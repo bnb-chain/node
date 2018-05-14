@@ -1,17 +1,17 @@
 bnbchain
 --------
 
-bnbchain is a blockchain with a flexible set of native assets and ICO/DEX features. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. With fast block times, a native app layer and no smart contract VM it can conceivably support up to 10,000 tx/s.
+bnbchain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. With fast block times, a native app layer and no smart contract VM it can conceivably support up to 10,000 tx/s.
 
 This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/examples/basecoin) and is already functional as a multi-asset cryptocurrency blockchain; see below for how to use it. The goal is to implement a DEX plugin that will allow for the trading of native asset pairs on chain.
 
 ## Overview
 
-* This uses BFT consensus; up to 1/3 of all validator nodes can be rogue/bad.
+* This uses BFT consensus so up to 1/3 of all validator nodes can be rogue or bad.
 * Validator nodes are part of the "validator set" so they are known, trusted and controlled by the network.
 * Full nodes are not validator nodes, but anyone can get a copy of the whole blockchain and validate it.
 * No PoW means block times are very fast.
-* UXTO/account does not matter as we just use the [cosmos](https://github.com/cosmos/cosmos-sdk/tree/master/x/bank) impl.
+* UXTO/account does not matter as we just use the [cosmos](https://github.com/cosmos/cosmos-sdk/tree/master/x/bank) bank.
 * Features like the DEX will run directly on the node as apps written in golang.
 
 <img src="https://d.pr/i/5kNDH1+" alt="tendermint architecture" width="500" />
@@ -58,6 +58,14 @@ $ go run cmd/bnbchaind/main.go start
 ```
 
 If everything worked you will see blocks being generated around every 1s in your console.
+
+### Reset
+
+When you make a change you probably want to reset your chain, remember to kill the node first.
+
+```bash
+$ go run cmd/bnbchaind/main.go unsafe_reset_all
+```
 
 ## Assets
 
@@ -118,7 +126,7 @@ $ go run cmd/bnbcli/main.go tx 492B08FFE364D389BB508FD3507BBACD3DB58A98
 Then you can check the balance of pepe's key to see that he now has 1000 `mycoin`:
 
 ```bash
-go run cmd/bnbcli/main.go account B71E119324558ABA3AE3F5BC854F1225132465A0
+$ go run cmd/bnbcli/main.go account B71E119324558ABA3AE3F5BC854F1225132465A0
 {
   "type": "16542275FBFAB8",
   "value": {
@@ -136,6 +144,8 @@ go run cmd/bnbcli/main.go account B71E119324558ABA3AE3F5BC854F1225132465A0
   }
 }
 ```
+
+Amounts are represented as ints, so if `mycoin` has a precision of 2 decimal places then pepe now has a balance of 10.00.
 
 ### Future
 
