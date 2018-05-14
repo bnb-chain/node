@@ -157,7 +157,7 @@ The idea for the DEX is that order books will be kept in the global state and ma
 
 If we use a native asset (BNB) as an ICO quote currency this will be straightforward as a plugin, but other examples of how to peg ethereum tokens to assets on tendermint chains do exist e.g.
 
-* [Peggy](https://github.com/cosmos/peggy)
+* [Peggy](https://github.com/cosmos/peggy) [read more](https://blog.cosmos.network/understanding-the-value-proposition-of-cosmos-ecaef63350d#f158)
 
 #### Others
 
