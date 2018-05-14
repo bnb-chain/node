@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/simplestake"
 
+	"github.com/BiJie/bnbchain/plugins/dex"
 	"github.com/BiJie/bnbchain/types"
 )
 
@@ -65,10 +66,12 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 
 	// Add handlers.
 	coinKeeper := bank.NewCoinKeeper(app.accountMapper)
+	dexKeeper := dex.NewKeeper(app.capKeyMainStore, coinKeeper)
 	ibcMapper := ibc.NewIBCMapper(app.cdc, app.capKeyIBCStore)
 	stakeKeeper := simplestake.NewKeeper(app.capKeyStakingStore, coinKeeper)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(coinKeeper)).
+		AddRoute("dex", dex.NewHandler(dexKeeper)).
 		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 
@@ -77,7 +80,7 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 
 	// Initialize BaseApp.
 	app.SetTxDecoder(app.txDecoder)
-	app.SetInitChainer(app.initChainer)
+	app.SetInitChainer(app.initChainerFn(dexKeeper))
 	app.MountStoresIAVL(app.capKeyMainStore, app.capKeyAccountStore, app.capKeyIBCStore, app.capKeyStakingStore)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeHandler))
 	err := app.LoadLatestVersion(app.capKeyMainStore)
@@ -96,8 +99,10 @@ func MakeCodec() *wire.Codec {
 	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
 	cdc.RegisterConcrete(bank.SendMsg{}, "basecoin/Send", nil)
 	cdc.RegisterConcrete(bank.IssueMsg{}, "basecoin/Issue", nil)
+	cdc.RegisterConcrete(dex.QuizMsg{}, "basecoin/Quiz", nil)
+	cdc.RegisterConcrete(dex.SetTrendMsg{}, "basecoin/SetTrend", nil)
 	cdc.RegisterConcrete(ibc.IBCTransferMsg{}, "basecoin/IBCTransferMsg", nil)
-	cdc.RegisterConcrete(ibc.IBCReceiveMsg{}, "basecoin/IBCReceiveMsg", nil)
+	cdc.RegisterConcrete(ibc.IBCReceiveMsg{}, "democoin/IBCReceiveMsg", nil)
 	cdc.RegisterConcrete(simplestake.BondMsg{}, "basecoin/BondMsg", nil)
 	cdc.RegisterConcrete(simplestake.UnbondMsg{}, "basecoin/UnbondMsg", nil)
 
@@ -128,24 +133,34 @@ func (app *BasecoinApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 	return tx, nil
 }
 
-// Custom logic for basecoin initialization
-func (app *BasecoinApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	stateJSON := req.AppStateBytes
+// custom logic for democoin initialization
+func (app *BasecoinApp) initChainerFn(dexKeeper dex.Keeper) sdk.InitChainer {
+	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+		stateJSON := req.AppStateBytes
 
-	genesisState := new(types.GenesisState)
-	err := json.Unmarshal(stateJSON, genesisState)
-	if err != nil {
-		panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-		// return sdk.ErrGenesisParse("").TraceCause(err, "")
-	}
+		genesisState := new(types.GenesisState)
+		err := json.Unmarshal(stateJSON, genesisState)
+		if err != nil {
+			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+			// return sdk.ErrGenesisParse("").TraceCause(err, "")
+		}
 
-	for _, gacc := range genesisState.Accounts {
-		acc, err := gacc.ToAppAccount()
+		for _, gacc := range genesisState.Accounts {
+			acc, err := gacc.ToAppAccount()
+			if err != nil {
+				panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+				//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+			}
+			app.accountMapper.SetAccount(ctx, acc)
+		}
+
+		// Application specific genesis handling
+		err = dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
 		}
-		app.accountMapper.SetAccount(ctx, acc)
+
+		return abci.ResponseInitChain{}
 	}
-	return abci.ResponseInitChain{}
 }

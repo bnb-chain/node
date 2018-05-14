@@ -1,4 +1,4 @@
-package cool
+package dex
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package cool
+package dex
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ type SetTrendMsg struct {
 }
 
 // Genesis state - specify genesis trend
-type CoolGenesis struct {
+type DexGenesis struct {
 	Trend string `json:"trend"`
 }
 

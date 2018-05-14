@@ -34,7 +34,7 @@ func QuizTxCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			// create the message
-			msg := cool.NewQuizMsg(from, args[0])
+			msg := dex.NewQuizMsg(from, args[0])
 
 			// get account name
 			name := viper.GetString(client.FlagName)
@@ -85,7 +85,7 @@ func SetTrendTxCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			// create the message
-			msg := cool.NewSetTrendMsg(from, args[0])
+			msg := dex.NewSetTrendMsg(from, args[0])
 
 			// build and sign the transaction, then broadcast to Tendermint
 			res, err := ctx.SignBuildBroadcast(name, msg, cdc)

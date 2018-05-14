@@ -1,4 +1,4 @@
-package cool
+package dex
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -42,7 +42,7 @@ func (k Keeper) CheckTrend(ctx sdk.Context, guessedTrend string) bool {
 }
 
 // InitGenesis - store the genesis trend
-func (k Keeper) InitGenesis(ctx sdk.Context, data CoolGenesis) error {
+func (k Keeper) InitGenesis(ctx sdk.Context, data DexGenesis) error {
 	k.setTrend(ctx, data.Trend)
 	return nil
 }

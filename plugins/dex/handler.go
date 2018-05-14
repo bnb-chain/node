@@ -1,4 +1,4 @@
-package cool
+package dex
 
 import (
 	"fmt"
@@ -9,13 +9,6 @@ import (
 
 // This is just an example to demonstrate a functional custom module
 // with full feature set functionality.
-//
-//  /$$$$$$$  /$$$$$$   /$$$$$$  /$$
-// /$$_____/ /$$__  $$ /$$__  $$| $$
-//| $$      | $$  \ $$| $$  \ $$| $$
-//| $$      | $$  | $$| $$  | $$| $$
-//|  $$$$$$$|  $$$$$$/|  $$$$$$/| $$$$$$$
-// \_______/ \______/  \______/ |______/
 
 // NewHandler returns a handler for "cool" type messages.
 func NewHandler(k Keeper) sdk.Handler {
