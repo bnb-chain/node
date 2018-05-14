@@ -39,9 +39,6 @@ func defaultAppState(args []string, addr sdk.Address, coinDenom string) (json.Ra
 	if err != nil {
 		return nil, err
 	}
-	// jsonMap["cool"] = json.RawMessage(`{
-	//     "trend": "ice-cold"
-	//   }`)
 	bz, err := json.Marshal(jsonMap)
 	return json.RawMessage(bz), err
 }
