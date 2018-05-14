@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/BiJie/bnbchain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/dex"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"

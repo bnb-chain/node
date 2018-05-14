@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/commands"
 
-	"github.com/BiJie/bnbchain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/dex"
 )
 
 // take the coolness quiz transaction

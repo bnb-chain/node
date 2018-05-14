@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/simplestake"
 
-	"github.com/BiJie/bnbchain/plugins/dex"
-	"github.com/BiJie/bnbchain/types"
+	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/types"
 )
 
 const (

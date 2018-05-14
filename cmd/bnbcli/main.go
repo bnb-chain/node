@@ -19,9 +19,9 @@ import (
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/commands"
 	simplestakingcmd "github.com/cosmos/cosmos-sdk/x/simplestake/commands"
 
-	"github.com/BiJie/bnbchain/app"
-	dexcmd "github.com/BiJie/bnbchain/plugins/dex/commands"
-	"github.com/BiJie/bnbchain/types"
+	"github.com/BiJie/BinanceChain/app"
+	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
+	"github.com/BiJie/BinanceChain/types"
 )
 
 // rootCmd is the entry point for this binary
