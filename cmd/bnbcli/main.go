@@ -28,7 +28,7 @@ import (
 var (
 	rootCmd = &cobra.Command{
 		Use:   "bnbcli",
-		Short: "BNBChain light-client",
+		Short: "BNBChain cli client",
 	}
 )
 
@@ -72,11 +72,14 @@ func main() {
 		client.PostCommands(
 			simplestakingcmd.UnbondTxCmd(cdc),
 		)...)
-	// and now democoin specific commands
+
+	// dex specific commands
 	rootCmd.AddCommand(
 		client.PostCommands(
-			dexcmd.QuizTxCmd(cdc),
-			dexcmd.SetTrendTxCmd(cdc),
+			client.LineBreak,
+			dexcmd.MakeOfferCmd(cdc),
+			dexcmd.FillOfferCmd(cdc),
+			dexcmd.CancelOfferCmd(cdc),
 		)...)
 
 	// add proxy, version and key info

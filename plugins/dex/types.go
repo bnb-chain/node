@@ -3,7 +3,6 @@ package dex
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -25,41 +24,73 @@ type DexGenesis struct {
 	VolumeBucketDuration int64 `json:"volumeBucketDuration"`
 }
 
-// New cool message
-func NewSetTrendMsg(sender sdk.Address, cool string) SetTrendMsg {
-	return SetTrendMsg{
+type MakeOfferMsg struct {
+	Sender sdk.Address
+}
+
+type FillOfferMsg struct {
+	Sender sdk.Address
+}
+
+type CancelOfferMsg struct {
+	Sender sdk.Address
+}
+
+// NewMakeOfferMsg - Creates a new MakeOfferMsg
+func NewMakeOfferMsg(sender sdk.Address) MakeOfferMsg {
+	return MakeOfferMsg{
 		Sender: sender,
-		Cool:   cool,
 	}
 }
 
-// enforce the msg type at compile time
-var _ sdk.Msg = SetTrendMsg{}
+var _ sdk.Msg = MakeOfferMsg{}
 
 // nolint
-func (msg SetTrendMsg) Type() string                            { return "cool" }
-func (msg SetTrendMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg SetTrendMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
-func (msg SetTrendMsg) String() string {
-	return fmt.Sprintf("SetTrendMsg{Sender: %v, Cool: %v}", msg.Sender, msg.Cool)
+func (msg MakeOfferMsg) Type() string                            { return "dex" }
+func (msg MakeOfferMsg) Get(key interface{}) (value interface{}) { return nil }
+func (msg MakeOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg MakeOfferMsg) String() string {
+	return fmt.Sprintf("MakeOfferMsg{Sender: %v}", msg.Sender)
 }
 
-// Validate Basic is used to quickly disqualify obviously invalid messages quickly
-func (msg SetTrendMsg) ValidateBasic() sdk.Error {
-	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
+// NewFillOfferMsg - Creates a new FillOfferMsg
+func NewFillOfferMsg(sender sdk.Address) FillOfferMsg {
+	return FillOfferMsg{
+		Sender: sender,
 	}
-	if strings.Contains(msg.Cool, "hot") {
-		return sdk.ErrUnauthorized("").Trace("hot is not cool")
-	}
-	if strings.Contains(msg.Cool, "warm") {
-		return sdk.ErrUnauthorized("").Trace("warm is not very cool")
-	}
-	return nil
 }
 
-// Get the bytes for the message signer to sign on
-func (msg SetTrendMsg) GetSignBytes() []byte {
+var _ sdk.Msg = FillOfferMsg{}
+
+// nolint
+func (msg FillOfferMsg) Type() string                            { return "dex" }
+func (msg FillOfferMsg) Get(key interface{}) (value interface{}) { return nil }
+func (msg FillOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg FillOfferMsg) String() string {
+	return fmt.Sprintf("FillOfferMsg{Sender: %v}", msg.Sender)
+}
+
+// NewCancelOfferMsg - Creates a new CancelOfferMsg
+func NewCancelOfferMsg(sender sdk.Address) CancelOfferMsg {
+	return CancelOfferMsg{
+		Sender: sender,
+	}
+}
+
+var _ sdk.Msg = CancelOfferMsg{}
+
+// nolint
+func (msg CancelOfferMsg) Type() string                            { return "dex" }
+func (msg CancelOfferMsg) Get(key interface{}) (value interface{}) { return nil }
+func (msg CancelOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg CancelOfferMsg) String() string {
+	return fmt.Sprintf("CancelOfferMsg{Sender: %v}", msg.Sender)
+}
+
+// TODO: validate messages
+
+// GetSignBytes - Get the bytes for the message signer to sign on
+func (msg MakeOfferMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -67,47 +98,44 @@ func (msg SetTrendMsg) GetSignBytes() []byte {
 	return b
 }
 
-//_______________________________________________________________________
-
-// A message type to quiz how cool you are. these fields are can be entirely
-// arbitrary and custom to your message
-type QuizMsg struct {
-	Sender     sdk.Address
-	CoolAnswer string
-}
-
-// New cool message
-func NewQuizMsg(sender sdk.Address, coolerthancool string) QuizMsg {
-	return QuizMsg{
-		Sender:     sender,
-		CoolAnswer: coolerthancool,
+// GetSignBytes - Get the bytes for the message signer to sign on
+func (msg FillOfferMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
 	}
+	return b
 }
 
-// enforce the msg type at compile time
-var _ sdk.Msg = QuizMsg{}
-
-// nolint
-func (msg QuizMsg) Type() string                            { return "cool" }
-func (msg QuizMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg QuizMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
-func (msg QuizMsg) String() string {
-	return fmt.Sprintf("QuizMsg{Sender: %v, CoolAnswer: %v}", msg.Sender, msg.CoolAnswer)
+// GetSignBytes - Get the bytes for the message signer to sign on
+func (msg CancelOfferMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // Validate Basic is used to quickly disqualify obviously invalid messages quickly
-func (msg QuizMsg) ValidateBasic() sdk.Error {
+func (msg MakeOfferMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
 	}
 	return nil
 }
 
-// Get the bytes for the message signer to sign on
-func (msg QuizMsg) GetSignBytes() []byte {
-	b, err := json.Marshal(msg)
-	if err != nil {
-		panic(err)
+// Validate Basic is used to quickly disqualify obviously invalid messages quickly
+func (msg FillOfferMsg) ValidateBasic() sdk.Error {
+	if len(msg.Sender) == 0 {
+		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
 	}
-	return b
+	return nil
+}
+
+// Validate Basic is used to quickly disqualify obviously invalid messages quickly
+func (msg CancelOfferMsg) ValidateBasic() sdk.Error {
+	if len(msg.Sender) == 0 {
+		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
+	}
+	return nil
 }
