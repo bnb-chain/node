@@ -67,6 +67,14 @@ When you make a change you probably want to reset your chain, remember to kill t
 $ go run cmd/bnbchaind/main.go unsafe_reset_all
 ```
 
+### Build
+
+Build binaries with make:
+
+```bash
+$ make build
+```
+
 ## Assets
 
 ### Issuing assets

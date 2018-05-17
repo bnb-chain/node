@@ -39,6 +39,19 @@ func defaultAppState(args []string, addr sdk.Address, coinDenom string) (json.Ra
 	if err != nil {
 		return nil, err
 	}
+	// dex fee settings - established in genesis block
+	// feeFactor: 25 => 0.25% (0.0025)
+	// maxFee: 50/10000 = 0.5% (0.005)
+	// nativeTokenDiscount: 1/2 => 50%
+	// volumeBucketDuration: 82800secs = 23hrs
+	jsonMap["dex"] = json.RawMessage(`{
+		"makerFee": 25,
+		"takerFee": 30,
+		"feeFactor": 10000,
+		"maxFee": 5000,
+		"nativeTokenDiscount": 2,
+		"volumeBucketDuration": 82800
+	}`)
 	bz, err := json.Marshal(jsonMap)
 	return json.RawMessage(bz), err
 }
