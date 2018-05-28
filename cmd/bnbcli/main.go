@@ -21,6 +21,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/app"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
+	icocmd "github.com/BiJie/BinanceChain/plugins/ico/commands"
 	"github.com/BiJie/BinanceChain/types"
 )
 
@@ -90,6 +91,8 @@ func main() {
 		client.LineBreak,
 		version.VersionCmd,
 	)
+
+	icocmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))
