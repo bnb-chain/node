@@ -18,6 +18,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/types"
+	"github.com/BiJie/BinanceChain/plugins/ico"
 )
 
 const (
@@ -71,6 +72,7 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 	stakeKeeper := simplestake.NewKeeper(app.capKeyStakingStore, coinKeeper)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(coinKeeper)).
+		AddRoute("ico", ico.NewHandler(coinKeeper)).
 		AddRoute("dex", dex.NewHandler(dexKeeper)).
 		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
@@ -98,7 +100,8 @@ func MakeCodec() *wire.Codec {
 	// Register Msgs
 	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
 	cdc.RegisterConcrete(bank.SendMsg{}, "basecoin/Send", nil)
-	cdc.RegisterConcrete(bank.IssueMsg{}, "basecoin/Issue", nil)
+	//cdc.RegisterConcrete(bank.IssueMsg{}, "basecoin/Issue", nil)
+	cdc.RegisterConcrete(ico.IssueMsg{}, "ico/IssueMsg", nil)
 	cdc.RegisterConcrete(dex.MakeOfferMsg{}, "dex/MakeOfferMsg", nil)
 	cdc.RegisterConcrete(dex.FillOfferMsg{}, "dex/FillOfferMsg", nil)
 	cdc.RegisterConcrete(dex.CancelOfferMsg{}, "dex/CancelOfferMsg", nil)
