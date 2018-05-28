@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/BiJie/BinanceChain/common"
 	"github.com/spf13/cobra"
 
 	"github.com/tendermint/tmlibs/cli"
@@ -20,8 +21,9 @@ import (
 	simplestakingcmd "github.com/cosmos/cosmos-sdk/x/simplestake/commands"
 
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
-	"github.com/BiJie/BinanceChain/types"
+	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
 )
 
 // rootCmd is the entry point for this binary
@@ -53,7 +55,7 @@ func main() {
 	// start with commands common to basecoin
 	rootCmd.AddCommand(
 		client.GetCommands(
-			authcmd.GetAccountCmd("main", cdc, types.GetAccountDecoder(cdc)),
+			authcmd.GetAccountCmd(common.AccountStoreName, cdc, types.GetAccountDecoder(cdc)),
 		)...)
 	rootCmd.AddCommand(
 		client.PostCommands(
@@ -90,6 +92,8 @@ func main() {
 		client.LineBreak,
 		version.VersionCmd,
 	)
+
+	tokencmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))

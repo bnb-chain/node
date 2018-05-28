@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/json"
 
+	"github.com/BiJie/BinanceChain/common"
+	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	abci "github.com/tendermint/abci/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -16,8 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/simplestake"
 
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/types"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
 const (
@@ -29,14 +32,11 @@ type BasecoinApp struct {
 	*bam.BaseApp
 	cdc *wire.Codec
 
-	// keys to access the substores
-	capKeyMainStore    *sdk.KVStoreKey
-	capKeyAccountStore *sdk.KVStoreKey
-	capKeyIBCStore     *sdk.KVStoreKey
-	capKeyStakingStore *sdk.KVStoreKey
-
 	// Manage getting and setting accounts
 	accountMapper sdk.AccountMapper
+	tokenMapper   tokenStore.Mapper
+	coinKeeper    bank.CoinKeeper
+	dexKeeper     dex.Keeper
 
 	// Handle fees
 	feeHandler sdk.FeeHandler
@@ -49,46 +49,52 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 
 	// Create your application object.
 	var app = &BasecoinApp{
-		BaseApp:            bam.NewBaseApp(appName, logger, db),
-		cdc:                cdc,
-		capKeyMainStore:    sdk.NewKVStoreKey("main"),
-		capKeyAccountStore: sdk.NewKVStoreKey("acc"),
-		capKeyIBCStore:     sdk.NewKVStoreKey("ibc"),
-		capKeyStakingStore: sdk.NewKVStoreKey("stake"),
+		BaseApp: bam.NewBaseApp(appName, logger, db),
+		cdc:     cdc,
 	}
 
 	// Define the accountMapper.
 	app.accountMapper = auth.NewAccountMapper(
 		cdc,
-		app.capKeyMainStore, // target store
-		&types.AppAccount{}, // prototype
+		common.AccountStoreKey, // target store
+		&types.AppAccount{},    // prototype
 	).Seal()
 
+	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+
 	// Add handlers.
-	coinKeeper := bank.NewCoinKeeper(app.accountMapper)
-	dexKeeper := dex.NewKeeper(app.capKeyMainStore, coinKeeper)
-	ibcMapper := ibc.NewIBCMapper(app.cdc, app.capKeyIBCStore)
-	stakeKeeper := simplestake.NewKeeper(app.capKeyStakingStore, coinKeeper)
-	app.Router().
-		AddRoute("bank", bank.NewHandler(coinKeeper)).
-		AddRoute("dex", dex.NewHandler(dexKeeper)).
-		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
-		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+	app.coinKeeper = bank.NewCoinKeeper(app.accountMapper)
+	app.dexKeeper = dex.NewKeeper(common.MainStoreKey, app.coinKeeper)
+	// Currently we do not need the ibc and staking part
+	// ibcMapper := ibc.NewIBCMapper(app.cdc, common.IBCStoreKey)
+	// stakeKeeper := simplestake.NewKeeper(common.StakingStoreKey, coinKeeper)
+	app.registerHandlers()
 
 	// Define the feeHandler.
 	app.feeHandler = auth.BurnFeeHandler
 
 	// Initialize BaseApp.
 	app.SetTxDecoder(app.txDecoder)
-	app.SetInitChainer(app.initChainerFn(dexKeeper))
-	app.MountStoresIAVL(app.capKeyMainStore, app.capKeyAccountStore, app.capKeyIBCStore, app.capKeyStakingStore)
+	app.SetInitChainer(app.initChainerFn())
+	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.IBCStoreKey, common.StakingStoreKey)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeHandler))
-	err := app.LoadLatestVersion(app.capKeyMainStore)
+	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
 
 	return app
+}
+
+func (app *BasecoinApp) registerHandlers() {
+	app.Router().
+		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
+		AddRoute("dex", dex.NewHandler(app.dexKeeper))
+	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
+	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
+		app.Router().AddRoute(route, handler)
+	}
 }
 
 // Custom tx codec
@@ -98,7 +104,7 @@ func MakeCodec() *wire.Codec {
 	// Register Msgs
 	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
 	cdc.RegisterConcrete(bank.SendMsg{}, "basecoin/Send", nil)
-	cdc.RegisterConcrete(bank.IssueMsg{}, "basecoin/Issue", nil)
+
 	cdc.RegisterConcrete(dex.MakeOfferMsg{}, "dex/MakeOfferMsg", nil)
 	cdc.RegisterConcrete(dex.FillOfferMsg{}, "dex/FillOfferMsg", nil)
 	cdc.RegisterConcrete(dex.CancelOfferMsg{}, "dex/CancelOfferMsg", nil)
@@ -107,10 +113,8 @@ func MakeCodec() *wire.Codec {
 	cdc.RegisterConcrete(simplestake.BondMsg{}, "basecoin/BondMsg", nil)
 	cdc.RegisterConcrete(simplestake.UnbondMsg{}, "basecoin/UnbondMsg", nil)
 
-	// Register AppAccount
-	cdc.RegisterInterface((*sdk.Account)(nil), nil)
-	cdc.RegisterConcrete(&types.AppAccount{}, "basecoin/Account", nil)
-
+	types.RegisterTypes(cdc)
+	tokens.RegisterTypes(cdc)
 	// Register crypto.
 	wire.RegisterCrypto(cdc)
 
@@ -135,7 +139,7 @@ func (app *BasecoinApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 }
 
 // custom logic for democoin initialization
-func (app *BasecoinApp) initChainerFn(dexKeeper dex.Keeper) sdk.InitChainer {
+func (app *BasecoinApp) initChainerFn() sdk.InitChainer {
 	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 
@@ -156,7 +160,7 @@ func (app *BasecoinApp) initChainerFn(dexKeeper dex.Keeper) sdk.InitChainer {
 		}
 
 		// Application specific genesis handling
-		err = dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
+		err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			//	return sdk.ErrGenesisParse("").TraceCause(err, "")

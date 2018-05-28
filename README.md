@@ -22,9 +22,10 @@ This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/ex
 
 ### Environment setup
 
-**Windows is currently not covered by this readme, please use Mac or Linux.**
-
 If you do not have golang yet, please [install it](https://golang.org/dl) or use brew on macOS: `brew install go` and `brew install dep`.
+
+
+**Mac & Linux**
 
 ```bash
 $ export GOPATH=~/go
@@ -34,6 +35,18 @@ $ mkdir -p $BNBCHAINPATH
 $ git clone git@github.com:BiJie/BinanceChain.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
 $ dep ensure
+```
+
+**Windows**
+
+If you are working on windows, `GOPATH` and `PATH` should already be set when you install golang.
+You may need add BNBCHAINPATH to the environment variables.
+
+```bat
+> md %BNBCHAINPATH%
+> git clone git@github.com:BiJie/BinanceChain.git %BNBCHAINPATH%
+> cd %BNBCHAINPATH%
+> dep ensure
 ```
 
 To test that installation worked, try to run the cli tool:
@@ -50,6 +63,10 @@ This command will generate a keypair for your node and create the genesis block 
 $ go run cmd/bnbchaind/main.go init
 $ cat ~/.bnbchaind/config/genesis.json
 ```
+
+> If you are working on windows platform, replace all **`'\'`** by **`'/'`** in `~\.bnbchaind\config\config.toml`. 
+Similarly, you need apply the same operation to `~\.bnbcli\config\config.toml` if it exists.
+
 
 You may want to check the [Issuing assets](#issuing-assets) section below before you start, but this is how to start the node and begin generating blocks:
 
