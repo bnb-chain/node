@@ -3,27 +3,25 @@ package matcheng
 import (
 	"math"
 	"sort"
-
-	"github.com/BiJie/BinanceChain/common/utils"
 )
 
 type LevelIndex struct {
-	value int64
+	value float64
 	index []int
 }
 
 type SurplusIndex struct {
 	LevelIndex
-	surplus []int64
+	surplus []float64
 }
 
 func (li *LevelIndex) clear() {
-	li.value = 0
+	li.value = 0.0
 	li.index = li.index[:0]
 }
 
 func (li *SurplusIndex) clear() {
-	li.value = math.MaxInt64
+	li.value = math.MaxFloat64
 	li.index = li.index[:0]
 	li.surplus = li.surplus[:0]
 }
@@ -34,46 +32,41 @@ func (li *SurplusIndex) clear() {
 // - one trade would be implemented via TWO transfer transactions on each currency of the pair;
 // - the trade would be uniquely identifiable via the two order id. UUID generation cannot be used here.
 type Trade struct {
-	oid     string // order id
-	lastPx  int64  // execution price
-	lastQty int64  // execution quantity
-	srcOId  string // source order id allocated from
+	SId     string // sell order id
+	LastPx  int64  // execution price
+	LastQty int64  // execution quantity
+	BId     string // buy order Id
 }
 
 type MatchEng struct {
 	Book OrderBookInterface
 	// LotSize may be based on price level, which can be set
 	// before any match() call
-	LotSize int64
-	// PriceLimit is a percentage use to calculate the range of price
-	// in order to determine the trade price. Though it is saved as int64,
-	// it would be converted into a float when the match engine is created.
-	PriceLimitPct float64
-	// all the below are buffers
-	overLappedLevel []OverLappedLevel
+	LotSize         float64
+	overLappedLevel []OverLappedLevel //buffer
 	buyBuf          []PriceLevel
 	sellBuf         []PriceLevel
 	maxExec         LevelIndex
 	leastSurplus    SurplusIndex
-	trades          []Trade
-	lastTradePrice  int64
+	Trades          []Trade
+	LastTradePrice  int64
 }
 
-func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
-	return &MatchEng{LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
+func NewMatchEng(basePrice, lotSize float64) *MatchEng {
+	return &MatchEng{LotSize: lotSize, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
 		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
-		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
+		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
 }
 
 //sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
-//reCalNxtTrade should be true at the begining and false when nxtTrade is changed by allocation logic
-func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
-	var s int64
+//recalNxtTrade should be true at the begining and false when nxtTrade is changed by allocation logic
+func sumOrdersTotalLeft(orders []OrderPart, recalNxtTrade bool) float64 {
+	var s float64
 	k := len(orders)
 	for i := 0; i < k; i++ {
 		o := &orders[i]
-		if reCalNxtTrade {
+		if recalNxtTrade {
 			o.nxtTrade = o.qty - o.cumQty
 		}
 		s += o.nxtTrade
@@ -82,44 +75,32 @@ func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
 }
 
 func prepareMatch(overlapped *[]OverLappedLevel) int {
-	var accum int64
+	var accu float64
 	k := len(*overlapped)
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
 		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
-		accum += l.SellTotal
-		l.AccumulatedSell = accum
+		accu += l.SellTotal
+		l.AccumulatedSell = accu
 	}
-	accum = 0
+	accu = 0.0
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
-		accum += l.BuyTotal
-		l.AccumulatedBuy = accum
-		l.AccumulatedExecutions = utils.MinInt(l.AccumulatedBuy, l.AccumulatedSell)
+		accu += l.BuyTotal
+		l.AccumulatedBuy = accu
+		l.AccumulatedExecutions = math.Min(l.AccumulatedBuy, l.AccumulatedSell)
 		l.BuySellSurplus = l.AccumulatedBuy - l.AccumulatedSell
 	}
 	return k
 }
 
-func getPriceCloseToRef(overlapped []OverLappedLevel, index []int, refPrice int64) (int64, int) {
+func getPriceCloseToRef(overlapped []OverLappedLevel, index []int, refPrice float64) (float64, int) {
 	var j int
-	var diff int64 = math.MaxInt64
-	refIsSmaller := false
+	var diff float64 = math.MaxFloat64
 	for _, i := range index {
 		p := overlapped[i].Price
-		d := p - refPrice
-		switch compareBuy(d, 0) {
-		case 0:
-			return refPrice, i
-		case 1:
-			refIsSmaller = true
-		case -1:
-			if refIsSmaller {
-				return refPrice, j
-			}
-			d = -d
-		}
+		d := math.Abs(p - refPrice)
 		if compareBuy(diff, d) > 0 {
 			// do not count == case, when more than one has the same diff, return the largest price, i.e. the 1st
 			diff = d
@@ -146,7 +127,7 @@ func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	leastSurplus *SurplusIndex) {
 	for _, j := range maxExec.index {
 		surplus := (*overlapped)[j].BuySellSurplus
-		abSurplus := utils.AbsInt(surplus)
+		abSurplus := math.Abs(surplus)
 		r := compareBuy(abSurplus, leastSurplus.value)
 		if r < 0 {
 			leastSurplus.value = abSurplus
@@ -161,7 +142,7 @@ func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 }
 
-func getTradePriceForMarketPressure(side int, overlapped *[]OverLappedLevel,
+func getTradePriceForMarketPressure(side int8, overlapped *[]OverLappedLevel,
 	leastSurplus []int, refPrice float64, priceLimit float64) (int64, int) {
 	lowerLimit := int64(math.Floor(refPrice * (1.0 - priceLimit)))
 	i := leastSurplus[0] //largest
@@ -191,7 +172,7 @@ func getTradePriceForMarketPressure(side int, overlapped *[]OverLappedLevel,
 }
 
 func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
-	leastSurplus *SurplusIndex, refPrice int64, priceLimitPct float64) (int64, int) {
+	leastSurplus *SurplusIndex, refPrice float64) (float64, int) {
 	maxExec.clear()
 	leastSurplus.clear()
 	calMaxExec(overlapped, maxExec)
@@ -218,19 +199,19 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 	// only buy side surplus exist, buying pressure
 	if buySurplus && !sellSurplus { // return hightest
-		return getTradePriceForMarketPressure(BUYSIDE, overlapped,
-			leastSurplus.index, float64(refPrice), priceLimitPct)
+		i := leastSurplus.index[0]
+		return (*overlapped)[i].Price, i
 	}
 	// only sell side surplus exist, selling pressure
 	if !buySurplus && sellSurplus { // return lowest
-		return getTradePriceForMarketPressure(SELLSIDE, overlapped,
-			leastSurplus.index, float64(refPrice), priceLimitPct)
+		i := leastSurplus.index[len(leastSurplus.index)-1]
+		return (*overlapped)[i].Price, i
 	}
 	if (buySurplus && sellSurplus) || (!buySurplus && !sellSurplus) {
 		return getPriceCloseToRef(*overlapped, leastSurplus.index, refPrice)
 	}
 	//never reach here
-	return math.MaxInt64, -1
+	return math.MaxFloat64, -1
 }
 
 // fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
@@ -265,7 +246,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -273,7 +254,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -281,7 +262,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			h++
 			k++
 		}
@@ -292,9 +273,9 @@ func (me *MatchEng) fillOrders(i int, j int) {
 
 // allocateResidual() assumes toAlloc is less than sum of quantity in orders.
 // It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
-func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
+func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) bool {
 	if len(orders) == 1 {
-		qty := utils.MinInt(*toAlloc, orders[0].nxtTrade)
+		qty := math.Min(*toAlloc, orders[0].nxtTrade)
 		orders[0].nxtTrade = qty
 		*toAlloc -= qty
 		return true
@@ -305,15 +286,15 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	// orders should have the same time, sort here to get deterministic sequence
 	sort.Slice(orders, func(i, j int) bool { return orders[i].id < orders[j].id })
 	residual := *toAlloc
+	halfLot := lotSize / 2
 
 	if compareBuy(t, residual) > 0 { // not enough to allocate
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
-		nLot := float64(residual / lotSize)
-		totalF := float64(t)
+		nLot := math.Floor((residual + halfLot) / lotSize)
 		k := len(orders)
 		for i := 0; i < k; i++ {
-			a := int64(math.Floor(nLot*float64(orders[i].nxtTrade)/totalF)) * lotSize // this is supposed to be the main portion
+			a := math.Floor(nLot*orders[i].nxtTrade/t+halfLot) * lotSize // this is supposed to be the main portion
 			if compareBuy(a, residual) >= 0 {
 				orders[i].nxtTrade = residual
 				residual = 0
@@ -323,9 +304,9 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 				residual -= a
 			}
 		}
-		remainderLot := residual / lotSize
+		remainderLot := math.Floor((residual + halfLot) / lotSize)
 		for i := 0; i < k; i++ {
-			if remainderLot > 0 { // remainder distribution, every one can only get 1 lot or zero
+			if remainderLot > 0 { // remainer distribution, every one can only get 1 lot or zero
 				orders[i].nxtTrade += lotSize
 				remainderLot -= 1
 				residual -= lotSize
@@ -349,11 +330,11 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 }
 
 // reserveQty() is called when orders have more leavesQty than the residual execution qty calculated from the matching process,
-// so that here is to 'reserve' the necessary qty from orders.
-func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
-	//orders should be sorted by time already, since they are added as time sequence
+// so that here is to 'reserve' the necessary qtys from orders.
+func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
+	//orders should be sorted by time already, since they are added as time squence
 	//no fill should happen on any in the 'orders' before this call, so that no other sorting happens
-	// residual must be smaller than the total qty of all orders
+	// resdiual must be smaller than the total qty of all orders
 	if len(orders) == 1 {
 		orders[0].nxtTrade = residual
 		return true
@@ -393,19 +374,19 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
 func (me *MatchEng) Match() bool {
-	me.trades = me.trades[:0]
+	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
-	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.lastTradePrice, me.PriceLimitPct)
+	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.LastTradePrice, me.PriceLimitPct)
 	if index < 0 {
 		return false
 	}
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
-	me.trades = me.trades[:0]
-	me.lastTradePrice = lastPx
+	me.Trades = me.Trades[:0]
+	me.LastTradePrice = lastPx
 	i, j := 0, len(me.overLappedLevel)-1
 	//sell below the price at index or buy above the price would not get filled
 	for i <= index && j >= index && compareBuy(totalExec, 0) > 0 {
@@ -450,9 +431,8 @@ func (me *MatchEng) Match() bool {
 //DropFilledOrder() would clear the order to remove
 func (me *MatchEng) DropFilledOrder() int {
 	i := 0
-	for _, p := range me.overLappedLevel {
+	for i, p := range me.overLappedLevel {
 		if len(p.BuyOrders) > 0 {
-			p.BuyTotal = sumOrdersTotalLeft(p.BuyOrders, true)
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 				i++
@@ -465,7 +445,6 @@ func (me *MatchEng) DropFilledOrder() int {
 			}
 		}
 		if len(p.SellOrders) > 0 {
-			p.SellTotal = sumOrdersTotalLeft(p.SellOrders, true)
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 				i++

@@ -17,7 +17,7 @@ type FreezeMsg struct {
 	base.MsgBase
 }
 
-func NewFreezeMsg(from sdk.Address, symbol string, amount int64) FreezeMsg {
+func NewFreezeMsg(from sdk.AccAddress, symbol string, amount int64) FreezeMsg {
 	return FreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
@@ -33,7 +33,7 @@ type UnfreezeMsg struct {
 	base.MsgBase
 }
 
-func NewUnfreezeMsg(from sdk.Address, symbol string, amount int64) UnfreezeMsg {
+func NewUnfreezeMsg(from sdk.AccAddress, symbol string, amount int64) UnfreezeMsg {
 	return UnfreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 

@@ -11,13 +11,13 @@ import (
 const Route = "dexList"
 
 type Msg struct {
-	From        sdk.Address `json:"from"`
-	Symbol      string      `json:"symbol"`
-	QuoteSymbol string      `json:"quote_symbol"`
-	InitPrice   int64       `json:"init_price"`
+	From        sdk.AccAddress `json:"from"`
+	Symbol      string         `json:"symbol"`
+	QuoteSymbol string         `json:"quote_symbol"`
+	InitPrice   int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.Address, symbol string, quoteSymbol string, initPrice int64) Msg {
+func NewMsg(from sdk.AccAddress, symbol string, quoteSymbol string, initPrice int64) Msg {
 	return Msg{
 		From:        from,
 		Symbol:      symbol,
@@ -29,7 +29,7 @@ func NewMsg(from sdk.Address, symbol string, quoteSymbol string, initPrice int64
 func (msg Msg) Type() string                            { return Route }
 func (msg Msg) String() string                          { return fmt.Sprintf("MsgList{%#v}", msg) }
 func (msg Msg) Get(key interface{}) (value interface{}) { return nil }
-func (msg Msg) GetSigners() []sdk.Address               { return []sdk.Address{msg.From} }
+func (msg Msg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.From} }
 
 func (msg Msg) ValidateBasic() sdk.Error {
 	err := types.ValidateSymbol(msg.Symbol)

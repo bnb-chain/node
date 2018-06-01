@@ -35,7 +35,7 @@ func (b *bucket) size() int {
 //bucket.get() return 2 values:
 //if the price is found, return the PriceLevel and its position,
 //otherwise return nil and the 1st position that is smaller for buy(larger for sell) than input price
-func (b *bucket) get(p int64, compare Comparator) (*PriceLevel, int) {
+func (b *bucket) get(p float64, compare Comparator) (*PriceLevel, int) {
 	k := len(b.elements)
 	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) < 0 })
 	if i > 0 && compare(b.elements[i-1].Price, p) == 0 {
@@ -46,7 +46,7 @@ func (b *bucket) get(p int64, compare Comparator) (*PriceLevel, int) {
 	}
 }
 
-func (b *bucket) getRange(p1 int64, p2 int64, compare Comparator, buffer *[]PriceLevel) int {
+func (b *bucket) getRange(p1 float64, p2 float64, compare Comparator, buffer *[]PriceLevel) int {
 	// return -1 means the price is out of range
 	if len(b.elements) == 0 || compare(p1, p2) < 0 { // should never reach here
 		return -1
@@ -88,7 +88,7 @@ func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 	return len(b.elements)
 }
 
-func (b *bucket) delete(p int64, compare Comparator) *PriceLevel {
+func (b *bucket) delete(p float64, compare Comparator) *PriceLevel {
 	k := len(b.elements)
 	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) < 0 })
 	if i > 0 && compare(b.elements[i-1].Price, p) == 0 {
@@ -112,7 +112,7 @@ func (b *bucket) clear() {
 }
 
 // if p1 < p2, return -1, if p1 == p2 return 0, if p1 > p2, return 1.
-type Comparator func(p1 int64, p2 int64) int
+type Comparator func(p1 float64, p2 float64) int
 
 type ULList struct {
 	begin      *bucket
@@ -137,7 +137,7 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 	allPriceLevels := make([]PriceLevel, realCapacity)
 	var preBucket *bucket = nil
 	for i, j := 0, 0; i < bucketNumber; i++ {
-		//TODO: even allocation may not be the most optimized, should try exponential as well
+		//TODO: even allocation may not be the most optimised, should try exponential as well
 		allBuckets[i].elements = allPriceLevels[j : j+bucketSize]
 		allBuckets[i].elements = allBuckets[i].elements[:0]
 		j += bucketSize
@@ -152,7 +152,7 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 	preBucket.next = nil
 
 	return &ULList{
-		&allBuckets[0], //at the very beginning, only one bucket is used
+		&allBuckets[0], //at the very beginnig, only one bucket is used
 		&allBuckets[1], //assert bucketNumber > 1
 		capacity,
 		bucketSize,
@@ -166,9 +166,9 @@ func (ull *ULList) String() string {
 	for i := ull.begin; i != ull.dend; i = i.next {
 		buffer.WriteString(fmt.Sprintf("Bucket %d{", j))
 		for _, p := range i.elements {
-			buffer.WriteString(fmt.Sprintf("%d->[", p.Price))
+			buffer.WriteString(fmt.Sprintf("%.8f->[", p.Price))
 			for _, o := range p.orders {
-				buffer.WriteString(fmt.Sprintf("%s %d %d,", o.id, o.time, o.qty))
+				buffer.WriteString(fmt.Sprintf("%s %d %.8f,", o.id, o.time, o.qty))
 			}
 			buffer.WriteString("]")
 		}
@@ -178,7 +178,7 @@ func (ull *ULList) String() string {
 	return buffer.String()
 }
 
-// ensureCapacity() guarantees at least one more free bucket to use,
+// ensureCapacity() gurantees at least one more free bucket to use,
 // otherwise 'double' the size
 func (ull *ULList) ensureCapacity() {
 	if ull.dend.next == nil { // no empty bucket is available, re-allocate
@@ -213,7 +213,7 @@ func (ull *ULList) splitAndInsert(origin *bucket, p *PriceLevel) int {
 		return 0
 	}
 	ull.ensureCapacity()
-	//assert(ull.dend.next!=nil), i.e. there is still available free bucket
+	//assert(ull.dend.next!=nil), i.e. there is still avaiable free bucket
 	oldNext := origin.next             //same the next of origin
 	origin.next = ull.dend.next        // pick up the one after data end
 	ull.dend.next = ull.dend.next.next //shift one after data end
@@ -242,7 +242,7 @@ func (ull *ULList) Clear() {
 //getBucket return the 'last' bucket which contains price larger-equal (for buy)
 //or smaller-equal (for sell) than the input price. If the price is larger (for buy)
 //or smaller than any bucket head, nil is returned
-func (ull *ULList) getBucket(p int64) *bucket {
+func (ull *ULList) getBucket(p float64) *bucket {
 	var last *bucket = nil
 	for b := ull.begin; b != ull.dend; b = b.next {
 		h := b.head()
@@ -254,7 +254,6 @@ func (ull *ULList) getBucket(p int64) *bucket {
 	return last
 }
 
-//AddPriceLevel() would only add price that doesn't exist in the list yet, otherwise return false.
 func (ull *ULList) AddPriceLevel(p *PriceLevel) bool {
 	last := ull.getBucket(p.Price)
 	if last == nil {
@@ -276,7 +275,7 @@ func (ull *ULList) AddPriceLevel(p *PriceLevel) bool {
 	return last.insert(p, ull.compare) > 0
 }
 
-func (ull *ULList) DeletePriceLevel(price int64) bool {
+func (ull *ULList) DeletePriceLevel(price float64) bool {
 	var last, lastOfLast *bucket
 	for b := ull.begin; b != ull.dend; b = b.next {
 		h := b.head()
@@ -313,7 +312,7 @@ func (ull *ULList) GetTop() *PriceLevel {
 	return ull.begin.head()
 }
 
-func (ull *ULList) GetPriceRange(p1 int64, p2 int64, buffer *[]PriceLevel) []PriceLevel {
+func (ull *ULList) GetPriceRange(p1 float64, p2 float64, buffer *[]PriceLevel) []PriceLevel {
 	ret := (*buffer)[:0]
 	if ull.compare(p1, p2) < 0 || len(ull.begin.elements) <= 0 {
 		return ret // empty slice
@@ -332,7 +331,7 @@ func (ull *ULList) GetPriceRange(p1 int64, p2 int64, buffer *[]PriceLevel) []Pri
 
 //GetPriceLevel returns the PriceLevel point that has the same price as p.
 //It will return nil if no such price.
-func (ull *ULList) GetPriceLevel(p int64) *PriceLevel {
+func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 	for i := ull.begin; i != ull.dend; i = i.next {
 		h := i.head()
 		if h != nil {

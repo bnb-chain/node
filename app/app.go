@@ -7,11 +7,11 @@ import (
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
-	abci "github.com/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
-	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
@@ -80,7 +80,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 }
 
 func (app *BinanceChain) registerHandlers() {
-	app.Router().AddRoute("bank", bank.NewHandler(app.coinKeeper))
+	app.Router().
+		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
+		AddRoute("dex", dex.NewHandler(app.dexKeeper, app.accountMapper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
@@ -127,11 +129,11 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		}
 
 		// Application specific genesis handling
-		err = app.orderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
-		if err != nil {
-			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-		}
+		// err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
+		// if err != nil {
+		// 	panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+		// 	//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		// }
 
 		return abci.ResponseInitChain{}
 	}
@@ -142,11 +144,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
-		// normal block
-		icoDone := ico.EndBlockAsync(ctx)
-		// other end blockers
-
-		<-icoDone
+		//only match in the normal block
+		app.dexKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
 	} else {
 		// breathe block
 

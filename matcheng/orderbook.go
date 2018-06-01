@@ -11,33 +11,41 @@ import (
 // import ""
 
 const (
-	BUYSIDE  = 1
-	SELLSIDE = 2
+	BUYSIDE  int8 = 1
+	SELLSIDE int8 = 2
 )
 
 // PRECISION is the last effective decimal digit of the price of currency pair
-const PRECISION = 1
+const PRECISION = 0.000000005
 
 type OrderPart struct {
 	id       string
-	time     uint64
+	time     int64
 	qty      int64
 	cumQty   int64
 	nxtTrade int64
 }
 
+func (o *OrderPart) LeavesQty() int64 {
+	if o.cumQty >= o.qty {
+		return 0
+	} else {
+		return o.qty - o.cumQty
+	}
+}
+
 type PriceLevel struct {
-	Price  int64
+	Price  float64
 	orders []OrderPart
 }
 
 type PriceLevelInterface interface {
-	addOrder(id string, time uint64, qty int64) (int, error)
+	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
 	Less(than bt.Item) bool
 }
 
-func compareBuy(p1 int64, p2 int64) int {
+func compareBuy(p1 float64, p2 float64) int {
 	d := (p2 - p1)
 	switch {
 	case d >= PRECISION:
@@ -49,16 +57,16 @@ func compareBuy(p1 int64, p2 int64) int {
 	}
 }
 
-func compareSell(p1 int64, p2 int64) int {
+func compareSell(p1 float64, p2 float64) int {
 	return -compareBuy(p1, p2)
 }
 
 func (l *PriceLevel) String() string {
-	return fmt.Sprintf("%d->[%v]", l.Price, l.orders)
+	return fmt.Sprintf("%.8f->[%v]", l.Price, l.orders)
 }
 
 //addOrder would implicitly called with sequence of 'time' parameter
-func (l *PriceLevel) addOrder(id string, time uint64, qty int64) (int, error) {
+func (l *PriceLevel) addOrder(id string, time int64, qty int64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
 	for _, o := range l.orders {
 		if o.id == id {
@@ -89,15 +97,15 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 }
 
 type OverLappedLevel struct {
-	Price                 int64
+	Price                 float64
 	BuyOrders             []OrderPart
 	SellOrders            []OrderPart
-	SellTotal             int64
-	AccumulatedSell       int64
-	BuyTotal              int64
-	AccumulatedBuy        int64
-	AccumulatedExecutions int64
-	BuySellSurplus        int64
+	SellTotal             float64
+	AccumulatedSell       float64
+	BuyTotal              float64
+	AccumulatedBuy        float64
+	AccumulatedExecutions float64
+	BuySellSurplus        float64
 }
 
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
@@ -107,9 +115,9 @@ type OrderBookInterface interface {
 	GetOverlappedRange(overlapped *[]OverLappedLevel, buyBuf *[]PriceLevel, sellBuf *[]PriceLevel) int
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
-	InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error)
-	RemoveOrder(id string, side int, price int64) (OrderPart, error)
-	RemovePriceLevel(price int64, side int) int
+	InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error)
+	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
+	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(numOfLevels int, iter func(price int64, buyTotal int64, sellTotal int64))
 }
 
@@ -127,7 +135,7 @@ func (ob *OrderBookOnULList) String() string {
 	return fmt.Sprintf("buyQueue: [%v]\nsellQueue:[%v]", ob.buyQueue, ob.sellQueue)
 }
 
-func (ob *OrderBookOnULList) getSideQueue(side int) *ULList {
+func (ob *OrderBookOnULList) getSideQueue(side int8) *ULList {
 	switch side {
 	case BUYSIDE:
 		return ob.buyQueue
@@ -194,7 +202,7 @@ func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel, b
 	if sellTop == nil { // on side market
 		return 0
 	}
-	var p2, p1 int64 = buyTop.Price, sellTop.Price
+	var p2, p1 float64 = buyTop.Price, sellTop.Price
 	if compareBuy(p2, p1) < 0 { //p2 < p1
 		return 0 // not overlapped
 	}
@@ -204,14 +212,14 @@ func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel, b
 	return len(*overlapped)
 }
 
-func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error) {
+func (ob *OrderBookOnULList) InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
 		// price level not exist, insert a new one
 		pl = &PriceLevel{price, []OrderPart{{id, time, qty, 0, 0}}}
 		if !q.AddPriceLevel(pl) {
-			return pl, fmt.Errorf("Failed to insert order %s at price %d", id, price)
+			return pl, fmt.Errorf("Failed to insert order %s at price %f", id, price)
 		}
 		return pl, nil
 	} else {
@@ -223,11 +231,11 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 }
 
 //TODO: InsertOrder and RemoveOrder should be faster if done in batch with multiple orders
-func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price int64) (OrderPart, error) {
+func (ob *OrderBookOnULList) RemoveOrder(id string, side int8, price int64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
-		return OrderPart{}, fmt.Errorf("order price %d doesn't exist at side %d.", price, side)
+		return OrderPart{}, fmt.Errorf("order price %f doesn't exist at side %d.", price, side)
 	}
 	op, total, ok := pl.removeOrder(id)
 	if ok != nil {
@@ -240,7 +248,7 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price int64) (Orde
 	return op, ok
 }
 
-func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int) int {
+func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
 	q := ob.getSideQueue(side)
 	if q.DeletePriceLevel(price) {
 		return 1
@@ -248,7 +256,7 @@ func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int) int {
 	return 0
 }
 
-func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iter func(price int64, buyTotal int64, sellTotal int64)) {
+func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iter func(price float64, buyTotal float64, sellTotal float64)) {
 
 }
 
@@ -269,11 +277,11 @@ func (l *SellPriceLevel) Less(than bt.Item) bool {
 }
 
 /*
-func (l *BuyPriceLevel) addOrder(id string, time uint64, qty int64) (int64, error) {
+func (l *BuyPriceLevel) addOrder(id string, time int64, qty int64) (int64, error) {
 	return l.Price.addOrder(id, time, qty)
 } */
 
-func newPriceLevelBySide(price int64, orders []OrderPart, side int) PriceLevelInterface {
+func newPriceLevelBySide(price int64, orders []OrderPart, side int8) PriceLevelInterface {
 	switch side {
 	case BUYSIDE:
 		return &BuyPriceLevel{PriceLevel{price, orders}}
@@ -283,7 +291,7 @@ func newPriceLevelBySide(price int64, orders []OrderPart, side int) PriceLevelIn
 	return &BuyPriceLevel{PriceLevel{price, orders}}
 }
 
-func newPriceLevelKey(price int64, side int) PriceLevelInterface {
+func newPriceLevelKey(price int64, side int8) PriceLevelInterface {
 	switch side {
 	case BUYSIDE:
 		return &BuyPriceLevel{PriceLevel{Price: price}}
@@ -299,7 +307,7 @@ func NewOrderBookOnBTree(d int) *OrderBookOnBTree {
 	return &OrderBookOnBTree{bt.New(8), bt.New(8)}
 }
 
-func (ob *OrderBookOnBTree) getSideQueue(side int) *bt.BTree {
+func (ob *OrderBookOnBTree) getSideQueue(side int8) *bt.BTree {
 	switch side {
 	case BUYSIDE:
 		return ob.buyQueue
@@ -330,7 +338,7 @@ func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel, bu
 	if !ok {
 		return 0
 	}
-	var p2, p1 int64 = buyTop.Price, sellTop.Price
+	var p2, p1 float64 = buyTop.Price, sellTop.Price
 	if compareBuy(p2, p1) < 0 { //p2 < p1
 		return 0 // not overlapped
 	}
@@ -356,7 +364,7 @@ func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel, bu
 	return len(*overlapped)
 }
 
-func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
+func toPriceLevel(pi PriceLevelInterface, side int8) *PriceLevel {
 	switch side {
 	case BUYSIDE:
 		if pl, ok := pi.(*BuyPriceLevel); ok {
@@ -370,7 +378,7 @@ func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
 	return nil
 }
 
-func printOrderQueueString(q *bt.BTree, side int) string {
+func printOrderQueueString(q *bt.BTree, side int8) string {
 	var buffer bytes.Buffer
 	q.Ascend(func(i bt.Item) bool {
 		buffer.WriteString(fmt.Sprintf("%v, ", toPriceLevel(i.(PriceLevelInterface), side)))
@@ -379,7 +387,7 @@ func printOrderQueueString(q *bt.BTree, side int) string {
 	return buffer.String()
 }
 
-func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error) {
+func (ob *OrderBookOnBTree) InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 
 	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
@@ -400,11 +408,11 @@ func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price 
 
 }
 
-func (ob *OrderBookOnBTree) RemoveOrder(id string, side int, price int64) (OrderPart, error) {
+func (ob *OrderBookOnBTree) RemoveOrder(id string, side int8, price int64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
 	var pl bt.Item
 	if pl = q.Get(newPriceLevelKey(price, side)); pl == nil {
-		return OrderPart{}, fmt.Errorf("order price %d doesn't exist at side %d.", price, side)
+		return OrderPart{}, fmt.Errorf("order price %f doesn't exist at side %d.", price, side)
 	}
 	if pl2, ok := pl.(PriceLevelInterface); !ok {
 		return OrderPart{}, errors.New("Severe error: Wrong type item inserted into OrderBook")
