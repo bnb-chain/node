@@ -21,8 +21,8 @@ import (
 
 	"github.com/BiJie/BinanceChain/app"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
-	icocmd "github.com/BiJie/BinanceChain/plugins/ico/commands"
-	"github.com/BiJie/BinanceChain/types"
+	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // rootCmd is the entry point for this binary
@@ -54,7 +54,7 @@ func main() {
 	// start with commands common to basecoin
 	rootCmd.AddCommand(
 		client.GetCommands(
-			authcmd.GetAccountCmd("main", cdc, types.GetAccountDecoder(cdc)),
+			authcmd.GetAccountCmd("acc", cdc, types.GetAccountDecoder(cdc)),
 		)...)
 	rootCmd.AddCommand(
 		client.PostCommands(
@@ -92,7 +92,7 @@ func main() {
 		version.VersionCmd,
 	)
 
-	icocmd.AddCommands(rootCmd, cdc)
+	tokencmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))
