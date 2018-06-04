@@ -1,16 +1,18 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
-	"github.com/BiJie/BinanceChain/plugins/ico"
+	"math/big"
+
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/commands"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"math/big"
 )
 
 const (
@@ -20,8 +22,7 @@ const (
 	flagDecimal   = "decimal"
 )
 
-func issueTokenCmd(cdc *wire.Codec) *cobra.Command {
-	cmdr := Commander{cdc}
+func issueTokenCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "issue",
 		Short: "issue a new token",
@@ -36,15 +37,12 @@ func issueTokenCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-type Commander struct {
-	Cdc *wire.Codec
-}
-
 func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(c.Cdc))
 
 	// get the banker address
 	from, err := ctx.GetFromAddress()
+	fmt.Println(hex.EncodeToString(from))
 	if err != nil {
 		return err
 	}
@@ -93,17 +91,16 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 
 func validateSymbol(symbol string) error {
 	if len(symbol) == 0 {
-		return errors.New("you must provide the symbol of the token")
+		return errors.New("you must provide the symbol of the tokens")
 	}
 
 	//TODO: check symbol uniqueness
 	return nil
 }
 
-// TODO: type amount as big.Int
 func parseSupply(supply string) (*big.Int, error) {
 	if len(supply) == 0 {
-		return nil, errors.New("you must provide total supply of the token")
+		return nil, errors.New("you must provide total supply of the tokens")
 	}
 
 	n := new(big.Int)
@@ -115,10 +112,9 @@ func parseSupply(supply string) (*big.Int, error) {
 	return n, nil
 }
 
-// TODO: type decimal as big.Int
 func parseDecimal(decimal string) (*big.Int, error) {
 	if len(decimal) == 0 {
-		return nil, errors.New("you must provide the decimal of the token")
+		return nil, errors.New("you must provide the decimal of the tokens")
 	}
 
 	n := new(big.Int)
@@ -131,11 +127,6 @@ func parseDecimal(decimal string) (*big.Int, error) {
 }
 
 func BuildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
-	amount := new(big.Int)
-	amount.Mul(amount.Exp(big.NewInt(10), decimal, nil), supply)
-
-	// TODO: will change the type of Coin.Amount to *Big.Int
-	coin := sdk.Coin{Denom: symbol, Amount: amount.Int64()}
-
-	return ico.NewIssueMsg(addr, coin)
+	token := types.Token{Name: name, Symbol: symbol, Supply: supply, Decimals: decimal}
+	return tokens.NewIssueMsg(addr, token)
 }

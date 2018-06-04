@@ -1,25 +1,25 @@
-package ico
+package tokens
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 
+	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-
 type IssueMsg struct {
-	Banker  sdk.Address `json:"banker"`
-	Coin    sdk.Coin	`json:"coin"`
+	Owner sdk.Address `json:"owner"`
+	Token types.Token   `json:"coin"`
 }
 
 // NewIssueMsg - construct arbitrary multi-in, multi-out send msg.
-func NewIssueMsg(banker sdk.Address, coin sdk.Coin) IssueMsg {
-	return IssueMsg{Banker: banker, Coin: coin}
+func NewIssueMsg(owner sdk.Address, token types.Token) IssueMsg {
+	return IssueMsg{Owner: owner, Token: token}
 }
 
 // Implements Msg.
-func (msg IssueMsg) Type() string { return "ico" }
+func (msg IssueMsg) Type() string { return "tokens" }
 
 // Implements Msg.
 func (msg IssueMsg) ValidateBasic() sdk.Error {
@@ -28,7 +28,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 }
 
 func (msg IssueMsg) String() string {
-	return fmt.Sprintf("IssueMsg{%v#%v}", msg.Banker, msg.Coin)
+	return fmt.Sprintf("IssueMsg{%v#%v}", msg.Owner, msg.Token)
 }
 
 // Implements Msg.
@@ -47,5 +47,5 @@ func (msg IssueMsg) GetSignBytes() []byte {
 
 // Implements Msg.
 func (msg IssueMsg) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.Banker}
+	return []sdk.Address{msg.Owner}
 }
