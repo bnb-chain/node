@@ -1,9 +1,10 @@
 package matcheng
 
 import (
+	"errors"
 	"fmt"
 
-	. "github.com/google/btree"
+	bt "github.com/google/btree"
 )
 
 // import ""
@@ -18,18 +19,19 @@ const PRECISION = 0.00000001
 
 type OrderPart struct {
 	id   string
-	time uint
+	time uint64
 	qty  float64
 }
 
-type OrderQueue struct {
-	totalQty float64
-	orders   []OrderPart
+type PriceLevel struct {
+	Price  float64
+	orders []OrderPart
 }
 
-type PriceLevel struct {
-	Price float64
-	queue OrderQueue
+type PriceLevelInterface interface {
+	addOrder(id string, time uint64, qty float64) (int, error)
+	removeOrder(id string) (OrderPart, int, error)
+	Less(than bt.Item) bool
 }
 
 func compareBuy(p1 float64, p2 float64) int {
@@ -49,61 +51,63 @@ func compareSell(p1 float64, p2 float64) int {
 }
 
 func newPriceLevel(price float64, orders []OrderPart) *PriceLevel {
-	t := 0.0
-	for _, o := range orders {
-		t += o.qty
-	}
-	return &PriceLevel{price, OrderQueue{t, orders}}
+	return &PriceLevel{price, orders}
 }
 
 //addOrder would implicitly called with sequence of 'time' parameter
-func (l *PriceLevel) addOrder(id string, time uint, qty float64) (float64, error) {
+func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
-	for _, o := range l.queue.orders {
+	for _, o := range l.orders {
 		if o.id == id {
 			return 0, fmt.Errorf("Order %s has existed in the price level.", id)
 		}
 	}
-	l.queue.totalQty += qty
-	l.queue.orders = append(l.queue.orders, OrderPart{id, time, qty})
-	return l.queue.totalQty, nil
+	l.orders = append(l.orders, OrderPart{id, time, qty})
+	return len(l.orders), nil
 
 }
 
-func (l *PriceLevel) removeOrder(id string) (OrderPart, float64, error) {
-	for i, o := range l.queue.orders {
+func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
+	for i, o := range l.orders {
 		if o.id == id {
-			l.queue.orders = append(l.queue.orders[:i], l.queue.orders[i+1])
-			l.queue.totalQty -= o.qty
-			return o, l.queue.totalQty, nil
+			l.orders = append(l.orders[:i], l.orders[i+1])
+			return o, len(l.orders), nil
 		}
 	}
 	// not found
-	return OrderPart{}, l.queue.totalQty, fmt.Errorf("order %s doesn't exist.", id)
+	return OrderPart{}, len(l.orders), fmt.Errorf("order %s doesn't exist.", id)
+}
+
+type OverLappedLevel struct {
+	Price      float64
+	BuyOrders  []OrderPart
+	SellOrders []OrderPart
+	SellTotal  float64
+	BuyTotal   float64
+	Executions float64
+	Surplus    float64
 }
 
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
 // It can be implemented in different structures but here a fast unrolled-linked list,
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.
 type OrderBookInterface interface {
-	GetOverlappedRange() []PriceLevel
+	GetOverlappedRange(overlapped []OverLappedLevel) int
 	InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error)
 	RemoveOrder(id string, side int, price float64) (OrderPart, error)
 }
 
 type OrderBookOnULList struct {
-	buyQueue   *ULList
-	sellQueue  *ULList
-	overlapped []PriceLevel
+	buyQueue  *ULList
+	sellQueue *ULList
 }
 
 type OrderBookOnBTree struct {
-	buyQueue   *BTree
-	sellQueue  *BTree
-	overlapped []PriceLevel
+	buyQueue  *bt.BTree
+	sellQueue *bt.BTree
 }
 
-func (ob *OrderBookULList) getSideQueue(side int) *ULList {
+func (ob *OrderBookOnULList) getSideQueue(side int) *ULList {
 	switch side {
 	case BUYSIDE:
 		return ob.buyQueue
@@ -113,27 +117,26 @@ func (ob *OrderBookULList) getSideQueue(side int) *ULList {
 	return nil
 }
 
-func NewOrderBookOnULList(d int) *OrderBook {
+func NewOrderBookOnULList(d int) *OrderBookOnULList {
 	//TODO: find out the best degree
 	// 16 is my magic number, hopefully the real overlapped levels are less
-	return &OrderBook{NewULList(4096, 16, compareBuy),
-		NewULList(4096, 16, compareSell),
-		make([]PriceLevel, 16)}
+	return &OrderBookOnULList{NewULList(4096, 16, compareBuy),
+		NewULList(4096, 16, compareSell)}
 }
 
-func (ob *OrderBookULList) GetOverlappedRange() []PriceLevel {
-	return ob.overlapped
+func (ob *OrderBookOnULList) GetOverlappedRange(overlapped []OverLappedLevel) int {
+	return 0
 }
 
-func (ob *OrderBookULList) InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error) {
+func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
 		// price level not exist, insert a new one
-		pl = newPriceLevel(price, []OrderPart{OrderPart{id, time, qty}})
+		pl = newPriceLevel(price, []OrderPart{{id, time, qty}})
 	} else {
-		if _, e := pl.addOrder(id, time, qty); e != nil {
-			return pl, e
+		if _, err := pl.addOrder(id, time, qty); err != nil {
+			return pl, err
 		}
 	}
 	if !q.SetPriceLevel(pl) {
@@ -157,4 +160,121 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (Or
 		q.DeletePriceLevel(pl.Price)
 	}
 	return op, ok
+}
+
+type BuyPriceLevel struct {
+	PriceLevel
+}
+
+type SellPriceLevel struct {
+	PriceLevel
+}
+
+func (l BuyPriceLevel) Less(than bt.Item) bool {
+	return (than.(BuyPriceLevel).Price - l.Price) >= PRECISION
+}
+
+func (l SellPriceLevel) Less(than bt.Item) bool {
+	return (l.Price - than.(SellPriceLevel).Price) >= PRECISION
+}
+
+/*
+func (l *BuyPriceLevel) addOrder(id string, time uint64, qty float64) (float64, error) {
+	return l.Price.addOrder(id, time, qty)
+} */
+
+func newPriceLevelBySide(price float64, orders []OrderPart, side int) PriceLevelInterface {
+	switch side {
+	case BUYSIDE:
+		return &BuyPriceLevel{PriceLevel{price, orders}}
+	case SELLSIDE:
+		return &SellPriceLevel{PriceLevel{price, orders}}
+	}
+	return &BuyPriceLevel{PriceLevel{price, orders}}
+}
+
+func newPriceLevelKey(price float64, side int) PriceLevelInterface {
+	switch side {
+	case BUYSIDE:
+		return &BuyPriceLevel{PriceLevel{Price: price}}
+	case SELLSIDE:
+		return &SellPriceLevel{PriceLevel{Price: price}}
+	}
+	return &BuyPriceLevel{PriceLevel{Price: price}}
+}
+
+func NewOrderBookOnBTree(d int) *OrderBookOnBTree {
+	//TODO: find out the best degree
+	// 16 is my magic number, hopefully the real overlapped levels are less
+	return &OrderBookOnBTree{bt.New(8), bt.New(8)}
+}
+
+func (ob *OrderBookOnBTree) getSideQueue(side int) *bt.BTree {
+	switch side {
+	case BUYSIDE:
+		return ob.buyQueue
+	case SELLSIDE:
+		return ob.sellQueue
+	}
+	return nil
+}
+
+func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped []OverLappedLevel) int {
+	return 0
+}
+
+func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
+	switch side {
+	case BUYSIDE:
+		if pl, ok := pi.(*BuyPriceLevel); ok {
+			return &pl.PriceLevel
+		}
+	case SELLSIDE:
+		if pl, ok := pi.(*SellPriceLevel); ok {
+			return &pl.PriceLevel
+		}
+	}
+	return nil
+}
+
+func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error) {
+	q := ob.getSideQueue(side)
+	var pl PriceLevelInterface
+	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
+		// price level not exist, insert a new one
+		pl = newPriceLevelBySide(price, []OrderPart{{id, time, qty}}, side)
+	} else {
+		if pl2, ok := pl.(PriceLevelInterface); !ok {
+			return nil, errors.New("Severe error: Wrong type item inserted into OrderBook")
+		} else {
+			if _, e := pl2.addOrder(id, time, qty); e != nil {
+				return toPriceLevel(pl2, side), e
+			}
+		}
+	}
+	if q.ReplaceOrInsert(pl) == nil {
+		return toPriceLevel(pl, side), fmt.Errorf("Failed to insert order %s at price %f", id, price)
+	}
+	return toPriceLevel(pl, side), nil
+}
+
+func (ob *OrderBookOnBTree) RemoveOrder(id string, side int, price float64) (OrderPart, error) {
+	q := ob.getSideQueue(side)
+	var pl PriceLevelInterface
+	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
+		return OrderPart{}, fmt.Errorf("order price %f doesn't exist at side %d.", price, side)
+	}
+	if pl2, ok := pl.(PriceLevelInterface); !ok {
+		return OrderPart{}, errors.New("Severe error: Wrong type item inserted into OrderBook")
+	} else {
+		op, total, err := pl2.removeOrder(id)
+		if err != nil {
+			return op, err
+		}
+		//price level is gone
+		if total == 0 {
+			q.Delete(pl)
+		}
+		return op, err
+	}
 }

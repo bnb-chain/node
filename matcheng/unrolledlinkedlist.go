@@ -52,14 +52,14 @@ func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 	return len(b.elements)
 }
 
-func (b *bucket) delete(p float64) *PriceLevel {
+func (b *bucket) delete(p float64, compare Comparator) *PriceLevel {
 	i := sort.Search(len(b.elements), func(i int) bool { return compare(b.elements[i].Price, p) >= 0 })
 	if i == len(b.elements) { // not found
 		return nil
 	}
 	if compare(b.elements[i].Price, p) == 0 {
 		pl := &b.elements[i]
-		b.element = append(b.elements[:i], b.elements[i+1:]...)
+		b.elements = append(b.elements[:i], b.elements[i+1:]...)
 		return pl
 	}
 	return nil
@@ -204,7 +204,7 @@ func (ull *ULList) DeletePriceLevel(price float64) bool {
 		//not found
 		return false
 	}
-	if last.delete(price) != nil {
+	if last.delete(price, ull.compare) != nil {
 		if last.size() == 0 {
 			// bucket is empty, remove from list
 			oldNext := last.next
