@@ -79,22 +79,25 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 }
 
 type OverLappedLevel struct {
-	Price      float64
-	BuyOrders  []OrderPart
-	SellOrders []OrderPart
-	SellTotal  float64
-	BuyTotal   float64
-	Executions float64
-	Surplus    float64
+	Price                 float64
+	BuyOrders             []OrderPart
+	SellOrders            []OrderPart
+	SellTotal             float64
+	AccumulatedSell       float64
+	BuyTotal              float64
+	AccumulatedBuy        float64
+	AccumulatedExecutions float64
+	BuySellSurplus        float64
 }
 
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
 // It can be implemented in different structures but here a fast unrolled-linked list,
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.
 type OrderBookInterface interface {
-	GetOverlappedRange(overlapped []OverLappedLevel) int
+	GetOverlappedRange(overlapped *[]OverLappedLevel) int
 	InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error)
 	RemoveOrder(id string, side int, price float64) (OrderPart, error)
+	ShowDepth(numOfLevels int, iter func(price float64, buyTotal float64, sellTotal float64))
 }
 
 type OrderBookOnULList struct {
@@ -124,8 +127,62 @@ func NewOrderBookOnULList(d int) *OrderBookOnULList {
 		NewULList(4096, 16, compareSell)}
 }
 
-func (ob *OrderBookOnULList) GetOverlappedRange(overlapped []OverLappedLevel) int {
-	return 0
+func mergeLevels(buyLevels []PriceLevel, sellLevels []PriceLevel, overlapped *[]OverLappedLevel) {
+	var i, j int = 0, len(sellLevels) - 1
+	for i < len(buyLevels) && j >= 0 {
+		b, s := buyLevels[i].Price, sellLevels[j].Price
+		switch compareBuy(b, s) {
+		case 0:
+			*overlapped = append(*overlapped, OverLappedLevel{Price: b,
+				BuyOrders:  buyLevels[i].orders,
+				SellOrders: sellLevels[j].orders})
+			i++
+			j--
+		case 1:
+			*overlapped = append(*overlapped, OverLappedLevel{Price: s,
+				SellOrders: sellLevels[j].orders})
+			j--
+		case -1:
+			*overlapped = append(*overlapped, OverLappedLevel{Price: b,
+				BuyOrders: buyLevels[i].orders})
+			i++
+		}
+	}
+	for i < len(buyLevels) {
+		b := buyLevels[i].Price
+		*overlapped = append(*overlapped, OverLappedLevel{Price: b,
+			BuyOrders: buyLevels[i].orders})
+		i++
+	}
+	for j >= 0 {
+		s := sellLevels[i].Price
+		*overlapped = append(*overlapped, OverLappedLevel{Price: s,
+			SellOrders: sellLevels[j].orders})
+		j--
+	}
+}
+
+func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel) int {
+	//clear return
+	*overlapped = (*overlapped)[:0]
+	// we may need more buffer to prevent memory allocating
+	buyTop := ob.buyQueue.GetTop()
+	if buyTop == nil { // one side market
+		return 0
+	}
+	sellTop := ob.sellQueue.GetTop()
+	if sellTop == nil { // on side market
+		return 0
+	}
+	var p2, p1 float64 = buyTop.Price, sellTop.Price
+	if p2 < p1 {
+		return 0 // not overlapped
+	}
+	buyBuf, sellBuf := make([]PriceLevel, 16), make([]PriceLevel, 16)
+	buyLevels := ob.buyQueue.GetPriceRange(p2, p1, &buyBuf)
+	sellLevels := ob.sellQueue.GetPriceRange(p1, p2, &sellBuf)
+	mergeLevels(buyLevels, sellLevels, overlapped)
+	return len(*overlapped)
 }
 
 func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error) {
@@ -219,8 +276,50 @@ func (ob *OrderBookOnBTree) getSideQueue(side int) *bt.BTree {
 	return nil
 }
 
-func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped []OverLappedLevel) int {
-	return 0
+func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel) int {
+	//clear return
+	*overlapped = (*overlapped)[:0]
+	bI := ob.buyQueue.Min()
+	if bI == nil {
+		return 0
+	}
+	buyTop, ok := bI.(BuyPriceLevel)
+	if !ok {
+		return 0
+	}
+	sI := ob.sellQueue.Min()
+	if sI == nil {
+		return 0
+	}
+	sellTop, ok := ob.sellQueue.Min().(SellPriceLevel)
+	if !ok {
+		return 0
+	}
+	var p2, p1 float64 = buyTop.Price, sellTop.Price
+	if p2 < p1 {
+		return 0 // not overlapped
+	}
+	buyLevels := make([]PriceLevel, 0, 16)
+	ob.buyQueue.AscendRange(BuyPriceLevel{PriceLevel{Price: p2}}, BuyPriceLevel{PriceLevel{Price: p1}},
+		func(i bt.Item) bool {
+			p, ok := i.(BuyPriceLevel)
+			if ok {
+				buyLevels = append(buyLevels, p.PriceLevel)
+			}
+			return true
+		})
+	sellLevels := make([]PriceLevel, 0, 16)
+	ob.sellQueue.AscendRange(BuyPriceLevel{PriceLevel{Price: p1}}, BuyPriceLevel{PriceLevel{Price: p2}},
+		func(i bt.Item) bool {
+			p, ok := i.(BuyPriceLevel)
+			if ok {
+				sellLevels = append(sellLevels, p.PriceLevel)
+			}
+			return true
+		})
+
+	mergeLevels(buyLevels, sellLevels, overlapped)
+	return len(*overlapped)
 }
 
 func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
