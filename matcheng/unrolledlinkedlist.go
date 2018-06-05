@@ -37,6 +37,30 @@ func (b *bucket) get(p float64, compare Comparator) *PriceLevel {
 	}
 }
 
+func (b *bucket) getRange(p1 float64, p2 float64, compare Comparator, buffer *[]PriceLevel) int {
+	// return -1 means the price is out of range
+	if len(b.elements) == 0 { // should never reach here
+		return -1
+	}
+	if compare(b.elements[0].Price, p2) < 0 {
+		return -1
+	}
+	if compare(b.elements[len(b.elements)-1].Price, p1) > 0 {
+		return 0
+	}
+	var i int
+	for _, p := range b.elements {
+		if compare(p2, p.Price) > 0 {
+			return -1
+		}
+		if compare(p1, p.Price) >= 0 {
+			*buffer = append(*buffer, p)
+			i++
+		}
+	}
+	return i
+}
+
 func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 	i := sort.Search(len(b.elements), func(i int) bool { return compare(b.elements[i].Price, p.Price) >= 0 })
 	if i == len(b.elements) { // not found
@@ -223,8 +247,25 @@ func (ull *ULList) DeletePriceLevel(price float64) bool {
 	return false
 }
 
-func (ull *ULList) GetPriceRange(p1 float64, p2 float64, buffer []PriceLevel) []PriceLevel {
-	return nil
+func (ull *ULList) GetTop() *PriceLevel {
+	return ull.begin.head()
+}
+
+func (ull *ULList) GetPriceRange(p1 float64, p2 float64, buffer *[]PriceLevel) []PriceLevel {
+	ret := (*buffer)[:0]
+	if ull.compare(p1, p2) < 0 || len(ull.begin.elements) <= 0 {
+		return ret // empty slice
+	}
+	if ull.compare(ull.begin.head().Price, p2) < 0 {
+		return ret
+	}
+
+	for i := ull.begin; i != ull.dend; i = i.next {
+		if i.getRange(p1, p2, ull.compare, buffer) < 0 {
+			return *buffer
+		}
+	}
+	return *buffer
 }
 
 func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
