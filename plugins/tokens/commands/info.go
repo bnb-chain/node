@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -31,7 +32,7 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 		return errors.New("you must provide the symbol")
 	}
 
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 
 	res, err := ctx.Query(key, common.TokenStoreName)
 	if err != nil {

@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -32,7 +34,7 @@ func issueTokenCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().String(flagTokenName, "", "name of the new token")
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the new token")
 	cmd.Flags().StringP(flagSupply, "n", "", "total supply of the new token")
-	cmd.Flags().String(flagDecimal, "", "")
+	cmd.Flags().String(flagDecimal, "0", "the decimal points of the token")
 
 	return cmd
 }
@@ -57,6 +59,8 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	symbol = strings.ToUpper(symbol)
 
 	supplyStr := viper.GetString(flagSupply)
 	supply, err := parseSupply(supplyStr)
@@ -94,7 +98,10 @@ func validateSymbol(symbol string) error {
 		return errors.New("you must provide the symbol of the tokens")
 	}
 
-	//TODO: check symbol uniqueness
+	if !utils.IsAlphaNum(symbol) {
+		return errors.New("the symbol should be alphanumeric")
+	}
+
 	return nil
 }
 
@@ -105,7 +112,7 @@ func parseSupply(supply string) (*big.Int, error) {
 
 	n := new(big.Int)
 	n, ok := n.SetString(supply, 10)
-	if !ok {
+	if !ok || n.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("invalid supply number")
 	}
 
@@ -119,14 +126,14 @@ func parseDecimal(decimal string) (*big.Int, error) {
 
 	n := new(big.Int)
 	n, ok := n.SetString(decimal, 10)
-	if !ok {
-		return nil, errors.New("invalid supply number")
+	if !ok || n.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("invalid decimal number")
 	}
 
 	return n, nil
 }
 
 func buildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
-	token := types.Token{Name: name, Symbol: symbol, Supply: types.NewNumber(supply), Decimals: types.NewNumber(decimal)}
+	token := types.Token{Name: name, Symbol: symbol, Supply: types.NewNumber(supply), Decimal: types.NewNumber(decimal)}
 	return tokens.NewIssueMsg(addr, token)
 }
