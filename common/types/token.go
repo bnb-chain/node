@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// TODO: to make the size of block header fixed and predictable, we may need change to type of "Supply" and "Decimals"
 type Token struct {
 	Name     string `json:"Name"`
 	Symbol   string `json:"Symbol"`
