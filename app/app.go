@@ -94,7 +94,6 @@ func MakeCodec() *wire.Codec {
 	// Register Msgs
 	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
 	cdc.RegisterConcrete(bank.SendMsg{}, "basecoin/Send", nil)
-	//cdc.RegisterConcrete(bank.IssueMsg{}, "basecoin/Issue", nil)
 
 	cdc.RegisterConcrete(dex.MakeOfferMsg{}, "dex/MakeOfferMsg", nil)
 	cdc.RegisterConcrete(dex.FillOfferMsg{}, "dex/FillOfferMsg", nil)

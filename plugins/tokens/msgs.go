@@ -10,7 +10,7 @@ import (
 
 type IssueMsg struct {
 	Owner sdk.Address `json:"owner"`
-	Token types.Token   `json:"coin"`
+	Token types.Token `json:"token"`
 }
 
 // NewIssueMsg - construct arbitrary multi-in, multi-out send msg.
