@@ -15,7 +15,7 @@ const (
 )
 
 // PRECISION is the last effective decimal digit of the price of currency pair
-const PRECISION = 0.00000001
+const PRECISION = 0.000000005
 
 type OrderPart struct {
 	id   string
