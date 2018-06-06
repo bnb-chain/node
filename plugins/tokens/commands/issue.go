@@ -71,7 +71,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := BuildMsg(from, name, symbol, supply, decimal)
+	msg := buildMsg(from, name, symbol, supply, decimal)
 
 	// default to next sequence number if none provided
 	ctx, err = context.EnsureSequence(ctx)
@@ -126,7 +126,7 @@ func parseDecimal(decimal string) (*big.Int, error) {
 	return n, nil
 }
 
-func BuildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
-	token := types.Token{Name: name, Symbol: symbol, Supply: supply, Decimals: decimal}
+func buildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
+	token := types.Token{Name: name, Symbol: symbol, Supply: types.NewNumber(supply), Decimals: types.NewNumber(decimal)}
 	return tokens.NewIssueMsg(addr, token)
 }

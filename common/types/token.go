@@ -2,14 +2,13 @@ package types
 
 import (
 	"fmt"
-	"math/big"
 )
 
 type Token struct {
-	Name     string   `json:"Name"`
-	Symbol   string   `json:"Symbol"`
-	Supply   *big.Int `json:"Supply"`
-	Decimals *big.Int `json:"Decimals"`
+	Name     string `json:"Name"`
+	Symbol   string `json:"Symbol"`
+	Supply   Number `json:"Supply"`
+	Decimals Number `json:"Decimals"`
 }
 
 func (token Token) String() string {
