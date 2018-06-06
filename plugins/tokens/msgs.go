@@ -18,12 +18,16 @@ func NewIssueMsg(owner sdk.Address, token types.Token) IssueMsg {
 	return IssueMsg{Owner: owner, Token: token}
 }
 
-// Implements Msg.
 func (msg IssueMsg) Type() string { return "tokens" }
 
-// Implements Msg.
+// ValidateBasic does a simple validation check that
+// doesn't require access to any other information.
 func (msg IssueMsg) ValidateBasic() sdk.Error {
-	// TODO
+	err := msg.Token.Validate()
+	if err != nil {
+		return sdk.ErrInvalidCoins(err.Error())
+	}
+
 	return nil
 }
 
@@ -31,12 +35,10 @@ func (msg IssueMsg) String() string {
 	return fmt.Sprintf("IssueMsg{%v#%v}", msg.Owner, msg.Token)
 }
 
-// Implements Msg.
 func (msg IssueMsg) Get(key interface{}) (value interface{}) {
 	return nil
 }
 
-// Implements Msg.
 func (msg IssueMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
