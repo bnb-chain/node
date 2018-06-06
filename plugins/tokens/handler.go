@@ -38,7 +38,8 @@ func handleIssueToken(ctx sdk.Context, tokenMapper Mapper, keeper bank.CoinKeepe
 
 	// amount = supply * 10^decimals
 	amount := new(big.Int)
-	amount.Mul(amount.Exp(big.NewInt(10), token.Decimals, nil), token.Supply)
+	// TODO: maybe need to wrap the big.Int methods
+	amount.Mul(amount.Exp(big.NewInt(10), token.Decimals.ToBigInt(), nil), token.Supply.ToBigInt())
 	// TODO: need to fix Coin#Amount type to big.Int
 	_, sdkError := keeper.AddCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: token.Symbol, Amount: amount.Int64()}))
 	if sdkError != nil {

@@ -11,5 +11,6 @@ func RegisterTypes(cdc *wire.Codec) {
 	cdc.RegisterInterface((*sdk.Account)(nil), nil)
 	cdc.RegisterConcrete(&AppAccount{}, "bnbchain/Account", nil)
 
-	cdc.RegisterConcrete(&Token{}, "bnbchain/token", nil)
+	cdc.RegisterConcrete(Token{}, "bnbchain/Token", nil)
+	cdc.RegisterConcrete(Number{}, "bnbchain/Number", nil)
 }
