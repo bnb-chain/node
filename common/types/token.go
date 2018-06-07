@@ -21,11 +21,12 @@ func ValidateSymbol(symbol string) error {
 
 // TODO: to make the size of block header fixed and predictable, we may need change to type of "Supply" and "Decimal"
 // and we should decide the range of the two variables.
+// the length of Name and Symbol also should be limited
 type Token struct {
 	Name    string `json:"Name"`
 	Symbol  string `json:"Symbol"`
-	Supply  Number `json:"Supply"`
-	Decimal Number `json:"Decimal"`
+	Supply  int64  `json:"Supply"`
+	Decimal int8   `json:"Decimal"`
 }
 
 func (token *Token) Validate() error {

@@ -1,7 +1,7 @@
 package issue
 
 import (
-	"math/big"
+	"math"
 	"reflect"
 	"strings"
 
@@ -36,11 +36,10 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Coi
 	}
 
 	// amount = supply * 10^decimals
-	amount := new(big.Int)
-	// TODO: maybe need to wrap the big.Int methods
-	amount.Mul(amount.Exp(big.NewInt(10), token.Decimal.ToBigInt(), nil), token.Supply.ToBigInt())
 	// TODO: need to fix Coin#Amount type to big.Int
-	_, sdkError := keeper.AddCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: token.Symbol, Amount: amount.Int64()}))
+	amount := int64(math.Pow10(int(token.Decimal))) * token.Supply
+	
+	_, sdkError := keeper.AddCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: token.Symbol, Amount: amount}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}
