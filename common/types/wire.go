@@ -5,7 +5,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 )
 
-
 func RegisterTypes(cdc *wire.Codec) {
 	// Register AppAccount
 	cdc.RegisterInterface((*sdk.Account)(nil), nil)

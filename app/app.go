@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/BiJie/BinanceChain/common"
+	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	abci "github.com/tendermint/abci/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -33,7 +34,9 @@ type BasecoinApp struct {
 
 	// Manage getting and setting accounts
 	accountMapper sdk.AccountMapper
-	tokenMapper   tokens.Mapper
+	tokenMapper   tokenStore.Mapper
+	coinKeeper    bank.CoinKeeper
+	dexKeeper     dex.Keeper
 
 	// Handle fees
 	feeHandler sdk.FeeHandler
@@ -57,26 +60,22 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 		&types.AppAccount{},    // prototype
 	).Seal()
 
-	app.tokenMapper = tokens.NewTokenMapper(cdc, common.TokenStoreKey)
+	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
 
 	// Add handlers.
-	coinKeeper := bank.NewCoinKeeper(app.accountMapper)
-	dexKeeper := dex.NewKeeper(common.MainStoreKey, coinKeeper)
-	ibcMapper := ibc.NewIBCMapper(app.cdc, common.IBCStoreKey)
-	stakeKeeper := simplestake.NewKeeper(common.StakingStoreKey, coinKeeper)
-	app.Router().
-		AddRoute("bank", bank.NewHandler(coinKeeper)).
-		AddRoute("tokens", tokens.NewHandler(app.tokenMapper, coinKeeper)).
-		AddRoute("dex", dex.NewHandler(dexKeeper)).
-		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
-		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+	app.coinKeeper = bank.NewCoinKeeper(app.accountMapper)
+	app.dexKeeper = dex.NewKeeper(common.MainStoreKey, app.coinKeeper)
+	// Currently we do not need the ibc and staking part
+	// ibcMapper := ibc.NewIBCMapper(app.cdc, common.IBCStoreKey)
+	// stakeKeeper := simplestake.NewKeeper(common.StakingStoreKey, coinKeeper)
+	app.registerHandlers()
 
 	// Define the feeHandler.
 	app.feeHandler = auth.BurnFeeHandler
 
 	// Initialize BaseApp.
 	app.SetTxDecoder(app.txDecoder)
-	app.SetInitChainer(app.initChainerFn(dexKeeper))
+	app.SetInitChainer(app.initChainerFn())
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.IBCStoreKey, common.StakingStoreKey)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeHandler))
 	err := app.LoadLatestVersion(common.MainStoreKey)
@@ -85,6 +84,17 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 	}
 
 	return app
+}
+
+func (app *BasecoinApp) registerHandlers() {
+	app.Router().
+		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
+		AddRoute("dex", dex.NewHandler(app.dexKeeper))
+	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
+	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+	for route, handler := range tokens.Routes(app.tokenMapper, app.coinKeeper) {
+		app.Router().AddRoute(route, handler)
+	}
 }
 
 // Custom tx codec
@@ -129,7 +139,7 @@ func (app *BasecoinApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 }
 
 // custom logic for democoin initialization
-func (app *BasecoinApp) initChainerFn(dexKeeper dex.Keeper) sdk.InitChainer {
+func (app *BasecoinApp) initChainerFn() sdk.InitChainer {
 	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 
@@ -150,7 +160,7 @@ func (app *BasecoinApp) initChainerFn(dexKeeper dex.Keeper) sdk.InitChainer {
 		}
 
 		// Application specific genesis handling
-		err = dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
+		err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			//	return sdk.ErrGenesisParse("").TraceCause(err, "")

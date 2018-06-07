@@ -1,14 +1,13 @@
 package commands
 
 import (
-
 	"github.com/spf13/cobra"
 )
 
 var listTokensCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all tokens",
-	Long: "Return a list of all tokens",
+	Long:  "Return a list of all tokens",
 	//RunE: runListCmd,
 }
 
