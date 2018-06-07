@@ -1,6 +1,7 @@
 package burn
 
 import (
+	"math"
 	"reflect"
 	"strings"
 
@@ -27,30 +28,32 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Coin
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
-	_, err := tokenMapper.GetToken(ctx, symbol)
+	token, err := tokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
+
+	burnAmount = int64(math.Pow10(int(token.Decimal))) * burnAmount
 
 	// TODO: the third param can be removed...
 	// TODO: add a function to get balance of the specific token
 	coins := keeper.GetCoins(ctx, msg.Owner, nil)
 	found := false
-	var theToken sdk.Coin
+	var tokenHeld sdk.Coin
 	for _, coin := range coins {
 		if coin.Denom == symbol {
-			theToken = coin
+			tokenHeld = coin
 			found = true
 			break
 		}
 	}
 
-	if !found || theToken.Amount < burnAmount {
+	if !found || tokenHeld.Amount < burnAmount || token.Supply < burnAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
 	_, sdkError := keeper.SubtractCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: burnAmount}))
-	// TODO: update supply
+	tokenMapper.UpdateTokenSupply(ctx, symbol, token.Supply-burnAmount)
 
 	if sdkError != nil {
 		return sdkError.Result()

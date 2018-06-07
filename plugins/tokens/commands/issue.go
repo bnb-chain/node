@@ -3,7 +3,7 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
-	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
@@ -91,35 +91,33 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func parseSupply(supply string) (*big.Int, error) {
+func parseSupply(supply string) (int64, error) {
 	if len(supply) == 0 {
-		return nil, errors.New("you must provide total supply of the tokens")
+		return 0, errors.New("you must provide total supply of the tokens")
 	}
 
-	n := new(big.Int)
-	n, ok := n.SetString(supply, 10)
-	if !ok || n.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("invalid supply number")
+	n, err := strconv.ParseInt(supply, 10, 64)
+	if err != nil || n < 0 {
+		return 0, errors.New("invalid supply number")
 	}
 
 	return n, nil
 }
 
-func parseDecimal(decimal string) (*big.Int, error) {
+func parseDecimal(decimal string) (int8, error) {
 	if len(decimal) == 0 {
-		return nil, errors.New("you must provide the decimal of the tokens")
+		return 0, errors.New("you must provide the decimal of the tokens")
 	}
 
-	n := new(big.Int)
-	n, ok := n.SetString(decimal, 10)
-	if !ok || n.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("invalid decimal number")
+	n, err := strconv.ParseInt(decimal, 10, 8)
+	if err != nil || n < 0 {
+		return 0, errors.New("invalid decimal number")
 	}
 
-	return n, nil
+	return int8(n), nil
 }
 
-func buildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
-	token := types.Token{Name: name, Symbol: symbol, Supply: types.NewNumber(supply), Decimal: types.NewNumber(decimal)}
+func buildMsg(addr sdk.Address, name string, symbol string, supply int64, decimal int8) sdk.Msg {
+	token := types.Token{Name: name, Symbol: symbol, Supply: supply, Decimal: decimal}
 	return issue.NewMsg(addr, token)
 }
