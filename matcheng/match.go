@@ -279,7 +279,7 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 	return true
 }
 
-// Match() return false mean there is orders in the book the current MatchEngine cannot handle
+// Match() return false mean there is orders in the book the current MatchEngine cannot handle.
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 func (me *MatchEng) Match() bool {
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel)
