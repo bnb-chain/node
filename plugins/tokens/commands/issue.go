@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/commands"
@@ -20,7 +19,6 @@ import (
 const (
 	flagSupply    = "supply"
 	flagTokenName = "token-name"
-	flagSymbol    = "symbol"
 	flagDecimal   = "decimal"
 )
 
@@ -93,18 +91,6 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func validateSymbol(symbol string) error {
-	if len(symbol) == 0 {
-		return errors.New("you must provide the symbol of the tokens")
-	}
-
-	if !utils.IsAlphaNum(symbol) {
-		return errors.New("the symbol should be alphanumeric")
-	}
-
-	return nil
-}
-
 func parseSupply(supply string) (*big.Int, error) {
 	if len(supply) == 0 {
 		return nil, errors.New("you must provide total supply of the tokens")
@@ -135,5 +121,5 @@ func parseDecimal(decimal string) (*big.Int, error) {
 
 func buildMsg(addr sdk.Address, name string, symbol string, supply *big.Int, decimal *big.Int) sdk.Msg {
 	token := types.Token{Name: name, Symbol: symbol, Supply: types.NewNumber(supply), Decimal: types.NewNumber(decimal)}
-	return tokens.NewIssueMsg(addr, token)
+	return issue.NewMsg(addr, token)
 }

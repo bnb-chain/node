@@ -1,7 +1,7 @@
-package tokens
+package store
 
 import (
-	"encoding/hex"
+	"fmt"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,6 +14,7 @@ type Mapper interface {
 	Exists(ctx sdk.Context, symbol string) bool
 	GetTokenList(ctx sdk.Context) []types.Token
 	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
+	UpdateToken(ctx sdk.Context, token types.Token) error
 }
 
 type mapper struct {
@@ -21,26 +22,23 @@ type mapper struct {
 	cdc   *wire.Codec
 }
 
-func NewTokenMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
+func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
 	return mapper{
 		key:   key,
 		cdc:   cdc,
 	}
 }
 
-func (m mapper) GetToken(ctx sdk.Context, symbol string) (token types.Token, err error) {
+func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 	store := ctx.KVStore(m.key)
-	key, err := hex.DecodeString(symbol)
-	if err != nil {
-		return
-	}
+	key := []byte(symbol)
 
 	bz := store.Get(key)
 	if bz != nil {
-		token = m.decodeToken(bz)
+		return m.decodeToken(bz), nil
 	}
 
-	return
+	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
 }
 
 func (m mapper) GetTokenList(ctx sdk.Context) []types.Token {
@@ -72,6 +70,33 @@ func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 	store := ctx.KVStore(m.key)
 	value := m.encodeToken(token)
 	store.Set(key, value)
+	return nil
+}
+
+func (m mapper) UpdateToken(ctx sdk.Context, token types.Token) error {
+	symbol := token.Symbol
+	if len(symbol) == 0 {
+		return errors.New("symbol cannot be empty")
+	}
+
+	key := []byte(symbol)
+	store := ctx.KVStore(m.key)
+	bz := store.Get(key)
+	if bz == nil {
+		return errors.New("token does not exist")
+	}
+
+	toBeUpdated := m.decodeToken(bz)
+	// currently, only name and supply can be updated.
+	if len(token.Name) != 0 {
+		toBeUpdated.Name = token.Name
+	}
+
+	if len(token.Supply.Value) !=0 {
+		toBeUpdated.Supply = token.Supply
+	}
+
+	store.Set(key, m.encodeToken(toBeUpdated))
 	return nil
 }
 
