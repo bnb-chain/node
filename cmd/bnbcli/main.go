@@ -21,9 +21,9 @@ import (
 	simplestakingcmd "github.com/cosmos/cosmos-sdk/x/simplestake/commands"
 
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
-	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // rootCmd is the entry point for this binary

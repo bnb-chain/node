@@ -1,37 +1,38 @@
-package tokens
+package issue
 
 import (
 	"math/big"
 	"reflect"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func NewHandler(tokenMapper Mapper, keeper bank.CoinKeeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.CoinKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		switch msg := msg.(type) {
-		case IssueMsg:
+		if msg, ok := msg.(Msg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
-		default:
-			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
-			return sdk.ErrUnknownRequest(errMsg).Result()
 		}
+
+		errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
+		return sdk.ErrUnknownRequest(errMsg).Result()
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper Mapper, keeper bank.CoinKeeper, msg IssueMsg) sdk.Result {
+func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.CoinKeeper, msg Msg) sdk.Result {
 	token := msg.Token
 	token.Symbol = strings.ToUpper(token.Symbol)
 	exists := tokenMapper.Exists(ctx, token.Symbol)
 	if exists {
-		return sdk.Result{ Code:sdk.CodeInvalidCoins }
+		return sdk.Result{Code: sdk.CodeInvalidCoins}
 	}
 
 	err := tokenMapper.NewToken(ctx, token)
 	if err != nil {
-		return sdk.Result{ Code:sdk.CodeInvalidCoins }
+		return sdk.Result{Code: sdk.CodeInvalidCoins}
 	}
 
 	// amount = supply * 10^decimals
