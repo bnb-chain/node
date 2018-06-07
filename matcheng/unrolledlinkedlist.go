@@ -1,6 +1,10 @@
 package matcheng
 
-import "sort"
+import (
+	"bytes"
+	"fmt"
+	"sort"
+)
 
 /* UnrolledLinkedList (ULList) is implemented here to handle the specific exchange order queue requirement:
 1. only handful orders on one of the edges would be touched frequently
@@ -62,16 +66,17 @@ func (b *bucket) getRange(p1 float64, p2 float64, compare Comparator, buffer *[]
 }
 
 func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
-	i := sort.Search(len(b.elements), func(i int) bool { return compare(b.elements[i].Price, p.Price) >= 0 })
-	if i == len(b.elements) { // not found
+	k := len(b.elements)
+	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p.Price) < 0 })
+	if i > 0 && compare(b.elements[i-1].Price, p.Price) == 0 {
+		return 0 // duplicated
+	}
+	if i == k { // not found
 		b.elements = append(b.elements, *p)
 		return len(b.elements)
 	}
-	if compare(b.elements[i].Price, p.Price) == 0 {
-		return 0 // duplicated
-	}
-	b.elements = b.elements[:len(b.elements)+1] //enlarge by 1
-	copy(b.elements[i+1:], b.elements[i:])      //shift by 1
+	b.elements = append(b.elements, b.elements[k-1]) //enlarge by 1
+	copy(b.elements[i+1:], b.elements[i:])           //shift by 1
 	b.elements[i] = *p
 	return len(b.elements)
 }
@@ -108,8 +113,11 @@ type ULList struct {
 }
 
 func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
-	if capacity < int(bucketSize) {
-		capacity = int(bucketSize)
+	if bucketSize <= 0 {
+		return nil
+	}
+	if capacity < bucketSize {
+		capacity = bucketSize
 	}
 	bucketNumber := capacity/bucketSize + 1
 	realCapacity := bucketNumber * bucketSize
@@ -117,7 +125,7 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 	allBuckets := make([]bucket, bucketNumber)
 	allPriceLevels := make([]PriceLevel, realCapacity)
 	var preBucket *bucket = nil
-	for i, j := int(0), int(0); i < bucketNumber; i++ {
+	for i, j := 0, 0; i < bucketNumber; i++ {
 		//TODO: even allocation may not be the most optimised, should try exponential as well
 		allBuckets[i].elements = allPriceLevels[j : j+bucketSize]
 		allBuckets[i].elements = allBuckets[i].elements[:0]
@@ -125,6 +133,8 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 		if preBucket != nil {
 			preBucket.next = &allBuckets[i]
 			preBucket = preBucket.next
+		} else {
+			preBucket = &allBuckets[0]
 		}
 	}
 	//assert preBucket!=nil
@@ -140,6 +150,22 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 		allBuckets}
 }
 
+func (ull *ULList) String() string {
+	var buffer bytes.Buffer
+	var j int
+	for i := ull.begin; i != ull.dend; i = i.next {
+		buffer.WriteString(fmt.Sprintf("Bucket %d{", j))
+		for _, p := range i.elements {
+			buffer.WriteString(fmt.Sprintf("%.8f->%v", p.Price, p.orders))
+		}
+		buffer.WriteString("},")
+		j++
+	}
+	return buffer.String()
+}
+
+// ensureCapacity() gurantees at least one more free bucket to use,
+// otherwise 'double' the size
 func (ull *ULList) ensureCapacity() {
 	if ull.dend == ull.cend { // no empty bucket is available, re-allocate
 		oldBucketNumber := ull.capacity/ull.bucketSize + 1
@@ -150,7 +176,7 @@ func (ull *ULList) ensureCapacity() {
 		ull.allBuckets = make([]bucket, bucketNumber)
 		copy(ull.allBuckets, oldBuckets)
 		newPriceLevels := make([]PriceLevel, deltaBucketNumber*ull.bucketSize)
-		var preBucket *bucket = nil
+		var preBucket *bucket = ull.cend
 		//no need to copy allPriceLevels, since no benefits
 		for i, j := oldBucketNumber, int(0); i < bucketNumber; i++ {
 			ull.allBuckets[i].elements = newPriceLevels[j : j+ull.bucketSize]
@@ -163,14 +189,16 @@ func (ull *ULList) ensureCapacity() {
 			}
 		}
 		preBucket.next = nil
-		ull.dend.next = &ull.allBuckets[oldBucketNumber]
 		ull.cend = preBucket
 	}
 }
 
+//splitBucket() would move one bucket from data end to be after the full
+//bucket, and re-allocate half the PriceLevels to it
 func (ull *ULList) splitBucket(origin *bucket) *bucket {
 	ull.ensureCapacity()
 	//assert(ull.dend!=ull.cend), i.e. there is still avaiable free bucket
+	ull.dend.elements = ull.dend.elements[:0]
 	oldNext := origin.next
 	origin.next = ull.dend
 	ull.dend = ull.dend.next
@@ -189,6 +217,9 @@ func (ull *ULList) Clear() {
 	ull.dend = ull.begin.next // only leave with one bucket
 }
 
+//getBucket return the 'last' bucket which contains price larger (for buy)
+//or smaller (for sell) than the input price. If the price is larger (for buy)
+//or smaller than any bucket head, nil is returned
 func (ull *ULList) getBucket(p float64) *bucket {
 	var last *bucket = nil
 	for b := ull.begin; b != ull.dend; b = b.next {
@@ -276,7 +307,7 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 			switch c {
 			case 0: //head has the price
 				return h
-			case 1: //head is less
+			case -1: //head is larger (for buy, less for sell)
 				if i == ull.dend { // last bucket
 					return i.get(p, ull.compare)
 				}
@@ -286,7 +317,7 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 					return i.get(p, ull.compare)
 				}
 				//continue to move to the next bucket
-			case -1: // no way to reach here
+			case 1: // no way to reach here
 				return nil
 			}
 		} else {

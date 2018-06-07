@@ -50,10 +50,6 @@ func compareSell(p1 float64, p2 float64) int {
 	return -compareBuy(p1, p2)
 }
 
-func newPriceLevel(price float64, orders []OrderPart) *PriceLevel {
-	return &PriceLevel{price, orders}
-}
-
 //addOrder would implicitly called with sequence of 'time' parameter
 func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
@@ -70,12 +66,16 @@ func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) 
 func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 	for i, o := range l.orders {
 		if o.id == id {
-			l.orders = append(l.orders[:i], l.orders[i+1])
-			return o, len(l.orders), nil
+			if i == len(l.orders)-1 {
+				l.orders = l.orders[:i]
+			} else {
+				l.orders = append(l.orders[:i], l.orders[i+1])
+			}
+			return o, 1, nil
 		}
 	}
 	// not found
-	return OrderPart{}, len(l.orders), fmt.Errorf("order %s doesn't exist.", id)
+	return OrderPart{}, 0, fmt.Errorf("order %s doesn't exist.", id)
 }
 
 type OverLappedLevel struct {
@@ -110,6 +110,10 @@ type OrderBookOnBTree struct {
 	sellQueue *bt.BTree
 }
 
+func (ob *OrderBookOnULList) String() string {
+	return fmt.Sprintf("buyQueue: [%v]\nsellQueue:[%v]", ob.buyQueue, ob.sellQueue)
+}
+
 func (ob *OrderBookOnULList) getSideQueue(side int) *ULList {
 	switch side {
 	case BUYSIDE:
@@ -120,42 +124,43 @@ func (ob *OrderBookOnULList) getSideQueue(side int) *ULList {
 	return nil
 }
 
-func NewOrderBookOnULList(d int) *OrderBookOnULList {
+func NewOrderBookOnULList(bucketSize int) *OrderBookOnULList {
 	//TODO: find out the best degree
 	// 16 is my magic number, hopefully the real overlapped levels are less
-	return &OrderBookOnULList{NewULList(4096, 16, compareBuy),
-		NewULList(4096, 16, compareSell)}
+	return &OrderBookOnULList{NewULList(4096, bucketSize, compareBuy),
+		NewULList(4096, bucketSize, compareSell)}
 }
 
 func mergeLevels(buyLevels []PriceLevel, sellLevels []PriceLevel, overlapped *[]OverLappedLevel) {
-	var i, j int = 0, len(sellLevels) - 1
-	for i < len(buyLevels) && j >= 0 {
+	*overlapped = (*overlapped)[:0]
+	var i, j, bN int = 0, len(sellLevels) - 1, len(buyLevels)
+	for i < bN && j >= 0 {
 		b, s := buyLevels[i].Price, sellLevels[j].Price
 		switch compareBuy(b, s) {
 		case 0:
-			*overlapped = append(*overlapped, OverLappedLevel{Price: b,
-				BuyOrders:  buyLevels[i].orders,
-				SellOrders: sellLevels[j].orders})
+			*overlapped = append(*overlapped,
+				OverLappedLevel{Price: b, BuyOrders: buyLevels[i].orders,
+					SellOrders: sellLevels[j].orders})
 			i++
 			j--
-		case 1:
+		case -1:
 			*overlapped = append(*overlapped, OverLappedLevel{Price: s,
 				SellOrders: sellLevels[j].orders})
 			j--
-		case -1:
+		case 1:
 			*overlapped = append(*overlapped, OverLappedLevel{Price: b,
 				BuyOrders: buyLevels[i].orders})
 			i++
 		}
 	}
-	for i < len(buyLevels) {
+	for i < bN {
 		b := buyLevels[i].Price
 		*overlapped = append(*overlapped, OverLappedLevel{Price: b,
 			BuyOrders: buyLevels[i].orders})
 		i++
 	}
 	for j >= 0 {
-		s := sellLevels[i].Price
+		s := sellLevels[j].Price
 		*overlapped = append(*overlapped, OverLappedLevel{Price: s,
 			SellOrders: sellLevels[j].orders})
 		j--
@@ -190,11 +195,12 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
 		// price level not exist, insert a new one
-		pl = newPriceLevel(price, []OrderPart{{id, time, qty}})
+		pl = &PriceLevel{price, []OrderPart{{id, time, qty}}}
 	} else {
 		if _, err := pl.addOrder(id, time, qty); err != nil {
 			return pl, err
 		}
+		return pl, nil
 	}
 	if !q.SetPriceLevel(pl) {
 		return pl, fmt.Errorf("Failed to insert order %s at price %f", id, price)
