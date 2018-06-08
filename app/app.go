@@ -92,7 +92,7 @@ func (app *BasecoinApp) registerHandlers() {
 		AddRoute("dex", dex.NewHandler(app.dexKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
-	for route, handler := range tokens.Routes(app.tokenMapper, app.coinKeeper) {
+	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
 }

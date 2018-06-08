@@ -11,5 +11,6 @@ import (
 func RegisterTypes(cdc *wire.Codec) {
 	cdc.RegisterConcrete(issue.Msg{}, "tokens/IssueMsg", nil)
 	cdc.RegisterConcrete(burn.Msg{}, "tokens/BurnMsg", nil)
-	cdc.RegisterConcrete(freeze.Msg{}, "tokens/FreezeMsg", nil)
+	cdc.RegisterConcrete(freeze.FreezeMsg{}, "tokens/FreezeMsg", nil)
+	cdc.RegisterConcrete(freeze.UnfreezeMsg{}, "tokens/UnfreezeMsg", nil)
 }

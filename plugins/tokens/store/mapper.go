@@ -89,6 +89,7 @@ func (m mapper) UpdateTokenSupply(ctx sdk.Context, symbol string, supply int64) 
 	toBeUpdated := m.decodeToken(bz)
 
 	if toBeUpdated.Supply != supply {
+		toBeUpdated.Supply = supply
 		store.Set(key, m.encodeToken(toBeUpdated))
 	}
 
