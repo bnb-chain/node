@@ -52,15 +52,14 @@ func TestNewULList(t *testing.T) {
 				if ull.bucketSize != 16 || ull.capacity != 4096 {
 					t.Error("Wrong size / capacity for the NewULList")
 				}
-				if ull.begin != &ull.allBuckets[0] || ull.dend != &ull.allBuckets[1] ||
-					ull.cend != &ull.allBuckets[4096/16] {
+				if ull.begin != &ull.allBuckets[0] || ull.dend != &ull.allBuckets[1] {
 					t.Error("data end / begin is not correct in NewULList")
 				}
 				if ull.begin.size() != 0 {
 					t.Error("NewULList initial size is not zero")
 				}
 				var i int
-				for k := ull.begin; k != ull.cend; k = k.next {
+				for k := ull.begin; k.next != nil; k = k.next {
 					i++
 				}
 				if i != 4096/16 {
@@ -139,7 +138,6 @@ func TestULList_GetPriceLevel(t *testing.T) {
 	type fields struct {
 		begin      *bucket
 		dend       *bucket
-		cend       *bucket
 		capacity   int
 		bucketSize int
 		compare    Comparator
@@ -148,27 +146,213 @@ func TestULList_GetPriceLevel(t *testing.T) {
 	type args struct {
 		p float64
 	}
+
+	buys := []PriceLevel{{Price: 100.5},
+		{Price: 100.2},
+		{Price: 100.1},
+		{Price: 99.5},
+		{Price: 99.4}}
+	sells := []PriceLevel{{Price: 100.0},
+		{Price: 101.2},
+		{Price: 102.1},
+		{Price: 102.5},
+		{Price: 103.4}}
+
+	makeFields := func(levels []PriceLevel, n int) *fields {
+		allBuckets := make([]bucket, 4)
+		begin := &allBuckets[0]
+		for i := 0; i < 3; i++ {
+			allBuckets[i].elements = allBuckets[i].elements[:0]
+			allBuckets[i].next = &allBuckets[i+1]
+		}
+		allBuckets[3].next = nil
+		dend := &allBuckets[3]
+		switch n {
+		case 1:
+			allBuckets[0].elements = levels[:1]
+			allBuckets[1].elements = levels[1:3]
+			allBuckets[2].elements = levels[3:]
+			return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
+		case 2:
+			allBuckets[0].elements = levels[:2]
+			allBuckets[1].elements = levels[2:4]
+			allBuckets[2].elements = levels[4:]
+			return &fields{begin, dend, 8, 2, compareSell, allBuckets}
+		}
+		return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
+	}
+	field1 := *makeFields(buys, 1)
+	field2 := *makeFields(sells, 2)
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
 		want   *PriceLevel
 	}{
-		// TODO: Add test cases.
+		{"NotExist1", field1, args{99.0}, nil},
+		{"NotExist2", field2, args{99.0}, nil},
+		{"NotExist3", field1, args{105.0}, nil},
+		{"NotExist4", field2, args{105.0}, nil},
+		{"NotExist5", field1, args{100.11}, nil},
+		{"NotExist6", field2, args{100.11}, nil},
+		{"Exist1", field1, args{100.5}, &PriceLevel{Price: 100.5}},
+		{"Exist2", field2, args{100.0}, &PriceLevel{Price: 100.0}},
+		{"Exist3", field1, args{99.4}, &PriceLevel{Price: 99.4}},
+		{"Exist4", field2, args{103.4}, &PriceLevel{Price: 103.4}},
+		{"Exist5", field1, args{100.2}, &PriceLevel{Price: 100.2}},
+		{"Exist6", field2, args{102.5}, &PriceLevel{Price: 102.5}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ull := &ULList{
 				begin:      tt.fields.begin,
 				dend:       tt.fields.dend,
-				cend:       tt.fields.cend,
 				capacity:   tt.fields.capacity,
 				bucketSize: tt.fields.bucketSize,
 				compare:    tt.fields.compare,
 				allBuckets: tt.fields.allBuckets,
 			}
+			t.Logf("before GetPriceLevel: %v", ull)
 			if got := ull.GetPriceLevel(tt.args.p); !reflect.DeepEqual(got, tt.want) {
+				t.Logf("after GetPriceLevel: %v", ull)
 				t.Errorf("ULList.GetPriceLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestULList_SetPriceLevel(t *testing.T) {
+	type fields struct {
+		begin      *bucket
+		dend       *bucket
+		capacity   int
+		bucketSize int
+		compare    Comparator
+		allBuckets []bucket
+	}
+	type args struct {
+		p *PriceLevel
+	}
+	buys := []PriceLevel{{Price: 100.5},
+		{Price: 100.2},
+		{Price: 100.1},
+		{Price: 99.5},
+		{Price: 99.4}}
+	sells := []PriceLevel{{Price: 100.0},
+		{Price: 101.2},
+		{Price: 102.1},
+		{Price: 102.5},
+		{Price: 103.4}}
+
+	makeFields := func(levels []PriceLevel, n int) *fields {
+		allBuckets := make([]bucket, 4)
+		begin := &allBuckets[0]
+		for i := 0; i < 3; i++ {
+			allBuckets[i].elements = allBuckets[i].elements[:0]
+			allBuckets[i].next = &allBuckets[i+1]
+		}
+		allBuckets[3].next = nil
+		dend := &allBuckets[3]
+		switch n {
+		case 1:
+			allBuckets[0].elements = levels[:1]
+			allBuckets[1].elements = levels[1:3]
+			allBuckets[2].elements = levels[3:]
+			return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
+		case 2:
+			allBuckets[0].elements = levels[:2]
+			allBuckets[1].elements = levels[2:4]
+			allBuckets[2].elements = levels[4:]
+			return &fields{begin, dend, 8, 2, compareSell, allBuckets}
+		}
+		return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{"NotExist1", *makeFields(buys, 1), args{&PriceLevel{Price: 99.0}}, true},
+		{"NotExist2", *makeFields(sells, 2), args{&PriceLevel{Price: 99.0}}, true},
+		{"NotExist3", *makeFields(buys, 1), args{&PriceLevel{Price: 105.0}}, true},
+		{"NotExist4", *makeFields(sells, 2), args{&PriceLevel{Price: 105.0}}, true},
+		{"NotExist5", *makeFields(buys, 1), args{&PriceLevel{Price: 100.11}}, true},
+		{"NotExist6", *makeFields(sells, 2), args{&PriceLevel{Price: 100.11}}, true},
+		{"Exist1", *makeFields(buys, 1), args{&PriceLevel{Price: 100.51}}, true},
+		{"Exist2", *makeFields(sells, 2), args{&PriceLevel{Price: 100.110}}, true},
+		{"Exist3", *makeFields(buys, 1), args{&PriceLevel{Price: 99.4}}, true},
+		{"Exist4", *makeFields(sells, 2), args{&PriceLevel{Price: 103.4}}, true},
+		{"Exist5", *makeFields(buys, 1), args{&PriceLevel{Price: 100.2}}, true},
+		{"Exist6", *makeFields(sells, 2), args{&PriceLevel{Price: 102.5}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ull := &ULList{
+				begin:      tt.fields.begin,
+				dend:       tt.fields.dend,
+				capacity:   tt.fields.capacity,
+				bucketSize: tt.fields.bucketSize,
+				compare:    tt.fields.compare,
+				allBuckets: tt.fields.allBuckets,
+			}
+			if got := ull.AddPriceLevel(tt.args.p); got != tt.want {
+				t.Errorf("ULList.SetPriceLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestULList_ensureCapacity(t *testing.T) {
+	type fields struct {
+		begin      *bucket
+		dend       *bucket
+		capacity   int
+		bucketSize int
+		compare    Comparator
+		allBuckets []bucket
+	}
+	makeFields := func() *fields {
+		allBuckets := make([]bucket, 4)
+		begin := &allBuckets[0]
+		for i := 0; i < 3; i++ {
+			allBuckets[i].next = &allBuckets[i+1]
+		}
+		dend := &allBuckets[3]
+		dend.next = nil
+		bucketSize := 2
+		capacity := 6
+		return &fields{begin, dend, capacity, bucketSize, compareBuy, allBuckets}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{"Full", *makeFields()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ull := &ULList{
+				begin:      tt.fields.begin,
+				dend:       tt.fields.dend,
+				capacity:   tt.fields.capacity,
+				bucketSize: tt.fields.bucketSize,
+				compare:    tt.fields.compare,
+				allBuckets: tt.fields.allBuckets,
+			}
+			ull.ensureCapacity()
+			oldDend := &ull.allBuckets[3]
+			i, j := 0, 0
+			for k := ull.begin; k != ull.dend; k = k.next {
+				i++
+			}
+			for k := ull.begin; k.next != nil; k = k.next {
+				j++
+			}
+			if ull.capacity != 12 || ull.dend.next == nil ||
+				ull.dend == oldDend || len(ull.allBuckets) != 7 || j != 6 || i != 3 {
+				t.Errorf("Re-allocate failed: capacity=%d, allBuckets=%d, dend(%p)/allBuckets[3](%p), i=%d, j=%d",
+					ull.capacity, len(ull.allBuckets), ull.dend, oldDend, i, j)
 			}
 		})
 	}
