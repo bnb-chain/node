@@ -124,11 +124,11 @@ func (ob *OrderBookOnULList) getSideQueue(side int) *ULList {
 	return nil
 }
 
-func NewOrderBookOnULList(bucketSize int) *OrderBookOnULList {
+func NewOrderBookOnULList(capacity int, bucketSize int) *OrderBookOnULList {
 	//TODO: find out the best degree
 	// 16 is my magic number, hopefully the real overlapped levels are less
-	return &OrderBookOnULList{NewULList(4096, bucketSize, compareBuy),
-		NewULList(4096, bucketSize, compareSell)}
+	return &OrderBookOnULList{NewULList(capacity, bucketSize, compareBuy),
+		NewULList(capacity, bucketSize, compareSell)}
 }
 
 func mergeLevels(buyLevels []PriceLevel, sellLevels []PriceLevel, overlapped *[]OverLappedLevel) {
@@ -196,16 +196,16 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 	if pl = q.GetPriceLevel(price); pl == nil {
 		// price level not exist, insert a new one
 		pl = &PriceLevel{price, []OrderPart{{id, time, qty}}}
+		if !q.AddPriceLevel(pl) {
+			return pl, fmt.Errorf("Failed to insert order %s at price %f", id, price)
+		}
+		return pl, nil
 	} else {
 		if _, err := pl.addOrder(id, time, qty); err != nil {
 			return pl, err
 		}
 		return pl, nil
 	}
-	if !q.SetPriceLevel(pl) {
-		return pl, fmt.Errorf("Failed to insert order %s at price %f", id, price)
-	}
-	return pl, nil
 }
 
 func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (OrderPart, error) {
@@ -233,12 +233,12 @@ type SellPriceLevel struct {
 	PriceLevel
 }
 
-func (l BuyPriceLevel) Less(than bt.Item) bool {
-	return (than.(BuyPriceLevel).Price - l.Price) >= PRECISION
+func (l *BuyPriceLevel) Less(than bt.Item) bool {
+	return (than.(*BuyPriceLevel).Price - l.Price) >= PRECISION
 }
 
-func (l SellPriceLevel) Less(than bt.Item) bool {
-	return (l.Price - than.(SellPriceLevel).Price) >= PRECISION
+func (l *SellPriceLevel) Less(than bt.Item) bool {
+	return (l.Price - than.(*SellPriceLevel).Price) >= PRECISION
 }
 
 /*
@@ -289,7 +289,7 @@ func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel) in
 	if bI == nil {
 		return 0
 	}
-	buyTop, ok := bI.(BuyPriceLevel)
+	buyTop, ok := bI.(*BuyPriceLevel)
 	if !ok {
 		return 0
 	}
@@ -297,7 +297,7 @@ func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel) in
 	if sI == nil {
 		return 0
 	}
-	sellTop, ok := ob.sellQueue.Min().(SellPriceLevel)
+	sellTop, ok := ob.sellQueue.Min().(*SellPriceLevel)
 	if !ok {
 		return 0
 	}
@@ -306,18 +306,18 @@ func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel) in
 		return 0 // not overlapped
 	}
 	buyLevels := make([]PriceLevel, 0, 16)
-	ob.buyQueue.AscendRange(BuyPriceLevel{PriceLevel{Price: p2}}, BuyPriceLevel{PriceLevel{Price: p1}},
+	ob.buyQueue.AscendRange(&BuyPriceLevel{PriceLevel{Price: p2}}, &BuyPriceLevel{PriceLevel{Price: p1}},
 		func(i bt.Item) bool {
-			p, ok := i.(BuyPriceLevel)
+			p, ok := i.(*BuyPriceLevel)
 			if ok {
 				buyLevels = append(buyLevels, p.PriceLevel)
 			}
 			return true
 		})
 	sellLevels := make([]PriceLevel, 0, 16)
-	ob.sellQueue.AscendRange(BuyPriceLevel{PriceLevel{Price: p1}}, BuyPriceLevel{PriceLevel{Price: p2}},
+	ob.sellQueue.AscendRange(&BuyPriceLevel{PriceLevel{Price: p1}}, &BuyPriceLevel{PriceLevel{Price: p2}},
 		func(i bt.Item) bool {
-			p, ok := i.(BuyPriceLevel)
+			p, ok := i.(*BuyPriceLevel)
 			if ok {
 				sellLevels = append(sellLevels, p.PriceLevel)
 			}
@@ -344,10 +344,14 @@ func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
 
 func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
-	var pl PriceLevelInterface
+
 	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
 		// price level not exist, insert a new one
-		pl = newPriceLevelBySide(price, []OrderPart{{id, time, qty}}, side)
+		pl2 := newPriceLevelBySide(price, []OrderPart{{id, time, qty}}, side)
+		if q.ReplaceOrInsert(pl2) == nil {
+			return toPriceLevel(pl2, side), fmt.Errorf("Failed to insert order %s at price %f", id, price)
+		}
+		return toPriceLevel(pl2, side), nil
 	} else {
 		if pl2, ok := pl.(PriceLevelInterface); !ok {
 			return nil, errors.New("Severe error: Wrong type item inserted into OrderBook")
@@ -355,12 +359,10 @@ func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price 
 			if _, e := pl2.addOrder(id, time, qty); e != nil {
 				return toPriceLevel(pl2, side), e
 			}
+			return toPriceLevel(pl2, side), nil
 		}
 	}
-	if q.ReplaceOrInsert(pl) == nil {
-		return toPriceLevel(pl, side), fmt.Errorf("Failed to insert order %s at price %f", id, price)
-	}
-	return toPriceLevel(pl, side), nil
+
 }
 
 func (ob *OrderBookOnBTree) RemoveOrder(id string, side int, price float64) (OrderPart, error) {

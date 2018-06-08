@@ -199,30 +199,40 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 	}
 
 	samePrice := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(4)
+		l := NewOrderBookOnULList(16, 4)
 		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
 		l.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
 		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
 		return l
-	}()
+	}
 	newPrice := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(4)
+		l := NewOrderBookOnULList(16, 4)
 		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
 		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
 		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
 		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
 		return l
-	}()
-	/* 	newPrice2 := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(4)
+	}
+	newPrice2 := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(16, 4)
 		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
 		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
 		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
 		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
 		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
-		l.InsertOrder("123458", BUYSIDE, 10002, 100.8, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
 		return l
-	}() */
+	}
+	newPrice3 := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(5, 2)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
 	tests := []struct {
 		name    string
 		fields  fields
@@ -232,16 +242,22 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 	}{
 		{"Sanity", fields{NewULList(4096, 16, compareBuy), NewULList(4096, 16, compareSell)},
 			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
-		{"SamePrice", fields{samePrice.buyQueue, samePrice.sellQueue},
+		{"SamePrice", fields{samePrice().buyQueue, nil},
 			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123457", 10001, 1000.0}, {"123458", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
-		{"NewPrice1", fields{newPrice.buyQueue, newPrice.sellQueue},
+		{"NewPrice1", fields{newPrice().buyQueue, nil},
 			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
-		/* {"NewPrice2", fields{newPrice.buyQueue, newPrice.sellQueue},
+		{"NewPrice2", fields{newPrice().buyQueue, nil},
 			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
-				{"NewPrice3", fields{newPrice2.buyQueue, newPrice2.sellQueue},
-		   			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
-		   		{"NewPrice4", fields{newPrice2.buyQueue, newPrice2.sellQueue},
-		   			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false}, */
+		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123458", 10002, 1000.0}, {"123460", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -250,7 +266,7 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 				sellQueue: tt.fields.sellQueue,
 			}
 			got, err := ob.InsertOrder(tt.args.id, tt.args.side, tt.args.time, tt.args.price, tt.args.qty)
-			t.Logf("after insert:%v", ob)
+			//t.Logf("after insert:%s", ob)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OrderBookOnULList.InsertOrder() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -262,11 +278,39 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 
 			case "SamePrice":
 
-				if len(ob.sellQueue.begin.elements) != 0 || len(ob.buyQueue.begin.elements) != 1 ||
+				if len(ob.buyQueue.begin.elements) != 1 ||
 					len(ob.buyQueue.begin.elements[0].orders) != 4 ||
 					ob.buyQueue.begin.elements[0].orders[0].id != "123455" ||
 					ob.buyQueue.begin.elements[0].orders[3].id != "123456" {
 					t.Error("SamePrice doesn't work")
+				}
+			case "NewPrice1":
+				if ob.buyQueue.String() != "Bucket 0{101.00000000->[123456 10000 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]}," {
+					t.Errorf("NewPrice1 insert failure:%v", ob.buyQueue)
+				}
+			case "NewPrice2":
+				if ob.buyQueue.String() != "Bucket 0{100.50000000->[123459 10002 1000.00000000,]100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]99.00000000->[123456 10000 1000.00000000,]}," {
+					t.Errorf("NewPrice2 insert failure:%v", ob.buyQueue)
+				}
+			case "NewPriceSplit1":
+				if ob.buyQueue.String() != "Bucket 0{101.00000000->[123456 10000 1000.00000000,]100.70000000->[123457 10001 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},Bucket 1{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]}," {
+					t.Errorf("NewPriceSplit1 insert failure:%s", ob.buyQueue)
+				}
+			case "NewPriceSplit2":
+				if ob.buyQueue.String() != "Bucket 0{100.70000000->[123457 10001 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},Bucket 1{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]99.00000000->[123456 10000 1000.00000000,]}," {
+					t.Errorf("NewPriceSplit1 insert failure:%s", ob.buyQueue)
+				}
+			case "NewPriceSplit3":
+				if ob.buyQueue.String() != "Bucket 0{100.70000000->[123457 10001 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,123456 10000 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]}," {
+					t.Errorf("NewPriceSplit1 insert failure:%s", ob.buyQueue)
+				}
+			case "NewPriceSplit4":
+				if ob.buyQueue.String() != "Bucket 0{100.70000000->[123457 10001 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]100.40000000->[123456 10000 1000.00000000,]},Bucket 1{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]99.50000000->[123459 10002 1000.00000000,]}," {
+					t.Errorf("NewPriceSplit1 insert failure:%s", ob.buyQueue)
+				}
+			case "NewPriceSplit5":
+				if ob.buyQueue.String() != "Bucket 0{100.70000000->[123457 10001 1000.00000000,]100.60000000->[123456 10000 1000.00000000,]},Bucket 1{100.50000000->[123459 10002 1000.00000000,]},Bucket 2{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]},Bucket 3{99.50000000->[123459 10002 1000.00000000,]}," {
+					t.Errorf("NewPriceSplit1 insert failure:%s", ob.buyQueue)
 				}
 			}
 		})
@@ -285,6 +329,42 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 		price float64
 		qty   float64
 	}
+
+	samePrice := func() *OrderBookOnBTree {
+		l := NewOrderBookOnBTree(8)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice := func() *OrderBookOnBTree {
+		l := NewOrderBookOnBTree(8)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice2 := func() *OrderBookOnBTree {
+		l := NewOrderBookOnBTree(8)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice3 := func() *OrderBookOnBTree {
+		l := NewOrderBookOnBTree(8)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
 	tests := []struct {
 		name    string
 		fields  fields
@@ -292,7 +372,24 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 		want    *PriceLevel
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"Sanity", fields{bt.New(8), bt.New(8)},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"SamePrice", fields{samePrice().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123457", 10001, 1000.0}, {"123458", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+		{"NewPrice1", fields{newPrice().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPrice2", fields{newPrice().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123458", 10002, 1000.0}, {"123460", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
+			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -300,7 +397,9 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 				buyQueue:  tt.fields.buyQueue,
 				sellQueue: tt.fields.sellQueue,
 			}
+
 			got, err := ob.InsertOrder(tt.args.id, tt.args.side, tt.args.time, tt.args.price, tt.args.qty)
+			t.Log(ob.buyQueue)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OrderBookOnBTree.InsertOrder() error = %v, wantErr %v", err, tt.wantErr)
 				return
