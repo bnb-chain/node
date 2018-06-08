@@ -74,21 +74,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 
 	// build message
 	msg := buildMsg(from, name, symbol, supply, decimal)
-
-	// default to next sequence number if none provided
-	ctx, err = context.EnsureSequence(ctx)
-	if err != nil {
-		return err
-	}
-
-	// build and sign the transaction, then broadcast to Tendermint
-	res, err := ctx.SignBuildBroadcast(ctx.FromAddressName, msg, c.Cdc)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Committed at block %d. Hash: %s\n", res.Height, res.Hash.String())
-	return nil
+	return c.sendTx(ctx, msg)
 }
 
 func parseSupply(supply string) (int64, error) {
