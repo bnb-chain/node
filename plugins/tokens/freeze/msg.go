@@ -1,64 +1,46 @@
 package freeze
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/tokens/base"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
-// const Route = "tokens/freeze"
-const Route = "tokensFreeze"
+// const RouteFreeze = "tokens/freeze"
+// const RouteFreeze = "tokens/unfreeze"
+const RouteFreeze = "tokensFreeze"
+const RouteUnfreeze = "tokensUnfreeze"
 
-var _ sdk.Msg = (*Msg)(nil)
+var _ sdk.Msg = (*FreezeMsg)(nil)
 
-type Msg struct {
-	Owner  sdk.Address `json:"owner"`
-	Symbol string      `json:"symbol"`
-	Amount int64       `json:"amount"`
+type FreezeMsg struct {
+	base.MsgBase
 }
 
-func NewMsg(owner sdk.Address, symbol string, amount int64) Msg {
-	return Msg{Owner: owner, Symbol: symbol, Amount: amount}
+func NewFreezeMsg(owner sdk.Address, symbol string, amount int64) FreezeMsg {
+	return FreezeMsg{base.MsgBase{Owner: owner, Symbol: symbol, Amount: amount}}
 }
 
-func (msg Msg) Type() string { return Route }
+func (msg FreezeMsg) Type() string { return RouteFreeze }
 
-// ValidateBasic does a simple validation check that
-// doesn't require access to any other information.
-func (msg Msg) ValidateBasic() sdk.Error {
-	err := types.ValidateSymbol(msg.Symbol)
-	if err != nil {
-		return sdk.ErrInvalidCoins(err.Error())
-	}
-
-	if msg.Amount <= 0 {
-		// TODO: maybe we need to define our own errors
-		return sdk.ErrInsufficientFunds("amount should be more than 0")
-	}
-
-	return nil
-}
-
-func (msg Msg) String() string {
+func (msg FreezeMsg) String() string {
 	return fmt.Sprintf("Freeze{%v#%v}", msg.Owner, msg.Symbol)
 }
 
-func (msg Msg) Get(key interface{}) (value interface{}) {
-	return nil
+var _ sdk.Msg = (*UnfreezeMsg)(nil)
+
+type UnfreezeMsg struct {
+	base.MsgBase
 }
 
-func (msg Msg) GetSignBytes() []byte {
-	b, err := json.Marshal(msg) // XXX: ensure some canonical form
-	if err != nil {
-		panic(err)
-	}
-	return b
+func NewUnfreezeMsg(owner sdk.Address, symbol string, amount int64) UnfreezeMsg {
+	return UnfreezeMsg{base.MsgBase{Owner: owner, Symbol: symbol, Amount: amount}}
 }
 
-// Implements Msg.
-func (msg Msg) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.Owner}
+func (msg UnfreezeMsg) Type() string { return RouteUnfreeze }
+
+func (msg UnfreezeMsg) String() string {
+	return fmt.Sprintf("Unfreeze{%v#%v%v}", msg.Owner, msg.Amount, msg.Symbol)
 }

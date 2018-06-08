@@ -24,7 +24,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.CoinKeeper) sdk.Handler {
 func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.CoinKeeper, msg Msg) sdk.Result {
 	burnAmount := msg.Amount
 	if burnAmount <= 0 {
-		return sdk.Result{Code: sdk.CodeInsufficientFunds}
+		return sdk.ErrInsufficientCoins("burn amount should be greater than 0").Result()
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
@@ -33,26 +33,16 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Coin
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
-	burnAmount = int64(math.Pow10(int(token.Decimal))) * burnAmount
+	innerBurnAmount := int64(math.Pow10(int(token.Decimal))) * burnAmount
 
 	// TODO: the third param can be removed...
-	// TODO: add a function to get balance of the specific token
 	coins := keeper.GetCoins(ctx, msg.Owner, nil)
-	found := false
-	var tokenHeld sdk.Coin
-	for _, coin := range coins {
-		if coin.Denom == symbol {
-			tokenHeld = coin
-			found = true
-			break
-		}
-	}
 
-	if !found || tokenHeld.Amount < burnAmount || token.Supply < burnAmount {
+	if coins.AmountOf(symbol) < innerBurnAmount || token.Supply < burnAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, sdkError := keeper.SubtractCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: burnAmount}))
+	_, sdkError := keeper.SubtractCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: innerBurnAmount}))
 	tokenMapper.UpdateTokenSupply(ctx, symbol, token.Supply-burnAmount)
 
 	if sdkError != nil {
