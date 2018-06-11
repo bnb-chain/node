@@ -3,8 +3,6 @@ package matcheng
 import (
 	"math"
 	"sort"
-
-	"github.com/google/uuid"
 )
 
 type LevelIndex struct {
@@ -22,9 +20,13 @@ func (li *LevelIndex) clear() {
 	li.index = li.index[:0]
 }
 
+//Trade stores an execution between 2 orders on a *currency pair*.
+//3 things needs attention:
+// - srcId and oid are just different names; actually no concept of source or destination;
+// - one trade would be implemented via TWO transfer transactions on each currency of the pair;
+// - the trade would be uniquely identifiable via the two order id. UUID generation cannot be used here.
 type Trade struct {
 	oid     string  // order id
-	tid     string  // trade id
 	lastPx  float64 // execution price
 	lastQty float64 // execution quantity
 	srcOId  string  // source order id allocated from
@@ -156,10 +158,6 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	return -math.MaxFloat64, -1
 }
 
-func generateTradeID() string {
-	return uuid.New().String()
-}
-
 func (me *MatchEng) fillOrders(i int, j int) {
 	var k, h int
 	buys := me.overLappedLevel[i].BuyOrders
@@ -187,23 +185,20 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].qty -= trade
 			sells[h].qty = 0
 			h++
-			tid := generateTradeID()
-			me.trades = append(me.trades, Trade{sells[h].id, tid, me.lastTradePrice, trade, buys[k].id})
+			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 		case r < 0:
 			trade := buys[k].qty
 			sells[h].qty -= trade
 			buys[k].qty = 0
 			k++
-			tid := generateTradeID()
-			me.trades = append(me.trades, Trade{buys[k].id, tid, me.lastTradePrice, trade, sells[h].id})
+			me.trades = append(me.trades, Trade{buys[k].id, me.lastTradePrice, trade, sells[h].id})
 		case r == 0:
 			trade := sells[h].qty
 			buys[k].qty = 0
 			sells[h].qty = 0
 			h++
 			k++
-			tid := generateTradeID()
-			me.trades = append(me.trades, Trade{sells[h].id, tid, me.lastTradePrice, trade, buys[k].id})
+			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 		}
 	}
 	me.overLappedLevel[i].BuyTotal = sumOrders(buys)
