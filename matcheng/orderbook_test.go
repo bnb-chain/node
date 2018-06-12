@@ -399,13 +399,178 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 			}
 
 			got, err := ob.InsertOrder(tt.args.id, tt.args.side, tt.args.time, tt.args.price, tt.args.qty)
-			t.Log(ob.buyQueue)
+			t.Log(printOrderQueueString(ob.buyQueue, BUYSIDE))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OrderBookOnBTree.InsertOrder() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("OrderBookOnBTree.InsertOrder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
+	type fields struct {
+		buyQueue  *ULList
+		sellQueue *ULList
+	}
+	type args struct {
+		id    string
+		side  int
+		price float64
+	}
+	samePrice := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(16, 4)
+		l.InsertOrder("123456", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(16, 4)
+		l.InsertOrder("123455", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice2 := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(16, 4)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+	newPrice3 := func() *OrderBookOnULList {
+		l := NewOrderBookOnULList(5, 2)
+		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+		return l
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    OrderPart
+		wantErr bool
+	}{
+		{"Sanity", fields{NewULList(4096, 16, compareBuy), NewULList(4096, 16, compareSell)},
+			args{"123456", BUYSIDE, 100.0}, OrderPart{}, true},
+		{"SamePrice", fields{samePrice().buyQueue, nil},
+			args{"123456", BUYSIDE, 100.0}, OrderPart{"123456", 10000, 1000.0}, false},
+		{"SamePrice2", fields{samePrice().buyQueue, nil},
+			args{"123458", BUYSIDE, 100.0}, OrderPart{"123458", 10002, 1000.0}, false},
+		{"SamePrice3", fields{samePrice().buyQueue, nil},
+			args{"123457", BUYSIDE, 100.0}, OrderPart{"123457", 10001, 1000.0}, false},
+		{"NewPrice1", fields{newPrice().buyQueue, nil},
+			args{"123459", BUYSIDE, 99.5}, OrderPart{"123459", 10002, 1000.0}, false},
+		{"NewPrice2", fields{newPrice().buyQueue, nil},
+			args{"123455", BUYSIDE, 100.5}, OrderPart{"123456", 10002, 1000.0}, false},
+		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 101.0}, OrderPart{"123456", 10000, 1000.0}, false},
+		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 99.0}, OrderPart{"123456", 10000, 1000.0}, false},
+		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 100.0}, OrderPart{"123456", 10000, 1000.0}, false},
+		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
+			args{"123456", BUYSIDE, 100.4}, OrderPart{"123456", 10000, 1000.0}, false},
+		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
+			args{"123456", BUYSIDE, 100.6}, OrderPart{"123456", 10000, 1000.0}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ob := &OrderBookOnULList{
+				buyQueue:  tt.fields.buyQueue,
+				sellQueue: tt.fields.sellQueue,
+			}
+			got, err := ob.RemoveOrder(tt.args.id, tt.args.side, tt.args.price)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("OrderBookOnULList.RemoveOrder() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("OrderBookOnULList.RemoveOrder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {
+	type fields struct {
+		buyQueue  *bt.BTree
+		sellQueue *bt.BTree
+	}
+	type args struct {
+		id    string
+		side  int
+		price float64
+	}
+	/* 	samePrice := func() *OrderBookOnULList {
+	   		l := NewOrderBookOnULList(16, 4)
+	   		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+	   		l.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
+	   		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+	   		return l
+	   	}
+	   	newPrice := func() *OrderBookOnULList {
+	   		l := NewOrderBookOnULList(16, 4)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+	   		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+	   		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+	   		return l
+	   	}
+	   	newPrice2 := func() *OrderBookOnULList {
+	   		l := NewOrderBookOnULList(16, 4)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+	   		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+	   		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+	   		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+	   		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+	   		return l
+	   	}
+	   	newPrice3 := func() *OrderBookOnULList {
+	   		l := NewOrderBookOnULList(5, 2)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
+	   		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
+	   		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
+	   		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
+	   		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+	   		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
+	   		return l
+	   	} */
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    OrderPart
+		wantStr string
+		wantErr bool
+	}{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ob := &OrderBookOnBTree{
+				buyQueue:  tt.fields.buyQueue,
+				sellQueue: tt.fields.sellQueue,
+			}
+			got, err := ob.RemoveOrder(tt.args.id, tt.args.side, tt.args.price)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("OrderBookOnBTree.RemoveOrder() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("OrderBookOnBTree.RemoveOrder() = %v, want %v", got, tt.want)
 			}
 		})
 	}
