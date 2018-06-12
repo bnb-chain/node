@@ -1,6 +1,7 @@
 package matcheng
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -50,6 +51,10 @@ func compareSell(p1 float64, p2 float64) int {
 	return -compareBuy(p1, p2)
 }
 
+func (l *PriceLevel) String() string {
+	return fmt.Sprintf("%.8f->[%v]", l.Price, l.orders)
+}
+
 //addOrder would implicitly called with sequence of 'time' parameter
 func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
@@ -95,6 +100,8 @@ type OverLappedLevel struct {
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.
 type OrderBookInterface interface {
 	GetOverlappedRange(overlapped *[]OverLappedLevel) int
+	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
+	//looping through InsertOrder() one after another.
 	InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error)
 	RemoveOrder(id string, side int, price float64) (OrderPart, error)
 	ShowDepth(numOfLevels int, iter func(price float64, buyTotal float64, sellTotal float64))
@@ -208,6 +215,7 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 	}
 }
 
+//TODO: InsertOrder and RemoveOrder should be faster if done in batch with multiple orders
 func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
@@ -234,11 +242,11 @@ type SellPriceLevel struct {
 }
 
 func (l *BuyPriceLevel) Less(than bt.Item) bool {
-	return (than.(*BuyPriceLevel).Price - l.Price) >= PRECISION
+	return (l.Price - than.(*BuyPriceLevel).Price) >= PRECISION
 }
 
 func (l *SellPriceLevel) Less(than bt.Item) bool {
-	return (l.Price - than.(*SellPriceLevel).Price) >= PRECISION
+	return (than.(*SellPriceLevel).Price - l.Price) >= PRECISION
 }
 
 /*
@@ -342,24 +350,31 @@ func toPriceLevel(pi PriceLevelInterface, side int) *PriceLevel {
 	return nil
 }
 
+func printOrderQueueString(q *bt.BTree, side int) string {
+	var buffer bytes.Buffer
+	q.Ascend(func(i bt.Item) bool {
+		buffer.WriteString(fmt.Sprintf("%v, ", toPriceLevel(i.(PriceLevelInterface), side)))
+		return true
+	})
+	return buffer.String()
+}
+
 func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 
 	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
 		// price level not exist, insert a new one
 		pl2 := newPriceLevelBySide(price, []OrderPart{{id, time, qty}}, side)
-		if q.ReplaceOrInsert(pl2) == nil {
-			return toPriceLevel(pl2, side), fmt.Errorf("Failed to insert order %s at price %f", id, price)
+		if q.ReplaceOrInsert(pl2) != nil {
+			return toPriceLevel(pl2, side), fmt.Errorf("Severe error: data consistence break when insert %v @ %v orderbook", id, price)
 		}
 		return toPriceLevel(pl2, side), nil
 	} else {
 		if pl2, ok := pl.(PriceLevelInterface); !ok {
 			return nil, errors.New("Severe error: Wrong type item inserted into OrderBook")
 		} else {
-			if _, e := pl2.addOrder(id, time, qty); e != nil {
-				return toPriceLevel(pl2, side), e
-			}
-			return toPriceLevel(pl2, side), nil
+			_, e := pl2.addOrder(id, time, qty)
+			return toPriceLevel(pl2, side), e
 		}
 	}
 
