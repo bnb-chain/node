@@ -10,17 +10,20 @@ Binance DEX (B-DEX) is a decentralized exchange and blockchain. Please check bus
 
 ## Architecture
 The system diagram is as below.
-<architecture image>
+
+![System Diagram](https://github.com/BiJie/BinanceChain/blob/danjundev/doc/B-DEX%20Diagram.png)
 
 ### Components
 #### Validator
-Validator nodess are responsible for generating the blockchain. 
+Validator nodess are responsible for generating the blockchain. Validator is a Tendermint based ABCI application. There would be multiple validator nodes, e.g. 7, forming the backbone of the mainnet of Binance DEX chain.
+
+Each validator would communicate to **all** the rest validator via direct TCP connections.
 
 #### Frontier
 Frontiers are non-validator nodes. They are not generating any blocks but responsible for accepting requests and publishing data. Several frontier nodes work with one validator node.
 
 #### Bridge
-Bridge is the communication channels between Validator and Frontier
+Bridge is the communication channels between Validator and Frontier. It would be a one-to-many broadcast for relaying the stream of blocks. 
 
 #### Client
 Clients are GUI applications. Users use client to enter orders, check account status and explore other information.
@@ -43,7 +46,9 @@ Clients are GUI applications. Users use client to enter orders, check account st
 
 #### List/De-List
 
-### Transaction Workflow
+### Genesis
+
+### Transaction Workflow After Genesis
 The below diagram shows the sequence of Time.
 
 #### Transaction Entry
@@ -70,7 +75,7 @@ The below diagram shows the sequence of Time.
 
 ### Validator - Transaction Check
 
-### Validator - Match Engine
+### Validator - [Match Engine](./match_engine.md)
 
 ### Validator - Execution 
 
@@ -98,3 +103,5 @@ The below diagram shows the sequence of Time.
 ### Market Data Federal Net
 
 ### Pegged Token
+
+### Data Prune
