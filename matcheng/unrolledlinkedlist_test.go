@@ -233,18 +233,8 @@ func TestULList_SetPriceLevel(t *testing.T) {
 	type args struct {
 		p *PriceLevel
 	}
-	buys := []PriceLevel{{Price: 100.5},
-		{Price: 100.2},
-		{Price: 100.1},
-		{Price: 99.5},
-		{Price: 99.4}}
-	sells := []PriceLevel{{Price: 100.0},
-		{Price: 101.2},
-		{Price: 102.1},
-		{Price: 102.5},
-		{Price: 103.4}}
 
-	makeFields := func(levels []PriceLevel, n int) *fields {
+	makeFields := func(n int) *fields {
 		allBuckets := make([]bucket, 4)
 		begin := &allBuckets[0]
 		for i := 0; i < 3; i++ {
@@ -255,11 +245,21 @@ func TestULList_SetPriceLevel(t *testing.T) {
 		dend := &allBuckets[3]
 		switch n {
 		case 1:
+			levels := []PriceLevel{{Price: 100.5},
+				{Price: 100.2},
+				{Price: 100.1},
+				{Price: 99.5},
+				{Price: 99.4}}
 			allBuckets[0].elements = levels[:1]
 			allBuckets[1].elements = levels[1:3]
 			allBuckets[2].elements = levels[3:]
 			return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
 		case 2:
+			levels := []PriceLevel{{Price: 100.0},
+				{Price: 101.2},
+				{Price: 102.1},
+				{Price: 102.5},
+				{Price: 103.4}}
 			allBuckets[0].elements = levels[:2]
 			allBuckets[1].elements = levels[2:4]
 			allBuckets[2].elements = levels[4:]
@@ -273,18 +273,20 @@ func TestULList_SetPriceLevel(t *testing.T) {
 		args   args
 		want   bool
 	}{
-		{"NotExist1", *makeFields(buys, 1), args{&PriceLevel{Price: 99.0}}, true},
-		{"NotExist2", *makeFields(sells, 2), args{&PriceLevel{Price: 99.0}}, true},
-		{"NotExist3", *makeFields(buys, 1), args{&PriceLevel{Price: 105.0}}, true},
-		{"NotExist4", *makeFields(sells, 2), args{&PriceLevel{Price: 105.0}}, true},
-		{"NotExist5", *makeFields(buys, 1), args{&PriceLevel{Price: 100.11}}, true},
-		{"NotExist6", *makeFields(sells, 2), args{&PriceLevel{Price: 100.11}}, true},
-		{"Exist1", *makeFields(buys, 1), args{&PriceLevel{Price: 100.51}}, true},
-		{"Exist2", *makeFields(sells, 2), args{&PriceLevel{Price: 100.110}}, true},
-		{"Exist3", *makeFields(buys, 1), args{&PriceLevel{Price: 99.4}}, true},
-		{"Exist4", *makeFields(sells, 2), args{&PriceLevel{Price: 103.4}}, true},
-		{"Exist5", *makeFields(buys, 1), args{&PriceLevel{Price: 100.2}}, true},
-		{"Exist6", *makeFields(sells, 2), args{&PriceLevel{Price: 102.5}}, true},
+		{"NotExist1", *makeFields(1), args{&PriceLevel{Price: 99.0}}, true},
+		{"NotExist2", *makeFields(2), args{&PriceLevel{Price: 99.0}}, true},
+		{"NotExist3", *makeFields(1), args{&PriceLevel{Price: 105.0}}, true},
+		{"NotExist4", *makeFields(2), args{&PriceLevel{Price: 105.0}}, true},
+		{"NotExist5", *makeFields(1), args{&PriceLevel{Price: 100.11}}, true},
+		{"NotExist6", *makeFields(2), args{&PriceLevel{Price: 100.11}}, true},
+		// one side
+		{"Exist1", *makeFields(1), args{&PriceLevel{Price: 100.51}}, true},
+		{"Exist2", *makeFields(2), args{&PriceLevel{Price: 100.110}}, true},
+		{"Exist3", *makeFields(1), args{&PriceLevel{Price: 99.3}}, true},
+		{"Exist4", *makeFields(2), args{&PriceLevel{Price: 103.5}}, true},
+		// in the middle
+		{"Exist5", *makeFields(1), args{&PriceLevel{Price: 100.21}}, true},
+		{"Exist6", *makeFields(2), args{&PriceLevel{Price: 102.35}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -297,8 +299,9 @@ func TestULList_SetPriceLevel(t *testing.T) {
 				allBuckets: tt.fields.allBuckets,
 			}
 			if got := ull.AddPriceLevel(tt.args.p); got != tt.want {
-				t.Errorf("ULList.SetPriceLevel() = %v, want %v", got, tt.want)
+				t.Errorf("ULList.AddPriceLevel() = %v, want %v", got, tt.want)
 			}
+			t.Log(ull.allBuckets)
 		})
 	}
 }
