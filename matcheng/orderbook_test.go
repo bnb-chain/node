@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	bt "github.com/google/btree"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_compareBuy(t *testing.T) {
@@ -27,6 +28,7 @@ func Test_compareBuy(t *testing.T) {
 		{"Equal3", args{-1.000000001, -1.0}, 0},
 		{"Equal4", args{5.581234, 5.581234}, 0},
 		{"Equal5", args{5.581234567, 5.581234568}, 0},
+		{"Equal6", args{100.2, 100.20000000}, 0},
 		{"P2Bigger1", args{0.005, 0.005111}, -1},
 		{"P2Bigger2", args{0.005, 1.005}, -1},
 		{"P2Bigger3", args{0.0000011, 0.00000111}, -1},
@@ -412,96 +414,39 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 }
 
 func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
-	type fields struct {
-		buyQueue  *ULList
-		sellQueue *ULList
-	}
-	type args struct {
-		id    string
-		side  int
-		price float64
-	}
-	samePrice := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(16, 4)
-		l.InsertOrder("123456", BUYSIDE, 10000, 100.0, 1000)
-		l.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
-		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
-		return l
-	}
-	newPrice := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(16, 4)
-		l.InsertOrder("123455", BUYSIDE, 10002, 100.5, 1000)
-		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
-		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
-		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
-		return l
-	}
-	newPrice2 := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(16, 4)
-		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
-		l.InsertOrder("123459", BUYSIDE, 10002, 99.5, 1000)
-		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
-		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
-		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
-		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
-		return l
-	}
-	newPrice3 := func() *OrderBookOnULList {
-		l := NewOrderBookOnULList(5, 2)
-		l.InsertOrder("123459", BUYSIDE, 10002, 100.5, 1000)
-		l.InsertOrder("123455", BUYSIDE, 10000, 100.0, 1000)
-		l.InsertOrder("123457", BUYSIDE, 10001, 100.7, 1000)
-		l.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
-		l.InsertOrder("123460", BUYSIDE, 10002, 100.0, 1000)
-		return l
-	}
+	assert := assert.New(t)
+	samePrice := NewOrderBookOnULList(16, 4)
+	samePrice.InsertOrder("123456", BUYSIDE, 10000, 100.0, 1000)
+	samePrice.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
+	samePrice.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
+	ord, err := samePrice.RemoveOrder("123457", BUYSIDE, 100.0)
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove middle order from multiple orders at the same price")
+	assert.Nil(err)
+	ord, err = samePrice.RemoveOrder("123456", BUYSIDE, 100.0)
+	assert.Equal(ord, OrderPart{"123456", 10000, 1000.0}, "Failed to remove head order from multiple orders at the same price")
+	assert.Nil(err)
+	ord, err = samePrice.RemoveOrder("123458", BUYSIDE, 100.0)
+	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0}, "Failed to remove last order at the same price")
+	assert.Nil(err)
 
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    OrderPart
-		wantErr bool
-	}{
-		{"Sanity", fields{NewULList(4096, 16, compareBuy), NewULList(4096, 16, compareSell)},
-			args{"123456", BUYSIDE, 100.0}, OrderPart{}, true},
-		{"SamePrice", fields{samePrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 100.0}, OrderPart{"123456", 10000, 1000.0}, false},
-		{"SamePrice2", fields{samePrice().buyQueue, nil},
-			args{"123458", BUYSIDE, 100.0}, OrderPart{"123458", 10002, 1000.0}, false},
-		{"SamePrice3", fields{samePrice().buyQueue, nil},
-			args{"123457", BUYSIDE, 100.0}, OrderPart{"123457", 10001, 1000.0}, false},
-		{"NewPrice1", fields{newPrice().buyQueue, nil},
-			args{"123459", BUYSIDE, 99.5}, OrderPart{"123459", 10002, 1000.0}, false},
-		{"NewPrice2", fields{newPrice().buyQueue, nil},
-			args{"123455", BUYSIDE, 100.5}, OrderPart{"123456", 10002, 1000.0}, false},
-		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 101.0}, OrderPart{"123456", 10000, 1000.0}, false},
-		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 99.0}, OrderPart{"123456", 10000, 1000.0}, false},
-		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 100.0}, OrderPart{"123456", 10000, 1000.0}, false},
-		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 100.4}, OrderPart{"123456", 10000, 1000.0}, false},
-		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
-			args{"123456", BUYSIDE, 100.6}, OrderPart{"123456", 10000, 1000.0}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ob := &OrderBookOnULList{
-				buyQueue:  tt.fields.buyQueue,
-				sellQueue: tt.fields.sellQueue,
-			}
-			got, err := ob.RemoveOrder(tt.args.id, tt.args.side, tt.args.price)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("OrderBookOnULList.RemoveOrder() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("OrderBookOnULList.RemoveOrder() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	l := NewOrderBookOnULList(16, 4)
+	l.InsertOrder("123459", SELLSIDE, 10002, 100.5, 1000)
+	l.InsertOrder("123459", SELLSIDE, 10002, 99.5, 1000)
+	l.InsertOrder("123455", SELLSIDE, 10000, 100.0, 1000)
+	l.InsertOrder("123457", SELLSIDE, 10001, 100.7, 1000)
+	l.InsertOrder("123458", SELLSIDE, 10002, 100.0, 1000)
+	l.InsertOrder("123460", SELLSIDE, 10002, 100.0, 1000)
+	ord, err = l.RemoveOrder("123457", SELLSIDE, 100.7)
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove last order level")
+	assert.Equal("Bucket 0{99.50000000->[123459 10002 1000.00000000,]100.00000000->[123455 10000 1000.00000000,123460 10002 1000.00000000,]},Bucket 1{100.50000000->[123459 10002 1000.00000000,]},",
+		l.sellQueue.String(), "Level at 100.7 should be removed.")
+	ord, err = l.RemoveOrder("123459", SELLSIDE, 99.5)
+	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0}, "Failed to remove 1st order level")
+	assert.Equal("Bucket 0{100.00000000->[123455 10000 1000.00000000,123460 10002 1000.00000000,]},Bucket 1{100.50000000->[123459 10002 1000.00000000,]},",
+		l.sellQueue.String(), "Level at 99.5 should be removed.")
+	ord, err = l.RemoveOrder("123460", SELLSIDE, 100.0)
+	ord, err = l.RemoveOrder("123455", SELLSIDE, 100.0)
+	ord, err = l.RemoveOrder("123455", SELLSIDE, 100.0)
 }
 
 func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {

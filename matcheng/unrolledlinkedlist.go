@@ -84,13 +84,18 @@ func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 }
 
 func (b *bucket) delete(p float64, compare Comparator) *PriceLevel {
-	i := sort.Search(len(b.elements), func(i int) bool { return compare(b.elements[i].Price, p) >= 0 })
-	if i == len(b.elements) { // not found
-		return nil
-	}
-	if compare(b.elements[i].Price, p) == 0 {
+	k := len(b.elements)
+	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) < 0 })
+	if i > 0 && compare(b.elements[i-1].Price, p) == 0 {
+		i = i - 1
 		pl := &b.elements[i]
-		b.elements = append(b.elements[:i], b.elements[i+1:]...)
+		if i == k-1 {
+			b.elements = b.elements[:i]
+		} else if i == 0 {
+			b.elements = b.elements[1:]
+		} else {
+			b.elements = append(b.elements[:i], b.elements[i+1:]...)
+		}
 		return pl
 	}
 	return nil
@@ -274,8 +279,8 @@ func (ull *ULList) DeletePriceLevel(price float64) bool {
 				lastOfLast.next = oldNext
 			}
 			//insert at the data end instead of the final end, so it is closer of the beginning of the memory allocation
-			oldDataEnd := ull.dend
-			ull.dend = last
+			oldDataEnd := ull.dend.next
+			ull.dend.next = last
 			last.next = oldDataEnd
 		}
 		return true

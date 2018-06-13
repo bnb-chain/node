@@ -71,12 +71,15 @@ func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) 
 func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 	for i, o := range l.orders {
 		if o.id == id {
-			if i == len(l.orders)-1 {
+			k := len(l.orders)
+			if i == k-1 {
 				l.orders = l.orders[:i]
+			} else if i == 0 {
+				l.orders = l.orders[1:]
 			} else {
-				l.orders = append(l.orders[:i], l.orders[i+1])
+				l.orders = append(l.orders[:i], l.orders[i+1:]...)
 			}
-			return o, 1, nil
+			return o, k - 1, nil
 		}
 	}
 	// not found
@@ -219,7 +222,7 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
-	if pl := q.GetPriceLevel(price); pl == nil {
+	if pl = q.GetPriceLevel(price); pl == nil {
 		return OrderPart{}, fmt.Errorf("order price %f doesn't exist at side %d.", price, side)
 	}
 	op, total, ok := pl.removeOrder(id)
@@ -227,7 +230,7 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (Or
 		return op, ok
 	}
 	//price level is gone
-	if total == 0.0 {
+	if total == 0 {
 		q.DeletePriceLevel(pl.Price)
 	}
 	return op, ok
