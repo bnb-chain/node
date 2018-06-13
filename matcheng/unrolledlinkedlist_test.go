@@ -3,6 +3,8 @@ package matcheng
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_bucket_head(t *testing.T) {
@@ -359,4 +361,30 @@ func TestULList_ensureCapacity(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestULList_DeletePriceLevel(t *testing.T) {
+	assert := assert.New(t)
+	l := NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 100.6})
+	l.AddPriceLevel(&PriceLevel{Price: 100.2})
+	l.AddPriceLevel(&PriceLevel{Price: 100.3})
+	l.AddPriceLevel(&PriceLevel{Price: 100.1})
+	assert.Equal("Bucket 0{100.60000000->[]100.30000000->[]},Bucket 1{100.20000000->[]100.10000000->[]},", l.String(), "AddPriceLevel sequence is wrong")
+	l.DeletePriceLevel(100.3)
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.20000000->[]100.10000000->[]},", l.String(), "Delete mid price")
+	l.DeletePriceLevel(100.2)
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.10000000->[]},", l.String(), "Delete mid price")
+	l.DeletePriceLevel(100.6)
+	assert.Equal("Bucket 0{100.10000000->[]},", l.String(), "Delete 1st bucket")
+	l.AddPriceLevel(&PriceLevel{Price: 100.6})
+	l.AddPriceLevel(&PriceLevel{Price: 100.2})
+	assert.Equal("Bucket 0{100.60000000->[]100.20000000->[]},Bucket 1{100.10000000->[]},", l.String(), "split bucket for new price")
+	l.DeletePriceLevel(100.1)
+	assert.Equal("Bucket 0{100.60000000->[]100.20000000->[]},", l.String(), "Delete last bucket")
+	l.DeletePriceLevel(100.2)
+	assert.Equal("Bucket 0{100.60000000->[]},", l.String(), "Delete last price")
+	l.DeletePriceLevel(100.6)
+	assert.Equal("", l.String(), "Delete last price")
+	assert.False(l.DeletePriceLevel(100.6), "delete empty")
 }
