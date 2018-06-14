@@ -102,7 +102,7 @@ type OverLappedLevel struct {
 // It can be implemented in different structures but here a fast unrolled-linked list,
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.
 type OrderBookInterface interface {
-	GetOverlappedRange(overlapped *[]OverLappedLevel) int
+	GetOverlappedRange(overlapped *[]OverLappedLevel, buyBuf *[]PriceLevel, sellBuf *[]PriceLevel) int
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
 	InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error)
@@ -177,9 +177,11 @@ func mergeLevels(buyLevels []PriceLevel, sellLevels []PriceLevel, overlapped *[]
 	}
 }
 
-func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel) int {
+func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel, buyBuf *[]PriceLevel, sellBuf *[]PriceLevel) int {
 	//clear return
 	*overlapped = (*overlapped)[:0]
+	*buyBuf = (*buyBuf)[:0]
+	*sellBuf = (*sellBuf)[:0]
 	// we may need more buffer to prevent memory allocating
 	buyTop := ob.buyQueue.GetTop()
 	if buyTop == nil { // one side market
@@ -190,12 +192,11 @@ func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel) i
 		return 0
 	}
 	var p2, p1 float64 = buyTop.Price, sellTop.Price
-	if p2 < p1 {
+	if compareBuy(p2, p1) < 0 { //p2 < p1
 		return 0 // not overlapped
 	}
-	buyBuf, sellBuf := make([]PriceLevel, 16), make([]PriceLevel, 16)
-	buyLevels := ob.buyQueue.GetPriceRange(p2, p1, &buyBuf)
-	sellLevels := ob.sellQueue.GetPriceRange(p1, p2, &sellBuf)
+	buyLevels := ob.buyQueue.GetPriceRange(p2, p1, buyBuf)
+	sellLevels := ob.sellQueue.GetPriceRange(p1, p2, sellBuf)
 	mergeLevels(buyLevels, sellLevels, overlapped)
 	return len(*overlapped)
 }
@@ -293,49 +294,50 @@ func (ob *OrderBookOnBTree) getSideQueue(side int) *bt.BTree {
 	return nil
 }
 
-func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel) int {
+func (ob *OrderBookOnBTree) GetOverlappedRange(overlapped *[]OverLappedLevel, buyLevels *[]PriceLevel, sellLevels *[]PriceLevel) int {
 	//clear return
 	*overlapped = (*overlapped)[:0]
-	bI := ob.buyQueue.Min()
-	if bI == nil {
+	*buyLevels = (*buyLevels)[:0]
+	*sellLevels = (*sellLevels)[:0]
+	bItem := ob.buyQueue.Min()
+	if bItem == nil {
 		return 0
 	}
-	buyTop, ok := bI.(*BuyPriceLevel)
+	buyTop, ok := bItem.(*BuyPriceLevel)
 	if !ok {
 		return 0
 	}
-	sI := ob.sellQueue.Min()
-	if sI == nil {
+	sItem := ob.sellQueue.Min()
+	if sItem == nil {
 		return 0
 	}
-	sellTop, ok := ob.sellQueue.Min().(*SellPriceLevel)
+	sellTop, ok := sItem.(*SellPriceLevel)
 	if !ok {
 		return 0
 	}
 	var p2, p1 float64 = buyTop.Price, sellTop.Price
-	if p2 < p1 {
+	if compareBuy(p2, p1) < 0 { //p2 < p1
 		return 0 // not overlapped
 	}
-	buyLevels := make([]PriceLevel, 0, 16)
-	ob.buyQueue.AscendRange(&BuyPriceLevel{PriceLevel{Price: p2}}, &BuyPriceLevel{PriceLevel{Price: p1}},
+	//PRECISION has to be added due to AscendRange is a range [GreaterOrEqual, LessThan)
+	ob.buyQueue.AscendRange(&BuyPriceLevel{PriceLevel{Price: p2}}, &BuyPriceLevel{PriceLevel{Price: p1 - PRECISION}},
 		func(i bt.Item) bool {
 			p, ok := i.(*BuyPriceLevel)
 			if ok {
-				buyLevels = append(buyLevels, p.PriceLevel)
+				*buyLevels = append(*buyLevels, p.PriceLevel)
 			}
 			return true
 		})
-	sellLevels := make([]PriceLevel, 0, 16)
-	ob.sellQueue.AscendRange(&BuyPriceLevel{PriceLevel{Price: p1}}, &BuyPriceLevel{PriceLevel{Price: p2}},
+	ob.sellQueue.AscendRange(&SellPriceLevel{PriceLevel{Price: p1}}, &SellPriceLevel{PriceLevel{Price: p2 + PRECISION}},
 		func(i bt.Item) bool {
-			p, ok := i.(*BuyPriceLevel)
+			p, ok := i.(*SellPriceLevel)
 			if ok {
-				sellLevels = append(sellLevels, p.PriceLevel)
+				*sellLevels = append(*sellLevels, p.PriceLevel)
 			}
 			return true
 		})
 
-	mergeLevels(buyLevels, sellLevels, overlapped)
+	mergeLevels(*buyLevels, *sellLevels, overlapped)
 	return len(*overlapped)
 }
 
@@ -385,8 +387,8 @@ func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price 
 
 func (ob *OrderBookOnBTree) RemoveOrder(id string, side int, price float64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
-	var pl PriceLevelInterface
-	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
+	var pl bt.Item
+	if pl = q.Get(newPriceLevelKey(price, side)); pl == nil {
 		return OrderPart{}, fmt.Errorf("order price %f doesn't exist at side %d.", price, side)
 	}
 	if pl2, ok := pl.(PriceLevelInterface); !ok {
