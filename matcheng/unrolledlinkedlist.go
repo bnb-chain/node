@@ -32,19 +32,23 @@ func (b *bucket) size() int {
 	return len(b.elements)
 }
 
-func (b *bucket) get(p float64, compare Comparator) *PriceLevel {
+//bucket.get() return 2 values:
+//if the price is found, return the PriceLevel and its position,
+//otherwise return nil and the 1st position that is smaller for buy(larger for sell) than input price
+func (b *bucket) get(p float64, compare Comparator) (*PriceLevel, int) {
 	k := len(b.elements)
-	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) == 0 })
-	if i < k {
-		return &b.elements[i]
+	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) < 0 })
+	if i > 0 && compare(b.elements[i-1].Price, p) == 0 {
+		pl := &b.elements[i-1]
+		return pl, i - 1
 	} else {
-		return nil
+		return nil, i
 	}
 }
 
 func (b *bucket) getRange(p1 float64, p2 float64, compare Comparator, buffer *[]PriceLevel) int {
 	// return -1 means the price is out of range
-	if len(b.elements) == 0 { // should never reach here
+	if len(b.elements) == 0 || compare(p1, p2) < 0 { // should never reach here
 		return -1
 	}
 	if compare(b.elements[0].Price, p2) < 0 {
@@ -53,10 +57,11 @@ func (b *bucket) getRange(p1 float64, p2 float64, compare Comparator, buffer *[]
 	if compare(b.elements[len(b.elements)-1].Price, p1) > 0 {
 		return 0
 	}
+
 	var i int
 	for _, p := range b.elements {
-		if compare(p2, p.Price) > 0 {
-			return -1
+		if compare(p.Price, p2) < 0 {
+			break
 		}
 		if compare(p1, p.Price) >= 0 {
 			*buffer = append(*buffer, p)
@@ -199,9 +204,14 @@ func (ull *ULList) ensureCapacity() {
 	}
 }
 
-//splitBucket() would move one bucket from data end to be after the full
+//splitAndInsert() would move one bucket from data end to be after the full
 //bucket, and re-allocate half the PriceLevels to it
-func (ull *ULList) splitBucket(origin *bucket) *bucket {
+func (ull *ULList) splitAndInsert(origin *bucket, p *PriceLevel) int {
+	//make sure here we have to insert
+	pl, pos := origin.get(p.Price, ull.compare)
+	if pl != nil {
+		return 0
+	}
 	ull.ensureCapacity()
 	//assert(ull.dend.next!=nil), i.e. there is still avaiable free bucket
 	oldNext := origin.next             //same the next of origin
@@ -209,11 +219,17 @@ func (ull *ULList) splitBucket(origin *bucket) *bucket {
 	ull.dend.next = ull.dend.next.next //shift one after data end
 	origin.next.next = oldNext         // re-connect the next of the origin from the new pick up
 	oldElements := origin.elements
-	newElements := origin.next.elements[:0]
-	mid := len(oldElements) / 2
-	origin.next.elements = append(newElements, oldElements[mid:]...)
-	origin.elements = oldElements[:mid]
-	return origin.next
+	origin.next.elements = origin.next.elements[:0] //clear data
+	//price at pos is either the same as p, or smaller for buy than p
+	//split at that place for the efficiency use of space, to prevent
+	//holes created by continuous insert of sorted prices, i.e. always
+	//insert at head or tail
+	origin.next.elements = append(origin.next.elements, *p)
+	if pos < len(oldElements) {
+		origin.next.elements = append(origin.next.elements, oldElements[pos:]...)
+		origin.elements = oldElements[:pos]
+	}
+	return len(origin.next.elements)
 }
 
 func (ull *ULList) Clear() {
@@ -241,16 +257,20 @@ func (ull *ULList) getBucket(p float64) *bucket {
 func (ull *ULList) AddPriceLevel(p *PriceLevel) bool {
 	last := ull.getBucket(p.Price)
 	if last == nil {
-		last = ull.begin
+		//larger than any existing price, insert at the very beginning
+		if ull.begin.size() >= ull.bucketSize {
+			ull.ensureCapacity()
+			oldNext := ull.begin
+			ull.begin = ull.dend.next          // pick up the one after data end
+			ull.dend.next = ull.dend.next.next //shift one after data end
+			ull.begin.next = oldNext           // re-connect the next of the origin from the new pick up
+		}
+		return ull.begin.insert(p, ull.compare) > 0
 	}
 	if last.size() >= ull.bucketSize {
 		//bucket is full, split
 		//TODO: do we have to wait until it is 100% full?
-		next := ull.splitBucket(last)
-		if ull.compare(next.head().Price, p.Price) >= 0 {
-			return next.insert(p, ull.compare) > 0
-		}
-		return last.insert(p, ull.compare) > 0
+		return ull.splitAndInsert(last, p) > 0
 	}
 	return last.insert(p, ull.compare) > 0
 }
@@ -321,7 +341,8 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 				return h
 			case 1: //head is larger (for buy, less for sell)
 				if i.next == ull.dend { // last bucket
-					return i.get(p, ull.compare)
+					p, _ := i.get(p, ull.compare)
+					return p
 				}
 				h = i.next.head()
 				// next bucket is more
@@ -330,7 +351,8 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 					case 0:
 						return h
 					case -1:
-						return i.get(p, ull.compare)
+						p, _ := i.get(p, ull.compare)
+						return p
 					}
 				}
 				//continue to move to the next bucket
