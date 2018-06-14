@@ -117,7 +117,6 @@ func Test_bucket_insert(t *testing.T) {
 			if got := b.insert(tt.args.p, tt.args.compare); got != tt.want {
 				t.Errorf("bucket.insert() = %v, want %v", got, tt.want)
 			}
-			t.Log(b)
 			switch tt.name {
 			case "NilBucket", "NilBucket2", "EmptyBucket", "EmptyBucket2":
 				if b.elements[0].Price != 101.1 {
@@ -370,21 +369,78 @@ func TestULList_DeletePriceLevel(t *testing.T) {
 	l.AddPriceLevel(&PriceLevel{Price: 100.2})
 	l.AddPriceLevel(&PriceLevel{Price: 100.3})
 	l.AddPriceLevel(&PriceLevel{Price: 100.1})
-	assert.Equal("Bucket 0{100.60000000->[]100.30000000->[]},Bucket 1{100.20000000->[]100.10000000->[]},", l.String(), "AddPriceLevel sequence is wrong")
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.30000000->[]100.20000000->[]},Bucket 2{100.10000000->[]},", l.String(), "AddPriceLevel sequence is wrong")
 	l.DeletePriceLevel(100.3)
-	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.20000000->[]100.10000000->[]},", l.String(), "Delete mid price")
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.20000000->[]},Bucket 2{100.10000000->[]},", l.String(), "Delete mid price")
 	l.DeletePriceLevel(100.2)
 	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.10000000->[]},", l.String(), "Delete mid price")
 	l.DeletePriceLevel(100.6)
 	assert.Equal("Bucket 0{100.10000000->[]},", l.String(), "Delete 1st bucket")
 	l.AddPriceLevel(&PriceLevel{Price: 100.6})
 	l.AddPriceLevel(&PriceLevel{Price: 100.2})
-	assert.Equal("Bucket 0{100.60000000->[]100.20000000->[]},Bucket 1{100.10000000->[]},", l.String(), "split bucket for new price")
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.20000000->[]100.10000000->[]},", l.String(), "split bucket for new price")
 	l.DeletePriceLevel(100.1)
-	assert.Equal("Bucket 0{100.60000000->[]100.20000000->[]},", l.String(), "Delete last bucket")
+	assert.Equal("Bucket 0{100.60000000->[]},Bucket 1{100.20000000->[]},", l.String(), "Delete price from last bucket")
 	l.DeletePriceLevel(100.2)
-	assert.Equal("Bucket 0{100.60000000->[]},", l.String(), "Delete last price")
+	assert.Equal("Bucket 0{100.60000000->[]},", l.String(), "Delete last bucket")
 	l.DeletePriceLevel(100.6)
 	assert.Equal("", l.String(), "Delete last price")
 	assert.False(l.DeletePriceLevel(100.6), "delete empty")
+}
+
+func Test_bucket_getRange(t *testing.T) {
+	assert := assert.New(t)
+	b1 := bucket{nil, []PriceLevel{
+		PriceLevel{Price: 106},
+		PriceLevel{Price: 105},
+		PriceLevel{Price: 104},
+		PriceLevel{Price: 103},
+		PriceLevel{Price: 102},
+		PriceLevel{Price: 101},
+		PriceLevel{Price: 100},
+	}}
+	buyBuf := make([]PriceLevel, 16)
+	assert.Equal(0, b1.getRange(91.0, 80.0, compareBuy, &buyBuf), "no overlap")
+	assert.Equal(-1, b1.getRange(108, 107, compareBuy, &buyBuf), "no overlap")
+	assert.Equal(-1, b1.getRange(100, 107, compareBuy, &buyBuf), "no overlap")
+	assert.Equal(1, b1.getRange(100, 100, compareBuy, &buyBuf), "1 overlap")
+	assert.Equal(100.0, buyBuf[len(buyBuf)-1].Price, "100 equal")
+	assert.Equal(1, b1.getRange(106, 106, compareBuy, &buyBuf), "106 overlap")
+	assert.Equal(106.0, buyBuf[len(buyBuf)-1].Price, "106 equal")
+	assert.Equal(1, b1.getRange(103, 103, compareBuy, &buyBuf), "1 overlap")
+	assert.Equal(103.0, buyBuf[len(buyBuf)-1].Price, "103 equal")
+	assert.Equal(2, b1.getRange(106, 105, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(1, b1.getRange(106, 105.5, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(2, b1.getRange(108, 105, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(2, b1.getRange(108, 104.5, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(2, b1.getRange(105.5, 103.5, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(3, b1.getRange(105, 103, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(3, b1.getRange(105, 102.6, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(3, b1.getRange(102, 100, compareBuy, &buyBuf), "2 overlap")
+	assert.Equal(3, b1.getRange(102.5, 99, compareBuy, &buyBuf), "2 overlap")
+	b2 := bucket{nil, []PriceLevel{
+		PriceLevel{Price: 100},
+		PriceLevel{Price: 101},
+		PriceLevel{Price: 102},
+		PriceLevel{Price: 103},
+		PriceLevel{Price: 104},
+		PriceLevel{Price: 105},
+		PriceLevel{Price: 106},
+	}}
+	assert.Equal(-1, b2.getRange(81.0, 90.0, compareSell, &buyBuf), "no overlap")
+	assert.Equal(0, b2.getRange(107, 108, compareSell, &buyBuf), "no overlap")
+	assert.Equal(-1, b2.getRange(110, 107, compareSell, &buyBuf), "no overlap")
+	assert.Equal(1, b2.getRange(100, 100, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(1, b2.getRange(106, 106, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(1, b2.getRange(103, 103, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(2, b2.getRange(105, 106, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(1, b2.getRange(105.6, 106, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(105, 108, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(104.5, 108, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(103.5, 105.5, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(103, 105, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(102.6, 105, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(100, 102, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(99, 102.5, compareSell, &buyBuf), "2 overlap")
+
 }
