@@ -20,6 +20,11 @@ func (li *LevelIndex) clear() {
 	li.index = li.index[:0]
 }
 
+func (li *SurplusIndex) clear() {
+	li.LevelIndex.clear()
+	li.surplus = li.surplus[:0]
+}
+
 //Trade stores an execution between 2 orders on a *currency pair*.
 //3 things needs attention:
 // - srcId and oid are just different names; actually no concept of source or destination;
@@ -38,6 +43,8 @@ type MatchEng struct {
 	// before any match() call
 	LotSize         float64
 	overLappedLevel []OverLappedLevel //buffer
+	buyBuf          []PriceLevel
+	sellBuf         []PriceLevel
 	maxExec         LevelIndex
 	maxSurplus      SurplusIndex
 	trades          []Trade
@@ -46,11 +53,14 @@ type MatchEng struct {
 
 func NewMatchEng(basePrice, lotSize float64) *MatchEng {
 	return &MatchEng{LotSize: lotSize, overLappedLevel: make([]OverLappedLevel, 0, 16),
-		trades: make([]Trade, 0, 32), lastTradePrice: basePrice}
+		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
+		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
 }
 
 func (me *MatchEng) clearData() {
 	me.overLappedLevel = me.overLappedLevel[:0]
+	me.buyBuf = me.buyBuf[:0]
+	me.sellBuf = me.sellBuf[:0]
 	me.maxExec.clear()
 	me.maxSurplus.clear()
 }
@@ -65,36 +75,38 @@ func sumOrders(orders []OrderPart) float64 {
 
 func prepareMatch(overlapped *[]OverLappedLevel) int {
 	var accu float64
-	for i := len(*overlapped) - 1; i >= 0; i-- {
-		l := (*overlapped)[i]
+	k := len(*overlapped)
+	for i := k - 1; i >= 0; i-- {
+		l := &(*overlapped)[i]
 		l.SellTotal = sumOrders(l.SellOrders)
 		accu += l.SellTotal
 		l.AccumulatedSell = accu
 	}
 	accu = 0.0
-	for _, l := range *overlapped {
+	for i := 0; i < k; i++ {
+		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrders(l.BuyOrders)
 		accu += l.BuyTotal
 		l.AccumulatedBuy = accu
 		l.AccumulatedExecutions = math.Min(l.AccumulatedBuy, l.AccumulatedSell)
 		l.BuySellSurplus = l.AccumulatedBuy - l.AccumulatedSell
 	}
-	return len(*overlapped)
+	return k
 }
 
-func getPriceCloseToRef(overlapped *[]OverLappedLevel, index []int, refPrice float64) (float64, int) {
+func getPriceCloseToRef(overlapped []OverLappedLevel, index []int, refPrice float64) (float64, int) {
 	var j int
 	var diff float64 = math.MaxFloat64
 	for _, i := range index {
-		p := (*overlapped)[i].Price
+		p := overlapped[i].Price
 		d := math.Abs(p - refPrice)
 		if compareBuy(diff, d) > 0 {
-			// do not count == case, when more than one has the same diff, return the largest
+			// do not count == case, when more than one has the same diff, return the largest price, i.e. the 1st
 			diff = d
 			j = i
 		}
 	}
-	return (*overlapped)[j].Price, j
+	return overlapped[j].Price, j
 }
 
 func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
@@ -153,7 +165,7 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 		return (*overlapped)[i].Price, i
 	}
 	if (buy && sell) || (!buy && !sell) {
-		return getPriceCloseToRef(overlapped, maxSurplus.index, refPrice)
+		return getPriceCloseToRef(*overlapped, maxSurplus.index, refPrice)
 	}
 	return -math.MaxFloat64, -1
 }
@@ -277,7 +289,7 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 // Match() return false mean there is orders in the book the current MatchEngine cannot handle.
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 func (me *MatchEng) Match() bool {
-	r := me.Book.GetOverlappedRange(&me.overLappedLevel)
+	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
 		return true
 	}
