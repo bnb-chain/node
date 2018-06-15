@@ -19,14 +19,14 @@ type Mapper interface {
 }
 
 type mapper struct {
-	key   sdk.StoreKey
-	cdc   *wire.Codec
+	key sdk.StoreKey
+	cdc *wire.Codec
 }
 
 func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
 	return mapper{
-		key:   key,
-		cdc:   cdc,
+		key: key,
+		cdc: cdc,
 	}
 }
 

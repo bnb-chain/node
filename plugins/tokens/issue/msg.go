@@ -10,17 +10,26 @@ import (
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
-const Route  = "tokensIssue"
+const Route = "tokensIssue"
 
 var _ sdk.Msg = (*Msg)(nil)
 
 type Msg struct {
-	Owner sdk.Address `json:"owner"`
-	Token types.Token `json:"token"`
+	From    sdk.Address `json:"from"`
+	Name    string      `json:"Name"`
+	Symbol  string      `json:"Symbol"`
+	Supply  int64       `json:"Supply"`
+	Decimal int8        `json:"Decimal"`
 }
 
-func NewMsg(owner sdk.Address, token types.Token) Msg {
-	return Msg{Owner: owner, Token: token}
+func NewMsg(from sdk.Address, name, symbol string, supply int64, decimal int8) Msg {
+	return Msg{
+		From:    from,
+		Name:    name,
+		Symbol:  symbol,
+		Supply:  supply,
+		Decimal: decimal,
+	}
 }
 
 func (msg Msg) Type() string { return Route }
@@ -28,16 +37,21 @@ func (msg Msg) Type() string { return Route }
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg Msg) ValidateBasic() sdk.Error {
-	err := msg.Token.Validate()
-	if err != nil {
+	if msg.From == nil {
+		return sdk.ErrInvalidAddress("sender address cannot be empty")
+	}
+
+	if err := types.ValidateSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
+
+	// TODO: check supply and decimal
 
 	return nil
 }
 
 func (msg Msg) String() string {
-	return fmt.Sprintf("IssueMsg{%v#%v}", msg.Owner, msg.Token)
+	return fmt.Sprintf("IssueMsg{%#v}", msg)
 }
 
 func (msg Msg) Get(key interface{}) (value interface{}) {
@@ -54,5 +68,5 @@ func (msg Msg) GetSignBytes() []byte {
 
 // Implements Msg.
 func (msg Msg) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.Owner}
+	return []sdk.Address{msg.From}
 }

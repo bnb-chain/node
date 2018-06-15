@@ -19,14 +19,14 @@ type FreezeMsg struct {
 	base.MsgBase
 }
 
-func NewFreezeMsg(owner sdk.Address, symbol string, amount int64) FreezeMsg {
-	return FreezeMsg{base.MsgBase{Owner: owner, Symbol: symbol, Amount: amount}}
+func NewFreezeMsg(from sdk.Address, symbol string, amount int64) FreezeMsg {
+	return FreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg FreezeMsg) Type() string { return RouteFreeze }
 
 func (msg FreezeMsg) String() string {
-	return fmt.Sprintf("Freeze{%v#%v}", msg.Owner, msg.Symbol)
+	return fmt.Sprintf("Freeze{%v#%v}", msg.From, msg.Symbol)
 }
 
 var _ sdk.Msg = (*UnfreezeMsg)(nil)
@@ -35,12 +35,12 @@ type UnfreezeMsg struct {
 	base.MsgBase
 }
 
-func NewUnfreezeMsg(owner sdk.Address, symbol string, amount int64) UnfreezeMsg {
-	return UnfreezeMsg{base.MsgBase{Owner: owner, Symbol: symbol, Amount: amount}}
+func NewUnfreezeMsg(from sdk.Address, symbol string, amount int64) UnfreezeMsg {
+	return UnfreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg UnfreezeMsg) Type() string { return RouteUnfreeze }
 
 func (msg UnfreezeMsg) String() string {
-	return fmt.Sprintf("Unfreeze{%v#%v%v}", msg.Owner, msg.Amount, msg.Symbol)
+	return fmt.Sprintf("Unfreeze{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
 }

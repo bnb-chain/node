@@ -35,14 +35,18 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Coin
 
 	innerBurnAmount := int64(math.Pow10(int(token.Decimal))) * burnAmount
 
-	// TODO: the third param can be removed...
-	coins := keeper.GetCoins(ctx, msg.Owner, nil)
+	if !token.IsOwner(msg.From) {
+		return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
+	}
 
+	// the token owner burns the token from the token account
+	// TODO: the third param can be removed...
+	coins := keeper.GetCoins(ctx, token.Address, nil)
 	if coins.AmountOf(symbol) < innerBurnAmount || token.Supply < burnAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, sdkError := keeper.SubtractCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: innerBurnAmount}))
+	_, sdkError := keeper.SubtractCoins(ctx, token.Address, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: innerBurnAmount}))
 	tokenMapper.UpdateTokenSupply(ctx, symbol, token.Supply-burnAmount)
 
 	if sdkError != nil {
