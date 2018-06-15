@@ -229,6 +229,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	me.overLappedLevel[i].SellTotal = sumOrders(sells)
 }
 
+// allocateResidual() assumes toAlloc is less than sum of quantity in orders.
+// It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
 func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) bool {
 	if len(orders) == 1 {
 		qty := math.Min(*toAlloc, orders[0].qty)
@@ -246,12 +248,12 @@ func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) boo
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
 		nLot := math.Floor((residual + halfLot) / lotSize)
-		remainderLot := math.Floor(math.Mod(nLot, float64(len(orders))) + 0.5)
+		remainderLot := int64(nLot) % int64(len(orders))
 		for _, o := range orders {
-			a := math.Floor((nLot*o.qty+halfLot)/lotSize) * lotSize
-			if compareBuy(remainderLot, 0) > 0 {
+			a := math.Floor(nLot*o.qty/t+halfLot) * lotSize // this is supposed to be the main portion
+			if remainderLot > 0 {                           // remainer distribution, every one can only get 1 lot
 				a += lotSize
-				remainderLot -= lotSize
+				remainderLot -= 1
 				o.qty = a
 			}
 			residual -= a
@@ -261,8 +263,9 @@ func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) boo
 		if compareBuy(*toAlloc, 0) != 0 {
 			return false
 		}
+		return true
 	}
-	return true
+	return false // t <= residual
 }
 
 // reserveQty() is called when orders have more leavesQty than the residual execution qty calculated from the matching process,
