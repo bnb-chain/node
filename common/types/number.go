@@ -17,6 +17,6 @@ func (num *Number) ToBigInt() *big.Int {
 	return res
 }
 
-func(num *Number) String() string {
+func (num *Number) String() string {
 	return num.Value
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type MsgBase struct {
-	Owner  sdk.Address `json:"owner"`
+	From   sdk.Address `json:"from"`
 	Symbol string      `json:"symbol"`
 	Amount int64       `json:"amount"`
 }
@@ -35,7 +35,7 @@ func (msg MsgBase) ValidateBasic() sdk.Error {
 }
 
 func (msg MsgBase) String() string {
-	return fmt.Sprintf("MsgBase{%v#%v%v}", msg.Owner, msg.Amount, msg.Symbol)
+	return fmt.Sprintf("MsgBase{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
 }
 
 func (msg MsgBase) Get(key interface{}) (value interface{}) {
@@ -51,5 +51,5 @@ func (msg MsgBase) GetSignBytes() []byte {
 }
 
 func (msg MsgBase) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.Owner}
+	return []sdk.Address{msg.From}
 }

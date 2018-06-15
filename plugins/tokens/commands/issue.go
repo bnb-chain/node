@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -104,6 +103,5 @@ func parseDecimal(decimal string) (int8, error) {
 }
 
 func buildMsg(addr sdk.Address, name string, symbol string, supply int64, decimal int8) sdk.Msg {
-	token := types.Token{Name: name, Symbol: symbol, Supply: supply, Decimal: decimal}
-	return issue.NewMsg(addr, token)
+	return issue.NewMsg(addr, name, symbol, supply, decimal)
 }

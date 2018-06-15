@@ -17,8 +17,8 @@ type Msg struct {
 	base.MsgBase
 }
 
-func NewMsg(owner sdk.Address, symbol string, amount int64) Msg {
-	return Msg{base.MsgBase{Owner: owner, Symbol: symbol, Amount: amount}}
+func NewMsg(from sdk.Address, symbol string, amount int64) Msg {
+	return Msg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg Msg) Type() string {
@@ -26,5 +26,5 @@ func (msg Msg) Type() string {
 }
 
 func (msg Msg) String() string {
-	return fmt.Sprintf("BurnMsg{%v#%v%v}", msg.Owner, msg.Amount, msg.Symbol)
+	return fmt.Sprintf("BurnMsg{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
 }

@@ -39,13 +39,13 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMapper 
 
 	freezeAmount = int64(math.Pow10(int(token.Decimal))) * freezeAmount
 	// TODO: the third param can be removed...
-	coins := keeper.GetCoins(ctx, msg.Owner, nil)
+	coins := keeper.GetCoins(ctx, msg.From, nil)
 	if coins.AmountOf(symbol) < freezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	_, sdkError := keeper.SubtractCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: freezeAmount}))
-	updateFrozenOfAccount(ctx, accountMapper, msg.Owner, symbol, freezeAmount)
+	_, sdkError := keeper.SubtractCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: freezeAmount}))
+	updateFrozenOfAccount(ctx, accountMapper, msg.From, symbol, freezeAmount)
 
 	if sdkError != nil {
 		return sdkError.Result()
@@ -68,7 +68,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 
 	unfreezeAmount = int64(math.Pow10(int(token.Decimal))) * unfreezeAmount
 	// TODO: the third param can be removed...
-	account := accountMapper.GetAccount(ctx, msg.Owner).(types.NamedAccount)
+	account := accountMapper.GetAccount(ctx, msg.From).(types.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	if frozenAmount < unfreezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
@@ -76,7 +76,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 	account.SetFrozenCoins(account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: frozenAmount})))
 	accountMapper.SetAccount(ctx, account)
 
-	_, sdkError := keeper.AddCoins(ctx, msg.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: unfreezeAmount}))
+	_, sdkError := keeper.AddCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: unfreezeAmount}))
 
 	if sdkError != nil {
 		return sdkError.Result()
