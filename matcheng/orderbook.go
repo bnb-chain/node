@@ -275,7 +275,7 @@ func newPriceLevelKey(price float64, side int) PriceLevelInterface {
 	case SELLSIDE:
 		return &SellPriceLevel{PriceLevel{Price: price}}
 	}
-	return &BuyPriceLevel{PriceLevel{Price: price}}
+	return nil
 }
 
 func NewOrderBookOnBTree(d int) *OrderBookOnBTree {
