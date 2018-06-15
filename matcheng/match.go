@@ -21,7 +21,8 @@ func (li *LevelIndex) clear() {
 }
 
 func (li *SurplusIndex) clear() {
-	li.LevelIndex.clear()
+	li.value = math.MaxFloat64
+	li.index = li.index[:0]
 	li.surplus = li.surplus[:0]
 }
 
@@ -46,7 +47,7 @@ type MatchEng struct {
 	buyBuf          []PriceLevel
 	sellBuf         []PriceLevel
 	maxExec         LevelIndex
-	maxSurplus      SurplusIndex
+	leastSurplus    SurplusIndex
 	trades          []Trade
 	lastTradePrice  float64
 }
@@ -54,15 +55,8 @@ type MatchEng struct {
 func NewMatchEng(basePrice, lotSize float64) *MatchEng {
 	return &MatchEng{LotSize: lotSize, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
+		maxExec: LevelIndex{0.0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxFloat64, make([]int, 8)}, make([]float64, 8)},
 		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
-}
-
-func (me *MatchEng) clearData() {
-	me.overLappedLevel = me.overLappedLevel[:0]
-	me.buyBuf = me.buyBuf[:0]
-	me.sellBuf = me.sellBuf[:0]
-	me.maxExec.clear()
-	me.maxSurplus.clear()
 }
 
 func sumOrders(orders []OrderPart) float64 {
@@ -109,8 +103,7 @@ func getPriceCloseToRef(overlapped []OverLappedLevel, index []int, refPrice floa
 	return overlapped[j].Price, j
 }
 
-func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
-	maxSurplus *SurplusIndex, refPrice float64) (float64, int) {
+func calMaxExec(overlapped *[]OverLappedLevel, maxExec *LevelIndex) {
 	for i, l := range *overlapped {
 		r := compareBuy(l.AccumulatedExecutions, maxExec.value)
 		if r > 0 {
@@ -121,72 +114,91 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 			maxExec.index = append(maxExec.index, i)
 		}
 	}
+}
+
+func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
+	leastSurplus *SurplusIndex) {
+	for _, j := range maxExec.index {
+		surplus := (*overlapped)[j].BuySellSurplus
+		abSurplus := math.Abs(surplus)
+		r := compareBuy(abSurplus, leastSurplus.value)
+		if r < 0 {
+			leastSurplus.value = abSurplus
+			leastSurplus.index = leastSurplus.index[:0]
+			leastSurplus.surplus = leastSurplus.surplus[:0]
+			leastSurplus.index = append(leastSurplus.index, j)
+			leastSurplus.surplus = append(leastSurplus.surplus, surplus)
+		} else if r == 0 {
+			leastSurplus.index = append(leastSurplus.index, j)
+			leastSurplus.surplus = append(leastSurplus.surplus, surplus)
+		}
+	}
+}
+
+func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
+	leastSurplus *SurplusIndex, refPrice float64) (float64, int) {
+	maxExec.clear()
+	leastSurplus.clear()
+	calMaxExec(overlapped, maxExec)
 	if len(maxExec.index) == 1 {
 		i := maxExec.index[0]
 		return (*overlapped)[i].Price, i
 	}
-	for _, j := range maxExec.index {
-		surplus := (*overlapped)[j].BuySellSurplus
-		abSurplus := math.Abs(surplus)
-		r := compareBuy(surplus, maxSurplus.value)
-		if r > 0 {
-			maxSurplus.value = abSurplus
-			maxSurplus.index = maxSurplus.index[:0]
-			maxSurplus.surplus = maxSurplus.surplus[:0]
-			maxSurplus.index = append(maxSurplus.index, j)
-			maxSurplus.surplus = append(maxSurplus.surplus, surplus)
-		} else if r == 0 {
-			maxSurplus.index = append(maxSurplus.index, j)
-			maxSurplus.surplus = append(maxSurplus.surplus, surplus)
-		}
-	}
-	if len(maxSurplus.index) == 1 {
-		i := maxSurplus.index[0]
+	calLeastSurplus(overlapped, maxExec, leastSurplus)
+	if len(leastSurplus.index) == 1 {
+		i := leastSurplus.index[0]
 		return (*overlapped)[i].Price, i
 	}
-	var buy, sell bool
-	for _, i := range maxSurplus.surplus {
+	var buySurplus, sellSurplus bool
+	for _, i := range leastSurplus.surplus {
 		if i < 0 {
-			sell = true
+			sellSurplus = true
 		}
 		if i > 0 {
-			buy = true
+			buySurplus = true
 		}
-		if buy && sell {
+		if buySurplus && sellSurplus { // just a short cut
 			break
 		}
 	}
-	if buy && !sell { // return lowest
-		i := maxSurplus.index[len(maxSurplus.index)-1]
+	// only buy side surplus exist, buying pressure
+	if buySurplus && !sellSurplus { // return hightest
+		i := leastSurplus.index[0]
 		return (*overlapped)[i].Price, i
 	}
-	if !buy && sell { // return hightest
-		i := maxSurplus.index[0]
+	// only sell side surplus exist, selling pressure
+	if !buySurplus && sellSurplus { // return lowest
+		i := leastSurplus.index[len(leastSurplus.index)-1]
 		return (*overlapped)[i].Price, i
 	}
-	if (buy && sell) || (!buy && !sell) {
-		return getPriceCloseToRef(*overlapped, maxSurplus.index, refPrice)
+	if (buySurplus && sellSurplus) || (!buySurplus && !sellSurplus) {
+		return getPriceCloseToRef(*overlapped, leastSurplus.index, refPrice)
 	}
-	return -math.MaxFloat64, -1
+	//never reach here
+	return math.MaxFloat64, -1
 }
 
+// fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
+// At least one side would be fully filled.
 func (me *MatchEng) fillOrders(i int, j int) {
 	var k, h int
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	// sort 1st to get the same seq of fills across different nodes
 	// TODO: duplicated sort called here via multiple call of fillOrders on the same i or j
-	// not a big deal so far since re-sort on a sorted is
+	// not a big deal so far since re-sort on a sorted slice is fast.
 	// stable sort is not used here to prevent sort-multiple-times changing the sequence
 	// because order id should be always different
 	sort.Slice(buys, func(i, j int) bool { return buys[i].id < buys[j].id })
 	sort.Slice(sells, func(i, j int) bool { return sells[i].id < sells[j].id })
-	for k < len(buys) && h < len(sells) {
-		if buys[k].qty == 0 {
+	bLength := len(buys)
+	sLength := len(sells)
+	for k < bLength && h < sLength {
+		if compareBuy(buys[k].qty, 0) == 0 {
 			k++
 			continue
 		}
-		if sells[h].qty == 0 {
+		if compareBuy(sells[h].qty, 0) == 0 {
 			h++
 			continue
 		}
@@ -196,28 +208,28 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			trade := sells[h].qty
 			buys[k].qty -= trade
 			sells[h].qty = 0
-			h++
 			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			h++
 		case r < 0:
 			trade := buys[k].qty
 			sells[h].qty -= trade
 			buys[k].qty = 0
+			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 			k++
-			me.trades = append(me.trades, Trade{buys[k].id, me.lastTradePrice, trade, sells[h].id})
 		case r == 0:
 			trade := sells[h].qty
 			buys[k].qty = 0
 			sells[h].qty = 0
+			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 			h++
 			k++
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 		}
 	}
 	me.overLappedLevel[i].BuyTotal = sumOrders(buys)
 	me.overLappedLevel[i].SellTotal = sumOrders(sells)
 }
 
-func (me *MatchEng) allocateResidual(toAlloc *float64, orders []OrderPart) bool {
+func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) bool {
 	if len(orders) == 1 {
 		qty := math.Min(*toAlloc, orders[0].qty)
 		orders[0].qty = qty
@@ -228,18 +240,18 @@ func (me *MatchEng) allocateResidual(toAlloc *float64, orders []OrderPart) bool 
 	// orders should have the same time, sort here to get deterministic sequence
 	sort.Slice(orders, func(i, j int) bool { return orders[i].id < orders[j].id })
 	residual := *toAlloc
-	halfLot := me.LotSize / 2
+	halfLot := lotSize / 2
 
 	if compareBuy(t, residual) > 0 { // not enough to allocate
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
-		nLot := math.Floor((residual + halfLot) / me.LotSize)
+		nLot := math.Floor((residual + halfLot) / lotSize)
 		remainderLot := math.Floor(math.Mod(nLot, float64(len(orders))) + 0.5)
 		for _, o := range orders {
-			a := math.Floor((nLot*o.qty+halfLot)/me.LotSize) * me.LotSize
+			a := math.Floor((nLot*o.qty+halfLot)/lotSize) * lotSize
 			if compareBuy(remainderLot, 0) > 0 {
-				a += me.LotSize
-				remainderLot -= me.LotSize
+				a += lotSize
+				remainderLot -= lotSize
 				o.qty = a
 			}
 			residual -= a
@@ -253,9 +265,12 @@ func (me *MatchEng) allocateResidual(toAlloc *float64, orders []OrderPart) bool 
 	return true
 }
 
+// reserveQty() is called when orders have more leavesQty than the residual execution qty calculated from the matching process,
+// so that here is to 'reserve' the necessary qtys from orders.
 func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 	//orders should be sorted by time already, since they are added as time squence
-	//no fill should happen on any in orders before this call, so that so other sorting happens
+	//no fill should happen on any in the 'orders' before this call, so that no other sorting happens
+	// resdiual must be smaller than the total qty of all orders
 	if len(orders) == 1 {
 		orders[0].qty = residual
 		return true
@@ -263,21 +278,25 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 	nt := orders[0].time
 	j, k := 1, 1
 	toAlloc := residual
-	for j < len(orders) || toAlloc <= 0 {
+	// the below algorithm is to determine the windows by orders' time and
+	// allocate residual qty one window after another
+	for j < len(orders) && toAlloc > 0 {
 		if orders[j].time == nt {
-			k++
-			if j == len(orders)-1 { // last one
-				return me.allocateResidual(&toAlloc, orders[j-k:])
-			} else {
+			if j == len(orders)-1 { // last one, so all the orders are at the same time
+				return allocateResidual(&toAlloc, orders[j-k:], me.LotSize)
+			} else { // check the next order's time
 				j++
+				k++
 			}
-		} else {
-			if !me.allocateResidual(&toAlloc, orders[j-k:j]) {
+		} else { // the current order time is different from all the past time, j must > 0
+			nt = orders[j].time //set the time for the new orders
+			// allocate for the past k orders
+			if !allocateResidual(&toAlloc, orders[j-k:j], me.LotSize) {
 				return false
 			}
-			if j == len(orders)-1 {
-				return me.allocateResidual(&toAlloc, orders[j:])
-			} else {
+			if j == len(orders)-1 { //only one order left
+				return allocateResidual(&toAlloc, orders[j:], me.LotSize)
+			} else { //start new counting
 				k = 1
 				j++
 			}
@@ -288,13 +307,15 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 
 // Match() return false mean there is orders in the book the current MatchEngine cannot handle.
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
+// cancel order should be handled 1st before calling Match().
+// IOC orders should be handled after Match()
 func (me *MatchEng) Match() bool {
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
-	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.maxSurplus, me.lastTradePrice)
+	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.lastTradePrice)
 	if index < 0 {
 		return false
 	}
@@ -302,7 +323,7 @@ func (me *MatchEng) Match() bool {
 	me.trades = me.trades[:0]
 	me.lastTradePrice = lastPx
 	i, j := 0, len(me.overLappedLevel)-1
-	//sell above price at index or buy below would not get filled
+	//sell below the price at index or buy above the price would not get filled
 	for i <= index && j >= index {
 		buyTotal := me.overLappedLevel[i].BuyTotal
 		sellTotal := me.overLappedLevel[j].SellTotal

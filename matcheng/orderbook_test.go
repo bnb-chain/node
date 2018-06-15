@@ -513,6 +513,9 @@ func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {
 }
 
 func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
+	overlap := make([]OverLappedLevel, 4)
+	buyBuf := make([]PriceLevel, 16)
+	sellBuf := make([]PriceLevel, 16)
 	assert := assert.New(t)
 	l := NewOrderBookOnULList(7, 3)
 	l.InsertOrder("123451", SELLSIDE, 10000, 99.5, 1000)
@@ -530,6 +533,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	l.InsertOrder("123463", SELLSIDE, 10005, 100.33, 1000)
 	t.Log(l.sellQueue)
 	assert.Equal(l.sellQueue.capacity, 14, "Capacity expansion")
+	assert.Equal(0, l.GetOverlappedRange(&overlap, &buyBuf, &sellBuf))
 
 	l.InsertOrder("223451", BUYSIDE, 10000, 99.5, 1000)
 	l.InsertOrder("223452", BUYSIDE, 10000, 99.55, 1000)
@@ -546,9 +550,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	l.InsertOrder("223463", BUYSIDE, 10005, 100.33, 1000)
 	t.Log(l.buyQueue)
 	assert.Equal(l.buyQueue.capacity, 14, "Capacity expansion")
-	overlap := make([]OverLappedLevel, 4)
-	buyBuf := make([]PriceLevel, 16)
-	sellBuf := make([]PriceLevel, 16)
+
 	assert.Equal(10, l.GetOverlappedRange(&overlap, &buyBuf, &sellBuf), "10 price overlap")
 	t.Log(overlap)
 	var j int
@@ -603,6 +605,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	l.InsertOrder("223462", BUYSIDE, 10005, 100.32, 1000)
 	l.InsertOrder("223463", BUYSIDE, 10005, 100.33, 1000)
 	l.sellQueue = NewULList(7, 3, compareSell)
+	assert.Equal(0, l.GetOverlappedRange(&overlap, &buyBuf, &sellBuf))
 	l.InsertOrder("123451", SELLSIDE, 10000, 97.5, 1000)
 	l.InsertOrder("123452", SELLSIDE, 10000, 98.55, 1000)
 	l.InsertOrder("123453", SELLSIDE, 10001, 98.60, 1000)
