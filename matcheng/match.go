@@ -59,10 +59,17 @@ func NewMatchEng(basePrice, lotSize float64) *MatchEng {
 		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
 }
 
-func sumOrders(orders []OrderPart) float64 {
+//sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
+//recalNxtTrade should be true at the begining and false when nxtTrade is changed by allocation logic
+func sumOrdersTotalLeft(orders []OrderPart, recalNxtTrade bool) float64 {
 	var s float64
-	for _, o := range orders {
-		s += o.qty
+	k := len(orders)
+	for i := 0; i < k; i++ {
+		o := &orders[i]
+		if recalNxtTrade {
+			o.nxtTrade = o.qty - o.cumQty
+		}
+		s += o.nxtTrade
 	}
 	return s
 }
@@ -72,14 +79,14 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	k := len(*overlapped)
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
-		l.SellTotal = sumOrders(l.SellOrders)
+		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
 		accu += l.SellTotal
 		l.AccumulatedSell = accu
 	}
 	accu = 0.0
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
-		l.BuyTotal = sumOrders(l.BuyOrders)
+		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
 		accu += l.BuyTotal
 		l.AccumulatedBuy = accu
 		l.AccumulatedExecutions = math.Min(l.AccumulatedBuy, l.AccumulatedSell)
@@ -194,51 +201,53 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	bLength := len(buys)
 	sLength := len(sells)
 	for k < bLength && h < sLength {
-		if compareBuy(buys[k].qty, 0) == 0 {
+		if compareBuy(buys[k].nxtTrade, 0) == 0 {
 			k++
 			continue
 		}
-		if compareBuy(sells[h].qty, 0) == 0 {
+		if compareBuy(sells[h].nxtTrade, 0) == 0 {
 			h++
 			continue
 		}
-		r := compareBuy(buys[k].qty, sells[h].qty)
+		r := compareBuy(buys[k].nxtTrade, sells[h].nxtTrade)
 		switch {
 		case r > 0:
-			trade := sells[h].qty
-			buys[k].qty -= trade
-			sells[h].qty = 0
+			trade := sells[h].nxtTrade
+			buys[k].nxtTrade -= trade
+			sells[h].nxtTrade = 0
 			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 			h++
 		case r < 0:
-			trade := buys[k].qty
-			sells[h].qty -= trade
-			buys[k].qty = 0
+			trade := buys[k].nxtTrade
+			sells[h].nxtTrade -= trade
+			buys[k].nxtTrade = 0
 			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 			k++
 		case r == 0:
-			trade := sells[h].qty
-			buys[k].qty = 0
-			sells[h].qty = 0
+			trade := sells[h].nxtTrade
+			buys[k].nxtTrade = 0
+			sells[h].nxtTrade = 0
 			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
 			h++
 			k++
 		}
 	}
-	me.overLappedLevel[i].BuyTotal = sumOrders(buys)
-	me.overLappedLevel[i].SellTotal = sumOrders(sells)
+	me.overLappedLevel[i].BuyTotal = sumOrdersTotalLeft(buys, false)
+	me.overLappedLevel[i].SellTotal = sumOrdersTotalLeft(sells, false)
 }
 
 // allocateResidual() assumes toAlloc is less than sum of quantity in orders.
 // It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
 func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) bool {
 	if len(orders) == 1 {
-		qty := math.Min(*toAlloc, orders[0].qty)
-		orders[0].qty = qty
+		qty := math.Min(*toAlloc, orders[0].nxtTrade)
+		orders[0].nxtTrade = qty
 		*toAlloc -= qty
 		return true
 	}
-	t := sumOrders(orders)
+
+	t := sumOrdersTotalLeft(orders, false)
+
 	// orders should have the same time, sort here to get deterministic sequence
 	sort.Slice(orders, func(i, j int) bool { return orders[i].id < orders[j].id })
 	residual := *toAlloc
@@ -248,15 +257,30 @@ func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) boo
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
 		nLot := math.Floor((residual + halfLot) / lotSize)
-		remainderLot := int64(nLot) % int64(len(orders))
-		for _, o := range orders {
-			a := math.Floor(nLot*o.qty/t+halfLot) * lotSize // this is supposed to be the main portion
-			if remainderLot > 0 {                           // remainer distribution, every one can only get 1 lot
-				a += lotSize
-				remainderLot -= 1
-				o.qty = a
+		k := len(orders)
+		for i := 0; i < k; i++ {
+			a := math.Floor(nLot*orders[i].nxtTrade/t+halfLot) * lotSize // this is supposed to be the main portion
+			if compareBuy(a, residual) >= 0 {
+				orders[i].nxtTrade = residual
+				residual = 0
+				break
+			} else {
+				orders[i].nxtTrade = a
+				residual -= a
 			}
-			residual -= a
+		}
+		remainderLot := math.Floor((residual + halfLot) / lotSize)
+		for i := 0; i < k; i++ {
+			if remainderLot > 0 { // remainer distribution, every one can only get 1 lot or zero
+				orders[i].nxtTrade += lotSize
+				remainderLot -= 1
+				residual -= lotSize
+				if i == k-1 { //restart from the beginning
+					i = 0
+				}
+			} else {
+				break
+			}
 		}
 		*toAlloc = residual
 		//assert *toAlloc == 0
@@ -264,8 +288,10 @@ func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) boo
 			return false
 		}
 		return true
+	} else { // t <= *toAlloc
+		*toAlloc -= t
+		return true
 	}
-	return false // t <= residual
 }
 
 // reserveQty() is called when orders have more leavesQty than the residual execution qty calculated from the matching process,
@@ -275,7 +301,7 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 	//no fill should happen on any in the 'orders' before this call, so that no other sorting happens
 	// resdiual must be smaller than the total qty of all orders
 	if len(orders) == 1 {
-		orders[0].qty = residual
+		orders[0].nxtTrade = residual
 		return true
 	}
 	nt := orders[0].time

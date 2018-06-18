@@ -9,25 +9,29 @@ import (
 
 func Test_sumOrders(t *testing.T) {
 	assert := assert.New(t)
-	orders := []OrderPart{OrderPart{"1", 100, 26.0}, OrderPart{"1", 100, 25.0}, OrderPart{"1", 100, 50.1}}
-	assert.Equal(101.1, sumOrders(orders))
+	orders := []OrderPart{OrderPart{"1", 100, 26.0, 0, 0}, OrderPart{"1", 100, 25.0, 0, 0}, OrderPart{"1", 100, 50.1, 0, 0}}
+	assert.Equal(101.1, sumOrdersTotalLeft(orders, true))
+	orders[0].qty = 1.0
+	orders[1].cumQty = 25.0
+	assert.Equal(101.1, sumOrdersTotalLeft(orders, false))
 	orders = []OrderPart{}
-	assert.Equal(0.0, sumOrders(orders))
-	orders = []OrderPart{OrderPart{"1", 100, 26.0}}
-	assert.Equal(26.0, sumOrders(orders))
-	assert.Equal(0.0, sumOrders(nil))
+	assert.Equal(0.0, sumOrdersTotalLeft(orders, true))
+	orders = []OrderPart{OrderPart{"1", 100, 26.0, 0, 0}}
+	assert.Equal(26.0, sumOrdersTotalLeft(orders, true))
+	assert.Equal(0.0, sumOrdersTotalLeft(nil, true))
 }
 
 func Test_prepareMatch(t *testing.T) {
 	assert := assert.New(t)
 	overlap := []OverLappedLevel{
-		OverLappedLevel{Price: 102.1, BuyOrders: []OrderPart{OrderPart{"1.1", 100, 150.0}, OrderPart{"1.2", 102, 150.0}}},
-		OverLappedLevel{Price: 100.1, BuyOrders: []OrderPart{OrderPart{"2.1", 100, 100.0}}},
-		OverLappedLevel{Price: 99.1, BuyOrders: []OrderPart{OrderPart{"3.1", 100, 200.0}}},
-		OverLappedLevel{Price: 98.1, SellOrders: []OrderPart{OrderPart{"4.1", 100, 100.0}, OrderPart{"4.2", 101, 100.0}, OrderPart{"4.3", 101, 50.0}},
-			BuyOrders: []OrderPart{OrderPart{"4.4", 100, 300.0}}},
-		OverLappedLevel{Price: 97.1, SellOrders: []OrderPart{OrderPart{"5.1", 100, 250.0}}},
-		OverLappedLevel{Price: 96.1, SellOrders: []OrderPart{OrderPart{"6.1", 101, 1000.0}}},
+		OverLappedLevel{Price: 102.1, BuyOrders: []OrderPart{OrderPart{"1.1", 100, 150.0, 0, 0}, OrderPart{"1.2", 102, 150.0, 0, 0}}},
+		OverLappedLevel{Price: 100.1, BuyOrders: []OrderPart{OrderPart{"2.1", 100, 100.0, 0, 0}}},
+		OverLappedLevel{Price: 99.1, BuyOrders: []OrderPart{OrderPart{"3.1", 100, 200.0, 0, 0}}},
+		OverLappedLevel{Price: 98.1,
+			SellOrders: []OrderPart{OrderPart{"4.1", 100, 100.0, 0, 0}, OrderPart{"4.2", 101, 100.0, 0, 0}, OrderPart{"4.3", 101, 50.0, 0, 0}},
+			BuyOrders:  []OrderPart{OrderPart{"4.4", 100, 300.0, 0, 0}}},
+		OverLappedLevel{Price: 97.1, SellOrders: []OrderPart{OrderPart{"5.1", 100, 250.0, 0, 0}}},
+		OverLappedLevel{Price: 96.1, SellOrders: []OrderPart{OrderPart{"6.1", 101, 1000.0, 0, 0}}},
 	}
 	execs := []float64{300.0, 400.0, 600.0, 900.0, 900.0, 900.0}
 	surpluses := []float64{-1200.0, -1100.0, -900.0, -600.0, -350.0, -100.0}
@@ -43,13 +47,14 @@ func Test_prepareMatch(t *testing.T) {
 func Test_getPriceCloseToRef(t *testing.T) {
 	assert := assert.New(t)
 	overlap := []OverLappedLevel{
-		OverLappedLevel{Price: 102.1, BuyOrders: []OrderPart{OrderPart{"1.1", 100, 150.0}, OrderPart{"1.2", 102, 150.0}}},
-		OverLappedLevel{Price: 100.1, BuyOrders: []OrderPart{OrderPart{"2.1", 100, 100.0}}},
-		OverLappedLevel{Price: 99.1, BuyOrders: []OrderPart{OrderPart{"3.1", 100, 200.0}}},
-		OverLappedLevel{Price: 98.1, SellOrders: []OrderPart{OrderPart{"4.1", 100, 100.0}, OrderPart{"4.2", 101, 100.0}, OrderPart{"4.3", 101, 50.0}},
-			BuyOrders: []OrderPart{OrderPart{"4.4", 100, 300.0}}},
-		OverLappedLevel{Price: 97.1, SellOrders: []OrderPart{OrderPart{"5.1", 100, 250.0}}},
-		OverLappedLevel{Price: 96.1, SellOrders: []OrderPart{OrderPart{"6.1", 101, 1000.0}}},
+		OverLappedLevel{Price: 102.1, BuyOrders: []OrderPart{OrderPart{"1.1", 100, 150.0, 0, 0}, OrderPart{"1.2", 102, 150.0, 0, 0}}},
+		OverLappedLevel{Price: 100.1, BuyOrders: []OrderPart{OrderPart{"2.1", 100, 100.0, 0, 0}}},
+		OverLappedLevel{Price: 99.1, BuyOrders: []OrderPart{OrderPart{"3.1", 100, 200.0, 0, 0}}},
+		OverLappedLevel{Price: 98.1,
+			SellOrders: []OrderPart{OrderPart{"4.1", 100, 100.0, 0, 0}, OrderPart{"4.2", 101, 100.0, 0, 0}, OrderPart{"4.3", 101, 50.0, 0, 0}},
+			BuyOrders:  []OrderPart{OrderPart{"4.4", 100, 300.0, 0, 0}}},
+		OverLappedLevel{Price: 97.1, SellOrders: []OrderPart{OrderPart{"5.1", 100, 250.0, 0, 0}}},
+		OverLappedLevel{Price: 96.1, SellOrders: []OrderPart{OrderPart{"6.1", 101, 1000.0, 0, 0}}},
 	}
 
 	p, i := getPriceCloseToRef(overlap, []int{0, 1, 2}, 99.0)
@@ -365,16 +370,16 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.lastTradePrice = 99.99
 	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 100,
 		BuyOrders: []OrderPart{
-			OrderPart{"2", 100, 80},
-			OrderPart{"1", 100, 70},
-			OrderPart{"4", 100, 50},
-			OrderPart{"3", 100, 100},
+			OrderPart{"2", 100, 80, 0, 0},
+			OrderPart{"1", 100, 70, 0, 0},
+			OrderPart{"4", 100, 50, 0, 0},
+			OrderPart{"3", 100, 100, 0, 0},
 		},
 		SellOrders: []OrderPart{
-			OrderPart{"9", 100, 60},
-			OrderPart{"8", 100, 70},
-			OrderPart{"7", 100, 50},
-			OrderPart{"6", 100, 100},
+			OrderPart{"9", 100, 60, 0, 0},
+			OrderPart{"8", 100, 70, 0, 0},
+			OrderPart{"7", 100, 50, 0, 0},
+			OrderPart{"6", 100, 100, 0, 0},
 		},
 	}}
 	prepareMatch(&me.overLappedLevel)
@@ -394,31 +399,165 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	}, me.trades)
 }
 
-func TestMatchEng_reserveQty(t *testing.T) {
-	me := NewMatchEng(100, 0.5)
-	assert := assert.New(t)
-	ords := []OrderPart{
-		OrderPart{"1", 100, 90},
-	}
-	assert.True(me.reserveQty(70, ords))
-	assert.Equal(70.0, ords[0].qty)
-	ords = []OrderPart{
-		OrderPart{"1", 100, 90},
-		OrderPart{"2", 100, 90},
-		OrderPart{"3", 100, 90},
-	}
-
-	assert.True(me.reserveQty(90, ords))
-
-}
-
 func Test_allocateResidual(t *testing.T) {
 	assert := assert.New(t)
 	orders := []OrderPart{
-		OrderPart{"1", 100, 90},
+		OrderPart{"1", 100, 180, 90, 90},
 	}
 	toAlloc := 50.0
 	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(50.0, orders[0].qty)
+	assert.Equal(50.0, orders[0].nxtTrade)
 	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"3", 100, 60, 0, 60},
+		OrderPart{"2", 100, 30, 0, 30},
+	}
+	toAlloc = 60.0
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(30.0, orders[0].nxtTrade)
+	assert.Equal(10.0, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(20.0, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"3", 100, 60, 0, 60},
+		OrderPart{"2", 100, 30, 0, 30},
+	}
+	toAlloc = 50.0
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(25.5, orders[0].nxtTrade)
+	assert.Equal(8.0, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(16.5, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"3", 100, 60, 0, 60},
+		OrderPart{"2", 100, 30, 0, 30},
+	}
+	toAlloc = 2.5
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(1.5, orders[0].nxtTrade)
+	assert.Equal(0.5, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(0.5, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"3", 100, 60, 0, 60},
+		OrderPart{"2", 100, 30, 0, 30},
+	}
+	toAlloc = 3.5
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(2.0, orders[0].nxtTrade)
+	assert.Equal(0.5, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(1.0, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"3", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+	}
+	toAlloc = 70
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(23.5, orders[0].nxtTrade)
+	assert.Equal(23.5, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(23.0, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"3", 100, 90, 0, 90},
+	}
+	toAlloc = 70
+	assert.True(allocateResidual(&toAlloc, orders, 0.5))
+	assert.Equal(23.5, orders[0].nxtTrade)
+	assert.Equal(23.5, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(23.0, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(0.0, toAlloc)
+}
+
+func TestMatchEng_reserveQty(t *testing.T) {
+	me := NewMatchEng(100, 0.5)
+	assert := assert.New(t)
+	orders := []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+	}
+	assert.True(me.reserveQty(70, orders))
+	assert.Equal(70.0, orders[0].nxtTrade)
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"3", 100, 90, 0, 90},
+	}
+
+	assert.True(me.reserveQty(90, orders))
+	assert.Equal(30.0, orders[0].nxtTrade)
+	assert.Equal(30.0, orders[1].nxtTrade)
+	assert.Equal(30.0, orders[0].nxtTrade)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"3", 100, 90, 0, 90},
+	}
+
+	assert.True(me.reserveQty(70, orders))
+	assert.Equal(23.5, orders[0].nxtTrade)
+	assert.Equal(23.5, orders[1].nxtTrade)
+	assert.Equal(23.0, orders[2].nxtTrade)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"3", 101, 90, 0, 90},
+	}
+
+	assert.True(me.reserveQty(70, orders))
+	assert.Equal(35.0, orders[0].nxtTrade)
+	assert.Equal(35.0, orders[1].nxtTrade)
+	assert.Equal(0.0, orders[2].nxtTrade)
+
+	orders = []OrderPart{
+		OrderPart{"1", 100, 90, 0, 90},
+		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"3", 101, 90, 0, 90},
+		OrderPart{"6", 101, 90, 0, 90},
+		OrderPart{"5", 102, 90, 0, 90},
+		OrderPart{"4", 102, 90, 0, 90},
+		OrderPart{"7", 102, 90, 0, 90},
+	}
+
+	assert.True(me.reserveQty(430, orders))
+	assert.Equal(90.0, orders[0].nxtTrade)
+	assert.Equal("1", orders[0].id)
+	assert.Equal(90.0, orders[1].nxtTrade)
+	assert.Equal("2", orders[1].id)
+	assert.Equal(90.0, orders[2].nxtTrade)
+	assert.Equal("3", orders[2].id)
+	assert.Equal(90.0, orders[3].nxtTrade)
+	assert.Equal("6", orders[3].id)
+	assert.Equal(23.5, orders[4].nxtTrade)
+	assert.Equal("4", orders[4].id)
+	assert.Equal(23.5, orders[5].nxtTrade)
+	assert.Equal("5", orders[5].id)
+	assert.Equal(23.0, orders[6].nxtTrade)
+	assert.Equal("7", orders[6].id)
 }

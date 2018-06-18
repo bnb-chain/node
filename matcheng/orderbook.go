@@ -19,9 +19,11 @@ const (
 const PRECISION = 0.000000005
 
 type OrderPart struct {
-	id   string
-	time uint64
-	qty  float64
+	id       string
+	time     uint64
+	qty      float64
+	cumQty   float64
+	nxtTrade float64
 }
 
 type PriceLevel struct {
@@ -63,7 +65,7 @@ func (l *PriceLevel) addOrder(id string, time uint64, qty float64) (int, error) 
 			return 0, fmt.Errorf("Order %s has existed in the price level.", id)
 		}
 	}
-	l.orders = append(l.orders, OrderPart{id, time, qty})
+	l.orders = append(l.orders, OrderPart{id, time, qty, 0, 0})
 	return len(l.orders), nil
 
 }
@@ -206,7 +208,7 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
 		// price level not exist, insert a new one
-		pl = &PriceLevel{price, []OrderPart{{id, time, qty}}}
+		pl = &PriceLevel{price, []OrderPart{{id, time, qty, 0, 0}}}
 		if !q.AddPriceLevel(pl) {
 			return pl, fmt.Errorf("Failed to insert order %s at price %f", id, price)
 		}
@@ -369,7 +371,7 @@ func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price 
 
 	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
 		// price level not exist, insert a new one
-		pl2 := newPriceLevelBySide(price, []OrderPart{{id, time, qty}}, side)
+		pl2 := newPriceLevelBySide(price, []OrderPart{{id, time, qty, 0, 0}}, side)
 		if q.ReplaceOrInsert(pl2) != nil {
 			return toPriceLevel(pl2, side), fmt.Errorf("Severe error: data consistence break when insert %v @ %v orderbook", id, price)
 		}
