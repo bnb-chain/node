@@ -62,7 +62,7 @@ func TestPriceLevel_addOrder(t *testing.T) {
 		wantErr bool
 	}{
 		{"AddedOrder", fields{100.0, make([]OrderPart, 0, 1)}, args{"12345", 2354, 1000.5}, 1, false},
-		{"Duplicated", fields{100.0, []OrderPart{{"12345", 0, 1555}}}, args{"12345", 2354, 1000.5}, 0, true},
+		{"Duplicated", fields{100.0, []OrderPart{{"12345", 0, 1555, 0, 0}}}, args{"12345", 2354, 1000.5}, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -105,11 +105,14 @@ func TestPriceLevel_removeOrder(t *testing.T) {
 		want1   int
 		wantErr bool
 	}{
-		{"NotExist1", fields{100.0, []OrderPart{{"12345", 0, 1555}}}, args{"12346"}, OrderPart{}, 0, true},
+		{"NotExist1", fields{100.0, []OrderPart{{"12345", 0, 1555, 0, 0}}}, args{"12346"}, OrderPart{}, 0, true},
 		{"NotExist2", fields{100.0, []OrderPart{}}, args{"12346"}, OrderPart{}, 0, true},
-		{"Delete1", fields{100.0, []OrderPart{{"12345", 0, 1555}, {"12346", 0, 1556}, {"12347", 0, 1557}}}, args{"12345"}, OrderPart{"12345", 0, 1555}, 2, false},
-		{"Delete2", fields{100.0, []OrderPart{{"12345", 0, 1555}, {"12346", 0, 1556}, {"12347", 0, 1557}}}, args{"12347"}, OrderPart{"12347", 0, 1557}, 2, false},
-		{"Delete3", fields{100.0, []OrderPart{{"12345", 0, 1555}, {"12346", 0, 1556}, {"12347", 0, 1557}}}, args{"12346"}, OrderPart{"12346", 0, 1556}, 2, false},
+		{"Delete1", fields{100.0, []OrderPart{{"12345", 0, 1555, 0, 0}, {"12346", 0, 1556, 0, 0},
+			{"12347", 0, 1557, 0, 0}}}, args{"12345"}, OrderPart{"12345", 0, 1555, 0, 0}, 2, false},
+		{"Delete2", fields{100.0, []OrderPart{{"12345", 0, 1555, 0, 0}, {"12346", 0, 1556, 0, 0},
+			{"12347", 0, 1557, 0, 0}}}, args{"12347"}, OrderPart{"12347", 0, 1557, 0, 0}, 2, false},
+		{"Delete3", fields{100.0, []OrderPart{{"12345", 0, 1555, 0, 0}, {"12346", 0, 1556, 0, 0},
+			{"12347", 0, 1557, 0, 0}}}, args{"12346"}, OrderPart{"12346", 0, 1556, 0, 0}, 2, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -244,23 +247,25 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 		wantErr bool
 	}{
 		{"Sanity", fields{NewULList(4096, 16, compareBuy), NewULList(4096, 16, compareSell)},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"SamePrice", fields{samePrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123457", 10001, 1000.0}, {"123458", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0, 0, 0},
+				{"123457", 10001, 1000.0, 0, 0}, {"123458", 10002, 1000.0, 0, 0}, {"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPrice1", fields{newPrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPrice2", fields{newPrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123458", 10002, 1000.0}, {"123460", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0, 0, 0},
+				{"123458", 10002, 1000.0, 0, 0}, {"123460", 10002, 1000.0, 0, 0}, {"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -376,23 +381,25 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 		wantErr bool
 	}{
 		{"Sanity", fields{bt.New(8), bt.New(8)},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"SamePrice", fields{samePrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123457", 10001, 1000.0}, {"123458", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0, 0, 0},
+				{"123457", 10001, 1000.0, 0, 0}, {"123458", 10002, 1000.0, 0, 0}, {"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPrice1", fields{newPrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPrice2", fields{newPrice().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit1", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 101.0, 1000.0}, &PriceLevel{101.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit2", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 99.0, 1000.0}, &PriceLevel{99.0, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit3", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0}, {"123458", 10002, 1000.0}, {"123460", 10002, 1000.0}, {"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.0, 1000.0}, &PriceLevel{100.0, []OrderPart{{"123455", 10000, 1000.0, 0, 0},
+				{"123458", 10002, 1000.0, 0, 0}, {"123460", 10002, 1000.0, 0, 0}, {"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit4", fields{newPrice2().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.4, 1000.0}, &PriceLevel{100.4, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 		{"NewPriceSplit5", fields{newPrice3().buyQueue, nil},
-			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0}}}, false},
+			args{"123456", BUYSIDE, 10000, 100.6, 1000.0}, &PriceLevel{100.6, []OrderPart{{"123456", 10000, 1000.0, 0, 0}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -421,13 +428,13 @@ func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
 	samePrice.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
 	samePrice.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
 	ord, err := samePrice.RemoveOrder("123457", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove middle order from multiple orders at the same price")
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0, 0, 0}, "Failed to remove middle order from multiple orders at the same price")
 	assert.Nil(err)
 	ord, err = samePrice.RemoveOrder("123456", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123456", 10000, 1000.0}, "Failed to remove head order from multiple orders at the same price")
+	assert.Equal(ord, OrderPart{"123456", 10000, 1000.0, 0, 0}, "Failed to remove head order from multiple orders at the same price")
 	assert.Nil(err)
 	ord, err = samePrice.RemoveOrder("123458", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0}, "Failed to remove last order at the same price")
+	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0, 0, 0}, "Failed to remove last order at the same price")
 	assert.Nil(err)
 
 	l := NewOrderBookOnULList(7, 2)
@@ -438,27 +445,27 @@ func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
 	l.InsertOrder("123458", SELLSIDE, 10002, 100.0, 1000)
 	l.InsertOrder("123460", SELLSIDE, 10002, 100.0, 1000)
 	ord, err = l.RemoveOrder("123457", SELLSIDE, 100.7)
-	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove last order level")
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0, 0, 0}, "Failed to remove last order level")
 	assert.Equal("Bucket 0{99.50000000->[123459 10002 1000.00000000,]},Bucket 1{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},",
 		l.sellQueue.String(), "Level at 100.7 should be removed.")
 	ord, err = l.RemoveOrder("123459", SELLSIDE, 99.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0}, "Failed to remove 1st order level")
+	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove 1st order level")
 	assert.Equal("Bucket 0{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},",
 		l.sellQueue.String(), "Level at 99.5 should be removed.")
 	ord, err = l.RemoveOrder("123459", SELLSIDE, 100.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0}, "Failed to remove last price")
+	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove last price")
 	assert.Equal("Bucket 0{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]},",
 		l.sellQueue.String(), "Level at 100.5 should be removed.")
 	ord, err = l.RemoveOrder("123455", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123455", 10000, 1000.0}, "Failed to remove 1st order at the same price")
+	assert.Equal(ord, OrderPart{"123455", 10000, 1000.0, 0, 0}, "Failed to remove 1st order at the same price")
 	assert.Equal("Bucket 0{100.00000000->[123458 10002 1000.00000000,123460 10002 1000.00000000,]},",
 		l.sellQueue.String(), "Level at 100.0 should remain.")
 	ord, err = l.RemoveOrder("123460", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123460", 10002, 1000.0}, "Failed to remove last order")
+	assert.Equal(ord, OrderPart{"123460", 10002, 1000.0, 0, 0}, "Failed to remove last order")
 	assert.Equal("Bucket 0{100.00000000->[123458 10002 1000.00000000,]},",
 		l.sellQueue.String(), "Level at 100.0 should remain.")
 	ord, err = l.RemoveOrder("123458", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0}, "Failed to remove last order")
+	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0, 0, 0}, "Failed to remove last order")
 	assert.Equal("",
 		l.sellQueue.String(), "Level at 100.0 should be removed.")
 }
@@ -470,13 +477,13 @@ func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {
 	samePrice.InsertOrder("123457", BUYSIDE, 10001, 100.0, 1000)
 	samePrice.InsertOrder("123458", BUYSIDE, 10002, 100.0, 1000)
 	ord, err := samePrice.RemoveOrder("123457", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove middle order from multiple orders at the same price")
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0, 0, 0}, "Failed to remove middle order from multiple orders at the same price")
 	assert.Nil(err)
 	ord, err = samePrice.RemoveOrder("123456", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123456", 10000, 1000.0}, "Failed to remove head order from multiple orders at the same price")
+	assert.Equal(ord, OrderPart{"123456", 10000, 1000.0, 0, 0}, "Failed to remove head order from multiple orders at the same price")
 	assert.Nil(err)
 	ord, err = samePrice.RemoveOrder("123458", BUYSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0}, "Failed to remove last order at the same price")
+	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0, 0, 0}, "Failed to remove last order at the same price")
 	assert.Nil(err)
 
 	l := NewOrderBookOnBTree(8)
@@ -487,27 +494,27 @@ func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {
 	l.InsertOrder("123458", SELLSIDE, 10002, 100.0, 1000)
 	l.InsertOrder("123460", SELLSIDE, 10002, 100.0, 1000)
 	ord, err = l.RemoveOrder("123457", SELLSIDE, 100.7)
-	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0}, "Failed to remove last order level")
+	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0, 0, 0}, "Failed to remove last order level")
 	assert.Equal("99.50000000->[[{123459 10002 1000}]], 100.00000000->[[{123455 10000 1000} {123458 10002 1000} {123460 10002 1000}]], 100.50000000->[[{123459 10002 1000}]], ",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 100.7 should be removed.")
 	ord, err = l.RemoveOrder("123459", SELLSIDE, 99.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0}, "Failed to remove 1st order level")
+	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove 1st order level")
 	assert.Equal("100.00000000->[[{123455 10000 1000} {123458 10002 1000} {123460 10002 1000}]], 100.50000000->[[{123459 10002 1000}]], ",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 99.5 should be removed.")
 	ord, err = l.RemoveOrder("123459", SELLSIDE, 100.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0}, "Failed to remove last price")
+	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove last price")
 	assert.Equal("100.00000000->[[{123455 10000 1000} {123458 10002 1000} {123460 10002 1000}]], ",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 100.5 should be removed.")
 	ord, err = l.RemoveOrder("123455", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123455", 10000, 1000.0}, "Failed to remove 1st order at the same price")
+	assert.Equal(ord, OrderPart{"123455", 10000, 1000.0, 0, 0}, "Failed to remove 1st order at the same price")
 	assert.Equal("100.00000000->[[{123458 10002 1000} {123460 10002 1000}]], ",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 100.0 should remain.")
 	ord, err = l.RemoveOrder("123460", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123460", 10002, 1000.0}, "Failed to remove last order")
+	assert.Equal(ord, OrderPart{"123460", 10002, 1000.0, 0, 0}, "Failed to remove last order")
 	assert.Equal("100.00000000->[[{123458 10002 1000}]], ",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 100.0 remain.")
 	ord, err = l.RemoveOrder("123458", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0}, "Failed to remove last order")
+	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0, 0, 0}, "Failed to remove last order")
 	assert.Equal("",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 100.0 be removed.")
 }
