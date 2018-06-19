@@ -107,8 +107,9 @@ type OrderBookInterface interface {
 	GetOverlappedRange(overlapped *[]OverLappedLevel, buyBuf *[]PriceLevel, sellBuf *[]PriceLevel) int
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
-	InsertOrder(id string, side int, time uint, price float64, qty float64) (*PriceLevel, error)
+	InsertOrder(id string, side int, time uint64, price float64, qty float64) (*PriceLevel, error)
 	RemoveOrder(id string, side int, price float64) (OrderPart, error)
+	RemovePriceLevel(price float64, side int) int
 	ShowDepth(numOfLevels int, iter func(price float64, buyTotal float64, sellTotal float64))
 }
 
@@ -237,6 +238,18 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int, price float64) (Or
 		q.DeletePriceLevel(pl.Price)
 	}
 	return op, ok
+}
+
+func (ob *OrderBookOnULList) RemovePriceLevel(price float64, side int) int {
+	q := ob.getSideQueue(side)
+	if q.DeletePriceLevel(price) {
+		return 1
+	}
+	return 0
+}
+
+func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iter func(price float64, buyTotal float64, sellTotal float64)) {
+
 }
 
 type BuyPriceLevel struct {
