@@ -397,6 +397,40 @@ func TestMatchEng_fillOrders(t *testing.T) {
 		Trade{"9", 99.99, 30.0, "3"},
 		Trade{"9", 99.99, 30.0, "4"},
 	}, me.trades)
+
+	me.trades = me.trades[:0]
+	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 100,
+		BuyOrders: []OrderPart{
+			OrderPart{"2", 100, 80, 0, 0},
+			OrderPart{"1", 100, 70, 0, 0},
+			OrderPart{"4", 100, 50, 0, 0},
+			OrderPart{"3", 100, 100, 0, 0},
+		},
+		SellOrders: []OrderPart{}},
+		OverLappedLevel{Price: 100,
+			BuyOrders: []OrderPart{},
+			SellOrders: []OrderPart{
+				OrderPart{"9", 100, 60, 0, 0},
+				OrderPart{"8", 100, 70, 0, 0},
+				OrderPart{"7", 100, 50, 0, 0},
+				OrderPart{"6", 100, 100, 0, 0},
+			}},
+	}
+	prepareMatch(&me.overLappedLevel)
+	t.Log(me.overLappedLevel)
+	assert.Equal(280.0, me.overLappedLevel[0].AccumulatedExecutions)
+	me.fillOrders(0, 1)
+	assert.Equal(20.0, me.overLappedLevel[0].BuyTotal)
+	assert.Equal(0.0, me.overLappedLevel[1].SellTotal)
+	t.Log(me.trades)
+	assert.Equal([]Trade{
+		Trade{"6", 99.99, 70.0, "1"},
+		Trade{"6", 99.99, 30.0, "2"},
+		Trade{"7", 99.99, 50.0, "2"},
+		Trade{"8", 99.99, 70.0, "3"},
+		Trade{"9", 99.99, 30.0, "3"},
+		Trade{"9", 99.99, 30.0, "4"},
+	}, me.trades)
 }
 
 func Test_allocateResidual(t *testing.T) {
@@ -560,4 +594,87 @@ func TestMatchEng_reserveQty(t *testing.T) {
 	assert.Equal("5", orders[5].id)
 	assert.Equal(23.0, orders[6].nxtTrade)
 	assert.Equal("7", orders[6].id)
+}
+
+func TestMatchEng_Match(t *testing.T) {
+	me := NewMatchEng(100, 1)
+	assert := assert.New(t)
+	me.Book = NewOrderBookOnULList(4, 2)
+	me.Book.InsertOrder("3", SELLSIDE, 100, 98.0, 100)
+	me.Book.InsertOrder("5", SELLSIDE, 101, 98.0, 100)
+	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 50)
+	me.Book.InsertOrder("8", BUYSIDE, 103, 98.0, 150)
+	me.Book.InsertOrder("2", BUYSIDE, 103, 100.0, 80)
+	me.Book.InsertOrder("4", BUYSIDE, 104, 100.0, 20)
+	me.Book.InsertOrder("6", BUYSIDE, 105, 100.0, 50)
+	me.Book.InsertOrder("9", SELLSIDE, 106, 98.0, 50)
+	me.Book.InsertOrder("91", BUYSIDE, 107, 100.0, 50)
+	me.Book.InsertOrder("92", SELLSIDE, 108, 97.0, 50)
+
+	assert.True(me.Match())
+	assert.Equal(3, len(me.overLappedLevel))
+	assert.Equal(98.0, me.lastTradePrice)
+	assert.Equal("[{92 98 50 1} {3 98 80 2} {3 98 20 4} {5 98 50 6} {5 98 50 91} {9 98 50 8}]", fmt.Sprint(me.trades))
+
+	me.Book = NewOrderBookOnULList(4, 2)
+	me.Book.InsertOrder("3", SELLSIDE, 100, 101.0, 100)
+	me.Book.InsertOrder("5", SELLSIDE, 101, 101.0, 100)
+	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 50)
+	me.Book.InsertOrder("8", BUYSIDE, 103, 98.0, 150)
+	me.Book.InsertOrder("2", BUYSIDE, 103, 100.0, 80)
+	me.Book.InsertOrder("4", BUYSIDE, 104, 100.0, 20)
+	me.Book.InsertOrder("6", BUYSIDE, 105, 100.0, 50)
+	me.Book.InsertOrder("9", SELLSIDE, 106, 101.0, 50)
+	me.Book.InsertOrder("91", BUYSIDE, 107, 100.0, 50)
+	me.Book.InsertOrder("92", SELLSIDE, 108, 102.0, 50)
+	assert.True(me.Match())
+	assert.Equal(0, len(me.overLappedLevel))
+	assert.Equal(0, len(me.trades))
+
+	me.Book = NewOrderBookOnULList(4, 2)
+	me.Book.InsertOrder("3", SELLSIDE, 100, 98.0, 100)
+	me.Book.InsertOrder("5", SELLSIDE, 101, 99.0, 100)
+	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 100)
+	me.Book.InsertOrder("8", BUYSIDE, 103, 99.0, 100)
+
+	assert.True(me.Match())
+	assert.Equal(3, len(me.overLappedLevel))
+	assert.Equal("[{3 99 100 1} {5 99 100 8}]", fmt.Sprint(me.trades))
+
+	me.Book = NewOrderBookOnULList(4, 2)
+	me.Book.InsertOrder("3", SELLSIDE, 100, 98.0, 100)
+	me.Book.InsertOrder("5", SELLSIDE, 101, 98.0, 100)
+	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 50)
+	me.Book.InsertOrder("8", SELLSIDE, 103, 98.0, 150)
+	me.Book.InsertOrder("2", BUYSIDE, 103, 100.0, 80)
+	me.Book.InsertOrder("4", BUYSIDE, 104, 100.0, 20)
+	me.Book.InsertOrder("6", BUYSIDE, 105, 100.0, 50)
+	me.Book.InsertOrder("9", SELLSIDE, 106, 98.0, 50)
+	me.Book.InsertOrder("91", BUYSIDE, 107, 100.0, 50)
+	me.Book.InsertOrder("92", SELLSIDE, 108, 97.0, 50)
+
+	assert.True(me.Match())
+	assert.Equal(3, len(me.overLappedLevel))
+	assert.Equal("[{92 98 50 1} {3 98 80 2} {3 98 20 4} {5 98 50 6} {5 98 50 91}]", fmt.Sprint(me.trades))
+
+	me.Book = NewOrderBookOnULList(4, 2)
+	me.Book.InsertOrder("3", SELLSIDE, 100, 96.0, 300)
+	me.Book.InsertOrder("5", SELLSIDE, 101, 98.0, 100)
+	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 150)
+	me.Book.InsertOrder("8", SELLSIDE, 103, 99.0, 200)
+	me.Book.InsertOrder("31", BUYSIDE, 103, 100.0, 50)
+	me.Book.InsertOrder("2", BUYSIDE, 103, 102.0, 250)
+	me.Book.InsertOrder("4", BUYSIDE, 104, 101.0, 250)
+	me.Book.InsertOrder("6", BUYSIDE, 105, 100.0, 350)
+	me.Book.InsertOrder("9", SELLSIDE, 105, 100.0, 200)
+	me.Book.InsertOrder("91", BUYSIDE, 105, 100.0, 300)
+	me.Book.InsertOrder("92", SELLSIDE, 105, 100.0, 100)
+	me.Book.InsertOrder("93", BUYSIDE, 105, 100.0, 300)
+
+	assert.True(me.Match())
+	t.Log(me.overLappedLevel)
+	assert.Equal(6, len(me.overLappedLevel))
+	assert.Equal(100.0, me.lastTradePrice)
+
+	t.Log(me.trades)
 }
