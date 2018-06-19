@@ -45,6 +45,7 @@ Step 4: Reference to previous trade price. Select the price closest to the last 
 
 
 ### Examples
+```
 1. Choose the largest execution (Step 1)
 -------------------------------------------------------------
 SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
@@ -108,7 +109,7 @@ SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
 25             96              50     25           25
 25     25      95              50     25           25
 
-
+```
 
 ### Order Matches
 After the execution price is concluded. Order match would happen in sequence of the price and time, i.e.
