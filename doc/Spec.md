@@ -151,12 +151,13 @@ During Genesis, all the validators would be connected and recognized with each o
 ### Transaction Workflow After Genesis
 The below diagram shows the sequence of Time.
 #### Account Creation
+//TODO
 
 #### Transaction Entry
 1. Client GUI or command line tools would validate the request parameters and generate a transaction requests
 2. Client GUI or command line tools would choose an access point (please see below) via consistent hash, connect and autheticate the connection, and send requests to it
 3. Frontier would validate the request and parameters, if all right, relay it to the connected Valdiator
-4. Validator would validate the request again by calling ABCI interface ``CheckTX`` , if all right, put it into mempool to broadcast. Please note no acknowledgement would be sent back even at this moment.
+4. Validator would validate the request again by calling ABCI interface ``CheckTX`` . One of the check is ensure there is enough asset to sponsor the transaction, e.g. enough BNB to buy Token ABC and pay the fees, freezed and previous locked quantity would be excluded as avaiable.  If all right, put it into mempool to broadcast. Please note no acknowledgement would be sent back even at this moment.
 
 #### P2P communication
 This would stay the same as tendermint for now. 
@@ -167,9 +168,11 @@ It would not force a hard fork if the selection logic is changed. So far it stay
 1. select orders with better prices with more chance to get executed in the upcoming blocks.
 
 #### Blocking
-The blocking is done via ABCI interfaces, ``BeginBlock``, ``DeliverTx``, ``EndBlock`` and ``Commit``.
+The blocking is done via ABCI interfaces, ``BeginBlock``, ``DeliverTx``, ``EndBlock`` and ``Commit``. It should be triggered when there is enough transaction to fill the whole block or the time is up to generate a block:
 
-Validator would perform the last and most crucial check on the transactions in ``DeliverTx``, majorly to ensure there is enough asset to sponsor the transaction, e.g. enough BNB to buy Token ABC and pay the fees.
+**//?? Each block can contain at most 4K transactions, but it should be generated within half a second (or less to catch time). Thus another half a second would be used for executions, until the ABCI application can handle further transactions.**
+
+Validator would perform the last and most crucial check on the transactions in ``DeliverTx``.  **After the DeliverTx, order quantity would be locked in the account, i.e. the amount of quantity cannot be spended / used to transfer or generate new orders.**
 
 After ``Commit`` is called, the block is concluded to book. This is the moment to trigger all the executions.
 
@@ -183,22 +186,30 @@ The most number of requests are expected to be orders. After the block is commit
 1. iterate all the new order requests, new orders in the new block would be inserted into the order book; while cancel order would be located from the outstanding order map and net off from the order book;
 2. perform match among all the left orders and generate all the trades
 3. clear the fully filled orders from order book
-4. iterate the execution list, move the asset accordingly to change the balance and charge the fees
-5. refresh/store the state of account. Please note trades would not be saved.
+4. iterate all unfully filled order, for IOC orders, remove from orders, and release the locked quantity back to 
+5. iterate the execution list, move the asset accordingly to change the balance and charge the fees
+6. refresh/store the state of account. Please note trades would not be saved.
 
 ##### Order Expire
+A whole order book scan would happen every 86400 blocks (around 24 hours) to filter out all the expired orders. After the scan, all the expired orders would be removed from the order book, the locked quantity in the account would be unlocked. Before this action all the existing orders in the order book is subject to matching. 
 
 ##### Transfer 
+This is dedicated for Transfer transaction, to move the asset accordingly to change the balance and charge the fees, and then refresh/store the state of account.
 
 ##### Burn
+The amount of asset would be moved into an invisible account.
 
 ##### Freeze / Unfreeze
+//TODO
 
 ##### Token Issue and ICO
+//TODO
 
 ## Data Structure and Storage
+//TODO: to determine which part should be changed upon Tendermint data structure & storage
 
 ### Encoding
+//TODO: Amino, any change to do upon Tendermint?
 
 ### Block
 
@@ -209,18 +220,47 @@ The most number of requests are expected to be orders. After the block is commit
 ## Base Components
 
 ### Frontier - Transaction Entry
+Frontier is accessed by user client ends via an assess point, which handles load balancing and session management. Frontier performs [Checks](./transaction_entry_checks.md) to make sure it's valid. For every request, **Frontier would generate an UUID as the unique identifier for the transaction for the whole life cycle**, , and then relay the requests to Validators.
+
+
+Every Frontier only has one validator to connect with, via direct TCP??. 
+
+For the requests below, the response would be generated after the block is booked, though the transaction would take effect after the execution is done.
+- New order and cancel order requests
+- Transfer 
+- Burn
+- Freeze
+- List/De-List
 
 ### Bridge - Transaction Transportation
+In order to relay the request from Frontier to Validator, the transaction would be wired into the same encoding format. The transportation is via a RPC mechnism opened by Validator ABCI application, gRPC??
 
 ### Validator - Mempool
+//TODO
 
 ### Validator - Transaction Check
+//TODO
 
 ### Validator - [Match Engine](./match_engine.md)
 
 ### Validator - Execution 
+The Execution would happen inside the function callback in ABCI. 
+//TODO
 
 ### Validator - Fees
+Fees would be calculated based on the trade notional value of quote currency and paid in BNB. The rate of quote currency to BNB from the last blocking around would be used to calculate.
+
+The fee rate is set and saved in the state of world. It can be reset via a special transaction type??. 
+
+#### Fee Collection and Rebate
+
+Fees would be collected and transferred to the blocking proposer Validator account?? after all the execution of the blocking round.
+
+Every one pays the same transaction fees, and there would be fee rebate framework, which is implemented outside the chain: 
+1. In perodic time, a routine would calculate the fee rebate for different accounts;
+2. the total rebates would collected evenly from all validator accounts.
+3. Transfer transactions would be generated
+
 
 ### Bridge - Broadcast
 
