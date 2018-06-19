@@ -233,7 +233,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 		}
 	}
 	me.overLappedLevel[i].BuyTotal = sumOrdersTotalLeft(buys, false)
-	me.overLappedLevel[i].SellTotal = sumOrdersTotalLeft(sells, false)
+	me.overLappedLevel[j].SellTotal = sumOrdersTotalLeft(sells, false)
 }
 
 // allocateResidual() assumes toAlloc is less than sum of quantity in orders.
@@ -339,6 +339,7 @@ func (me *MatchEng) reserveQty(residual float64, orders []OrderPart) bool {
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
 func (me *MatchEng) Match() bool {
+	me.trades = me.trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
 		return true
@@ -353,7 +354,7 @@ func (me *MatchEng) Match() bool {
 	me.lastTradePrice = lastPx
 	i, j := 0, len(me.overLappedLevel)-1
 	//sell below the price at index or buy above the price would not get filled
-	for i <= index && j >= index {
+	for i <= index && j >= index && compareBuy(totalExec, 0) > 0 {
 		buyTotal := me.overLappedLevel[i].BuyTotal
 		sellTotal := me.overLappedLevel[j].SellTotal
 		switch {
@@ -374,7 +375,9 @@ func (me *MatchEng) Match() bool {
 			if compareBuy(totalExec, sellTotal) >= 0 { // all buy would be filled later as well
 				me.fillOrders(i, j)
 			} else {
-				me.reserveQty(totalExec, me.overLappedLevel[j].SellOrders)
+				if !me.reserveQty(totalExec, me.overLappedLevel[j].SellOrders) {
+					return false
+				}
 				me.fillOrders(i, j)
 			}
 			totalExec -= buyTotal
@@ -388,4 +391,37 @@ func (me *MatchEng) Match() bool {
 	}
 
 	return true
+}
+
+//DropFilledOrder() would clear the order to remove
+func (me *MatchEng) DropFilledOrder() int {
+	i := 0
+	for i, p := range me.overLappedLevel {
+		if len(p.BuyOrders) > 0 {
+			if p.BuyTotal == 0 {
+				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
+				i++
+			} else {
+				for _, o := range p.BuyOrders {
+					if o.nxtTrade == 0 {
+						me.Book.RemoveOrder(o.id, BUYSIDE, p.Price)
+					}
+				}
+			}
+		}
+		if len(p.SellOrders) > 0 {
+			if p.SellTotal == 0 {
+				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
+				i++
+			} else {
+				for _, o := range p.SellOrders {
+					if o.nxtTrade == 0 {
+						me.Book.RemoveOrder(o.id, SELLSIDE, p.Price)
+					}
+				}
+			}
+		}
+	}
+
+	return i
 }
