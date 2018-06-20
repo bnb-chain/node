@@ -16,12 +16,14 @@ The below match logic would be applied on every listed token pairs.
 
 The match only happens when the best bid and ask prices are _'crossed'_, i.e. best bid > best ask. 
 
+There would be only 1 price selected in one match round as the best prices among all the fillable orders, to show the fairness.
+
 All the orders would be matched first by the price aggressiveness and then block height. 
 
 ### Conclude Execution Price
 The execution price would be selected as the below logic, in order to:
 1. maximize the execution qty
-2. execute all orders or at least all orders on one side
+2. execute all orders or at least all orders on one side that are fillable against the selected price.
 3. indicate the market pressure from either buy or sell
 
 - Step 0: no match for one side market, or market without crossed order book
@@ -45,6 +47,7 @@ Step 4: Reference to previous trade price. Select the price closest to the last 
 
 
 ### Examples
+The chosen price level row would have ``*`` on the deciding colume.
 ```
 1. Choose the largest execution (Step 1)
 -------------------------------------------------------------
