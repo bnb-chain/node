@@ -179,7 +179,12 @@ After ``Commit`` is called, the block is concluded to book. This is the moment t
 #### Execution
 Executions are different according to different type of transactions, but the main purpose is to generate the correct state, and persist. All the validators are expected to generate the same result of execution and the states.
 
-All the below can happen concurrently. The last step of saving state has contention so that locks may be used.
+All the below can happen concurrently. After all planned execution have been done, the changed states would be saved in the below sequence in a serialized way to ensure deterministic:
+1. Account change state, in the sequence of account number
+2. Token Store if there is change
+3. Fee Store is there is change
+4. Listed Pairs Store if there is change
+5. 
 
 ##### Order Match
 The most number of requests are expected to be orders. After the block is committed:
@@ -248,7 +253,7 @@ The Execution would happen inside the function callback in ABCI.
 //TODO
 
 ### Validator - Fees
-Fees would be calculated based on the trade notional value of quote currency and paid in BNB. The rate of quote currency to BNB from the last blocking around would be used to calculate.
+Fees would be calculated based on the trade notional value of quote currency and only paid in BNB. The rate of quote currency to BNB from the last blocking around would be used to calculate.
 
 The fee rate is set and saved in the state of world. It can be reset via a special transaction type??. 
 
@@ -256,10 +261,12 @@ The fee rate is set and saved in the state of world. It can be reset via a speci
 
 Fees would be collected and transferred to the blocking proposer Validator account?? after all the execution of the blocking round.
 
-Every one pays the same transaction fees, and there would be fee rebate framework, which is implemented outside the chain: 
+The fee may be calculated after the order execution based on the notional value of the order, using the convert rate concluded at the **last blocking time** between the quote currency and BNB. 
+
+Every one pays the same transaction fees, and there could be fee rebate framework, which is implemented outside the chain: 
 1. In perodic time, a routine would calculate the fee rebate for different accounts;
 2. the total rebates would collected evenly from all validator accounts.
-3. Transfer transactions would be generated
+3. Transfer transactions would be generated and placed onto the network as normal transactions
 
 
 ### Bridge - Broadcast
@@ -270,10 +277,27 @@ Every one pays the same transaction fees, and there would be fee rebate framewor
 
 ### Frontier - Market Data Propagation
 
-### Client - P2P Bootstrap
+### Client - Account and Balance Management
+The client GUI and command should have the below functions on account:
+- generate new accounts 
+- dispose accounts from the GUI
+- register an existing account into the GUI
+
+As a convenience toolkit, the logic concepts of **holding account** and **trading account** can be introduced into the Client GUI. **holding account** is no different from the account used in other account based block chain, such as Ethereum, which can hold and transfer tokens; while **trading account** is used to send orders to B-DEX. The client side segregation is to protect the usual holding account from exposing to frequent trading activities and reduce the chance of being hacked.
+
+The Client GUI should be able to show balance of different tokens on one account or total balance of one token across different accounts registered with the same GUI clients.
+
+### Client - Connection Bootstrap
+Client GUI would be built in with the initial access point addresses, e.g. 7 URL from 7 sites. Client would select one access point based on the below logic:
+1. Client GUI try to connect and validate the built-in addresses in random sequence or the last saved sequence.
+2. once the 1st connection is autheticated and established, Client asks the access point to get the latest access point address list, and then connect the new ones that are not in the old list.
+3. Client GUI would choose one connectable access point that has the least latency. Access point may delay sending the response if it feels overloaded.
+
 #### Account Authetication
 
 #### Connection Authetication
+
+### Client - Market Data Display
 
 ### Client - API
 
