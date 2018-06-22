@@ -102,7 +102,7 @@ Besides Frontiers keep order book information inside its memory, they also save 
 #### Bridge
 Bridge is the communication channels between Validator and Frontier. It would be a one-to-many broadcast for relaying the stream of blocks. The implementation can be either Kafka clusters or Multicast subnet. Different solution would not impact the core block chain architecture but it is better they are the same across different 'sites'.
 
-1 Bridge, 1 Validator, and a few of Frontiers should stay within one LAN. 
+1 Bridge, 1 Validator, and a few of Frontiers should stay within one LAN, and be named as a **site**. 
 
 #### Client
 Clients are native GUI applications on different platforms or Web interfaces. They should have 4 major functions:
@@ -292,7 +292,12 @@ After ``Commit`` is called, the block is concluded to book. This is the moment t
 #### Execution
 Executions are different according to different type of transactions, but the main purpose is to generate the correct state, and persist. All the validators are expected to generate the same result of execution and the states.
 
-All the below can happen concurrently. The last step of saving state has contention so that locks may be used.
+All the below can happen concurrently. After all planned execution have been done, the changed states would be saved in the below sequence in a serialized way to ensure deterministic:
+1. Account change state, in the sequence of account number
+2. Token Store if there is change
+3. Fee Store is there is change
+4. Listed Pairs Store if there is change
+5. 
 
 ##### Order Match
 The most number of requests are expected to be orders. After the block is committed:
@@ -348,8 +353,23 @@ The issuing process is simple as followed:
 ## Data Structure and Storage
 //TODO: to determine which part should be changed upon Tendermint data structure & storage
 
+### Numbers
+All the numbers on B-DEX chain, including token totalSupply, quantity, price, transaction fees, would all be presented as **signed int64** inside the chain data structure and code. However, the numbers can be presented or used as floating numbers, with no more than 8 digits after decimal point. This decision is to increase the performance and secure deterministic computing across different platforms. It enforces constraints on different logics as below:
+- As preferred by different issuers, the token can have different definition on number of decimals, less than or equal to 8. B-DEX would trade these symbols at defined minimums, such as minimum ticks/lotsize, which may be smaller than or equal to the number of decimals of token itself, so that trades can always be settled.
+- the totalSupply for the token issued on B-DEX chain cannot exceed positive max of int64, after adjusted by boosting with the decimal digits.
+- Frontier and Validator would only accept and publish all the numbers in int64. Client GUI and command line tools would present value and quantity in floating number, and should convert any floating number into int64 before sending requests and vice versa to present the data they get from Frontier, with the below logic:
+   - for token quantity and lot size, convert according to the token decimal digit definition, when it is floating number, the decimal digits should not be larger than token decimal digit number.
+   - for token price and tick size,  convert by using the quote token decimal digit definition
+- Client Side GUI, Frontier, and Validator would all check to make sure **no overflow** on orders' notional value after order quantity and price are converted into int64, otherwise the order should rejected.
+
+For different execution type, the number is managed as below:
+- transfering, issue, burn, freeze, matching, and trade allocation would be performed with int64 numbers directly
+- Fee rate would be stored in a unit of million-th, so that 0.05% would be stored as 500. Denote fee rate expressed in int64 as ``Rate``, a comparator ``C`` calculated as ``C=MAX_INT64/Rate``, and ``K`` as the digit number of ``Rate``, order notional is ``N``, then ``if N>C, Fee = Floor(N/(10^K)*Rate/(10^(6-K))); else Fee= Floor(N*Rate/(10^6))
+
+
 ### Encoding
-//TODO: Amino, any change to do upon Tendermint?
+Tendermint Amino is used as the core encoding spec.
+
 
 ### Block
 
@@ -363,7 +383,7 @@ The issuing process is simple as followed:
 Frontier is accessed by user client ends via an assess point, which handles load balancing and session management. Frontier performs [Checks](./transaction_entry_checks.md) to make sure it's valid. For every request, **Frontier would generate an UUID as the unique identifier for the transaction for the whole life cycle**, , and then relay the requests to Validators.
 
 
-Every Frontier only has one validator to connect with, via direct TCP??. 
+Every Frontier only has one validator to connect with. It submits transactions to Validator via Tendermint RPC connection.
 
 For the requests below, the response would be generated after the block is booked, though the transaction would take effect after the execution is done.
 - New order and cancel order requests
@@ -373,7 +393,9 @@ For the requests below, the response would be generated after the block is booke
 - List/De-List
 
 ### Bridge - Transaction Transportation
-In order to relay the request from Frontier to Validator, the transaction would be wired into the same encoding format. The transportation is via a RPC mechnism opened by Validator ABCI application, gRPC??
+In order to relay the request from Frontier to Validator, the transaction would be wired into the same encoding format. The transportation of the transaction data can be implemented in the below options:
+- send through Kafka infra, which requires Validator Application listens to Kafka
+- RPC mechnism opened by Tendermint
 
 ### Validator - Mempool
 //TODO
@@ -388,7 +410,7 @@ The Execution would happen inside the function callback in ABCI.
 //TODO
 
 ### Validator - Fees
-Fees would be calculated based on the trade notional value of quote currency and paid in BNB. The rate of quote currency to BNB from the last blocking around would be used to calculate.
+Fees would be calculated based on the trade notional value of quote currency and only paid in BNB. The rate of quote currency to BNB from the last blocking around would be used to calculate.
 
 The fee rate is set and saved in the state of world. It can be reset via a special transaction type??. 
 
@@ -396,10 +418,14 @@ The fee rate is set and saved in the state of world. It can be reset via a speci
 
 Fees would be collected and transferred to the blocking proposer Validator account?? after all the execution of the blocking round.
 
-Every one pays the same transaction fees, and there would be fee rebate framework, which is implemented outside the chain: 
+The fee may be calculated after the order execution based on the notional value of the order, using the convert rate concluded at the **last blocking time** between the quote currency and BNB. 
+
+The Client tools should check whether there is enough BNB balance to cover the fees at the order entry time. If the BNB value is dropping and there is not enough BNB balance to cover the fee at the time of order execution, the fee would be deducted by converting some of the traded assets into BNB.
+
+Every one pays the same transaction fees, and there could be fee rebate framework, which is implemented outside the chain: 
 1. In perodic time, a routine would calculate the fee rebate for different accounts;
 2. the total rebates would collected evenly from all validator accounts.
-3. Transfer transactions would be generated
+3. Transfer transactions would be generated and placed onto the network as normal transactions
 
 
 ### Bridge - Broadcast
@@ -410,14 +436,39 @@ Every one pays the same transaction fees, and there would be fee rebate framewor
 
 ### Frontier - Market Data Propagation
 
-### Client - P2P Bootstrap
+### Client - Account and Balance Management
+The client GUI and command should have the below functions on account:
+- generate new accounts 
+- dispose accounts from the GUI
+- register an existing account into the GUI
+
+As a convenience toolkit, the logic concepts of **holding account** and **trading account** can be introduced into the Client GUI. **holding account** is no different from the account used in other account based block chain, such as Ethereum, which can hold and transfer tokens; while **trading account** is used to send orders to B-DEX. The client side segregation is to protect the usual holding account from exposing to frequent trading activities and reduce the chance of being hacked.
+
+The Client GUI should be able to show balance of different tokens on one account or total balance of one token across different accounts registered with the same GUI clients.
+
+### Client - Connection Bootstrap
+Client GUI would be built in with the initial access point addresses, e.g. 7 URL from 7 sites. Client would select one access point based on the below logic:
+1. Client GUI try to connect and validate the built-in addresses in random sequence or the last saved sequence.
+2. once the 1st connection is autheticated and established, Client asks the access point to get the latest access point address list, and then connect the new ones that are not in the old list.
+3. Client GUI would choose one connectable access point that has the least latency. Access point may delay sending the response if it feels overloaded.
+
 #### Account Authetication
 
 #### Connection Authetication
 
+### Client - Market Data Display
+
 ### Client - API
 
 ## Periphery
+### The Running Platform Spec
+The Frontier, Bridge and Validator program is designed and tested to run on 64bits Linux system, perferred CentOS 7.
+
+For Validator, it is better to run it on a hardware with minimum setup as below:
+- CPU: 8 core
+- Mem: 64G
+- Disk: SSD 512G
+- Network Bandwidth: ??
 
 ### Explorer 
 
