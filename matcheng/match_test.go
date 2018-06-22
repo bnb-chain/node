@@ -657,6 +657,16 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal("[{92 98 50 1} {3 98 80 2} {3 98 20 4} {5 98 50 6} {5 98 50 91}]", fmt.Sprint(me.trades))
 
+	/* 	3. the least abs surplus imbalance (Step 2)
+	--------------------------------------------------------------
+	SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+	900            102      250    250    250          -650
+	900            101      250    500    500          -400
+	900   300      100      1150   1650   900          750*
+	600   200      99              1650   900          1050
+	400   100      98              1650   900          1250
+	900            97              1650   900          1250
+	300   300      96              1650   900          1350 */
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 96.0, 300)
 	me.Book.InsertOrder("5", SELLSIDE, 101, 98.0, 100)
