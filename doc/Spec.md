@@ -1,12 +1,74 @@
 # Binance DEX Specification
 
+- [Binance DEX Specification](#binance-dex-specification)
+    - [Goal](#goal)
+    - [Architecture](#architecture)
+        - [Components](#components)
+            - [Validator](#validator)
+            - [Frontier](#frontier)
+            - [Bridge](#bridge)
+            - [Client](#client)
+    - [Security](#security)
+    - [Workflow](#workflow)
+        - [Critical Concepts](#critical-concepts)
+            - [User Setup, Keys, Address and Account](#user-setup-keys-address-and-account)
+                - [Address](#address)
+            - [Orders](#orders)
+            - [Transfer](#transfer)
+            - [Issuance](#issuance)
+            - [Freeze / Unfreeze](#freeze--unfreeze)
+            - [Burn](#burn)
+            - [List/De-List](#listde-list)
+        - [Genesis](#genesis)
+        - [Transaction Workflow After Genesis](#transaction-workflow-after-genesis)
+            - [Account Creation](#account-creation)
+            - [Transaction Entry](#transaction-entry)
+            - [P2P communication](#p2p-communication)
+            - [Consensus](#consensus)
+                - [How to Select Transactions into Blocking](#how-to-select-transactions-into-blocking)
+            - [Blocking](#blocking)
+            - [Execution](#execution)
+                - [Order Match](#order-match)
+                - [Order Expire](#order-expire)
+                - [Transfer](#transfer)
+                - [Burn](#burn)
+                - [Freeze / Unfreeze](#freeze--unfreeze)
+                - [Token Issue and ICO](#token-issue-and-ico)
+    - [Data Structure and Storage](#data-structure-and-storage)
+        - [Encoding](#encoding)
+        - [Block](#block)
+        - [Transaction Data](#transaction-data)
+        - [Storage](#storage)
+    - [Base Components](#base-components)
+        - [Frontier - Transaction Entry](#frontier---transaction-entry)
+        - [Bridge - Transaction Transportation](#bridge---transaction-transportation)
+        - [Validator - Mempool](#validator---mempool)
+        - [Validator - Transaction Check](#validator---transaction-check)
+        - [Validator - Match Engine](#validator---match-engine)
+        - [Validator - Execution](#validator---execution)
+        - [Validator - Fees](#validator---fees)
+            - [Fee Collection and Rebate](#fee-collection-and-rebate)
+        - [Bridge - Broadcast](#bridge---broadcast)
+        - [Frontier - Block Saving](#frontier---block-saving)
+        - [Frontier - Exeuction](#frontier---exeuction)
+        - [Frontier - Market Data Propagation](#frontier---market-data-propagation)
+        - [Client - P2P Bootstrap](#client---p2p-bootstrap)
+            - [Account Authetication](#account-authetication)
+            - [Connection Authetication](#connection-authetication)
+        - [Client - API](#client---api)
+    - [Periphery](#periphery)
+        - [Explorer](#explorer)
+        - [Market Data Federal Net](#market-data-federal-net)
+        - [Pegged Token](#pegged-token)
+        - [Data Prune](#data-prune)
+
 ## Goal
 Binance DEX (B-DEX) is a decentralized exchange and blockchain. Please check business documentation for details. It allows:
-- Token issurance, with customized burn and/or freeze
+- Token issuance, with customized burn and/or freeze
 - Token asset transfer
 - Trade across tokens via buy/sell orders upon the listed token pairs, directly from blockchain wallet
 - Do not need to deposit before trading
-- public ledger for all information, gurantees for no front-running from anyone, including the all the validator nodes
+- public ledger for all information, guarantees for no front-running from anyone, including the all the validator nodes
 
 ## Architecture
 The system diagram is as below.
@@ -17,8 +79,8 @@ The system diagram is as below.
 #### Validator
 Validator nodes comprise the core network of the block chain. They  are responsible for :
 - generating the blockchain, after consensus
-- executing the trasfering/freezing/burning/issuing/listing/de-listing transactions
-- matching orders on the list currency pairs and transfering the asserts between accounts that have execution trades
+- executing the transferring/freezing/burning/issuing/listing/de-listing transactions
+- matching orders on the list currency pairs and transferring the asserts between accounts that have execution trades
 - according to the blocks, saving proper world of state, as the authority of the state
 
 Validator is a Tendermint based ABCI application. There would be multiple validator nodes, e.g. 7, forming the backbone of the mainnet of Binance DEX chain.
@@ -44,7 +106,7 @@ Bridge is the communication channels between Validator and Frontier. It would be
 
 #### Client
 Clients are native GUI applications on different platforms or Web interfaces. They should have 4 major functions:
-1. enter orders and transfering requests
+1. enter orders and transferring requests
 2. check account status
 3. show realtime and historical market data, and even some technical metrics
 4. and explore other block chain information.
@@ -57,7 +119,7 @@ The block chain information can also be accessed via Explorer web site similar t
 - Client should verify the Frontier addresses
 - Only Frontiers and Validators can access the specified addresses and ports of Validators via secure transportation. No others can.
 - Both Frontiers and Validators would check the requests parameters for their types and values. 
-- Frontiers/Explorer should implenment the similar controls on API request frequency and other rules to prevent DDoS 
+- Frontiers/Explorer should implement the similar controls on API request frequency and other rules to prevent DDoS 
 - Once 1/3 validator cannot work, the chain would stop blocking. Exchange would be marked as down and new orders should be rejected.
 
 ## Workflow
@@ -74,6 +136,7 @@ Account is an internal concept associated with the user address, which is a 1:1 
 
 #### Orders
 Orders are the requests for client to buy or sell tokens into other tokens on B-DEX. Orders are composed of the below parameters.
+
 0. Symbol Pairs: the list pair the order wants to trade. 
 1. Order Type: B-DEX only accept LIMIT orders, which is adhering to SEC definitions of LIMIT orders
 2. Price: price users would like to pay for the specified token quantity, presented as a float number of base currency. Internally it can be multiplied by Price Factor and store as an intergater in the range of int64.
@@ -85,43 +148,93 @@ Orders are the requests for client to buy or sell tokens into other tokens on B-
    2. IOC: Immediate or Cancel. Orders would be executed as much as it can in the booking block round and then got canceled back if there is still quantity left.
    
 Orders would be rejected when:
-0. user address cannot be located with asset
-1. account doesn't possess enough token to buy or sell
-2. Exchange is down or has problem to match it
-3. the token is not listed against any base currencies
-4. other order parameters are not valid
-5. duplicated order ID
 
-Orders may be canceled / expired back when:
+0. user address cannot be located with asset
+1. Account does not possess enough token to buy or sell
+2. Exchange is down or has problem to match it
+3. The token is not listed against any base currencies
+4. Other order parameters are not valid
+5. Duplicated order ID
+
+Orders may be canceled / expired back when: 
+
 1. IOC order not fully filled
 2. Order expired
 3. Exchange has problem to handle further with the orders
 
 #### Transfer
-Transfering can happen between any 2 addresses on any tokens issued by B-DEX Chain, even the token is not listed against any base currencies.
+Transferring can happen between any 2 addresses on any tokens issued by B-DEX Chain, even the token is not listed against any base currencies.
 
 A transfer transaction contains:
+
 1. Source Address, with owner signature
 2. Target Address
 3. Quantity
 
 Transfer would happen right after the request is blocked. Transfer transaction would be rejected when:
-0. user address cannot be located with asset
-1. account doesn't possess enough token to transfer
-2. Exchange is down or has problem to execute
+
+1. User address cannot be located with asset
+2. Account does not possess enough token to transfer
+3. Account does not possess enough BNB to pay the fees for transferring
+4. Exchange is down or has problem to execute
  
-#### Issurance
-//TODO: Issurance can be done via ICO or direct setup.
+#### Issuance
+
+Issuance is to create a new token that does not exist on Binance Chain. To make it simple and fast, we seperate the issuance and ICO process. All the specific tokens are minted in the issuing process, and never be mined within the later blocks.
+
+Since this operation costs many fees, operators should ensure their account has enough BNB before exeucting.
+
+An issuance transaction contains:
+
+1. Source Address: the sender address of the transaction and it will become the **owner** of the token
+2. Token Name: the length of the token name is limited to 30 characters. e.g. "Bitcoin"
+3. Symbol: identifier of the token, limited to 10 alphanumeric characters and is case insensitive. To avoid conflicts with existing symbols on other blockchains, a suffix '.B' is added internally,  e.g. "BTC.B" 
+4. Total Supply:  // TODO
+5. Decimals:  // TODO
+
+Issuance transaction would be rejected when:
+
+1. The name and the symbol do not meet the naming limits
+2. The symbol already exists. This circumstance happens when you double execute the issuance operation, or the symbol is occupied by other token
+3. The total supply and the decimals do not meet the range limits
+4. The account of the sender does not possess enough BNB
+
 
 #### Freeze / Unfreeze
-Freeze is to move certain amount of token to be temporarily unspendable/un-usable for a defined period of time. The Freeze transaction can be either defined in the ICO spec or issued via user request. The Freeze transaction would define the time (or time series) and percentage amount to be unfreezed in the future time. The Unfreeze actions would be triggered by Validator itself after the specified time points, instead of the users.
+Freeze is to lock certain amount of token to be temporarily unspendable/un-usable while Unfreeze is to unlock them.
+
+Anyone can freeze his/her own tokens as long as his/her account possesses enough tokens.
+Anyone can unfreeze his/her own frozen tokens as long as his/her account has enough frozen tokens. 
+
+An freeze/unfreeze transaction contains:
+
+1. Source Address
+2. Symbol
+3. Amount
+
+Freeze/unfreeze transaction would be rejected when:
+
+1. The symbol does not exist
+2. The account does not possess enough token to be frozen/unfrozen
+3. The account does not possess enough BNB to pay for the transaction fees
 
 
 #### Burn
-Burn is to destroy certain amount of token, after which that amount is not spendable/usable anymore. This is 
-implemented by sending the amount to a non-readable account, right after the containing block is booked.
+Burn is to destroy certain amount of token, after which that amount of tokens will be subtracted from the operator's balance.
+The total supply should be updated at the same time. Notice that only the owner of the token has the permission to burn token. 
 
-The Burn interface is not open on the public User client GUI or command line tools.
+A burn transaction contains:
+
+1. Source Address
+2. Symbol
+3. Amount
+
+Burn transaction would be rejected when:
+
+1. The symbol does not exist
+2. The sender is not the owner of the token
+3. Owner account does not possess enough tokens to burn
+4. Account does not possess enough BNB to pay for the transaction fees
 
 #### List/De-List
 The List/De-List requests are used to define the tradable currency pair universe. They take effect right after the containing block is booked. The List/De-List interface is not open on the public User client GUI or command line tools.
@@ -197,13 +310,40 @@ A whole order book scan would happen every 86400 blocks (around 24 hours) to fil
 This is dedicated for Transfer transaction, to move the asset accordingly to change the balance and charge the fees, and then refresh/store the state of account.
 
 ##### Burn
-The amount of asset would be moved into an invisible account.
+This is to reduce the total supply of the token. Following steps would be executed in sequence:
+
+1. Validate the transaction parameters
+2. Check whether the token exists
+3. Check whether the sender is the owner
+4. Check whether the sender account has sufficient tokens
+5. Check whether the provided amount is bigger than total supply
+6. Subtract tokens from sender's balance
+7. Update total supply
 
 ##### Freeze / Unfreeze
-//TODO
+Freezing is to lock some amount of tokens in user's balance.
 
-##### Token Issue and ICO
-//TODO
+1. Validate the transaction parameters
+2. Check whether the token exists
+3. Check whether the sender account has sufficient tokens
+4. Move tokens from `balance` to `frozen`
+
+Unfreezing is to unlock some amount of tokens in user's frozen balance
+
+1. Validate the transaction parameters
+2. Check whether the token exists
+3. Check whether the sender account has sufficient frozen tokens
+4. Move tokens from `frozen` to `balance`.
+
+##### Token Issue
+The issuing process is simple as followed:
+
+1. Check the range restriction of total supply and decimals
+2. Check the uniqueness of the symbol
+3. Save the token info to tokenStore
+4. Add the total tokens to the owner's account 
+
+##### ICO
 
 ## Data Structure and Storage
 //TODO: to determine which part should be changed upon Tendermint data structure & storage
