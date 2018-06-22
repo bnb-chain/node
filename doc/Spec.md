@@ -374,6 +374,45 @@ Tendermint Amino is used as the core encoding spec.
 ### Block
 
 ### Transaction Data
+A transaction in tendermint is any sequence of bytes. It's up to the ABCI application to accept or reject the transactions. 
+
+In cosmos-sdk, all kinds of transactions are wrapped in type `StdTx` before marshalling by Amino
+```json
+{
+    "Msg":        msg,
+    "Fee":        fee,
+    "Signatures": sigs,
+}
+``` 
+
+All kinds of transactions have the same type of Fee and Signatures, the difference is the `msg` part.
+
+**Issue Msg**
+
+```go
+type Msg struct {
+  From     sdk.Address `json:"from"`
+  Name     string      `json:"name"`
+  Symbol   string      `json:"symbol"`
+  Supply   int64       `json:"supply"`
+  Decimals int8        `json:"decimals"`
+}
+```
+
+**Burn/Freeze/Unfreeze Msg**
+
+```go
+type Msg struct {
+  From   sdk.Address `json:"from"`
+  Symbol string      `json:"symbol"`
+  Amount int64       `json:"amount"`
+}
+```
+
+**ICO**
+
+// TODO
+
 
 ### Storage 
 
