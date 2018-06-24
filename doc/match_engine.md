@@ -47,7 +47,7 @@ the sell side, if all prices are above the reference price minus a lower percent
     If both positive and
 negative surplus amounts exist, precede to Step 4.
 
-Step 4: When both positive and negative surplus amounts exists at the lowest, if the reference price falls at / into these prices, the reference price should be chose, otherwise the price closest to the reference price would be chosen.
+- Step 4: When both positive and negative surplus amounts exists at the lowest, if the reference price falls at / into these prices, the reference price should be chose, otherwise the price closest to the reference price would be chosen.
 
 
 ### Examples
