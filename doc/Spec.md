@@ -266,35 +266,35 @@ Genesis is starting point of the chain. It defined all the original parameters f
 During Genesis, all the validators would be connected and recognized with each other. The chain will start generating blocks and saving new states. The readiness of Frontiers is not a dependency here.
 
 
-### Transaction Workflow After Genesis
+## Transaction Workflow After Genesis
 The below diagram shows the sequence of Time.
-#### Account Creation
+### Account Creation
 //TODO
 
-#### Transaction Entry
+### Transaction Entry
 1. Client GUI or command line tools would validate the request parameters and generate a transaction requests
 2. Client GUI or command line tools would choose an access point (please see below) via consistent hash, connect and autheticate the connection, and send requests to it
 3. Frontier would validate the request and parameters, if all right, relay it to the connected Valdiator
 4. Validator would validate the request again by calling ABCI interface ``CheckTX`` . One of the check is ensure there is enough asset to sponsor the transaction, e.g. enough BNB to buy Token ABC and pay the fees, freezed and previous locked quantity would be excluded as avaiable.  If all right, put it into mempool to broadcast. Please note no acknowledgement would be sent back even at this moment.
 
-#### P2P communication
+### P2P communication
 This would stay the same as tendermint for now. 
-#### Consensus
+### Consensus
 This would stay the same as tendermint for now.
-##### How to Select Transactions into Blocking
+#### How to Select Transactions into Blocking
 It would not force a hard fork if the selection logic is changed. So far it stays the same as Tendermint, but the more optimized is to:
 1. select orders with better prices with more chance to get executed in the upcoming blocks.
 
-#### Blocking
+### Blocking
 The blocking is done via ABCI interfaces, ``BeginBlock``, ``DeliverTx``, ``EndBlock`` and ``Commit``. It should be triggered when there is enough transaction to fill the whole block or the time is up to generate a block:
 
 **//?? Each block can contain at most 4K transactions, but it should be generated within half a second (or less to catch time). Thus another half a second would be used for executions, until the ABCI application can handle further transactions.**
 
 Validator would perform the last and most crucial check on the transactions in ``DeliverTx``.  **After the DeliverTx, order quantity would be locked in the account, i.e. the amount of quantity cannot be spended / used to transfer or generate new orders.**
 
-After ``Commit`` is called, the block is concluded to book. This is the moment to trigger all the executions.
+After ``EndBlock`` is called, the block is concluded to book. This is the moment to trigger all the executions.
 
-#### Execution
+### Execution
 Executions are different according to different type of transactions, but the main purpose is to generate the correct state, and persist. All the validators are expected to generate the same result of execution and the states.
 
 All the below can happen concurrently. After all planned execution have been done, the changed states would be saved in the below sequence in a serialized way to ensure deterministic:
@@ -302,10 +302,9 @@ All the below can happen concurrently. After all planned execution have been don
 2. Token Store if there is change
 3. Fee Store is there is change
 4. Listed Pairs Store if there is change
-5. 
 
-##### Order Match
-The most number of requests are expected to be orders. After the block is committed:
+#### Order Match
+The most number of requests are expected to be orders. After the block is concluded, the below code would be called in the `EndBlock` in the `ABCI` application:
 1. iterate all the new order requests, new orders in the new block would be inserted into the order book; while cancel order would be located from the outstanding order map and net off from the order book;
 2. perform match among all the left orders and generate all the trades
 3. clear the fully filled orders from order book
@@ -313,13 +312,13 @@ The most number of requests are expected to be orders. After the block is commit
 5. iterate the execution list, move the asset accordingly to change the balance and charge the fees
 6. refresh/store the state of account. Please note trades would not be saved.
 
-##### Order Expire
+#### Order Expire
 A whole order book scan would happen every 86400 blocks (around 24 hours) to filter out all the expired orders. After the scan, all the expired orders would be removed from the order book, the locked quantity in the account would be unlocked. Before this action all the existing orders in the order book is subject to matching. 
 
-##### Transfer 
+#### Transfer 
 This is dedicated for Transfer transaction, to move the asset accordingly to change the balance and charge the fees, and then refresh/store the state of account.
 
-##### Burn
+#### Burn
 This is to reduce the total supply of the token. Following steps would be executed in sequence:
 
 1. Validate the transaction parameters
@@ -330,7 +329,7 @@ This is to reduce the total supply of the token. Following steps would be execut
 6. Subtract tokens from sender's balance
 7. Update total supply
 
-##### Freeze / Unfreeze
+#### Freeze / Unfreeze
 Freezing is to lock some amount of tokens in user's balance.
 
 1. Validate the transaction parameters
@@ -345,7 +344,7 @@ Unfreezing is to unlock some amount of tokens in user's frozen balance
 3. Check whether the sender account has sufficient frozen tokens
 4. Move tokens from `frozen` to `balance`.
 
-##### Token Issue
+#### Token Issue
 The issuing process is simple as followed:
 
 1. Check the range restriction of total supply and decimals
@@ -353,10 +352,14 @@ The issuing process is simple as followed:
 3. Save the token info to tokenStore
 4. Add the total tokens to the owner's account 
 
-##### ICO
+#### ICO
+
+#### Governance
+
+#### Voting
 
 ## Data Structure and Storage
-//TODO: to determine which part should be changed upon Tendermint data structure & storage
+This section is about how data and information would be stored in memory and storage.
 
 ### Numbers
 All the numbers on B-DEX chain, including token totalSupply, quantity, price, transaction fees, would all be presented as **signed int64** inside the chain data structure and code. However, the numbers can be presented or used as floating numbers, with no more than 8 digits after decimal point. This decision is to increase the performance and secure deterministic computing across different platforms. It enforces constraints on different logics as below:
@@ -392,7 +395,23 @@ In cosmos-sdk, all kinds of transactions are wrapped in type `StdTx` before mars
 
 All kinds of transactions have the same type of Fee and Signatures, the difference is the `msg` part.
 
-**Issue Msg**
+Adding new transaction types would not require fork of blockchain, while upgrading transaction would be done via adding new transaction type: e.g. Burn2 vs. Burn.
+
+#### Order
+```go
+type Msg struct {
+    From   sdk.Address `json:"from"`
+    Id	   string `json:"id"`
+    Pair   string `json:"pair"`
+    Type   int8   `json:"type"`
+    Side   int8   `json:"side"`
+    Price  int64  `json:price`
+    Quantity int64 `json:"quantity"`
+    TimeInForce int8 `json:"tif"
+}
+```
+
+#### Issue Msg
 
 ```go
 type Msg struct {
@@ -404,7 +423,7 @@ type Msg struct {
 }
 ```
 
-**Burn/Freeze/Unfreeze Msg**
+#### Burn/Freeze/Unfreeze Msg
 
 ```go
 type Msg struct {
