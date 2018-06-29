@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 )
 
-func NewHandler(tokenMapper store.Mapper, keeper bank.CoinKeeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
@@ -21,7 +21,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.CoinKeeper) sdk.Handler {
 	}
 }
 
-func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.CoinKeeper, msg Msg) sdk.Result {
+func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
 	burnAmount := msg.Amount
 	if burnAmount <= 0 {
 		return sdk.ErrInsufficientCoins("burn amount should be greater than 0").Result()
@@ -41,12 +41,12 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Coin
 
 	// the token owner burns the token from the token account
 	// TODO: the third param can be removed...
-	coins := keeper.GetCoins(ctx, token.Address, nil)
+	coins := keeper.GetCoins(ctx, token.Address)
 	if coins.AmountOf(symbol) < innerBurnAmount || token.Supply < burnAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, sdkError := keeper.SubtractCoins(ctx, token.Address, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: innerBurnAmount}))
+	_, _, sdkError := keeper.SubtractCoins(ctx, token.Address, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: innerBurnAmount}))
 	tokenMapper.UpdateTokenSupply(ctx, symbol, token.Supply-burnAmount)
 
 	if sdkError != nil {

@@ -2,15 +2,20 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-crypto/keys"
-	"github.com/tendermint/go-wire"
+	"github.com/tendermint/tmlibs/common"
 )
+
+func makePrivKey(secret common.HexBytes) crypto.PrivKey {
+	privKey := crypto.GenPrivKeyEd25519FromSecret(secret)
+	return privKey
+}
 
 func ValidateSymbol(symbol string) error {
 	if len(symbol) == 0 {
@@ -24,16 +29,12 @@ func ValidateSymbol(symbol string) error {
 	return nil
 }
 
-func GenerateTokenAddress(token Token, sequence int64, algo keys.CryptoAlgo) (sdk.Address, error) {
-	secret := append(token.Owner, wire.BinaryBytes(sequence)...)
-	switch algo {
-	case keys.AlgoEd25519:
-		return crypto.GenPrivKeyEd25519FromSecret(secret).PubKey().Address(), nil
-	case keys.AlgoSecp256k1:
-		return crypto.GenPrivKeySecp256k1FromSecret(secret).PubKey().Address(), nil
-	default:
-		return nil, errors.Errorf("Cannot generate keys for algorithm: %s", algo)
-	}
+func GenerateTokenAddress(token Token, sequence int64) (sdk.Address, error) {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(sequence))
+	secret := append(token.Owner, b...)
+	priv := makePrivKey(secret)
+	return priv.PubKey().Address(), nil
 }
 
 // we should decide the range of the two variables.
