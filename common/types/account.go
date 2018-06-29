@@ -7,11 +7,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
-var _ sdk.Account = (NamedAccount)(nil)
+var _ auth.Account = (NamedAccount)(nil)
 
 // TODO: maybe need to move GetFrozenCoins to the base interface
 type NamedAccount interface {
-	sdk.Account
+	auth.Account
 	GetName() string
 	SetName(string)
 
@@ -24,9 +24,6 @@ type NamedAccount interface {
 //
 // This is compatible with the stock auth.AccountStore, since
 // auth.AccountStore uses the flexible go-amino library.
-
-var _ NamedAccount = (*AppAccount)(nil)
-
 type AppAccount struct {
 	auth.BaseAccount
 	Name        string    `json:"name"`
@@ -37,21 +34,18 @@ type AppAccount struct {
 func (acc AppAccount) GetName() string      { return acc.Name }
 func (acc *AppAccount) SetName(name string) { acc.Name = name }
 
-func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins }
-func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
-
-// Get the AccountDecoder function for the custom NamedAccount
-func GetAccountDecoder(cdc *wire.Codec) sdk.AccountDecoder {
-	return func(accBytes []byte) (res sdk.Account, err error) {
+// Get the AccountDecoder function for the custom AppAccount
+func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
+	return func(accBytes []byte) (res auth.Account, err error) {
 		if len(accBytes) == 0 {
 			return nil, sdk.ErrTxDecode("accBytes are empty")
 		}
-		acct := AppAccount{}
-		err = cdc.UnmarshalBinaryBare(accBytes, &acct)
+		acct := new(AppAccount)
+		err = cdc.UnmarshalBinary(accBytes, &acct)
 		if err != nil {
 			panic(err)
 		}
-		return &acct, err
+		return acct, err
 	}
 }
 
@@ -70,16 +64,17 @@ type GenesisAccount struct {
 	Coins   sdk.Coins   `json:"coins"`
 }
 
-func NewGenesisAccount(aa NamedAccount) *GenesisAccount {
+// NewGenesisAccount -
+func NewGenesisAccount(aa *AppAccount) *GenesisAccount {
 	return &GenesisAccount{
-		Name:    aa.GetName(),
+		Name:    aa.Name,
 		Address: aa.GetAddress(),
 		Coins:   aa.GetCoins().Sort(),
 	}
 }
 
-// convert GenesisAccount to NamedAccount
-func (ga *GenesisAccount) ToAppAccount() (acc NamedAccount, err error) {
+// convert GenesisAccount to AppAccount
+func (ga *GenesisAccount) ToAppAccount() (acc *AppAccount, err error) {
 	baseAcc := auth.BaseAccount{
 		Address: ga.Address,
 		Coins:   ga.Coins.Sort(),

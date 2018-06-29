@@ -116,26 +116,26 @@ func (msg CancelOfferMsg) GetSignBytes() []byte {
 	return b
 }
 
-// Validate Basic is used to quickly disqualify obviously invalid messages quickly
+// ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg MakeOfferMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
+		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
 	return nil
 }
 
-// Validate Basic is used to quickly disqualify obviously invalid messages quickly
+// ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg FillOfferMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
+		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
 	return nil
 }
 
-// Validate Basic is used to quickly disqualify obviously invalid messages quickly
+// ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg CancelOfferMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).Trace("")
+		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
 	return nil
 }
