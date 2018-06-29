@@ -6,15 +6,15 @@ const (
 	MainStoreName    = "main"
 	AccountStoreName = "acc"
 	TokenStoreName   = "tokens"
-	IBCStoreName     = "ibc"
-	StakeStoreName   = "stake"
+	DexStoreName     = "dex"
+	// StakeStoreName   = "stake"
 )
 
 var (
 	// keys to access the substores
 	MainStoreKey    = sdk.NewKVStoreKey(MainStoreName)
 	AccountStoreKey = sdk.NewKVStoreKey(AccountStoreName)
-	IBCStoreKey     = sdk.NewKVStoreKey(IBCStoreName)
-	StakingStoreKey = sdk.NewKVStoreKey(StakeStoreName)
-	TokenStoreKey   = sdk.NewKVStoreKey(TokenStoreName)
+	// StakingStoreKey = sdk.NewKVStoreKey(StakeStoreName)
+	TokenStoreKey = sdk.NewKVStoreKey(TokenStoreName)
+	DexStoreKey   = sdk.NewKVStoreKey(DexStoreName)
 )

@@ -7,11 +7,13 @@ import (
 )
 
 const (
-	// Cool module reserves error 400-499 lawl
-	CodeIncorrectCoolAnswer sdk.CodeType = 400
+	DefaultCodespace sdk.CodespaceType = 6
+
+	// CodeIncorrectDexOperation module reserves error 400-499 lawl
+	CodeIncorrectDexOperation sdk.CodeType = 400
 )
 
-// ErrIncorrectCoolAnswer - Error returned upon an incorrect guess
-func ErrIncorrectCoolAnswer(answer string) sdk.Error {
-	return sdk.NewError(CodeIncorrectCoolAnswer, fmt.Sprintf("Incorrect cool answer: %v", answer))
+// ErrIncorrectDexOperation - Error returned upon an incorrect guess
+func ErrIncorrectDexOperation(codespace sdk.CodespaceType, answer string) sdk.Error {
+	return sdk.NewError(codespace, CodeIncorrectDexOperation, fmt.Sprintf("Invalid dex operation: %v", answer))
 }
