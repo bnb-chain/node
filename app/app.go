@@ -116,7 +116,14 @@ func MakeCodec() *wire.Codec {
 
 	// Register AppAccount
 	cdc.RegisterInterface((*auth.Account)(nil), nil)
-	cdc.RegisterConcrete(&types.AppAccount{}, "basecoin/Account", nil)
+	cdc.RegisterInterface((*types.NamedAccount)(nil), nil)
+	cdc.RegisterConcrete(&types.AppAccount{}, "bnbchain/Account", nil)
+
+	cdc.RegisterConcrete(types.Token{}, "bnbchain/Token", nil)
+	cdc.RegisterConcrete(types.Number{}, "bnbchain/Number", nil)
+
+	tokens.RegisterTypes(cdc)
+
 	return cdc
 }
 
