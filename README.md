@@ -34,7 +34,8 @@ $ export BNBCHAINPATH=~/go/src/github.com/BiJie/BinanceChain
 $ mkdir -p $BNBCHAINPATH
 $ git clone git@github.com:BiJie/BinanceChain.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
-$ dep ensure
+$ make get_vendor_deps
+$ make install
 ```
 
 **Windows**
@@ -46,13 +47,16 @@ You may need add BNBCHAINPATH to the environment variables.
 > md %BNBCHAINPATH%
 > git clone git@github.com:BiJie/BinanceChain.git %BNBCHAINPATH%
 > cd %BNBCHAINPATH%
-> dep ensure
+> make get_vendor_deps
+> make install
 ```
+
+> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set https_proxy=127.0.0.1:1080` if you still have https issues. 
 
 To test that installation worked, try to run the cli tool:
 
 ```bash
-$ go run cmd/bnbcli/main.go
+$ bnbcli
 ```
 
 ### Start the blockchain
@@ -60,7 +64,7 @@ $ go run cmd/bnbcli/main.go
 This command will generate a keypair for your node and create the genesis block config:
 
 ```bash
-$ go run cmd/bnbchaind/main.go init
+$ bnbchaind init
 $ cat ~/.bnbchaind/config/genesis.json
 ```
 
@@ -71,7 +75,7 @@ Similarly, you need apply the same operation to `~\.bnbcli\config\config.toml` i
 You may want to check the [Issuing assets](#issuing-assets) section below before you start, but this is how to start the node and begin generating blocks:
 
 ```bash
-$ go run cmd/bnbchaind/main.go start
+$ bnbchaind start
 ```
 
 If everything worked you will see blocks being generated around every 1s in your console.
@@ -81,15 +85,7 @@ If everything worked you will see blocks being generated around every 1s in your
 When you make a change you probably want to reset your chain, remember to kill the node first.
 
 ```bash
-$ go run cmd/bnbchaind/main.go unsafe_reset_all
-```
-
-### Build
-
-Build binaries with make:
-
-```bash
-$ make build
+$ bnbchaind unsafe_reset_all
 ```
 
 ## Assets
@@ -118,7 +114,7 @@ You can change this key to your own (use `go run cmd/bnbcli/main.go keys list` t
 Start your node, then list your keys as below:
 
 ```bash
-$ go run cmd/bnbcli/main.go keys list
+$ bnbcli keys list
 All keys:
 pepe    B71E119324558ABA3AE3F5BC854F1225132465A0
 you     DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
@@ -127,7 +123,7 @@ you     DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
 Check a balance with this command, e.g.:
 
 ```bash
-$ go run cmd/bnbcli/main.go account DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
+$ bnbcli account DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
 ```
 
 ### Sending assets
@@ -137,7 +133,7 @@ You have to send a transaction to send assets to another address, which is possi
 Make sure `chain-id` is set correctly; you can find it in your `genesis.json`.
 
 ```bash
-$ go run cmd/bnbcli/main.go send --chain-id=test-chain-QP9aAb --name=you --amount=1000mycoin --to=B71E119324558ABA3AE3F5BC854F1225132465A0 --sequence=0
+$ bnbcli send --chain-id=test-chain-QP9aAb --name=you --amount=1000mycoin --to=B71E119324558ABA3AE3F5BC854F1225132465A0 --sequence=0
 Password to sign with 'you': xxx
 Committed at block 88. Hash: 492B08FFE364D389BB508FD3507BBACD3DB58A98
 ```
@@ -145,13 +141,13 @@ Committed at block 88. Hash: 492B08FFE364D389BB508FD3507BBACD3DB58A98
 You can look at the contents of the tx, use the tx hash above:
 
 ```bash
-$ go run cmd/bnbcli/main.go tx 492B08FFE364D389BB508FD3507BBACD3DB58A98
+$ bnbcli tx 492B08FFE364D389BB508FD3507BBACD3DB58A98
 ```
 
 Then you can check the balance of pepe's key to see that he now has 1000 `mycoin`:
 
 ```bash
-$ go run cmd/bnbcli/main.go account B71E119324558ABA3AE3F5BC854F1225132465A0
+$ bnbcli account B71E119324558ABA3AE3F5BC854F1225132465A0
 {
   "type": "16542275FBFAB8",
   "value": {
