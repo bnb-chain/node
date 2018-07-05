@@ -49,15 +49,8 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	return c.sendTx(ctx, msg)
 }
 
-func (c Commander) sendTx(ctx core.CoreContext, msg sdk.Msg) error {
-	// default to next sequence number if none provided
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		return err
-	}
-
-	// build and sign the transaction, then broadcast to Tendermint
-	res, err := ctx.SignBuildBroadcast(ctx.FromAddressName, msg, c.Cdc)
+func (c Commander) sendTx(ctx context.CoreContext, msg sdk.Msg) error {
+	res, err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msg, c.Cdc)
 	if err != nil {
 		return err
 	}

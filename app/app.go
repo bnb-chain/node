@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 
+	"github.com/BiJie/BinanceChain/common"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	abci "github.com/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -16,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -30,13 +30,6 @@ const (
 type BasecoinApp struct {
 	*bam.BaseApp
 	cdc *wire.Codec
-
-	// keys to access the substores
-	capKeyMainStore    *sdk.KVStoreKey
-	capKeyAccountStore *sdk.KVStoreKey
-	capKeyTokensStore  *sdk.KVStoreKey
-	capKeyDexStore     *sdk.KVStoreKey
-	// capKeyStakingStore *sdk.KVStoreKey
 
 	// keepers
 	feeCollectionKeeper auth.FeeCollectionKeeper
@@ -58,21 +51,10 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 	var app = &BasecoinApp{
 		BaseApp:            bam.NewBaseApp(appName, cdc, logger, db),
 		cdc:                cdc,
-		capKeyMainStore:    common.MainStoreKey,
-		capKeyAccountStore: common.AccountStoreKey,
-		capKeyTokensStore:  common.TokenStoreKey,
-		capKeyDexStore:     common.DexStoreKey,
-		// capKeyStakingStore: sdk.NewKVStoreKey("stake"),
 	}
 
-	// Define the accountMapper.
-	app.accountMapper = auth.NewAccountMapper(
-		cdc,
-		app.capKeyAccountStore, // target store
-		&types.AppAccount{},    // prototype
-	)
-
-	// Add mappers.
+	// mappers
+	app.accountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, &types.AppAccount{})
 	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
 
 	// Add handlers.
@@ -86,9 +68,9 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 
 	// Initialize BaseApp.
 	app.SetInitChainer(app.initChainerFn())
-	app.MountStoresIAVL(app.capKeyMainStore, app.capKeyAccountStore, app.capKeyTokensStore, app.capKeyDexStore)
+	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
-	err := app.LoadLatestVersion(app.capKeyMainStore)
+	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
 	}

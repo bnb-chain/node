@@ -3,6 +3,7 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -12,27 +13,23 @@ import (
 // const Route  = "tokens/issue"
 const Route = "tokensIssue"
 
-var _ sdk.Msg = (*Msg)(nil)
+var _ sdk.Msg = Msg{}
 
 type Msg struct {
-	From    sdk.Address `json:"from"`
-	Name    string      `json:"Name"`
-	Symbol  string      `json:"Symbol"`
-	Supply  int64       `json:"Supply"`
-	Decimal int8        `json:"Decimal"`
+	From        sdk.Address `json:"from"`
+	Name        string      `json:"name"`
+	Symbol      string      `json:"symbol"`
+	TotalSupply int64       `json:"total_supply"`
 }
 
-func NewMsg(from sdk.Address, name, symbol string, supply int64, decimal int8) Msg {
+func NewMsg(from sdk.Address, name, symbol string, supply int64) Msg {
 	return Msg{
-		From:    from,
-		Name:    name,
-		Symbol:  symbol,
-		Supply:  supply,
-		Decimal: decimal,
+		From:        from,
+		Name:        name,
+		Symbol:      symbol,
+		TotalSupply: supply,
 	}
 }
-
-func (msg Msg) Type() string { return Route }
 
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
@@ -45,18 +42,22 @@ func (msg Msg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
-	// TODO: check supply and decimal
+	if len(msg.Name) == 0 || len(msg.Name) > 20 {
+		return sdk.ErrInvalidCoins("token name should have 1~20 characters")
+	}
+
+	if msg.TotalSupply <= 0 || msg.TotalSupply > types.MaxTotalSupply {
+		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.MaxTotalSupply / int64(math.Pow10(int(types.Decimals)))))
+	}
 
 	return nil
 }
 
-func (msg Msg) String() string {
-	return fmt.Sprintf("IssueMsg{%#v}", msg)
-}
-
-func (msg Msg) Get(key interface{}) (value interface{}) {
-	return nil
-}
+// Implements Msg.
+func (msg Msg) Type() string                            { return Route }
+func (msg Msg) String() string                          { return fmt.Sprintf("IssueMsg{%#v}", msg) }
+func (msg Msg) Get(key interface{}) (value interface{}) { return nil }
+func (msg Msg) GetSigners() []sdk.Address               { return []sdk.Address{msg.From} }
 
 func (msg Msg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
@@ -64,9 +65,4 @@ func (msg Msg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
-}
-
-// Implements Msg.
-func (msg Msg) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.From}
 }
