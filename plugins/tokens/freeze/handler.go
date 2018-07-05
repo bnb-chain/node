@@ -1,7 +1,6 @@
 package freeze
 
 import (
-	"math"
 	"reflect"
 	"strings"
 
@@ -34,25 +33,17 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMapper 
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
-	token, err := tokenMapper.GetToken(ctx, symbol)
-	if err != nil {
-		return sdk.ErrInvalidCoins(err.Error()).Result()
-	}
-
-	freezeAmount = int64(math.Pow10(int(token.Decimal))) * freezeAmount
-	// TODO: the third param can be removed...
 	coins := keeper.GetCoins(ctx, msg.From)
 	if coins.AmountOf(symbol) < freezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
 	_, _, sdkError := keeper.SubtractCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: freezeAmount}))
-	updateFrozenOfAccount(ctx, accountMapper, msg.From, symbol, freezeAmount)
-
 	if sdkError != nil {
 		return sdkError.Result()
 	}
 
+	updateFrozenOfAccount(ctx, accountMapper, msg.From, symbol, freezeAmount)
 	return sdk.Result{}
 }
 
@@ -63,19 +54,13 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
-	token, err := tokenMapper.GetToken(ctx, symbol)
-	if err != nil {
-		return sdk.ErrInvalidCoins(err.Error()).Result()
-	}
-
-	unfreezeAmount = int64(math.Pow10(int(token.Decimal))) * unfreezeAmount
-	// TODO: the third param can be removed...
 	account := accountMapper.GetAccount(ctx, msg.From).(types.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	if frozenAmount < unfreezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 	}
-	account.SetFrozenCoins(account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: frozenAmount})))
+
+	account.SetFrozenCoins(account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: unfreezeAmount})))
 	accountMapper.SetAccount(ctx, account)
 
 	_, _, sdkError := keeper.AddCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: unfreezeAmount}))

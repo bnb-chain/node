@@ -22,6 +22,7 @@ import (
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
+	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
 )
 
 // rootCmd is the entry point for this binary
@@ -92,6 +93,8 @@ func main() {
 		client.LineBreak,
 		version.VersionCmd,
 	)
+
+	tokencmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))
