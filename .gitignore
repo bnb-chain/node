@@ -18,3 +18,4 @@ vendor
 # ide files and temp files
 .idea/
 *.swp
+.vscode/settings.json
