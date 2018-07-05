@@ -45,6 +45,10 @@ type MatchEng struct {
 	// LotSize may be based on price level, which can be set
 	// before any match() call
 	LotSize int64
+	// PriceLimit is a percentage use to calculate the range of price
+	// in order to determine the trade price. Though it is saved as int64,
+	// it would be converted into a float when the match engine is created.
+	PriceLimitPct float64
 	// all the below are buffers
 	overLappedLevel []OverLappedLevel
 	buyBuf          []PriceLevel
@@ -55,8 +59,8 @@ type MatchEng struct {
 	lastTradePrice  int64
 }
 
-func NewMatchEng(basePrice, lotSize int64) *MatchEng {
-	return &MatchEng{LotSize: lotSize, overLappedLevel: make([]OverLappedLevel, 0, 16),
+func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
+	return &MatchEng{LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
 		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
 		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
@@ -101,9 +105,21 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 func getPriceCloseToRef(overlapped []OverLappedLevel, index []int, refPrice int64) (int64, int) {
 	var j int
 	var diff int64 = math.MaxInt64
+	refIsSmaller := false
 	for _, i := range index {
 		p := overlapped[i].Price
-		d := utils.AbsInt(p - refPrice)
+		d := p - refPrice
+		switch compareBuy(d, 0) {
+		case 0:
+			return refPrice, i
+		case 1:
+			refIsSmaller = true
+		case -1:
+			if refIsSmaller {
+				return refPrice, j
+			}
+			d = -d
+		}
 		if compareBuy(diff, d) > 0 {
 			// do not count == case, when more than one has the same diff, return the largest price, i.e. the 1st
 			diff = d
@@ -145,8 +161,37 @@ func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 }
 
+func getTradePriceForMarketPressure(side int, overlapped *[]OverLappedLevel,
+	leastSurplus []int, refPrice float64, priceLimit float64) (int64, int) {
+	lowerLimit := int64(math.Floor(refPrice * (1.0 - priceLimit)))
+	i := leastSurplus[0] //largest
+	if compareBuy(lowerLimit, (*overlapped)[i].Price) > 0 {
+		// refPrice is larger than every one
+		return (*overlapped)[i].Price, i
+	}
+	upperLimit := int64(math.Ceil(refPrice * (1.0 + priceLimit)))
+	j := leastSurplus[len(leastSurplus)-1] //smallest
+	if compareBuy((*overlapped)[j].Price, upperLimit) > 0 {
+		// refPrice is less than every one
+		return (*overlapped)[j].Price, j
+	}
+	if side == BUYSIDE {
+		if compareBuy(upperLimit, (*overlapped)[i].Price) > 0 {
+			return (*overlapped)[i].Price, i
+		} else {
+			return getPriceCloseToRef(*overlapped, leastSurplus, upperLimit)
+		}
+	} else {
+		if compareBuy(lowerLimit, (*overlapped)[j].Price) < 0 {
+			return (*overlapped)[j].Price, j
+		} else {
+			return getPriceCloseToRef(*overlapped, leastSurplus, lowerLimit)
+		}
+	}
+}
+
 func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
-	leastSurplus *SurplusIndex, refPrice int64) (int64, int) {
+	leastSurplus *SurplusIndex, refPrice int64, priceLimitPct float64) (int64, int) {
 	maxExec.clear()
 	leastSurplus.clear()
 	calMaxExec(overlapped, maxExec)
@@ -173,13 +218,13 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 	// only buy side surplus exist, buying pressure
 	if buySurplus && !sellSurplus { // return hightest
-		i := leastSurplus.index[0]
-		return (*overlapped)[i].Price, i
+		return getTradePriceForMarketPressure(BUYSIDE, overlapped,
+			leastSurplus.index, float64(refPrice), priceLimitPct)
 	}
 	// only sell side surplus exist, selling pressure
 	if !buySurplus && sellSurplus { // return lowest
-		i := leastSurplus.index[len(leastSurplus.index)-1]
-		return (*overlapped)[i].Price, i
+		return getTradePriceForMarketPressure(SELLSIDE, overlapped,
+			leastSurplus.index, float64(refPrice), priceLimitPct)
 	}
 	if (buySurplus && sellSurplus) || (!buySurplus && !sellSurplus) {
 		return getPriceCloseToRef(*overlapped, leastSurplus.index, refPrice)
@@ -354,7 +399,7 @@ func (me *MatchEng) Match() bool {
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
-	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.lastTradePrice)
+	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.lastTradePrice, me.PriceLimitPct)
 	if index < 0 {
 		return false
 	}

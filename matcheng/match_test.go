@@ -62,14 +62,14 @@ func Test_getPriceCloseToRef(t *testing.T) {
 	assert.Equal(int64(991), p)
 	p, i = getPriceCloseToRef(overlap, []int{0, 1, 2}, 996)
 	assert.Equal(1, i)
-	assert.Equal(int64(1001), p)
+	assert.Equal(int64(996), p)
 	p, i = getPriceCloseToRef(overlap, []int{0, 1, 2}, 1025)
 	assert.Equal(0, i)
 	assert.Equal(int64(1021), p)
 
 	p, i = getPriceCloseToRef(overlap, []int{0, 2, 5}, 996)
-	assert.Equal(2, i)
-	assert.Equal(int64(991), p)
+	assert.Equal(0, i)
+	assert.Equal(int64(996), p)
 	p, i = getPriceCloseToRef(overlap, []int{0, 2, 5}, 991)
 	assert.Equal(2, i)
 	assert.Equal(int64(991), p)
@@ -79,7 +79,7 @@ func Test_getPriceCloseToRef(t *testing.T) {
 	p, i = getPriceCloseToRef(overlap, []int{0, 2, 5}, 1021)
 	assert.Equal(0, i)
 	assert.Equal(int64(1021), p)
-	p, i = getPriceCloseToRef(overlap, []int{0, 2, 5}, 975)
+	p, i = getPriceCloseToRef(overlap, []int{0, 2, 5}, 961)
 	assert.Equal(5, i)
 	assert.Equal(int64(961), p)
 
@@ -152,7 +152,7 @@ func Test_getTradePrice(t *testing.T) {
 	//simple case for exec
 	maxExec := LevelIndex{}
 	leastSurplus := SurplusIndex{}
-	p, i := getTradePrice(&overlap, &maxExec, &leastSurplus, 0)
+	p, i := getTradePrice(&overlap, &maxExec, &leastSurplus, 0, 0.05)
 	assert.Equal(int64(1071), p)
 	assert.Equal(3, i)
 	overlap = []OverLappedLevel{
@@ -167,7 +167,7 @@ func Test_getTradePrice(t *testing.T) {
 	//simple case for surplus
 	maxExec.clear()
 	leastSurplus.clear()
-	p, i = getTradePrice(&overlap, &maxExec, &leastSurplus, 0)
+	p, i = getTradePrice(&overlap, &maxExec, &leastSurplus, 0, 0.05)
 	assert.Equal(int64(1071), p)
 	assert.Equal(3, i)
 
@@ -180,16 +180,16 @@ func Test_getTradePrice(t *testing.T) {
 	300    250     98       150    300    300*         0
 	50     50      97              300    50           250
 	*/
-	me := NewMatchEng(100, 5)
+	me := NewMatchEng(100, 1, 0.05)
 	book := NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1000, 150)
-	book.InsertOrder("2", SELLSIDE, 100, 980, 250)
-	book.InsertOrder("3", SELLSIDE, 101, 970, 50)
-	book.InsertOrder("4", BUYSIDE, 101, 980, 150)
+	book.InsertOrder("1", BUYSIDE, 100, 100, 150)
+	book.InsertOrder("2", SELLSIDE, 100, 98, 250)
+	book.InsertOrder("3", SELLSIDE, 101, 97, 50)
+	book.InsertOrder("4", BUYSIDE, 101, 98, 150)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(980), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000, 0.05)
+	assert.Equal(int64(98), p)
 	assert.Equal(1, i)
 
 	/* 	2. Choose the largest execution (Step 1)
@@ -202,15 +202,15 @@ func Test_getTradePrice(t *testing.T) {
 	100    100     96              500    100          400
 	*/
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1000, 150)
-	book.InsertOrder("2", SELLSIDE, 100, 960, 100)
-	book.InsertOrder("3", SELLSIDE, 101, 970, 200)
-	book.InsertOrder("4", BUYSIDE, 101, 990, 50)
-	book.InsertOrder("5", BUYSIDE, 102, 970, 300)
+	book.InsertOrder("1", BUYSIDE, 100, 100, 150)
+	book.InsertOrder("2", SELLSIDE, 100, 96, 100)
+	book.InsertOrder("3", SELLSIDE, 101, 97, 200)
+	book.InsertOrder("4", BUYSIDE, 101, 99, 50)
+	book.InsertOrder("5", BUYSIDE, 102, 97, 300)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(970), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 100, 0.05)
+	assert.Equal(int64(97), p)
 	assert.Equal(2, i)
 
 	/* 3. the least abs surplus imbalance (Step 2)
@@ -225,17 +225,17 @@ func Test_getTradePrice(t *testing.T) {
 	1000   1000    96              900    900          -100*
 	*/
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1020, 300)
-	book.InsertOrder("2", BUYSIDE, 101, 1000, 100)
-	book.InsertOrder("3", SELLSIDE, 101, 980, 250)
-	book.InsertOrder("4", BUYSIDE, 101, 990, 200)
-	book.InsertOrder("5", BUYSIDE, 102, 980, 300)
-	book.InsertOrder("6", SELLSIDE, 102, 970, 250)
-	book.InsertOrder("7", SELLSIDE, 103, 960, 1000)
+	book.InsertOrder("1", BUYSIDE, 100, 102, 300)
+	book.InsertOrder("2", BUYSIDE, 101, 100, 100)
+	book.InsertOrder("3", SELLSIDE, 101, 98, 250)
+	book.InsertOrder("4", BUYSIDE, 101, 99, 200)
+	book.InsertOrder("5", BUYSIDE, 102, 98, 300)
+	book.InsertOrder("6", SELLSIDE, 102, 97, 250)
+	book.InsertOrder("7", SELLSIDE, 103, 96, 1000)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(960), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 100, 0.05)
+	assert.Equal(int64(96), p)
 	assert.Equal(5, i)
 
 	/* 	4. the least abs surplus imbalance (Step 2)
@@ -252,20 +252,21 @@ func Test_getTradePrice(t *testing.T) {
 	*/
 
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1020, 30)
-	book.InsertOrder("2", BUYSIDE, 101, 1010, 10)
-	book.InsertOrder("3", SELLSIDE, 101, 980, 10)
-	book.InsertOrder("4", BUYSIDE, 101, 990, 50)
-	book.InsertOrder("5", BUYSIDE, 102, 960, 15)
-	book.InsertOrder("6", SELLSIDE, 102, 970, 50)
-	book.InsertOrder("7", SELLSIDE, 103, 950, 50)
+	book.InsertOrder("1", BUYSIDE, 100, 102, 30)
+	book.InsertOrder("2", BUYSIDE, 101, 101, 10)
+	book.InsertOrder("3", SELLSIDE, 101, 98, 10)
+	book.InsertOrder("4", BUYSIDE, 101, 99, 50)
+	book.InsertOrder("5", BUYSIDE, 102, 96, 15)
+	book.InsertOrder("6", SELLSIDE, 102, 97, 50)
+	book.InsertOrder("7", SELLSIDE, 103, 95, 50)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(970), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 100, 0.05)
+	assert.Equal(int64(97), p)
 	assert.Equal(4, i)
 
-	/* 	5. choose the lowest for all the same value of sell surplus imbalance (Step 3)
+	/* 	5.1 choose the lowest for all the same value of sell surplus imbalance,
+	reference price is 80 and 5% upper limit (Step 3)
 	--------------------------------------------------------------
 	SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
 	50             102      10     10     10           -40
@@ -279,56 +280,127 @@ func Test_getTradePrice(t *testing.T) {
 	*/
 
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1020, 10)
-	book.InsertOrder("2", BUYSIDE, 101, 970, 10)
-	book.InsertOrder("3", SELLSIDE, 101, 950, 50)
+	book.InsertOrder("1", BUYSIDE, 100, 102, 10)
+	book.InsertOrder("2", BUYSIDE, 101, 97, 10)
+	book.InsertOrder("3", SELLSIDE, 101, 95, 50)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(950), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 80, 0.05)
+	assert.Equal(int64(95), p)
 	assert.Equal(2, i)
-	/*		--------------------------------------------------------------
-	SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
-	20             102      50     50     20           30*
-	20             101             50     20           30
-	20             100             50     20           30
-	20             99              50     20           30
-	20             98              50     20           30
-	20     10      97              50     20           30
-	10             96              50     10           40
-	10     10      95              50     10           40
+
+	/*
+		5.2 choose the lowest for all the same value of sell surplus imbalance,
+		reference price is 100 and 5% upper limit (Step 3)
+		--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		50             99       10     10     10           -40
+		50             98              10     10           -40
+		50             97              10     10           -40
+		50             96              10     10           -40
+		50             95              10     10           -40
+		50             94       10     20     20           -30*
+		50             93              20     20           -30
+		50     50      92              20     20           -30
 	*/
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", SELLSIDE, 100, 970, 10)
-	book.InsertOrder("2", SELLSIDE, 101, 950, 10)
-	book.InsertOrder("3", BUYSIDE, 101, 1020, 50)
+	book.InsertOrder("1", SELLSIDE, 100, 92, 50)
+	book.InsertOrder("2", BUYSIDE, 101, 99, 10)
+	book.InsertOrder("3", BUYSIDE, 101, 94, 10)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 1000)
-	assert.Equal(int64(1020), p)
-	assert.Equal(0, i)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 100, 0.05)
+	assert.Equal(int64(94), p)
+	assert.Equal(1, i)
 
-	/* 	6. choose the closest to the last trade price 99 (Step 4)
-	   	--------------------------------------------------------------
-	   	SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
-	   	50             100      25     25     25           -25*
-	   	50             99              25     25           -25
-	   	50     25      98              25     25           -25
-	   	25             97       25     50     25           25
-	   	25             96              50     25           25
-	   	25     25      95              50     25           25
+	/*
+		5.3 choose the lowest for all the same value of sell surplus imbalance,
+		reference price is 90 and 5% upper limit (Step 3)
+		--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		50             99       100    100    50           50
+		50             98              100    50           50
+		50             97              100    50           50
+		50             96              100    50           50
+		50             95              100    50           50*
+		50             94              100    50           50
+		50             93              100    50           50
+		50     50      92              100    50           50
 	*/
-
 	book = NewOrderBookOnULList(4096, 16)
-	book.InsertOrder("1", BUYSIDE, 100, 1000, 25)
-	book.InsertOrder("4", SELLSIDE, 101, 980, 25)
-	book.InsertOrder("2", BUYSIDE, 101, 970, 25)
-	book.InsertOrder("3", SELLSIDE, 101, 950, 25)
+	book.InsertOrder("1", SELLSIDE, 100, 92, 50)
+	book.InsertOrder("2", BUYSIDE, 101, 99, 100)
 	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	prepareMatch(&me.overLappedLevel)
-	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 990)
-	assert.Equal(int64(1000), p)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 90, 0.05)
+	assert.Equal(int64(95), p)
 	assert.Equal(0, i)
+
+	/*
+		5.4 choose the lowest for all the same value of sell surplus imbalance,
+		reference price is 100 and 5% upper limit (Step 3)
+		--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		50             101      10     10     10           -40
+		50             100             10     10           -40
+		50             99              10     10           -40
+		50             98              10     10           -40
+		50             97              10     10           -40
+		50             96       10     20     20           -30
+		50             95              20     20           -30*
+		50     50      94              20     20           -30
+	*/
+	book = NewOrderBookOnULList(4096, 16)
+	book.InsertOrder("1", SELLSIDE, 100, 94, 50)
+	book.InsertOrder("2", BUYSIDE, 101, 96, 10)
+	book.InsertOrder("3", BUYSIDE, 101, 101, 10)
+	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
+	prepareMatch(&me.overLappedLevel)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 100, 0.05)
+	assert.Equal(int64(95), p)
+	assert.Equal(1, i)
+	/*
+		6.1 choose the closest to the last trade price 99 (Step 4)
+		--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		50             100      25     25     25           -25
+		50             99              25     25           -25*
+		50     25      98              25     25           -25
+		25             97       25     50     25           25
+		25             96              50     25           25
+		25     25      95              50     25           25
+	*/
+	book = NewOrderBookOnULList(4096, 16)
+	book.InsertOrder("1", BUYSIDE, 100, 100, 25)
+	book.InsertOrder("2", SELLSIDE, 100, 95, 25)
+	book.InsertOrder("2", SELLSIDE, 100, 98, 25)
+	book.InsertOrder("3", BUYSIDE, 101, 97, 25)
+	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
+	prepareMatch(&me.overLappedLevel)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 99, 0.05)
+	assert.Equal(int64(99), p)
+	assert.Equal(0, i)
+	/*
+		6.2 choose the closest to the last trade price 97 (Step 4)
+		--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		50             100      25     25     25           -25
+		50             99              25     25           -25
+		50     25      98              25     25           -25
+		25             97       25     50     25           25*
+		25             96              50     25           25
+		25     25      95              50     25           25
+	*/
+	book = NewOrderBookOnULList(4096, 16)
+	book.InsertOrder("1", BUYSIDE, 100, 100, 25)
+	book.InsertOrder("2", SELLSIDE, 100, 95, 25)
+	book.InsertOrder("2", SELLSIDE, 100, 98, 25)
+	book.InsertOrder("3", BUYSIDE, 101, 97, 25)
+	book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
+	prepareMatch(&me.overLappedLevel)
+	p, i = getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, 97, 0.05)
+	assert.Equal(int64(97), p)
+	assert.Equal(2, i)
 }
 func Test_calLeastSurplus(t *testing.T) {
 	assert := assert.New(t)
@@ -343,7 +415,7 @@ func Test_calLeastSurplus(t *testing.T) {
 		OverLappedLevel{AccumulatedExecutions: 12001, BuySellSurplus: 5000},
 		OverLappedLevel{AccumulatedExecutions: 13001, BuySellSurplus: 5000},
 	}
-	me := NewMatchEng(100, 5)
+	me := NewMatchEng(100, 5, 0.05)
 	maxExec := me.maxExec
 	leastSurplus := me.leastSurplus
 	calMaxExec(&overlap, &maxExec)
@@ -373,7 +445,7 @@ func Test_calLeastSurplus(t *testing.T) {
 
 func TestMatchEng_fillOrders(t *testing.T) {
 	assert := assert.New(t)
-	me := NewMatchEng(100, 5)
+	me := NewMatchEng(100, 5, 0.05)
 	me.lastTradePrice = 999
 	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 1000,
 		BuyOrders: []OrderPart{
@@ -536,7 +608,7 @@ func Test_allocateResidual(t *testing.T) {
 }
 
 func TestMatchEng_reserveQty(t *testing.T) {
-	me := NewMatchEng(100, 5)
+	me := NewMatchEng(100, 5, 0.05)
 	assert := assert.New(t)
 	orders := []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
@@ -604,7 +676,7 @@ func TestMatchEng_reserveQty(t *testing.T) {
 }
 
 func TestMatchEng_Match(t *testing.T) {
-	me := NewMatchEng(100, 1)
+	me := NewMatchEng(100, 1, 0.05)
 	assert := assert.New(t)
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 98, 100)
@@ -697,7 +769,7 @@ func TestMatchEng_Match(t *testing.T) {
 }
 
 func TestMatchEng_DropFilledOrder(t *testing.T) {
-	me := NewMatchEng(100, 1)
+	me := NewMatchEng(100, 1, 0.05)
 	assert := assert.New(t)
 	/* 	3. the least abs surplus imbalance (Step 2)
 	--------------------------------------------------------------
