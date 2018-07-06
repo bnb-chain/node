@@ -13,7 +13,7 @@ import (
 
 func Routes(tokenMapper store.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	routes[issue.Route] = issue.NewHandler(tokenMapper, accountMapper, keeper)
+	routes[issue.Route] = issue.NewHandler(tokenMapper, keeper)
 	routes[burn.Route] = burn.NewHandler(tokenMapper, keeper)
 	freezeHandler := freeze.NewHandler(tokenMapper, accountMapper, keeper)
 	routes[freeze.RouteFreeze] = freezeHandler

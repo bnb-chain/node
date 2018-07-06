@@ -15,8 +15,10 @@ type Mapper interface {
 	GetTokenList(ctx sdk.Context) []types.Token
 	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
 	// we do not provide the updateToken method
-	UpdateTokenSupply(ctx sdk.Context, symbol string, supply int64) error
+	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
 }
+
+var _ Mapper = (*mapper)(nil)
 
 type mapper struct {
 	key sdk.StoreKey
@@ -74,7 +76,7 @@ func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 	return nil
 }
 
-func (m mapper) UpdateTokenSupply(ctx sdk.Context, symbol string, supply int64) error {
+func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
 	}
@@ -88,8 +90,8 @@ func (m mapper) UpdateTokenSupply(ctx sdk.Context, symbol string, supply int64) 
 
 	toBeUpdated := m.decodeToken(bz)
 
-	if toBeUpdated.Supply != supply {
-		toBeUpdated.Supply = supply
+	if toBeUpdated.TotalSupply != supply {
+		toBeUpdated.TotalSupply = supply
 		store.Set(key, m.encodeToken(toBeUpdated))
 	}
 
