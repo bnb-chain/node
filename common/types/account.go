@@ -24,6 +24,9 @@ type NamedAccount interface {
 //
 // This is compatible with the stock auth.AccountStore, since
 // auth.AccountStore uses the flexible go-amino library.
+
+var _ NamedAccount = (*AppAccount)(nil)
+
 type AppAccount struct {
 	auth.BaseAccount
 	Name        string    `json:"name"`
@@ -31,8 +34,10 @@ type AppAccount struct {
 }
 
 // nolint
-func (acc AppAccount) GetName() string      { return acc.Name }
-func (acc *AppAccount) SetName(name string) { acc.Name = name }
+func (acc AppAccount) GetName() string                  { return acc.Name }
+func (acc *AppAccount) SetName(name string)             { acc.Name = name }
+func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins }
+func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
 
 // Get the AccountDecoder function for the custom AppAccount
 func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
@@ -41,7 +46,7 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 			return nil, sdk.ErrTxDecode("accBytes are empty")
 		}
 		acct := new(AppAccount)
-		err = cdc.UnmarshalBinary(accBytes, &acct)
+		err = cdc.UnmarshalBinaryBare(accBytes, &acct)
 		if err != nil {
 			panic(err)
 		}
