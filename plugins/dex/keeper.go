@@ -9,13 +9,14 @@ import (
 
 // Keeper - handlers sets/gets of custom variables for your module
 type Keeper struct {
-	ck       bank.CoinKeeper
-	storeKey sdk.StoreKey // The key used to access the store from the Context.
+	ck        bank.Keeper
+	storeKey  sdk.StoreKey // The key used to access the store from the Context.
+	codespace sdk.CodespaceType
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.CoinKeeper) Keeper {
-	return Keeper{bankKeeper, key}
+func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType) Keeper {
+	return Keeper{bankKeeper, key, codespace}
 }
 
 // Key to knowing the trend on the streets!
