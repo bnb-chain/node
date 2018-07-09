@@ -48,11 +48,11 @@ func AppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState json.Ra
 }
 
 func newApp(logger log.Logger, db dbm.DB) abci.Application {
-	return app.NewBasecoinApp(logger, db)
+	return app.NewBinanceChain(logger, db)
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB) (json.RawMessage, []tmtypes.GenesisValidator, error) {
-	dapp := app.NewBasecoinApp(logger, db)
+	dapp := app.NewBinanceChain(logger, db)
 	return dapp.ExportAppStateAndValidators()
 }
 
