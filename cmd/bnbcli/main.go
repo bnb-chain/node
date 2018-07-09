@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/BiJie/BinanceChain/common"
 	"github.com/spf13/cobra"
 
 	"github.com/tendermint/tmlibs/cli"
@@ -14,21 +15,21 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/tx"
 
 	"github.com/cosmos/cosmos-sdk/version"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/commands"
-	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/commands"
-	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/commands"
-	simplestakingcmd "github.com/cosmos/cosmos-sdk/x/simplestake/commands"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
+	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
 
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
-	"github.com/BiJie/BinanceChain/types"
+	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
 )
 
 // rootCmd is the entry point for this binary
 var (
 	rootCmd = &cobra.Command{
 		Use:   "bnbcli",
-		Short: "BNBChain cli client",
+		Short: "BNBChain light-client",
 	}
 )
 
@@ -53,7 +54,7 @@ func main() {
 	// start with commands common to basecoin
 	rootCmd.AddCommand(
 		client.GetCommands(
-			authcmd.GetAccountCmd("main", cdc, types.GetAccountDecoder(cdc)),
+			authcmd.GetAccountCmd(common.AccountStoreName, cdc, types.GetAccountDecoder(cdc)),
 		)...)
 	rootCmd.AddCommand(
 		client.PostCommands(
@@ -63,15 +64,17 @@ func main() {
 		client.PostCommands(
 			ibccmd.IBCTransferCmd(cdc),
 		)...)
-	rootCmd.AddCommand(
-		client.PostCommands(
-			ibccmd.IBCRelayCmd(cdc),
-			simplestakingcmd.BondTxCmd(cdc),
-		)...)
-	rootCmd.AddCommand(
-		client.PostCommands(
-			simplestakingcmd.UnbondTxCmd(cdc),
-		)...)
+
+	// temp. disabled staking commands
+	// rootCmd.AddCommand(
+	// 	client.PostCommands(
+	// 		ibccmd.IBCRelayCmd(cdc),
+	// 		simplestakingcmd.BondTxCmd(cdc),
+	// 	)...)
+	// rootCmd.AddCommand(
+	// 	client.PostCommands(
+	// 		simplestakingcmd.UnbondTxCmd(cdc),
+	// 	)...)
 
 	// dex specific commands
 	rootCmd.AddCommand(
@@ -90,6 +93,8 @@ func main() {
 		client.LineBreak,
 		version.VersionCmd,
 	)
+
+	tokencmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))

@@ -7,25 +7,41 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
-var _ sdk.Account = (*AppAccount)(nil)
+var _ auth.Account = (NamedAccount)(nil)
+
+// TODO: maybe need to move GetFrozenCoins to the base interface
+type NamedAccount interface {
+	auth.Account
+	GetName() string
+	SetName(string)
+
+	GetFrozenCoins() sdk.Coins
+	SetFrozenCoins(sdk.Coins)
+}
 
 // Custom extensions for this application.  This is just an example of
 // extending auth.BaseAccount with custom fields.
 //
 // This is compatible with the stock auth.AccountStore, since
 // auth.AccountStore uses the flexible go-amino library.
+
+var _ NamedAccount = (*AppAccount)(nil)
+
 type AppAccount struct {
 	auth.BaseAccount
-	Name string `json:"name"`
+	Name        string    `json:"name"`
+	FrozenCoins sdk.Coins `json:"frozen"`
 }
 
 // nolint
-func (acc AppAccount) GetName() string      { return acc.Name }
-func (acc *AppAccount) SetName(name string) { acc.Name = name }
+func (acc AppAccount) GetName() string                  { return acc.Name }
+func (acc *AppAccount) SetName(name string)             { acc.Name = name }
+func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins }
+func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
 
 // Get the AccountDecoder function for the custom AppAccount
-func GetAccountDecoder(cdc *wire.Codec) sdk.AccountDecoder {
-	return func(accBytes []byte) (res sdk.Account, err error) {
+func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
+	return func(accBytes []byte) (res auth.Account, err error) {
 		if len(accBytes) == 0 {
 			return nil, sdk.ErrTxDecode("accBytes are empty")
 		}
@@ -53,11 +69,12 @@ type GenesisAccount struct {
 	Coins   sdk.Coins   `json:"coins"`
 }
 
+// NewGenesisAccount -
 func NewGenesisAccount(aa *AppAccount) *GenesisAccount {
 	return &GenesisAccount{
 		Name:    aa.Name,
-		Address: aa.Address,
-		Coins:   aa.Coins.Sort(),
+		Address: aa.GetAddress(),
+		Coins:   aa.GetCoins().Sort(),
 	}
 }
 
