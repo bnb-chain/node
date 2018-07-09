@@ -3,6 +3,7 @@ package dex
 import (
 	"encoding/binary"
 
+	me "github.com/BiJie/BinanceChain/matcheng"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 )
@@ -12,11 +13,29 @@ type Keeper struct {
 	ck        bank.Keeper
 	storeKey  sdk.StoreKey // The key used to access the store from the Context.
 	codespace sdk.CodespaceType
+	engines   map[string]*me.MatchEng
+	cancels   map[string][]string
 }
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType) Keeper {
-	return Keeper{bankKeeper, key, codespace}
+	return Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
+		engines: make(map[string]*me.MatchEng)}
+}
+
+func CreateMatchEng(symbol string) *me.MatchEng {
+	//TODO: read lot size
+	return me.NewMatchEng(1000, 1, 0.05)
+}
+
+func (kp *Keeper) AddOrder(id string, symbol string, side int8, price int64, qty int64, height int64) (err error) {
+	eng, ok := kp.engines[symbol]
+	if !ok {
+		eng = CreateMatchEng(symbol)
+		kp.engines[symbol] = eng
+	}
+	_, err := eng.Book.InsertOrder(id, side, height, price, qty)
+	return err
 }
 
 // Key to knowing the trend on the streets!
@@ -90,12 +109,12 @@ func (k Keeper) setVolumeBucketDuration(ctx sdk.Context, volumeBucketDuration in
 }
 
 // InitGenesis - store the genesis trend
-func (k Keeper) InitGenesis(ctx sdk.Context, data DexGenesis) error {
-	k.setMakerFee(ctx, data.MakerFee)
-	k.setTakerFee(ctx, data.TakerFee)
-	k.setFeeFactor(ctx, data.FeeFactor)
-	k.setMaxFee(ctx, data.MaxFee)
-	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
-	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
-	return nil
-}
+// func (k Keeper) InitGenesis(ctx sdk.Context, data DexGenesis) error {
+// 	k.setMakerFee(ctx, data.MakerFee)
+// 	k.setTakerFee(ctx, data.TakerFee)
+// 	k.setFeeFactor(ctx, data.FeeFactor)
+// 	k.setMaxFee(ctx, data.MaxFee)
+// 	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
+// 	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
+// 	return nil
+// }

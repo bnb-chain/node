@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/dex"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -17,6 +16,10 @@ type NamedAccount interface {
 
 	GetFrozenCoins() sdk.Coins
 	SetFrozenCoins(sdk.Coins)
+
+	//TODO: this should merge into Coin
+	GetLockedCoins() sdk.Coins
+	SetLockedCoins(sdk.Coins)
 }
 
 // Custom extensions for this application.  This is just an example of
@@ -31,6 +34,7 @@ type AppAccount struct {
 	auth.BaseAccount
 	Name        string    `json:"name"`
 	FrozenCoins sdk.Coins `json:"frozen"`
+	LockedCoins sdk.Coins `json:"locked"`
 }
 
 // nolint
@@ -38,6 +42,8 @@ func (acc AppAccount) GetName() string                  { return acc.Name }
 func (acc *AppAccount) SetName(name string)             { acc.Name = name }
 func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins }
 func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
+func (acc AppAccount) GetLockedCoins() sdk.Coins        { return acc.LockedCoins }
+func (acc *AppAccount) SetLockedCoins(frozen sdk.Coins) { acc.LockedCoins = frozen }
 
 // Get the AccountDecoder function for the custom AppAccount
 func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
@@ -56,10 +62,20 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 
 //___________________________________________________________________________________
 
+// Genesis state - specify genesis trend
+type DexGenesis struct {
+	MakerFee             int64 `json:"makerFee"`
+	TakerFee             int64 `json:"takerFee"`
+	FeeFactor            int64 `json:"feeFactor"`
+	MaxFee               int64 `json:"maxFee"`
+	NativeTokenDiscount  int64 `json:"nativeTokenDiscount"`
+	VolumeBucketDuration int64 `json:"volumeBucketDuration"`
+}
+
 // State to Unmarshal
 type GenesisState struct {
 	Accounts   []*GenesisAccount `json:"accounts"`
-	DexGenesis dex.DexGenesis    `json:"dex"`
+	DexGenesis DexGenesis        `json:"dex"`
 }
 
 // GenesisAccount doesn't need pubkey or sequence

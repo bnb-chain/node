@@ -6,7 +6,6 @@ import (
 
 // Register concrete types on wire codec
 func RegisterWire(cdc *wire.Codec) {
-	cdc.RegisterConcrete(MakeOfferMsg{}, "cool/MakeOffer", nil)
-	cdc.RegisterConcrete(FillOfferMsg{}, "cool/FillOffer", nil)
-	cdc.RegisterConcrete(CancelOfferMsg{}, "cool/CancelOffer", nil)
+	cdc.RegisterConcrete(NewOrderMsg{}, "dex/NewOrder", nil)
+	cdc.RegisterConcrete(CancelOrderMsg{}, "dex/CancelOrder", nil)
 }
