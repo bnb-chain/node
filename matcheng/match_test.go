@@ -810,7 +810,7 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	assert.Nil(book.sellQueue.GetPriceLevel(98))
 	assert.Nil(book.sellQueue.GetPriceLevel(96))
 	for _, o := range book.buyQueue.GetPriceLevel(100).orders {
-		assert.Equal(o.time, uint64(105))
+		assert.Equal(o.time, int64(105))
 		assert.True(o.cumQty > 0)
 	}
 }

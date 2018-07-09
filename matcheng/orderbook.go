@@ -20,7 +20,7 @@ const PRECISION = 1
 
 type OrderPart struct {
 	id       string
-	time     uint64
+	time     int64
 	qty      int64
 	cumQty   int64
 	nxtTrade int64
@@ -32,7 +32,7 @@ type PriceLevel struct {
 }
 
 type PriceLevelInterface interface {
-	addOrder(id string, time uint64, qty int64) (int, error)
+	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
 	Less(than bt.Item) bool
 }
@@ -58,7 +58,7 @@ func (l *PriceLevel) String() string {
 }
 
 //addOrder would implicitly called with sequence of 'time' parameter
-func (l *PriceLevel) addOrder(id string, time uint64, qty int64) (int, error) {
+func (l *PriceLevel) addOrder(id string, time int64, qty int64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
 	for _, o := range l.orders {
 		if o.id == id {
@@ -107,7 +107,7 @@ type OrderBookInterface interface {
 	GetOverlappedRange(overlapped *[]OverLappedLevel, buyBuf *[]PriceLevel, sellBuf *[]PriceLevel) int
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
-	InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error)
+	InsertOrder(id string, side int, time int64, price int64, qty int64) (*PriceLevel, error)
 	RemoveOrder(id string, side int, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int) int
 	ShowDepth(numOfLevels int, iter func(price int64, buyTotal int64, sellTotal int64))
@@ -204,7 +204,7 @@ func (ob *OrderBookOnULList) GetOverlappedRange(overlapped *[]OverLappedLevel, b
 	return len(*overlapped)
 }
 
-func (ob *OrderBookOnULList) InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error) {
+func (ob *OrderBookOnULList) InsertOrder(id string, side int, time int64, price int64, qty int64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 	var pl *PriceLevel
 	if pl = q.GetPriceLevel(price); pl == nil {
@@ -269,7 +269,7 @@ func (l *SellPriceLevel) Less(than bt.Item) bool {
 }
 
 /*
-func (l *BuyPriceLevel) addOrder(id string, time uint64, qty int64) (int64, error) {
+func (l *BuyPriceLevel) addOrder(id string, time int64, qty int64) (int64, error) {
 	return l.Price.addOrder(id, time, qty)
 } */
 
@@ -379,7 +379,7 @@ func printOrderQueueString(q *bt.BTree, side int) string {
 	return buffer.String()
 }
 
-func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time uint64, price int64, qty int64) (*PriceLevel, error) {
+func (ob *OrderBookOnBTree) InsertOrder(id string, side int, time int64, price int64, qty int64) (*PriceLevel, error) {
 	q := ob.getSideQueue(side)
 
 	if pl := q.Get(newPriceLevelKey(price, side)); pl == nil {
