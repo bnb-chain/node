@@ -10,9 +10,12 @@ const (
 	DefaultCodespace sdk.CodespaceType = 6
 
 	// CodeIncorrectDexOperation module reserves error 400-499 lawl
-	CodeIncorrectDexOperation sdk.CodeType = 400
-	CodeInvalidOrderParam     sdk.CodeType = 401
-	CodeInvalidTradeSymbol    sdk.CodeType = 402
+	CodeIncorrectDexOperation   sdk.CodeType = 400
+	CodeInvalidOrderParam       sdk.CodeType = 401
+	CodeInvalidTradeSymbol      sdk.CodeType = 402
+	CodeFailInsertOrder         sdk.CodeType = 403
+	CodeFailLocateOrderToCancel sdk.CodeType = 404
+	CodeDuplicatedOrder         sdk.CodeType = 405
 )
 
 // ErrIncorrectDexOperation - Error returned upon an incorrect guess

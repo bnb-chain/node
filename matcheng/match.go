@@ -161,7 +161,7 @@ func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 }
 
-func getTradePriceForMarketPressure(side int, overlapped *[]OverLappedLevel,
+func getTradePriceForMarketPressure(side int8, overlapped *[]OverLappedLevel,
 	leastSurplus []int, refPrice float64, priceLimit float64) (int64, int) {
 	lowerLimit := int64(math.Floor(refPrice * (1.0 - priceLimit)))
 	i := leastSurplus[0] //largest
