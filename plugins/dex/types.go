@@ -67,6 +67,9 @@ func IsValidTimeInForce(tif int8) bool {
 type CancelOrderMsg struct {
 	Sender sdk.Address
 	Id     string `json:"id"`
+	Symbol string `json:"symbol"`
+	Side   int8   `json:"side"`
+	Price  int64  `json:"price"`
 }
 
 // NewNewOrderMsg - Creates a new NewOrderMsg
@@ -95,10 +98,14 @@ func (msg NewOrderMsg) String() string {
 }
 
 // NewCancelOrderMsg - Creates a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.Address, id string) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.Address, id string, symbol string, side int8,
+	price int64) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
 		Id:     id,
+		Symbol: symbol,
+		Side:   side,
+		Price:  price,
 	}
 }
 

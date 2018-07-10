@@ -1,6 +1,7 @@
 package dex
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -43,9 +44,9 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(msg.Symbol)
 	var symbolToLock string
 	if msg.Side == Side.BUY {
-		symbolToLock = strings.ToUpper(tradeCcy)
-	} else {
 		symbolToLock = strings.ToUpper(quoteCcy)
+	} else {
+		symbolToLock = strings.ToUpper(tradeCcy)
 	}
 	coins := keeper.ck.GetCoins(ctx, msg.Sender)
 	if coins.AmountOf(symbolToLock) < freezeAmount {
@@ -58,10 +59,57 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	}
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, freezeAmount)
+
+	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
+		err := keeper.AddOrder(msg, ctx.BlockHeight())
+		if err != nil {
+			return sdk.NewError(DefaultCodespace, CodeFailInsertOrder, err.Error()).Result()
+		}
+	}
 	return sdk.Result{}
 }
 
 // Handle CancelOffer -
-func handleCancelOrder(ctx sdk.Context, k Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+	var err error
+	if ctx.IsCheckTx() {
+		//only check whether there exists order to cancel
+		if !keeper.OrderExists(msg.Id) {
+			err = errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", msg.Id, msg.Symbol))
+		}
+	} else {
+		//remove order from cache and order book
+		ord, err := keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price)
+		if err != nil {
+			//unlocked the locked qty for the unfilled qty
+			unlockAmount := ord.LeavesQty()
+
+			tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+			var symbolToUnlock string
+			if msg.Side == Side.BUY {
+				symbolToUnlock = strings.ToUpper(quoteCcy)
+			} else {
+				symbolToUnlock = strings.ToUpper(tradeCcy)
+			}
+			account := accountMapper.GetAccount(ctx, msg.Sender).(types.NamedAccount)
+			lockedAmount := account.GetLockedCoins().AmountOf(msg.Symbol)
+			if lockedAmount < unlockAmount {
+				return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
+			}
+
+			account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbolToUnlock, Amount: unlockAmount})))
+			accountMapper.SetAccount(ctx, account)
+
+			_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: unlockAmount}))
+
+			if sdkError != nil {
+				return sdkError.Result()
+			}
+		}
+	}
+	if err != nil {
+		return sdk.NewError(DefaultCodespace, CodeFailLocateOrderToCancel, err.Error()).Result()
+	}
+	//TODO: here fee should be calculated and deducted
 	return sdk.Result{}
 }
