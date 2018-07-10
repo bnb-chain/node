@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/ico"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	abci "github.com/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -11,7 +13,6 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
 
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -26,9 +27,9 @@ const (
 	appName = "BNBChain"
 )
 
-// BasecoinApp is the BNBChain ABCI application
-type BasecoinApp struct {
-	*bam.BaseApp
+// BinanceChain is the BNBChain ABCI application
+type BinanceChain struct {
+	*BaseApp
 	cdc *wire.Codec
 
 	// keepers
@@ -41,16 +42,16 @@ type BasecoinApp struct {
 	tokenMapper   tokenStore.Mapper
 }
 
-// NewBasecoinApp creates a new instance of the BasecoinApp.
-func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
+// NewBinanceChain creates a new instance of the BinanceChain.
+func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 
 	// Create app-level codec for txs and accounts.
 	var cdc = MakeCodec()
 
 	// Create your application object.
-	var app = &BasecoinApp{
-		BaseApp:            bam.NewBaseApp(appName, cdc, logger, db),
-		cdc:                cdc,
+	var app = &BinanceChain{
+		BaseApp: NewBaseApp(appName, cdc, logger, db),
+		cdc:     cdc,
 	}
 
 	// mappers
@@ -68,6 +69,7 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 
 	// Initialize BaseApp.
 	app.SetInitChainer(app.initChainerFn())
+	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
 	err := app.LoadLatestVersion(common.MainStoreKey)
@@ -77,7 +79,7 @@ func NewBasecoinApp(logger log.Logger, db dbm.DB) *BasecoinApp {
 	return app
 }
 
-func (app *BasecoinApp) registerHandlers() {
+func (app *BinanceChain) registerHandlers() {
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
 		AddRoute("dex", dex.NewHandler(app.dexKeeper))
@@ -110,7 +112,7 @@ func MakeCodec() *wire.Codec {
 }
 
 // initChainerFn performs custom logic for chain initialization.
-func (app *BasecoinApp) initChainerFn() sdk.InitChainer {
+func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 
@@ -141,8 +143,31 @@ func (app *BasecoinApp) initChainerFn() sdk.InitChainer {
 	}
 }
 
+func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	lastBlockTime := app.checkState.ctx.BlockHeader().Time
+	blockTime := ctx.BlockHeader().Time
+
+	if utils.SameDayInUTC(lastBlockTime, blockTime) {
+		// normal block
+		icoDone := ico.EndBlockAsync(ctx)
+		// other end blockers
+
+		<- icoDone
+	} else {
+		// breathe block
+
+		icoDone := ico.EndBlockAsync(ctx)
+		// other end blockers
+
+		<- icoDone
+	}
+
+	// TODO: update validators
+	return abci.ResponseEndBlock{}
+}
+
 // ExportAppStateAndValidators exports blockchain world state to json.
-func (app *BasecoinApp) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
+func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 	ctx := app.NewContext(true, abci.Header{})
 
 	// iterate to get the accounts
