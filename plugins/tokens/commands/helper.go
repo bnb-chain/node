@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/spf13/cobra"
@@ -31,7 +30,7 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = validateSymbol(symbol)
+	err = types.ValidateSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -59,17 +58,6 @@ func (c Commander) sendTx(ctx context.CoreContext, msg sdk.Msg) error {
 	return nil
 }
 
-func validateSymbol(symbol string) error {
-	if len(symbol) == 0 {
-		return errors.New("you must provide the symbol of the tokens")
-	}
-
-	if !utils.IsAlphaNum(symbol) {
-		return errors.New("the symbol should be alphanumeric")
-	}
-
-	return nil
-}
 
 func parseAmount(amountStr string) (int64, error) {
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
