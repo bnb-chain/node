@@ -38,28 +38,28 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 
 func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	freezeAmount := msg.Quantity
-	if freezeAmount <= 0 {
-		return sdk.ErrInsufficientCoins("freeze amount should be greater than 0").Result()
-	}
+	var amountToLock int64
 	tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(msg.Symbol)
 	var symbolToLock string
 	if msg.Side == Side.BUY {
+		// TODO: where is 10^8 stored?
+		amountToLock = msg.Quantity * msg.Price / 10e8
 		symbolToLock = strings.ToUpper(quoteCcy)
 	} else {
+		amountToLock = msg.Quantity
 		symbolToLock = strings.ToUpper(tradeCcy)
 	}
 	coins := keeper.ck.GetCoins(ctx, msg.Sender)
-	if coins.AmountOf(symbolToLock) < freezeAmount {
+	if coins.AmountOf(symbolToLock) < amountToLock {
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: freezeAmount}))
+	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: amountToLock}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}
 
-	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, freezeAmount)
+	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
 		err := keeper.AddOrder(msg, ctx.BlockHeight())
