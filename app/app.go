@@ -60,7 +60,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 
 	// Add handlers.
 	app.coinKeeper = bank.NewKeeper(app.accountMapper)
-	app.orderKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.coinKeeper, app.RegisterCodespace(dex.DefaultCodespace))
+	// TODO: make the concurrency configurable
+	app.orderKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.coinKeeper, app.RegisterCodespace(dex.DefaultCodespace), 2)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -142,14 +143,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
-		// normal block
-		icoDone := ico.EndBlockAsync(ctx)
-		// other end blockers
-
-		<-icoDone
+		// only match in the normal block
+		app.orderKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
 	} else {
 		// breathe block
-
 		icoDone := ico.EndBlockAsync(ctx)
 		// other end blockers
 
