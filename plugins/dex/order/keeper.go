@@ -1,4 +1,4 @@
-package dex
+package order
 
 import (
 	"encoding/binary"
@@ -242,12 +242,12 @@ func (k Keeper) setVolumeBucketDuration(ctx sdk.Context, volumeBucketDuration in
 }
 
 // InitGenesis - store the genesis trend
-// func (k Keeper) InitGenesis(ctx sdk.Context, data DexGenesis) error {
-// 	k.setMakerFee(ctx, data.MakerFee)
-// 	k.setTakerFee(ctx, data.TakerFee)
-// 	k.setFeeFactor(ctx, data.FeeFactor)
-// 	k.setMaxFee(ctx, data.MaxFee)
-// 	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
-// 	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
-// 	return nil
-// }
+func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) error {
+	k.setMakerFee(ctx, data.MakerFee)
+	k.setTakerFee(ctx, data.TakerFee)
+	k.setFeeFactor(ctx, data.FeeFactor)
+	k.setMaxFee(ctx, data.MaxFee)
+	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
+	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
+	return nil
+}
