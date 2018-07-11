@@ -16,6 +16,10 @@ type NamedAccount interface {
 
 	GetFrozenCoins() sdk.Coins
 	SetFrozenCoins(sdk.Coins)
+
+	//TODO: this should merge into Coin
+	GetLockedCoins() sdk.Coins
+	SetLockedCoins(sdk.Coins)
 }
 
 // Custom extensions for this application.  This is just an example of
@@ -30,6 +34,7 @@ type AppAccount struct {
 	auth.BaseAccount
 	Name        string    `json:"name"`
 	FrozenCoins sdk.Coins `json:"frozen"`
+	LockedCoins sdk.Coins `json:"locked"`
 }
 
 // nolint
@@ -37,6 +42,8 @@ func (acc AppAccount) GetName() string                  { return acc.Name }
 func (acc *AppAccount) SetName(name string)             { acc.Name = name }
 func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins }
 func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
+func (acc AppAccount) GetLockedCoins() sdk.Coins        { return acc.LockedCoins }
+func (acc *AppAccount) SetLockedCoins(frozen sdk.Coins) { acc.LockedCoins = frozen }
 
 // Get the AccountDecoder function for the custom AppAccount
 func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
