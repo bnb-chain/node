@@ -1,4 +1,4 @@
-package cli
+package commands
 
 import (
 	"github.com/pkg/errors"
@@ -8,7 +8,7 @@ import (
 )
 
 // MakeOfferCmd -
-func MakeOfferCmd(cdc *wire.Codec) *cobra.Command {
+func makeOfferCmd(cdc *wire.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "offer [whatever]",
 		Short: "Make an offer (dex)",
@@ -22,7 +22,7 @@ func MakeOfferCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 // FillOfferCmd -
-func FillOfferCmd(cdc *wire.Codec) *cobra.Command {
+func fillOfferCmd(cdc *wire.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "fill [order id]",
 		Short: "Fill an offer (dex)",
@@ -36,7 +36,7 @@ func FillOfferCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 // CancelOfferCmd -
-func CancelOfferCmd(cdc *wire.Codec) *cobra.Command {
+func cancelOfferCmd(cdc *wire.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "cancel [order id]",
 		Short: "Cancel an offer (dex)",

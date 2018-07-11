@@ -47,7 +47,7 @@ func (msg Msg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.TotalSupply <= 0 || msg.TotalSupply > types.MaxTotalSupply {
-		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.MaxTotalSupply / int64(math.Pow10(int(types.Decimals)))))
+		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.MaxTotalSupply/int64(math.Pow10(int(types.Decimals)))))
 	}
 
 	return nil

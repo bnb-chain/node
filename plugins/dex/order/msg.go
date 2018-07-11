@@ -1,4 +1,4 @@
-package dex
+package order
 
 import (
 	"encoding/json"
@@ -7,21 +7,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const Route = "dexOrder"
+
 // A really cool msg type, these fields are can be entirely arbitrary and
 // custom to your message
 type SetTrendMsg struct {
 	Sender sdk.Address
 	Cool   string
-}
-
-// Genesis state - specify genesis trend
-type DexGenesis struct {
-	MakerFee             int64 `json:"makerFee"`
-	TakerFee             int64 `json:"takerFee"`
-	FeeFactor            int64 `json:"feeFactor"`
-	MaxFee               int64 `json:"maxFee"`
-	NativeTokenDiscount  int64 `json:"nativeTokenDiscount"`
-	VolumeBucketDuration int64 `json:"volumeBucketDuration"`
 }
 
 type MakeOfferMsg struct {

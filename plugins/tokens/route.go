@@ -15,8 +15,6 @@ func Routes(tokenMapper store.Mapper, accountMapper auth.AccountMapper, keeper b
 	routes := make(map[string]sdk.Handler)
 	routes[issue.Route] = issue.NewHandler(tokenMapper, keeper)
 	routes[burn.Route] = burn.NewHandler(tokenMapper, keeper)
-	freezeHandler := freeze.NewHandler(tokenMapper, accountMapper, keeper)
-	routes[freeze.RouteFreeze] = freezeHandler
-	routes[freeze.RouteUnfreeze] = freezeHandler
+	routes[freeze.RouteFreeze] = freeze.NewHandler(tokenMapper, accountMapper, keeper)
 	return routes
 }

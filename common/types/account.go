@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/dex"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -52,40 +51,4 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 		}
 		return acct, err
 	}
-}
-
-//___________________________________________________________________________________
-
-// State to Unmarshal
-type GenesisState struct {
-	Accounts   []*GenesisAccount `json:"accounts"`
-	DexGenesis dex.DexGenesis    `json:"dex"`
-}
-
-// GenesisAccount doesn't need pubkey or sequence
-type GenesisAccount struct {
-	Name    string      `json:"name"`
-	Address sdk.Address `json:"address"`
-	Coins   sdk.Coins   `json:"coins"`
-}
-
-// NewGenesisAccount -
-func NewGenesisAccount(aa *AppAccount) *GenesisAccount {
-	return &GenesisAccount{
-		Name:    aa.Name,
-		Address: aa.GetAddress(),
-		Coins:   aa.GetCoins().Sort(),
-	}
-}
-
-// convert GenesisAccount to AppAccount
-func (ga *GenesisAccount) ToAppAccount() (acc *AppAccount, err error) {
-	baseAcc := auth.BaseAccount{
-		Address: ga.Address,
-		Coins:   ga.Coins.Sort(),
-	}
-	return &AppAccount{
-		BaseAccount: baseAcc,
-		Name:        ga.Name,
-	}, nil
 }
