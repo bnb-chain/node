@@ -82,7 +82,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 func (app *BinanceChain) registerHandlers() {
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
-		AddRoute("dex", dex.NewHandler(app.dexKeeper))
+		AddRoute("dex", dex.NewHandler(app.dexKeeper, app.accountMapper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
@@ -133,11 +133,11 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		}
 
 		// Application specific genesis handling
-		err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
-		if err != nil {
-			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-		}
+		// err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
+		// if err != nil {
+		// 	panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+		// 	//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		// }
 
 		return abci.ResponseInitChain{}
 	}
@@ -148,18 +148,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
-		// normal block
-		icoDone := ico.EndBlockAsync(ctx)
-		// other end blockers
-
-		<- icoDone
+		//only match in the normal block
+		app.dexKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
 	} else {
 		// breathe block
 
 		icoDone := ico.EndBlockAsync(ctx)
 		// other end blockers
 
-		<- icoDone
+		<-icoDone
 	}
 
 	// TODO: update validators
