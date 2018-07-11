@@ -4,93 +4,123 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/BiJie/BinanceChain/common/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// A really cool msg type, these fields are can be entirely arbitrary and
-// custom to your message
-type SetTrendMsg struct {
-	Sender sdk.Address
-	Cool   string
+type NewOrderMsg struct {
+	Sender      sdk.Address `json:"sender"`
+	Id          string      `json:"id"`
+	Symbol      string      `json:"symbol"`
+	OrderType   int8        `json:"ordertype"`
+	Side        int8        `json:"side"`
+	Price       int64       `json:"price"`
+	Quantity    int64       `json:"quantity"`
+	TimeInForce int8        `json:"timeinforce"`
 }
 
-// Genesis state - specify genesis trend
-type DexGenesis struct {
-	MakerFee             int64 `json:"makerFee"`
-	TakerFee             int64 `json:"takerFee"`
-	FeeFactor            int64 `json:"feeFactor"`
-	MaxFee               int64 `json:"maxFee"`
-	NativeTokenDiscount  int64 `json:"nativeTokenDiscount"`
-	VolumeBucketDuration int64 `json:"volumeBucketDuration"`
-}
+// Side/TimeInForce/OrderType are const, following FIX protocol convention
+// Used as Enum
+var Side = struct {
+	BUY  int8
+	SELL int8
+}{1, 2}
 
-type MakeOfferMsg struct {
-	Sender sdk.Address
-}
-
-type FillOfferMsg struct {
-	Sender sdk.Address
-}
-
-type CancelOfferMsg struct {
-	Sender sdk.Address
-}
-
-// NewMakeOfferMsg - Creates a new MakeOfferMsg
-func NewMakeOfferMsg(sender sdk.Address) MakeOfferMsg {
-	return MakeOfferMsg{
-		Sender: sender,
+func IsValidSide(side int8) bool {
+	switch side {
+	case Side.BUY, Side.SELL:
+		return true
+	default:
+		return false
 	}
 }
 
-var _ sdk.Msg = MakeOfferMsg{}
+var OrderType = struct {
+	LIMIT  int8
+	MARKET int8
+}{2, 1}
 
-// nolint
-func (msg MakeOfferMsg) Type() string                            { return "dex" }
-func (msg MakeOfferMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg MakeOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
-func (msg MakeOfferMsg) String() string {
-	return fmt.Sprintf("MakeOfferMsg{Sender: %v}", msg.Sender)
-}
-
-// NewFillOfferMsg - Creates a new FillOfferMsg
-func NewFillOfferMsg(sender sdk.Address) FillOfferMsg {
-	return FillOfferMsg{
-		Sender: sender,
+func IsValidOrderType(ot int8) bool {
+	switch ot {
+	case OrderType.LIMIT: // only allow LIMIT for now.
+		return true
+	default:
+		return false
 	}
 }
 
-var _ sdk.Msg = FillOfferMsg{}
+var TimeInForce = struct {
+	GTC int8
+	IOC int8
+}{1, 3}
 
-// nolint
-func (msg FillOfferMsg) Type() string                            { return "dex" }
-func (msg FillOfferMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg FillOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
-func (msg FillOfferMsg) String() string {
-	return fmt.Sprintf("FillOfferMsg{Sender: %v}", msg.Sender)
-}
-
-// NewCancelOfferMsg - Creates a new CancelOfferMsg
-func NewCancelOfferMsg(sender sdk.Address) CancelOfferMsg {
-	return CancelOfferMsg{
-		Sender: sender,
+func IsValidTimeInForce(tif int8) bool {
+	switch tif {
+	case TimeInForce.GTC, TimeInForce.IOC:
+		return true
+	default:
+		return false
 	}
 }
 
-var _ sdk.Msg = CancelOfferMsg{}
-
-// nolint
-func (msg CancelOfferMsg) Type() string                            { return "dex" }
-func (msg CancelOfferMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg CancelOfferMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
-func (msg CancelOfferMsg) String() string {
-	return fmt.Sprintf("CancelOfferMsg{Sender: %v}", msg.Sender)
+type CancelOrderMsg struct {
+	Sender sdk.Address
+	Id     string `json:"id"`
+	Symbol string `json:"symbol"`
+	Side   int8   `json:"side"`
+	Price  int64  `json:"price"`
 }
 
-// TODO: validate messages
+// NewNewOrderMsg - Creates a new NewOrderMsg
+func NewNewOrderMsg(sender sdk.Address, id string, side int8,
+	symbol string, price int64, qty int64) NewOrderMsg {
+	return NewOrderMsg{
+		Sender:      sender,
+		Id:          id,
+		Symbol:      symbol,
+		OrderType:   OrderType.LIMIT, // default
+		Side:        side,
+		Price:       price,
+		Quantity:    qty,
+		TimeInForce: TimeInForce.GTC, // default
+	}
+}
+
+var _ sdk.Msg = NewOrderMsg{}
+
+// nolint
+func (msg NewOrderMsg) Type() string                            { return "NewOrder" }
+func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
+func (msg NewOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg NewOrderMsg) String() string {
+	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
+}
+
+// NewCancelOrderMsg - Creates a new CancelOrderMsg
+func NewCancelOrderMsg(sender sdk.Address, id string, symbol string, side int8,
+	price int64) CancelOrderMsg {
+	return CancelOrderMsg{
+		Sender: sender,
+		Id:     id,
+		Symbol: symbol,
+		Side:   side,
+		Price:  price,
+	}
+}
+
+var _ sdk.Msg = CancelOrderMsg{}
+
+// nolint
+func (msg CancelOrderMsg) Type() string                            { return "dex" }
+func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
+func (msg CancelOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg CancelOrderMsg) String() string {
+	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)
+}
 
 // GetSignBytes - Get the bytes for the message signer to sign on
-func (msg MakeOfferMsg) GetSignBytes() []byte {
+func (msg NewOrderMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -99,7 +129,7 @@ func (msg MakeOfferMsg) GetSignBytes() []byte {
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
-func (msg FillOfferMsg) GetSignBytes() []byte {
+func (msg CancelOrderMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -107,33 +137,46 @@ func (msg FillOfferMsg) GetSignBytes() []byte {
 	return b
 }
 
-// GetSignBytes - Get the bytes for the message signer to sign on
-func (msg CancelOfferMsg) GetSignBytes() []byte {
-	b, err := json.Marshal(msg)
+//TODO: check whether the symbol is listed or not
+func ValidateSymbol(symbol string) error {
+	_, _, err := utils.TradeSymbol2Ccy(symbol)
 	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-// ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg MakeOfferMsg) ValidateBasic() sdk.Error {
-	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
+		return err
 	}
 	return nil
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg FillOfferMsg) ValidateBasic() sdk.Error {
+func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
+	err := ValidateSymbol(msg.Symbol)
+	if err != nil {
+		return ErrInvalidTradeSymbol(err.Error())
+	}
+	if msg.Quantity <= 0 {
+		return ErrInvalidOrderParam("Quantity", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+	}
+	if msg.Price <= 0 {
+		return ErrInvalidOrderParam("Price", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+	}
+	if IsValidOrderType(msg.OrderType) {
+		return ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
+	}
+	if IsValidSide(msg.Side) {
+		return ErrInvalidOrderParam("Side", fmt.Sprintf("Invalid side:%d", msg.Side))
+	}
+	if IsValidTimeInForce(msg.TimeInForce) {
+		return ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
+	}
+	//TODO: check whether it is round tick / lot / within min/max notional
+
 	return nil
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg CancelOfferMsg) ValidateBasic() sdk.Error {
+func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
