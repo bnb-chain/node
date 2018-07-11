@@ -47,7 +47,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = validateSymbol(symbol)
+	err = types.ValidateSymbol(symbol)
 	if err != nil {
 		return err
 	}

@@ -35,11 +35,10 @@ type BinanceChain struct {
 	// keepers
 	feeCollectionKeeper auth.FeeCollectionKeeper
 	coinKeeper          bank.Keeper
-	dexKeeper           dex.Keeper
-
-	// Manage getting and setting accounts
-	accountMapper auth.AccountMapper
-	tokenMapper   tokenStore.Mapper
+	orderKeeper         dex.OrderKeeper
+	accountMapper       auth.AccountMapper
+	tokenMapper         tokenStore.Mapper
+	tradingPairMapper   dex.TradingPairMapper
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -57,10 +56,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 	// mappers
 	app.accountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, &types.AppAccount{})
 	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+	app.tradingPairMapper = dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 
 	// Add handlers.
 	app.coinKeeper = bank.NewKeeper(app.accountMapper)
-	app.dexKeeper = dex.NewKeeper(common.DexStoreKey, app.coinKeeper, app.RegisterCodespace(dex.DefaultCodespace))
+	// TODO: make the concurrency configurable
+	app.orderKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.coinKeeper, app.RegisterCodespace(dex.DefaultCodespace), 2)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -70,7 +71,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 	// Initialize BaseApp.
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
-	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey)
+	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
 	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
@@ -80,12 +81,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 }
 
 func (app *BinanceChain) registerHandlers() {
-	app.Router().
-		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
-		AddRoute("dex", dex.NewHandler(app.dexKeeper, app.accountMapper))
+	app.Router().AddRoute("bank", bank.NewHandler(app.coinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
+		app.Router().AddRoute(route, handler)
+	}
+
+	for route, handler := range dex.Routes(app.tradingPairMapper, app.orderKeeper, app.tokenMapper, app.accountMapper, app.coinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -97,16 +100,8 @@ func MakeCodec() *wire.Codec {
 	wire.RegisterCrypto(cdc) // Register crypto.
 	sdk.RegisterWire(cdc)    // Register Msgs
 	dex.RegisterWire(cdc)
-
-	// Register AppAccount
-	cdc.RegisterInterface((*auth.Account)(nil), nil)
-	cdc.RegisterInterface((*types.NamedAccount)(nil), nil)
-	cdc.RegisterConcrete(&types.AppAccount{}, "bnbchain/Account", nil)
-
-	cdc.RegisterConcrete(types.Token{}, "bnbchain/Token", nil)
-	cdc.RegisterConcrete(types.Number{}, "bnbchain/Number", nil)
-
 	tokens.RegisterTypes(cdc)
+	types.RegisterWire(cdc)
 
 	return cdc
 }
@@ -116,7 +111,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 
-		genesisState := new(types.GenesisState)
+		genesisState := new(GenesisState)
 		err := json.Unmarshal(stateJSON, genesisState)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
@@ -133,11 +128,11 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		}
 
 		// Application specific genesis handling
-		// err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
-		// if err != nil {
-		// 	panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-		// 	//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-		// }
+		err = app.orderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
+		if err != nil {
+			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		}
 
 		return abci.ResponseInitChain{}
 	}
@@ -148,11 +143,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
-		//only match in the normal block
-		app.dexKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
+		// only match in the normal block
+		app.orderKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
 	} else {
 		// breathe block
-
 		icoDone := ico.EndBlockAsync(ctx)
 		// other end blockers
 
@@ -168,9 +162,9 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	ctx := app.NewContext(true, abci.Header{})
 
 	// iterate to get the accounts
-	accounts := []*types.GenesisAccount{}
+	accounts := []*GenesisAccount{}
 	appendAccount := func(acc auth.Account) (stop bool) {
-		account := &types.GenesisAccount{
+		account := &GenesisAccount{
 			Address: acc.GetAddress(),
 			Coins:   acc.GetCoins(),
 		}
@@ -179,7 +173,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	}
 	app.accountMapper.IterateAccounts(ctx, appendAccount)
 
-	genState := types.GenesisState{
+	genState := GenesisState{
 		Accounts: accounts,
 	}
 	appState, err = wire.MarshalJSONIndent(app.cdc, genState)

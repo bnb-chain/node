@@ -1,13 +1,16 @@
-package dex
+package order
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/dex/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+const Route = "dexOrder"
 
 type NewOrderMsg struct {
 	Sender      sdk.Address `json:"sender"`
@@ -90,7 +93,7 @@ func NewNewOrderMsg(sender sdk.Address, id string, side int8,
 var _ sdk.Msg = NewOrderMsg{}
 
 // nolint
-func (msg NewOrderMsg) Type() string                            { return "NewOrder" }
+func (msg NewOrderMsg) Type() string                            { return Route }
 func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg NewOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
 func (msg NewOrderMsg) String() string {
@@ -112,7 +115,7 @@ func NewCancelOrderMsg(sender sdk.Address, id string, symbol string, side int8,
 var _ sdk.Msg = CancelOrderMsg{}
 
 // nolint
-func (msg CancelOrderMsg) Type() string                            { return "dex" }
+func (msg CancelOrderMsg) Type() string                            { return Route }
 func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg CancelOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
@@ -153,22 +156,22 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	}
 	err := ValidateSymbol(msg.Symbol)
 	if err != nil {
-		return ErrInvalidTradeSymbol(err.Error())
+		return types.ErrInvalidTradeSymbol(err.Error())
 	}
 	if msg.Quantity <= 0 {
-		return ErrInvalidOrderParam("Quantity", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Negative Number:%d", msg.Quantity))
 	}
 	if msg.Price <= 0 {
-		return ErrInvalidOrderParam("Price", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+		return types.ErrInvalidOrderParam("Price", fmt.Sprintf("Negative Number:%d", msg.Quantity))
 	}
 	if IsValidOrderType(msg.OrderType) {
-		return ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
+		return types.ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
 	}
 	if IsValidSide(msg.Side) {
-		return ErrInvalidOrderParam("Side", fmt.Sprintf("Invalid side:%d", msg.Side))
+		return types.ErrInvalidOrderParam("Side", fmt.Sprintf("Invalid side:%d", msg.Side))
 	}
 	if IsValidTimeInForce(msg.TimeInForce) {
-		return ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
+		return types.ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
 	}
 	//TODO: check whether it is round tick / lot / within min/max notional
 

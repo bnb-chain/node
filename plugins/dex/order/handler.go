@@ -1,4 +1,4 @@
-package dex
+package order
 
 import (
 	"errors"
@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/dex/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -28,15 +29,15 @@ func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 	}
 }
 
-//TODO: duplicated with plugins/tokens/freeze/handler.go
+// TODO: duplicated with plugins/tokens/freeze/handler.go
 func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.Address, symbol string, lockedAmount int64) {
-	account := accountMapper.GetAccount(ctx, address).(types.NamedAccount)
+	account := accountMapper.GetAccount(ctx, address).(common.NamedAccount)
 	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: lockedAmount})))
 	accountMapper.SetAccount(ctx, account)
 }
 
 func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
-	//TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
+	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	freezeAmount := msg.Quantity
 	if freezeAmount <= 0 {
 		return sdk.ErrInsufficientCoins("freeze amount should be greater than 0").Result()
@@ -63,7 +64,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
 		err := keeper.AddOrder(msg, ctx.BlockHeight())
 		if err != nil {
-			return sdk.NewError(DefaultCodespace, CodeFailInsertOrder, err.Error()).Result()
+			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 		}
 	}
 	return sdk.Result{}
@@ -91,7 +92,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 			} else {
 				symbolToUnlock = strings.ToUpper(tradeCcy)
 			}
-			account := accountMapper.GetAccount(ctx, msg.Sender).(types.NamedAccount)
+			account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
 			lockedAmount := account.GetLockedCoins().AmountOf(msg.Symbol)
 			if lockedAmount < unlockAmount {
 				return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
@@ -108,7 +109,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 		}
 	}
 	if err != nil {
-		return sdk.NewError(DefaultCodespace, CodeFailLocateOrderToCancel, err.Error()).Result()
+		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
 	//TODO: here fee should be calculated and deducted
 	return sdk.Result{}
