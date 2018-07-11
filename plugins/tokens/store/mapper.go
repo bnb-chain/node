@@ -18,7 +18,7 @@ type Mapper interface {
 	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
 }
 
-var _ Mapper = (*mapper)(nil)
+var _ Mapper = mapper{}
 
 type mapper struct {
 	key sdk.StoreKey
