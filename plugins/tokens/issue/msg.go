@@ -16,13 +16,13 @@ const Route = "tokensIssue"
 var _ sdk.Msg = Msg{}
 
 type Msg struct {
-	From        sdk.Address `json:"from"`
-	Name        string      `json:"name"`
-	Symbol      string      `json:"symbol"`
-	TotalSupply int64       `json:"total_supply"`
+	From        sdk.AccAddress `json:"from"`
+	Name        string         `json:"name"`
+	Symbol      string         `json:"symbol"`
+	TotalSupply int64          `json:"total_supply"`
 }
 
-func NewMsg(from sdk.Address, name, symbol string, supply int64) Msg {
+func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) Msg {
 	return Msg{
 		From:        from,
 		Name:        name,
@@ -47,7 +47,7 @@ func (msg Msg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.TotalSupply <= 0 || msg.TotalSupply > types.MaxTotalSupply {
-		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.MaxTotalSupply / int64(math.Pow10(int(types.Decimals)))))
+		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.MaxTotalSupply/int64(math.Pow10(int(types.Decimals)))))
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func (msg Msg) ValidateBasic() sdk.Error {
 func (msg Msg) Type() string                            { return Route }
 func (msg Msg) String() string                          { return fmt.Sprintf("IssueMsg{%#v}", msg) }
 func (msg Msg) Get(key interface{}) (value interface{}) { return nil }
-func (msg Msg) GetSigners() []sdk.Address               { return []sdk.Address{msg.From} }
+func (msg Msg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.From} }
 
 func (msg Msg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form

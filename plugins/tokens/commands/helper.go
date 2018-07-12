@@ -2,12 +2,10 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/spf13/cobra"
@@ -20,7 +18,7 @@ type Commander struct {
 	Cdc *wire.Codec
 }
 
-type msgBuilder func(from sdk.Address, symbol string, amount int64) sdk.Msg
+type msgBuilder func(from sdk.AccAddress, symbol string, amount int64) sdk.Msg
 
 func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msgBuilder) error {
 	ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(c.Cdc))
@@ -31,7 +29,7 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = validateSymbol(symbol)
+	err = types.ValidateSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -50,22 +48,9 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 }
 
 func (c Commander) sendTx(ctx context.CoreContext, msg sdk.Msg) error {
-	res, err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msg, c.Cdc)
+	err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, c.Cdc)
 	if err != nil {
 		return err
-	}
-
-	fmt.Printf("Committed at block %d. Hash: %s\n", res.Height, res.Hash.String())
-	return nil
-}
-
-func validateSymbol(symbol string) error {
-	if len(symbol) == 0 {
-		return errors.New("you must provide the symbol of the tokens")
-	}
-
-	if !utils.IsAlphaNum(symbol) {
-		return errors.New("the symbol should be alphanumeric")
 	}
 
 	return nil
