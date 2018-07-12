@@ -17,7 +17,7 @@ type Msg struct {
 	base.MsgBase
 }
 
-func NewMsg(from sdk.Address, symbol string, amount int64) Msg {
+func NewMsg(from sdk.AccAddress, symbol string, amount int64) Msg {
 	return Msg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 

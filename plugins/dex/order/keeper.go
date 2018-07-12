@@ -73,7 +73,7 @@ func (kp *Keeper) OrderExists(id string) bool {
 }
 
 type transfer struct {
-	account sdk.Address
+	account sdk.AccAddress
 	inCcy   string
 	in      int64
 	outCcy  string
@@ -90,7 +90,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (t
 }
 
 //TODO: should get an even hash
-func channelHash(account sdk.Address) int {
+func channelHash(account sdk.AccAddress) int {
 	return int(account[0] + account[1])
 }
 
@@ -143,10 +143,10 @@ func (kp *Keeper) distributeMatch() []chan transfer {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
 	//TODO: error handling
-	_, _, sdkErr := kp.ck.SubtractCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: tran.out}})
-	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: tran.in}})
+	_, _, sdkErr := kp.ck.SubtractCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)}})
+	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: tran.out})))
+	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)})))
 	accountMapper.SetAccount(ctx, account)
 	return sdkErr
 }
