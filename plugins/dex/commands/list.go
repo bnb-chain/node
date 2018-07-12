@@ -2,13 +2,13 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -51,12 +51,11 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg := list.NewMsg(from, symbol, quoteSymbol, initPrice)
-			res, err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msg, cdc)
+			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("Committed at block %d. Hash: %s\n", res.Height, res.Hash.String())
 			return nil
 		},
 	}

@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/wire"
-	abci "github.com/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/cli"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tmlibs/cli"
-	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/log"
 
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -43,7 +43,7 @@ func AppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState json.Ra
 		"nativeTokenDiscount": 2,
 		"volumeBucketDuration": 82800
       }`)
-	appState, err = server.AppendJSON(cdc, appState, key, value)
+	appState, err = server.InsertKeyJSON(cdc, appState, key, value)
 	return
 }
 
