@@ -43,7 +43,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	var symbolToLock string
 	if msg.Side == Side.BUY {
 		// TODO: where is 10^8 stored?
-		amountToLock = msg.Quantity * msg.Price / 10e8
+		amountToLock = msg.Quantity * msg.Price / 1e8
 		symbolToLock = strings.ToUpper(quoteCcy)
 	} else {
 		amountToLock = msg.Quantity

@@ -84,7 +84,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (t
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
-	quoteQty := trade.LastPx * trade.LastQty / 100000000
+	quoteQty := trade.LastPx * trade.LastQty / 1e8
 	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty},
 		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty}
 }
@@ -94,8 +94,11 @@ func channelHash(account sdk.AccAddress) int {
 	return int(account[0] + account[1])
 }
 
-func (kp *Keeper) distributeMatch() []chan transfer {
+func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
 	size := len(kp.roundOrders)
+	if size == 0 {
+		return nil
+	}
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	outs := make([]chan string, concurrency)
@@ -161,7 +164,12 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		}
 		wg.Done()
 	}
-	tradeOuts := kp.distributeMatch()
+	tradeOuts := kp.matchAndDistributeTrades()
+	if tradeOuts == nil {
+		//TODO: logging
+		return sdk.CodeOK, nil
+	}
+
 	wg.Add(len(tradeOuts))
 	for _, c := range tradeOuts {
 		go allocate(ctx, accountMapper, c)
