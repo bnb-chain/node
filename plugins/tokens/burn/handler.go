@@ -37,11 +37,11 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	coins := keeper.GetCoins(ctx, token.Owner)
-	if coins.AmountOf(symbol) < burnAmount || token.TotalSupply < burnAmount {
+	if coins.AmountOf(symbol).Int64() < burnAmount || token.TotalSupply < burnAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: burnAmount}))
+	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: sdk.NewInt(burnAmount)}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}

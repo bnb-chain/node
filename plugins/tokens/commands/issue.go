@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	flagTotalSupply    = "total-supply"
-	flagTokenName = "token-name"
+	flagTotalSupply = "total-supply"
+	flagTokenName   = "token-name"
 )
 
 func issueTokenCmd(cmdr Commander) *cobra.Command {
@@ -78,6 +78,6 @@ func parseSupply(supply string) (int64, error) {
 	return n, nil
 }
 
-func buildMsg(addr sdk.Address, name string, symbol string, supply int64) sdk.Msg {
+func buildMsg(addr sdk.AccAddress, name string, symbol string, supply int64) sdk.Msg {
 	return issue.NewMsg(addr, name, symbol, supply)
 }

@@ -30,9 +30,9 @@ func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 }
 
 // TODO: duplicated with plugins/tokens/freeze/handler.go
-func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.Address, symbol string, lockedAmount int64) {
+func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, lockedAmount int64) {
 	account := accountMapper.GetAccount(ctx, address).(common.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: lockedAmount})))
+	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(lockedAmount)})))
 	accountMapper.SetAccount(ctx, account)
 }
 
@@ -50,11 +50,11 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 		symbolToLock = strings.ToUpper(tradeCcy)
 	}
 	coins := keeper.ck.GetCoins(ctx, msg.Sender)
-	if coins.AmountOf(symbolToLock) < amountToLock {
+	if coins.AmountOf(symbolToLock).Int64() < amountToLock {
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: amountToLock}))
+	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}
@@ -93,15 +93,15 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 				symbolToUnlock = strings.ToUpper(tradeCcy)
 			}
 			account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
-			lockedAmount := account.GetLockedCoins().AmountOf(msg.Symbol)
+			lockedAmount := account.GetLockedCoins().AmountOf(msg.Symbol).Int64()
 			if lockedAmount < unlockAmount {
 				return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 			}
 
-			account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbolToUnlock, Amount: unlockAmount})))
+			account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)})))
 			accountMapper.SetAccount(ctx, account)
 
-			_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: unlockAmount}))
+			_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
 
 			if sdkError != nil {
 				return sdkError.Result()

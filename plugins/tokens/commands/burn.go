@@ -21,7 +21,7 @@ func burnTokenCmd(cmdr Commander) *cobra.Command {
 }
 
 func (c Commander) burnToken(cmd *cobra.Command, args []string) error {
-	burnMsgBuilder := func(from sdk.Address, symbol string, amount int64) sdk.Msg {
+	burnMsgBuilder := func(from sdk.AccAddress, symbol string, amount int64) sdk.Msg {
 		return burn.NewMsg(from, symbol, amount)
 	}
 
