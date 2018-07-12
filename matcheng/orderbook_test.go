@@ -50,7 +50,7 @@ func TestPriceLevel_addOrder(t *testing.T) {
 	}
 	type args struct {
 		id   string
-		time uint64
+		time int64
 		qty  int64
 	}
 	tests := []struct {
@@ -197,8 +197,8 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 	}
 	type args struct {
 		id    string
-		side  int
-		time  uint64
+		side  int8
+		time  int64
 		price int64
 		qty   int64
 	}
@@ -331,8 +331,8 @@ func TestOrderBookOnBTree_InsertOrder(t *testing.T) {
 	}
 	type args struct {
 		id    string
-		side  int
-		time  uint64
+		side  int8
+		time  int64
 		price int64
 		qty   int64
 	}

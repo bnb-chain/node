@@ -9,9 +9,7 @@ import (
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const RouteFreeze = "tokens/freeze"
-// const RouteFreeze = "tokens/unfreeze"
 const RouteFreeze = "tokensFreeze"
-const RouteUnfreeze = "tokensUnfreeze"
 
 var _ sdk.Msg = (*FreezeMsg)(nil)
 
@@ -19,7 +17,7 @@ type FreezeMsg struct {
 	base.MsgBase
 }
 
-func NewFreezeMsg(from sdk.Address, symbol string, amount int64) FreezeMsg {
+func NewFreezeMsg(from sdk.AccAddress, symbol string, amount int64) FreezeMsg {
 	return FreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
@@ -35,11 +33,11 @@ type UnfreezeMsg struct {
 	base.MsgBase
 }
 
-func NewUnfreezeMsg(from sdk.Address, symbol string, amount int64) UnfreezeMsg {
+func NewUnfreezeMsg(from sdk.AccAddress, symbol string, amount int64) UnfreezeMsg {
 	return UnfreezeMsg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
-func (msg UnfreezeMsg) Type() string { return RouteUnfreeze }
+func (msg UnfreezeMsg) Type() string { return RouteFreeze }
 
 func (msg UnfreezeMsg) String() string {
 	return fmt.Sprintf("Unfreeze{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)

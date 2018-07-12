@@ -6,7 +6,7 @@ import (
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/spf13/cobra"
 
-	"github.com/tendermint/tmlibs/cli"
+	"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -76,15 +76,6 @@ func main() {
 	// 		simplestakingcmd.UnbondTxCmd(cdc),
 	// 	)...)
 
-	// dex specific commands
-	rootCmd.AddCommand(
-		client.PostCommands(
-			client.LineBreak,
-			dexcmd.MakeOfferCmd(cdc),
-			dexcmd.FillOfferCmd(cdc),
-			dexcmd.CancelOfferCmd(cdc),
-		)...)
-
 	// add proxy, version and key info
 	rootCmd.AddCommand(
 		client.LineBreak,
@@ -95,6 +86,7 @@ func main() {
 	)
 
 	tokencmd.AddCommands(rootCmd, cdc)
+	dexcmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))

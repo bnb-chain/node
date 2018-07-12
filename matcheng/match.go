@@ -34,10 +34,10 @@ func (li *SurplusIndex) clear() {
 // - one trade would be implemented via TWO transfer transactions on each currency of the pair;
 // - the trade would be uniquely identifiable via the two order id. UUID generation cannot be used here.
 type Trade struct {
-	oid     string // order id
-	lastPx  int64  // execution price
-	lastQty int64  // execution quantity
-	srcOId  string // source order id allocated from
+	SId     string // sell order id
+	LastPx  int64  // execution price
+	LastQty int64  // execution quantity
+	BId     string // buy order Id
 }
 
 type MatchEng struct {
@@ -55,15 +55,15 @@ type MatchEng struct {
 	sellBuf         []PriceLevel
 	maxExec         LevelIndex
 	leastSurplus    SurplusIndex
-	trades          []Trade
-	lastTradePrice  int64
+	Trades          []Trade
+	LastTradePrice  int64
 }
 
 func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
 	return &MatchEng{LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
 		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
-		trades: make([]Trade, 0, 64), lastTradePrice: basePrice}
+		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
 }
 
 //sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
@@ -161,7 +161,7 @@ func calLeastSurplus(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	}
 }
 
-func getTradePriceForMarketPressure(side int, overlapped *[]OverLappedLevel,
+func getTradePriceForMarketPressure(side int8, overlapped *[]OverLappedLevel,
 	leastSurplus []int, refPrice float64, priceLimit float64) (int64, int) {
 	lowerLimit := int64(math.Floor(refPrice * (1.0 - priceLimit)))
 	i := leastSurplus[0] //largest
@@ -265,7 +265,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -273,7 +273,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -281,7 +281,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.trades = append(me.trades, Trade{sells[h].id, me.lastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
 			h++
 			k++
 		}
@@ -393,19 +393,19 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
 func (me *MatchEng) Match() bool {
-	me.trades = me.trades[:0]
+	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
-	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.lastTradePrice, me.PriceLimitPct)
+	lastPx, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.LastTradePrice, me.PriceLimitPct)
 	if index < 0 {
 		return false
 	}
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
-	me.trades = me.trades[:0]
-	me.lastTradePrice = lastPx
+	me.Trades = me.Trades[:0]
+	me.LastTradePrice = lastPx
 	i, j := 0, len(me.overLappedLevel)-1
 	//sell below the price at index or buy above the price would not get filled
 	for i <= index && j >= index && compareBuy(totalExec, 0) > 0 {

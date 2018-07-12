@@ -9,9 +9,9 @@ import (
 )
 
 type MsgBase struct {
-	From   sdk.Address `json:"from"`
-	Symbol string      `json:"symbol"`
-	Amount int64       `json:"amount"`
+	From   sdk.AccAddress `json:"from"`
+	Symbol string         `json:"symbol"`
+	Amount int64          `json:"amount"`
 }
 
 func (msg MsgBase) Type() string {
@@ -50,6 +50,6 @@ func (msg MsgBase) GetSignBytes() []byte {
 	return b
 }
 
-func (msg MsgBase) GetSigners() []sdk.Address {
-	return []sdk.Address{msg.From}
+func (msg MsgBase) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.From}
 }

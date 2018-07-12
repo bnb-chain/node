@@ -33,7 +33,7 @@ func unfreezeTokenCmd(cmdr Commander) *cobra.Command {
 }
 
 func (c Commander) freezeToken(cmd *cobra.Command, args []string) error {
-	freezeMsgBuilder := func(from sdk.Address, symbol string, amount int64) sdk.Msg {
+	freezeMsgBuilder := func(from sdk.AccAddress, symbol string, amount int64) sdk.Msg {
 		return freeze.NewFreezeMsg(from, symbol, amount)
 	}
 
@@ -41,7 +41,7 @@ func (c Commander) freezeToken(cmd *cobra.Command, args []string) error {
 }
 
 func (c Commander) unfreeze(cmd *cobra.Command, args []string) error {
-	unfreezeMsgBuilder := func(from sdk.Address, symbol string, amount int64) sdk.Msg {
+	unfreezeMsgBuilder := func(from sdk.AccAddress, symbol string, amount int64) sdk.Msg {
 		return freeze.NewUnfreezeMsg(from, symbol, amount)
 	}
 
