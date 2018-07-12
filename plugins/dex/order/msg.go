@@ -13,14 +13,14 @@ import (
 const Route = "dexOrder"
 
 type NewOrderMsg struct {
-	Sender      sdk.Address `json:"sender"`
-	Id          string      `json:"id"`
-	Symbol      string      `json:"symbol"`
-	OrderType   int8        `json:"ordertype"`
-	Side        int8        `json:"side"`
-	Price       int64       `json:"price"`
-	Quantity    int64       `json:"quantity"`
-	TimeInForce int8        `json:"timeinforce"`
+	Sender      sdk.AccAddress `json:"sender"`
+	Id          string         `json:"id"`
+	Symbol      string         `json:"symbol"`
+	OrderType   int8           `json:"ordertype"`
+	Side        int8           `json:"side"`
+	Price       int64          `json:"price"`
+	Quantity    int64          `json:"quantity"`
+	TimeInForce int8           `json:"timeinforce"`
 }
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
@@ -68,7 +68,7 @@ func IsValidTimeInForce(tif int8) bool {
 }
 
 type CancelOrderMsg struct {
-	Sender sdk.Address
+	Sender sdk.AccAddress
 	Id     string `json:"id"`
 	Symbol string `json:"symbol"`
 	Side   int8   `json:"side"`
@@ -76,7 +76,7 @@ type CancelOrderMsg struct {
 }
 
 // NewNewOrderMsg - Creates a new NewOrderMsg
-func NewNewOrderMsg(sender sdk.Address, id string, side int8,
+func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	symbol string, price int64, qty int64) NewOrderMsg {
 	return NewOrderMsg{
 		Sender:      sender,
@@ -95,13 +95,13 @@ var _ sdk.Msg = NewOrderMsg{}
 // nolint
 func (msg NewOrderMsg) Type() string                            { return Route }
 func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg NewOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
 }
 
 // NewCancelOrderMsg - Creates a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.Address, id string, symbol string, side int8,
+func NewCancelOrderMsg(sender sdk.AccAddress, id string, symbol string, side int8,
 	price int64) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
@@ -117,7 +117,7 @@ var _ sdk.Msg = CancelOrderMsg{}
 // nolint
 func (msg CancelOrderMsg) Type() string                            { return Route }
 func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg CancelOrderMsg) GetSigners() []sdk.Address               { return []sdk.Address{msg.Sender} }
+func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
 	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)
 }

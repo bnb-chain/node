@@ -73,7 +73,7 @@ func (kp *Keeper) OrderExists(id string) bool {
 }
 
 type transfer struct {
-	account sdk.Address
+	account sdk.AccAddress
 	inCcy   string
 	in      int64
 	outCcy  string
@@ -84,18 +84,21 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (t
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
-	quoteQty := trade.LastPx * trade.LastQty / 100000000
+	quoteQty := trade.LastPx * trade.LastQty / 1e8
 	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty},
 		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty}
 }
 
 //TODO: should get an even hash
-func channelHash(account sdk.Address) int {
+func channelHash(account sdk.AccAddress) int {
 	return int(account[0] + account[1])
 }
 
-func (kp *Keeper) distributeMatch() []chan transfer {
+func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
 	size := len(kp.roundOrders)
+	if size == 0 {
+		return nil
+	}
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	outs := make([]chan string, concurrency)
@@ -143,10 +146,10 @@ func (kp *Keeper) distributeMatch() []chan transfer {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
 	//TODO: error handling
-	_, _, sdkErr := kp.ck.SubtractCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: tran.out}})
-	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: tran.in}})
+	_, _, sdkErr := kp.ck.SubtractCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)}})
+	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: tran.out})))
+	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)})))
 	accountMapper.SetAccount(ctx, account)
 	return sdkErr
 }
@@ -161,7 +164,12 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		}
 		wg.Done()
 	}
-	tradeOuts := kp.distributeMatch()
+	tradeOuts := kp.matchAndDistributeTrades()
+	if tradeOuts == nil {
+		//TODO: logging
+		return sdk.CodeOK, nil
+	}
+
 	wg.Add(len(tradeOuts))
 	for _, c := range tradeOuts {
 		go allocate(ctx, accountMapper, c)

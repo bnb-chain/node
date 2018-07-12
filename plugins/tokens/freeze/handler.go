@@ -34,11 +34,11 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMapper 
 
 	symbol := strings.ToUpper(msg.Symbol)
 	coins := keeper.GetCoins(ctx, msg.From)
-	if coins.AmountOf(symbol) < freezeAmount {
+	if coins.AmountOf(symbol).Int64() < freezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: freezeAmount}))
+	_, _, sdkError := keeper.SubtractCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}
@@ -55,15 +55,15 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 
 	symbol := strings.ToUpper(msg.Symbol)
 	account := accountMapper.GetAccount(ctx, msg.From).(types.NamedAccount)
-	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
+	frozenAmount := account.GetFrozenCoins().AmountOf(symbol).Int64()
 	if frozenAmount < unfreezeAmount {
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 	}
 
-	account.SetFrozenCoins(account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: unfreezeAmount})))
+	account.SetFrozenCoins(account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)})))
 	accountMapper.SetAccount(ctx, account)
 
-	_, _, sdkError := keeper.AddCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: unfreezeAmount}))
+	_, _, sdkError := keeper.AddCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}))
 
 	if sdkError != nil {
 		return sdkError.Result()
@@ -72,8 +72,8 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 	return sdk.Result{}
 }
 
-func updateFrozenOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.Address, symbol string, frozenAmount int64) {
+func updateFrozenOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, frozenAmount int64) {
 	account := accountMapper.GetAccount(ctx, address).(types.NamedAccount)
-	account.SetFrozenCoins(account.GetFrozenCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: frozenAmount})))
+	account.SetFrozenCoins(account.GetFrozenCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(frozenAmount)})))
 	accountMapper.SetAccount(ctx, account)
 }

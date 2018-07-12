@@ -9,8 +9,8 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -21,13 +21,13 @@ const (
 )
 
 type Token struct {
-	Name        string      `json:"name"`
-	Symbol      string      `json:"symbol"`
-	TotalSupply int64       `json:"total_supply"`
-	Owner       sdk.Address `json:"owner"`
+	Name        string         `json:"name"`
+	Symbol      string         `json:"symbol"`
+	TotalSupply int64          `json:"total_supply"`
+	Owner       sdk.AccAddress `json:"owner"`
 }
 
-func NewToken(name, symbol string, totalSupply int64, owner sdk.Address) Token {
+func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress) Token {
 	return Token{
 		Name:        name,
 		Symbol:      symbol,
@@ -36,7 +36,7 @@ func NewToken(name, symbol string, totalSupply int64, owner sdk.Address) Token {
 	}
 }
 
-func (token *Token) IsOwner(addr sdk.Address) bool { return bytes.Equal(token.Owner, addr) }
+func (token *Token) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
 func (token Token) String() string {
 	return fmt.Sprintf("{Name: %v, Symbol: %v, TotalSupply: %v, Owner: %X}",
 		token.Name, token.Symbol, token.TotalSupply, token.Owner)
@@ -62,12 +62,12 @@ func ValidateSymbol(symbol string) error {
 	return nil
 }
 
-func GenerateTokenAddress(token Token, sequence int64) (sdk.Address, error) {
+func GenerateTokenAddress(token Token, sequence int64) (sdk.AccAddress, error) {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(sequence))
 	secret := append(token.Owner, b...)
-	priv := makePrivKey(secret)
-	return priv.PubKey().Address(), nil
+	priv := makePrivKey(common.HexBytes(secret))
+	return sdk.AccAddress(priv.PubKey().Address()), nil
 }
 
 func makePrivKey(secret common.HexBytes) crypto.PrivKey {
