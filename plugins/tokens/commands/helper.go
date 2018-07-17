@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 type Commander struct {

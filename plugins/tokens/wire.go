@@ -1,10 +1,11 @@
 package tokens
 
 import (
+	"github.com/cosmos/cosmos-sdk/wire"
+
 	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
 	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
-	"github.com/cosmos/cosmos-sdk/wire"
 )
 
 // Register concrete types on wire codec
