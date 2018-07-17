@@ -17,20 +17,21 @@ import (
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
-	ck          bank.Keeper
-	storeKey    sdk.StoreKey // The key used to access the store from the Context.
-	codespace   sdk.CodespaceType
-	engines     map[string]*me.MatchEng
-	allOrders   map[string]NewOrderMsg
-	roundOrders map[string]int // limit to the total tx number in a block
-	poolSize    uint           // number of concurrent channels, counted in the pow of 2
+	ck             bank.Keeper
+	storeKey       sdk.StoreKey // The key used to access the store from the Context.
+	codespace      sdk.CodespaceType
+	engines        map[string]*me.MatchEng
+	allOrders      map[string]NewOrderMsg
+	roundOrders    map[string]int // limit to the total tx number in a block
+	roundIOCOrders map[string][]string
+	poolSize       uint // number of concurrent channels, counted in the pow of 2
 }
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) Keeper {
 	return Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: make(map[string]*me.MatchEng), allOrders: make(map[string]NewOrderMsg, 1000000),
-		roundOrders: make(map[string]int), poolSize: concurrency}
+		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256), poolSize: concurrency}
 }
 
 func CreateMatchEng(symbol string) *me.MatchEng {
@@ -50,6 +51,9 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	if err != nil {
 		kp.allOrders[msg.Id] = msg
 		kp.roundOrders[symbol] += 1
+		if msg.TimeInForce == TimeInForce.IOC {
+			kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
+		}
 	}
 	return err
 }
@@ -94,7 +98,7 @@ func channelHash(account sdk.AccAddress) int {
 	return int(account[0] + account[1])
 }
 
-func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
+func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	size := len(kp.roundOrders)
 	if size == 0 {
 		return nil
@@ -105,11 +109,12 @@ func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
 	for i, _ := range outs {
 		outs[i] = make(chan string, channelSize+1)
 	}
-	i, j := 0, 0
+	i, j, t := 0, 0, channelSize
 	for k, _ := range kp.roundOrders {
 		i++
-		if i > channelSize {
+		if i >= t {
 			j++
+			t += channelSize
 		}
 		outs[j] <- k
 	}
@@ -117,25 +122,40 @@ func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
 	for i, _ := range tradeOuts {
 		tradeOuts[i] = make(chan transfer)
 	}
+	wg.Add(concurrency)
 	for i = 0; i < concurrency; i++ {
 		channel := outs[i]
 		go func() {
-			for n := range channel {
-				if kp.engines[n].Match() {
-					tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(n)
-					for _, t := range kp.engines[n].Trades {
+			for ts := range channel {
+				engine := kp.engines[ts]
+				if engine.Match() {
+					tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(ts)
+					for _, t := range engine.Trades {
 						t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
 						//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
 						c := channelHash(t1.account) % concurrency
 						tradeOuts[c] <- t1
-						c = channelHash(t1.account) % concurrency
+						c = channelHash(t2.account) % concurrency
 						tradeOuts[c] <- t2
 					}
-				}
-				// TODO: when Match() failed, have to unsolicited cancel all the orders
+					engine.DropFilledOrder()
+				} // TODO: when Match() failed, have to unsolicited cancel all the orders
 				// when multiple unsolicited cancel happened, the validator would stop running
 				// and ask for help
+				iocIDs := kp.roundIOCOrders[ts]
+				for _, id := range iocIDs {
+					if msg, ok := kp.allOrders[id]; ok {
+						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err != nil {
+							//here is a trick to use the same currency as in and out ccy to simulate cancel
+							qty := ord.LeavesQty()
+							c := channelHash(msg.Sender)
+							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty}
+						}
+					}
+				}
 			}
+			wg.Done()
 		}()
 	}
 	for _, c := range outs {
@@ -146,12 +166,18 @@ func (kp *Keeper) matchAndDistributeTrades() []chan transfer {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
 	//TODO: error handling
-	_, _, sdkErr := kp.ck.SubtractCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)}})
-	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
+	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
+	//for Out, only need to reduce the locked.
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
 	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)})))
 	accountMapper.SetAccount(ctx, account)
 	return sdkErr
+}
+
+func (kp *Keeper) clearAfterMatch() (err error) {
+	kp.roundOrders = make(map[string]int, 256)
+	kp.roundIOCOrders = make(map[string][]string, 256)
+	return nil
 }
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
@@ -164,7 +190,8 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		}
 		wg.Done()
 	}
-	tradeOuts := kp.matchAndDistributeTrades()
+	var wgOrd sync.WaitGroup
+	tradeOuts := kp.matchAndDistributeTrades(&wgOrd)
 	if tradeOuts == nil {
 		//TODO: logging
 		return sdk.CodeOK, nil
@@ -173,7 +200,10 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 	wg.Add(len(tradeOuts))
 	for _, c := range tradeOuts {
 		go allocate(ctx, accountMapper, c)
-		close(c)
+	}
+	wgOrd.Wait()
+	for _, t := range tradeOuts {
+		close(t)
 	}
 	wg.Wait()
 	return sdk.CodeOK, nil
