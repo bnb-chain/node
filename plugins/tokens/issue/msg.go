@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash

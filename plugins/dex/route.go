@@ -1,13 +1,13 @@
 package dex
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/dex/list"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/list"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
 func Routes(tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper, tokenMapper tokens.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
