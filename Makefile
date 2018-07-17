@@ -32,12 +32,12 @@ get_vendor_deps:
 	@rm -rf vendor/
 	@echo "--> Running dep ensure"
 	@dep ensure -v
+	@go get golang.org/x/tools/cmd/goimports
 
 ########################################
 ### Format
 format:
 	@echo "-->Formatting"
-	go get golang.org/x/tools/cmd/goimports
 	$(shell cd ../../../ && goimports -w -local github.com/BiJie/BinanceChain $(PACKAGES))
 
 ########################################
