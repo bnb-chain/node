@@ -3,10 +3,11 @@ package store
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/pkg/errors"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 type Mapper interface {

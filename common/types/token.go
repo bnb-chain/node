@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/BiJie/BinanceChain/common/utils"
 )
 
 const (

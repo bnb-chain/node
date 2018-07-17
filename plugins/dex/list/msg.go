@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const Route = "dexList"
