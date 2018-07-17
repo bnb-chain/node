@@ -162,14 +162,14 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if msg.Price <= 0 {
 		return ErrInvalidOrderParam("Price", fmt.Sprintf("Negative Number:%d", msg.Quantity))
 	}
-	if IsValidOrderType(msg.OrderType) {
-		return ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
+	if !IsValidOrderType(msg.OrderType) {
+		return types.ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
 	}
-	if IsValidSide(msg.Side) {
-		return ErrInvalidOrderParam("Side", fmt.Sprintf("Invalid side:%d", msg.Side))
+	if !IsValidSide(msg.Side) {
+		return types.ErrInvalidOrderParam("Side", fmt.Sprintf("Invalid side:%d", msg.Side))
 	}
-	if IsValidTimeInForce(msg.TimeInForce) {
-		return ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
+	if !IsValidTimeInForce(msg.TimeInForce) {
+		return types.ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
 	}
 	//TODO: check whether it is round tick / lot / within min/max notional
 
