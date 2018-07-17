@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/matcheng"
 )
 

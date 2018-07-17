@@ -21,7 +21,7 @@ else
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
 endif
 
-install: 
+install:
 	go install $(BUILD_FLAGS) ./cmd/bnbchaind
 	go install $(BUILD_FLAGS) ./cmd/bnbcli
 
