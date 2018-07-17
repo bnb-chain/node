@@ -1,9 +1,10 @@
 package commands
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
+
+	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
 )
 
 func freezeTokenCmd(cmdr Commander) *cobra.Command {
