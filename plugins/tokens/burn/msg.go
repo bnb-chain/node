@@ -3,8 +3,9 @@ package burn
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/plugins/tokens/base"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/plugins/tokens/base"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
