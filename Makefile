@@ -12,7 +12,7 @@ ci: get_tools get_vendor_deps build test_cover
 ########################################
 ### Build
 
-build:
+build: format
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
@@ -32,6 +32,13 @@ get_vendor_deps:
 	@rm -rf vendor/
 	@echo "--> Running dep ensure"
 	@dep ensure -v
+	@go get golang.org/x/tools/cmd/goimports
+
+########################################
+### Format
+format:
+	@echo "-->Formatting"
+	$(shell cd ../../../ && goimports -w -local github.com/BiJie/BinanceChain $(PACKAGES))
 
 ########################################
 ### Testing
