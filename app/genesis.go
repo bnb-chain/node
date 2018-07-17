@@ -1,11 +1,11 @@
 package app
 
 import (
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex"
 )
 
 type GenesisState struct {

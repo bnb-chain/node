@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 func getTokenInfoCmd(cmdr Commander) *cobra.Command {
