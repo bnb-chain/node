@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func NewHandler(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) sdk.Handler {
