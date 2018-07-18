@@ -72,9 +72,9 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 	return eng.Book.RemoveOrder(id, side, price)
 }
 
-func (kp *Keeper) OrderExists(id string) bool {
-	_, ok := kp.allOrders[id]
-	return ok
+func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
+	ord, ok := kp.allOrders[id]
+	return ord, ok
 }
 
 type transfer struct {
@@ -163,6 +163,10 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 		close(c)
 	}
 	return tradeOuts
+}
+
+func (kp *Keeper) GetOrderBook(pair string) {
+
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {

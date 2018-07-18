@@ -1,6 +1,7 @@
 package order
 
 import (
+	"regexp"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,8 +45,21 @@ func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 	acct, _ := sdk.AccAddressFromHex("1234123412341234")
 	msg := NewNewOrderMsg(acct, "order1", 1, "BTC.B_BNB", 355, 100)
 	assert.Nil(msg.ValidateBasic())
+	msg = NewNewOrderMsg(acct, "order1", 5, "BTC.B_BNB", 355, 100)
+	assert.Regexp(regexp.MustCompile(".*Invalid side:5.*"), msg.ValidateBasic().Error())
+	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.B_BNB", -355, 100)
+	assert.Regexp(regexp.MustCompile(".*Zero/Negative Number.*"), msg.ValidateBasic().Error())
+	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.B_BNB", 355, 0)
+	assert.Regexp(regexp.MustCompile(".*Zero/Negative Number.*"), msg.ValidateBasic().Error())
+	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.BBNB", 355, 100)
+	assert.Regexp(regexp.MustCompile(".*Invalid trade symbol.*"), msg.ValidateBasic().Error())
+	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.B_BNB", 355, 10)
+	msg.TimeInForce = 5
+	assert.Regexp(regexp.MustCompile(".*Invalid TimeInForce.*"), msg.ValidateBasic().Error())
 }
 
 func TestCancelOrderMsg_ValidateBasic(t *testing.T) {
-
+	assert := assert.New(t)
+	msg := NewCancelOrderMsg(sdk.AccAddress{}, "order1", 1, "BTC.B_BNB", 355)
+	assert.NotNil(msg.ValidateBasic())
 }
