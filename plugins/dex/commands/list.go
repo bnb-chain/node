@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"errors"
-	"strconv"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -12,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 )
 
@@ -46,7 +45,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			quoteSymbol = strings.ToUpper(quoteSymbol)
 
 			initPriceStr := viper.GetString(flagInitPrice)
-			initPrice, err := parseInitPrice(initPriceStr)
+			initPrice, err := utils.ParsePrice(initPriceStr)
 			if err != nil {
 				return err
 			}
@@ -66,21 +65,4 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
 
 	return cmd
-}
-
-func parseInitPrice(initPriceStr string) (int64, error) {
-	if len(initPriceStr) == 0 {
-		return 0, errors.New("initPrice should be provided")
-	}
-
-	initPrice, err := strconv.ParseInt(initPriceStr, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	if initPrice <= 0 {
-		return initPrice, errors.New("initPrice should be greater than 0")
-	}
-
-	return initPrice, nil
 }
