@@ -183,3 +183,25 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	}
 	return appState, validators, nil
 }
+
+func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	path := splitPath(req.Path)
+	if len(path) == 0 {
+		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	switch path[0] {
+	// "/app" prefix for special application queries
+	case "app":
+		return handleBinanceChainQuery(app, path, req)
+	default:
+		return app.BaseApp.Query(req)
+	}
+}
+
+func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
+	return abci.ResponseQuery{
+		Code: uint32(sdk.ABCICodeOK),
+		Info: "DD",
+	}
+}

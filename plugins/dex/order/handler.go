@@ -73,27 +73,28 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 // Handle CancelOffer -
 func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
 	var err error
+	origOrd, ok := keeper.OrderExists(msg.Id)
 	if ctx.IsCheckTx() {
 		//only check whether there exists order to cancel
-		if !keeper.OrderExists(msg.Id) {
+		if !ok {
 			err = errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", msg.Id, msg.Symbol))
 		}
 	} else {
 		//remove order from cache and order book
-		ord, err := keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price)
+		ord, err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 		if err != nil {
 			//unlocked the locked qty for the unfilled qty
 			unlockAmount := ord.LeavesQty()
 
-			tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+			tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(origOrd.Symbol)
 			var symbolToUnlock string
-			if msg.Side == Side.BUY {
+			if origOrd.Side == Side.BUY {
 				symbolToUnlock = strings.ToUpper(quoteCcy)
 			} else {
 				symbolToUnlock = strings.ToUpper(tradeCcy)
 			}
 			account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
-			lockedAmount := account.GetLockedCoins().AmountOf(msg.Symbol).Int64()
+			lockedAmount := account.GetLockedCoins().AmountOf(origOrd.Symbol).Int64()
 			if lockedAmount < unlockAmount {
 				return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 			}

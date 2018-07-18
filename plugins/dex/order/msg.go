@@ -99,14 +99,10 @@ func (msg NewOrderMsg) String() string {
 }
 
 // NewCancelOrderMsg - Creates a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, id string, symbol string, side int8,
-	price int64) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.AccAddress, id string) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
 		Id:     id,
-		Symbol: symbol,
-		Side:   side,
-		Price:  price,
 	}
 }
 
@@ -157,10 +153,10 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidTradeSymbol(err.Error())
 	}
 	if msg.Quantity <= 0 {
-		return ErrInvalidOrderParam("Quantity", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
 	}
 	if msg.Price <= 0 {
-		return ErrInvalidOrderParam("Price", fmt.Sprintf("Negative Number:%d", msg.Quantity))
+		return types.ErrInvalidOrderParam("Price", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
 	}
 	if !IsValidOrderType(msg.OrderType) {
 		return types.ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))
