@@ -39,6 +39,13 @@ get_vendor_deps:
 format:
 	@echo "-->Formatting"
 	$(shell cd ../../../ && goimports -w -local github.com/BiJie/BinanceChain $(PACKAGES))
+	$(shell cd ../../../ && gofmt -w $(PACKAGES))
+
+########################################
+### Lint
+lint:
+	@echo "-->Lint"
+	golint $(PACKAGES)
 
 ########################################
 ### Testing
