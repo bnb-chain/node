@@ -60,48 +60,8 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 	}
 }
 
-//___________________________________________________________________________________
-
-// Genesis state - specify genesis trend
-type DexGenesis struct {
-	MakerFee             int64 `json:"makerFee"`
-	TakerFee             int64 `json:"takerFee"`
-	FeeFactor            int64 `json:"feeFactor"`
-	MaxFee               int64 `json:"maxFee"`
-	NativeTokenDiscount  int64 `json:"nativeTokenDiscount"`
-	VolumeBucketDuration int64 `json:"volumeBucketDuration"`
-}
-
-// State to Unmarshal
-type GenesisState struct {
-	Accounts   []*GenesisAccount `json:"accounts"`
-	DexGenesis DexGenesis        `json:"dex"`
-}
-
-// GenesisAccount doesn't need pubkey or sequence
-type GenesisAccount struct {
-	Name    string      `json:"name"`
-	Address sdk.Address `json:"address"`
-	Coins   sdk.Coins   `json:"coins"`
-}
-
-// NewGenesisAccount -
-func NewGenesisAccount(aa *AppAccount) *GenesisAccount {
-	return &GenesisAccount{
-		Name:    aa.Name,
-		Address: aa.GetAddress(),
-		Coins:   aa.GetCoins().Sort(),
-	}
-}
-
-// convert GenesisAccount to AppAccount
-func (ga *GenesisAccount) ToAppAccount() (acc *AppAccount, err error) {
-	baseAcc := auth.BaseAccount{
-		Address: ga.Address,
-		Coins:   ga.Coins.Sort(),
-	}
-	return &AppAccount{
-		BaseAccount: baseAcc,
-		Name:        ga.Name,
-	}, nil
+// Prototype function for AppAccount
+func ProtoAppAccount() auth.Account {
+	aa := AppAccount{}
+	return &aa
 }

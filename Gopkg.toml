@@ -30,7 +30,7 @@
 
 [[override]]
   name = "github.com/tendermint/iavl"
-  version = "=0.9.2"
+  version = "=v0.9.2"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
@@ -40,7 +40,7 @@
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
-  version = "0.20.0"
+  version = "0.22.0"
 
 [[constraint]]
   name = "github.com/pkg/errors"

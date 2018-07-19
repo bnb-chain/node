@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"io"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
@@ -41,7 +42,7 @@ type BinanceChain struct {
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
-func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
+func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *BinanceChain {
 
 	// Create app-level codec for txs and accounts.
 	var cdc = MakeCodec()
@@ -52,8 +53,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB) *BinanceChain {
 		cdc:     cdc,
 	}
 
+	app.SetCommitMultiStoreTracer(traceStore)
 	// mappers
-	app.accountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, &types.AppAccount{})
+	app.accountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
 	app.tradingPairMapper = dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 
@@ -98,7 +100,8 @@ func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
 
 	wire.RegisterCrypto(cdc) // Register crypto.
-	sdk.RegisterWire(cdc)    // Register Msgs
+	bank.RegisterWire(cdc)
+	sdk.RegisterWire(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterTypes(cdc)
 	types.RegisterWire(cdc)
