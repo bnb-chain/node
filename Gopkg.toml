@@ -34,9 +34,7 @@
 
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.22.2"
-
-
+  version = "=0.22.3"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
@@ -45,11 +43,6 @@
 [[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
-
-# this got updated and broke, so locked to an old working commit ...
-[[override]]
-  name = "google.golang.org/genproto"
-  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [prune]
   go-tests = true
