@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/server"
@@ -46,12 +47,12 @@ func AppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState json.Ra
 	return
 }
 
-func newApp(logger log.Logger, db dbm.DB) abci.Application {
-	return app.NewBinanceChain(logger, db)
+func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
+	return app.NewBinanceChain(logger, db, storeTracer)
 }
 
-func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB) (json.RawMessage, []tmtypes.GenesisValidator, error) {
-	dapp := app.NewBinanceChain(logger, db)
+func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {
+	dapp := app.NewBinanceChain(logger, db, storeTracer)
 	return dapp.ExportAppStateAndValidators()
 }
 
