@@ -59,3 +59,9 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 		return acct, err
 	}
 }
+
+// Prototype function for AppAccount
+func ProtoAppAccount() auth.Account {
+	aa := AppAccount{}
+	return &aa
+}

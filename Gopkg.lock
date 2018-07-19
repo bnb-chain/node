@@ -81,8 +81,8 @@
     "x/stake/tags",
     "x/stake/types"
   ]
-  revision = "080dd5b97a90005cac0c730a81fd1d6864b9fd3e"
-  version = "v0.20.0"
+  revision = "9f2b83cbe9e1b35b350703366b5e7f5806c5547e"
+  version = "v0.22.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -459,7 +459,7 @@
 [[projects]]
   name = "github.com/zondax/ledger-goclient"
   packages = ["."]
-  revision = "065cbf938a16f20335c40cfe180f9cd4955c6a5a"
+  revision = "39ba4728c137c75718a21f9b4b3280fa31b9139b"
 
 [[projects]]
   branch = "master"
@@ -565,6 +565,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c932ad8b0e43de64d1dae18cd44baadc468a7ae7d0fdaa319ddf9af747038df1"
+  inputs-digest = "d1f809755780b4dfa74387ba86d8c0cda6cfb9c35757d717089842ff603e1a90"
   solver-name = "gps-cdcl"
   solver-version = 1
