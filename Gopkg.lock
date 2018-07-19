@@ -32,10 +32,9 @@
   revision = "fdfc19097e7ac6b57035062056f5b7b4638b8898"
 
 [[projects]]
-  branch = "master"
   name = "github.com/btcsuite/btcutil"
   packages = ["bech32"]
-  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
+  revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
   name = "github.com/cosmos/cosmos-sdk"
@@ -91,7 +90,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/ebuchman/fail-test"
   packages = ["."]
   revision = "95f809107225be108efcf10a3509e4ea6ceef3c4"
@@ -266,13 +264,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
     "prometheus/promhttp"
   ]
-  revision = "ee1c9d7e23df7f011bdf6f12a5c9e7f0ae10a1fe"
+  revision = "ae27198cdd90bf12cd134ad79d1366a6cf49f632"
 
 [[projects]]
   branch = "master"
@@ -302,7 +299,6 @@
   revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
 
 [[projects]]
-  branch = "master"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
@@ -453,8 +449,8 @@
     "types",
     "version"
   ]
-  revision = "5ff65274b84ea905787a48512cc3124385bddf2f"
-  version = "v0.22.2"
+  revision = "2aa2b63cadc42cca1071c36adfd2f2ce14e1aa8f"
+  version = "v0.22.3"
 
 [[projects]]
   name = "github.com/zondax/ledger-goclient"
@@ -480,7 +476,6 @@
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -492,7 +487,7 @@
     "netutil",
     "trace"
   ]
-  revision = "cffdcf672aee934982473246bc7e9a8ba446aa9b"
+  revision = "292b43bbf7cb8d35ddf40f8d5100ef3837cced3f"
 
 [[projects]]
   branch = "master"
@@ -565,6 +560,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d1f809755780b4dfa74387ba86d8c0cda6cfb9c35757d717089842ff603e1a90"
+  inputs-digest = "1bbacb52987c52442c941584b7a021566b898d82bcfe9303639158632d5ca019"
   solver-name = "gps-cdcl"
   solver-version = 1
