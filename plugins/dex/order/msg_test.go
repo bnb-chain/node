@@ -60,6 +60,6 @@ func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 
 func TestCancelOrderMsg_ValidateBasic(t *testing.T) {
 	assert := assert.New(t)
-	msg := NewCancelOrderMsg(sdk.AccAddress{}, "order1", 1, "BTC.B_BNB", 355)
+	msg := NewCancelOrderMsg(sdk.AccAddress{}, "order1")
 	assert.NotNil(msg.ValidateBasic())
 }
