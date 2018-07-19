@@ -2,8 +2,17 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"runtime/debug"
 	"strings"
+
+	"github.com/pkg/errors"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -11,11 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/pkg/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 // Key to store the header in the DB itself.
@@ -36,7 +40,7 @@ const (
 	runTxModeDeliver runTxMode = iota
 )
 
-// The ABCI application
+// BaseApp reflects the ABCI application implementation.
 type BaseApp struct {
 	// initialized on creation
 	Logger     log.Logger
@@ -70,9 +74,15 @@ type BaseApp struct {
 
 var _ abci.Application = (*BaseApp)(nil)
 
-// Create and name new BaseApp
+// NewBaseApp returns a reference to an initialized BaseApp.
+//
+// TODO: Determine how to use a flexible and robust configuration paradigm that
+// allows for sensible defaults while being highly configurable
+// (e.g. functional options).
+//
 // NOTE: The db is used to store the version number for now.
-func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB) *BaseApp {
+// Accepts variable number of option functions, which act on the BaseApp to set configuration choices
+func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, options ...func(*BaseApp)) *BaseApp {
 	app := &BaseApp{
 		Logger:     logger,
 		name:       name,
@@ -83,14 +93,25 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB) *Bas
 		codespacer: sdk.NewCodespacer(),
 		txDecoder:  defaultTxDecoder(cdc),
 	}
-	// Register the undefined & root codespaces, which should not be used by any modules
+
+	// Register the undefined & root codespaces, which should not be used by
+	// any modules.
 	app.codespacer.RegisterOrPanic(sdk.CodespaceRoot)
+	for _, option := range options {
+		option(app)
+	}
 	return app
 }
 
 // BaseApp Name
 func (app *BaseApp) Name() string {
 	return app.name
+}
+
+// SetCommitMultiStoreTracer sets the store tracer on the BaseApp's underlying
+// CommitMultiStore.
+func (app *BaseApp) SetCommitMultiStoreTracer(w io.Writer) {
+	app.cms.WithTracer(w)
 }
 
 // Register the next available codespace through the baseapp's codespacer, starting from a default
@@ -387,13 +408,18 @@ func handleQueryP2P(app *BaseApp, path []string, req abci.RequestQuery) (res abc
 	return sdk.ErrUnknownRequest(msg).QueryResult()
 }
 
-// Implements ABCI
+// BeginBlock implements the ABCI application interface.
 func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
-	// Initialize the DeliverTx state.
-	// If this is the first block, it should already
-	// be initialized in InitChain.
-	// Otherwise app.deliverState will be nil, since it
-	// is reset on Commit.
+	if app.cms.TracingEnabled() {
+		app.cms.ResetTraceContext()
+		app.cms.WithTracingContext(sdk.TraceContext(
+			map[string]interface{}{"blockHeight": req.Header.Height},
+		))
+	}
+
+	// Initialize the DeliverTx state. If this is the first block, it should
+	// already be initialized in InitChain. Otherwise app.deliverState will be
+	// nil, since it is reset on Commit.
 	if app.deliverState == nil {
 		app.setDeliverState(req.Header)
 	} else {
@@ -401,9 +427,11 @@ func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeg
 		// by InitChain. Context is now updated with Header information.
 		app.deliverState.ctx = app.deliverState.ctx.WithBlockHeader(req.Header)
 	}
+
 	if app.beginBlocker != nil {
 		res = app.beginBlocker(app.deliverState.ctx, req)
 	}
+
 	// set the signed validators for addition to context in deliverTx
 	app.signedValidators = req.Validators
 	return
@@ -543,25 +571,26 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg) (result sdk.Result)
 	return result
 }
 
-// Returns deliverState if app is in runTxModeDeliver, otherwhise returns checkstate
+// Returns the applicantion's deliverState if app is in runTxModeDeliver,
+// otherwise it returns the application's checkstate.
 func getState(app *BaseApp, mode runTxMode) *state {
 	if mode == runTxModeCheck || mode == runTxModeSimulate {
 		return app.checkState
 	}
+
 	return app.deliverState
 }
 
-// txBytes may be nil in some cases, eg. in tests.
-// Also, in the future we may support "internal" transactions.
+// runTx processes a transaction. The transactions is proccessed via an
+// anteHandler. txBytes may be nil in some cases, eg. in tests. Also, in the
+// future we may support "internal" transactions.
 func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk.Result) {
-	//NOTE: GasWanted should be returned by the AnteHandler.
-	// GasUsed is determined by the GasMeter.
-	// We need access to the context to get the gas meter so
-	// we initialize upfront
+	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
+	// determined by the GasMeter. We need access to the context to get the gas
+	// meter so we initialize upfront.
 	var gasWanted int64
 	ctx := app.getContextForAnte(mode, txBytes)
 
-	// Handle any panics.
 	defer func() {
 		if r := recover(); r != nil {
 			switch rType := r.(type) {
@@ -573,11 +602,11 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 				result = sdk.ErrInternal(log).Result()
 			}
 		}
+
 		result.GasWanted = gasWanted
 		result.GasUsed = ctx.GasMeter().GasConsumed()
 	}()
 
-	// Get the Msg.
 	var msgs = tx.GetMsgs()
 
 	err := validateBasicTxMsgs(msgs)
@@ -585,7 +614,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		return err.Result()
 	}
 
-	// Run the ante handler.
+	// run the ante handler
 	if app.anteHandler != nil {
 		newCtx, anteResult, abort := app.anteHandler(ctx, tx)
 		if abort {
@@ -594,17 +623,24 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		if !newCtx.IsZero() {
 			ctx = newCtx
 		}
+
 		gasWanted = result.GasWanted
 	}
 
-	// CacheWrap the state in case it fails.
+	// Keep the state in a transient CacheWrap in case processing the messages
+	// fails.
 	msCache := getState(app, mode).CacheMultiStore()
-	ctx = ctx.WithMultiStore(msCache)
+	if msCache.TracingEnabled() {
+		msCache = msCache.WithTracingContext(sdk.TraceContext(
+			map[string]interface{}{"txHash": cmn.HexBytes(tmhash.Sum(txBytes)).String()},
+		)).(sdk.CacheMultiStore)
+	}
 
+	ctx = ctx.WithMultiStore(msCache)
 	result = app.runMsgs(ctx, msgs)
 	result.GasWanted = gasWanted
 
-	// Only update state if all messages pass and we're not in a simulation.
+	// only update state if all messages pass and we're not in a simulation
 	if result.IsOK() && mode != runTxModeSimulate {
 		msCache.Write()
 	}
@@ -612,11 +648,16 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	return
 }
 
-// Implements ABCI
+// EndBlock implements the ABCI application interface.
 func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+	if app.deliverState.ms.TracingEnabled() {
+		app.deliverState.ms = app.deliverState.ms.ResetTraceContext().(sdk.CacheMultiStore)
+	}
+
 	if app.endBlocker != nil {
 		res = app.endBlocker(app.deliverState.ctx, req)
 	}
+
 	return
 }
 
