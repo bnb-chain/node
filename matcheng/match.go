@@ -52,8 +52,8 @@ type MatchEng struct {
 	LastTradePrice  int64
 }
 
-func NewMatchEng(basePrice, lotSize float64) *MatchEng {
-	return &MatchEng{LotSize: lotSize, overLappedLevel: make([]OverLappedLevel, 0, 16),
+func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
+	return &MatchEng{Book: NewOrderBookOnULList(10000, 16), LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
 		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
 		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
