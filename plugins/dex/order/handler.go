@@ -51,7 +51,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	}
 	coins := keeper.ck.GetCoins(ctx, msg.Sender)
 	if coins.AmountOf(symbolToLock).Int64() < amountToLock {
-		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
+		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
 	}
 
 	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
