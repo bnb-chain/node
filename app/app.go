@@ -81,6 +81,45 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	return app
 }
 
+//TODO???: where to init checkState in reboot
+func (app *BinanceChain) SetCheckState(header abci.Header) {
+	ms := app.cms.CacheMultiStore()
+	app.checkState = &state{
+		ms:  ms,
+		ctx: sdk.NewContext(ms, header, true, app.Logger),
+	}
+}
+
+//Getter for testing
+func (app *BinanceChain) GetCodec() *wire.Codec {
+	return app.cdc
+}
+
+//Getter for testing
+func (app *BinanceChain) GetOrderKeeper() *dex.OrderKeeper {
+	return &app.orderKeeper
+}
+
+//Getter for testing
+func (app *BinanceChain) GetCoinKeeper() *bank.Keeper {
+	return &app.coinKeeper
+}
+
+//Getter for testing
+func (app *BinanceChain) GetTradingPairMapper() *dex.TradingPairMapper {
+	return &app.tradingPairMapper
+}
+
+//Getter for testing
+func (app *BinanceChain) GetTokenMapper() *tokens.Mapper {
+	return &app.tokenMapper
+}
+
+//Getter for testing
+func (app *BinanceChain) GetAccountMapper() *auth.AccountMapper {
+	return &app.accountMapper
+}
+
 func (app *BinanceChain) registerHandlers() {
 	app.Router().AddRoute("bank", bank.NewHandler(app.coinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).

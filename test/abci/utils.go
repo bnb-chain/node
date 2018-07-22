@@ -6,23 +6,18 @@ import (
 	"github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 
+	"github.com/BiJie/BinanceChain/app"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/BiJie/BinanceChain/app"
 )
 
 type TestClient struct {
 	cl  abcicli.Client
 	cdc *wire.Codec
-}
-
-func NewTestClient(a *app.BinanceChain) *TestClient {
-	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
-	return &TestClient{abcicli.NewLocalClient(nil, a), app.MakeCodec()}
 }
 
 func (tc *TestClient) DeliverTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
@@ -51,12 +46,32 @@ func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.Response
 
 // util objects
 var (
-	memDB   = db.NewMemDB()
-	logger  = log.NewTMLogger(os.Stdout)
-	testApp = app.NewBinanceChain(logger, memDB, os.Stdout)
-	tc      = NewTestClient(testApp)
+	memDB                             = db.NewMemDB()
+	logger                            = log.NewTMLogger(os.Stdout)
+	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
+	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
+		sdk.Coins{sdk.NewCoin("BNB", 200), sdk.NewCoin("BTC", 200)})
+	tc = NewTestClient(testApp)
 )
 
 func TC() *TestClient {
 	return tc
+}
+
+func TA() *app.BinanceChain {
+	return testApp
+}
+
+func Account(i int) auth.Account {
+	return genAccs[i]
+}
+
+func Address(i int) sdk.AccAddress {
+	return addrs[i]
+}
+
+func NewTestClient(a *app.BinanceChain) *TestClient {
+	a.SetCheckState(types.Header{})
+	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
+	return &TestClient{abcicli.NewLocalClient(nil, a), app.MakeCodec()}
 }

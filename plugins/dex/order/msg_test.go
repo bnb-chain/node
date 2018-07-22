@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/libs/bech32"
 )
 
 func TestIsValidSide(t *testing.T) {
@@ -42,7 +43,9 @@ func TestValidateSymbol(t *testing.T) {
 
 func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 	assert := assert.New(t)
-	acct, _ := sdk.AccAddressFromHex("1234123412341234")
+	add, e := bech32.ConvertAndEncode(sdk.Bech32PrefixAccAddr, []byte("NEWORDERVALIDATE"))
+	acct, e := sdk.AccAddressFromBech32(add)
+	t.Log(e)
 	msg := NewNewOrderMsg(acct, "order1", 1, "BTC.B_BNB", 355, 100)
 	assert.Nil(msg.ValidateBasic())
 	msg = NewNewOrderMsg(acct, "order1", 5, "BTC.B_BNB", 355, 100)
