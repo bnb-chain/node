@@ -1,12 +1,13 @@
-package abci
+package app_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	o "github.com/BiJie/BinanceChain/plugins/dex/order"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	o "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 func Test_handleNewOrder_CheckTx(t *testing.T) {
