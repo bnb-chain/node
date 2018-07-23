@@ -30,15 +30,14 @@ const (
 // BinanceChain is the BNBChain ABCI application
 type BinanceChain struct {
 	*BaseApp
-	cdc *wire.Codec
+	Codec *wire.Codec
 
-	// keepers
-	feeCollectionKeeper auth.FeeCollectionKeeper
-	coinKeeper          bank.Keeper
-	orderKeeper         dex.OrderKeeper
-	accountMapper       auth.AccountMapper
-	tokenMapper         tokenStore.Mapper
-	tradingPairMapper   dex.TradingPairMapper
+	FeeCollectionKeeper auth.FeeCollectionKeeper
+	CoinKeeper          bank.Keeper
+	OrderKeeper         dex.OrderKeeper
+	AccountMapper       auth.AccountMapper
+	TokenMapper         tokenStore.Mapper
+	TradingPairMapper   dex.TradingPairMapper
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -50,18 +49,19 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	// Create your application object.
 	var app = &BinanceChain{
 		BaseApp: NewBaseApp(appName, cdc, logger, db),
-		cdc:     cdc,
+		Codec:   cdc,
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
 	// mappers
-	app.accountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.tokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
-	app.tradingPairMapper = dex.NewTradingPairMapper(cdc, common.PairStoreKey)
+	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+	app.TradingPairMapper = dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 
 	// Add handlers.
-	app.coinKeeper = bank.NewKeeper(app.accountMapper)
-	app.orderKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.coinKeeper, app.RegisterCodespace(dex.DefaultCodespace))
+	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
+	// TODO: make the concurrency configurable
+	app.OrderKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, app.RegisterCodespace(dex.DefaultCodespace), 2)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -72,7 +72,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
+	app.SetAnteHandler(auth.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
 	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
@@ -89,47 +89,15 @@ func (app *BinanceChain) SetCheckState(header abci.Header) {
 	}
 }
 
-//Getter for testing
-func (app *BinanceChain) GetCodec() *wire.Codec {
-	return app.cdc
-}
-
-//Getter for testing
-func (app *BinanceChain) GetOrderKeeper() *dex.OrderKeeper {
-	return &app.orderKeeper
-}
-
-//Getter for testing
-func (app *BinanceChain) GetCoinKeeper() *bank.Keeper {
-	return &app.coinKeeper
-}
-
-//Getter for testing
-func (app *BinanceChain) GetTradingPairMapper() *dex.TradingPairMapper {
-	return &app.tradingPairMapper
-}
-
-//Getter for testing
-func (app *BinanceChain) GetTokenMapper() *tokens.Mapper {
-	return &app.tokenMapper
-}
-
-//Getter for testing
-func (app *BinanceChain) GetAccountMapper() *auth.AccountMapper {
-	return &app.accountMapper
-}
-
 func (app *BinanceChain) registerHandlers() {
-	app.Router().
-		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
-		AddRoute("dex", dex.NewHandler(app.dexKeeper, app.accountMapper))
+	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
-	for route, handler := range tokens.Routes(app.tokenMapper, app.accountMapper, app.coinKeeper) {
+	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
 
-	for route, handler := range dex.Routes(app.tradingPairMapper, app.orderKeeper, app.tokenMapper, app.accountMapper, app.coinKeeper) {
+	for route, handler := range dex.Routes(app.TradingPairMapper, app.OrderKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -166,15 +134,15 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 				panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 				//	return sdk.ErrGenesisParse("").TraceCause(err, "")
 			}
-			app.accountMapper.SetAccount(ctx, acc)
+			app.AccountMapper.SetAccount(ctx, acc)
 		}
 
 		// Application specific genesis handling
-		// err = app.dexKeeper.InitGenesis(ctx, genesisState.DexGenesis)
-		// if err != nil {
-		// 	panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-		// 	//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-		// }
+		err = app.OrderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
+		if err != nil {
+			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
+			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		}
 
 		return abci.ResponseInitChain{}
 	}
@@ -185,8 +153,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
-		//only match in the normal block
-		app.dexKeeper.MatchAndAllocateAll(ctx, app.accountMapper)
+		// only match in the normal block
+		app.OrderKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
 	} else {
 		// breathe block
 
@@ -214,7 +182,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 		accounts = append(accounts, account)
 		return false
 	}
-	app.accountMapper.IterateAccounts(ctx, appendAccount)
+	app.AccountMapper.IterateAccounts(ctx, appendAccount)
 
 	genState := GenesisState{
 		Accounts: accounts,
