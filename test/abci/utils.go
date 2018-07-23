@@ -66,14 +66,14 @@ func TA() *app.BinanceChain {
 func InitAccounts(ctx sdk.Context, app *app.BinanceChain) {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{BaseAccount: auth.BaseAccount{Address: acc.GetAddress(), Coins: acc.GetCoins()}}
-		aacc.BaseAccount.AccountNumber = app.GetAccountMapper().GetNextAccountNumber(ctx)
-		app.GetAccountMapper().SetAccount(ctx, aacc)
+		aacc.BaseAccount.AccountNumber = app.AccountMapper.GetNextAccountNumber(ctx)
+		app.AccountMapper.SetAccount(ctx, aacc)
 	}
 }
 
 func ResetAccounts(ctx sdk.Context, app *app.BinanceChain) {
 	for _, acc := range genAccs {
-		app.GetAccountMapper().GetAccount(ctx, acc.GetAddress()).SetCoins(sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
+		app.AccountMapper.GetAccount(ctx, acc.GetAddress()).SetCoins(sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
 	}
 }
 
@@ -92,9 +92,9 @@ func NewTestClient(a *app.BinanceChain) *TestClient {
 }
 
 func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return TA().GetCoinKeeper().GetCoins(ctx, add).AmountOf(ccy).Int64()
+	return TA().CoinKeeper.GetCoins(ctx, add).AmountOf(ccy).Int64()
 }
 
 func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return TA().GetAccountMapper().GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+	return TA().AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }

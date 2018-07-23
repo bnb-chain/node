@@ -12,15 +12,15 @@ package order
 
 // func Test_handleNewOrder(t *testing.T) {
 // 	assert := assert.New(t)
-// 	var cdc = test.TA().GetCodec()
+// 	var cdc = test.TA().Codec
 // 	// mappers
-// 	accountMapper := test.TA().GetAccountMapper()
-// 	tokenMapper := test.TA().GetTokenMapper()
+// 	accountMapper := test.TA().AccountMapper()
+// 	tokenMapper := test.TA().TtokenMapper
 
 // 	// Add handlers.
-// 	coinKeeper := test.TA().GetCoinKeeper()
+// 	coinKeeper := test.TA().CoinKeeper()
 // 	// TODO: make the concurrency configurable
-// 	orderKeeper := test.TA().GetOrderKeeper()
+// 	orderKeeper := test.TA().OrderKeeper
 
 // 	ctx := test.TA().NewContext(true, abci.Header{})
 // 	acct, _ := sdk.AccAddressFromHex("bc1handlenew0rder2")
