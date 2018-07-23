@@ -1,4 +1,4 @@
-package abci
+package app_test
 
 import (
 	"os"
@@ -6,14 +6,15 @@ import (
 	"github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 
-	"github.com/BiJie/BinanceChain/app"
-	common "github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/BiJie/BinanceChain/app"
+	common "github.com/BiJie/BinanceChain/common/types"
 )
 
 type TestClient struct {
