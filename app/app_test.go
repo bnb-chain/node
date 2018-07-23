@@ -53,16 +53,8 @@ var (
 	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
-	tc = NewTestClient(testApp)
+	testClient = NewTestClient(testApp)
 )
-
-func TC() *TestClient {
-	return tc
-}
-
-func TA() *app.BinanceChain {
-	return testApp
-}
 
 func InitAccounts(ctx sdk.Context, app *app.BinanceChain) {
 	for _, acc := range genAccs {
@@ -93,9 +85,9 @@ func NewTestClient(a *app.BinanceChain) *TestClient {
 }
 
 func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return TA().CoinKeeper.GetCoins(ctx, add).AmountOf(ccy).Int64()
+	return testApp.CoinKeeper.GetCoins(ctx, add).AmountOf(ccy).Int64()
 }
 
 func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return TA().AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
