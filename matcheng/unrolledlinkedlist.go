@@ -313,6 +313,18 @@ func (ull *ULList) GetTop() *PriceLevel {
 	return ull.begin.head()
 }
 
+func (ull *ULList) Iterate(levelNum int, iter LevelIter) {
+	i := 0
+	for b := ull.begin; b != ull.dend; b = b.next {
+		for _, l := range b.elements {
+			iter(l.Price, l.totalLeavesQty())
+			if i++; i >= levelNum {
+				return
+			}
+		}
+	}
+}
+
 func (ull *ULList) GetPriceRange(p1 int64, p2 int64, buffer *[]PriceLevel) []PriceLevel {
 	ret := (*buffer)[:0]
 	if ull.compare(p1, p2) < 0 || len(ull.begin.elements) <= 0 {
