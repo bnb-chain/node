@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"io"
+	"os"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
@@ -25,6 +26,12 @@ import (
 
 const (
 	appName = "BNBChain"
+)
+
+// default home directories for expected binaries
+var (
+	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
 )
 
 // BinanceChain is the BNBChain ABCI application
@@ -114,27 +121,34 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		stateJSON := req.AppStateBytes
 
 		genesisState := new(GenesisState)
-		err := json.Unmarshal(stateJSON, genesisState)
+		err := app.cdc.UnmarshalJSON(stateJSON, genesisState)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			// return sdk.ErrGenesisParse("").TraceCause(err, "")
 		}
 
 		for _, gacc := range genesisState.Accounts {
-			acc, err := gacc.ToAppAccount()
-			if err != nil {
-				panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-				//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-			}
+			acc := gacc.ToAppAccount()
+			acc.AccountNumber = app.accountMapper.GetNextAccountNumber(ctx)
 			app.accountMapper.SetAccount(ctx, acc)
 		}
 
-		// Application specific genesis handling
-		err = app.orderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
-		if err != nil {
-			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		for _, token := range genesisState.Tokens {
+			// TODO: replace by Issue and move to token.genesis
+			err = app.tokenMapper.NewToken(ctx, token)
+			if err != nil {
+				panic(err)
+			}
+
+			_, _, sdkErr := app.coinKeeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil),
+				sdk.Coin{Denom: token.Symbol, Amount: sdk.NewInt(token.TotalSupply)}))
+			if sdkErr != nil {
+				panic(sdkErr)
+			}
 		}
+
+		// Application specific genesis handling
+		app.orderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
 
 		return abci.ResponseInitChain{}
 	}
@@ -164,11 +178,10 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	ctx := app.NewContext(true, abci.Header{})
 
 	// iterate to get the accounts
-	accounts := []*GenesisAccount{}
+	accounts := []GenesisAccount{}
 	appendAccount := func(acc auth.Account) (stop bool) {
-		account := &GenesisAccount{
+		account := GenesisAccount{
 			Address: acc.GetAddress(),
-			Coins:   acc.GetCoins(),
 		}
 		accounts = append(accounts, account)
 		return false
