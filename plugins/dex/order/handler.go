@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 
@@ -43,7 +44,8 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	var symbolToLock string
 	if msg.Side == Side.BUY {
 		// TODO: where is 10^8 stored?
-		amountToLock = msg.Quantity * msg.Price / 1e8
+		var bi big.Int
+		amountToLock = bi.Div(bi.Mul(big.NewInt(msg.Quantity), big.NewInt(msg.Price)), big.NewInt(1e8)).Int64()
 		symbolToLock = strings.ToUpper(quoteCcy)
 	} else {
 		amountToLock = msg.Quantity
