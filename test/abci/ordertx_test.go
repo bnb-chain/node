@@ -15,7 +15,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	InitAccounts(ctx, TA())
 	add := Account(0).GetAddress()
 	msg := o.NewNewOrderMsg(add, "order1", 1, "BTC_BNB", 355e8, 100e8)
-	res, e := TC().CheckTxSync(msg, TA().GetCodec())
+	res, e := TC().CheckTxSync(msg, TA().Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
 	assert.Regexp(".*do not have enough token to lock.*", res.GetLog())
@@ -25,7 +25,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
 	msg = o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
-	res, e = TC().CheckTxSync(msg, TA().GetCodec())
+	res, e = TC().CheckTxSync(msg, TA().Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
 	assert.Equal(int64(145e8), GetAvail(ctx, add, "BNB"))
@@ -35,7 +35,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 
 	add = Account(1).GetAddress()
 	msg = o.NewNewOrderMsg(add, "order2.1", 2, "BTC_BNB", 355e8, 250e8)
-	res, e = TC().CheckTxSync(msg, TA().GetCodec())
+	res, e = TC().CheckTxSync(msg, TA().Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
 	assert.Regexp(".*do not have enough token to lock.*", res.GetLog())
@@ -45,7 +45,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
 	msg = o.NewNewOrderMsg(add, "order2.2", 2, "BTC_BNB", 355e8, 200e8)
-	res, e = TC().CheckTxSync(msg, TA().GetCodec())
+	res, e = TC().CheckTxSync(msg, TA().Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
 	assert.Equal(int64(500e8), GetAvail(ctx, add, "BNB"))
@@ -62,7 +62,7 @@ type level struct {
 func getOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	TA().GetOrderKeeper().GetOrderBookUnSafe(pair, 5,
+	TA().OrderKeeper.GetOrderBookUnSafe(pair, 5,
 		func(price, qty int64) {
 			buys = append(buys, level{price, qty})
 		},
@@ -77,11 +77,11 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	TC().cl.BeginBlockSync(abci.RequestBeginBlock{})
 	ctx := TA().NewContext(false, abci.Header{})
 	InitAccounts(ctx, TA())
-	TA().GetOrderKeeper().ClearOrderBook("BTC_BNB")
+	TA().OrderKeeper.ClearOrderBook("BTC_BNB")
 	add := Account(0).GetAddress()
 	msg := o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
 
-	res, e := TC().DeliverTxSync(msg, TA().GetCodec())
+	res, e := TC().DeliverTxSync(msg, TA().Codec)
 	t.Logf("res is %v and error is %v", res, e)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
