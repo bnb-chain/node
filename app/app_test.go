@@ -2,19 +2,26 @@ package app_test
 
 import (
 	"os"
-
-	"github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
+	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/tendermint/tendermint/libs/db"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/tendermint/tendermint/abci/client"
+	"github.com/tendermint/tendermint/abci/types"
+
+	"github.com/tendermint/tendermint/libs/db"
 
 	"github.com/BiJie/BinanceChain/app"
 	common "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex"
 )
 
 type TestClient struct {
@@ -90,4 +97,59 @@ func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 
 func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+}
+
+func setGenesis(bapp *app.BinanceChain, trend string, accs ...auth.BaseAccount) error {
+	genaccs := make([]*app.GenesisAccount, len(accs))
+	for i, acc := range accs {
+		genaccs[i] = app.NewGenesisAccount(&common.AppAccount{acc, "blah", sdk.Coins(nil), sdk.Coins(nil)})
+	}
+
+	genesisState := app.GenesisState{
+		Accounts:   genaccs,
+		DexGenesis: dex.Genesis{},
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(bapp.Codec, genesisState)
+	if err != nil {
+		return err
+	}
+
+	// Initialize the chain
+	vals := []abci.Validator{}
+	bapp.InitChain(abci.RequestInitChain{Validators: vals, AppStateBytes: stateBytes})
+	bapp.Commit()
+
+	return nil
+}
+
+func TestGenesis(t *testing.T) {
+	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "sdk/app")
+	db := dbm.NewMemDB()
+	bapp := app.NewBinanceChain(logger, db, os.Stdout)
+
+	// Construct some genesis bytes to reflect democoin/types/AppAccount
+	pk := crypto.GenPrivKeyEd25519().PubKey()
+	addr := sdk.AccAddress(pk.Address())
+	coins, err := sdk.ParseCoins("77bnb,99btc")
+	require.Nil(t, err)
+	baseAcc := auth.BaseAccount{
+		Address: addr,
+		Coins:   coins,
+	}
+	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
+
+	err = setGenesis(bapp, "ice-cold", baseAcc)
+	require.Nil(t, err)
+	// A checkTx context
+	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
+	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address)
+	require.Equal(t, acc, res1)
+
+	// reload app and ensure the account is still there
+	bapp = app.NewBinanceChain(logger, db, os.Stdout)
+	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
+	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
+	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address)
+	require.Equal(t, acc, res1)
 }
