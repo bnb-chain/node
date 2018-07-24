@@ -5,7 +5,7 @@
 ##
 BINARY=/bnbchaind/${BINARY:-bnbchaind}
 ID=${ID:-0}
-LOG=${LOG:-gaiad.log}
+LOG=${LOG:-bnbchaind.log}
 
 ##
 ## Assert linux binary
