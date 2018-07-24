@@ -1,11 +1,11 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -68,7 +68,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			fmt.Printf("Msg [%v] was sent.\n", msg)
 			return nil
 		},
 	}
@@ -83,16 +83,29 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 
 // CancelOrderCommand -
 func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "show [listed pair]",
+	cmd := &cobra.Command{
+		Use:   "show -l <listed pair>",
 		Short: "Show order book of the listed currency pair",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 || len(args[0]) == 0 {
-				return errors.New("You must provide a whatever")
+			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+
+			_, err := ctx.GetFromAddress()
+			if err != nil {
+				return err
 			}
+
+			symbol := viper.GetString(flagSymbol)
+			err = types.ValidateSymbol(symbol)
+			if err != nil {
+				return err
+			}
+			ctx.Query(fmt.Sprintf("app/orderbook/%s", symbol))
 			return nil
 		},
 	}
+
+	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
+	return cmd
 }
 
 // CancelOfferCmd -
@@ -115,7 +128,7 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			fmt.Printf("Msg [%v] was sent.\n", msg)
 			return nil
 		},
 	}
