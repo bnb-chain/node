@@ -390,12 +390,12 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	assert.Equal(int64(0), me.overLappedLevel[0].SellTotal)
 	t.Log(me.Trades)
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, "1"},
-		Trade{"6", 999, 30, "2"},
-		Trade{"7", 999, 50, "2"},
-		Trade{"8", 999, 70, "3"},
-		Trade{"9", 999, 30, "3"},
-		Trade{"9", 999, 30, "4"},
+		Trade{"6", 999, 70, 1000, 1000, "1"},
+		Trade{"6", 999, 30, 1000, 1000, "2"},
+		Trade{"7", 999, 50, 1000, 1000, "2"},
+		Trade{"8", 999, 70, 1000, 1000, "3"},
+		Trade{"9", 999, 30, 1000, 1000, "3"},
+		Trade{"9", 999, 30, 1000, 1000, "4"},
 	}, me.Trades)
 
 	me.Trades = me.Trades[:0]
@@ -424,12 +424,12 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	assert.Equal(int64(0), me.overLappedLevel[1].SellTotal)
 	t.Log(me.Trades)
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, "1"},
-		Trade{"6", 999, 30, "2"},
-		Trade{"7", 999, 50, "2"},
-		Trade{"8", 999, 70, "3"},
-		Trade{"9", 999, 30, "3"},
-		Trade{"9", 999, 30, "4"},
+		Trade{"6", 999, 70, 1000, 1000, "1"},
+		Trade{"6", 999, 30, 1000, 1000, "2"},
+		Trade{"7", 999, 50, 1000, 1000, "2"},
+		Trade{"8", 999, 70, 1000, 1000, "3"},
+		Trade{"9", 999, 30, 1000, 1000, "3"},
+		Trade{"9", 999, 30, 1000, 1000, "4"},
 	}, me.Trades)
 }
 
@@ -614,7 +614,7 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal(int64(98), me.LastTradePrice)
-	assert.Equal("[{92 98 50 1} {3 98 80 2} {3 98 20 4} {5 98 50 6} {5 98 50 91} {9 98 50 8}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 100 90 1} {3 98 80 100 98 2} {3 98 20 100 98 4} {5 98 50 100 98 6} {5 98 50 100 98 91} {9 98 50 98 98 8}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 101.0, 100)
@@ -639,7 +639,7 @@ func TestMatchEng_Match(t *testing.T) {
 
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{3 99 100 1} {5 99 100 8}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{3 99 100 100 98 1} {5 99 100 99 99 8}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 98.0, 100)
@@ -655,7 +655,7 @@ func TestMatchEng_Match(t *testing.T) {
 
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{92 98 50 1} {3 98 80 2} {3 98 20 4} {5 98 50 6} {5 98 50 91}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 100 97 1} {3 98 80 100 98 2} {3 98 20 100 98 4} {5 98 50 100 98 6} {5 98 50 100 98 91}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 96, 300)
