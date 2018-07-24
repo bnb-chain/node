@@ -1,7 +1,9 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -210,8 +212,46 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 }
 
 func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
-	return abci.ResponseQuery{
-		Code: uint32(sdk.ABCICodeOK),
-		Info: "DD",
+	switch path[1] {
+	case "orderbook":
+		//TODO: sync lock, validate pair, level number
+		if len(path) < 3 {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeUnknownRequest),
+				Info: "OrderBook Query Requires Pair Name",
+			}
+		}
+		pair := path[2]
+		orderbook := make([][]int64, 10)
+		for l := range orderbook {
+			orderbook[l] = make([]int64, 4)
+		}
+		i, j := 0, 0
+		app.OrderKeeper.GetOrderBookUnSafe(pair, 10,
+			func(price, qty int64) {
+				orderbook[i][2] = price
+				orderbook[i][3] = qty
+				i++
+			},
+			func(price, qty int64) {
+				orderbook[j][1] = price
+				orderbook[j][0] = qty
+				j++
+			})
+		var buffer bytes.Buffer
+		buffer.WriteString("SellQty    SellPrice    BuyPrice    BuyQty")
+		for _, l := range orderbook {
+			buffer.WriteString(fmt.Sprintf("%d    %d    %d    %d",
+				l[0], l[1], l[2], l[3]))
+		}
+		return abci.ResponseQuery{
+			Code: uint32(sdk.ABCICodeOK),
+			Info: buffer.String(),
+		}
+	default:
+		return abci.ResponseQuery{
+			Code: uint32(sdk.ABCICodeOK),
+			Info: "Unknown 'app' Query Path",
+		}
 	}
 }
