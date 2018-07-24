@@ -19,7 +19,7 @@ import (
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
-	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
+	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
 )
 
 // rootCmd is the entry point for this binary
