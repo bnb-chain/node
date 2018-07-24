@@ -129,7 +129,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		stateJSON := req.AppStateBytes
 
 		genesisState := new(GenesisState)
-		err := app.cdc.UnmarshalJSON(stateJSON, genesisState)
+		err := app.Codec.UnmarshalJSON(stateJSON, genesisState)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			// return sdk.ErrGenesisParse("").TraceCause(err, "")
