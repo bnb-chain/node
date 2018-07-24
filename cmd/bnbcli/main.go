@@ -18,7 +18,7 @@ import (
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
-	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/commands"
+	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/commands"
 )
 
