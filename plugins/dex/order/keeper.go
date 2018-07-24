@@ -51,7 +51,7 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		kp.engines[symbol] = eng
 	}
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
-	if err != nil {
+	if err == nil {
 		kp.allOrders[msg.Id] = msg
 		kp.roundOrders[symbol] += 1
 		if msg.TimeInForce == TimeInForce.IOC {
@@ -85,15 +85,17 @@ type transfer struct {
 	in      int64
 	outCcy  string
 	out     int64
+	unlock  int64
 }
 
 func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (transfer, transfer) {
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
-	quoteQty := trade.LastPx * trade.LastQty / 1e8
-	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty},
-		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty}
+	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)
+	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
+		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
 
 //TODO: should get an even hash
@@ -103,6 +105,7 @@ func channelHash(account sdk.AccAddress) int {
 
 func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	size := len(kp.roundOrders)
+	//size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
 		return nil
 	}
@@ -114,12 +117,12 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	}
 	i, j, t := 0, 0, channelSize
 	for k, _ := range kp.roundOrders {
-		i++
 		if i >= t {
 			j++
 			t += channelSize
 		}
 		outs[j] <- k
+		i++
 	}
 	tradeOuts := make([]chan transfer, concurrency)
 	for i, _ := range tradeOuts {
@@ -148,12 +151,18 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 				iocIDs := kp.roundIOCOrders[ts]
 				for _, id := range iocIDs {
 					if msg, ok := kp.allOrders[id]; ok {
-						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err != nil {
+						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
 							//here is a trick to use the same currency as in and out ccy to simulate cancel
 							qty := ord.LeavesQty()
 							c := channelHash(msg.Sender)
 							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
-							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty}
+							var unlock int64
+							if msg.Side == Side.BUY {
+								unlock = utils.CalBigNotional(msg.Price, qty)
+							} else {
+								unlock = qty
+							}
+							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
 						}
 					}
 				}
@@ -173,6 +182,13 @@ func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy matcheng
 	}
 }
 
+func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Trades, eng.LastTradePrice
+	}
+	return nil, 0
+}
+
 func (kp *Keeper) ClearOrderBook(pair string) {
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.Clear()
@@ -180,12 +196,13 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
-	//TODO: error handling
-	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
 	//for Out, only need to reduce the locked.
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)})))
+	account.SetLockedCoins(account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
 	accountMapper.SetAccount(ctx, account)
+	//TODO: error handling
+	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
+	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}})
 	return sdkErr
 }
 

@@ -71,9 +71,11 @@ func InitAccounts(ctx sdk.Context, app *app.BinanceChain) {
 	}
 }
 
-func ResetAccounts(ctx sdk.Context, app *app.BinanceChain) {
+func ResetAccounts(ctx sdk.Context, app *app.BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
-		app.AccountMapper.GetAccount(ctx, acc.GetAddress()).SetCoins(sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
+		a := app.AccountMapper.GetAccount(ctx, acc.GetAddress())
+		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
+		app.AccountMapper.SetAccount(ctx, a)
 	}
 }
 

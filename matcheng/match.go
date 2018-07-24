@@ -34,10 +34,12 @@ func (li *SurplusIndex) clear() {
 // - one trade would be implemented via TWO transfer transactions on each currency of the pair;
 // - the trade would be uniquely identifiable via the two order id. UUID generation cannot be used here.
 type Trade struct {
-	SId     string // sell order id
-	LastPx  int64  // execution price
-	LastQty int64  // execution quantity
-	BId     string // buy order Id
+	SId        string // sell order id
+	LastPx     int64  // execution price
+	LastQty    int64  // execution quantity
+	OrigBuyPx  int64  // original intended price for the trade
+	OrigSellPx int64  // original intended price for the trade
+	BId        string // buy order Id
 }
 
 type MatchEng struct {
@@ -239,6 +241,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	var k, h int
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
+	origBuyPx := me.overLappedLevel[i].Price
+	origSellPx := me.overLappedLevel[j].Price
 	// sort 1st to get the same seq of fills across different nodes
 	// TODO: duplicated sort called here via multiple call of fillOrders on the same i or j
 	// not a big deal so far since re-sort on a sorted slice is fast.
@@ -265,7 +269,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -273,7 +277,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -281,7 +285,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
 			h++
 			k++
 		}
