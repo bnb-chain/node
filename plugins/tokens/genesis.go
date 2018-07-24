@@ -1,8 +1,9 @@
 package tokens
 
 import (
-	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 func DefaultGenesisToken(owner sdk.AccAddress) types.Token {
