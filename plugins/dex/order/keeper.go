@@ -312,12 +312,11 @@ func (k Keeper) setVolumeBucketDuration(ctx sdk.Context, volumeBucketDuration in
 }
 
 // InitGenesis - store the genesis trend
-func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) error {
+func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	k.setMakerFee(ctx, data.MakerFee)
 	k.setTakerFee(ctx, data.TakerFee)
 	k.setFeeFactor(ctx, data.FeeFactor)
 	k.setMaxFee(ctx, data.MaxFee)
 	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
 	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
-	return nil
 }
