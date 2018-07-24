@@ -99,7 +99,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
 
-func setGenesis(bapp *app.BinanceChain, trend string, accs ...auth.BaseAccount) error {
+func setGenesis(bapp *app.BinanceChain, accs ...auth.BaseAccount) error {
 	genaccs := make([]*app.GenesisAccount, len(accs))
 	for i, acc := range accs {
 		genaccs[i] = app.NewGenesisAccount(&common.AppAccount{acc, "blah", sdk.Coins(nil), sdk.Coins(nil)})
@@ -139,7 +139,7 @@ func TestGenesis(t *testing.T) {
 	}
 	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
-	err = setGenesis(bapp, "ice-cold", baseAcc)
+	err = setGenesis(bapp, baseAcc)
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
