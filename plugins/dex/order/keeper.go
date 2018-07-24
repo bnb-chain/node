@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/BiJie/BinanceChain/matcheng"
+
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 
@@ -165,8 +167,16 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBook(pair string) {
+func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy matcheng.LevelIter, iterSell matcheng.LevelIter) {
+	if eng, ok := kp.engines[pair]; ok {
+		eng.Book.ShowDepth(levelNum, iterBuy, iterSell)
+	}
+}
 
+func (kp *Keeper) ClearOrderBook(pair string) {
+	if eng, ok := kp.engines[pair]; ok {
+		eng.Book.Clear()
+	}
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {

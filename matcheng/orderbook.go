@@ -43,6 +43,7 @@ type PriceLevelInterface interface {
 	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
 	Less(than bt.Item) bool
+	totalLeavesQty() int64
 }
 
 func compareBuy(p1 int64, p2 int64) int {
@@ -96,6 +97,14 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 	return OrderPart{}, 0, fmt.Errorf("order %s doesn't exist.", id)
 }
 
+func (l *PriceLevel) totalLeavesQty() int64 {
+	var total int64 = 0
+	for _, o := range l.orders {
+		total += o.LeavesQty()
+	}
+	return total
+}
+
 type OverLappedLevel struct {
 	Price                 int64
 	BuyOrders             []OrderPart
@@ -108,6 +117,8 @@ type OverLappedLevel struct {
 	BuySellSurplus        int64
 }
 
+type LevelIter func(price int64, total int64)
+
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
 // It can be implemented in different structures but here a fast unrolled-linked list,
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.
@@ -118,7 +129,8 @@ type OrderBookInterface interface {
 	InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error)
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int8) int
-	ShowDepth(numOfLevels int, iter func(price int64, buyTotal int64, sellTotal int64))
+	ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter)
+	Clear()
 }
 
 type OrderBookOnULList struct {
@@ -256,8 +268,14 @@ func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
 	return 0
 }
 
-func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iter func(price int64, buyTotal int64, sellTotal int64)) {
+func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter) {
+	ob.buyQueue.Iterate(numOfLevels, iterBuy)
+	ob.sellQueue.Iterate(numOfLevels, iterSell)
+}
 
+func (ob *OrderBookOnULList) Clear() {
+	ob.buyQueue.Clear()
+	ob.sellQueue.Clear()
 }
 
 type BuyPriceLevel struct {
