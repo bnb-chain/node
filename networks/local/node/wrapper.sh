@@ -26,9 +26,9 @@ fi
 export BCHOME="/bnbchaind/node${ID}/gaiad"
 
 if [ -d "`dirname ${BCHOME}/${LOG}`" ]; then
-  "$BINARY" --home "BCHOME" "$@" | tee "${BCHOME}/${LOG}"
+  "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
 else
-  "$BINARY" --home "BCHOME" "$@"
+  "$BINARY" --home "$BCHOME" "$@"
 fi
 
 chmod 777 -R /bnbchaind
