@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/BiJie/BinanceChain/matcheng"
-
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 
@@ -15,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	me "github.com/BiJie/BinanceChain/matcheng"
+	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 )
 
 // in the future, this may be distributed via Sharding
@@ -176,7 +174,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy matcheng.LevelIter, iterSell matcheng.LevelIter) {
+func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy me.LevelIter, iterSell me.LevelIter) {
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.ShowDepth(levelNum, iterBuy, iterSell)
 	}

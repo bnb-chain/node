@@ -1,4 +1,4 @@
-package app_test
+package app
 
 import (
 	"os"
@@ -19,7 +19,6 @@ import (
 
 	"github.com/tendermint/tendermint/libs/db"
 
-	"github.com/BiJie/BinanceChain/app"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 )
@@ -57,13 +56,13 @@ func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.Response
 var (
 	memDB                             = db.NewMemDB()
 	logger                            = log.NewTMLogger(os.Stdout)
-	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
+	testApp                           = NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
 	testClient = NewTestClient(testApp)
 )
 
-func InitAccounts(ctx sdk.Context, app *app.BinanceChain) {
+func InitAccounts(ctx sdk.Context, app *BinanceChain) {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{BaseAccount: auth.BaseAccount{Address: acc.GetAddress(), Coins: acc.GetCoins()}}
 		aacc.BaseAccount.AccountNumber = app.AccountMapper.GetNextAccountNumber(ctx)
@@ -71,7 +70,7 @@ func InitAccounts(ctx sdk.Context, app *app.BinanceChain) {
 	}
 }
 
-func ResetAccounts(ctx sdk.Context, app *app.BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
+func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountMapper.GetAccount(ctx, acc.GetAddress())
 		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
@@ -87,10 +86,10 @@ func Address(i int) sdk.AccAddress {
 	return addrs[i]
 }
 
-func NewTestClient(a *app.BinanceChain) *TestClient {
+func NewTestClient(a *BinanceChain) *TestClient {
 	a.SetCheckState(types.Header{})
 	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
-	return &TestClient{abcicli.NewLocalClient(nil, a), app.MakeCodec()}
+	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
 
 func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
@@ -101,13 +100,14 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
 
-func setGenesis(bapp *app.BinanceChain, accs ...auth.BaseAccount) error {
-	genaccs := make([]*app.GenesisAccount, len(accs))
+func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
+	genaccs := make([]GenesisAccount, len(accs))
 	for i, acc := range accs {
-		genaccs[i] = app.NewGenesisAccount(&common.AppAccount{acc, "blah", sdk.Coins(nil), sdk.Coins(nil)})
+		genaccs[i] = NewGenesisAccount(acc)
 	}
 
-	genesisState := app.GenesisState{
+	genesisState := GenesisState{
+		Tokens:     tokens,
 		Accounts:   genaccs,
 		DexGenesis: dex.Genesis{},
 	}
@@ -128,30 +128,29 @@ func setGenesis(bapp *app.BinanceChain, accs ...auth.BaseAccount) error {
 func TestGenesis(t *testing.T) {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "sdk/app")
 	db := dbm.NewMemDB()
-	bapp := app.NewBinanceChain(logger, db, os.Stdout)
+	bapp := NewBinanceChain(logger, db, os.Stdout)
 
 	// Construct some genesis bytes to reflect democoin/types/AppAccount
 	pk := crypto.GenPrivKeyEd25519().PubKey()
 	addr := sdk.AccAddress(pk.Address())
-	coins, err := sdk.ParseCoins("77bnb,99btc")
-	require.Nil(t, err)
 	baseAcc := auth.BaseAccount{
 		Address: addr,
-		Coins:   coins,
 	}
+	tokens := []common.Token{{"BNB", "BNB", int64(100000), addr}}
 	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
-	err = setGenesis(bapp, baseAcc)
+	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
-	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address)
+	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", sdk.NewInt(100000)}})
+	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 
 	// reload app and ensure the account is still there
-	bapp = app.NewBinanceChain(logger, db, os.Stdout)
+	bapp = NewBinanceChain(logger, db, os.Stdout)
 	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
 	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
-	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address)
+	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 }
