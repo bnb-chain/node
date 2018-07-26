@@ -49,14 +49,16 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		kp.engines[symbol] = eng
 	}
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
-	if err == nil {
-		kp.allOrders[msg.Id] = msg
-		kp.roundOrders[symbol] += 1
-		if msg.TimeInForce == TimeInForce.IOC {
-			kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
-		}
+	if err != nil {
+		return err
 	}
-	return err
+
+	kp.allOrders[msg.Id] = msg
+	kp.roundOrders[symbol] += 1
+	if msg.TimeInForce == TimeInForce.IOC {
+		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
+	}
+	return nil
 }
 
 func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
@@ -70,6 +72,18 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 	}
 	delete(kp.allOrders, id)
 	return eng.Book.RemoveOrder(id, side, price)
+}
+
+func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
+	_, ok := kp.allOrders[id]
+	if !ok {
+		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	}
+	eng, ok := kp.engines[symbol]
+	if !ok {
+		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	}
+	return eng.Book.GetOrder(id, side, price)
 }
 
 func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
