@@ -110,7 +110,7 @@ func MakeCodec() *wire.Codec {
 	bank.RegisterWire(cdc)
 	sdk.RegisterWire(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
-	tokens.RegisterTypes(cdc)
+	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 
 	return cdc
