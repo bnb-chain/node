@@ -9,7 +9,7 @@ import (
 )
 
 // Register concrete types on wire codec
-func RegisterTypes(cdc *wire.Codec) {
+func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(issue.Msg{}, "tokens/IssueMsg", nil)
 	cdc.RegisterConcrete(burn.Msg{}, "tokens/BurnMsg", nil)
 	cdc.RegisterConcrete(freeze.FreezeMsg{}, "tokens/FreezeMsg", nil)
