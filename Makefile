@@ -60,6 +60,10 @@ test_unit:
 	@go test $(PACKAGES)
 
 ########################################
+### Pre Commit
+pre_commit: build test format
+
+########################################
 ### Local validator nodes using docker and docker-compose
 build-docker-node:
 	$(MAKE) -C networks/local
