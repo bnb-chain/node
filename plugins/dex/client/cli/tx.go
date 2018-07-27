@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/pkg/errors"
+
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

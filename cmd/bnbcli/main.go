@@ -7,7 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/version"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
 	"github.com/spf13/cobra"
@@ -16,6 +15,7 @@ import (
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
+	authcmd "github.com/BiJie/BinanceChain/plugins/auth/client/cli"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
 )
