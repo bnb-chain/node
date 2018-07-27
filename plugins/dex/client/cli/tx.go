@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -40,7 +41,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			symbol := viper.GetString(flagSymbol)
-			err = types.ValidateSymbol(symbol)
+			err = validatePairSymbol(symbol)
 			if err != nil {
 				return err
 			}
@@ -54,7 +55,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			qtyStr := viper.GetString(flagPrice)
+			qtyStr := viper.GetString(flagQty)
 			qty, err := utils.ParsePrice(qtyStr)
 			if err != nil {
 				return err
@@ -96,11 +97,27 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			symbol := viper.GetString(flagSymbol)
-			err = types.ValidateSymbol(symbol)
+			err = validatePairSymbol(symbol)
 			if err != nil {
 				return err
 			}
-			ctx.Query(fmt.Sprintf("app/orderbook/%s", symbol))
+
+			bz, err := ctx.Query(fmt.Sprintf("app/orderbook/%s", symbol))
+			if err != nil {
+				return err
+			}
+
+			orderbook := make([][]int64, 10)
+			err = cdc.UnmarshalBinary(bz, &orderbook)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("%16v|%16v|%16v|%16v\n", "SellQty", "SellPrice", "BuyPrice", "BuyQty")
+			for _, l := range orderbook {
+				fmt.Printf("%16v|%16v|%16v|%16v\n", l[0], l[1], l[2], l[3])
+			}
+
 			return nil
 		},
 	}
@@ -142,4 +159,20 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
 	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd
+}
+
+func validatePairSymbol(symbol string) error {
+	tokenSymbols := strings.Split(symbol, "_")
+	if len(tokenSymbols) != 2 {
+		return errors.New("Invalid symbol")
+	}
+
+	for _, tokenSymbol := range tokenSymbols {
+		err := types.ValidateSymbol(tokenSymbol)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
