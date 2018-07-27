@@ -141,8 +141,7 @@ func TokensRequestHandler(
 		denoms = map[string]bool{}
 		for _, coin := range coins {
 			denom := coin.Denom
-			exists := true
-			// exists := tokens.ExistsCC(ctx, denom)
+			exists := tokens.ExistsCC(ctx, denom)
 			// TODO: we probably actually want to show zero balances.
 			// if exists && !sdk.Int.IsZero(coins.AmountOf(denom)) {
 			if exists {
