@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/BiJie/BinanceChain/matcheng"
-
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 
@@ -15,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	me "github.com/BiJie/BinanceChain/matcheng"
+	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 )
 
 // in the future, this may be distributed via Sharding
@@ -52,13 +50,15 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	}
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
 	if err != nil {
-		kp.allOrders[msg.Id] = msg
-		kp.roundOrders[symbol] += 1
-		if msg.TimeInForce == TimeInForce.IOC {
-			kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
-		}
+		return err
 	}
-	return err
+
+	kp.allOrders[msg.Id] = msg
+	kp.roundOrders[symbol] += 1
+	if msg.TimeInForce == TimeInForce.IOC {
+		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
+	}
+	return nil
 }
 
 func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
@@ -74,6 +74,18 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 	return eng.Book.RemoveOrder(id, side, price)
 }
 
+func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
+	_, ok := kp.allOrders[id]
+	if !ok {
+		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	}
+	eng, ok := kp.engines[symbol]
+	if !ok {
+		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	}
+	return eng.Book.GetOrder(id, side, price)
+}
+
 func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
 	ord, ok := kp.allOrders[id]
 	return ord, ok
@@ -85,15 +97,17 @@ type transfer struct {
 	in      int64
 	outCcy  string
 	out     int64
+	unlock  int64
 }
 
 func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (transfer, transfer) {
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
-	quoteQty := trade.LastPx * trade.LastQty / 1e8
-	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty},
-		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty}
+	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)
+	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
+		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
 
 //TODO: should get an even hash
@@ -103,6 +117,7 @@ func channelHash(account sdk.AccAddress) int {
 
 func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	size := len(kp.roundOrders)
+	//size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
 		return nil
 	}
@@ -114,12 +129,12 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	}
 	i, j, t := 0, 0, channelSize
 	for k, _ := range kp.roundOrders {
-		i++
 		if i >= t {
 			j++
 			t += channelSize
 		}
 		outs[j] <- k
+		i++
 	}
 	tradeOuts := make([]chan transfer, concurrency)
 	for i, _ := range tradeOuts {
@@ -148,12 +163,18 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 				iocIDs := kp.roundIOCOrders[ts]
 				for _, id := range iocIDs {
 					if msg, ok := kp.allOrders[id]; ok {
-						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err != nil {
+						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
 							//here is a trick to use the same currency as in and out ccy to simulate cancel
 							qty := ord.LeavesQty()
 							c := channelHash(msg.Sender)
 							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
-							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty}
+							var unlock int64
+							if msg.Side == Side.BUY {
+								unlock = utils.CalBigNotional(msg.Price, qty)
+							} else {
+								unlock = qty
+							}
+							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
 						}
 					}
 				}
@@ -167,10 +188,17 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy matcheng.LevelIter, iterSell matcheng.LevelIter) {
+func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy me.LevelIter, iterSell me.LevelIter) {
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.ShowDepth(levelNum, iterBuy, iterSell)
 	}
+}
+
+func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Trades, eng.LastTradePrice
+	}
+	return nil, 0
 }
 
 func (kp *Keeper) ClearOrderBook(pair string) {
@@ -180,12 +208,13 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
-	//TODO: error handling
-	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
 	//for Out, only need to reduce the locked.
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.out)})))
+	account.SetLockedCoins(account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
 	accountMapper.SetAccount(ctx, account)
+	//TODO: error handling
+	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
+	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}})
 	return sdkErr
 }
 
@@ -295,12 +324,11 @@ func (k Keeper) setVolumeBucketDuration(ctx sdk.Context, volumeBucketDuration in
 }
 
 // InitGenesis - store the genesis trend
-func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) error {
+func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	k.setMakerFee(ctx, data.MakerFee)
 	k.setTakerFee(ctx, data.TakerFee)
 	k.setFeeFactor(ctx, data.FeeFactor)
 	k.setMaxFee(ctx, data.MaxFee)
 	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
 	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
-	return nil
 }

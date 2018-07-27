@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"io"
+	"os"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
@@ -25,6 +26,12 @@ import (
 
 const (
 	appName = "BNBChain"
+)
+
+// default home directories for expected binaries
+var (
+	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
 )
 
 // BinanceChain is the BNBChain ABCI application
@@ -122,28 +129,34 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		stateJSON := req.AppStateBytes
 
 		genesisState := new(GenesisState)
-		err := json.Unmarshal(stateJSON, genesisState)
+		err := app.Codec.UnmarshalJSON(stateJSON, genesisState)
 		if err != nil {
 			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
 			// return sdk.ErrGenesisParse("").TraceCause(err, "")
 		}
 
 		for _, gacc := range genesisState.Accounts {
-			acc, err := gacc.ToAppAccount()
-			if err != nil {
-				panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-				//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-			}
+			acc := gacc.ToAppAccount()
+			acc.AccountNumber = app.AccountMapper.GetNextAccountNumber(ctx)
 			app.AccountMapper.SetAccount(ctx, acc)
 		}
 
-		// Application specific genesis handling
-		err = app.OrderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
-		if err != nil {
-			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
+		for _, token := range genesisState.Tokens {
+			// TODO: replace by Issue and move to token.genesis
+			err = app.TokenMapper.NewToken(ctx, token)
+			if err != nil {
+				panic(err)
+			}
+
+			_, _, sdkErr := app.CoinKeeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil),
+				sdk.Coin{Denom: token.Symbol, Amount: sdk.NewInt(token.TotalSupply)}))
+			if sdkErr != nil {
+				panic(sdkErr)
+			}
 		}
 
+		// Application specific genesis handling
+		app.OrderKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
 		return abci.ResponseInitChain{}
 	}
 }
@@ -172,11 +185,10 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	ctx := app.NewContext(true, abci.Header{})
 
 	// iterate to get the accounts
-	accounts := []*GenesisAccount{}
+	accounts := []GenesisAccount{}
 	appendAccount := func(acc auth.Account) (stop bool) {
-		account := &GenesisAccount{
+		account := GenesisAccount{
 			Address: acc.GetAddress(),
-			Coins:   acc.GetCoins(),
 		}
 		accounts = append(accounts, account)
 		return false
@@ -209,8 +221,49 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 }
 
 func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
-	return abci.ResponseQuery{
-		Code: uint32(sdk.ABCICodeOK),
-		Info: "DD",
+	switch path[1] {
+	case "orderbook":
+		//TODO: sync lock, validate pair, level number
+		if len(path) < 3 {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeUnknownRequest),
+				Log:  "OrderBook Query Requires Pair Name",
+			}
+		}
+		pair := path[2]
+		orderbook := make([][]int64, 10)
+		for l := range orderbook {
+			orderbook[l] = make([]int64, 4)
+		}
+		i, j := 0, 0
+		app.OrderKeeper.GetOrderBookUnSafe(pair, 10,
+			func(price, qty int64) {
+				orderbook[i][2] = price
+				orderbook[i][3] = qty
+				i++
+			},
+			func(price, qty int64) {
+				orderbook[j][1] = price
+				orderbook[j][0] = qty
+				j++
+			})
+
+		resValue, err := app.Codec.MarshalBinary(orderbook)
+		if err != nil {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeInternal),
+				Log:  err.Error(),
+			}
+		}
+
+		return abci.ResponseQuery{
+			Code:  uint32(sdk.ABCICodeOK),
+			Value: resValue,
+		}
+	default:
+		return abci.ResponseQuery{
+			Code: uint32(sdk.ABCICodeOK),
+			Info: "Unknown 'app' Query Path",
+		}
 	}
 }

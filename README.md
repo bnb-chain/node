@@ -51,7 +51,7 @@ You may need add BNBCHAINPATH to the environment variables.
 > make install
 ```
 
-> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set https_proxy=127.0.0.1:1080` if you still have https issues. 
+> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set(win)/export(linux/mac) https_proxy=127.0.0.1:1080` if you still have https issues. 
 
 To test that installation worked, try to run the cli tool:
 
@@ -64,12 +64,12 @@ $ bnbcli
 This command will generate a keypair for your node and create the genesis block config:
 
 ```bash
-$ bnbchaind init
+$ bnbchaind init --name=xxx
 $ cat ~/.bnbchaind/config/genesis.json
 ```
 
-> If you are working on windows platform, replace all **`'\'`** by **`'/'`** in `~\.bnbchaind\config\config.toml`. 
-Similarly, you need apply the same operation to `~\.bnbcli\config\config.toml` if it exists.
+> ~~If you are working on windows platform, replace all **`'\'`** by **`'/'`** in `~\.bnbchaind\config\config.toml`. Similarly, you need apply the same operation to `~\.bnbcli\config\config.toml` if it exists.~~
+> (This is fixed in new version of cosmos)
 
 
 You may want to check the [Issuing assets](#issuing-assets) section below before you start, but this is how to start the node and begin generating blocks:

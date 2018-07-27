@@ -42,6 +42,7 @@ type PriceLevel struct {
 type PriceLevelInterface interface {
 	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
+	getOrder(id string) (OrderPart, error)
 	Less(than bt.Item) bool
 	totalLeavesQty() int64
 }
@@ -97,6 +98,16 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 	return OrderPart{}, 0, fmt.Errorf("order %s doesn't exist.", id)
 }
 
+func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
+	for _, o := range l.orders {
+		if o.id == id {
+			return o, nil
+		}
+	}
+	// not found
+	return OrderPart{}, fmt.Errorf("order %s doesn't exist.", id)
+}
+
 func (l *PriceLevel) totalLeavesQty() int64 {
 	var total int64 = 0
 	for _, o := range l.orders {
@@ -127,6 +138,7 @@ type OrderBookInterface interface {
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
 	InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error)
+	GetOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter)
@@ -258,6 +270,16 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int8, price int64) (Ord
 		q.DeletePriceLevel(pl.Price)
 	}
 	return op, ok
+}
+
+func (ob *OrderBookOnULList) GetOrder(id string, side int8, price int64) (OrderPart, error) {
+	q := ob.getSideQueue(side)
+	var pl *PriceLevel
+	if pl = q.GetPriceLevel(price); pl == nil {
+		return OrderPart{}, fmt.Errorf("order price %d doesn't exist at side %d.", price, side)
+	}
+	op, err := pl.getOrder(id)
+	return op, err
 }
 
 func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {

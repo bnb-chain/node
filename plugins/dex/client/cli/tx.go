@@ -1,11 +1,12 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
-
 	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -19,6 +20,7 @@ import (
 
 const (
 	flagId          = "id"
+	flagRefId       = "refid"
 	flagPrice       = "price"
 	flagQty         = "qty"
 	flagSide        = "side"
@@ -39,7 +41,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			symbol := viper.GetString(flagSymbol)
-			err = types.ValidateSymbol(symbol)
+			err = validatePairSymbol(symbol)
 			if err != nil {
 				return err
 			}
@@ -53,7 +55,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			qtyStr := viper.GetString(flagPrice)
+			qtyStr := viper.GetString(flagQty)
 			qty, err := utils.ParsePrice(qtyStr)
 			if err != nil {
 				return err
@@ -68,7 +70,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			fmt.Printf("Msg [%v] was sent.\n", msg)
 			return nil
 		},
 	}
@@ -83,22 +85,51 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 
 // CancelOrderCommand -
 func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "show [listed pair]",
+	cmd := &cobra.Command{
+		Use:   "show -l <listed pair>",
 		Short: "Show order book of the listed currency pair",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 || len(args[0]) == 0 {
-				return errors.New("You must provide a whatever")
+			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+
+			_, err := ctx.GetFromAddress()
+			if err != nil {
+				return err
 			}
+
+			symbol := viper.GetString(flagSymbol)
+			err = validatePairSymbol(symbol)
+			if err != nil {
+				return err
+			}
+
+			bz, err := ctx.Query(fmt.Sprintf("app/orderbook/%s", symbol))
+			if err != nil {
+				return err
+			}
+
+			orderbook := make([][]int64, 10)
+			err = cdc.UnmarshalBinary(bz, &orderbook)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("%16v|%16v|%16v|%16v\n", "SellQty", "SellPrice", "BuyPrice", "BuyQty")
+			for _, l := range orderbook {
+				fmt.Printf("%16v|%16v|%16v|%16v\n", l[0], l[1], l[2], l[3])
+			}
+
 			return nil
 		},
 	}
+
+	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
+	return cmd
 }
 
 // CancelOfferCmd -
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cancel -i <order id>",
+		Use:   "cancel -i <order id> -f <ref order id>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
@@ -109,16 +140,39 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			id := viper.GetString(flagId)
-
-			msg := order.NewCancelOrderMsg(from, id)
+			if id == "" {
+				fmt.Println("please input order id")
+			}
+			refId := viper.GetString(flagRefId)
+			if refId == "" {
+				fmt.Println("please input reference order id")
+			}
+			msg := order.NewCancelOrderMsg(from, id, refId)
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
 			}
-
+			fmt.Printf("Msg [%v] was sent.\n", msg)
 			return nil
 		},
 	}
 	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
+	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd
+}
+
+func validatePairSymbol(symbol string) error {
+	tokenSymbols := strings.Split(symbol, "_")
+	if len(tokenSymbols) != 2 {
+		return errors.New("Invalid symbol")
+	}
+
+	for _, tokenSymbol := range tokenSymbols {
+		err := types.ValidateSymbol(tokenSymbol)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
