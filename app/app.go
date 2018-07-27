@@ -1,9 +1,7 @@
 package app
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 
@@ -229,7 +227,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 		if len(path) < 3 {
 			return abci.ResponseQuery{
 				Code: uint32(sdk.CodeUnknownRequest),
-				Info: "OrderBook Query Requires Pair Name",
+				Log:  "OrderBook Query Requires Pair Name",
 			}
 		}
 		pair := path[2]
@@ -249,15 +247,18 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 				orderbook[j][0] = qty
 				j++
 			})
-		var buffer bytes.Buffer
-		buffer.WriteString("SellQty    SellPrice    BuyPrice    BuyQty")
-		for _, l := range orderbook {
-			buffer.WriteString(fmt.Sprintf("%d    %d    %d    %d",
-				l[0], l[1], l[2], l[3]))
+
+		resValue, err := app.Codec.MarshalBinary(orderbook)
+		if err != nil {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeInternal),
+				Log:  err.Error(),
+			}
 		}
+
 		return abci.ResponseQuery{
-			Code: uint32(sdk.ABCICodeOK),
-			Info: buffer.String(),
+			Code:  uint32(sdk.ABCICodeOK),
+			Value: resValue,
 		}
 	default:
 		return abci.ResponseQuery{
