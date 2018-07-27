@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -86,6 +84,6 @@ func main() {
 	dexcmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
-	executor := cli.PrepareMainCmd(rootCmd, "BC", os.ExpandEnv("$HOME/.bnbcli"))
+	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
 	executor.Execute()
 }
