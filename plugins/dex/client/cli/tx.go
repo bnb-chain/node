@@ -19,6 +19,7 @@ import (
 
 const (
 	flagId          = "id"
+	flagRefId       = "refid"
 	flagPrice       = "price"
 	flagQty         = "qty"
 	flagSide        = "side"
@@ -111,7 +112,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 // CancelOfferCmd -
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cancel -i <order id>",
+		Use:   "cancel -i <order id> -f <ref order id>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
@@ -122,8 +123,14 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			id := viper.GetString(flagId)
-
-			msg := order.NewCancelOrderMsg(from, id)
+			if id == "" {
+				fmt.Println("please input order id")
+			}
+			refId := viper.GetString(flagRefId)
+			if refId == "" {
+				fmt.Println("please input reference order id")
+			}
+			msg := order.NewCancelOrderMsg(from, id, refId)
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -133,5 +140,6 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
+	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd
 }

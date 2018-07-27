@@ -81,11 +81,17 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 
 // Handle CancelOffer -
 func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
-	origOrd, ok := keeper.OrderExists(msg.Id)
+	origOrd, ok := keeper.OrderExists(msg.RefId)
 
 	//only check whether there exists order to cancel
 	if !ok {
-		errString := fmt.Sprintf("Failed to find order [%v] on symbol [%v]", msg.Id, msg.Symbol)
+		errString := fmt.Sprintf("Failed to find order [%v]", msg.RefId)
+		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
+	}
+
+	// only can cancel their own order
+	if !reflect.DeepEqual(msg.Sender, origOrd.Sender) {
+		errString := fmt.Sprintf("Order [%v] does not belong to transaction sender", msg.RefId)
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
 	}
 
