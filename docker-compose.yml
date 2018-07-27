@@ -13,7 +13,7 @@ services:
       - ./build:/bnbchaind:Z
     networks:
       localnet:
-        ipv4_address: 192.168.10.2
+        ipv4_address: 172.20.0.2
 
   bnbdnode1:
     container_name: bnbdnode1
@@ -27,7 +27,7 @@ services:
       - ./build:/bnbchaind:Z
     networks:
       localnet:
-        ipv4_address: 192.168.10.3
+        ipv4_address: 172.20.0.3
 
   bnbdnode2:
     container_name: bnbdnode2
@@ -41,7 +41,7 @@ services:
       - ./build:/bnbchaind:Z
     networks:
       localnet:
-        ipv4_address: 192.168.10.4
+        ipv4_address: 172.20.0.4
 
   bnbdnode3:
     container_name: bnbdnode3
@@ -55,7 +55,7 @@ services:
       - ./build:/bnbchaind:Z
     networks:
       localnet:
-        ipv4_address: 192.168.10.5
+        ipv4_address: 172.20.0.5
 
 networks:
   localnet:
@@ -64,5 +64,5 @@ networks:
       driver: default
       config:
       -
-        subnet: 192.168.10.0/16
+        subnet: 172.20.0.0/16
 
