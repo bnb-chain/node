@@ -2,7 +2,6 @@ package rest
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -56,7 +55,8 @@ func BalanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 			symbol:  vars["symbol"],
 		}
 
-		exists := tokens.ExistsCC(ctx, params.symbol)
+		// exists := tokens.ExistsCC(ctx, params.symbol)
+		exists := true
 		if !exists {
 			throw(http.StatusNotFound, errors.New("symbol not found"))
 			return
@@ -69,13 +69,24 @@ func BalanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 			return
 		}
 
-		fmt.Println(coins)
+		locked := sdk.NewInt(0)
+		frozen := sdk.NewInt(0)
+		lockedc, err := getLockedCC(cdc, ctx, params.address)
+		if err != nil {
+			locked = lockedc.AmountOf(params.symbol)
+		}
+		frozenc, err := getFrozenCC(cdc, ctx, params.address)
+		if err != nil {
+			frozen = frozenc.AmountOf(params.symbol)
+		}
 
 		resp := balanceResponse{
 			Address: vars["address"],
 			Balance: TokenBalance{
 				Symbol:  params.symbol,
 				Balance: coins.AmountOf(params.symbol),
+				Locked:  locked,
+				Frozen:  frozen,
 			},
 		}
 
