@@ -11,16 +11,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-type TokenBalance struct {
-	Symbol  string  `json:"symbol"`
-	Balance sdk.Int `json:"balance"`
-}
-
 type balancesSendBody struct {
 	Address Address `json:"address"`
+}
+
+type TokenBalance struct {
+	Symbol  string  `json:"symbol"`
+	Balance sdk.Int `json:"free"`
+	Locked  sdk.Int `json:"locked"`
+	Frozen  sdk.Int `json:"frozen"`
 }
 
 type balancesResponse struct {
@@ -72,6 +75,30 @@ func getCoinsCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (
 	return acc.GetCoins(), nil
 }
 
+func getLockedCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (sdk.Coins, error) {
+	acc, err := getAccount(cdc, ctx, addr)
+	nacc := acc.(types.NamedAccount)
+	if err != nil {
+		return sdk.Coins{}, err
+	}
+	if acc == nil {
+		return sdk.Coins{}, nil
+	}
+	return nacc.GetLockedCoins(), nil
+}
+
+func getFrozenCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (sdk.Coins, error) {
+	acc, err := getAccount(cdc, ctx, addr)
+	nacc := acc.(types.NamedAccount)
+	if err != nil {
+		return sdk.Coins{}, err
+	}
+	if acc == nil {
+		return sdk.Coins{}, nil
+	}
+	return nacc.GetFrozenCoins(), nil
+}
+
 // end temp stuff
 
 // TokensRequestHandler - http request handler to send coins to a address
@@ -114,7 +141,8 @@ func TokensRequestHandler(
 		denoms = map[string]bool{}
 		for _, coin := range coins {
 			denom := coin.Denom
-			exists := tokens.ExistsCC(ctx, denom)
+			exists := true
+			// exists := tokens.ExistsCC(ctx, denom)
 			// TODO: we probably actually want to show zero balances.
 			// if exists && !sdk.Int.IsZero(coins.AmountOf(denom)) {
 			if exists {
@@ -126,9 +154,21 @@ func TokensRequestHandler(
 		bals := make([]TokenBalance, 0, len(denoms))
 		for symb := range denoms {
 			symbs = append(symbs, symb)
+			locked := sdk.NewInt(0)
+			frozen := sdk.NewInt(0)
+			lockedc, err := getLockedCC(cdc, ctx, params.address)
+			if err != nil {
+				locked = lockedc.AmountOf(symb)
+			}
+			frozenc, err := getFrozenCC(cdc, ctx, params.address)
+			if err != nil {
+				frozen = frozenc.AmountOf(symb)
+			}
 			bals = append(bals, TokenBalance{
 				Symbol:  symb,
 				Balance: coins.AmountOf(symb),
+				Locked:  locked,
+				Frozen:  frozen,
 			})
 		}
 
