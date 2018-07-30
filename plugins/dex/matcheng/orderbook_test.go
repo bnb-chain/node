@@ -438,36 +438,36 @@ func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
 	assert.Nil(err)
 
 	l := NewOrderBookOnULList(7, 2)
-	l.InsertOrder("123459", SELLSIDE, 10002, 100.5, 1000)
-	l.InsertOrder("123459", SELLSIDE, 10002, 99.5, 1000)
-	l.InsertOrder("123455", SELLSIDE, 10000, 100.0, 1000)
-	l.InsertOrder("123457", SELLSIDE, 10001, 100.7, 1000)
-	l.InsertOrder("123458", SELLSIDE, 10002, 100.0, 1000)
-	l.InsertOrder("123460", SELLSIDE, 10002, 100.0, 1000)
-	ord, err = l.RemoveOrder("123457", SELLSIDE, 100.7)
-	assert.Equal(ord, OrderPart{"123457", 10001, 1000.0, 0, 0}, "Failed to remove last order level")
-	assert.Equal("Bucket 0{99.50000000->[123459 10002 1000.00000000,]},Bucket 1{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},",
-		l.sellQueue.String(), "Level at 100.7 should be removed.")
-	ord, err = l.RemoveOrder("123459", SELLSIDE, 99.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove 1st order level")
-	assert.Equal("Bucket 0{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]100.50000000->[123459 10002 1000.00000000,]},",
-		l.sellQueue.String(), "Level at 99.5 should be removed.")
-	ord, err = l.RemoveOrder("123459", SELLSIDE, 100.5)
-	assert.Equal(ord, OrderPart{"123459", 10002, 1000.0, 0, 0}, "Failed to remove last price")
-	assert.Equal("Bucket 0{100.00000000->[123455 10000 1000.00000000,123458 10002 1000.00000000,123460 10002 1000.00000000,]},",
-		l.sellQueue.String(), "Level at 100.5 should be removed.")
-	ord, err = l.RemoveOrder("123455", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123455", 10000, 1000.0, 0, 0}, "Failed to remove 1st order at the same price")
-	assert.Equal("Bucket 0{100.00000000->[123458 10002 1000.00000000,123460 10002 1000.00000000,]},",
-		l.sellQueue.String(), "Level at 100.0 should remain.")
-	ord, err = l.RemoveOrder("123460", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123460", 10002, 1000.0, 0, 0}, "Failed to remove last order")
-	assert.Equal("Bucket 0{100.00000000->[123458 10002 1000.00000000,]},",
-		l.sellQueue.String(), "Level at 100.0 should remain.")
-	ord, err = l.RemoveOrder("123458", SELLSIDE, 100.0)
-	assert.Equal(ord, OrderPart{"123458", 10002, 1000.0, 0, 0}, "Failed to remove last order")
-	assert.Equal("",
-		l.sellQueue.String(), "Level at 100.0 should be removed.")
+	l.InsertOrder("123459", SELLSIDE, 10002, 1005, 10000)
+	l.InsertOrder("123459", SELLSIDE, 10002, 995, 10000)
+	l.InsertOrder("123455", SELLSIDE, 10000, 1000, 10000)
+	l.InsertOrder("123457", SELLSIDE, 10001, 1007, 10000)
+	l.InsertOrder("123458", SELLSIDE, 10002, 1000, 10000)
+	l.InsertOrder("123460", SELLSIDE, 10002, 1000, 10000)
+	ord, err = l.RemoveOrder("123457", SELLSIDE, 1007)
+	assert.Equal(ord, OrderPart{"123457", 10001, 10000, 0, 0}, "Failed to remove last order level")
+	assert.Equal("Bucket 0{995->[123459 10002 10000,]},Bucket 1{1000->[123455 10000 10000,123458 10002 10000,123460 10002 10000,]1005->[123459 10002 10000,]},",
+		l.sellQueue.String(), "Level at 1007 should be removed.")
+	ord, err = l.RemoveOrder("123459", SELLSIDE, 995)
+	assert.Equal(ord, OrderPart{"123459", 10002, 10000, 0, 0}, "Failed to remove 1st order level")
+	assert.Equal("Bucket 0{1000->[123455 10000 10000,123458 10002 10000,123460 10002 10000,]1005->[123459 10002 10000,]},",
+		l.sellQueue.String(), "Level at 995 should be removed.")
+	ord, err = l.RemoveOrder("123459", SELLSIDE, 1005)
+	assert.Equal(ord, OrderPart{"123459", 10002, 10000, 0, 0}, "Failed to remove last price")
+	assert.Equal("Bucket 0{1000->[123455 10000 10000,123458 10002 10000,123460 10002 10000,]},",
+		l.sellQueue.String(), "Level at 1005 should be removed.")
+	ord, err = l.RemoveOrder("123455", SELLSIDE, 1000)
+	assert.Equal(ord, OrderPart{"123455", 10000, 10000, 0, 0}, "Failed to remove 1st order at the same price")
+	assert.Equal("Bucket 0{1000->[123458 10002 10000,123460 10002 10000,]},",
+		l.sellQueue.String(), "Level at 1000 should remain.")
+	ord, err = l.RemoveOrder("123460", SELLSIDE, 1000)
+	assert.Equal(ord, OrderPart{"123460", 10002, 10000, 0, 0}, "Failed to remove last order")
+	assert.Equal("Bucket 0{1000->[123458 10002 10000,]},",
+		l.sellQueue.String(), "Level at 1000 should remain.")
+	ord, err = l.RemoveOrder("123458", SELLSIDE, 1000)
+	assert.Equal(ord, OrderPart{"123458", 10002, 10000, 0, 0}, "Failed to remove last order")
+	assert.Equal("Bucket 0{},",
+		l.sellQueue.String(), "Level at 1000 should be removed.")
 }
 
 func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {

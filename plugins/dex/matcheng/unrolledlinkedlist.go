@@ -294,6 +294,12 @@ func (ull *ULList) DeletePriceLevel(price float64) bool {
 			// bucket is empty, remove from list
 			oldNext := last.next
 			if lastOfLast == nil { //i.e. last == ull.begin
+				if oldNext == ull.dend {
+					//do nothing
+					return true
+				}
+				//there are more than 1 bucket before begin and dend,
+				//drop the begin
 				ull.begin = oldNext
 			} else {
 				lastOfLast.next = oldNext
