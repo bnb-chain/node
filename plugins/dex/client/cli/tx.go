@@ -89,13 +89,8 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
 
-			_, err := ctx.GetFromAddress()
-			if err != nil {
-				return err
-			}
-
 			symbol := viper.GetString(flagSymbol)
-			err = validatePairSymbol(symbol)
+			err := validatePairSymbol(symbol)
 			if err != nil {
 				return err
 			}
