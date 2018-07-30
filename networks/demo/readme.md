@@ -10,6 +10,12 @@ issue token
 ./issue.sh --from alice -s TRX -n 10000000 --name tron
 ```
 
+### info.sh
+show token info
+``` shell
+./info.sh -s ADA
+```
+
 ### list.sh
 list trade pair
 
