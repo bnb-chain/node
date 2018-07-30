@@ -16,6 +16,4 @@ while true ; do
     esac
 done;
 
-expect ./show.exp $pair $chain_id
-
-echo "Order sent success."
+./bnbcli dex show -l $pair
