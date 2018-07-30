@@ -3,7 +3,7 @@
 # ./order.sh --list-pair BTC_BNB --side 1 --price 1 --quantity 100 --from alice --tif 1
 
 chain_id=$CHAIN_ID
-id="$(cat /proc/sys/kernel/random/uuid)"
+id="$(od -x /dev/urandom | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')"
 
 while true ; do
     case "$1" in
