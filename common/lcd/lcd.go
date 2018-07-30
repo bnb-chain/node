@@ -20,6 +20,7 @@ import (
 	tmserver "github.com/tendermint/tendermint/rpc/lib/server"
 
 	"github.com/BiJie/BinanceChain/common"
+	dex "github.com/BiJie/BinanceChain/plugins/dex/client/rest"
 	tokens "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
@@ -89,6 +90,7 @@ func createHandler(cdc *wire.Codec) http.Handler {
 	tx.RegisterRoutes(ctx, r, cdc)
 	auth.RegisterRoutes(ctx, r, cdc, "acc")
 	bank.RegisterRoutes(ctx, r, cdc, kb)
+	dex.RegisterRoutes(ctx, r, cdc)
 	tokens.RegisterRoutes(ctx, r, cdc, tkstore.NewMapper(cdc, common.TokenStoreKey))
 
 	return r
