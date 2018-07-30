@@ -10,16 +10,12 @@ while true ; do
             pair=$2
             shift 2
         ;;
-		--from )
-			from=$2
-			shift 2
-		;;
 		*)
             break
         ;;
     esac
 done;
 
-expect ./show.exp $pair $from $chain_id
+expect ./show.exp $pair $chain_id
 
 echo "Order sent success."
