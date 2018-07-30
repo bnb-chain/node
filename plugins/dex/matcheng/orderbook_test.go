@@ -465,7 +465,7 @@ func TestOrderBookOnULList_RemoveOrder(t *testing.T) {
 		l.sellQueue.String(), "Level at 1000 should remain.")
 	ord, err = l.RemoveOrder("123458", SELLSIDE, 1000)
 	assert.Equal(ord, OrderPart{"123458", 10002, 10000, 0, 0}, "Failed to remove last order")
-	assert.Equal("",
+	assert.Equal("Bucket 0{},",
 		l.sellQueue.String(), "Level at 1000 should be removed.")
 }
 
