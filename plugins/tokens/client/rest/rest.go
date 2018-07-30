@@ -25,6 +25,6 @@ func RegisterRoutes(
 	cdc *wire.Codec,
 	tokens tokens.Mapper,
 ) {
-	registerTokensRoute(ctx, r, cdc, tokens)
-	registerBalanceRoute(ctx, r, cdc, tokens)
+	RegisterBalancesRoute(ctx, r, cdc, tokens)
+	RegisterBalanceRoute(ctx, r, cdc, tokens)
 }
