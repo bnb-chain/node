@@ -238,7 +238,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			orderbook[l] = make([]int64, 4)
 		}
 		i, j := 0, 0
-		app.OrderKeeper.GetOrderBookUnSafe(pair, 10,
+		app.OrderKeeper.GetOrderBookUnSafe(pair, 20,
 			func(price, qty int64) {
 				orderbook[i][2] = price
 				orderbook[i][3] = qty
