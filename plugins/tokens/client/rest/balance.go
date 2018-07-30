@@ -2,6 +2,7 @@ package rest
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -10,18 +11,18 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-// https://github.com/tendermint/tendermint/blob/05a76fb517f50da27b4bfcdc7b4cf185fc61eff6/crypto/crypto.go#L14
-// RegisterRoutes - Central function to define routes that get registered by the main application
-func registerBalanceRoute(ctx context.CoreContext, r *mux.Router, cdc *wire.Codec, tokens tokens.Mapper) {
-	r.HandleFunc("/balances/{address}/{symbol}", BalanceRequestHandler(cdc, tokens, ctx)).Methods("GET")
-}
-
-type balanceSendBody struct {
-	Address Address `json:"address"`
-	Symbol  string  `json:"symbol"`
+// RegisterBalanceRoute registers this http route handler
+func RegisterBalanceRoute(
+	ctx context.CoreContext,
+	r *mux.Router,
+	cdc *wire.Codec,
+	tokens tokens.Mapper,
+) *mux.Route {
+	return r.HandleFunc("/balances/{address}/{symbol}", balanceRequestHandler(cdc, tokens, ctx)).Methods("GET")
 }
 
 type balanceResponse struct {
@@ -29,8 +30,7 @@ type balanceResponse struct {
 	Balance TokenBalance `json:"balance"`
 }
 
-// BalanceRequestHandler - http request handler to send coins to a address
-func BalanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.CoreContext) http.HandlerFunc {
+func balanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.CoreContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		throw := func(status int, err error) {
 			w.WriteHeader(status)
@@ -80,13 +80,15 @@ func BalanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 			frozen = frozenc.AmountOf(params.symbol)
 		}
 
+		fmt.Println(utils.Fixed8(coins.AmountOf(params.symbol).Int64()))
+
 		resp := balanceResponse{
 			Address: vars["address"],
 			Balance: TokenBalance{
-				Symbol:  params.symbol,
-				Balance: coins.AmountOf(params.symbol),
-				Locked:  locked,
-				Frozen:  frozen,
+				Symbol: params.symbol,
+				Free:   utils.Fixed8(coins.AmountOf(params.symbol).Int64()),
+				Locked: utils.Fixed8(locked.Int64()),
+				Frozen: utils.Fixed8(frozen.Int64()),
 			},
 		}
 
