@@ -384,8 +384,10 @@ func TestULList_DeletePriceLevel(t *testing.T) {
 	l.DeletePriceLevel(1002)
 	assert.Equal("Bucket 0{1006->[]},", l.String(), "Delete last bucket")
 	l.DeletePriceLevel(1006)
-	assert.Equal("", l.String(), "Delete last price")
+	assert.Equal("Bucket 0{},", l.String(), "Delete last price")
 	assert.False(l.DeletePriceLevel(1006), "delete empty")
+	l.AddPriceLevel(&PriceLevel{Price: 1006})
+	assert.Equal("Bucket 0{1006->[]},", l.String(), "Reinsert the empty")
 }
 
 func Test_bucket_getRange(t *testing.T) {
