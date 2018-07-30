@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/lcd"
 	"github.com/BiJie/BinanceChain/common/types"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
