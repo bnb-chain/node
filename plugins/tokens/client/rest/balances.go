@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -12,18 +13,15 @@ import (
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-type balancesSendBody struct {
-	Address Address `json:"address"`
-}
-
 type TokenBalance struct {
-	Symbol  string  `json:"symbol"`
-	Balance sdk.Int `json:"free"`
-	Locked  sdk.Int `json:"locked"`
-	Frozen  sdk.Int `json:"frozen"`
+	Symbol string       `json:"symbol"`
+	Free   utils.Fixed8 `json:"free"`
+	Locked utils.Fixed8 `json:"locked"`
+	Frozen utils.Fixed8 `json:"frozen"`
 }
 
 type balancesResponse struct {
@@ -31,20 +29,20 @@ type balancesResponse struct {
 	Balances []TokenBalance `json:"balances"`
 }
 
-// RegisterRoutes - Central function to define routes that get registered by the main application
-func registerTokensRoute(
+// RegisterBalancesRoute registers this http route handler
+func RegisterBalancesRoute(
 	ctx context.CoreContext,
 	r *mux.Router,
 	cdc *wire.Codec,
 	tokens tokens.Mapper,
-) {
-	r.HandleFunc("/balances/{address}", TokensRequestHandler(cdc, tokens, ctx)).Methods("GET")
+) *mux.Route {
+	return r.HandleFunc("/balances/{address}", tokensRequestHandler(cdc, tokens, ctx)).Methods("GET")
 }
 
-// temporary account decoder bits
+// account decoder funcs
 
-func decodeAccount(cdc *wire.Codec, bz []byte) (acc auth.Account, err error) {
-	err = cdc.UnmarshalBinaryBare(bz, &acc)
+func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc auth.Account, err error) {
+	err = cdc.UnmarshalBinaryBare(*bz, &acc)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +58,7 @@ func getAccount(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (
 	if bz == nil {
 		return nil, nil
 	}
-	acc, err := decodeAccount(cdc, bz)
+	acc, err := decodeAccount(cdc, &bz)
 	return acc, err
 }
 
@@ -101,8 +99,7 @@ func getFrozenCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) 
 
 // end temp stuff
 
-// TokensRequestHandler - http request handler to send coins to a address
-func TokensRequestHandler(
+func tokensRequestHandler(
 	cdc *wire.Codec, tokens tokens.Mapper, ctx context.CoreContext,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +113,7 @@ func TokensRequestHandler(
 
 		// collect params
 		// convert bech32 address
+		fmt.Println(r.URL)
 		addr, err := sdk.AccAddressFromBech32(vars["address"])
 		if err != nil {
 			throw(http.StatusBadRequest, err)
@@ -164,10 +162,10 @@ func TokensRequestHandler(
 				frozen = frozenc.AmountOf(symb)
 			}
 			bals = append(bals, TokenBalance{
-				Symbol:  symb,
-				Balance: coins.AmountOf(symb),
-				Locked:  locked,
-				Frozen:  frozen,
+				Symbol: symb,
+				Free:   utils.Fixed8(coins.AmountOf(symb).Int64()),
+				Locked: utils.Fixed8(locked.Int64()),
+				Frozen: utils.Fixed8(frozen.Int64()),
 			})
 		}
 
