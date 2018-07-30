@@ -4,19 +4,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/pkg/errors"
-
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
-
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 const (
@@ -92,13 +89,8 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
 
-			_, err := ctx.GetFromAddress()
-			if err != nil {
-				return err
-			}
-
 			symbol := viper.GetString(flagSymbol)
-			err = validatePairSymbol(symbol)
+			err := validatePairSymbol(symbol)
 			if err != nil {
 				return err
 			}
