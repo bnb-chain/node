@@ -9,6 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -72,6 +73,6 @@ func GenerateTokenAddress(token Token, sequence int64) (sdk.AccAddress, error) {
 }
 
 func makePrivKey(secret common.HexBytes) crypto.PrivKey {
-	privKey := crypto.GenPrivKeyEd25519FromSecret(secret)
+	privKey := ed25519.GenPrivKeyFromSecret(secret)
 	return privKey
 }
