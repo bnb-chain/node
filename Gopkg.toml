@@ -34,11 +34,11 @@
 
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.22.3"
+  version = "=0.22.8"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
-  version = "0.22.0"
+  version = "0.23.1"
 
 [[constraint]]
   name = "github.com/pkg/errors"
