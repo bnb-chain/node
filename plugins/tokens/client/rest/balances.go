@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -113,7 +112,6 @@ func tokensRequestHandler(
 
 		// collect params
 		// convert bech32 address
-		fmt.Println(r.URL)
 		addr, err := sdk.AccAddressFromBech32(vars["address"])
 		if err != nil {
 			throw(http.StatusBadRequest, err)
