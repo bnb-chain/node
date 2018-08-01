@@ -113,7 +113,6 @@ func tokensRequestHandler(
 
 		// collect params
 		// convert bech32 address
-		fmt.Println(r.URL)
 		addr, err := sdk.AccAddressFromBech32(vars["address"])
 		if err != nil {
 			throw(http.StatusBadRequest, err)
@@ -151,14 +150,19 @@ func tokensRequestHandler(
 		bals := make([]TokenBalance, 0, len(denoms))
 		for symb := range denoms {
 			symbs = append(symbs, symb)
+			// count locked and frozen coins
 			locked := sdk.NewInt(0)
 			frozen := sdk.NewInt(0)
 			lockedc, err := getLockedCC(cdc, ctx, params.address)
 			if err != nil {
+				fmt.Println("getLockedCC error ignored, will use `0`")
+			} else {
 				locked = lockedc.AmountOf(symb)
 			}
 			frozenc, err := getFrozenCC(cdc, ctx, params.address)
 			if err != nil {
+				fmt.Println("getFrozenCC error ignored, will use `0`")
+			} else {
 				frozen = frozenc.AmountOf(symb)
 			}
 			bals = append(bals, TokenBalance{

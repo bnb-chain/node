@@ -31,10 +31,10 @@ type NamedAccount interface {
 var _ NamedAccount = (*AppAccount)(nil)
 
 type AppAccount struct {
-	auth.BaseAccount
-	Name        string    `json:"name"`
-	FrozenCoins sdk.Coins `json:"frozen"`
-	LockedCoins sdk.Coins `json:"locked"`
+	auth.BaseAccount `json:"base"`
+	Name             string    `json:"name"`
+	FrozenCoins      sdk.Coins `json:"frozen"`
+	LockedCoins      sdk.Coins `json:"locked"`
 }
 
 // nolint

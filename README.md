@@ -126,6 +126,29 @@ Check a balance with this command, e.g.:
 $ bnbcli account DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
 ```
 
+Alternatively through http when `bnbcli rest-server` is running. Amounts are returned as decimal numbers in strings.
+
+```bash
+$ curl -s http://localhost:1317/balances/cosmosaccaddr173hyu6dtfkrj9vujjhvz2ayehrng64rxq3h4yp | json_pp
+{
+   "address" : "cosmosaccaddr173hyu6dtfkrj9vujjhvz2ayehrng64rxq3h4yp",
+   "balances" : [
+      {
+         "symbol" : "BNB",
+         "free" : "200000000",
+         "locked" : "0",
+         "frozen" : "0"
+      },
+      {
+         "symbol" : "XYZ",
+         "free" : "98999900",
+         "locked" : "100",
+         "frozen" : "0"
+      }
+   ]
+}
+```
+
 ### Sending assets
 
 You have to send a transaction to send assets to another address, which is possible with the cli tool:
@@ -167,6 +190,27 @@ $ bnbcli account B71E119324558ABA3AE3F5BC854F1225132465A0
 ```
 
 Amounts are represented as ints, so if `mycoin` has a precision of 2 decimal places then pepe now has a balance of 10.00.
+
+## DEX
+
+### Placing an order
+
+```bash
+$ bnbcli dex order -i uniqueid1 -l XYZ_BNB -s 1 -p 100000000 -q 100000000 --from me --chain-id=$CHAIN_ID -t 1
+```
+
+### Viewing the order book
+
+```bash
+$ bnbcli dex show -l XYZ_BNB
+```
+
+Alternatively through http when `bnbcli rest-server` is running. Prices and quantities are returned as decimal numbers in strings.
+
+```bash
+$ curl -s http://localhost:1317/orderbook/XYZ_BNB | json_pp
+{"pair":"XYZ_BNB","orders":[{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"}]}
+```
 
 ### Future
 

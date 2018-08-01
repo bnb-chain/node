@@ -43,10 +43,8 @@
     "client",
     "client/context",
     "client/keys",
-    "client/lcd",
     "client/rpc",
     "client/tx",
-    "cmd/gaia/app",
     "crypto",
     "crypto/keys",
     "crypto/keys/bcrypt",
@@ -55,7 +53,6 @@
     "server",
     "server/config",
     "store",
-    "tests",
     "types",
     "version",
     "wire",
@@ -66,19 +63,9 @@
     "x/bank/client",
     "x/bank/client/cli",
     "x/bank/client/rest",
-    "x/gov",
-    "x/gov/client/rest",
     "x/ibc",
     "x/ibc/client/cli",
-    "x/ibc/client/rest",
-    "x/mock",
-    "x/slashing",
-    "x/slashing/client/rest",
-    "x/stake",
-    "x/stake/client/rest",
-    "x/stake/keeper",
-    "x/stake/tags",
-    "x/stake/types"
+    "x/mock"
   ]
   revision = "23e3d5ac12145c02fcb4b4767d7dfccad782aee5"
   version = "v0.23.1"
@@ -567,6 +554,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5db81378776c45ea5bedefdd36a67a4767937ec987e44f8fc84174be185f84f8"
+  inputs-digest = "ca7b5881920e36467017afdc199d7988f7f3ae3dee41b656d3d7328541e1bef6"
   solver-name = "gps-cdcl"
   solver-version = 1
