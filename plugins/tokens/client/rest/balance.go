@@ -69,18 +69,21 @@ func balanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 			return
 		}
 
+		// count locked and frozen coins
 		locked := sdk.NewInt(0)
 		frozen := sdk.NewInt(0)
 		lockedc, err := getLockedCC(cdc, ctx, params.address)
 		if err != nil {
+			fmt.Println("getLockedCC error ignored, will use `0`")
+		} else {
 			locked = lockedc.AmountOf(params.symbol)
 		}
 		frozenc, err := getFrozenCC(cdc, ctx, params.address)
 		if err != nil {
+			fmt.Println("getFrozenCC error ignored, will use `0`")
+		} else {
 			frozen = frozenc.AmountOf(params.symbol)
 		}
-
-		fmt.Println(utils.Fixed8(coins.AmountOf(params.symbol).Int64()))
 
 		resp := balanceResponse{
 			Address: vars["address"],
