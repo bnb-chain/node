@@ -105,7 +105,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (t
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
 	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
 		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
@@ -170,7 +170,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
 							var unlock int64
 							if msg.Side == Side.BUY {
-								unlock = utils.CalBigNotional(msg.Price, qty)
+								unlock = utils.CalBigNotional(msg.Price, msg.Quantity) - utils.CalBigNotional(msg.Price, msg.Quantity-qty)
 							} else {
 								unlock = qty
 							}
