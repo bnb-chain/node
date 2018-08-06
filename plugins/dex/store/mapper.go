@@ -3,8 +3,9 @@ package store
 import (
 	"errors"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
