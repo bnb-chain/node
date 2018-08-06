@@ -210,7 +210,8 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
 	//for Out, only need to reduce the locked.
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
+	account.SetLockedCoins(
+		account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
 	accountMapper.SetAccount(ctx, account)
 	//TODO: error handling
 	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})

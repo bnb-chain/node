@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
