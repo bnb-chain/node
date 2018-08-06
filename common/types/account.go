@@ -2,8 +2,9 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 var _ auth.Account = (NamedAccount)(nil)
