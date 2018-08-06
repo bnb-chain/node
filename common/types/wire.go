@@ -1,8 +1,9 @@
 package types
 
 import (
-	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 func RegisterWire(cdc *wire.Codec) {

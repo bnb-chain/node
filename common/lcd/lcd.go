@@ -9,7 +9,6 @@ import (
 	keys "github.com/cosmos/cosmos-sdk/client/keys"
 	rpc "github.com/cosmos/cosmos-sdk/client/rpc"
 	tx "github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/cosmos/cosmos-sdk/wire"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
 	"github.com/gorilla/mux"
@@ -18,6 +17,8 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	tmserver "github.com/tendermint/tendermint/rpc/lib/server"
+
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/common"
 	dex "github.com/BiJie/BinanceChain/plugins/dex/client/rest"

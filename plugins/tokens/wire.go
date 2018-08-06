@@ -1,7 +1,7 @@
 package tokens
 
 import (
-	"github.com/cosmos/cosmos-sdk/wire"
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
 	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
