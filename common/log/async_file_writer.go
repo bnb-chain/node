@@ -59,6 +59,7 @@ func NewAsyncFileWriter(filename string, bufSize int64) *AsyncFileWriter {
 	return &AsyncFileWriter{
 		filename:   filename,
 		buf:        make(chan []byte, bufSize),
+		stop:       make(chan struct{}),
 		hourTicker: NewHourTicker(),
 	}
 }
@@ -125,18 +126,18 @@ func (w *AsyncFileWriter) flushBuffer() {
 
 func (w *AsyncFileWriter) SyncWrite(msg []byte) {
 	w.rotateFile()
-	w.fd.Write(msg)
+	if w.fd != nil {
+		w.fd.Write(msg)
+	}
 }
 
 func (w *AsyncFileWriter) rotateFile() {
-	// TODO(wuzhenxing): error handling?
-	w.Lock()
-	defer w.Unlock()
-
 	select {
 	case <-w.hourTicker:
-		w.fd.Sync()
-		w.fd.Close()
+		if w.fd != nil {
+			w.fd.Sync()
+			w.fd.Close()
+		}
 		w.InitLogFile()
 	default:
 	}
@@ -159,6 +160,9 @@ func (w *AsyncFileWriter) Write(msg []byte) (n int, err error) {
 }
 
 func (w *AsyncFileWriter) Flush() error {
+	if w.fd == nil {
+		return nil
+	}
 	return w.fd.Sync()
 }
 
