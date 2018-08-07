@@ -49,20 +49,19 @@ func (ht *HourTicker) Ticker() <-chan time.Time {
 }
 
 type AsyncFileWriter struct {
-	filename string
+	filePath string
 	fd       *os.File
 
 	wg         sync.WaitGroup
 	started    int32
-	rotate     bool
 	buf        chan []byte
 	stop       chan struct{}
 	hourTicker *HourTicker
 }
 
-func NewAsyncFileWriter(filename string, bufSize int64) *AsyncFileWriter {
+func NewAsyncFileWriter(filePath string, bufSize int64) *AsyncFileWriter {
 	return &AsyncFileWriter{
-		filename:   filename,
+		filePath:   filePath,
 		buf:        make(chan []byte, bufSize),
 		stop:       make(chan struct{}),
 		hourTicker: NewHourTicker(),
@@ -74,26 +73,32 @@ func (w *AsyncFileWriter) initLogFile() error {
 		fd  *os.File
 		err error
 	)
-	realFile, err := w.timeFilename()
+
+	absFilePath, err := filepath.Abs(w.filePath)
 	if err != nil {
 		return err
 	}
 
-	fd, err = os.OpenFile(realFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	realFilePath, err := w.timeFilePath(absFilePath)
+	if err != nil {
+		return err
+	}
+
+	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
 
 	w.fd = fd
-	_, err = os.Lstat(w.filename)
+	_, err = os.Lstat(absFilePath)
 	if err == nil || os.IsExist(err) {
-		err = os.Remove(w.filename)
+		err = os.Remove(absFilePath)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = os.Symlink("./"+filepath.Base(realFile), w.filename)
+	err = os.Symlink(realFilePath, absFilePath)
 	if err != nil {
 		return err
 	}
@@ -202,10 +207,6 @@ func (w *AsyncFileWriter) flushAndClose() error {
 	return w.fd.Close()
 }
 
-func (w *AsyncFileWriter) timeFilename() (string, error) {
-	absPath, err := filepath.Abs(w.filename)
-	if err != nil {
-		return "", err
-	}
-	return absPath + "." + time.Now().Format("2006-01-02_15"), nil
+func (w *AsyncFileWriter) timeFilePath(filePath string) (string, error) {
+	return filePath + "." + time.Now().Format("2006-01-02_15"), nil
 }
