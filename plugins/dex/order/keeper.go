@@ -123,9 +123,12 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	}
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
+	if size%concurrency != 0 {
+		channelSize += 1
+	}
 	outs := make([]chan string, concurrency)
 	for i, _ := range outs {
-		outs[i] = make(chan string, channelSize+1)
+		outs[i] = make(chan string, channelSize)
 	}
 	i, j, t := 0, 0, channelSize
 	for k, _ := range kp.roundOrders {
@@ -166,7 +169,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
 							//here is a trick to use the same currency as in and out ccy to simulate cancel
 							qty := ord.LeavesQty()
-							c := channelHash(msg.Sender)
+							c := channelHash(msg.Sender) % concurrency
 							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
 							var unlock int64
 							if msg.Side == Side.BUY {
