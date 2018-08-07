@@ -28,8 +28,9 @@ type NewOrderMsg struct {
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
 const (
-	sideBuy  int8 = iota + 1
-	sideSell int8 = iota + 1
+	_        int8 = iota
+	sideBuy  int8 = iota
+	sideSell int8 = iota
 )
 
 var Side = struct {
@@ -48,8 +49,9 @@ func IsValidSide(side int8) bool {
 }
 
 const (
-	orderMarket int8 = iota + 1
-	orderLimit  int8 = iota + 1
+	_           int8 = iota
+	orderMarket int8 = iota
+	orderLimit  int8 = iota
 )
 
 // OrderType is an enum of order type options supported by the matching engine
@@ -69,9 +71,10 @@ func IsValidOrderType(ot int8) bool {
 }
 
 const (
-	tifGTC int8 = iota + 1
-	_      int8 = iota + 1
-	tifIOC int8 = iota + 1
+	_      int8 = iota
+	tifGTC int8 = iota
+	_      int8 = iota
+	tifIOC int8 = iota
 )
 
 // TimeInForce is an enum of TIF (Time in Force) options supported by the matching engine
