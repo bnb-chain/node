@@ -2,7 +2,9 @@ package order
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -25,11 +27,17 @@ type NewOrderMsg struct {
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
+const (
+	sideBuy  int8 = iota + 1
+	sideSell int8 = iota + 1
+)
+
 var Side = struct {
 	BUY  int8
 	SELL int8
-}{1, 2}
+}{sideBuy, sideSell}
 
+// IsValidSide validates that a side is valid and supported by the matching engine
 func IsValidSide(side int8) bool {
 	switch side {
 	case Side.BUY, Side.SELL:
@@ -39,11 +47,18 @@ func IsValidSide(side int8) bool {
 	}
 }
 
+const (
+	orderMarket int8 = iota + 1
+	orderLimit  int8 = iota + 1
+)
+
+// OrderType is an enum of order type options supported by the matching engine
 var OrderType = struct {
 	LIMIT  int8
 	MARKET int8
-}{2, 1}
+}{orderLimit, orderMarket}
 
+// IsValidOrderType validates that an order type is valid and supported by the matching engine
 func IsValidOrderType(ot int8) bool {
 	switch ot {
 	case OrderType.LIMIT: // only allow LIMIT for now.
@@ -53,11 +68,24 @@ func IsValidOrderType(ot int8) bool {
 	}
 }
 
+const (
+	tifGTC int8 = iota + 1
+	_      int8 = iota + 1
+	tifIOC int8 = iota + 1
+)
+
+// TimeInForce is an enum of TIF (Time in Force) options supported by the matching engine
 var TimeInForce = struct {
 	GTC int8
 	IOC int8
-}{1, 3}
+}{tifGTC, tifIOC}
 
+var timeInForceNames = map[string]int8{
+	"GTC": tifGTC,
+	"IOC": tifIOC,
+}
+
+// IsValidTimeInForce validates that a tif code is correct
 func IsValidTimeInForce(tif int8) bool {
 	switch tif {
 	case TimeInForce.GTC, TimeInForce.IOC:
@@ -67,6 +95,16 @@ func IsValidTimeInForce(tif int8) bool {
 	}
 }
 
+// TifStringToTifCode converts a string like "GTC" to its internal tif code
+func TifStringToTifCode(tif string) (int8, error) {
+	upper := strings.ToUpper(tif)
+	if val, ok := timeInForceNames[upper]; ok {
+		return val, nil
+	}
+	return -1, errors.New("tif " + upper + " not found or supported")
+}
+
+// CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
 	Sender sdk.AccAddress
 	Id     string `json:"id"`
