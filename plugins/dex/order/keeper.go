@@ -111,8 +111,8 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (t
 }
 
 //TODO: should get an even hash
-func channelHash(account sdk.AccAddress) int {
-	return int(account[0] + account[1])
+func channelHash(account sdk.AccAddress, bucketNumber int) int {
+	return int(account[0]+account[1]) % bucketNumber
 }
 
 func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
@@ -126,18 +126,20 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	if size%concurrency != 0 {
 		channelSize += 1
 	}
-	outs := make([]chan string, concurrency)
+	outs := make([][]string, concurrency)
 	for i, _ := range outs {
-		outs[i] = make(chan string, channelSize)
+		outs[i] = make([]string, channelSize)
 	}
-	i, j, t := 0, 0, channelSize
+	i, j, t, ii := 0, 0, channelSize, 0
 	for k, _ := range kp.roundOrders {
 		if i >= t {
 			j++
+			ii = 0
 			t += channelSize
 		}
-		outs[j] <- k
+		outs[j][ii] = k
 		i++
+		ii++
 	}
 	tradeOuts := make([]chan transfer, concurrency)
 	for i, _ := range tradeOuts {
@@ -147,16 +149,19 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	for i = 0; i < concurrency; i++ {
 		channel := outs[i]
 		go func() {
-			for ts := range channel {
+			for _, ts := range channel {
+				if ts == "" {
+					break
+				}
 				engine := kp.engines[ts]
 				if engine.Match() {
 					tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(ts)
 					for _, t := range engine.Trades {
 						t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
 						//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
-						c := channelHash(t1.account) % concurrency
+						c := channelHash(t1.account, concurrency)
 						tradeOuts[c] <- t1
-						c = channelHash(t2.account) % concurrency
+						c = channelHash(t2.account, concurrency)
 						tradeOuts[c] <- t2
 					}
 					engine.DropFilledOrder()
@@ -169,7 +174,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
 							//here is a trick to use the same currency as in and out ccy to simulate cancel
 							qty := ord.LeavesQty()
-							c := channelHash(msg.Sender) % concurrency
+							c := channelHash(msg.Sender, concurrency)
 							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
 							var unlock int64
 							if msg.Side == Side.BUY {
@@ -185,9 +190,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 			wg.Done()
 		}()
 	}
-	for _, c := range outs {
-		close(c)
-	}
+
 	return tradeOuts
 }
 
