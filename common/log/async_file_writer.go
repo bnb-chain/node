@@ -62,8 +62,7 @@ type AsyncFileWriter struct {
 func NewAsyncFileWriter(filePath string, bufSize int64) *AsyncFileWriter {
 	absFilePath, err := filepath.Abs(filePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "get file path of logger error. err=%s", err)
-		return nil
+		panic(fmt.Sprintf("get file path of logger error. filePath=%s, err=%s", filePath, err))
 	}
 
 	return &AsyncFileWriter{
