@@ -154,8 +154,12 @@ func (w *AsyncFileWriter) SyncWrite(msg []byte) {
 func (w *AsyncFileWriter) rotateFile() {
 	select {
 	case <-w.hourTicker.C:
-		w.flushAndClose()
-		w.initLogFile()
+		if err := w.flushAndClose(); err != nil {
+			fmt.Fprintf(os.Stderr, "flush and close file error. err=%s", err)
+		}
+		if err := w.initLogFile(); err != nil {
+			fmt.Fprintf(os.Stderr, "init log file error. err=%s", err)
+		}
 	default:
 	}
 }
