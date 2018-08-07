@@ -60,8 +60,14 @@ type AsyncFileWriter struct {
 }
 
 func NewAsyncFileWriter(filePath string, bufSize int64) *AsyncFileWriter {
+	absFilePath, err := filepath.Abs(filePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "get file path of logger error. err=%s", err)
+		return nil
+	}
+
 	return &AsyncFileWriter{
-		filePath:   filePath,
+		filePath:   absFilePath,
 		buf:        make(chan []byte, bufSize),
 		stop:       make(chan struct{}),
 		hourTicker: NewHourTicker(),
@@ -74,31 +80,22 @@ func (w *AsyncFileWriter) initLogFile() error {
 		err error
 	)
 
-	absFilePath, err := filepath.Abs(w.filePath)
-	if err != nil {
-		return err
-	}
-
-	realFilePath, err := w.timeFilePath(absFilePath)
-	if err != nil {
-		return err
-	}
-
+	realFilePath := w.timeFilePath(w.filePath)
 	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
 
 	w.fd = fd
-	_, err = os.Lstat(absFilePath)
+	_, err = os.Lstat(w.filePath)
 	if err == nil || os.IsExist(err) {
-		err = os.Remove(absFilePath)
+		err = os.Remove(w.filePath)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = os.Symlink(realFilePath, absFilePath)
+	err = os.Symlink(realFilePath, w.filePath)
 	if err != nil {
 		return err
 	}
@@ -207,6 +204,6 @@ func (w *AsyncFileWriter) flushAndClose() error {
 	return w.fd.Close()
 }
 
-func (w *AsyncFileWriter) timeFilePath(filePath string) (string, error) {
-	return filePath + "." + time.Now().Format("2006-01-02_15"), nil
+func (w *AsyncFileWriter) timeFilePath(filePath string) string {
+	return filePath + "." + time.Now().Format("2006-01-02_15")
 }
