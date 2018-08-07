@@ -2,7 +2,6 @@ package log
 
 import (
 	"testing"
-	"time"
 )
 
 func TestWriter(t *testing.T) {
@@ -11,5 +10,4 @@ func TestWriter(t *testing.T) {
 	w.Write([]byte("hello\n"))
 	w.Write([]byte("world\n"))
 	w.Stop()
-	time.Sleep(10 * time.Second)
 }
