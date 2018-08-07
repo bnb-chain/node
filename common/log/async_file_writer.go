@@ -1,6 +1,7 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,13 +12,19 @@ import (
 
 type HourTicker struct {
 	stop chan struct{}
+	C    <-chan time.Time
 }
 
-func NewHourTicker() <-chan time.Time {
+func NewHourTicker() *HourTicker {
 	ht := &HourTicker{
 		stop: make(chan struct{}),
 	}
-	return ht.Ticker()
+	ht.C = ht.Ticker()
+	return ht
+}
+
+func (ht *HourTicker) Stop() {
+	ht.stop <- struct{}{}
 }
 
 func (ht *HourTicker) Ticker() <-chan time.Time {
@@ -42,8 +49,6 @@ func (ht *HourTicker) Ticker() <-chan time.Time {
 }
 
 type AsyncFileWriter struct {
-	sync.Mutex
-
 	filename string
 	fd       *os.File
 
@@ -52,7 +57,7 @@ type AsyncFileWriter struct {
 	rotate     bool
 	buf        chan []byte
 	stop       chan struct{}
-	hourTicker <-chan time.Time
+	hourTicker *HourTicker
 }
 
 func NewAsyncFileWriter(filename string, bufSize int64) *AsyncFileWriter {
@@ -64,7 +69,7 @@ func NewAsyncFileWriter(filename string, bufSize int64) *AsyncFileWriter {
 	}
 }
 
-func (w *AsyncFileWriter) InitLogFile() error {
+func (w *AsyncFileWriter) initLogFile() error {
 	var (
 		fd  *os.File
 		err error
@@ -82,15 +87,28 @@ func (w *AsyncFileWriter) InitLogFile() error {
 	w.fd = fd
 	_, err = os.Lstat(w.filename)
 	if err == nil || os.IsExist(err) {
-		os.Remove(w.filename)
+		err = os.Remove(w.filename)
+		if err != nil {
+			return err
+		}
 	}
-	os.Symlink("./"+filepath.Base(realFile), w.filename)
+
+	err = os.Symlink("./"+filepath.Base(realFile), w.filename)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (w *AsyncFileWriter) Start() {
+func (w *AsyncFileWriter) Start() error {
 	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
-		return
+		return errors.New("logger has already been started")
+	}
+
+	err := w.initLogFile()
+	if err != nil {
+		return err
 	}
 
 	w.wg.Add(1)
@@ -99,6 +117,8 @@ func (w *AsyncFileWriter) Start() {
 			atomic.StoreInt32(&w.started, 0)
 
 			w.flushBuffer()
+			w.flushAndClose()
+
 			w.wg.Done()
 		}()
 
@@ -115,13 +135,13 @@ func (w *AsyncFileWriter) Start() {
 			}
 		}
 	}()
+	return nil
 }
 
 func (w *AsyncFileWriter) flushBuffer() {
 	for msg := range w.buf {
 		w.SyncWrite(msg)
 	}
-	w.Flush()
 }
 
 func (w *AsyncFileWriter) SyncWrite(msg []byte) {
@@ -133,18 +153,17 @@ func (w *AsyncFileWriter) SyncWrite(msg []byte) {
 
 func (w *AsyncFileWriter) rotateFile() {
 	select {
-	case <-w.hourTicker:
-		if w.fd != nil {
-			w.fd.Sync()
-			w.fd.Close()
-		}
-		w.InitLogFile()
+	case <-w.hourTicker.C:
+		w.flushAndClose()
+		w.initLogFile()
 	default:
 	}
 }
 
 func (w *AsyncFileWriter) Stop() {
 	w.stop <- struct{}{}
+
+	w.hourTicker.Stop()
 }
 
 func (w *AsyncFileWriter) Write(msg []byte) (n int, err error) {
@@ -164,6 +183,19 @@ func (w *AsyncFileWriter) Flush() error {
 		return nil
 	}
 	return w.fd.Sync()
+}
+
+func (w *AsyncFileWriter) flushAndClose() error {
+	if w.fd == nil {
+		return nil
+	}
+
+	err := w.fd.Sync()
+	if err != nil {
+		return err
+	}
+
+	return w.fd.Close()
 }
 
 func (w *AsyncFileWriter) timeFilename() (string, error) {
