@@ -140,8 +140,13 @@ func (w *AsyncFileWriter) Start() error {
 }
 
 func (w *AsyncFileWriter) flushBuffer() {
-	for msg := range w.buf {
-		w.SyncWrite(msg)
+	for {
+		select {
+		case msg := <-w.buf:
+			w.SyncWrite(msg)
+		default:
+			return
+		}
 	}
 }
 
@@ -167,6 +172,7 @@ func (w *AsyncFileWriter) rotateFile() {
 
 func (w *AsyncFileWriter) Stop() {
 	w.stop <- struct{}{}
+	w.wg.Wait()
 
 	w.hourTicker.Stop()
 }
