@@ -12,6 +12,45 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+// middleware (limits, parsing, etc)
+
+func (s *server) limitReqSize(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// reject suspiciously large form posts
+		if r.ContentLength > s.maxPostSize {
+			http.Error(w, "request too large", http.StatusExpectationFailed)
+			return
+		}
+		// parse request body as multipart/form-data with maxPostSize in mind
+		r.Body = http.MaxBytesReader(w, r.Body, s.maxPostSize)
+		next(w, r)
+	}
+}
+
+func (s *server) withUrlEncForm(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func (s *server) withMultipartForm(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseMultipartForm(1024)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// -----
+
 func (s *server) handleVersionReq() http.HandlerFunc {
 	return hnd.CLIVersionReqHandler
 }
@@ -22,6 +61,11 @@ func (s *server) handleNodeVersionReq() http.HandlerFunc {
 
 func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	return dexapi.DepthReqHandler(cdc, ctx)
+}
+
+func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	h := dexapi.OrderReqHandler(cdc, ctx)
+	return s.withUrlEncForm(s.limitReqSize(h))
 }
 
 func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {

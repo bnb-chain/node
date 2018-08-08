@@ -11,8 +11,13 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+const maxPostSize int64 = 1024 * 1024 * 0.5 // ~500KB
+
 type server struct {
 	router *mux.Router
+
+	// settings
+	maxPostSize int64
 
 	// handler dependencies
 	ctx context.CoreContext
@@ -33,6 +38,7 @@ func newServer(ctx context.CoreContext, cdc *wire.Codec) *server {
 
 	return &server{
 		router:       mux.NewRouter(),
+		maxPostSize:  maxPostSize,
 		ctx:          ctx,
 		cdc:          cdc,
 		keyBase:      kb,
