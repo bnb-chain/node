@@ -23,7 +23,6 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
 // in the future, this may be distributed via Sharding
