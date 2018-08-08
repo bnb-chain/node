@@ -1,17 +1,10 @@
-package lcd
+package api
 
 import (
-	"net/http"
 	"os"
 
 	client "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
-	keys "github.com/cosmos/cosmos-sdk/client/keys"
-	rpc "github.com/cosmos/cosmos-sdk/client/rpc"
-	tx "github.com/cosmos/cosmos-sdk/client/tx"
-	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
-	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -19,27 +12,23 @@ import (
 	tmserver "github.com/tendermint/tendermint/rpc/lib/server"
 
 	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/BiJie/BinanceChain/common"
-	dex "github.com/BiJie/BinanceChain/plugins/dex/client/rest"
-	tokens "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
 // ServeCommand will generate a long-running rest server
-// (aka Light Client Daemon) that exposes functionality similar
-// to the cli, but over rest
+// that exposes functionality similar to the cli, but over http
 func ServeCommand(cdc *wire.Codec) *cobra.Command {
 	flagListenAddr := "laddr"
 	flagCORS := "cors"
 	flagMaxOpenConnections := "max-open"
 
 	cmd := &cobra.Command{
-		Use:   "rest-server",
-		Short: "Start LCD (light-client daemon), a local REST server",
+		Use:   "api-server",
+		Short: "Start the API server daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper()
 			listenAddr := viper.GetString(flagListenAddr)
-			handler := createHandler(cdc)
+			server := newServer(ctx, cdc).bindRoutes()
+			handler := server.router
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "rest-server")
 			maxOpen := viper.GetInt(flagMaxOpenConnections)
 
@@ -63,36 +52,11 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagListenAddr, "tcp://localhost:1317", "The address for the server to listen on")
+	cmd.Flags().String(flagListenAddr, "tcp://localhost:8080", "The address for the server to listen on")
 	cmd.Flags().String(flagCORS, "", "Set the domains that can make CORS requests (* for all)")
 	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
 	cmd.Flags().String(client.FlagNode, "tcp://localhost:26657", "Address of the node to connect to")
 	cmd.Flags().Int(flagMaxOpenConnections, 1000, "The number of maximum open connections")
 
 	return cmd
-}
-
-func createHandler(cdc *wire.Codec) http.Handler {
-	r := mux.NewRouter()
-
-	kb, err := keys.GetKeyBase() //XXX
-	if err != nil {
-		panic(err)
-	}
-
-	ctx := context.NewCoreContextFromViper()
-
-	// TODO: make more functional? aka r = keys.RegisterRoutes(r)
-	r.HandleFunc("/version", CLIVersionRequestHandler).Methods("GET")
-	r.HandleFunc("/node_version", NodeVersionRequestHandler(ctx)).Methods("GET")
-
-	keys.RegisterRoutes(r)
-	rpc.RegisterRoutes(ctx, r)
-	tx.RegisterRoutes(ctx, r, cdc)
-	auth.RegisterRoutes(ctx, r, cdc, "acc")
-	bank.RegisterRoutes(ctx, r, cdc, kb)
-	dex.RegisterRoutes(ctx, r, cdc)
-	tokens.RegisterRoutes(ctx, r, cdc, tkstore.NewMapper(cdc, common.TokenStoreKey))
-
-	return r
 }

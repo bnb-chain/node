@@ -1,4 +1,4 @@
-package lcd
+package handlers
 
 import (
 	"fmt"
@@ -8,13 +8,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 )
 
-// cli version REST handler endpoint
+// CLIVersionRequestHandler handles requests to the cli version REST handler endpoint
 func CLIVersionRequestHandler(w http.ResponseWriter, r *http.Request) {
 	v := version.GetVersion()
 	w.Write([]byte(v))
 }
 
-// connected node version REST handler endpoint
+// NodeVersionRequestHandler handles requests to the connected node version REST handler endpoint
 func NodeVersionRequestHandler(ctx context.CoreContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		version, err := ctx.Query("/app/version")
