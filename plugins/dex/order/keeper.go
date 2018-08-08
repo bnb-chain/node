@@ -39,7 +39,7 @@ type Transfer struct {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) (*Keeper, error) {
+func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) Keeper {
 	engines := make(map[string]*me.MatchEng)
 	allPairs := make([]string, 2)
 	for _, p := range allPairs {
