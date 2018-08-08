@@ -75,6 +75,11 @@ func genActiveOrdersSnapshotKey(height int64) string {
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
+	allPairs := make([]string, 2)
+	for _, p := range allPairs {
+		eng := CreateMatchEng(p)
+		engines[p] = eng
+	}
 	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
 		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
@@ -333,7 +338,6 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
-<<<<<<< HEAD
 	key := utils.Int642Bytes(blockTime / 1000)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
@@ -519,16 +523,6 @@ func (kp *Keeper) InitOrderBook(allPairs []string, kvstore sdk.KVStore,
 	if err != nil {
 		panic(err)
 	}
-=======
-	//t := time.Unix(blockTime/1000, 0)
-	//key := t.Format("20060102")
-	//store := ctx.KVStore(kp.storeKey)
-	//store.Set(key, height)
-}
-
-func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
-	return sdk.CodeOK, nil
->>>>>>> add some steps in end block.
 }
 
 // Key to knowing the trend on the streets!
