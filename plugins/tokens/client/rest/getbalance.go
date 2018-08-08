@@ -15,8 +15,8 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-// BalanceRequestHandler creates an http request handler to get an individual token balance of a given address
-func BalanceRequestHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.Mapper) http.HandlerFunc {
+// BalanceReqHandler creates an http request handler to get an individual token balance of a given address
+func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.Mapper) http.HandlerFunc {
 	type params struct {
 		address sdk.AccAddress
 		symbol  string

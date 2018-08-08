@@ -12,22 +12,22 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func (s *server) handleVersion() http.HandlerFunc {
-	return hnd.CLIVersionRequestHandler
+func (s *server) handleVersionReq() http.HandlerFunc {
+	return hnd.CLIVersionReqHandler
 }
 
-func (s *server) handleNodeVersion() http.HandlerFunc {
-	return hnd.NodeVersionRequestHandler(s.ctx)
+func (s *server) handleNodeVersionReq() http.HandlerFunc {
+	return hnd.NodeVersionReqHandler(s.ctx)
 }
 
-func (s *server) handleDexDepthRequest(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
-	return dexapi.DepthRequestHandler(cdc, ctx)
+func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	return dexapi.DepthReqHandler(cdc, ctx)
 }
 
-func (s *server) handleBalancesRequest(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
-	return tksapi.BalancesRequestHandler(cdc, ctx, tokens)
+func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
+	return tksapi.BalancesReqHandler(cdc, ctx, tokens)
 }
 
-func (s *server) handleBalanceRequest(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
-	return tksapi.BalanceRequestHandler(cdc, ctx, tokens)
+func (s *server) handleBalanceReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
+	return tksapi.BalanceReqHandler(cdc, ctx, tokens)
 }
