@@ -40,14 +40,24 @@ type Transfer struct {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) Keeper {
+	engines := make(map[string]*me.MatchEng)
+	allPairs := make([]string, 2)
+	for _, p := range allPairs {
+		eng := CreateMatchEng(p)
+		initializeOrderBook(p, eng)
+	}
 	return Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
-		engines: make(map[string]*me.MatchEng), allOrders: make(map[string]NewOrderMsg, 1000000),
+		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
 		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256), poolSize: concurrency}
 }
 
 func CreateMatchEng(symbol string) *me.MatchEng {
 	//TODO: read lot size
 	return me.NewMatchEng(1000, 1, 0.05)
+}
+
+func initializeOrderBook(symbol string, eng *me.MatchEng) error {
+	return nil
 }
 
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
