@@ -6,11 +6,6 @@ import (
 	tx "github.com/cosmos/cosmos-sdk/client/tx"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
-
-	"github.com/BiJie/BinanceChain/common"
-	dex "github.com/BiJie/BinanceChain/plugins/dex/client/rest"
-	tokens "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
 const version = "v1"
@@ -24,16 +19,19 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc("/node_version", s.handleNodeVersion()).Methods("GET")
 
 	// dex routes
-	r.HandleFunc(prefix+"/depth/{pair}", dex.DepthRequestHandler(s.cdc, s.ctx)).Methods("GET")
+	r.HandleFunc(prefix+"/depth/{pair}", s.handleDexDepthRequest(s.cdc, s.ctx)).Methods("GET")
+
+	// tokens routes
+	r.HandleFunc(prefix+"/balances/{address}", s.handleBalancesRequest(s.cdc, s.ctx, s.tokens)).Methods("GET")
+	r.HandleFunc(prefix+"/balances/{address}/{symbol}", s.handleBalanceRequest(s.cdc, s.ctx, s.tokens)).Methods("GET")
 
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
 	keys.RegisterRoutes(r)
 	rpc.RegisterRoutes(s.ctx, r)
 	tx.RegisterRoutes(s.ctx, r, s.cdc)
-	auth.RegisterRoutes(s.ctx, r, s.cdc, s.accountStoreName)
+	auth.RegisterRoutes(s.ctx, r, s.cdc, s.accStoreName)
 	bank.RegisterRoutes(s.ctx, r, s.cdc, s.keyBase)
-	tokens.RegisterRoutes(s.ctx, r, s.cdc, tkstore.NewMapper(cdc, common.TokenStoreKey))
 
 	return s
 }

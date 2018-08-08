@@ -13,10 +13,8 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-// DepthRequestHandler - http request handler to send coins to a address
-func DepthRequestHandler(
-	cdc *wire.Codec, ctx context.CoreContext,
-) http.HandlerFunc {
+// DepthRequestHandler creates an http request handler to send coins to a address
+func DepthRequestHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	type params struct {
 		pair string
 	}

@@ -19,9 +19,9 @@ type server struct {
 	cdc *wire.Codec
 
 	// stores for handlers
-	keyBase          keys.Keybase
-	tokenMapper      tkstore.Mapper
-	accountStoreName string
+	keyBase      keys.Keybase
+	tokens       tkstore.Mapper
+	accStoreName string
 }
 
 // NewServer provides a new server structure.
@@ -32,11 +32,11 @@ func newServer(ctx context.CoreContext, cdc *wire.Codec) *server {
 	}
 
 	return &server{
-		router:           mux.NewRouter(),
-		ctx:              ctx,
-		cdc:              cdc,
-		keyBase:          kb,
-		tokenMapper:      tkstore.NewMapper(cdc, common.TokenStoreKey),
-		accountStoreName: common.AccountStoreName,
+		router:       mux.NewRouter(),
+		ctx:          ctx,
+		cdc:          cdc,
+		keyBase:      kb,
+		tokens:       tkstore.NewMapper(cdc, common.TokenStoreKey),
+		accStoreName: common.AccountStoreName,
 	}
 }
