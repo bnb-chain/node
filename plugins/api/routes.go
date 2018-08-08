@@ -13,12 +13,18 @@ import (
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
+const version = "v1"
+const prefix = "/api/" + version
+
 func (s *server) bindRoutes() *server {
 	r := s.router
 
 	// version routes
-	r.HandleFunc("/version", s.handleVersion())
-	r.HandleFunc("/node_version", s.handleNodeVersion())
+	r.HandleFunc("/version", s.handleVersion()).Methods("GET")
+	r.HandleFunc("/node_version", s.handleNodeVersion()).Methods("GET")
+
+	// dex routes
+	r.HandleFunc(prefix+"/depth/{pair}", dex.DepthRequestHandler(s.cdc, s.ctx)).Methods("GET")
 
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
@@ -27,7 +33,6 @@ func (s *server) bindRoutes() *server {
 	tx.RegisterRoutes(s.ctx, r, s.cdc)
 	auth.RegisterRoutes(s.ctx, r, s.cdc, s.accountStoreName)
 	bank.RegisterRoutes(s.ctx, r, s.cdc, s.keyBase)
-	dex.RegisterRoutes(s.ctx, r, s.cdc)
 	tokens.RegisterRoutes(s.ctx, r, s.cdc, tkstore.NewMapper(cdc, common.TokenStoreKey))
 
 	return s

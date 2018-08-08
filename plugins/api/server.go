@@ -1,13 +1,14 @@
 package api
 
 import (
-	"github.com/BiJie/BinanceChain/common"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	keyscli "github.com/cosmos/cosmos-sdk/client/keys"
 	keys "github.com/cosmos/cosmos-sdk/crypto/keys"
 	"github.com/gorilla/mux"
+
+	"github.com/BiJie/BinanceChain/common"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type server struct {
