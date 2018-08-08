@@ -45,8 +45,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	// not a big deal so far since re-sort on a sorted slice is fast.
 	// stable sort is not used here to prevent sort-multiple-times changing the sequence
 	// because order id should be always different
-	sort.Slice(buys, func(i, j int) bool { return buys[i].id < buys[j].id })
-	sort.Slice(sells, func(i, j int) bool { return sells[i].id < sells[j].id })
+	sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
+	sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
 	bLength := len(buys)
 	sLength := len(sells)
 	for k < bLength && h < sLength {
@@ -64,25 +64,25 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			trade := sells[h].nxtTrade
 			buys[k].nxtTrade -= trade
 			sells[h].nxtTrade = 0
-			buys[k].cumQty += trade
-			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			buys[k].CumQty += trade
+			sells[h].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
 			sells[h].nxtTrade -= trade
 			buys[k].nxtTrade = 0
-			buys[k].cumQty += trade
-			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			buys[k].CumQty += trade
+			sells[h].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
 			buys[k].nxtTrade = 0
 			sells[h].nxtTrade = 0
-			buys[k].cumQty += trade
-			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			buys[k].CumQty += trade
+			sells[h].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
 			h++
 			k++
 		}
@@ -101,13 +101,13 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 		orders[0].nxtTrade = residual
 		return true
 	}
-	nt := orders[0].time
+	nt := orders[0].Time
 	j, k := 1, 1
 	toAlloc := residual
 	// the below algorithm is to determine the windows by orders' time and
 	// allocate residual qty one window after another
 	for j < len(orders) && toAlloc > 0 {
-		if orders[j].time == nt {
+		if orders[j].Time == nt {
 			if j == len(orders)-1 { // last one, so all the orders are at the same time
 				return allocateResidual(&toAlloc, orders[j-k:], me.LotSize)
 			} else { // check the next order's time
@@ -115,7 +115,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 				k++
 			}
 		} else { // the current order time is different from all the past time, j must > 0
-			nt = orders[j].time //set the time for the new orders
+			nt = orders[j].Time //set the time for the new orders
 			// allocate for the past k orders
 			if !allocateResidual(&toAlloc, orders[j-k:j], me.LotSize) {
 				return false
@@ -202,7 +202,7 @@ func (me *MatchEng) DropFilledOrder() int {
 			} else {
 				for _, o := range p.BuyOrders {
 					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.id, BUYSIDE, p.Price)
+						me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
 					}
 				}
 			}
@@ -215,7 +215,7 @@ func (me *MatchEng) DropFilledOrder() int {
 			} else {
 				for _, o := range p.SellOrders {
 					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.id, SELLSIDE, p.Price)
+						me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
 					}
 				}
 			}

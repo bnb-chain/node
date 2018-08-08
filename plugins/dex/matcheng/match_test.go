@@ -9,11 +9,11 @@ import (
 
 func Test_sumOrders(t *testing.T) {
 	assert := assert.New(t)
-	orders := []OrderPart{OrderPart{"1", 100, 26.0, 0, 0}, OrderPart{"1", 100, 25.0, 0, 0}, OrderPart{"1", 100, 50.1, 0, 0}}
-	assert.Equal(101.1, sumOrdersTotalLeft(orders, true))
-	orders[0].qty = 1.0
-	orders[1].cumQty = 25.0
-	assert.Equal(101.1, sumOrdersTotalLeft(orders, false))
+	orders := []OrderPart{OrderPart{"1", 100, 260, 0, 0}, OrderPart{"1", 100, 250, 0, 0}, OrderPart{"1", 100, 501, 0, 0}}
+	assert.Equal(int64(1011), sumOrdersTotalLeft(orders, true))
+	orders[0].Qty = 10
+	orders[1].CumQty = 250
+	assert.Equal(int64(1011), sumOrdersTotalLeft(orders, false))
 	orders = []OrderPart{}
 	assert.Equal(0.0, sumOrdersTotalLeft(orders, true))
 	orders = []OrderPart{OrderPart{"1", 100, 26.0, 0, 0}}
@@ -448,84 +448,84 @@ func Test_allocateResidual(t *testing.T) {
 		OrderPart{"3", 100, 60, 0, 60},
 		OrderPart{"2", 100, 30, 0, 30},
 	}
-	toAlloc = 60.0
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(30.0, orders[0].nxtTrade)
-	assert.Equal(10.0, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(20.0, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 600
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(300), orders[0].nxtTrade)
+	assert.Equal(int64(100), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(200), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 90, 0, 90},
 		OrderPart{"3", 100, 60, 0, 60},
 		OrderPart{"2", 100, 30, 0, 30},
 	}
-	toAlloc = 50.0
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(25.5, orders[0].nxtTrade)
-	assert.Equal(8.0, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(16.5, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 500
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(255), orders[0].nxtTrade)
+	assert.Equal(int64(80), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(165), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 90, 0, 90},
 		OrderPart{"3", 100, 60, 0, 60},
 		OrderPart{"2", 100, 30, 0, 30},
 	}
-	toAlloc = 2.5
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(1.5, orders[0].nxtTrade)
-	assert.Equal(0.5, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(0.5, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 25
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(15), orders[0].nxtTrade)
+	assert.Equal(int64(5), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(5), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 90, 0, 90},
 		OrderPart{"3", 100, 60, 0, 60},
 		OrderPart{"2", 100, 30, 0, 30},
 	}
-	toAlloc = 3.5
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(2.0, orders[0].nxtTrade)
-	assert.Equal(0.5, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(1.0, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 35
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(20), orders[0].nxtTrade)
+	assert.Equal(int64(5), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(10), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 90, 0, 90},
 		OrderPart{"3", 100, 90, 0, 90},
 		OrderPart{"2", 100, 90, 0, 90},
 	}
-	toAlloc = 70
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(23.5, orders[0].nxtTrade)
-	assert.Equal(23.5, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(23.0, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 700
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(235), orders[0].nxtTrade)
+	assert.Equal(int64(235), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(230), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 90, 0, 90},
 		OrderPart{"2", 100, 90, 0, 90},
 		OrderPart{"3", 100, 90, 0, 90},
 	}
-	toAlloc = 70
-	assert.True(allocateResidual(&toAlloc, orders, 0.5))
-	assert.Equal(23.5, orders[0].nxtTrade)
-	assert.Equal(23.5, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(23.0, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(0.0, toAlloc)
+	toAlloc = 700
+	assert.True(allocateResidual(&toAlloc, orders, 5))
+	assert.Equal(int64(235), orders[0].nxtTrade)
+	assert.Equal(int64(235), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(230), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
 }
 
 func TestMatchEng_reserveQty(t *testing.T) {
@@ -579,21 +579,21 @@ func TestMatchEng_reserveQty(t *testing.T) {
 		OrderPart{"7", 102, 90, 0, 90},
 	}
 
-	assert.True(me.reserveQty(430, orders))
-	assert.Equal(90.0, orders[0].nxtTrade)
-	assert.Equal("1", orders[0].id)
-	assert.Equal(90.0, orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
-	assert.Equal(90.0, orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
-	assert.Equal(90.0, orders[3].nxtTrade)
-	assert.Equal("6", orders[3].id)
-	assert.Equal(23.5, orders[4].nxtTrade)
-	assert.Equal("4", orders[4].id)
-	assert.Equal(23.5, orders[5].nxtTrade)
-	assert.Equal("5", orders[5].id)
-	assert.Equal(23.0, orders[6].nxtTrade)
-	assert.Equal("7", orders[6].id)
+	assert.True(me.reserveQty(4300, orders))
+	assert.Equal(int64(900), orders[0].nxtTrade)
+	assert.Equal("1", orders[0].Id)
+	assert.Equal(int64(900), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(900), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(900), orders[3].nxtTrade)
+	assert.Equal("6", orders[3].Id)
+	assert.Equal(int64(235), orders[4].nxtTrade)
+	assert.Equal("4", orders[4].Id)
+	assert.Equal(int64(235), orders[5].nxtTrade)
+	assert.Equal("5", orders[5].Id)
+	assert.Equal(int64(230), orders[6].nxtTrade)
+	assert.Equal("7", orders[6].Id)
 }
 
 func TestMatchEng_Match(t *testing.T) {
@@ -720,8 +720,8 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	assert.Nil(book.sellQueue.GetPriceLevel(99))
 	assert.Nil(book.sellQueue.GetPriceLevel(98))
 	assert.Nil(book.sellQueue.GetPriceLevel(96))
-	for _, o := range book.buyQueue.GetPriceLevel(100).orders {
-		assert.Equal(o.time, int64(105))
-		assert.True(o.cumQty > 0)
+	for _, o := range book.buyQueue.GetPriceLevel(100).Orders {
+		assert.Equal(o.Time, int64(105))
+		assert.True(o.CumQty > 0)
 	}
 }

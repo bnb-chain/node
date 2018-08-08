@@ -15,7 +15,7 @@ import (
 )
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
+func NewHandler(k *Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
@@ -36,7 +36,7 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 	accountMapper.SetAccount(ctx, account)
 }
 
-func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+func handleNewOrder(ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	_, ok := keeper.OrderExists(msg.Id)
 	if ctx.IsCheckTx() {
@@ -80,7 +80,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 }
 
 // Handle CancelOffer -
-func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+func handleCancelOrder(ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.RefId)
 
 	//only check whether there exists order to cancel

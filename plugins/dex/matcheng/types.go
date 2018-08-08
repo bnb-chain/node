@@ -29,18 +29,18 @@ type Trade struct {
 }
 
 type OrderPart struct {
-	id       string
-	time     int64
-	qty      int64
-	cumQty   int64
+	Id       string
+	Time     int64
+	Qty      int64
+	CumQty   int64
 	nxtTrade int64
 }
 
 func (o *OrderPart) LeavesQty() int64 {
-	if o.cumQty >= o.qty {
+	if o.CumQty >= o.Qty {
 		return 0
 	} else {
-		return o.qty - o.cumQty
+		return o.Qty - o.CumQty
 	}
 }
 
@@ -58,7 +58,7 @@ type PriceLevelInterface interface {
 
 type PriceLevel struct {
 	Price  int64
-	orders []OrderPart
+	Orders []OrderPart
 }
 
 type BuyPriceLevel struct {
@@ -74,31 +74,31 @@ type SellPriceLevel struct {
 }
 
 func (l *PriceLevel) String() string {
-	return fmt.Sprintf("%d->[%v]", l.Price, l.orders)
+	return fmt.Sprintf("%d->[%v]", l.Price, l.Orders)
 }
 
 //addOrder would implicitly called with sequence of 'time' parameter
 func (l *PriceLevel) addOrder(id string, time int64, qty int64) (int, error) {
 	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
-	for _, o := range l.orders {
-		if o.id == id {
+	for _, o := range l.Orders {
+		if o.Id == id {
 			return 0, fmt.Errorf("Order %s has existed in the price level.", id)
 		}
 	}
-	l.orders = append(l.orders, OrderPart{id, time, qty, 0, 0})
-	return len(l.orders), nil
+	l.Orders = append(l.Orders, OrderPart{id, time, qty, 0, 0})
+	return len(l.Orders), nil
 }
 
 func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
-	for i, o := range l.orders {
-		if o.id == id {
-			k := len(l.orders)
+	for i, o := range l.Orders {
+		if o.Id == id {
+			k := len(l.Orders)
 			if i == k-1 {
-				l.orders = l.orders[:i]
+				l.Orders = l.Orders[:i]
 			} else if i == 0 {
-				l.orders = l.orders[1:]
+				l.Orders = l.Orders[1:]
 			} else {
-				l.orders = append(l.orders[:i], l.orders[i+1:]...)
+				l.Orders = append(l.Orders[:i], l.Orders[i+1:]...)
 			}
 			return o, k - 1, nil
 		}
@@ -108,8 +108,8 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 }
 
 func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
-	for _, o := range l.orders {
-		if o.id == id {
+	for _, o := range l.Orders {
+		if o.Id == id {
 			return o, nil
 		}
 	}
@@ -119,7 +119,7 @@ func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
 
 func (l *PriceLevel) totalLeavesQty() int64 {
 	var total int64 = 0
-	for _, o := range l.orders {
+	for _, o := range l.Orders {
 		total += o.LeavesQty()
 	}
 	return total

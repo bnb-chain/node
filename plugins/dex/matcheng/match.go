@@ -33,8 +33,8 @@ func sumOrdersTotalLeft(orders []OrderPart, recalNxtTrade bool) float64 {
 	k := len(orders)
 	for i := 0; i < k; i++ {
 		o := &orders[i]
-		if recalNxtTrade {
-			o.nxtTrade = o.qty - o.cumQty
+		if reCalNxtTrade {
+			o.nxtTrade = o.Qty - o.CumQty
 		}
 		s += o.nxtTrade
 	}
@@ -194,7 +194,7 @@ func allocateResidual(toAlloc *float64, orders []OrderPart, lotSize float64) boo
 	t := sumOrdersTotalLeft(orders, false)
 
 	// orders should have the same time, sort here to get deterministic sequence
-	sort.Slice(orders, func(i, j int) bool { return orders[i].id < orders[j].id })
+	sort.Slice(orders, func(i, j int) bool { return orders[i].Id < orders[j].Id })
 	residual := *toAlloc
 	halfLot := lotSize / 2
 
