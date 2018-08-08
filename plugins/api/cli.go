@@ -29,7 +29,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 			listenAddr := viper.GetString(flagListenAddr)
 			server := newServer(ctx, cdc).bindRoutes()
 			handler := server.router
-			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "rest-server")
+			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "apiserv")
 			maxOpen := viper.GetInt(flagMaxOpenConnections)
 
 			listener, err := tmserver.StartHTTPServer(
