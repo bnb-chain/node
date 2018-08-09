@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -14,6 +13,8 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/tx"

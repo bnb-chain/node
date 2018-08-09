@@ -7,9 +7,10 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
