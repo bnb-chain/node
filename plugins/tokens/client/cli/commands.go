@@ -1,10 +1,16 @@
 package commands
 
 import (
+<<<<<<< HEAD
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
+=======
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/spf13/cobra"
+
+>>>>>>> add some steps in end block.
 	"github.com/BiJie/BinanceChain/wire"
 )
 
