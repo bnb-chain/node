@@ -10,7 +10,7 @@ import (
 // type TradingPair = types.TradingPair
 
 type TradingPairMapper = store.TradingPairMapper
-type OrderKeeper = order.Keeper
+type DexKeeper = order.Keeper
 
 var NewTradingPairMapper = store.NewTradingPairMapper
 var NewOrderKeeper = order.NewKeeper

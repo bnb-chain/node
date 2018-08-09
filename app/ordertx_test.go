@@ -64,7 +64,7 @@ type level struct {
 func getOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	testApp.OrderKeeper.GetOrderBookUnSafe(pair, 5,
+	testApp.DexKeeper.GetOrderBookUnSafe(pair, 5,
 		func(price, qty int64) {
 			buys = append(buys, level{price, qty})
 		},
@@ -79,7 +79,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
-	testApp.OrderKeeper.ClearOrderBook("BTC_BNB")
+	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	add := Account(0).GetAddress()
 	msg := o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
 
@@ -100,7 +100,7 @@ func Test_Match(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
-	testApp.OrderKeeper.ClearOrderBook("BTC_BNB")
+	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	add := Account(0).GetAddress()
 	add2 := Account(1).GetAddress()
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
@@ -132,13 +132,13 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	code, e := testApp.OrderKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
+	code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
 	t.Logf("res is %v and error is %v", code, e)
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 
-	trades, lastPx := testApp.OrderKeeper.GetLastTrades("BTC_BNB")
+	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	//total execution is 900e8 BTC @ price 96e8, notional is 86400e8
@@ -186,7 +186,7 @@ func Test_Match(t *testing.T) {
 	buys, sells = getOrderBook("ETH_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	code, e = testApp.OrderKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
+	code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
 	t.Logf("res is %v and error is %v", code, e)
 	buys, sells = getOrderBook("ETH_BNB")
 	assert.Equal(1, len(buys))
@@ -194,7 +194,7 @@ func Test_Match(t *testing.T) {
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
-	trades, lastPx = testApp.OrderKeeper.GetLastTrades("ETH_BNB")
+	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
 	assert.Equal(int64(97e8), lastPx)
 	assert.Equal(4, len(trades))
 	//total execution is 90e8 ETH @ price 97e8, notional is 8730e8
@@ -223,7 +223,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
-	testApp.OrderKeeper.ClearOrderBook("BTC_BNB")
+	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	add := Account(0).GetAddress()
 	msg := o.NewCancelOrderMsg(add, "order5.0", "order5.1")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)

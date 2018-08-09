@@ -38,16 +38,19 @@ func initializeOrderBook(symbol string, eng *me.MatchEng) error {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) Keeper {
+func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
 	allPairs := make([]string, 2)
 	for _, p := range allPairs {
 		eng := CreateMatchEng(p)
-		initializeOrderBook(p, eng)
+		if err := initializeOrderBook(p, eng); err != nil {
+			return nil, err
+		}
+		engines[p] = eng
 	}
-	return Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
+	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
-		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256), poolSize: concurrency}
+		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256), poolSize: concurrency}, nil
 }
 
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
@@ -266,6 +269,21 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		close(t)
 	}
 	wg.Wait()
+	return sdk.CodeOK, nil
+}
+
+func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+	return sdk.CodeOK, nil
+}
+
+func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
+	//t := time.Unix(blockTime/1000, 0)
+	//key := t.Format("20060102")
+	//store := ctx.KVStore(kp.storeKey)
+	//store.Set(key, height)
+}
+
+func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
 	return sdk.CodeOK, nil
 }
 
