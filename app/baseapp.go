@@ -18,8 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 // Key to store the header in the DB itself.

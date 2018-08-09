@@ -4,8 +4,9 @@ import (
 	"github.com/gorilla/mux"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
+
+	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/plugins/tokens"

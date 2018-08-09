@@ -49,6 +49,8 @@ type WAL interface {
 // Write ahead logger writes order book snapshot and changes to disk after block execution.
 // Can be used for crash-recovery and deterministic replay
 
+// NOT USED YET
+
 type orderbookWAL struct {
 	cmn.BaseService
 

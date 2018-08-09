@@ -1,9 +1,10 @@
 package commands
 
 import (
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
