@@ -300,6 +300,7 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
+<<<<<<< HEAD
 	t := time.Unix(blockTime/1000, 0)
 	key := t.Format("20060102")
 	store := ctx.KVStore(kp.storeKey)
@@ -338,6 +339,15 @@ func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error)
 		bookBytes := dumpOrderBookBytes(eng, buf)
 		bookBytes = bookBytes[:0]
 	}
+=======
+	//t := time.Unix(blockTime/1000, 0)
+	//key := t.Format("20060102")
+	//store := ctx.KVStore(kp.storeKey)
+	//store.Set(key, height)
+}
+
+func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
+>>>>>>> add some steps in end block.
 	return sdk.CodeOK, nil
 }
 
