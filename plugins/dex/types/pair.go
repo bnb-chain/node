@@ -27,7 +27,3 @@ func calcTickSize() int64 {
 func calcLotSize() int64 {
 	return 1e8
 }
-
-func GetPairLabel(tradeAsset, quoteAsset string) string {
-	return tradeAsset + "_" + quoteAsset
-}
