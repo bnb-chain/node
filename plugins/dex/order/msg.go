@@ -36,6 +36,11 @@ var Side = struct {
 	SELL int8
 }{sideBuy, sideSell}
 
+var sideNames = map[string]int8{
+	"BUY":  sideBuy,
+	"SELL": sideSell,
+}
+
 // IsValidSide validates that a side is valid and supported by the matching engine
 func IsValidSide(side int8) bool {
 	switch side {
@@ -44,6 +49,15 @@ func IsValidSide(side int8) bool {
 	default:
 		return false
 	}
+}
+
+// SideStringToSideCode converts a string like "BUY" to its internal side code
+func SideStringToSideCode(side string) (int8, error) {
+	upperSide := strings.ToUpper(side)
+	if val, ok := sideNames[upperSide]; ok {
+		return val, nil
+	}
+	return -1, errors.New("side `" + upperSide + "` not found or supported")
 }
 
 const (
@@ -98,11 +112,11 @@ func IsValidTimeInForce(tif int8) bool {
 
 // TifStringToTifCode converts a string like "GTC" to its internal tif code
 func TifStringToTifCode(tif string) (int8, error) {
-	upper := strings.ToUpper(tif)
-	if val, ok := timeInForceNames[upper]; ok {
+	upperTif := strings.ToUpper(tif)
+	if val, ok := timeInForceNames[upperTif]; ok {
 		return val, nil
 	}
-	return -1, errors.New("tif " + upper + " not found or supported")
+	return -1, errors.New("tif `" + upperTif + "` not found or supported")
 }
 
 // CancelOrderMsg represents a message to cancel an open order

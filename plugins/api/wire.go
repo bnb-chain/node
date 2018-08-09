@@ -1,4 +1,4 @@
-package lcd
+package api
 
 import (
 	amino "github.com/tendermint/go-amino"

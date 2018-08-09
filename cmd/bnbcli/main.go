@@ -1,6 +1,10 @@
 package main
 
 import (
+	"github.com/spf13/cobra"
+
+	"github.com/tendermint/tendermint/libs/cli"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -9,13 +13,11 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
-	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/lcd"
 	"github.com/BiJie/BinanceChain/common/types"
+	apiserv "github.com/BiJie/BinanceChain/plugins/api"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
 )
@@ -74,7 +76,7 @@ func main() {
 	// add proxy, version and key info
 	rootCmd.AddCommand(
 		client.LineBreak,
-		lcd.ServeCommand(cdc),
+		apiserv.ServeCommand(cdc),
 		keys.Commands(),
 		client.LineBreak,
 		version.VersionCmd,

@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -23,6 +22,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -51,12 +51,15 @@ type BinanceChain struct {
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *BinanceChain {
 
-	// Create app-level codec for txs and accounts.
+	// create app-level codec for txs and accounts
 	var cdc = MakeCodec()
 
-	// Create your application object.
+	// create composed tx decoder
+	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
+
+	// create your application object
 	var app = &BinanceChain{
-		BaseApp: NewBaseApp(appName, cdc, logger, db),
+		BaseApp: NewBaseApp(appName, cdc, logger, db, decoders),
 		Codec:   cdc,
 	}
 
@@ -268,5 +271,24 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			Code: uint32(sdk.ABCICodeOK),
 			Info: "Unknown 'app' Query Path",
 		}
+	}
+}
+
+// default custom logic for transaction decoding
+func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
+	return func(txBytes []byte) (sdk.Tx, sdk.Error) {
+		var tx = auth.StdTx{}
+
+		if len(txBytes) == 0 {
+			return nil, sdk.ErrTxDecode("txBytes are empty")
+		}
+
+		// StdTx.Msg is an interface. The concrete types
+		// are registered by MakeTxCodec
+		err := cdc.UnmarshalBinary(txBytes, &tx)
+		if err != nil {
+			return nil, sdk.ErrTxDecode("").TraceSDK(err.Error())
+		}
+		return tx, nil
 	}
 }
