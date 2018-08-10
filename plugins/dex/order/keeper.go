@@ -212,10 +212,26 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int, iterBuy me.LevelIter, iterSell me.LevelIter) {
-	if eng, ok := kp.engines[pair]; ok {
-		eng.Book.ShowDepth(levelNum, iterBuy, iterSell)
+func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int) [][]int64 {
+	orderbook := make([][]int64, levelNum)
+	for l := range orderbook {
+		orderbook[l] = make([]int64, 4)
 	}
+	i, j := 0, 0
+
+	if eng, ok := kp.engines[pair]; ok {
+		eng.Book.ShowDepth(levelNum, func(p *me.PriceLevel) {
+			orderbook[i][2] = p.Price
+			orderbook[i][3] = p.TotalLeavesQty()
+			i++
+		},
+			func(p *me.PriceLevel) {
+				orderbook[j][1] = p.Price
+				orderbook[j][0] = p.TotalLeavesQty()
+				j++
+			})
+	}
+	return orderbook
 }
 
 func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
@@ -310,10 +326,17 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, days
 	return height
 }
 
-func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
-	//for sym, eng := range kp.engines {
+func dumpOrderBookBytes(eng *me.MatchEng, buf []byte) []byte {
+	return buf
+}
 
-	//}
+func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
+	buf := make([]byte, 1000)
+	for _, eng := range kp.engines {
+		buf := buf[:0]
+		bookBytes := dumpOrderBookBytes(eng, buf)
+		bookBytes = bookBytes[:0]
+	}
 	return sdk.CodeOK, nil
 }
 

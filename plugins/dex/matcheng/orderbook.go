@@ -44,7 +44,7 @@ type PriceLevelInterface interface {
 	removeOrder(id string) (OrderPart, int, error)
 	getOrder(id string) (OrderPart, error)
 	Less(than bt.Item) bool
-	totalLeavesQty() int64
+	TotalLeavesQty() int64
 }
 
 func compareBuy(p1 int64, p2 int64) int {
@@ -108,7 +108,7 @@ func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
 	return OrderPart{}, fmt.Errorf("order %s doesn't exist.", id)
 }
 
-func (l *PriceLevel) totalLeavesQty() int64 {
+func (l *PriceLevel) TotalLeavesQty() int64 {
 	var total int64 = 0
 	for _, o := range l.orders {
 		total += o.LeavesQty()
@@ -128,7 +128,7 @@ type OverLappedLevel struct {
 	BuySellSurplus        int64
 }
 
-type LevelIter func(price int64, total int64)
+type LevelIter func(*PriceLevel)
 
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
 // It can be implemented in different structures but here a fast unrolled-linked list,
@@ -142,6 +142,7 @@ type OrderBookInterface interface {
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter)
+	GetAllLevels() ([]*PriceLevel, []*PriceLevel)
 	Clear()
 }
 
@@ -293,6 +294,14 @@ func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
 func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter) {
 	ob.buyQueue.Iterate(numOfLevels, iterBuy)
 	ob.sellQueue.Iterate(numOfLevels, iterSell)
+}
+
+func (ob *OrderBookOnULList) GetAllLevels() ([]*PriceLevel, []*PriceLevel) {
+	buys := make([]*PriceLevel, ob.buyQueue.capacity)
+	buys = buys[:0]
+	sells := make([]*PriceLevel, ob.sellQueue.capacity)
+	sells = buys[:0]
+	return buys, sells
 }
 
 func (ob *OrderBookOnULList) Clear() {
