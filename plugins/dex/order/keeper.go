@@ -28,6 +28,16 @@ type Keeper struct {
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
 }
 
+// Transfer represents a transfer between trade currencies
+type Transfer struct {
+	account sdk.AccAddress
+	inCcy   string
+	in      int64
+	outCcy  string
+	out     int64
+	unlock  int64
+}
+
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) Keeper {
 	return Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
@@ -91,23 +101,14 @@ func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
 	return ord, ok
 }
 
-type transfer struct {
-	account sdk.AccAddress
-	inCcy   string
-	in      int64
-	outCcy  string
-	out     int64
-	unlock  int64
-}
-
-func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (transfer, transfer) {
+func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (Transfer, Transfer) {
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)
-	return transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
-		transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
+	return Transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
+		Transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
 
 //TODO: should get an even hash
@@ -115,7 +116,7 @@ func channelHash(account sdk.AccAddress) int {
 	return int(account[0] + account[1])
 }
 
-func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
+func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
 	size := len(kp.roundOrders)
 	//size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -136,9 +137,9 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 		outs[j] <- k
 		i++
 	}
-	tradeOuts := make([]chan transfer, concurrency)
+	tradeOuts := make([]chan Transfer, concurrency)
 	for i, _ := range tradeOuts {
-		tradeOuts[i] = make(chan transfer)
+		tradeOuts[i] = make(chan Transfer)
 	}
 	wg.Add(concurrency)
 	for i = 0; i < concurrency; i++ {
@@ -174,7 +175,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan transfer {
 							} else {
 								unlock = qty
 							}
-							tradeOuts[c] <- transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+							tradeOuts[c] <- Transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
 						}
 					}
 				}
@@ -207,7 +208,7 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
-func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran transfer) sdk.Error {
+func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran Transfer) sdk.Error {
 	//for Out, only need to reduce the locked.
 	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
 	account.SetLockedCoins(
@@ -229,7 +230,7 @@ func (kp *Keeper) clearAfterMatch() (err error) {
 // all the symbols' order books, among all the clients
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
-	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, c <-chan transfer) {
+	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, c <-chan Transfer) {
 		for n := range c {
 			kp.doTransfer(ctx, accountMapper, n)
 		}
