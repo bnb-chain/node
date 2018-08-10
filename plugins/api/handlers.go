@@ -64,7 +64,7 @@ func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CoreContext) htt
 }
 
 func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
-	h := dexapi.OrderReqHandler(cdc, ctx)
+	h := dexapi.DepthReqHandler(cdc, ctx)
 	return s.withUrlEncForm(s.limitReqSize(h))
 }
 

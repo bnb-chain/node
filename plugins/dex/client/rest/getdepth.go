@@ -1,15 +1,13 @@
 package rest
 
 import (
-	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -19,8 +17,8 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 		pair string
 	}
 	type response struct {
-		Pair   string  `json:"pair"`
-		Orders []order `json:"orders"`
+		Pair   string        `json:"pair"`
+		Orders []store.Order `json:"orders"`
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
@@ -36,13 +34,13 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 		}
 
 		// validate pair
-		err := validatePairSymbol(params.pair)
+		err := store.ValidatePairSymbol(params.pair)
 		if err != nil {
 			throw(w, http.StatusNotFound, err)
 			return
 		}
 
-		book, err := getOrderBook(cdc, ctx, params.pair)
+		book, err := store.GetOrderBook(cdc, ctx, params.pair)
 		if err != nil {
 			throw(w, http.StatusNotFound, err)
 			return
@@ -61,20 +59,4 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 
 		w.Write(output)
 	}
-}
-
-func validatePairSymbol(symbol string) error {
-	tokenSymbols := strings.Split(symbol, "_")
-	if len(tokenSymbols) != 2 {
-		return errors.New("Invalid symbol")
-	}
-
-	for _, tokenSymbol := range tokenSymbols {
-		err := types.ValidateSymbol(tokenSymbol)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
