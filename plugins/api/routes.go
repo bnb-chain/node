@@ -19,6 +19,7 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc("/node_version", s.handleNodeVersionReq()).Methods("GET")
 
 	// dex routes
+	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx)).Methods("PUT")
 	r.HandleFunc(prefix+"/depth/{pair}", s.handleDexDepthReq(s.cdc, s.ctx)).Methods("GET")
 
 	// tokens routes
