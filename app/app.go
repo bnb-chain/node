@@ -131,11 +131,7 @@ func (app *BinanceChain) registerHandlers() {
 		app.Router().AddRoute(route, handler)
 	}
 
-<<<<<<< HEAD
 	for route, handler := range dex.Routes(app.TradingPairMapper, *app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-=======
-	for route, handler := range dex.Routes(app.TradingPairMapper, app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
->>>>>>> add some steps in end block.
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -201,8 +197,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
 	} else {
+		// breathe block
 		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
 		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
+<<<<<<< HEAD
 <<<<<<< HEAD
 		app.DexKeeper.SnapShotOrderBook(height, ctx)
 =======
@@ -213,6 +211,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 >>>>>>> add some steps in end block.
 >>>>>>> add some steps in end block.
 		// breathe block
+=======
+		app.DexKeeper.SnapShotOrderBook(height)
+
+>>>>>>> add GetBreatheBlockHeight
 		icoDone := ico.EndBlockAsync(ctx)
 
 		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.OrderKeeper)
@@ -276,31 +278,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			}
 		}
 		pair := path[2]
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
->>>>>>> add some steps in end block.
 		orderbook := app.DexKeeper.GetOrderBookUnSafe(pair, 20)
-=======
-		orderbook := make([][]int64, 10)
-		for l := range orderbook {
-			orderbook[l] = make([]int64, 4)
-		}
-		i, j := 0, 0
-		app.DexKeeper.GetOrderBookUnSafe(pair, 20,
-			func(price, qty int64) {
-				orderbook[i][2] = price
-				orderbook[i][3] = qty
-				i++
-			},
-			func(price, qty int64) {
-				orderbook[j][1] = price
-				orderbook[j][0] = qty
-				j++
-			})
-
->>>>>>> add some steps in end block.
 		resValue, err := app.Codec.MarshalBinary(orderbook)
 		if err != nil {
 			return abci.ResponseQuery{
