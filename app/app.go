@@ -76,14 +76,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
 	var err error
-<<<<<<< HEAD
-
 	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
-
-=======
-	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, app.RegisterCodespace(dex.DefaultCodespace), 2)
->>>>>>> add some steps in end block.
 	if err != nil {
 		logger.Error("Failed to create an order keep", "error", err)
 		panic(err)
@@ -137,11 +131,7 @@ func (app *BinanceChain) registerHandlers() {
 		app.Router().AddRoute(route, handler)
 	}
 
-<<<<<<< HEAD
 	for route, handler := range dex.Routes(app.TradingPairMapper, *app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-=======
-	for route, handler := range dex.Routes(app.TradingPairMapper, app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
->>>>>>> add some steps in end block.
 		app.Router().AddRoute(route, handler)
 	}
 }
