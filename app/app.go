@@ -243,23 +243,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			}
 		}
 		pair := path[2]
-		orderbook := make([][]int64, 10)
-		for l := range orderbook {
-			orderbook[l] = make([]int64, 4)
-		}
-		i, j := 0, 0
-		app.DexKeeper.GetOrderBookUnSafe(pair, 20,
-			func(price, qty int64) {
-				orderbook[i][2] = price
-				orderbook[i][3] = qty
-				i++
-			},
-			func(price, qty int64) {
-				orderbook[j][1] = price
-				orderbook[j][0] = qty
-				j++
-			})
-
+		orderbook := app.DexKeeper.GetOrderBookUnSafe(pair, 20)
 		resValue, err := app.Codec.MarshalBinary(orderbook)
 		if err != nil {
 			return abci.ResponseQuery{
