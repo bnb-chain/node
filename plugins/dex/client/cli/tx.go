@@ -26,11 +26,20 @@ const (
 	flagTimeInForce = "tif"
 )
 
+func generateOrderID(ctx context.CoreContext, from sdk.AccAddress) (string, context.CoreContext, error) {
+	ctx, err := context.EnsureSequence(ctx)
+	if err != nil {
+		panic(err)
+	}
+	id := fmt.Sprintf("%s-%d", from.String(), ctx.Sequence)
+	return id, ctx, err
+}
+
 // NewOrderCommand -
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "order -i <id> -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
-		Short: "send new order",
+		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
+		Short: "Submit a new order (order ID is auto-generated)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
 
@@ -46,7 +55,11 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			symbol = strings.ToUpper(symbol)
-			id := viper.GetString(flagId)
+			var id string
+			id, _, err = generateOrderID(ctx, from)
+			if err != nil {
+				return err
+			}
 
 			priceStr := viper.GetString(flagPrice)
 			price, err := utils.ParsePrice(priceStr)
@@ -76,7 +89,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
 	cmd.Flags().StringP(flagSide, "s", "", "side (buy as 1 or sell as 2) of the order")
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
