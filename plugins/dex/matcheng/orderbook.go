@@ -20,6 +20,7 @@ type OrderBookInterface interface {
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter)
+	GetAllLevels() ([]*PriceLevel, []*PriceLevel)
 	Clear()
 }
 
@@ -135,6 +136,14 @@ func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
 func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter) {
 	ob.buyQueue.Iterate(numOfLevels, iterBuy)
 	ob.sellQueue.Iterate(numOfLevels, iterSell)
+}
+
+func (ob *OrderBookOnULList) GetAllLevels() ([]*PriceLevel, []*PriceLevel) {
+	buys := make([]*PriceLevel, ob.buyQueue.capacity)
+	buys = buys[:0]
+	sells := make([]*PriceLevel, ob.sellQueue.capacity)
+	sells = buys[:0]
+	return buys, sells
 }
 
 func (ob *OrderBookOnULList) Clear() {
