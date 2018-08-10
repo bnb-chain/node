@@ -301,6 +301,9 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add GetBreatheBlockHeight
 	t := time.Unix(blockTime/1000, 0)
 	key := t.Format("20060102")
 	store := ctx.KVStore(kp.storeKey)
@@ -309,6 +312,7 @@ func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
 		panic(err)
 	}
 	store.Set([]byte(key), bz)
+<<<<<<< HEAD
 }
 
 func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
@@ -348,6 +352,31 @@ func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error)
 
 func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
 >>>>>>> add some steps in end block.
+=======
+}
+
+func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
+	store := ctx.KVStore(kp.storeKey)
+	bz := []byte(nil)
+
+	for i := 0; bz == nil && i <= daysBack; i++ {
+		t := timeNow.AddDate(0, 0, -i)
+		key := t.Format("20060102")
+		bz = store.Get([]byte(key))
+	}
+	var height int64
+	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
+	if err != nil {
+		panic(err)
+	}
+	return height
+}
+
+func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
+	//for sym, eng := range kp.engines {
+
+	//}
+>>>>>>> add GetBreatheBlockHeight
 	return sdk.CodeOK, nil
 }
 
