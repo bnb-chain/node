@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/wire"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -26,6 +28,7 @@ type Keeper struct {
 	roundOrders    map[string]int // limit to the total tx number in a block
 	roundIOCOrders map[string][]string
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
+	cdc            *wire.Codec
 }
 
 func CreateMatchEng(symbol string) *me.MatchEng {
@@ -38,7 +41,8 @@ func initializeOrderBook(symbol string, eng *me.MatchEng) error {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType, concurrency uint) (*Keeper, error) {
+func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
+	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
 	allPairs := make([]string, 2)
 	for _, p := range allPairs {
@@ -50,7 +54,8 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.Codespace
 	}
 	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
-		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256), poolSize: concurrency}, nil
+		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
+		poolSize: concurrency, cdc: cdc}, nil
 }
 
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
@@ -278,13 +283,37 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
-	//t := time.Unix(blockTime/1000, 0)
-	//key := t.Format("20060102")
-	//store := ctx.KVStore(kp.storeKey)
-	//store.Set(key, height)
+	t := time.Unix(blockTime/1000, 0)
+	key := t.Format("20060102")
+	store := ctx.KVStore(kp.storeKey)
+	bz, err := kp.cdc.MarshalBinaryBare(height)
+	if err != nil {
+		panic(err)
+	}
+	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
+func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
+	store := ctx.KVStore(kp.storeKey)
+	bz := []byte(nil)
+
+	for i := 0; bz == nil && i <= daysBack; i++ {
+		t := timeNow.AddDate(0, 0, -i)
+		key := t.Format("20060102")
+		bz = store.Get([]byte(key))
+	}
+	var height int64
+	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
+	if err != nil {
+		panic(err)
+	}
+	return height
+}
+
+func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
+	//for sym, eng := range kp.engines {
+
+	//}
 	return sdk.CodeOK, nil
 }
 

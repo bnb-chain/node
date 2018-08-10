@@ -71,7 +71,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
 	var err error
-	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, app.RegisterCodespace(dex.DefaultCodespace), 2)
+	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper,
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
 	if err != nil {
 		logger.Error("Failed to create an order keep", "error", err)
 		panic(err)
@@ -111,7 +112,7 @@ func (app *BinanceChain) registerHandlers() {
 		app.Router().AddRoute(route, handler)
 	}
 
-	for route, handler := range dex.Routes(app.TradingPairMapper, app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
+	for route, handler := range dex.Routes(app.TradingPairMapper, *app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -179,7 +180,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else {
 		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
 		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
-		app.DexKeeper.SnapShotOrderBook()
+		app.DexKeeper.SnapShotOrderBook(height)
 		// breathe block
 		icoDone := ico.EndBlockAsync(ctx)
 		// other end blockers
