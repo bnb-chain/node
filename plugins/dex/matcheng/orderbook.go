@@ -8,6 +8,128 @@ import (
 	bt "github.com/google/btree"
 )
 
+// import ""
+
+const (
+	BUYSIDE  int8 = 1
+	SELLSIDE int8 = 2
+)
+
+// PRECISION is the last effective decimal digit of the price of currency pair
+const PRECISION = 1
+
+type OrderPart struct {
+	id       string
+	time     int64
+	qty      int64
+	cumQty   int64
+	nxtTrade int64
+}
+
+func (o *OrderPart) LeavesQty() int64 {
+	if o.cumQty >= o.qty {
+		return 0
+	} else {
+		return o.qty - o.cumQty
+	}
+}
+
+type PriceLevel struct {
+	Price  int64
+	orders []OrderPart
+}
+
+type PriceLevelInterface interface {
+	addOrder(id string, time int64, qty int64) (int, error)
+	removeOrder(id string) (OrderPart, int, error)
+	getOrder(id string) (OrderPart, error)
+	Less(than bt.Item) bool
+	TotalLeavesQty() int64
+}
+
+func compareBuy(p1 int64, p2 int64) int {
+	d := (p2 - p1)
+	switch {
+	case d >= PRECISION:
+		return -1
+	case d <= -PRECISION:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareSell(p1 int64, p2 int64) int {
+	return -compareBuy(p1, p2)
+}
+
+func (l *PriceLevel) String() string {
+	return fmt.Sprintf("%d->[%v]", l.Price, l.orders)
+}
+
+//addOrder would implicitly called with sequence of 'time' parameter
+func (l *PriceLevel) addOrder(id string, time int64, qty int64) (int, error) {
+	// TODO: need benchmark - queue is not expected to be very long (less than hundreds)
+	for _, o := range l.orders {
+		if o.id == id {
+			return 0, fmt.Errorf("Order %s has existed in the price level.", id)
+		}
+	}
+	l.orders = append(l.orders, OrderPart{id, time, qty, 0, 0})
+	return len(l.orders), nil
+
+}
+
+func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
+	for i, o := range l.orders {
+		if o.id == id {
+			k := len(l.orders)
+			if i == k-1 {
+				l.orders = l.orders[:i]
+			} else if i == 0 {
+				l.orders = l.orders[1:]
+			} else {
+				l.orders = append(l.orders[:i], l.orders[i+1:]...)
+			}
+			return o, k - 1, nil
+		}
+	}
+	// not found
+	return OrderPart{}, 0, fmt.Errorf("order %s doesn't exist.", id)
+}
+
+func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
+	for _, o := range l.orders {
+		if o.id == id {
+			return o, nil
+		}
+	}
+	// not found
+	return OrderPart{}, fmt.Errorf("order %s doesn't exist.", id)
+}
+
+func (l *PriceLevel) TotalLeavesQty() int64 {
+	var total int64 = 0
+	for _, o := range l.orders {
+		total += o.LeavesQty()
+	}
+	return total
+}
+
+type OverLappedLevel struct {
+	Price                 int64
+	BuyOrders             []OrderPart
+	SellOrders            []OrderPart
+	SellTotal             int64
+	AccumulatedSell       int64
+	BuyTotal              int64
+	AccumulatedBuy        int64
+	AccumulatedExecutions int64
+	BuySellSurplus        int64
+}
+
+type LevelIter func(*PriceLevel)
+
 // OrderBookInterface is a generic sequenced order to quickly get the spread to match.
 // It can be implemented in different structures but here a fast unrolled-linked list,
 // or/and google/B-Tree are chosen, still need performance benchmark to justify this.

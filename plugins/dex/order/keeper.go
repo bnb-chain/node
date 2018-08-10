@@ -338,7 +338,12 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
+<<<<<<< HEAD
 	key := utils.Int642Bytes(blockTime / 1000)
+=======
+	t := time.Unix(blockTime/1000, 0)
+	key := t.Format("20060102")
+>>>>>>> add iteration for all levels.
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {
