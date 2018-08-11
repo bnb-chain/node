@@ -15,8 +15,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/wire"
-
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -45,7 +43,7 @@ type BinanceChain struct {
 
 	FeeCollectionKeeper tx.FeeCollectionKeeper
 	CoinKeeper          bank.Keeper
-	DexKeeper           *dex.DexKeeper
+	DexKeeper           *dex.OrderKeeper
 	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
 	TradingPairMapper   dex.TradingPairMapper
@@ -200,24 +198,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// breathe block
 		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
 		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
-<<<<<<< HEAD
-<<<<<<< HEAD
 		app.DexKeeper.SnapShotOrderBook(height, ctx)
-=======
-<<<<<<< HEAD
-		app.DexKeeper.SnapShotOrderBook(height)
-=======
-		app.DexKeeper.SnapShotOrderBook()
->>>>>>> add some steps in end block.
->>>>>>> add some steps in end block.
-		// breathe block
-=======
-		app.DexKeeper.SnapShotOrderBook(height)
-
->>>>>>> add GetBreatheBlockHeight
 		icoDone := ico.EndBlockAsync(ctx)
 
-		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.OrderKeeper)
+		dex.EndBreatheBlock(ctx, app.TradingPairMapper, *app.DexKeeper)
 
 		// other end blockers
 		<-icoDone
@@ -278,7 +262,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			}
 		}
 		pair := path[2]
-		orderbook := app.DexKeeper.GetOrderBookUnSafe(pair, 20)
+		orderbook := app.DexKeeper.GetOrderBook(pair, 20)
 		resValue, err := app.Codec.MarshalBinary(orderbook)
 		if err != nil {
 			return abci.ResponseQuery{

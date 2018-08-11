@@ -23,6 +23,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
 // in the future, this may be distributed via Sharding
@@ -239,22 +240,20 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int) [][]int64 {
-	orderbook := make([][]int64, levelNum)
-	for l := range orderbook {
-		orderbook[l] = make([]int64, 4)
-	}
+func (kp *Keeper) GetOrderBook(pair string, levelNum int) []store.OrderBookLevel {
+	orderbook := make([]store.OrderBookLevel, levelNum)
+
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.ShowDepth(levelNum, func(p *me.PriceLevel) {
-			orderbook[i][2] = p.Price
-			orderbook[i][3] = p.TotalLeavesQty()
+			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
+			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
 			i++
 		},
 			func(p *me.PriceLevel) {
-				orderbook[j][1] = p.Price
-				orderbook[j][0] = p.TotalLeavesQty()
+				orderbook[j].SellPrice = utils.Fixed8(p.Price)
+				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
 	}
@@ -338,12 +337,7 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
-<<<<<<< HEAD
 	key := utils.Int642Bytes(blockTime / 1000)
-=======
-	t := time.Unix(blockTime/1000, 0)
-	key := t.Format("20060102")
->>>>>>> add iteration for all levels.
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {

@@ -137,4 +137,4 @@ type OverLappedLevel struct {
 	BuySellSurplus        int64
 }
 
-type LevelIter func(l *PriceLevel)
+type LevelIter func(*PriceLevel)
