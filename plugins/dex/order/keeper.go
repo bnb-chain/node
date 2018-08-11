@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
 // in the future, this may be distributed via Sharding
@@ -40,7 +41,6 @@ type Transfer struct {
 	out     int64
 	unlock  int64
 }
-
 
 func CreateMatchEng(symbol string) *me.MatchEng {
 	//TODO: read lot size
@@ -214,22 +214,20 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookUnSafe(pair string, levelNum int) [][]int64 {
-	orderbook := make([][]int64, levelNum)
-	for l := range orderbook {
-		orderbook[l] = make([]int64, 4)
-	}
+func (kp *Keeper) GetOrderBook(pair string, levelNum int) []store.OrderBookLevel {
+	orderbook := make([]store.OrderBookLevel, levelNum)
+
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.ShowDepth(levelNum, func(p *me.PriceLevel) {
-			orderbook[i][2] = p.Price
-			orderbook[i][3] = p.TotalLeavesQty()
+			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
+			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
 			i++
 		},
 			func(p *me.PriceLevel) {
-				orderbook[j][1] = p.Price
-				orderbook[j][0] = p.TotalLeavesQty()
+				orderbook[j].SellPrice = utils.Fixed8(p.Price)
+				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
 	}

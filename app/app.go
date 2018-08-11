@@ -243,7 +243,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			}
 		}
 		pair := path[2]
-		orderbook := app.DexKeeper.GetOrderBookUnSafe(pair, 20)
+		orderbook := app.DexKeeper.GetOrderBook(pair, 20)
 		resValue, err := app.Codec.MarshalBinary(orderbook)
 		if err != nil {
 			return abci.ResponseQuery{
