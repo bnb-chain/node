@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
 // in the future, this may be distributed via Sharding
@@ -44,6 +45,10 @@ type Transfer struct {
 func CreateMatchEng(symbol string) *me.MatchEng {
 	//TODO: read lot size
 	return me.NewMatchEng(1000, 1, 0.05)
+}
+
+func genOrderBookSnapshotKey(height int64, pair string) string {
+	return fmt.Sprintf("orderbook_%v_%v", height, pair)
 }
 
 func initializeOrderBook(symbol string, eng *me.MatchEng) error {
@@ -300,10 +305,6 @@ func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> add GetBreatheBlockHeight
 	t := time.Unix(blockTime/1000, 0)
 	key := t.Format("20060102")
 	store := ctx.KVStore(kp.storeKey)
@@ -312,7 +313,6 @@ func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
 		panic(err)
 	}
 	store.Set([]byte(key), bz)
-<<<<<<< HEAD
 }
 
 func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
@@ -332,52 +332,19 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, days
 	return height
 }
 
-func dumpOrderBookBytes(eng *me.MatchEng, buf []byte) []byte {
-	return buf
-}
-
-func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
-	buf := make([]byte, 1000)
-	for _, eng := range kp.engines {
-		buf := buf[:0]
-		bookBytes := dumpOrderBookBytes(eng, buf)
-		bookBytes = bookBytes[:0]
+func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
+	kvstore := ctx.KVStore(kp.storeKey)
+	for pair, eng := range kp.engines {
+		buys, sells := eng.Book.GetAllLevels()
+		snapshot := store.OrderBookSnapshot{Buys: buys, Sells: sells}
+		bookBytes, err := kp.cdc.MarshalBinary(snapshot)
+		if err != nil {
+			return err
+		}
+		key := genOrderBookSnapshotKey(height, pair)
+		kvstore.Set([]byte(key), bookBytes)
 	}
-=======
-	//t := time.Unix(blockTime/1000, 0)
-	//key := t.Format("20060102")
-	//store := ctx.KVStore(kp.storeKey)
-	//store.Set(key, height)
-}
-
-func (kp *Keeper) SnapShotOrderBook() (code sdk.CodeType, err error) {
->>>>>>> add some steps in end block.
-=======
-}
-
-func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
-	bz := []byte(nil)
-
-	for i := 0; bz == nil && i <= daysBack; i++ {
-		t := timeNow.AddDate(0, 0, -i)
-		key := t.Format("20060102")
-		bz = store.Get([]byte(key))
-	}
-	var height int64
-	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-	if err != nil {
-		panic(err)
-	}
-	return height
-}
-
-func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
-	//for sym, eng := range kp.engines {
-
-	//}
->>>>>>> add GetBreatheBlockHeight
-	return sdk.CodeOK, nil
+	return nil
 }
 
 // Key to knowing the trend on the streets!

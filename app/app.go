@@ -186,7 +186,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else {
 		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
 		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
-		app.DexKeeper.SnapShotOrderBook(height)
+		app.DexKeeper.SnapShotOrderBook(height, ctx)
 		// breathe block
 		icoDone := ico.EndBlockAsync(ctx)
 
