@@ -47,6 +47,10 @@ func CreateMatchEng(symbol string) *me.MatchEng {
 	return me.NewMatchEng(1000, 1, 0.05)
 }
 
+func genOrderBookSnapshotKey(height int64, pair string) string {
+	return fmt.Sprintf("orderbook_%v_%v", height, pair)
+}
+
 func initializeOrderBook(symbol string, eng *me.MatchEng) error {
 	return nil
 }
@@ -326,18 +330,19 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, days
 	return height
 }
 
-func dumpOrderBookBytes(eng *me.MatchEng, buf []byte) []byte {
-	return buf
-}
-
-func (kp *Keeper) SnapShotOrderBook(height int64) (code sdk.CodeType, err error) {
-	buf := make([]byte, 1000)
-	for _, eng := range kp.engines {
-		buf := buf[:0]
-		bookBytes := dumpOrderBookBytes(eng, buf)
-		bookBytes = bookBytes[:0]
+func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
+	kvstore := ctx.KVStore(kp.storeKey)
+	for pair, eng := range kp.engines {
+		buys, sells := eng.Book.GetAllLevels()
+		snapshot := store.OrderBookSnapshot{Buys: buys, Sells: sells}
+		bookBytes, err := kp.cdc.MarshalBinary(snapshot)
+		if err != nil {
+			return err
+		}
+		key := genOrderBookSnapshotKey(height, pair)
+		kvstore.Set([]byte(key), bookBytes)
 	}
-	return sdk.CodeOK, nil
+	return nil
 }
 
 // Key to knowing the trend on the streets!

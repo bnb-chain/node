@@ -143,6 +143,14 @@ func (ob *OrderBookOnULList) GetAllLevels() ([]*PriceLevel, []*PriceLevel) {
 	buys = buys[:0]
 	sells := make([]*PriceLevel, ob.sellQueue.capacity)
 	sells = buys[:0]
+	ob.buyQueue.Iterate(ob.buyQueue.capacity,
+		func(p *PriceLevel) {
+			buys = append(buys, p)
+		})
+	ob.sellQueue.Iterate(ob.sellQueue.capacity,
+		func(p *PriceLevel) {
+			sells = append(sells, p)
+		})
 	return buys, sells
 }
 

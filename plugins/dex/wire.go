@@ -5,6 +5,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
@@ -16,6 +17,7 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(list.Msg{}, "dex/ListMsg", nil)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 
+	cdc.RegisterConcrete(store.OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(order.TradingGenesis{}, "dex/TradingGenesis", nil)
 	cdc.RegisterConcrete(Genesis{}, "dex/Genesis", nil)
 }
