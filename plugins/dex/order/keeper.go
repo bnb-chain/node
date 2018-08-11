@@ -41,6 +41,16 @@ type Transfer struct {
 	unlock  int64
 }
 
+
+func CreateMatchEng(symbol string) *me.MatchEng {
+	//TODO: read lot size
+	return me.NewMatchEng(1000, 1, 0.05)
+}
+
+func initializeOrderBook(symbol string, eng *me.MatchEng) error {
+	return nil
+}
+
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
@@ -57,15 +67,6 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.Codespace
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
 		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
 		poolSize: concurrency, cdc: cdc}, nil
-}
-
-func CreateMatchEng(symbol string) *me.MatchEng {
-	//TODO: read lot size
-	return me.NewMatchEng(1000, 1, 0.05)
-}
-
-func initializeOrderBook(symbol string, eng *me.MatchEng) error {
-	return nil
 }
 
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
