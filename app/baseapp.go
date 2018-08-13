@@ -6,20 +6,18 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/wire"
 
+	"github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 // Key to store the header in the DB itself.
@@ -48,12 +46,12 @@ type BaseApp struct {
 	cdc        *wire.Codec          // Amino codec
 	db         dbm.DB               // common DB backend
 	cms        sdk.CommitMultiStore // Main (uncached) state
-	router     baseapp.Router       // handle any kind of message
+	router     Router               // handle any kind of message
 	codespacer *sdk.Codespacer      // handle module codespacing
 
 	// must be set
-	txDecoder   sdk.TxDecoder   // unmarshal []byte into sdk.Tx
-	anteHandler sdk.AnteHandler // ante handler for fee and auth
+	txDecoder   tx.TxDecoder   // unmarshal []byte into sdk.Tx
+	anteHandler tx.AnteHandler // ante handler for fee and auth
 
 	// may be nil
 	initChainer      sdk.InitChainer  // initialize state with validators and state blob
@@ -89,7 +87,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, opti
 		cdc:        cdc,
 		db:         db,
 		cms:        store.NewCommitMultiStore(db),
-		router:     baseapp.NewRouter(),
+		router:     NewRouter(),
 		codespacer: sdk.NewCodespacer(),
 		txDecoder:  defaultTxDecoder(cdc),
 	}
@@ -137,7 +135,7 @@ func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
 }
 
 // Set the txDecoder function
-func (app *BaseApp) SetTxDecoder(txDecoder sdk.TxDecoder) {
+func (app *BaseApp) SetTxDecoder(txDecoder tx.TxDecoder) {
 	app.txDecoder = txDecoder
 }
 
@@ -147,9 +145,9 @@ func (app *BaseApp) SetTxDecoder(txDecoder sdk.TxDecoder) {
 //	- set the default here to JSON decode like docs/examples/app1 (it will fail
 //		for multiple messages ;))
 //	- pass a TxDecoder into NewBaseApp, instead of a codec.
-func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
-	return func(txBytes []byte) (sdk.Tx, sdk.Error) {
-		var tx = auth.StdTx{}
+func defaultTxDecoder(cdc *wire.Codec) tx.TxDecoder {
+	return func(txBytes []byte) (tx.Tx, sdk.Error) {
+		var stdTx = tx.StdTx{}
 
 		if len(txBytes) == 0 {
 			return nil, sdk.ErrTxDecode("txBytes are empty")
@@ -157,11 +155,11 @@ func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
 
 		// StdTx.Msg is an interface. The concrete types
 		// are registered by MakeTxCodec
-		err := cdc.UnmarshalBinary(txBytes, &tx)
+		err := cdc.UnmarshalBinary(txBytes, &stdTx)
 		if err != nil {
 			return nil, sdk.ErrTxDecode("").TraceSDK(err.Error())
 		}
-		return tx, nil
+		return stdTx, nil
 	}
 }
 
@@ -175,7 +173,7 @@ func (app *BaseApp) SetBeginBlocker(beginBlocker sdk.BeginBlocker) {
 func (app *BaseApp) SetEndBlocker(endBlocker sdk.EndBlocker) {
 	app.endBlocker = endBlocker
 }
-func (app *BaseApp) SetAnteHandler(ah sdk.AnteHandler) {
+func (app *BaseApp) SetAnteHandler(ah tx.AnteHandler) {
 	app.anteHandler = ah
 }
 func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
@@ -184,7 +182,7 @@ func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
 func (app *BaseApp) SetPubKeyPeerFilter(pf sdk.PeerFilter) {
 	app.pubkeyPeerFilter = pf
 }
-func (app *BaseApp) Router() baseapp.Router { return app.router }
+func (app *BaseApp) Router() Router { return app.router }
 
 // load latest application version
 func (app *BaseApp) LoadLatestVersion(mainKey sdk.StoreKey) error {
@@ -487,19 +485,17 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 }
 
 // Basic validator for msgs
-func validateBasicTxMsgs(msgs []sdk.Msg) sdk.Error {
-	if msgs == nil || len(msgs) == 0 {
+func validateBasicTxMsg(msg tx.Msg) sdk.Error {
+	if msg == nil {
 		// TODO: probably shouldn't be ErrInternal. Maybe new ErrInvalidMessage, or ?
-		return sdk.ErrInternal("Tx.GetMsgs() must return at least one message in list")
+		return sdk.ErrInternal("Tx.GetMsg() must return  one message")
 	}
 
-	for _, msg := range msgs {
-		// Validate the Msg.
-		err := msg.ValidateBasic()
-		if err != nil {
-			err = err.WithDefaultCodespace(sdk.CodespaceRoot)
-			return err
-		}
+	// Validate the Msg.
+	err := msg.ValidateBasic()
+	if err != nil {
+		err = err.WithDefaultCodespace(sdk.CodespaceRoot)
+		return err
 	}
 
 	return nil
@@ -523,45 +519,42 @@ func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx sdk.C
 }
 
 // Iterates through msgs and executes them
-func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg) (result sdk.Result) {
-	// accumulate results
-	logs := make([]string, 0, len(msgs))
+func (app *BaseApp) runMsg(ctx sdk.Context, msg tx.Msg) (result sdk.Result) {
+	var log string
 	var data []byte   // NOTE: we just append them all (?!)
 	var tags sdk.Tags // also just append them all
 	var code sdk.ABCICodeType
-	for msgIdx, msg := range msgs {
-		// Match route.
-		msgType := msg.Type()
-		handler := app.router.Route(msgType)
-		if handler == nil {
-			return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
-		}
 
-		msgResult := handler(ctx, msg)
-
-		// NOTE: GasWanted is determined by ante handler and
-		// GasUsed by the GasMeter
-
-		// Append Data and Tags
-		data = append(data, msgResult.Data...)
-		tags = append(tags, msgResult.Tags...)
-
-		// Stop execution and return on first failed message.
-		if !msgResult.IsOK() {
-			logs = append(logs, fmt.Sprintf("Msg %d failed: %s", msgIdx, msgResult.Log))
-			code = msgResult.Code
-			break
-		}
-
-		// Construct usable logs in multi-message transactions.
-		logs = append(logs, fmt.Sprintf("Msg %d: %s", msgIdx, msgResult.Log))
+	// Match route.
+	msgType := msg.Type()
+	handler := app.router.Route(msgType)
+	if handler == nil {
+		return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
 	}
 
+	msgResult := handler(ctx, msg)
+
+	// NOTE: GasWanted is determined by ante handler and
+	// GasUsed by the GasMeter
+
+	// Append Data and Tags
+	data = append(data, msgResult.Data...)
+	tags = append(tags, msgResult.Tags...)
+
+	// Stop execution and return on first failed message.
+	if !msgResult.IsOK() {
+		log = fmt.Sprintf("Msg failed: %s", msgResult.Log)
+		code = msgResult.Code
+	} else {
+		log = fmt.Sprintf("Msg: %s", msgResult.Log)
+	}
+
+	// Construct usable logs in multi-message transactions.
 	// Set the final gas values.
 	result = sdk.Result{
 		Code:    code,
 		Data:    data,
-		Log:     strings.Join(logs, "\n"),
+		Log:     log,
 		GasUsed: ctx.GasMeter().GasConsumed(),
 		// TODO: FeeAmount/FeeDenom
 		Tags: tags,
@@ -583,7 +576,7 @@ func getState(app *BaseApp, mode runTxMode) *state {
 // runTx processes a transaction. The transactions is proccessed via an
 // anteHandler. txBytes may be nil in some cases, eg. in tests. Also, in the
 // future we may support "internal" transactions.
-func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk.Result) {
+func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx tx.Tx) (result sdk.Result) {
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -606,9 +599,9 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		result.GasUsed = ctx.GasMeter().GasConsumed()
 	}()
 
-	var msgs = tx.GetMsgs()
+	var msg = tx.GetMsg()
 
-	err := validateBasicTxMsgs(msgs)
+	err := validateBasicTxMsg(msg)
 	if err != nil {
 		return err.Result()
 	}
@@ -636,7 +629,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	}
 
 	ctx = ctx.WithMultiStore(msCache)
-	result = app.runMsgs(ctx, msgs)
+	result = app.runMsg(ctx, msg)
 	result.GasWanted = gasWanted
 
 	// only update state if all messages pass and we're not in a simulation

@@ -11,26 +11,64 @@ import (
 
 var msgCdc = wire.NewCodec()
 
-var _ sdk.Tx = (*StdTx)(nil)
+var _ Tx = (*StdTx)(nil)
 
 // StdTx is a standard way to wrap a Msg with Fee and Signatures.
 // NOTE: the first signature is the FeePayer (Signatures must not be nil).
-type StdTx = auth.StdTx
+type StdTx struct {
+	Msg        Msg            `json:"msg"`
+	Fee        StdFee         `json:"fee"`
+	Signatures []StdSignature `json:"signatures"`
+	Memo       string         `json:"memo"`
+}
 
-func NewStdTx(msgs []sdk.Msg, fee StdFee, sigs []StdSignature, memo string) StdTx {
+func NewStdTx(msg Msg, fee StdFee, sigs []StdSignature, memo string) StdTx {
 	return StdTx{
-		Msgs:       msgs,
+		Msg:        msg,
 		Fee:        fee,
 		Signatures: sigs,
 		Memo:       memo,
 	}
 }
 
+//nolint
+func (tx StdTx) GetMsg() Msg { return tx.Msg }
+
+// GetSigners returns the addresses that must sign the transaction.
+// Addresses are returned in a determistic order.
+// They are accumulated from the GetSigners method for each Msg
+// in the order they appear in tx.GetMsg().
+// Duplicate addresses will be omitted.
+func (tx StdTx) GetSigners() []sdk.AccAddress {
+	seen := map[string]bool{}
+	var signers []sdk.AccAddress
+	for _, addr := range tx.Msg.GetSigners() {
+		if !seen[addr.String()] {
+			signers = append(signers, addr)
+			seen[addr.String()] = true
+		}
+	}
+	return signers
+}
+
+//nolint
+func (tx StdTx) GetMemo() string { return tx.Memo }
+
+// Signatures returns the signature of signers who signed the Msg.
+// GetSignatures returns the signature of signers who signed the Msg.
+// CONTRACT: Length returned is same as length of
+// pubkeys returned from MsgKeySigners, and the order
+// matches.
+// CONTRACT: If the signature is missing (ie the Msg is
+// invalid), then the corresponding signature is
+// .Empty().
+func (tx StdTx) GetSignatures() []StdSignature { return tx.Signatures }
+
 // FeePayer returns the address responsible for paying the fees
 // for the transactions. It's the first address returned by msg.GetSigners().
 // If GetSigners() is empty, this panics.
-func FeePayer(tx sdk.Tx) sdk.AccAddress {
-	return tx.GetMsgs()[0].GetSigners()[0]
+func FeePayer(tx Tx) sdk.AccAddress {
+	return tx.GetMsg().GetSigners()[0]
 }
 
 //__________________________________________________________
@@ -56,26 +94,22 @@ func NewStdFee(gas int64, amount ...sdk.Coin) StdFee {
 // and the Sequence numbers for each signature (prevent
 // inchain replay and enforce tx ordering per account).
 type StdSignDoc struct {
-	AccountNumber int64             `json:"account_number"`
-	ChainID       string            `json:"chain_id"`
-	Fee           json.RawMessage   `json:"fee"`
-	Memo          string            `json:"memo"`
-	Msgs          []json.RawMessage `json:"msgs"`
-	Sequence      int64             `json:"sequence"`
+	AccountNumber int64           `json:"account_number"`
+	ChainID       string          `json:"chain_id"`
+	Fee           json.RawMessage `json:"fee"`
+	Memo          string          `json:"memo"`
+	Msg           json.RawMessage `json:"msg"`
+	Sequence      int64           `json:"sequence"`
 }
 
 // StdSignBytes returns the bytes to sign for a transaction.
-func StdSignBytes(chainID string, accnum int64, sequence int64, fee StdFee, msgs []sdk.Msg, memo string) []byte {
-	var msgsBytes []json.RawMessage
-	for _, msg := range msgs {
-		msgsBytes = append(msgsBytes, json.RawMessage(msg.GetSignBytes()))
-	}
+func StdSignBytes(chainID string, accnum int64, sequence int64, fee StdFee, msg Msg, memo string) []byte {
 	bz, err := msgCdc.MarshalJSON(StdSignDoc{
 		AccountNumber: accnum,
 		ChainID:       chainID,
 		Fee:           json.RawMessage(fee.Bytes()),
 		Memo:          memo,
-		Msgs:          msgsBytes,
+		Msg:           msg.GetSignBytes(),
 		Sequence:      sequence,
 	})
 	if err != nil {
@@ -92,21 +126,21 @@ type StdSignMsg struct {
 	AccountNumber int64
 	Sequence      int64
 	Fee           StdFee
-	Msgs          []sdk.Msg
+	Msg           Msg
 	Memo          string
 }
 
 // Bytes gets message bytes
 func (msg StdSignMsg) Bytes() []byte {
-	return StdSignBytes(msg.ChainID, msg.AccountNumber, msg.Sequence, msg.Fee, msg.Msgs, msg.Memo)
+	return StdSignBytes(msg.ChainID, msg.AccountNumber, msg.Sequence, msg.Fee, msg.Msg, msg.Memo)
 }
 
 // StdSignature is a standard signature
 type StdSignature = auth.StdSignature
 
 // DefaultTxDecoder houses the logic for standard transaction decoding
-func DefaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
-	return func(txBytes []byte) (sdk.Tx, sdk.Error) {
+func DefaultTxDecoder(cdc *wire.Codec) TxDecoder {
+	return func(txBytes []byte) (Tx, sdk.Error) {
 		var tx = StdTx{}
 
 		if len(txBytes) == 0 {

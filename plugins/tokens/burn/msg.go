@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/plugins/tokens/base"
 )
 
@@ -12,7 +13,7 @@ import (
 // const Route = "tokens/burn"
 const Route = "tokensBurn"
 
-var _ sdk.Msg = (*Msg)(nil)
+var _ tx.Msg = (*Msg)(nil)
 
 type Msg struct {
 	base.MsgBase

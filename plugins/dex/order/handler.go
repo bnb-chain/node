@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -15,8 +16,8 @@ import (
 )
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+func NewHandler(k Keeper, accountMapper auth.AccountMapper) tx.Handler {
+	return func(ctx sdk.Context, msg tx.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
 			return handleNewOrder(ctx, k, accountMapper, msg)

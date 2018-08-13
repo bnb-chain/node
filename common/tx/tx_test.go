@@ -15,12 +15,12 @@ import (
 func TestStdTx(t *testing.T) {
 	priv := ed25519.GenPrivKey()
 	addr := sdk.AccAddress(priv.PubKey().Address())
-	msgs := []sdk.Msg{sdk.NewTestMsg(addr)}
+	msg := txns.NewTestMsg(addr)
 	fee := newStdFee()
 	sigs := []txns.StdSignature{}
 
-	tx := txns.NewStdTx(msgs, fee, sigs, "")
-	require.Equal(t, msgs, tx.GetMsgs())
+	tx := txns.NewStdTx(msg, fee, sigs, "")
+	require.Equal(t, msg, tx.GetMsg())
 	require.Equal(t, sigs, tx.GetSignatures())
 
 	feePayer := txns.FeePayer(tx)
@@ -30,15 +30,15 @@ func TestStdTx(t *testing.T) {
 func TestStdSignBytes(t *testing.T) {
 	priv := ed25519.GenPrivKey()
 	addr := sdk.AccAddress(priv.PubKey().Address())
-	msgs := []sdk.Msg{sdk.NewTestMsg(addr)}
+	msg := txns.NewTestMsg(addr)
 	fee := newStdFee()
 	signMsg := txns.StdSignMsg{
 		"1234",
 		3,
 		6,
 		fee,
-		msgs,
+		msg,
 		"memo",
 	}
-	require.Equal(t, fmt.Sprintf("{\"account_number\":\"3\",\"chain_id\":\"1234\",\"fee\":{\"amount\":[{\"amount\":\"150\",\"denom\":\"atom\"}],\"gas\":\"5000\"},\"memo\":\"memo\",\"msgs\":[[\"%s\"]],\"sequence\":\"6\"}", addr), string(signMsg.Bytes()))
+	require.Equal(t, fmt.Sprintf("{\"account_number\":\"3\",\"chain_id\":\"1234\",\"fee\":{\"amount\":[{\"amount\":\"150\",\"denom\":\"atom\"}],\"gas\":\"5000\"},\"memo\":\"memo\",\"msg\":[\"%s\"],\"sequence\":\"6\"}", addr), string(signMsg.Bytes()))
 }
