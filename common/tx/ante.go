@@ -19,9 +19,9 @@ const (
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
 // nolint: gocyclo
-func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) AnteHandler {
 	return func(
-		ctx sdk.Context, tx sdk.Tx,
+		ctx sdk.Context, tx Tx,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
 
 		// This AnteHandler requires Txs to be StdTxs
@@ -59,7 +59,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 
 		sigs := stdTx.GetSignatures()
 		signerAddrs := stdTx.GetSigners()
-		msgs := tx.GetMsgs()
+		msg := tx.GetMsg()
 
 		// charge gas for the memo
 		newCtx.GasMeter().ConsumeGas(memoCostPerByte*sdk.Gas(len(stdTx.GetMemo())), "memo")
@@ -79,7 +79,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 			signerAddr, sig := signerAddrs[i], sigs[i]
 
 			// check signature, return account with incremented nonce
-			signBytes := StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], fee, msgs, stdTx.GetMemo())
+			signBytes := StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], fee, msg, stdTx.GetMemo())
 			signerAcc, res := processSig(
 				newCtx, am,
 				signerAddr, sig, signBytes,

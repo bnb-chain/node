@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -14,7 +15,7 @@ import (
 // const Route  = "tokens/issue"
 const Route = "tokensIssue"
 
-var _ sdk.Msg = Msg{}
+var _ tx.Msg = Msg{}
 
 type Msg struct {
 	From        sdk.AccAddress `json:"from"`

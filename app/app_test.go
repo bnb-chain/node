@@ -8,20 +8,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/abci/client"
+	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/libs/db"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
-
-	"github.com/tendermint/tendermint/libs/db"
-
+	"github.com/BiJie/BinanceChain/common/tx"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type TestClient struct {
@@ -29,26 +27,26 @@ type TestClient struct {
 	cdc *wire.Codec
 }
 
-func (tc *TestClient) DeliverTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
-	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
+func (tc *TestClient) DeliverTxAsync(msg tx.Msg, cdc *wire.Codec) *abcicli.ReqRes {
+	stdtx := tx.NewStdTx(msg, tx.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.DeliverTxAsync(tx)
 }
 
-func (tc *TestClient) CheckTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
-	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
+func (tc *TestClient) CheckTxAsync(msg tx.Msg, cdc *wire.Codec) *abcicli.ReqRes {
+	stdtx := tx.NewStdTx(msg, tx.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.CheckTxAsync(tx)
 }
 
-func (tc *TestClient) DeliverTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseDeliverTx, error) {
-	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
+func (tc *TestClient) DeliverTxSync(msg tx.Msg, cdc *wire.Codec) (*types.ResponseDeliverTx, error) {
+	stdtx := tx.NewStdTx(msg, tx.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.DeliverTxSync(tx)
 }
 
-func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseCheckTx, error) {
-	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
+func (tc *TestClient) CheckTxSync(msg tx.Msg, cdc *wire.Codec) (*types.ResponseCheckTx, error) {
+	stdtx := tx.NewStdTx(msg, tx.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.CheckTxSync(tx)
 }

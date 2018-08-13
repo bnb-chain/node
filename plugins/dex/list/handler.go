@@ -6,13 +6,14 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-func NewHandler(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+func NewHandler(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) tx.Handler {
+	return func(ctx sdk.Context, msg tx.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case Msg:
 			return handleList(ctx, pairMapper, tokenMapper, msg)

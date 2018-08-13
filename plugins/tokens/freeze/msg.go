@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/plugins/tokens/base"
 )
 
@@ -12,7 +13,7 @@ import (
 // const RouteFreeze = "tokens/freeze"
 const RouteFreeze = "tokensFreeze"
 
-var _ sdk.Msg = (*FreezeMsg)(nil)
+var _ tx.Msg = (*FreezeMsg)(nil)
 
 type FreezeMsg struct {
 	base.MsgBase
@@ -28,7 +29,7 @@ func (msg FreezeMsg) String() string {
 	return fmt.Sprintf("Freeze{%v#%v}", msg.From, msg.Symbol)
 }
 
-var _ sdk.Msg = (*UnfreezeMsg)(nil)
+var _ tx.Msg = (*UnfreezeMsg)(nil)
 
 type UnfreezeMsg struct {
 	base.MsgBase

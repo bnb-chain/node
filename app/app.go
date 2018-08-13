@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -23,6 +22,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -98,7 +98,7 @@ func (app *BinanceChain) SetCheckState(header abci.Header) {
 }
 
 func (app *BinanceChain) registerHandlers() {
-	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
+	// app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
@@ -116,7 +116,7 @@ func MakeCodec() *wire.Codec {
 
 	wire.RegisterCrypto(cdc) // Register crypto.
 	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
+	tx.RegisterWire(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)

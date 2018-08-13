@@ -8,6 +8,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
@@ -129,7 +130,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	}
 }
 
-var _ sdk.Msg = NewOrderMsg{}
+var _ tx.Msg = NewOrderMsg{}
 
 // nolint
 func (msg NewOrderMsg) Type() string                            { return Route }
@@ -148,7 +149,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 	}
 }
 
-var _ sdk.Msg = CancelOrderMsg{}
+var _ tx.Msg = CancelOrderMsg{}
 
 // nolint
 func (msg CancelOrderMsg) Type() string                            { return Route }
