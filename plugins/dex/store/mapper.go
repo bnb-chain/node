@@ -5,15 +5,16 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/wire"
-
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
 	Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool
-	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) types.TradingPair
+	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
+	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 }
 
 var _ TradingPairMapper = mapper{}
@@ -41,7 +42,7 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 		return errors.New("QuoteAsset cannot be empty")
 	}
 
-	key := []byte(types.GetPairLabel(tradeAsset, quoteAsset))
+	key := []byte(utils.Ccy2TradeSymbol(tradeAsset, quoteAsset))
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
@@ -51,15 +52,33 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 func (m mapper) Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
-	label := types.GetPairLabel(tradeAsset, quoteAsset)
-	return store.Has([]byte(label))
+	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
+	return store.Has([]byte(symbol))
 }
 
-func (m mapper) GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) types.TradingPair {
+func (m mapper) GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
-	label := types.GetPairLabel(tradeAsset, quoteAsset)
-	bz := store.Get([]byte(label))
-	return m.decodeTradingPair(bz)
+	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
+	bz := store.Get([]byte(symbol))
+
+	if bz == nil {
+		return types.TradingPair{}, errors.New("trading pair not found: " + symbol)
+	}
+
+	return m.decodeTradingPair(bz), nil
+}
+
+func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
+	store := ctx.KVStore(m.key)
+	iter := store.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		pair := m.decodeTradingPair(iter.Value())
+		res = append(res, pair)
+	}
+
+	return res
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {

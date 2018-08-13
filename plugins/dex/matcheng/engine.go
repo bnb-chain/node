@@ -39,7 +39,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	origBuyPx := me.overLappedLevel[i].Price
-	origSellPx := me.overLappedLevel[j].Price
 	// sort 1st to get the same seq of fills across different nodes
 	// TODO: duplicated sort called here via multiple call of fillOrders on the same i or j
 	// not a big deal so far since re-sort on a sorted slice is fast.
@@ -66,7 +65,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, buys[k].cumQty, buys[k].id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -74,7 +73,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, buys[k].cumQty, buys[k].id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -82,7 +81,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].cumQty += trade
 			sells[h].cumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, origSellPx, buys[k].id})
+			me.Trades = append(me.Trades, Trade{sells[h].id, me.LastTradePrice, trade, origBuyPx, buys[k].cumQty, buys[k].id})
 			h++
 			k++
 		}

@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -61,7 +60,10 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			tif := int8(viper.GetInt(flagTimeInForce))
+			tif, err := order.TifStringToTifCode(viper.GetString(flagTimeInForce))
+			if err != nil {
+				panic(err)
+			}
 			side := int8(viper.GetInt(flagSide))
 
 			msg := order.NewNewOrderMsg(from, id, side, symbol, price, qty)
@@ -79,7 +81,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagSide, "s", "", "side (buy as 1 or sell as 2) of the order")
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
-	cmd.Flags().StringP(flagTimeInForce, "t", "", "TimeInForce for the order")
+	cmd.Flags().StringP(flagTimeInForce, "t", "gtc", "TimeInForce for the order (gtc or ioc)")
 	return cmd
 }
 
