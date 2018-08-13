@@ -225,6 +225,12 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
+func (app *BinanceChain) LoadOrderBookFromSnapshot() error {
+	ms := app.cms.CacheMultiStore()
+	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
+	return app.DexKeeper.LoadOrderBookSnapshot(store, 100)
+}
+
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	path := splitPath(req.Path)
 	if len(path) == 0 {

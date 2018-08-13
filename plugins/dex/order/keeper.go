@@ -1,9 +1,12 @@
 package order
 
 import (
+	"bytes"
+	"compress/zlib"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -51,10 +54,6 @@ func genOrderBookSnapshotKey(height int64, pair string) string {
 	return fmt.Sprintf("orderbook_%v_%v", height, pair)
 }
 
-func initializeOrderBook(symbol string, eng *me.MatchEng) error {
-	return nil
-}
-
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
@@ -62,9 +61,6 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.Codespace
 	allPairs := make([]string, 2)
 	for _, p := range allPairs {
 		eng := CreateMatchEng(p)
-		if err := initializeOrderBook(p, eng); err != nil {
-			return nil, err
-		}
 		engines[p] = eng
 	}
 	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
@@ -315,14 +311,18 @@ func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
 	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
+func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvstore sdk.KVStore, daysBack int) int64 {
+
 	bz := []byte(nil)
 
 	for i := 0; bz == nil && i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i)
 		key := t.Format("20060102")
-		bz = store.Get([]byte(key))
+		bz = kvstore.Get([]byte(key))
+	}
+	if bz == nil {
+		//TODO: logging
+		return -1
 	}
 	var height int64
 	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
@@ -334,6 +334,8 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, ctx sdk.Context, days
 
 func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
 		snapshot := store.OrderBookSnapshot{Buys: buys, Sells: sells}
@@ -341,8 +343,47 @@ func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
 		if err != nil {
 			return err
 		}
+		b.Reset()
+		w.Reset(&b)
+		_, err = w.Write(bookBytes)
+		if err != nil {
+			return err
+		}
+		bookBytes = b.Bytes()
 		key := genOrderBookSnapshotKey(height, pair)
 		kvstore.Set([]byte(key), bookBytes)
+	}
+	return nil
+}
+
+func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) error {
+	timeNow := time.Now()
+	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
+	if height == -1 {
+		return errors.New("Failed to load BreatheBlock Height")
+	}
+
+	for pair, _ := range kp.engines {
+		key := genOrderBookSnapshotKey(height, pair)
+		bz := kvstore.Get([]byte(key))
+		if bz == nil {
+			// maybe that is a new listed pair
+			//TODO: logging
+			continue
+		}
+		b := bytes.NewBuffer(bz)
+		var bw bytes.Buffer
+		r, err := zlib.NewReader(b)
+		if err != nil {
+			continue
+		}
+		io.Copy(&bw, r)
+		var ob store.OrderBookSnapshot
+		err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ob)
+		if err != nil {
+			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", key))
+		}
+
 	}
 	return nil
 }
