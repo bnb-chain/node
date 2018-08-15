@@ -18,6 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	bc "github.com/tendermint/tendermint/blockchain"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
@@ -45,6 +48,16 @@ type Transfer struct {
 	unlock  int64
 }
 
+type OrderBookSnapshot struct {
+	Buys           []me.PriceLevel `json:"buys"`
+	Sells          []me.PriceLevel `json:"sells"`
+	LastTradePrice int64           `json:"lasttradeprice"`
+}
+
+type ActiveOrders struct {
+	Orders []NewOrderMsg `json:"orders"`
+}
+
 func CreateMatchEng(symbol string) *me.MatchEng {
 	//TODO: read lot size
 	return me.NewMatchEng(1000, 1, 0.05)
@@ -52,6 +65,10 @@ func CreateMatchEng(symbol string) *me.MatchEng {
 
 func genOrderBookSnapshotKey(height int64, pair string) string {
 	return fmt.Sprintf("orderbook_%v_%v", height, pair)
+}
+
+func genActiveOrdersSnapshotKey(height int64) string {
+	return fmt.Sprintf("activeorders_%v", height)
 }
 
 // NewKeeper - Returns the Keeper
@@ -330,38 +347,50 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvstore sdk.KVStore, 
 	return height
 }
 
-func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
-	kvstore := ctx.KVStore(kp.storeKey)
+func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.KVStore) error {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
-	for pair, eng := range kp.engines {
-		buys, sells := eng.Book.GetAllLevels()
-		snapshot := store.OrderBookSnapshot{Buys: buys, Sells: sells}
-		bookBytes, err := kp.cdc.MarshalBinary(snapshot)
-		if err != nil {
-			return err
-		}
-		b.Reset()
-		w.Reset(&b)
-		_, err = w.Write(bookBytes)
-		if err != nil {
-			return err
-		}
-		bookBytes = b.Bytes()
-		key := genOrderBookSnapshotKey(height, pair)
-		kvstore.Set([]byte(key), bookBytes)
+	bytes, err := cdc.MarshalBinary(snapshot)
+	if err != nil {
+		panic(err)
 	}
+	_, err = w.Write(bytes)
+	if err != nil {
+		return err
+	}
+	bytes = b.Bytes()
+	kv.Set([]byte(key), bytes)
 	return nil
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) error {
+func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
+	kvstore := ctx.KVStore(kp.storeKey)
+	for pair, eng := range kp.engines {
+		buys, sells := eng.Book.GetAllLevels()
+		snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
+		key := genOrderBookSnapshotKey(height, pair)
+		err := compressAndSave(snapshot, kp.cdc, key, kvstore)
+		if err != nil {
+			return err
+		}
+	}
+	msgs := make([]NewOrderMsg, 0, len(kp.allOrders))
+	for _, value := range kp.allOrders {
+		msgs = append(msgs, value)
+	}
+	snapshot := ActiveOrders{Orders: msgs}
+	key := genActiveOrdersSnapshotKey(height)
+	return compressAndSave(snapshot, kp.cdc, key, kvstore)
+}
+
+func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) (int64, error) {
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
 	if height == -1 {
-		return errors.New("Failed to load BreatheBlock Height")
+		return height, errors.New("Failed to load BreatheBlock Height")
 	}
 
-	for pair, _ := range kp.engines {
+	for pair, eng := range kp.engines {
 		key := genOrderBookSnapshotKey(height, pair)
 		bz := kvstore.Get([]byte(key))
 		if bz == nil {
@@ -376,12 +405,73 @@ func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) error
 			continue
 		}
 		io.Copy(&bw, r)
-		var ob store.OrderBookSnapshot
+		var ob OrderBookSnapshot
 		err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ob)
 		if err != nil {
 			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", key))
 		}
+		for _, pl := range ob.Buys {
+			eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
+		}
+		for _, pl := range ob.Sells {
+			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
+		}
+	}
+	key := genActiveOrdersSnapshotKey(height)
+	bz := kvstore.Get([]byte(key))
+	if bz == nil {
+		//TODO: log
+		return height, nil
+	}
+	b := bytes.NewBuffer(bz)
+	var bw bytes.Buffer
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		//TODO: log
+		return height, nil
+	}
+	io.Copy(&bw, r)
+	var ao ActiveOrders
+	err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ao)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
+	}
+	for _, m := range ao.Orders {
+		kp.allOrders[m.Id] = m
+	}
+	return height, nil
+}
 
+func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
+	for _, txBytes := range block.Data.Txs {
+		tx, err := txDecoder(txBytes)
+		if err != nil {
+			panic(err)
+		}
+		msgs := tx.GetMsgs()
+		for _, m := range msgs {
+			switch msg := m.(type) {
+			case NewOrderMsg:
+				kp.AddOrder(msg, height)
+			case CancelOrderMsg:
+				ord, ok := kp.allOrders[msg.RefId]
+				if !ok {
+					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
+				}
+				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price)
+				if err != nil {
+					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
+				}
+			}
+		}
+	}
+}
+
+func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
+	txDecoder sdk.TxDecoder) error {
+	for i := breatheHeight + 1; i <= lastHeight; i++ {
+		block := bc.LoadBlock(i)
+		kp.replayOneBlocks(block, txDecoder, i)
 	}
 	return nil
 }

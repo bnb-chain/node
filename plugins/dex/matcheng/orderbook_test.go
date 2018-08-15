@@ -67,7 +67,7 @@ func TestPriceLevel_addOrder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := &PriceLevel{
 				Price:  tt.fields.Price,
-				orders: tt.fields.orders,
+				Orders: tt.fields.orders,
 			}
 			got, err := l.addOrder(tt.args.id, tt.args.time, tt.args.qty)
 			if (err != nil) != tt.wantErr {
@@ -75,9 +75,9 @@ func TestPriceLevel_addOrder(t *testing.T) {
 				return
 			}
 			if tt.name == "AddedOrder" {
-				if l.orders[0].id != tt.args.id ||
-					l.orders[0].qty != tt.args.qty ||
-					l.orders[0].time != tt.args.time {
+				if l.Orders[0].Id != tt.args.id ||
+					l.Orders[0].Qty != tt.args.qty ||
+					l.Orders[0].Time != tt.args.time {
 					t.Error("order is not inserted into PriceLevel")
 				}
 			}
@@ -117,7 +117,7 @@ func TestPriceLevel_removeOrder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := &PriceLevel{
 				Price:  tt.fields.Price,
-				orders: tt.fields.orders,
+				Orders: tt.fields.orders,
 			}
 			got, got1, err := l.removeOrder(tt.args.id)
 			if (err != nil) != tt.wantErr {
@@ -125,7 +125,7 @@ func TestPriceLevel_removeOrder(t *testing.T) {
 				return
 			}
 			if tt.name == "Delete2" {
-				if len(l.orders) != 2 || l.orders[0].id != "12345" || l.orders[1].id != "12346" {
+				if len(l.Orders) != 2 || l.Orders[0].Id != "12345" || l.Orders[1].Id != "12346" {
 					t.Error("RemoveOrder failed to remove correct id")
 				}
 			}
@@ -154,7 +154,7 @@ func Test_mergeLevels(t *testing.T) {
 		{"OneSide1", args{[]PriceLevel{{Price: 1200}, {Price: 1010}, {Price: 1000}}, nil, &overLapped}},
 		{"OneSide2", args{nil, []PriceLevel{{Price: 1000}, {Price: 1010}, {Price: 1200}}, &overLapped}},
 		{"OneOnEachSide", args{[]PriceLevel{{Price: 1010}}, []PriceLevel{{Price: 1000}}, &overLapped}},
-		{"NormalMerge", args{[]PriceLevel{{Price: 1041, orders: make([]OrderPart, 3)}, {Price: 1030}}, []PriceLevel{{Price: 1020}, {Price: 1032, orders: make([]OrderPart, 4)}}, &overLapped}},
+		{"NormalMerge", args{[]PriceLevel{{Price: 1041, Orders: make([]OrderPart, 3)}, {Price: 1030}}, []PriceLevel{{Price: 1020}, {Price: 1032, Orders: make([]OrderPart, 4)}}, &overLapped}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -286,9 +286,9 @@ func TestOrderBookOnULList_InsertOrder(t *testing.T) {
 			case "SamePrice":
 
 				if len(ob.buyQueue.begin.elements) != 1 ||
-					len(ob.buyQueue.begin.elements[0].orders) != 4 ||
-					ob.buyQueue.begin.elements[0].orders[0].id != "123455" ||
-					ob.buyQueue.begin.elements[0].orders[3].id != "123456" {
+					len(ob.buyQueue.begin.elements[0].Orders) != 4 ||
+					ob.buyQueue.begin.elements[0].Orders[0].Id != "123455" ||
+					ob.buyQueue.begin.elements[0].Orders[3].Id != "123456" {
 					t.Error("SamePrice doesn't work")
 				}
 			case "NewPrice1":
@@ -563,7 +563,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	for b := l.buyQueue.begin; b != l.buyQueue.dend; b = b.next {
 		for _, p := range b.elements {
 			assert.Equal(p.Price, overlap[j].Price, "overlapped Price equal")
-			assert.Equal(2*len(p.orders), len(overlap[j].BuyOrders)+len(overlap[j].SellOrders), "order number equal")
+			assert.Equal(2*len(p.Orders), len(overlap[j].BuyOrders)+len(overlap[j].SellOrders), "order number equal")
 			j++
 		}
 	}
@@ -681,7 +681,7 @@ func TestOrderBookOnBTree_GetOverlappedRange(t *testing.T) {
 	var j int
 	l.buyQueue.Ascend(func(i bt.Item) bool {
 		assert.Equal(i.(*BuyPriceLevel).Price, overlap[j].Price, "overlapped Price equal")
-		assert.Equal(2*len(i.(*BuyPriceLevel).orders), len(overlap[j].BuyOrders)+len(overlap[j].SellOrders), fmt.Sprintf("order number equal %d", overlap[j].Price))
+		assert.Equal(2*len(i.(*BuyPriceLevel).Orders), len(overlap[j].BuyOrders)+len(overlap[j].SellOrders), fmt.Sprintf("order number equal %d", overlap[j].Price))
 		j++
 		return true
 	})

@@ -167,8 +167,8 @@ func (ull *ULList) String() string {
 		buffer.WriteString(fmt.Sprintf("Bucket %d{", j))
 		for _, p := range i.elements {
 			buffer.WriteString(fmt.Sprintf("%d->[", p.Price))
-			for _, o := range p.orders {
-				buffer.WriteString(fmt.Sprintf("%s %d %d,", o.id, o.time, o.qty))
+			for _, o := range p.Orders {
+				buffer.WriteString(fmt.Sprintf("%s %d %d,", o.Id, o.Time, o.Qty))
 			}
 			buffer.WriteString("]")
 		}

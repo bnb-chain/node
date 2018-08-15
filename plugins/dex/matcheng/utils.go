@@ -24,30 +24,30 @@ func mergeLevels(buyLevels []PriceLevel, sellLevels []PriceLevel, overlapped *[]
 		switch compareBuy(b, s) {
 		case 0:
 			*overlapped = append(*overlapped,
-				OverLappedLevel{Price: b, BuyOrders: buyLevels[i].orders,
-					SellOrders: sellLevels[j].orders})
+				OverLappedLevel{Price: b, BuyOrders: buyLevels[i].Orders,
+					SellOrders: sellLevels[j].Orders})
 			i++
 			j--
 		case -1:
 			*overlapped = append(*overlapped, OverLappedLevel{Price: s,
-				SellOrders: sellLevels[j].orders})
+				SellOrders: sellLevels[j].Orders})
 			j--
 		case 1:
 			*overlapped = append(*overlapped, OverLappedLevel{Price: b,
-				BuyOrders: buyLevels[i].orders})
+				BuyOrders: buyLevels[i].Orders})
 			i++
 		}
 	}
 	for i < bN {
 		b := buyLevels[i].Price
 		*overlapped = append(*overlapped, OverLappedLevel{Price: b,
-			BuyOrders: buyLevels[i].orders})
+			BuyOrders: buyLevels[i].Orders})
 		i++
 	}
 	for j >= 0 {
 		s := sellLevels[j].Price
 		*overlapped = append(*overlapped, OverLappedLevel{Price: s,
-			SellOrders: sellLevels[j].orders})
+			SellOrders: sellLevels[j].Orders})
 		j--
 	}
 }
