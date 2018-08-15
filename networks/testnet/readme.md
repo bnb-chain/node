@@ -15,6 +15,8 @@ eg
 ./deploy.sh --build true --skip_timeout true
 ```
 
+log file's path is `~/node*.log` and node's home path is `~/node*`
+
 ## Introduction
 
 After execute `deploy.sh`, you will get a testnet like:
