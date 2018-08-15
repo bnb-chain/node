@@ -2,10 +2,18 @@
 
 ## Usage
 
-1. build BinanceChain in every node.
-2. go to machine `172.31.4.208` and run `./deploy.sh`
+go to machine `172.31.4.208` and run `./deploy.sh`
 
-TODO: add feature to build BinanceChain in every node.
+```
+Options:
+ --build     			(default false)build bnbchaind before deploy
+ --skip_timeout     	(default true)make progress as soon as we have all the precommits
+```
+
+eg
+```
+./deploy.sh --build true --skip_timeout true
+```
 
 ## Introduction
 

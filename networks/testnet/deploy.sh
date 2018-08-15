@@ -1,24 +1,61 @@
 #!/usr/bin/env bash
 
+# options
+skip_timeout=true
+is_build=false
+
+while true ; do
+    case "$1" in
+		--build )
+			is_build=$2
+			shift 2
+		;;
+		--skip_timeout )
+			skip_timeout=$2
+			shift 2
+		;;
+        *)
+            break
+        ;;
+    esac
+done;
+
 cd ../..
+work_path=$(pwd)
 
 if ! [ -f build/node0/gaiad/config/genesis.json ];
 then
-
 	docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2
 fi
-
-cd build
-
-# options
-skip_timeout=true
 
 # variables
 paths=("node0" "node1" "node2" "node3")
 des_ips=("172.31.47.173" "172.31.47.173" "172.31.47.252" "172.31.47.252")
 src_ips=("172.20.0.2" "172.20.0.3" "172.20.0.4" "172.20.0.5")
+machines=("172.31.47.173" "172.31.47.252" "172.31.35.68")
 bridge_ip="172.31.35.68"
 witness_ip="172.31.35.68"
+
+if [ "${is_build}" = true ]
+then
+	# build
+	cd ${work_path}
+	make get_vendor_deps
+	make build
+
+	cd ${work_path}/..
+
+	tar -zcvf BinanceChain.tar.gz --exclude=BinanceChain/build BinanceChain > /dev/null
+	for i in {0..2}
+	do
+		echo "Copying repo to host ${machines[$i]}..."
+		ssh bijieprd@${des_ips[$i]} "sudo rm -rf ~/gowork/src/github.com/BiJie/BinanceChain"
+		scp BinanceChain.tar.gz bijieprd@${des_ips[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
+		ssh bijieprd@${des_ips[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
+	done
+fi
+
+cd ${work_path}/build
 
 ## prepare validators
 # close pex
