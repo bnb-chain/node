@@ -71,7 +71,9 @@ build-docker-node:
 # Run a 4-node testnet locally
 localnet-start: localnet-stop
 	@if ! [ -f build/node0/gaiad/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2 ; fi
-	docker-compose up
+	@if [ "$(SKIP_TIMEOUT)" = "true" ]; then for i in `seq 0 3`; do sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ./build/node$$i/gaiad/config/config.toml; done; fi
+	@if [ "$(PEX)" = "false" ]; then for i in `seq 0 3`; do sed -i -e "s/pex = true/pex = false/g" ./build/node$$i/gaiad/config/config.toml; done; fi
+	#docker-compose up
 
 # Stop testnet
 localnet-stop:
