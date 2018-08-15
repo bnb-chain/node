@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
 
-cd ../../build/
+cd ../..
 
+if ! [ -f build/node0/gaiad/config/genesis.json ];
+then
+
+	docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2
+fi
+
+cd build
+
+# options
+skip_timeout=true
+
+# variables
 paths=("node0" "node1" "node2" "node3")
 des_ips=("172.31.47.173" "172.31.47.173" "172.31.47.252" "172.31.47.252")
 src_ips=("172.20.0.2" "172.20.0.3" "172.20.0.4" "172.20.0.5")
@@ -12,7 +24,12 @@ witness_ip="172.31.35.68"
 # close pex
 for p in "${paths[@]}"
 do
-  $(cd "${p}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
+  	$(cd "${p}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
+
+	if [ "${skip_timeout}" = true ]
+	then
+	  	$(cd "${p}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+	fi
 done
 
 # change gentx
