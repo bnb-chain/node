@@ -11,8 +11,8 @@ func Test_sumOrders(t *testing.T) {
 	assert := assert.New(t)
 	orders := []OrderPart{OrderPart{"1", 100, 260, 0, 0}, OrderPart{"1", 100, 250, 0, 0}, OrderPart{"1", 100, 501, 0, 0}}
 	assert.Equal(int64(1011), sumOrdersTotalLeft(orders, true))
-	orders[0].qty = 10
-	orders[1].cumQty = 250
+	orders[0].Qty = 10
+	orders[1].CumQty = 250
 	assert.Equal(int64(1011), sumOrdersTotalLeft(orders, false))
 	orders = []OrderPart{}
 	assert.Equal(int64(0), sumOrdersTotalLeft(orders, true))
@@ -531,9 +531,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(300), orders[0].nxtTrade)
 	assert.Equal(int64(100), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(200), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
@@ -545,9 +545,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(255), orders[0].nxtTrade)
 	assert.Equal(int64(80), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(165), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
@@ -559,9 +559,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(15), orders[0].nxtTrade)
 	assert.Equal(int64(5), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(5), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
@@ -573,9 +573,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(20), orders[0].nxtTrade)
 	assert.Equal(int64(5), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(10), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
@@ -587,9 +587,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(235), orders[0].nxtTrade)
 	assert.Equal(int64(235), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(230), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
@@ -601,9 +601,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(235), orders[0].nxtTrade)
 	assert.Equal(int64(235), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(230), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 }
 
@@ -660,19 +660,19 @@ func TestMatchEng_reserveQty(t *testing.T) {
 
 	assert.True(me.reserveQty(4300, orders))
 	assert.Equal(int64(900), orders[0].nxtTrade)
-	assert.Equal("1", orders[0].id)
+	assert.Equal("1", orders[0].Id)
 	assert.Equal(int64(900), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].id)
+	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(900), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].id)
+	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(900), orders[3].nxtTrade)
-	assert.Equal("6", orders[3].id)
+	assert.Equal("6", orders[3].Id)
 	assert.Equal(int64(235), orders[4].nxtTrade)
-	assert.Equal("4", orders[4].id)
+	assert.Equal("4", orders[4].Id)
 	assert.Equal(int64(235), orders[5].nxtTrade)
-	assert.Equal("5", orders[5].id)
+	assert.Equal("5", orders[5].Id)
 	assert.Equal(int64(230), orders[6].nxtTrade)
-	assert.Equal("7", orders[6].id)
+	assert.Equal("7", orders[6].Id)
 }
 
 func TestMatchEng_Match(t *testing.T) {
@@ -809,8 +809,8 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	assert.Nil(book.sellQueue.GetPriceLevel(99))
 	assert.Nil(book.sellQueue.GetPriceLevel(98))
 	assert.Nil(book.sellQueue.GetPriceLevel(96))
-	for _, o := range book.buyQueue.GetPriceLevel(100).orders {
-		assert.Equal(o.time, int64(105))
-		assert.True(o.cumQty > 0)
+	for _, o := range book.buyQueue.GetPriceLevel(100).Orders {
+		assert.Equal(o.Time, int64(105))
+		assert.True(o.CumQty > 0)
 	}
 }

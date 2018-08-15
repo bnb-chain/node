@@ -2,7 +2,6 @@ package store
 
 import (
 	"github.com/BiJie/BinanceChain/common/utils"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 )
 
 type Order struct {
@@ -10,9 +9,4 @@ type Order struct {
 	BuyPrice  utils.Fixed8 `json:"buyPrice"`
 	SellQty   utils.Fixed8 `json:"sellQty"`
 	SellPrice utils.Fixed8 `json:"sellPrice"`
-}
-
-type OrderBookSnapshot struct {
-	Buys  []*me.PriceLevel
-	Sells []*me.PriceLevel
 }

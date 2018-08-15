@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	abci "github.com/tendermint/tendermint/abci/types"
+	bc "github.com/tendermint/tendermint/blockchain"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -93,6 +94,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	height, err := app.LoadOrderBookFromSnapshot()
+	if err != nil {
+		panic(err)
+	}
+	err = app.ReplayOrdersIntoOrderBook(height)
+	if err != nil {
+		panic(err)
+	}
+
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
 	err = app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
@@ -225,10 +235,16 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
-func (app *BinanceChain) LoadOrderBookFromSnapshot() error {
+func (app *BinanceChain) LoadOrderBookFromSnapshot() (int64, error) {
 	ms := app.cms.CacheMultiStore()
 	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
-	return app.DexKeeper.LoadOrderBookSnapshot(store, 100)
+	//count back to 7 days.
+	return app.DexKeeper.LoadOrderBookSnapshot(store, 7)
+}
+
+func (app *BinanceChain) ReplayOrdersIntoOrderBook(breatheHeight int64) error {
+	blockstore := bc.NewBlockStore(app.db)
+	return app.DexKeeper.ReplayOrdersFromBlock(blockstore, app.LastBlockHeight(), breatheHeight, app.txDecoder)
 }
 
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
