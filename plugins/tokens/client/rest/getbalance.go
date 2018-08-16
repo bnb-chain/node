@@ -7,65 +7,53 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
-// RegisterBalanceRoute registers this http route handler
-func RegisterBalanceRoute(
-	ctx context.CoreContext,
-	r *mux.Router,
-	cdc *wire.Codec,
-	tokens tokens.Mapper,
-) *mux.Route {
-	return r.HandleFunc("/balances/{address}/{symbol}", balanceRequestHandler(cdc, tokens, ctx)).Methods("GET")
-}
-
-type balanceResponse struct {
-	Address string       `json:"address"`
-	Balance TokenBalance `json:"balance"`
-}
-
-func balanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.CoreContext) http.HandlerFunc {
+// BalanceReqHandler creates an http request handler to get an individual token balance of a given address
+func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.Mapper) http.HandlerFunc {
+	type params struct {
+		address sdk.AccAddress
+		symbol  string
+	}
+	type response struct {
+		Address string       `json:"address"`
+		Balance tokenBalance `json:"balance"`
+	}
+	throw := func(w http.ResponseWriter, status int, err error) {
+		w.WriteHeader(status)
+		w.Write([]byte(err.Error()))
+		return
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		throw := func(status int, err error) {
-			w.WriteHeader(status)
-			w.Write([]byte(err.Error()))
-			return
-		}
-
 		vars := mux.Vars(r)
 
 		// collect params
 		// convert bech32 address
 		addr, err := sdk.AccAddressFromBech32(vars["address"])
 		if err != nil {
-			throw(http.StatusBadRequest, err)
+			throw(w, http.StatusBadRequest, err)
 			return
 		}
-		params := struct {
-			address sdk.AccAddress
-			symbol  string
-		}{
+		params := params{
 			address: addr,
 			symbol:  vars["symbol"],
 		}
 
-		// exists := tokens.ExistsCC(ctx, params.symbol)
-		exists := true
+		exists := tokens.ExistsCC(ctx, params.symbol)
 		if !exists {
-			throw(http.StatusNotFound, errors.New("symbol not found"))
+			throw(w, http.StatusNotFound, errors.New("symbol not found"))
 			return
 		}
 
-		// coins := bank.GetCoins(ctx, params.address)
 		coins, err := getCoinsCC(cdc, ctx, params.address)
 		if err != nil {
-			throw(http.StatusNotFound, err)
+			throw(w, http.StatusNotFound, err)
 			return
 		}
 
@@ -85,9 +73,9 @@ func balanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 			frozen = frozenc.AmountOf(params.symbol)
 		}
 
-		resp := balanceResponse{
+		resp := response{
 			Address: vars["address"],
-			Balance: TokenBalance{
+			Balance: tokenBalance{
 				Symbol: params.symbol,
 				Free:   utils.Fixed8(coins.AmountOf(params.symbol).Int64()),
 				Locked: utils.Fixed8(locked.Int64()),
@@ -97,7 +85,7 @@ func balanceRequestHandler(cdc *wire.Codec, tokens tokens.Mapper, ctx context.Co
 
 		output, err := cdc.MarshalJSON(resp)
 		if err != nil {
-			throw(http.StatusInternalServerError, err)
+			throw(w, http.StatusInternalServerError, err)
 			return
 		}
 

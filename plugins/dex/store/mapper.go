@@ -3,12 +3,11 @@ package store
 import (
 	"errors"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/utils"
-
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type TradingPairMapper interface {
