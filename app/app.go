@@ -94,6 +94,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
+	err = app.LoadLatestVersion(common.MainStoreKey)
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 	height, err := app.LoadOrderBookFromSnapshot()
 	if err != nil {
 		panic(err)
@@ -103,11 +108,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 		panic(err)
 	}
 
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
-	err = app.LoadLatestVersion(common.MainStoreKey)
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
 	return app
 }
 
