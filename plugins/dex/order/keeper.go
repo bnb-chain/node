@@ -337,7 +337,7 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvstore sdk.KVStore, 
 	}
 	if bz == nil {
 		//TODO: logging
-		return -1
+		return 0
 	}
 	var height int64
 	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
@@ -386,8 +386,9 @@ func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
 func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) (int64, error) {
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
-	if height == -1 {
-		return height, errors.New("Failed to load BreatheBlock Height")
+	if height == 0 {
+		//TODO: Log. this might be the first day online and no breathe block is saved.
+		return height, nil
 	}
 
 	for pair, eng := range kp.engines {
@@ -443,7 +444,11 @@ func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) (int6
 }
 
 func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
-	for _, txBytes := range block.Data.Txs {
+	if block == nil {
+		//TODO: Log
+		return
+	}
+	for _, txBytes := range block.Txs {
 		tx, err := txDecoder(txBytes)
 		if err != nil {
 			panic(err)
@@ -469,6 +474,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
+	fmt.Printf("breathhguith is %v, last height is %v", breatheHeight, lastHeight)
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		kp.replayOneBlocks(block, txDecoder, i)
