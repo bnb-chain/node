@@ -1,5 +1,7 @@
 package types
 
+import "math"
+
 type TradingPair struct {
 	TradeAsset string `json:"trade_asset"`
 	QuoteAsset string `json:"quote_asset"`
@@ -13,17 +15,27 @@ func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
 		TradeAsset: tradeAsset,
 		QuoteAsset: quoteAsset,
 		Price:      price,
-		TickSize:   calcTickSize(),
-		LotSize:    calcLotSize(),
+		TickSize:   CalcTickSize(price),
+		LotSize:    CalcLotSize(price),
 	}
 }
 
-// TODO:
-func calcTickSize() int64 {
-	return 1
+// CalcTickSize calculate TickSize based on price
+func CalcTickSize(price int64) int64 {
+	if price <= 0 {
+		return 1
+	}
+
+	priceDigits := int64(math.Floor(math.Log10(float64(price))))
+	return int64(math.Pow(10, math.Max(float64(priceDigits-5), 0)))
 }
 
-// TODO:
-func calcLotSize() int64 {
-	return 1e8
+// CalcLotSize calculate LotSize based on price
+func CalcLotSize(price int64) int64 {
+	if price <= 0 {
+		return 1
+	}
+
+	priceDigits := int64(math.Floor(math.Log10(float64(price))))
+	return int64(math.Pow(10, math.Max(float64(8-math.Max(float64(priceDigits-5), 0)), 0)))
 }

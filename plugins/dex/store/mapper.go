@@ -15,6 +15,7 @@ type TradingPairMapper interface {
 	Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool
 	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
+	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64)
 }
 
 var _ TradingPairMapper = mapper{}
@@ -79,6 +80,18 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	}
 
 	return res
+}
+
+func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) {
+	tickSize := types.CalcTickSize(price)
+	lotSize := types.CalcLotSize(price)
+
+	if tickSize != pair.TickSize || lotSize != pair.LotSize {
+		pair.TickSize = tickSize
+		pair.LotSize = lotSize
+		// TODO: do we need to store price here?
+		m.AddTradingPair(ctx, pair)
+	}
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {

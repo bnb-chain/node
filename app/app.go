@@ -177,12 +177,26 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// breathe block
 		icoDone := ico.EndBlockAsync(ctx)
 		// other end blockers
-
+		app.updateTickSizeAndLotSize(ctx)
 		<-icoDone
 	}
 
 	// TODO: update validators
 	return abci.ResponseEndBlock{}
+}
+
+func (app *BinanceChain) updateTickSizeAndLotSize(ctx sdk.Context) {
+	tradingPairs := app.TradingPairMapper.ListAllTradingPairs(ctx)
+
+	for _, pair := range tradingPairs {
+		symbol := utils.Ccy2TradeSymbol(pair.TradeAsset, pair.QuoteAsset)
+		_, lastPrice := app.OrderKeeper.GetLastTrades(symbol)
+		if lastPrice == 0 {
+			continue
+		}
+
+		app.TradingPairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
+	}
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.
