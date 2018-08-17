@@ -1,7 +1,6 @@
 package types
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,11 +11,11 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 		in  int64
 		out int64
 	}{
-		{-1, 1},
-		{0, 1},
-		{int64(math.Pow(10, 2)), int64(math.Pow(10, 8))},
-		{int64(math.Pow(10, 8)), int64(math.Pow(10, 5))},
-		{int64(math.Pow(10, 17)), int64(math.Pow(10, 0))},
+		{-1, 1e8},
+		{0, 1e8},
+		{1e2, 1e8},
+		{1e8, 1e5},
+		{1e17, 1},
 	}
 
 	var tickSizeTests = []struct {
@@ -25,9 +24,9 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 	}{
 		{-1, 1},
 		{0, 1},
-		{int64(math.Pow(10, 2)), int64(math.Pow(10, 0))},
-		{int64(math.Pow(10, 8)), int64(math.Pow(10, 3))},
-		{int64(math.Pow(10, 17)), int64(math.Pow(10, 12))},
+		{1e2, 1},
+		{1e8, 1e3},
+		{1e17, 1e12},
 	}
 
 	for i := 0; i < len(lotSizeTests); i++ {

@@ -33,7 +33,7 @@ func CalcTickSize(price int64) int64 {
 // CalcLotSize calculate LotSize based on price
 func CalcLotSize(price int64) int64 {
 	if price <= 0 {
-		return 1
+		return 1e8
 	}
 
 	priceDigits := int64(math.Floor(math.Log10(float64(price))))
