@@ -75,11 +75,6 @@ func genActiveOrdersSnapshotKey(height int64) string {
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
-	allPairs := make([]string, 2)
-	for _, p := range allPairs {
-		eng := CreateMatchEng(p)
-		engines[p] = eng
-	}
 	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
 		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
@@ -358,8 +353,13 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	if err != nil {
 		return err
 	}
+	err = w.Flush()
+	if err != nil {
+		return err
+	}
 	bytes = b.Bytes()
 	kv.Set([]byte(key), bytes)
+	w.Close()
 	return nil
 }
 
@@ -383,7 +383,7 @@ func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
 	return compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) (int64, error) {
+func (kp *Keeper) LoadOrderBookSnapshot(allPairs []string, kvstore sdk.KVStore, daysBack int) (int64, error) {
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
 	if height == 0 {
@@ -391,7 +391,12 @@ func (kp *Keeper) LoadOrderBookSnapshot(kvstore sdk.KVStore, daysBack int) (int6
 		return height, nil
 	}
 
-	for pair, eng := range kp.engines {
+	for _, pair := range allPairs {
+		eng, ok := kp.engines[pair]
+		if !ok {
+			eng = CreateMatchEng(pair)
+			kp.engines[pair] = eng
+		}
 		key := genOrderBookSnapshotKey(height, pair)
 		bz := kvstore.Get([]byte(key))
 		if bz == nil {
