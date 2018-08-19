@@ -76,11 +76,6 @@ func genActiveOrdersSnapshotKey(height int64) string {
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
-	allPairs := make([]string, 2)
-	for _, p := range allPairs {
-		eng := CreateMatchEng(p)
-		engines[p] = eng
-	}
 	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
 		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
 		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
