@@ -279,6 +279,22 @@ func (kp *Keeper) clearAfterMatch() (err error) {
 	return nil
 }
 
+// MatchAll will only concurrently match but do not allocate into accounts
+func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
+	var wgOrd sync.WaitGroup
+	tradeOuts := kp.matchAndDistributeTrades(&wgOrd)
+	if tradeOuts == nil {
+		//TODO: logging
+		return sdk.CodeOK, nil
+	}
+
+	wgOrd.Wait()
+	for _, t := range tradeOuts {
+		close(t)
+	}
+	return sdk.CodeOK, nil
+}
+
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
@@ -477,6 +493,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 			}
 		}
 	}
+	kp.MatchAll() //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
