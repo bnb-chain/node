@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -99,7 +100,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-	height, err := app.LoadOrderBookFromSnapshot()
+	allPairs := app.getAllTradingPairsString()
+	height, err := app.LoadOrderBookFromSnapshot(allPairs)
 	if err != nil {
 		panic(err)
 	}
@@ -109,6 +111,18 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	}
 
 	return app
+}
+
+func (app *BinanceChain) getAllTradingPairsString() []string {
+	if app.checkState == nil {
+		return make([]string, 0)
+	}
+	listedPairs := app.TradingPairMapper.ListAllTradingPairs(app.checkState.ctx)
+	allStrings := make([]string, 0, len(listedPairs))
+	for _, p := range listedPairs {
+		allStrings = append(allStrings, utils.Ccy2TradeSymbol(p.TradeAsset, p.QuoteAsset))
+	}
+	return allStrings
 }
 
 //TODO???: where to init checkState in reboot
@@ -235,11 +249,11 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
-func (app *BinanceChain) LoadOrderBookFromSnapshot() (int64, error) {
+func (app *BinanceChain) LoadOrderBookFromSnapshot(allPairs []string) (int64, error) {
 	ms := app.cms.CacheMultiStore()
 	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
 	//count back to 7 days.
-	return app.DexKeeper.LoadOrderBookSnapshot(store, 7)
+	return app.DexKeeper.LoadOrderBookSnapshot(allPairs, store, 7)
 }
 
 func (app *BinanceChain) ReplayOrdersIntoOrderBook(breatheHeight int64) error {
