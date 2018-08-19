@@ -5,21 +5,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	sdkstore "github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	bc "github.com/tendermint/tendermint/blockchain"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
-	sdkstore "github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/stretchr/testify/assert"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 func MakeCodec() *wire.Codec {
@@ -114,11 +119,11 @@ func Test_compressAndSave(t *testing.T) {
 	assert.True(len(bz) < len(bytes))
 }
 
-func MakeAddress() sdk.AccAddress {
+func MakeAddress() (sdk.AccAddress, ed25519.PrivKeyEd25519) {
 	privKey := ed25519.GenPrivKey()
 	pubKey := privKey.PubKey()
 	addr := sdk.AccAddress(pubKey.Address())
-	return addr
+	return addr, privKey
 }
 
 func TestKeeper_SnapShotOrderBook(t *testing.T) {
@@ -128,7 +133,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	cms := MakeCMS()
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
-	accAdd := MakeAddress()
+	accAdd, _ := MakeAddress()
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 10200, 300)
 	keeper.AddOrder(msg, 42)
 	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 10100, 100)
@@ -178,11 +183,70 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	assert.Nil(err)
 }
 
+func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *wire.Codec) *tmtypes.Block {
+	tmTxs := make([]tmtypes.Tx, len(txs))
+	for i, tx := range txs {
+		tmTxs[i], _ = cdc.MarshalBinary(tx)
+	}
+	return tmtypes.MakeBlock(height, tmTxs, commit, nil)
+}
+
+const BlockPartSize = 65536
+
+func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey ed25519.PrivKeyEd25519) auth.StdTx {
+	fee, _ := sdk.ParseCoin("100 BNB")
+	signMsg := auth.StdSignMsg{
+		ChainID:       "chainID1",
+		AccountNumber: accountNumber,
+		Sequence:      seqNum,
+		Msgs:          msgs,
+		Memo:          "Memo1",
+		Fee:           auth.NewStdFee(int64(100), fee), // TODO run simulate to estimate gas?
+	}
+	sig, _ := privKey.Sign(signMsg.Bytes())
+	sigs := []auth.StdSignature{{
+		PubKey:        privKey.PubKey(),
+		Signature:     sig,
+		AccountNumber: accountNumber,
+		Sequence:      seqNum,
+	}}
+	tx := auth.NewStdTx(signMsg.Msgs, signMsg.Fee, sigs, signMsg.Memo)
+	return tx
+}
+
+func GenerateBlocksAndSave(storedb db.DB, height int64, cdc *wire.Codec) *bc.BlockStore {
+	blockStore := bc.NewBlockStore(storedb)
+	lastCommit := &tmtypes.Commit{}
+	buyerAdd, buyerPrivKey := MakeAddress()
+	sellerAdd, sellerPrivKey := MakeAddress()
+	txs := make([]auth.StdTx, 7)
+	msgs01 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123456", Side.BUY, "XYZ_BNB", 10200, 300)}
+	txs[0] = MakeTxFromMsg(msgs01, int64(100), int64(9001), buyerPrivKey)
+	msgs02 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123457", Side.BUY, "XYZ_BNB", 10100, 100)}
+	txs[1] = MakeTxFromMsg(msgs02, int64(100), int64(9002), buyerPrivKey)
+	msgs03 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123459", Side.SELL, "XYZ_BNB", 9800, 100)}
+	txs[2] = MakeTxFromMsg(msgs03, int64(1001), int64(7001), sellerPrivKey)
+	msgs04 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123458", Side.BUY, "XYZ_BNB", 9900, 500)}
+	txs[3] = MakeTxFromMsg(msgs04, int64(100), int64(9003), buyerPrivKey)
+	msgs05 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123460", Side.SELL, "XYZ_BNB", 9700, 500)}
+	txs[4] = MakeTxFromMsg(msgs05, int64(1001), int64(7002), sellerPrivKey)
+	msgs06 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123461", Side.SELL, "XYZ_BNB", 9500, 500)}
+	txs[5] = MakeTxFromMsg(msgs06, int64(1001), int64(7003), sellerPrivKey)
+	msgs07 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123462", Side.BUY, "XYZ_BNB", 9600, 150)}
+	txs[6] = MakeTxFromMsg(msgs07, int64(100), int64(9004), buyerPrivKey)
+	block := NewMockBlock(txs, height, lastCommit, cdc)
+	blockParts := block.MakePartSet(BlockPartSize)
+	//blockID := tmtypes.BlockID{Hash: block.Hash(), PartsHeader: blockParts.Header()}
+	//lastCommit = tmtypes.MakeCommit(block)
+	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
+	return blockStore
+}
+
 func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
-	assert := assert.New(t)
-	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
-	logger := log.NewTMLogger(os.Stdout)
-	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	// assert := assert.New(t)
+	// cdc := MakeCodec()
+	// keeper := MakeKeeper(cdc)
+	// cms := MakeCMS()
+	// logger := log.NewTMLogger(os.Stdout)
+	// ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
 }
