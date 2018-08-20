@@ -13,6 +13,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const flagQuoteSymbol = "quote-symbol"

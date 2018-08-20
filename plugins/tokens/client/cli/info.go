@@ -13,6 +13,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 func getTokenInfoCmd(cmdr Commander) *cobra.Command {

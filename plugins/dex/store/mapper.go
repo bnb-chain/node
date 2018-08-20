@@ -9,10 +9,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
-	dexUtils "github.com/BiJie/BinanceChain/plugins/dex/utils"
 	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 type TradingPairMapper interface {

@@ -13,6 +13,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type Commander struct {

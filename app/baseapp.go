@@ -466,9 +466,9 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 
 // Basic validator for msgs
 func validateBasicTxMsgs(msgs []sdk.Msg) sdk.Error {
-	if msgs == nil || len(msgs) == 0 {
+	if msgs == nil || len(msgs) != 1 {
 		// TODO: probably shouldn't be ErrInternal. Maybe new ErrInvalidMessage, or ?
-		return sdk.ErrInternal("Tx.GetMsgs() must return at least one message in list")
+		return sdk.ErrInternal("Tx.GetMsgs() must return exactly one message")
 	}
 
 	for _, msg := range msgs {

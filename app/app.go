@@ -206,6 +206,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		<-icoDone
 	}
 
+	// distribute fees
+	distributeFee(ctx, app.AccountMapper)
 	// TODO: update validators
 	return abci.ResponseEndBlock{}
 }
