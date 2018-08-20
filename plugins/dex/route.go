@@ -12,7 +12,9 @@ import (
 
 func Routes(tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper, tokenMapper tokens.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	routes[order.Route] = order.NewHandler(orderKeeper, accountMapper)
+	orderHandler := order.NewHandler(orderKeeper, accountMapper)
+	routes[order.RouteNew] = orderHandler
+	routes[order.RouteCancel] = orderHandler
 	routes[list.Route] = list.NewHandler(tradingPairMapper, tokenMapper)
 	return routes
 }

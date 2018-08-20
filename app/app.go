@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -23,6 +22,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (

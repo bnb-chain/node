@@ -9,7 +9,7 @@ import (
 func DefaultGenesisToken(owner sdk.AccAddress) types.Token {
 	return types.NewToken(
 		"Binance Chain Native Token",
-		"BNB",
+		types.NativeToken,
 		2e16,
 		owner,
 	)
