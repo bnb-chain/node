@@ -19,6 +19,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	bc "github.com/tendermint/tendermint/blockchain"
+	dbm "github.com/tendermint/tendermint/libs/db"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -147,7 +148,7 @@ func channelHash(account sdk.AccAddress, bucketNumber int) int {
 	return int(account[0]+account[1]) % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
+func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade bool) []chan Transfer {
 	size := len(kp.roundOrders)
 	//size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -174,8 +175,11 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
 		ii++
 	}
 	tradeOuts := make([]chan Transfer, concurrency)
-	for i, _ := range tradeOuts {
-		tradeOuts[i] = make(chan Transfer)
+	if distributeTrade {
+		for i, _ := range tradeOuts {
+			//TODO: channelSize is enough for buffer to facilitate ?
+			tradeOuts[i] = make(chan Transfer, channelSize)
+		}
 	}
 	wg.Add(concurrency)
 	for i = 0; i < concurrency; i++ {
@@ -187,14 +191,16 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
 				}
 				engine := kp.engines[ts]
 				if engine.Match() {
-					tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(ts)
-					for _, t := range engine.Trades {
-						t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
-						//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
-						c := channelHash(t1.account, concurrency)
-						tradeOuts[c] <- t1
-						c = channelHash(t2.account, concurrency)
-						tradeOuts[c] <- t2
+					if distributeTrade {
+						tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(ts)
+						for _, t := range engine.Trades {
+							t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
+							//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
+							c := channelHash(t1.account, concurrency)
+							tradeOuts[c] <- t1
+							c = channelHash(t2.account, concurrency)
+							tradeOuts[c] <- t2
+						}
 					}
 					engine.DropFilledOrder()
 				} // TODO: when Match() failed, have to unsolicited cancel all the orders
@@ -204,6 +210,9 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup) []chan Transfer {
 				for _, id := range iocIDs {
 					if msg, ok := kp.allOrders[id]; ok {
 						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
+							if !distributeTrade {
+								continue
+							}
 							//here is a trick to use the same currency as in and out ccy to simulate cancel
 							qty := ord.LeavesQty()
 							c := channelHash(msg.Sender, concurrency)
@@ -282,16 +291,12 @@ func (kp *Keeper) clearAfterMatch() (err error) {
 // MatchAll will only concurrently match but do not allocate into accounts
 func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	var wgOrd sync.WaitGroup
-	tradeOuts := kp.matchAndDistributeTrades(&wgOrd)
+	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, false) //only match
 	if tradeOuts == nil {
 		//TODO: logging
 		return sdk.CodeOK, nil
 	}
-
 	wgOrd.Wait()
-	for _, t := range tradeOuts {
-		close(t)
-	}
 	return sdk.CodeOK, nil
 }
 
@@ -306,7 +311,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		wg.Done()
 	}
 	var wgOrd sync.WaitGroup
-	tradeOuts := kp.matchAndDistributeTrades(&wgOrd)
+	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, true)
 	if tradeOuts == nil {
 		//TODO: logging
 		return sdk.CodeOK, nil
@@ -504,6 +509,19 @@ func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHe
 		kp.replayOneBlocks(block, txDecoder, i)
 	}
 	return nil
+}
+
+func (kp *Keeper) InitOrderBook(allPairs []string, kvstore sdk.KVStore,
+	daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	height, err := kp.LoadOrderBookSnapshot(allPairs, kvstore, daysBack)
+	if err != nil {
+		panic(err)
+	}
+	blockStore := bc.NewBlockStore(blockDB)
+	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Key to knowing the trend on the streets!
