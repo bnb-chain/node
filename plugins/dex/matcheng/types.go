@@ -53,7 +53,7 @@ type PriceLevelInterface interface {
 	removeOrder(id string) (OrderPart, int, error)
 	getOrder(id string) (OrderPart, error)
 	Less(than bt.Item) bool
-	totalLeavesQty() int64
+	TotalLeavesQty() int64
 }
 
 type PriceLevel struct {
@@ -117,7 +117,7 @@ func (l *PriceLevel) getOrder(id string) (OrderPart, error) {
 	return OrderPart{}, fmt.Errorf("order %s doesn't exist.", id)
 }
 
-func (l *PriceLevel) totalLeavesQty() int64 {
+func (l *PriceLevel) TotalLeavesQty() int64 {
 	var total int64 = 0
 	for _, o := range l.Orders {
 		total += o.LeavesQty()
@@ -137,4 +137,4 @@ type OverLappedLevel struct {
 	BuySellSurplus        int64
 }
 
-type LevelIter func(price int64, total int64)
+type LevelIter func(*PriceLevel)

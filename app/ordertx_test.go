@@ -3,6 +3,8 @@ package app
 import (
 	"testing"
 
+	"github.com/BiJie/BinanceChain/common/utils"
+
 	"github.com/stretchr/testify/assert"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -57,20 +59,22 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 }
 
 type level struct {
-	price int64
-	qty   int64
+	price utils.Fixed8
+	qty   utils.Fixed8
 }
 
 func getOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	testApp.DexKeeper.GetOrderBookUnSafe(pair, 5,
-		func(price, qty int64) {
-			buys = append(buys, level{price, qty})
-		},
-		func(price, qty int64) {
-			sells = append(sells, level{price, qty})
-		})
+	orderbooks := testApp.DexKeeper.GetOrderBook(pair, 5)
+	for _, l := range orderbooks {
+		if l.BuyPrice != 0 {
+			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})
+		}
+		if l.SellPrice != 0 {
+			sells = append(sells, level{price: l.SellPrice, qty: l.SellQty})
+		}
+	}
 	return buys, sells
 }
 
@@ -90,8 +94,8 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(1, len(buys))
 	assert.Equal(0, len(sells))
-	assert.Equal(int64(355e8), buys[0].price)
-	assert.Equal(int64(1e8), buys[0].qty)
+	assert.Equal(utils.Fixed8(355e8), buys[0].price)
+	assert.Equal(utils.Fixed8(1e8), buys[0].qty)
 }
 
 func Test_Match(t *testing.T) {

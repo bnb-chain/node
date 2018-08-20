@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	bc "github.com/tendermint/tendermint/blockchain"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -77,10 +76,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
 	var err error
-
 	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
-
 	if err != nil {
 		logger.Error("Failed to create an order keep", "error", err)
 		panic(err)
@@ -100,29 +97,20 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-	allPairs := app.getAllTradingPairsString()
-	height, err := app.LoadOrderBookFromSnapshot(allPairs)
-	if err != nil {
-		panic(err)
-	}
-	err = app.ReplayOrdersIntoOrderBook(height)
-	if err != nil {
-		panic(err)
-	}
+
+	app.InitDexKeeperBook()
 
 	return app
 }
 
-func (app *BinanceChain) getAllTradingPairsString() []string {
+func (app *BinanceChain) InitDexKeeperBook() {
 	if app.checkState == nil {
-		return make([]string, 0)
+		return
 	}
-	listedPairs := app.TradingPairMapper.ListAllTradingPairs(app.checkState.ctx)
-	allStrings := make([]string, 0, len(listedPairs))
-	for _, p := range listedPairs {
-		allStrings = append(allStrings, utils.Ccy2TradeSymbol(p.TradeAsset, p.QuoteAsset))
-	}
-	return allStrings
+	allPairs := app.TradingPairMapper.ListAllTradingPairStrings(app.checkState.ctx)
+	store := app.checkState.ctx.KVStore(common.DexStoreKey)
+	//count back to 7 days.
+	app.DexKeeper.InitOrderBook(allPairs, store, 7, app.db, app.LastBlockHeight(), app.txDecoder)
 }
 
 //TODO???: where to init checkState in reboot
@@ -208,14 +196,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
 	} else {
-		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
-		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
-		app.DexKeeper.SnapShotOrderBook(height, ctx)
 		// breathe block
 
 		icoDone := ico.EndBlockAsync(ctx)
 
-		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.OrderKeeper)
+		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.AccountMapper, *app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
@@ -250,18 +235,6 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
-func (app *BinanceChain) LoadOrderBookFromSnapshot(allPairs []string) (int64, error) {
-	ms := app.cms.CacheMultiStore()
-	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
-	//count back to 7 days.
-	return app.DexKeeper.LoadOrderBookSnapshot(allPairs, store, 7)
-}
-
-func (app *BinanceChain) ReplayOrdersIntoOrderBook(breatheHeight int64) error {
-	blockstore := bc.NewBlockStore(app.db)
-	return app.DexKeeper.ReplayOrdersFromBlock(blockstore, app.LastBlockHeight(), breatheHeight, app.txDecoder)
-}
-
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	path := splitPath(req.Path)
 	if len(path) == 0 {
@@ -288,7 +261,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			}
 		}
 		pair := path[2]
-		orderbook := app.DexKeeper.GetOrderBookUnSafe(pair, 20)
+		orderbook := app.DexKeeper.GetOrderBook(pair, 20)
 		resValue, err := app.Codec.MarshalBinary(orderbook)
 		if err != nil {
 			return abci.ResponseQuery{
