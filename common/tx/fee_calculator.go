@@ -18,7 +18,7 @@ func GetCalculator(msgType string) FeeCalculator {
 	return calculators[msgType]
 }
 
-func UnsetAllCalculator() {
+func UnsetAllCalculators() {
 	for key := range calculators {
 		delete(calculators, key)
 	}

@@ -51,6 +51,6 @@ func TestRegisterAndGetCalculators(t *testing.T) {
 	require.Equal(t, types.FeeForProposer, fee.Type)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, fee.Tokens)
 
-	tx.UnsetAllCalculator()
+	tx.UnsetAllCalculators()
 	require.Nil(t, tx.GetCalculator(msg.Type()))
 }

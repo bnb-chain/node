@@ -19,14 +19,14 @@ import (
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
-	tx.UnsetAllCalculator()
+	tx.UnsetAllCalculators()
 	testMsg := sdk.NewTestMsg(addrs...)
 	tx.RegisterCalculator(testMsg.Type(), tx.FreeFeeCalculator())
 	return testMsg
 }
 
 func newTestMsgWithFeeCalculator(calculator tx.FeeCalculator, addrs ...sdk.AccAddress) *sdk.TestMsg {
-	tx.UnsetAllCalculator()
+	tx.UnsetAllCalculators()
 	testMsg := sdk.NewTestMsg(addrs...)
 	tx.RegisterCalculator(testMsg.Type(), calculator)
 	return testMsg
@@ -592,11 +592,24 @@ func TestAnteHandlerFees(t *testing.T) {
 	// set the accounts
 	priv1, acc1 := newAccount(ctx, mapper)
 
-	// fee for proposer
-	fee := newStdFee()
-	msg := newTestMsgWithFeeCalculator(tx.FixedFeeCalculator(10, types.FeeForProposer), acc1.GetAddress())
-	tx1 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{0}, fee)
+	stdFee := newStdFee()
+
+	// fee free
+	msg := newTestMsgWithFeeCalculator(tx.FreeFeeCalculator(), acc1.GetAddress())
+	tx1 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{0}, stdFee)
 	checkBalance(t, anteHandler, mapper, ctx, tx1, acc1.GetAddress(),
+		sdk.Coins{sdk.NewCoin(types.NativeToken, 100)},
+		[]sdk.Coins{{sdk.NewCoin(types.NativeToken, 100)},
+			{sdk.NewCoin(types.NativeToken, 100)},
+			{sdk.NewCoin(types.NativeToken, 100)},
+			{sdk.NewCoin(types.NativeToken, 100)}},
+	)
+
+	// fee for proposer
+
+	msg = newTestMsgWithFeeCalculator(tx.FixedFeeCalculator(10, types.FeeForProposer), acc1.GetAddress())
+	tx2 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{1}, stdFee)
+	checkBalance(t, anteHandler, mapper, ctx, tx2, acc1.GetAddress(),
 		sdk.Coins{sdk.NewCoin(types.NativeToken, 90)},
 		[]sdk.Coins{{sdk.NewCoin(types.NativeToken, 110)},
 			{sdk.NewCoin(types.NativeToken, 100)},
@@ -606,8 +619,8 @@ func TestAnteHandlerFees(t *testing.T) {
 
 	// fee for all validators, fee amount can be divided evenly.
 	msg = newTestMsgWithFeeCalculator(tx.FixedFeeCalculator(20, types.FeeForAll), acc1.GetAddress())
-	tx2 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{1}, fee)
-	checkBalance(t, anteHandler, mapper, ctx, tx2, acc1.GetAddress(),
+	tx3 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{2}, stdFee)
+	checkBalance(t, anteHandler, mapper, ctx, tx3, acc1.GetAddress(),
 		sdk.Coins{sdk.NewCoin(types.NativeToken, 70)},
 		[]sdk.Coins{{sdk.NewCoin(types.NativeToken, 115)},
 			{sdk.NewCoin(types.NativeToken, 105)},
@@ -617,8 +630,8 @@ func TestAnteHandlerFees(t *testing.T) {
 
 	// fee for all validators, fee amount cannot be divided evenly
 	msg = newTestMsgWithFeeCalculator(tx.FixedFeeCalculator(30, types.FeeForAll), acc1.GetAddress())
-	tx3 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{2}, fee)
-	checkBalance(t, anteHandler, mapper, ctx, tx3, acc1.GetAddress(),
+	tx4 := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv1}, []int64{4}, []int64{3}, stdFee)
+	checkBalance(t, anteHandler, mapper, ctx, tx4, acc1.GetAddress(),
 		sdk.Coins{sdk.NewCoin(types.NativeToken, 40)},
 		[]sdk.Coins{{sdk.NewCoin(types.NativeToken, 124)},
 			{sdk.NewCoin(types.NativeToken, 112)},

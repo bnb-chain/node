@@ -206,6 +206,10 @@ func calcCollectAndDistributeFees(ctx sdk.Context, am auth.AccountMapper, acc au
 	}
 
 	fee.Tokens.Sort()
+	if ctx.IsCheckTx() {
+		return checkSufficientFunds(acc, fee)
+	}
+
 	res := deductFees(ctx, acc, fee, am)
 	if !res.IsOK() {
 		return res
@@ -264,7 +268,7 @@ func calculateFees(msg sdk.Msg) (types.Fee, error) {
 	return calculator(msg), nil
 }
 
-func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountMapper) sdk.Result {
+func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	coins := acc.GetCoins()
 
 	newCoins := coins.Minus(fee.Tokens.Sort())
@@ -272,6 +276,16 @@ func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.Accoun
 		errMsg := fmt.Sprintf("%s < %s", coins, fee.Tokens)
 		return sdk.ErrInsufficientFunds(errMsg).Result()
 	}
+
+	return sdk.Result{}
+}
+
+func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountMapper) sdk.Result {
+	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
+		return res
+	}
+
+	newCoins := acc.GetCoins().Minus(fee.Tokens.Sort())
 	err := acc.SetCoins(newCoins)
 	if err != nil {
 		// Handle w/ #870
