@@ -126,10 +126,10 @@ Check a balance with this command, e.g.:
 $ bnbcli account DEBF30B59A5CD0111FDF4F86664BC063BF450A1A
 ```
 
-Alternatively through http when `bnbcli rest-server` is running. Amounts are returned as decimal numbers in strings.
+Alternatively through http when `bnbcli api-server` is running. Amounts are returned as decimal numbers in strings.
 
 ```bash
-$ curl -s http://localhost:1317/balances/cosmosaccaddr173hyu6dtfkrj9vujjhvz2ayehrng64rxq3h4yp | json_pp
+$ curl -s http://localhost:8080/balances/cosmosaccaddr173hyu6dtfkrj9vujjhvz2ayehrng64rxq3h4yp | json_pp
 {
    "address" : "cosmosaccaddr173hyu6dtfkrj9vujjhvz2ayehrng64rxq3h4yp",
    "balances" : [
@@ -205,10 +205,10 @@ $ bnbcli dex order -i uniqueid1 -l XYZ_BNB -s 1 -p 100000000 -q 100000000 --from
 $ bnbcli dex show -l XYZ_BNB
 ```
 
-Alternatively through http when `bnbcli rest-server` is running. Prices and quantities are returned as decimal numbers in strings.
+Alternatively through http when `bnbcli api-server` is running. Prices and quantities are returned as decimal numbers in strings.
 
 ```bash
-$ curl -s http://localhost:1317/orderbook/XYZ_BNB | json_pp
+$ curl -s http://localhost:8080/orderbook/XYZ_BNB | json_pp
 {"pair":"XYZ_BNB","orders":[{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"}]}
 ```
 

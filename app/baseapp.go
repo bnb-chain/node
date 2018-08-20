@@ -6,19 +6,16 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/pkg/errors"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -82,8 +79,9 @@ var _ abci.Application = (*BaseApp)(nil)
 // (e.g. functional options).
 //
 // NOTE: The db is used to store the version number for now.
+// Accepts a user-defined txDecoder
 // Accepts variable number of option functions, which act on the BaseApp to set configuration choices
-func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, options ...func(*BaseApp)) *BaseApp {
+func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, options ...func(*BaseApp)) *BaseApp {
 	app := &BaseApp{
 		Logger:     logger,
 		name:       name,
@@ -92,7 +90,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, opti
 		cms:        store.NewCommitMultiStore(db),
 		router:     baseapp.NewRouter(),
 		codespacer: sdk.NewCodespacer(),
-		txDecoder:  defaultTxDecoder(cdc),
+		txDecoder:  txDecoder,
 	}
 
 	// Register the undefined & root codespaces, which should not be used by
@@ -140,30 +138,6 @@ func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
 // Set the txDecoder function
 func (app *BaseApp) SetTxDecoder(txDecoder sdk.TxDecoder) {
 	app.txDecoder = txDecoder
-}
-
-// default custom logic for transaction decoding
-// TODO: remove auth and wire dependencies from baseapp
-//	- move this to auth.DefaultTxDecoder
-//	- set the default here to JSON decode like docs/examples/app1 (it will fail
-//		for multiple messages ;))
-//	- pass a TxDecoder into NewBaseApp, instead of a codec.
-func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
-	return func(txBytes []byte) (sdk.Tx, sdk.Error) {
-		var tx = auth.StdTx{}
-
-		if len(txBytes) == 0 {
-			return nil, sdk.ErrTxDecode("txBytes are empty")
-		}
-
-		// StdTx.Msg is an interface. The concrete types
-		// are registered by MakeTxCodec
-		err := cdc.UnmarshalBinary(txBytes, &tx)
-		if err != nil {
-			return nil, sdk.ErrTxDecode("").TraceSDK(err.Error())
-		}
-		return tx, nil
-	}
 }
 
 // nolint - Set functions

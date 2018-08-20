@@ -24,6 +24,7 @@ type MatchEng struct {
 	LastTradePrice  int64
 }
 
+// NewMatchEng constructs a new MatchEng.
 func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
 	return &MatchEng{Book: NewOrderBookOnULList(10000, 16), LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),

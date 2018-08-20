@@ -16,7 +16,7 @@ func IsAlphaNum(s string) bool {
 
 func ParsePrice(priceStr string) (int64, error) {
 	if len(priceStr) == 0 {
-		return 0, errors.New("Input number should be provided")
+		return 0, errors.New("price should be non-empty")
 	}
 
 	price, err := strconv.ParseInt(priceStr, 10, 64)
