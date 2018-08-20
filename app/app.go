@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	bc "github.com/tendermint/tendermint/blockchain"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -94,29 +93,21 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-	allPairs := app.getAllTradingPairsString()
-	height, err := app.LoadOrderBookFromSnapshot(allPairs)
-	if err != nil {
-		panic(err)
-	}
-	err = app.ReplayOrdersIntoOrderBook(height)
-	if err != nil {
-		panic(err)
-	}
+
+	app.InitDexKeeperBook()
 
 	return app
 }
 
-func (app *BinanceChain) getAllTradingPairsString() []string {
+func (app *BinanceChain) InitDexKeeperBook() {
 	if app.checkState == nil {
-		return make([]string, 0)
+		return
 	}
-	listedPairs := app.TradingPairMapper.ListAllTradingPairs(app.checkState.ctx)
-	allStrings := make([]string, 0, len(listedPairs))
-	for _, p := range listedPairs {
-		allStrings = append(allStrings, utils.Ccy2TradeSymbol(p.TradeAsset, p.QuoteAsset))
-	}
-	return allStrings
+	allPairs := app.TradingPairMapper.ListAllTradingPairStrings(app.checkState.ctx)
+	ms := app.cms.CacheMultiStore()
+	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
+	//count back to 7 days.
+	app.DexKeeper.InitOrderBook(allPairs, store, 7, app.db, app.LastBlockHeight(), app.txDecoder)
 }
 
 //TODO???: where to init checkState in reboot
@@ -239,18 +230,6 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 		return nil, nil, err
 	}
 	return appState, validators, nil
-}
-
-func (app *BinanceChain) LoadOrderBookFromSnapshot(allPairs []string) (int64, error) {
-	ms := app.cms.CacheMultiStore()
-	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
-	//count back to 7 days.
-	return app.DexKeeper.LoadOrderBookSnapshot(allPairs, store, 7)
-}
-
-func (app *BinanceChain) ReplayOrdersIntoOrderBook(breatheHeight int64) error {
-	blockstore := bc.NewBlockStore(app.db)
-	return app.DexKeeper.ReplayOrdersFromBlock(blockstore, app.LastBlockHeight(), breatheHeight, app.txDecoder)
 }
 
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
