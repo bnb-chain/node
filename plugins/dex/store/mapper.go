@@ -83,13 +83,13 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 }
 
 func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) {
-	tickSize := types.CalcTickSize(price)
-	lotSize := types.CalcLotSize(price)
+	tickSize := utils.CalcTickSize(price)
+	lotSize := utils.CalcLotSize(price)
 
 	if tickSize != pair.TickSize || lotSize != pair.LotSize {
 		pair.TickSize = tickSize
 		pair.LotSize = lotSize
-		// TODO: do we need to store price here?
+
 		m.AddTradingPair(ctx, pair)
 	}
 }

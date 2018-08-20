@@ -1,9 +1,11 @@
-package types
+package utils_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/BiJie/BinanceChain/common/utils"
 )
 
 func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
@@ -30,10 +32,10 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 	}
 
 	for i := 0; i < len(lotSizeTests); i++ {
-		assert.Equal(t, CalcLotSize(lotSizeTests[i].in), lotSizeTests[i].out)
+		assert.Equal(t, utils.CalcLotSize(lotSizeTests[i].in), lotSizeTests[i].out)
 	}
 
 	for i := 0; i < len(tickSizeTests); i++ {
-		assert.Equal(t, CalcTickSize(tickSizeTests[i].in), tickSizeTests[i].out)
+		assert.Equal(t, utils.CalcTickSize(tickSizeTests[i].in), tickSizeTests[i].out)
 	}
 }
