@@ -1,5 +1,7 @@
 package types
 
+import "github.com/BiJie/BinanceChain/plugins/dex/utils"
+
 type TradingPair struct {
 	TradeAsset string `json:"trade_asset"`
 	QuoteAsset string `json:"quote_asset"`
@@ -9,21 +11,13 @@ type TradingPair struct {
 }
 
 func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
+	tickSize, lotSize := utils.CalcTickSizeAndLotSize(price)
+
 	return TradingPair{
 		TradeAsset: tradeAsset,
 		QuoteAsset: quoteAsset,
 		Price:      price,
-		TickSize:   calcTickSize(),
-		LotSize:    calcLotSize(),
+		TickSize:   tickSize,
+		LotSize:    lotSize,
 	}
-}
-
-// TODO:
-func calcTickSize() int64 {
-	return 1
-}
-
-// TODO:
-func calcLotSize() int64 {
-	return 1e8
 }
