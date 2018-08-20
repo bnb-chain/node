@@ -63,13 +63,10 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	}
 
 	// TODO: perform reduce avail + increase locked + insert orderbook atomically
-	_, tags, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
+	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}
-
-	tags.AppendTag("dex.orderId", []byte(msg.Id))
-	tags.AppendTag("dex.pair", []byte(msg.Symbol))
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
@@ -79,9 +76,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 		}
 	}
-	return sdk.Result{
-		Tags: tags,
-	}
+	return sdk.Result{}
 }
 
 // Handle CancelOffer -
@@ -128,9 +123,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 		return sdk.ErrInsufficientCoins("do not have enough token to unlock").Result()
 	}
 
-	_, tags, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
-
-	tags.AppendTag("dex.orderId", []byte(msg.Id))
+	_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
 
 	if sdkError != nil {
 		return sdkError.Result()
@@ -139,7 +132,5 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToUnlock, -unlockAmount)
 
 	//TODO: here fee should be calculated and deducted
-	return sdk.Result{
-		Tags: tags,
-	}
+	return sdk.Result{}
 }
