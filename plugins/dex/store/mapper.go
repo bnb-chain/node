@@ -86,8 +86,7 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 }
 
 func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) {
-	tickSize := dexUtils.CalcTickSize(price)
-	lotSize := dexUtils.CalcLotSize(price)
+	tickSize, lotSize := dexUtils.CalcTickSizeAndLotSize(price)
 
 	if tickSize != pair.TickSize || lotSize != pair.LotSize {
 		pair.TickSize = tickSize

@@ -11,11 +11,13 @@ type TradingPair struct {
 }
 
 func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
+	tickSize, lotSize := utils.CalcTickSizeAndLotSize(price)
+
 	return TradingPair{
 		TradeAsset: tradeAsset,
 		QuoteAsset: quoteAsset,
 		Price:      price,
-		TickSize:   utils.CalcTickSize(price),
-		LotSize:    utils.CalcLotSize(price),
+		TickSize:   tickSize,
+		LotSize:    lotSize,
 	}
 }

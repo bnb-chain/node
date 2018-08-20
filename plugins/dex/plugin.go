@@ -6,7 +6,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/utils"
 )
 
-func EndBlock(ctx sdk.Context, tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper) {
+func EndBreatheBlock(ctx sdk.Context, tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper) {
 	updateTickSizeAndLotSize(ctx, tradingPairMapper, orderKeeper)
 }
 
