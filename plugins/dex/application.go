@@ -6,7 +6,11 @@ import (
 	"github.com/BiJie/BinanceChain/common/utils"
 )
 
-func UpdateTickSizeAndLotSize(ctx sdk.Context, tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper) {
+func EndBlock(ctx sdk.Context, tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper) {
+	updateTickSizeAndLotSize(ctx, tradingPairMapper, orderKeeper)
+}
+
+func updateTickSizeAndLotSize(ctx sdk.Context, tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper) {
 	tradingPairs := tradingPairMapper.ListAllTradingPairs(ctx)
 
 	for _, pair := range tradingPairs {

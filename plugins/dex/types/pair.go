@@ -1,6 +1,6 @@
 package types
 
-import "github.com/BiJie/BinanceChain/common/utils"
+import "github.com/BiJie/BinanceChain/plugins/dex/utils"
 
 type TradingPair struct {
 	TradeAsset string `json:"trade_asset"`

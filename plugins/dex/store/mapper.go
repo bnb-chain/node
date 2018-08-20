@@ -7,6 +7,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	dexUtils "github.com/BiJie/BinanceChain/plugins/dex/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -83,8 +84,8 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 }
 
 func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) {
-	tickSize := utils.CalcTickSize(price)
-	lotSize := utils.CalcLotSize(price)
+	tickSize := dexUtils.CalcTickSize(price)
+	lotSize := dexUtils.CalcLotSize(price)
 
 	if tickSize != pair.TickSize || lotSize != pair.LotSize {
 		pair.TickSize = tickSize
