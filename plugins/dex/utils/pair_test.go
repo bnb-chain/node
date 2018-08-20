@@ -9,33 +9,21 @@ import (
 )
 
 func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
-	var lotSizeTests = []struct {
-		in  int64
-		out int64
+	var tests = []struct {
+		price    int64
+		lotSize  int64
+		tickSize int64
 	}{
-		{-1, 1e8},
-		{0, 1e8},
-		{1e2, 1e8},
-		{1e8, 1e5},
-		{1e17, 1},
+		{-1, 1e8, 1},
+		{0, 1e8, 1},
+		{1e2, 1e8, 1},
+		{1e8, 1e5, 1e3},
+		{1e17, 1, 1e12},
 	}
 
-	var tickSizeTests = []struct {
-		in  int64
-		out int64
-	}{
-		{-1, 1},
-		{0, 1},
-		{1e2, 1},
-		{1e8, 1e3},
-		{1e17, 1e12},
-	}
-
-	for i := 0; i < len(lotSizeTests); i++ {
-		assert.Equal(t, utils.CalcLotSize(lotSizeTests[i].in), lotSizeTests[i].out)
-	}
-
-	for i := 0; i < len(tickSizeTests); i++ {
-		assert.Equal(t, utils.CalcTickSize(tickSizeTests[i].in), tickSizeTests[i].out)
+	for i := 0; i < len(tests); i++ {
+		tickSize, lotSize := utils.CalcTickSizeAndLotSize(tests[i].price)
+		assert.Equal(t, tests[i].tickSize, tickSize)
+		assert.Equal(t, tests[i].lotSize, lotSize)
 	}
 }
