@@ -5,6 +5,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"fmt"
+
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	dexUtils "github.com/BiJie/BinanceChain/plugins/dex/utils"
@@ -17,6 +19,7 @@ type TradingPairMapper interface {
 	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64)
+	ValidateOrder(ctx sdk.Context, symbol string, price int64, quantity int64) error
 }
 
 var _ TradingPairMapper = mapper{}
@@ -92,6 +95,32 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 
 		m.AddTradingPair(ctx, pair)
 	}
+}
+
+func (m mapper) ValidateOrder(ctx sdk.Context, symbol string, price int64, quantity int64) error {
+	tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(symbol)
+	if err != nil {
+		return err
+	}
+
+	pair, err := m.GetTradingPair(ctx, tradeAsset, quoteAsset)
+	if err != nil {
+		return err
+	}
+
+	if quantity <= 0 || quantity%pair.LotSize != 0 {
+		return errors.New(fmt.Sprintf("minimum quantity should be larger than %v and order's quantity is %v", pair.LotSize, quantity))
+	}
+
+	if price <= 0 || price%pair.TickSize != 0 {
+		return errors.New(fmt.Sprintf("minimum price should be larger than %v and order's price is %v", pair.TickSize, price))
+	}
+
+	if utils.IsExceedMaxNotional(price, quantity) {
+		return errors.New(fmt.Sprintf("the product of price(%v) and quantity(%v) should less than MaxInt64", price, quantity))
+	}
+
+	return nil
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {
