@@ -83,10 +83,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 
 			// check signature, return account with incremented nonce
 			signBytes := StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], stdTx.Fee, msgs, stdTx.GetMemo())
-			signerAcc, res := processSig(
-				newCtx, am,
-				signerAddr, sig, signBytes,
-			)
+			signerAcc, res := processSig(newCtx, am, signerAddr, sig, signBytes)
 			if !res.IsOK() {
 				return newCtx, res, true
 			}
@@ -96,7 +93,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 			signerAccs[i] = signerAcc
 		}
 
-		res = calcCollectAndDistributeFees(newCtx, am, signerAccs[0], msgs[0])
+		newCtx, res = calcAndDeductFees(newCtx, am, signerAccs[0], msgs[0])
 		if !res.IsOK() {
 			return newCtx, res, true
 		}
@@ -105,7 +102,6 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 		newCtx = auth.WithSigners(newCtx, signerAccs)
 
 		// TODO: tx tags (?)
-
 		return newCtx, sdk.Result{GasWanted: stdTx.Fee.Gas}, false // continue...
 	}
 }
@@ -191,7 +187,7 @@ func processSig(
 	return
 }
 
-func calcCollectAndDistributeFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) sdk.Result {
+func calcAndDeductFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -202,62 +198,33 @@ func calcCollectAndDistributeFees(ctx sdk.Context, am auth.AccountMapper, acc au
 	}
 
 	if fee.Type == types.FeeFree || fee.Tokens.IsZero() {
-		return sdk.Result{}
+		return ctx, sdk.Result{}
 	}
 
 	fee.Tokens.Sort()
+
+	// in CheckTx, we only check the funds without deduction
 	if ctx.IsCheckTx() {
-		return checkSufficientFunds(acc, fee)
+		return ctx, checkSufficientFunds(acc, fee)
 	}
 
 	res := deductFees(ctx, acc, fee, am)
 	if !res.IsOK() {
-		return res
+		return ctx, res
 	}
 
-	distributeFee(ctx, fee, am)
-	return sdk.Result{}
-}
-
-func distributeFee(ctx sdk.Context, fee types.Fee, am auth.AccountMapper) {
-	proposerAddr := ctx.BlockHeader().Proposer.Address
-	if fee.Type == types.FeeForProposer {
-		// The proposer's account must be initialized before it becomes a proposer.
-		proposerAcc := am.GetAccount(ctx, proposerAddr)
-		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
-		am.SetAccount(ctx, proposerAcc)
-	} else if fee.Type == types.FeeForAll {
-		signingValidators := ctx.SigningValidators()
-		valSize := int64(len(signingValidators))
-		avgTokens := sdk.Coins{}
-		roundingTokens := sdk.Coins{}
-		for _, token := range fee.Tokens {
-			// TODO: int64 is enough, will drop big.Int
-			// TODO: temporarily, the validators average the fees. Will change to use power as a weight to calc fees.
-			amount := token.Amount.Int64()
-			avgAmount := amount / valSize
-			roundingAmount := amount - avgAmount*valSize
-			if avgAmount != 0 {
-				avgTokens = append(avgTokens, sdk.NewCoin(token.Denom, avgAmount))
-			}
-
-			if roundingAmount != 0 {
-				roundingTokens = append(roundingTokens, sdk.NewCoin(token.Denom, roundingAmount))
-			}
-		}
-
-		for _, signingValidator := range signingValidators {
-			validator := signingValidator.Validator
-			validatorAcc := am.GetAccount(ctx, validator.Address)
-			if bytes.Equal(proposerAddr, validator.Address) && !roundingTokens.IsZero() {
-				validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))
-			}
-			if !avgTokens.IsZero() {
-				validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(avgTokens))
-			}
-			am.SetAccount(ctx, validatorAcc)
+	oldFee := Fee(ctx)
+	var newFee types.Fee
+	if oldFee.Tokens == nil {
+		newFee = fee
+	} else {
+		newFee = types.NewFee(oldFee.Tokens.Plus(fee.Tokens), oldFee.Type)
+		if fee.Type == types.FeeForAll {
+			newFee.Type = types.FeeForAll
 		}
 	}
+	ctx = WithFee(ctx, fee)
+	return ctx, sdk.Result{}
 }
 
 func calculateFees(msg sdk.Msg) (types.Fee, error) {
