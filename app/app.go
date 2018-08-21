@@ -43,7 +43,7 @@ type BinanceChain struct {
 
 	FeeCollectionKeeper tx.FeeCollectionKeeper
 	CoinKeeper          bank.Keeper
-	DexKeeper           *dex.OrderKeeper
+	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
 	TradingPairMapper   dex.TradingPairMapper
@@ -195,6 +195,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
 	} else {
+		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
+		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
+		app.DexKeeper.SnapShotOrderBook(height, ctx)
 		// breathe block
 		app.DexKeeper.ExpireOrders(height, ctx, app.AccountMapper)
 		app.DexKeeper.MarkBreatheBlock(height, blockTime, ctx)
