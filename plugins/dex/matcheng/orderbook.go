@@ -16,10 +16,12 @@ type OrderBookInterface interface {
 	//TODO: especially for ULList, it might be faster by inserting multiple orders in one go then
 	//looping through InsertOrder() one after another.
 	InsertOrder(id string, side int8, time int64, price int64, qty int64) (*PriceLevel, error)
+	InsertPriceLevel(p *PriceLevel, side int8) error
 	GetOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemovePriceLevel(price int64, side int8) int
-	ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter)
+	ShowDepth(maxLevels int, iterBuy LevelIter, iterSell LevelIter)
+	GetAllLevels() ([]PriceLevel, []PriceLevel)
 	Clear()
 }
 
@@ -32,6 +34,8 @@ type OrderBookOnULList struct {
 	buyQueue  *ULList
 	sellQueue *ULList
 }
+
+var _ OrderBookInterface = (*OrderBookOnULList)(nil)
 
 func NewOrderBookOnULList(capacity int, bucketSize int) *OrderBookOnULList {
 	//TODO: find out the best degree
@@ -96,6 +100,14 @@ func (ob *OrderBookOnULList) InsertOrder(id string, side int8, time int64, price
 	}
 }
 
+func (ob *OrderBookOnULList) InsertPriceLevel(pl *PriceLevel, side int8) error {
+	q := ob.getSideQueue(side)
+	if !q.AddPriceLevel(pl) {
+		return fmt.Errorf("Failed to insert price level at price %d", pl.Price)
+	}
+	return nil
+}
+
 //TODO: InsertOrder and RemoveOrder should be faster if done in batch with multiple orders
 func (ob *OrderBookOnULList) RemoveOrder(id string, side int8, price int64) (OrderPart, error) {
 	q := ob.getSideQueue(side)
@@ -132,9 +144,23 @@ func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
 	return 0
 }
 
-func (ob *OrderBookOnULList) ShowDepth(numOfLevels int, iterBuy LevelIter, iterSell LevelIter) {
-	ob.buyQueue.Iterate(numOfLevels, iterBuy)
-	ob.sellQueue.Iterate(numOfLevels, iterSell)
+func (ob *OrderBookOnULList) ShowDepth(maxLevels int, iterBuy LevelIter, iterSell LevelIter) {
+	ob.buyQueue.Iterate(maxLevels, iterBuy)
+	ob.sellQueue.Iterate(maxLevels, iterSell)
+}
+
+func (ob *OrderBookOnULList) GetAllLevels() ([]PriceLevel, []PriceLevel) {
+	buys := make([]PriceLevel, 0, ob.buyQueue.capacity)
+	sells := make([]PriceLevel, 0, ob.sellQueue.capacity)
+	ob.buyQueue.Iterate(ob.buyQueue.capacity,
+		func(p *PriceLevel) {
+			buys = append(buys, *p)
+		})
+	ob.sellQueue.Iterate(ob.sellQueue.capacity,
+		func(p *PriceLevel) {
+			sells = append(sells, *p)
+		})
+	return buys, sells
 }
 
 func (ob *OrderBookOnULList) Clear() {
