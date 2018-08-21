@@ -327,11 +327,11 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 	return sdk.CodeOK, nil
 }
 
-func (kp *Keeper) ExpireOrders(height int64, ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
 	return sdk.CodeOK, nil
 }
 
-func (kp *Keeper) MarkBreatheBlock(height, blockTime int64, ctx sdk.Context) {
+func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
 	key := utils.Int642Bytes(blockTime / 1000)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
@@ -381,7 +381,7 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	return nil
 }
 
-func (kp *Keeper) SnapShotOrderBook(height int64, ctx sdk.Context) (err error) {
+func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
