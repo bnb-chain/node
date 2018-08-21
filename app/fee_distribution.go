@@ -6,11 +6,20 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/tx"
+
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func distributeFee(ctx sdk.Context, fee types.Fee, am auth.AccountMapper) {
+func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
 	proposerAddr := ctx.BlockHeader().Proposer.Address
+	// extract fees from ctx
+	fee := tx.Fee(ctx)
+	if fee.IsEmpty() {
+		// no fees in this block
+		return
+	}
+
 	if fee.Type == types.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
 		proposerAcc := am.GetAccount(ctx, proposerAddr)

@@ -215,7 +215,7 @@ func calcAndDeductFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account,
 
 	oldFee := Fee(ctx)
 	var newFee types.Fee
-	if oldFee.Tokens == nil {
+	if oldFee.IsEmpty() {
 		newFee = fee
 	} else {
 		newFee = types.NewFee(oldFee.Tokens.Plus(fee.Tokens), oldFee.Type)

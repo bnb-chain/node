@@ -23,3 +23,7 @@ func NewFee(tokens sdk.Coins, distributeType FeeDistributeType) Fee {
 		Type:   distributeType,
 	}
 }
+
+func (fee Fee) IsEmpty() bool {
+	return fee.Tokens == nil
+}
