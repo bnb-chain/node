@@ -39,7 +39,7 @@ func TestFixed8DecodeString(t *testing.T) {
 	for _, val := range ivalues {
 		n, err := Fixed8DecodeString(val)
 		assert.Nil(t, err)
-		assert.Equal(t, val, n.String())
+		assert.Equal(t, val+".00000000", n.String())
 	}
 
 	// Fixed8DecodeString parses number with maximal precision
