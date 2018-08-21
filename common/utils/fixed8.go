@@ -32,14 +32,12 @@ func (f Fixed8) String() string {
 	str := strconv.FormatInt(val/int64(Fixed8Decimals), 10)
 	buf.WriteString(str)
 	val %= int64(Fixed8Decimals)
-	if val > 0 {
-		buf.WriteRune('.')
-		str = strconv.FormatInt(val, 10)
-		for i := len(str); i < 8; i++ {
-			buf.WriteRune('0')
-		}
-		buf.WriteString(str)
+	buf.WriteRune('.')
+	str = strconv.FormatInt(val, 10)
+	for i := len(str); i < 8; i++ {
+		buf.WriteRune('0')
 	}
+	buf.WriteString(str)
 	return buf.String()
 }
 
