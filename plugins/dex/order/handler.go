@@ -11,15 +11,16 @@ import (
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
+func NewHandler(k Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, k, accountMapper, msg)
+			return handleNewOrder(ctx, k, accountMapper, pairMapper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, k, accountMapper, msg)
 		default:
@@ -36,7 +37,14 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 	accountMapper.SetAccount(ctx, account)
 }
 
-func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
+	msg NewOrderMsg) sdk.Result {
+
+	err := pairMapper.ValidateOrder(ctx, msg.Symbol, msg.Quantity, msg.Quantity)
+	if err != nil {
+		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
+	}
+
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	_, ok := keeper.OrderExists(msg.Id)
 	if ctx.IsCheckTx() {
