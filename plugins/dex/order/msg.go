@@ -190,7 +190,6 @@ func (msg CancelOrderMsg) GetSignBytes() []byte {
 	return b
 }
 
-//TODO: check whether the symbol is listed or not
 func ValidateSymbol(symbol string) error {
 	_, _, err := utils.TradeSymbol2Ccy(symbol)
 	if err != nil {
@@ -223,7 +222,6 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if !IsValidTimeInForce(msg.TimeInForce) {
 		return types.ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
 	}
-	//TODO: check whether it is round tick / lot / within min/max notional
 
 	return nil
 }

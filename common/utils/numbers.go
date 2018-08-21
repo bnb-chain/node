@@ -32,6 +32,12 @@ func CalBigNotional(price, qty int64) int64 {
 	return bi.Div(bi.Mul(big.NewInt(qty), big.NewInt(price)), big.NewInt(1e8)).Int64()
 }
 
+// IsExceedMaxNotional return the result that is the product of price and quantity exceeded max notional
+func IsExceedMaxNotional(price, qty int64) bool {
+	var bi big.Int
+	return !bi.Div(bi.Mul(big.NewInt(qty), big.NewInt(price)), big.NewInt(1e8)).IsInt64()
+}
+
 func Int642Bytes(n int64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(n))
