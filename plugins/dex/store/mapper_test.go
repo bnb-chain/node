@@ -1,6 +1,7 @@
 package store
 
 import (
+	"math"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store"
@@ -10,8 +11,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-
-	"math"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
