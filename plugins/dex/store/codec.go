@@ -17,8 +17,8 @@ func queryOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) ([]by
 	return bz, nil
 }
 
-// GetOrderBook decodes the order book from the store
-func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]Order, error) {
+// GetOrderBook decodes the order book from the serialized store
+func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]OrderBookLevel, error) {
 	bz, err := queryOrderBook(cdc, ctx, pair)
 	if err != nil {
 		return nil, err
@@ -44,14 +44,14 @@ func GetOrderBookRaw(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]
 }
 
 // DecodeOrderBook decodes the order book to a set of Order structs
-func DecodeOrderBook(cdc *wire.Codec, bz *[]byte) (*[]Order, error) {
+func DecodeOrderBook(cdc *wire.Codec, bz *[]byte) (*[]OrderBookLevel, error) {
 	table, err := DecodeOrderBookRaw(cdc, bz)
 	if err != nil {
 		return nil, err
 	}
-	book := make([]Order, 0)
+	book := make([]OrderBookLevel, 0)
 	for _, o := range *table {
-		order := Order{
+		order := OrderBookLevel{
 			SellQty:   utils.Fixed8(o[0]),
 			SellPrice: utils.Fixed8(o[1]),
 			BuyPrice:  utils.Fixed8(o[2]),

@@ -7,6 +7,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	dexUtils "github.com/BiJie/BinanceChain/plugins/dex/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -15,6 +16,8 @@ type TradingPairMapper interface {
 	Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool
 	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
+	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64)
+	ListAllTradingPairStrings(ctx sdk.Context) []string
 }
 
 var _ TradingPairMapper = mapper{}
@@ -79,6 +82,26 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	}
 
 	return res
+}
+
+func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) {
+	tickSize, lotSize := dexUtils.CalcTickSizeAndLotSize(price)
+
+	if tickSize != pair.TickSize || lotSize != pair.LotSize {
+		pair.TickSize = tickSize
+		pair.LotSize = lotSize
+
+		m.AddTradingPair(ctx, pair)
+	}
+}
+
+func (m mapper) ListAllTradingPairStrings(ctx sdk.Context) []string {
+	listedPairs := m.ListAllTradingPairs(ctx)
+	allStrings := make([]string, 0, len(listedPairs))
+	for _, p := range listedPairs {
+		allStrings = append(allStrings, utils.Ccy2TradeSymbol(p.TradeAsset, p.QuoteAsset))
+	}
+	return allStrings
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {

@@ -19,8 +19,8 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 		pair string
 	}
 	type response struct {
-		Pair   string        `json:"pair"`
-		Orders []store.Order `json:"orders"`
+		Pair   string                 `json:"pair"`
+		Orders []store.OrderBookLevel `json:"orders"`
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)

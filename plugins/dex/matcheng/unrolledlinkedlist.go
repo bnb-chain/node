@@ -167,8 +167,8 @@ func (ull *ULList) String() string {
 		buffer.WriteString(fmt.Sprintf("Bucket %d{", j))
 		for _, p := range i.elements {
 			buffer.WriteString(fmt.Sprintf("%d->[", p.Price))
-			for _, o := range p.orders {
-				buffer.WriteString(fmt.Sprintf("%s %d %d,", o.id, o.time, o.qty))
+			for _, o := range p.Orders {
+				buffer.WriteString(fmt.Sprintf("%s %d %d,", o.Id, o.Time, o.Qty))
 			}
 			buffer.WriteString("]")
 		}
@@ -320,11 +320,10 @@ func (ull *ULList) GetTop() *PriceLevel {
 }
 
 func (ull *ULList) Iterate(levelNum int, iter LevelIter) {
-	i := 0
 	for b := ull.begin; b != ull.dend; b = b.next {
-		for _, l := range b.elements {
-			iter(l.Price, l.totalLeavesQty())
-			if i++; i >= levelNum {
+		for i, _ := range b.elements {
+			iter(&b.elements[i])
+			if i >= levelNum {
 				return
 			}
 		}
