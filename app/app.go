@@ -175,8 +175,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else {
 		// breathe block
 		icoDone := ico.EndBlockAsync(ctx)
-		// other end blockers
 
+		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.OrderKeeper)
+
+		// other end blockers
 		<-icoDone
 	}
 
