@@ -10,12 +10,15 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	o "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert := assert.New(t)
 	ctx := testApp.NewContext(true, abci.Header{})
 	InitAccounts(ctx, testApp)
+	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
+
 	add := Account(0).GetAddress()
 	msg := o.NewNewOrderMsg(add, "order1", 1, "BTC_BNB", 355e8, 100e8)
 	res, e := testClient.CheckTxSync(msg, testApp.Codec)
@@ -84,6 +87,8 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
+	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
+
 	add := Account(0).GetAddress()
 	msg := o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
 
@@ -105,6 +110,9 @@ func Test_Match(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
+	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("ETH", "BNB", 1e8))
+	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("btc", "BNB", 1e8))
+
 	add := Account(0).GetAddress()
 	add2 := Account(1).GetAddress()
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
@@ -228,6 +236,8 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
+	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
+
 	add := Account(0).GetAddress()
 	msg := o.NewCancelOrderMsg(add, "order5.0", "order5.1")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)

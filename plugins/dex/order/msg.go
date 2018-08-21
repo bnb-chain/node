@@ -8,7 +8,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
@@ -188,24 +187,12 @@ func (msg CancelOrderMsg) GetSignBytes() []byte {
 	return b
 }
 
-//TODO: check whether the symbol is listed or not
-func ValidateSymbol(symbol string) error {
-	_, _, err := utils.TradeSymbol2Ccy(symbol)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
-	err := ValidateSymbol(msg.Symbol)
-	if err != nil {
-		return ErrInvalidTradeSymbol(err.Error())
-	}
+
 	if msg.Quantity <= 0 {
 		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
 	}
@@ -221,7 +208,6 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if !IsValidTimeInForce(msg.TimeInForce) {
 		return types.ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
 	}
-	//TODO: check whether it is round tick / lot / within min/max notional
 
 	return nil
 }
