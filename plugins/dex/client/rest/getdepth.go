@@ -1,12 +1,14 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -25,6 +27,13 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 		w.Write([]byte(err.Error()))
 		return
 	}
+	write := func(w http.ResponseWriter, data string) error {
+		if _, err := w.Write([]byte(data)); err != nil {
+			throw(w, http.StatusInternalServerError, err)
+			return err
+		}
+		return nil
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
@@ -40,23 +49,52 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			return
 		}
 
-		book, err := store.GetOrderBook(cdc, ctx, params.pair)
+		table, err := store.GetOrderBookRaw(cdc, ctx, params.pair)
 		if err != nil {
 			throw(w, http.StatusNotFound, err)
 			return
 		}
 
-		resp := response{
-			Pair:   vars["pair"],
-			Orders: *book,
-		}
-
-		output, err := cdc.MarshalJSON(resp)
-		if err != nil {
-			throw(w, http.StatusInternalServerError, err)
+		if err = write(w, "{\"asks\":["); err != nil {
 			return
 		}
 
-		w.Write(output)
+		// pass 1 - asks
+		i := 0
+		for _, o := range *table {
+			if i > 0 {
+				if err = write(w, ","); err != nil {
+					return
+				}
+			}
+			// [PRICE, QTY]
+			if err = write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o[1]), utils.Fixed8(o[0]))); err != nil {
+				return
+			}
+			i++
+		}
+
+		// pass 2 - bids
+		if err = write(w, "],\"bids\":["); err != nil {
+			return
+		}
+		i = 0
+		for _, o := range *table {
+			if i > 0 {
+				if err = write(w, ","); err != nil {
+					return
+				}
+			}
+			// [PRICE, QTY]
+			if err = write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o[2]), utils.Fixed8(o[3]))); err != nil {
+				return
+			}
+			i++
+		}
+
+		// end streamed json
+		if err = write(w, "]}"); err != nil {
+			return
+		}
 	}
 }
