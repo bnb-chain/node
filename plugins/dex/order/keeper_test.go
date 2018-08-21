@@ -170,6 +170,33 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(int64(9800), sells[2].Price)
 }
 
+func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS()
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	accAdd, _ := MakeAddress()
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 10200, 300)
+	keeper.AddOrder(msg, 42)
+	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price)
+	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	err := keeper.SnapShotOrderBook(ctx, 43)
+	assert.Nil(err)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix()*1000)
+	keeper2 := MakeKeeper(cdc)
+	pairs := []string{"XYZ_BNB"}
+	h, err := keeper2.LoadOrderBookSnapshot(pairs, cms.GetKVStore(common.DexStoreKey), 10)
+	assert.Equal(int64(43), h)
+	assert.Equal(0, len(keeper2.allOrders))
+	buys, sells = keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+}
+
 func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()

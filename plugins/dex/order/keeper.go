@@ -235,13 +235,13 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBook(pair string, levelNum int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, levelNum)
+func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLevel {
+	orderbook := make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
-		eng.Book.ShowDepth(levelNum, func(p *me.PriceLevel) {
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
 			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
 			i++
@@ -498,7 +498,6 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
-	fmt.Printf("breathhguith is %v, last height is %v", breatheHeight, lastHeight)
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		kp.replayOneBlocks(block, txDecoder, i)

@@ -106,8 +106,7 @@ func (app *BinanceChain) InitDexKeeperBook() {
 		return
 	}
 	allPairs := app.TradingPairMapper.ListAllTradingPairStrings(app.checkState.ctx)
-	ms := app.cms.CacheMultiStore()
-	store := ms.CacheMultiStore().GetKVStore(common.DexStoreKey)
+	store := app.checkState.ctx.KVStore(common.DexStoreKey)
 	//count back to 7 days.
 	app.DexKeeper.InitOrderBook(allPairs, store, 7, app.db, app.LastBlockHeight(), app.txDecoder)
 }
