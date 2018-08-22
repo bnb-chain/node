@@ -93,7 +93,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 			signerAccs[i] = signerAcc
 		}
 
-		newCtx, res = calcAndDeductFees(newCtx, am, signerAccs[0], msgs[0])
+		newCtx, res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0])
 		if !res.IsOK() {
 			return newCtx, res, true
 		}
@@ -187,7 +187,7 @@ func processSig(
 	return
 }
 
-func calcAndDeductFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -213,6 +213,7 @@ func calcAndDeductFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account,
 		return ctx, res
 	}
 
+	// record fees in ctx.
 	oldFee := Fee(ctx)
 	var newFee types.Fee
 	if oldFee.IsEmpty() {
