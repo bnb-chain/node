@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
@@ -30,7 +29,7 @@ func StreamDepthResponse(w io.Writer, table *[]store.OrderBookLevel) error {
 			}
 		}
 		// [PRICE, QTY]
-		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o.SellPrice), utils.Fixed8(o.SellQty))); err != nil {
+		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", o.SellPrice, o.SellQty)); err != nil {
 			return err
 		}
 		i++
@@ -48,7 +47,7 @@ func StreamDepthResponse(w io.Writer, table *[]store.OrderBookLevel) error {
 			}
 		}
 		// [PRICE, QTY]
-		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o.BuyPrice), utils.Fixed8(o.BuyQty))); err != nil {
+		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", o.BuyPrice, o.BuyQty)); err != nil {
 			return err
 		}
 		i++
