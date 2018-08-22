@@ -15,14 +15,17 @@ func write(w io.Writer, data string) error {
 }
 
 // StreamDepthResponse streams out the order book in the http response.
-func StreamDepthResponse(w io.Writer, table *[]store.OrderBookLevel) error {
+func StreamDepthResponse(w io.Writer, levels *[]store.OrderBookLevel, limit int) error {
 	if err := write(w, "{\"asks\":["); err != nil {
 		return err
 	}
 
 	// pass 1 - asks
 	i := 0
-	for _, o := range *table {
+	for _, o := range *levels {
+		if i > limit-1 {
+			break
+		}
 		if i > 0 {
 			if err := write(w, ","); err != nil {
 				return err
@@ -40,7 +43,10 @@ func StreamDepthResponse(w io.Writer, table *[]store.OrderBookLevel) error {
 		return err
 	}
 	i = 0
-	for _, o := range *table {
+	for _, o := range *levels {
+		if i > limit-1 {
+			break
+		}
 		if i > 0 {
 			if err := write(w, ","); err != nil {
 				return err
