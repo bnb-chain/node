@@ -223,7 +223,7 @@ func calcAndDeductFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account,
 			newFee.Type = types.FeeForAll
 		}
 	}
-	ctx = WithFee(ctx, fee)
+	ctx = WithFee(ctx, newFee)
 	return ctx, sdk.Result{}
 }
 
