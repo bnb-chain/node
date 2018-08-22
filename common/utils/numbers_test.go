@@ -34,5 +34,6 @@ func TestMaxInt(t *testing.T) {
 func TestIsExceedMaxNotional(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(true, IsExceedMaxNotional(math.MaxInt64, math.MaxInt64))
+	assert.Equal(true, IsExceedMaxNotional(math.MaxInt64/2, math.MaxInt64/2))
 	assert.Equal(false, IsExceedMaxNotional(1, 1))
 }

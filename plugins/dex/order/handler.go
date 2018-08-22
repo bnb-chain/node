@@ -50,15 +50,15 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewO
 	}
 
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize != 0 {
-		return errors.New(fmt.Sprintf("minimum quantity should be larger than %v and order's quantity is %v", pair.LotSize, msg.Quantity))
+		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize))
 	}
 
 	if msg.Price <= 0 || msg.Price%pair.TickSize != 0 {
-		return errors.New(fmt.Sprintf("minimum price should be larger than %v and order's price is %v", pair.TickSize, msg.Price))
+		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize))
 	}
 
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
-		return errors.New(fmt.Sprintf("the product of price(%v) and quantity(%v) should less than MaxInt64", msg.Price, msg.Quantity))
+		return errors.New("notional value of the order is too large(cannot fit in int64)")
 	}
 
 	return nil

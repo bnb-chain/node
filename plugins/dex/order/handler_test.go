@@ -1,6 +1,7 @@
 package order
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -35,7 +36,8 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey) {
 
 func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 	pairMapper, ctx := newTradingPairMapper()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	msg := NewOrderMsg{
@@ -46,11 +48,27 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
+	require.Equal(t, fmt.Sprintf("trading pair not found: %s", msg.Symbol), err.Error())
+}
+
+func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
+	pairMapper, ctx := newTradingPairMapper()
+
+	msg := NewOrderMsg{
+		Symbol:   "AAABNB",
+		Price:    1e3 + 1e2,
+		Quantity: 1e6,
+	}
+
+	err := validateOrder(ctx, pairMapper, msg)
+	require.Error(t, err)
+	require.Equal(t, "Failed to parse trade symbol into currencies", err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 	pairMapper, ctx := newTradingPairMapper()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	msg := NewOrderMsg{
@@ -61,11 +79,13 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
+	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize), err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 	pairMapper, ctx := newTradingPairMapper()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	msg := NewOrderMsg{
@@ -76,6 +96,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
+	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize), err.Error())
 }
 
 func TestHandler_ValidateOrder_Normal(t *testing.T) {
@@ -106,4 +127,5 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
+	require.Equal(t, "notional value of the order is too large(cannot fit in int64)", err.Error())
 }
