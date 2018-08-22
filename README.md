@@ -208,8 +208,8 @@ $ bnbcli dex show -l XYZ_BNB
 Alternatively through http when `bnbcli api-server` is running. Prices and quantities are returned as decimal numbers in strings.
 
 ```bash
-$ curl -s http://localhost:8080/orderbook/XYZ_BNB | json_pp
-{"pair":"XYZ_BNB","orders":[{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"},{"buyQty":"0","buyPrice":"0","sellQty":"0","sellPrice":"0"}]}
+$ curl -s http://localhost:8080/api/v1/depth?symbol=XYZ_BNB&limit=5 | json_pp
+{"asks":[["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"]],"bids":[["0.10000000","1.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"]]}
 ```
 
 ### Future

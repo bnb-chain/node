@@ -33,14 +33,6 @@ func TestIsValidTimeInForce(t *testing.T) {
 	assert.True(IsValidTimeInForce(3))
 }
 
-func TestValidateSymbol(t *testing.T) {
-	assert := assert.New(t)
-	assert.Nil(ValidateSymbol("BTC.B_BNB"))
-	assert.NotNil(ValidateSymbol("BNB"))
-	assert.NotNil(ValidateSymbol("_BNB"))
-	assert.NotNil(ValidateSymbol("BNB_"))
-}
-
 func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 	assert := assert.New(t)
 	add, e := bech32.ConvertAndEncode(sdk.Bech32PrefixAccAddr, []byte("NEWORDERVALIDATE"))
@@ -54,8 +46,6 @@ func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 	assert.Regexp(regexp.MustCompile(".*Zero/Negative Number.*"), msg.ValidateBasic().Error())
 	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.B_BNB", 355, 0)
 	assert.Regexp(regexp.MustCompile(".*Zero/Negative Number.*"), msg.ValidateBasic().Error())
-	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.BBNB", 355, 100)
-	assert.Regexp(regexp.MustCompile(".*Invalid trade symbol.*"), msg.ValidateBasic().Error())
 	msg = NewNewOrderMsg(acct, "order1", 2, "BTC.B_BNB", 355, 10)
 	msg.TimeInForce = 5
 	assert.Regexp(regexp.MustCompile(".*Invalid TimeInForce.*"), msg.ValidateBasic().Error())
