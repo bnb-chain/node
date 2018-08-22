@@ -1,4 +1,4 @@
-PACKAGES=$(shell go list ./... | grep -v '/vendor/')
+PACKAGES=$(shell go list ./... | grep -v \/tests\/integration)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 BUILD_TAGS = netgo
 BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/BiJie/BinanceChain/version.GitCommit=${COMMIT_HASH}"
@@ -58,6 +58,9 @@ test: test_unit
 
 test_unit:
 	@go test $(PACKAGES)
+
+test_integration:
+	@go test "github.com/BiJie/BinanceChain/tests/integration"
 
 ########################################
 ### Pre Commit
