@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
 func write(w io.Writer, data string) error {
@@ -15,7 +16,7 @@ func write(w io.Writer, data string) error {
 }
 
 // StreamDepthResponse streams out the order book in the http response.
-func StreamDepthResponse(w io.Writer, table *[][]int64) error {
+func StreamDepthResponse(w io.Writer, table *[]store.OrderBookLevel) error {
 	if err := write(w, "{\"asks\":["); err != nil {
 		return err
 	}
@@ -29,7 +30,7 @@ func StreamDepthResponse(w io.Writer, table *[][]int64) error {
 			}
 		}
 		// [PRICE, QTY]
-		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o[1]), utils.Fixed8(o[0]))); err != nil {
+		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o.SellPrice), utils.Fixed8(o.SellQty))); err != nil {
 			return err
 		}
 		i++
@@ -47,7 +48,7 @@ func StreamDepthResponse(w io.Writer, table *[][]int64) error {
 			}
 		}
 		// [PRICE, QTY]
-		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o[2]), utils.Fixed8(o[3]))); err != nil {
+		if err := write(w, fmt.Sprintf("[\"%s\",\"%s\"]", utils.Fixed8(o.BuyPrice), utils.Fixed8(o.BuyQty))); err != nil {
 			return err
 		}
 		i++

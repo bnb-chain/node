@@ -37,7 +37,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			return
 		}
 
-		table, err := store.GetOrderBookRaw(cdc, ctx, params.pair)
+		table, err := store.GetOrderBook(cdc, ctx, params.pair)
 		if err != nil {
 			throw(w, http.StatusNotFound, err)
 			return
