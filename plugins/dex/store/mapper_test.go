@@ -1,7 +1,6 @@
 package store
 
 import (
-	"math"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store"
@@ -84,50 +83,4 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 	require.Equal(t, "AAA", pairs[0].TradeAsset)
 	require.Equal(t, "BBB", pairs[1].TradeAsset)
 	require.Equal(t, "CCC", pairs[2].TradeAsset)
-}
-
-func TestMapper_ValidateOrder_OrderNotExist(t *testing.T) {
-	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
-	require.NoError(t, err)
-
-	err = pairMapper.ValidateOrder(ctx, "BBB_BNB", 1e8, 1e8)
-	require.Error(t, err)
-}
-
-func TestMapper_ValidateOrder_WrongPrice(t *testing.T) {
-	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
-	require.NoError(t, err)
-
-	err = pairMapper.ValidateOrder(ctx, "AAA_BNB", 1e3+1e2, 1e6)
-	require.Error(t, err)
-}
-
-func TestMapper_ValidateOrder_WrongQuantity(t *testing.T) {
-	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
-	require.NoError(t, err)
-
-	err = pairMapper.ValidateOrder(ctx, "AAA_BNB", 1e3, 1e5+1e4)
-	require.Error(t, err)
-}
-
-func TestMapper_ValidateOrder_Normal(t *testing.T) {
-	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
-	require.NoError(t, err)
-
-	err = pairMapper.ValidateOrder(ctx, "AAA_BNB", 1e3, 1e5)
-	require.NoError(t, err)
-}
-
-func TestMapper_ValidateOrder_MaxNotional(t *testing.T) {
-	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
-	require.NoError(t, err)
-
-	err = pairMapper.ValidateOrder(ctx, "AAA_BNB", (math.MaxInt64-4)-((int64)(math.MaxInt64-4)%1e3),
-		(math.MaxInt64-4)-((int64)(math.MaxInt64-4)%1e5))
-	require.Error(t, err)
 }

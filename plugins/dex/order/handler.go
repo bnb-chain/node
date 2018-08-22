@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/pkg/errors"
 
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -37,10 +38,36 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 	accountMapper.SetAccount(ctx, account)
 }
 
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewOrderMsg) error {
+	tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
+	if err != nil {
+		return err
+	}
+
+	pair, err := pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
+	if err != nil {
+		return err
+	}
+
+	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize != 0 {
+		return errors.New(fmt.Sprintf("minimum quantity should be larger than %v and order's quantity is %v", pair.LotSize, msg.Quantity))
+	}
+
+	if msg.Price <= 0 || msg.Price%pair.TickSize != 0 {
+		return errors.New(fmt.Sprintf("minimum price should be larger than %v and order's price is %v", pair.TickSize, msg.Price))
+	}
+
+	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
+		return errors.New(fmt.Sprintf("the product of price(%v) and quantity(%v) should less than MaxInt64", msg.Price, msg.Quantity))
+	}
+
+	return nil
+}
+
 func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
 	msg NewOrderMsg) sdk.Result {
 
-	err := pairMapper.ValidateOrder(ctx, msg.Symbol, msg.Quantity, msg.Quantity)
+	err := validateOrder(ctx, pairMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
