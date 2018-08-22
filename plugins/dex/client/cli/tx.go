@@ -13,6 +13,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -98,20 +99,14 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			bz, err := ctx.Query(fmt.Sprintf("app/orderbook/%s", symbol))
-			if err != nil {
-				return err
-			}
-
-			orderbook := make([][]int64, 10)
-			err = cdc.UnmarshalBinary(bz, &orderbook)
+			orderbook, err := store.GetOrderBook(cdc, ctx, symbol)
 			if err != nil {
 				return err
 			}
 
 			fmt.Printf("%16v|%16v|%16v|%16v\n", "SellQty", "SellPrice", "BuyPrice", "BuyQty")
-			for _, l := range orderbook {
-				fmt.Printf("%16v|%16v|%16v|%16v\n", l[0], l[1], l[2], l[3])
+			for _, l := range *orderbook {
+				fmt.Printf("%16v|%16v|%16v|%16v\n", l.SellQty, l.SellPrice, l.BuyPrice, l.BuyQty)
 			}
 
 			return nil

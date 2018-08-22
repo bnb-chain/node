@@ -10,9 +10,10 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-func Routes(tradingPairMapper TradingPairMapper, orderKeeper OrderKeeper, tokenMapper tokens.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
+func Routes(tradingPairMapper TradingPairMapper, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
+	accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	orderHandler := order.NewHandler(orderKeeper, accountMapper)
+	orderHandler := order.NewHandler(dexKeeper, accountMapper)
 	routes[order.RouteNew] = orderHandler
 	routes[order.RouteCancel] = orderHandler
 	routes[list.Route] = list.NewHandler(tradingPairMapper, tokenMapper)

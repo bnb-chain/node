@@ -1,6 +1,9 @@
 package utils
 
-import "math/big"
+import (
+	"encoding/binary"
+	"math/big"
+)
 
 func AbsInt(a int64) int64 {
 	y := a >> 63
@@ -27,4 +30,10 @@ func MaxInt(a, b int64) int64 {
 func CalBigNotional(price, qty int64) int64 {
 	var bi big.Int
 	return bi.Div(bi.Mul(big.NewInt(qty), big.NewInt(price)), big.NewInt(1e8)).Int64()
+}
+
+func Int642Bytes(n int64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(n))
+	return b
 }
