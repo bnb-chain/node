@@ -54,15 +54,29 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	pairMapper, ctx := newTradingPairMapper()
 
-	msg := NewOrderMsg{
-		Symbol:   "AAABNB",
-		Price:    1e3 + 1e2,
-		Quantity: 1e6,
+	msgs := []NewOrderMsg{
+		{
+			Symbol:   "BNB",
+			Price:    1e3,
+			Quantity: 1e6,
+		},
+		{
+			Symbol:   "_BNB",
+			Price:    1e3,
+			Quantity: 1e6,
+		},
+		{
+			Symbol:   "BNB_",
+			Price:    1e3,
+			Quantity: 1e6,
+		},
 	}
 
-	err := validateOrder(ctx, pairMapper, msg)
-	require.Error(t, err)
-	require.Equal(t, "Failed to parse trade symbol into currencies", err.Error())
+	for _, msg := range msgs {
+		err := validateOrder(ctx, pairMapper, msg)
+		require.Error(t, err)
+		require.Equal(t, "Failed to parse trade symbol into currencies", err.Error())
+	}
 }
 
 func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
