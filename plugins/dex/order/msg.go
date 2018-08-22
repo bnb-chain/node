@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	RouteNew    = "orderNew"
-	RouteCancel = "orderCancel"
+	NewOrder    = "orderNew"
+	CancelOrder = "orderCancel"
 )
 
 type NewOrderMsg struct {
@@ -149,7 +149,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 var _ sdk.Msg = NewOrderMsg{}
 
 // nolint
-func (msg NewOrderMsg) Type() string                            { return RouteNew }
+func (msg NewOrderMsg) Type() string                            { return NewOrder }
 func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
@@ -168,7 +168,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 var _ sdk.Msg = CancelOrderMsg{}
 
 // nolint
-func (msg CancelOrderMsg) Type() string                            { return RouteCancel }
+func (msg CancelOrderMsg) Type() string                            { return CancelOrder }
 func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {

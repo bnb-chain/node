@@ -14,8 +14,8 @@ func Routes(tradingPairMapper TradingPairMapper, dexKeeper DexKeeper, tokenMappe
 	accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
 	orderHandler := order.NewHandler(dexKeeper, accountMapper)
-	routes[order.RouteNew] = orderHandler
-	routes[order.RouteCancel] = orderHandler
+	routes[order.NewOrder] = orderHandler
+	routes[order.CancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(tradingPairMapper, tokenMapper)
 	return routes
 }

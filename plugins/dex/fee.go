@@ -14,6 +14,6 @@ const (
 
 func init() {
 	tx.RegisterCalculator(list.Route, tx.FixedFeeCalculator(ListingFee, types.FeeForAll))
-	tx.RegisterCalculator(order.RouteNew, tx.FreeFeeCalculator())
-	tx.RegisterCalculator(order.RouteCancel, tx.FixedFeeCalculator(OrderCancelFee, types.FeeForProposer))
+	tx.RegisterCalculator(order.NewOrder, tx.FreeFeeCalculator())
+	tx.RegisterCalculator(order.CancelOrder, tx.FixedFeeCalculator(OrderCancelFee, types.FeeForProposer))
 }
