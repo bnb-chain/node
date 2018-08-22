@@ -1,13 +1,13 @@
 package order
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/pkg/errors"
 
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
