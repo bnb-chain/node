@@ -5,7 +5,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -30,44 +29,12 @@ func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]Ord
 	return book, err
 }
 
-// GetOrderBookRaw decodes the raw order book from the store
-func GetOrderBookRaw(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[][]int64, error) {
-	bz, err := queryOrderBook(cdc, ctx, pair)
-	if err != nil {
-		return nil, err
-	}
-	if bz == nil {
-		return nil, nil
-	}
-	table, err := DecodeOrderBookRaw(cdc, &bz)
-	return table, err
-}
-
-// DecodeOrderBook decodes the order book to a set of Order structs
+// DecodeOrderBook decodes the order book to a set of OrderBookLevel structs
 func DecodeOrderBook(cdc *wire.Codec, bz *[]byte) (*[]OrderBookLevel, error) {
-	table, err := DecodeOrderBookRaw(cdc, bz)
+	levels := make([]OrderBookLevel, 0)
+	err := cdc.UnmarshalBinary(*bz, &levels)
 	if err != nil {
 		return nil, err
 	}
-	book := make([]OrderBookLevel, 0)
-	for _, o := range *table {
-		order := OrderBookLevel{
-			SellQty:   utils.Fixed8(o[0]),
-			SellPrice: utils.Fixed8(o[1]),
-			BuyPrice:  utils.Fixed8(o[2]),
-			BuyQty:    utils.Fixed8(o[3]),
-		}
-		book = append(book, order)
-	}
-	return &book, nil
-}
-
-// DecodeOrderBookRaw decodes the raw order book table
-func DecodeOrderBookRaw(cdc *wire.Codec, bz *[]byte) (*[][]int64, error) {
-	table := make([][]int64, 0)
-	err := cdc.UnmarshalBinary(*bz, &table)
-	if err != nil {
-		return nil, err
-	}
-	return &table, nil
+	return &levels, nil
 }
