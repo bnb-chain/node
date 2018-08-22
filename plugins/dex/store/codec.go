@@ -9,12 +9,12 @@ import (
 )
 
 // queryOrderBook queries the store for the serialized order book for a given pair.
-func queryOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) ([]byte, error) {
+func queryOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]byte, error) {
 	bz, err := ctx.Query(fmt.Sprintf("app/orderbook/%s", pair))
 	if err != nil {
 		return nil, err
 	}
-	return bz, nil
+	return &bz, nil
 }
 
 // decodeOrderBook decodes the order book to a set of OrderBookLevel structs
@@ -36,6 +36,6 @@ func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]Ord
 	if bz == nil {
 		return nil, nil
 	}
-	book, err := decodeOrderBook(cdc, &bz)
+	book, err := decodeOrderBook(cdc, bz)
 	return book, err
 }
