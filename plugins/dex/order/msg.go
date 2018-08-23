@@ -6,23 +6,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 const Route = "dexOrder"
-
-type NewOrderMsg struct {
-	Sender      sdk.AccAddress `json:"sender"`
-	Id          string         `json:"id"`
-	Symbol      string         `json:"symbol"`
-	OrderType   int8           `json:"ordertype"`
-	Side        int8           `json:"side"`
-	Price       int64          `json:"price"`
-	Quantity    int64          `json:"quantity"`
-	TimeInForce int8           `json:"timeinforce"`
-}
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
@@ -40,6 +30,16 @@ var Side = struct {
 var sideNames = map[string]int8{
 	"BUY":  sideBuy,
 	"SELL": sideSell,
+}
+
+// GenerateOrderID generates an order ID
+func GenerateOrderID(ctx context.CoreContext, from sdk.AccAddress) (string, context.CoreContext, error) {
+	ctx, err := context.EnsureSequence(ctx)
+	if err != nil {
+		panic(err)
+	}
+	id := fmt.Sprintf("%s-%d", from.String(), ctx.Sequence)
+	return id, ctx, err
 }
 
 // IsValidSide validates that a side is valid and supported by the matching engine
@@ -120,14 +120,18 @@ func TifStringToTifCode(tif string) (int8, error) {
 	return -1, errors.New("tif `" + upperTif + "` not found or supported")
 }
 
-// CancelOrderMsg represents a message to cancel an open order
-type CancelOrderMsg struct {
-	Sender sdk.AccAddress
-	Id     string `json:"id"`
-	RefId  string `json:"refid"`
+type NewOrderMsg struct {
+	Sender      sdk.AccAddress `json:"sender"`
+	Id          string         `json:"id"`
+	Symbol      string         `json:"symbol"`
+	OrderType   int8           `json:"ordertype"`
+	Side        int8           `json:"side"`
+	Price       int64          `json:"price"`
+	Quantity    int64          `json:"quantity"`
+	TimeInForce int8           `json:"timeinforce"`
 }
 
-// NewNewOrderMsg - Creates a new NewOrderMsg
+// NewNewOrderMsg constructs a new NewOrderMsg
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	symbol string, price int64, qty int64) NewOrderMsg {
 	return NewOrderMsg{
@@ -142,6 +146,30 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	}
 }
 
+// NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
+func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int8,
+	symbol string, price int64, qty int64) (NewOrderMsg, error) {
+	var id string
+	from, err := ctx.GetFromAddress()
+	if err != nil {
+		return NewOrderMsg{}, err
+	}
+	id, _, err = GenerateOrderID(ctx, from)
+	if err != nil {
+		return NewOrderMsg{}, err
+	}
+	return NewOrderMsg{
+		Sender:      sender,
+		Id:          id,
+		Symbol:      symbol,
+		OrderType:   OrderType.LIMIT, // default
+		Side:        side,
+		Price:       price,
+		Quantity:    qty,
+		TimeInForce: TimeInForce.GTC, // default
+	}, nil
+}
+
 var _ sdk.Msg = NewOrderMsg{}
 
 // nolint
@@ -152,13 +180,20 @@ func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
 }
 
-// NewCancelOrderMsg - Creates a new CancelOrderMsg
+// NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
 		Id:     id,
 		RefId:  refId,
 	}
+}
+
+// CancelOrderMsg represents a message to cancel an open order
+type CancelOrderMsg struct {
+	Sender sdk.AccAddress
+	Id     string `json:"id"`
+	RefId  string `json:"refid"`
 }
 
 var _ sdk.Msg = CancelOrderMsg{}

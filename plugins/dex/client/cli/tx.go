@@ -27,11 +27,19 @@ const (
 	flagTimeInForce = "tif"
 )
 
-// NewOrderCommand -
+func generateOrderID(ctx context.CoreContext, from sdk.AccAddress) (string, context.CoreContext, error) {
+	ctx, err := context.EnsureSequence(ctx)
+	if err != nil {
+		panic(err)
+	}
+	id := fmt.Sprintf("%s-%d", from.String(), ctx.Sequence)
+	return id, ctx, err
+}
+
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "order -i <id> -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
-		Short: "send new order",
+		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
+		Short: "Submit a new order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
 
@@ -47,7 +55,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			symbol = strings.ToUpper(symbol)
-			id := viper.GetString(flagId)
 
 			priceStr := viper.GetString(flagPrice)
 			price, err := utils.ParsePrice(priceStr)
@@ -67,7 +74,11 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			msg := order.NewNewOrderMsg(from, id, side, symbol, price, qty)
+			msg, err := order.NewNewOrderMsgAuto(ctx, from, side, symbol, price, qty)
+			if err != nil {
+				panic(err)
+			}
+
 			msg.TimeInForce = tif
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
@@ -86,7 +97,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-// CancelOrderCommand -
 func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show -l <listed pair>",
@@ -118,7 +128,6 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-// CancelOfferCmd -
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cancel -i <order id> -f <ref order id>",
