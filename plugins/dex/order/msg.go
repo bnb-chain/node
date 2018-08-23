@@ -11,7 +11,10 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
-const Route = "dexOrder"
+const (
+	NewOrder    = "orderNew"
+	CancelOrder = "orderCancel"
+)
 
 type NewOrderMsg struct {
 	Sender      sdk.AccAddress `json:"sender"`
@@ -145,7 +148,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 var _ sdk.Msg = NewOrderMsg{}
 
 // nolint
-func (msg NewOrderMsg) Type() string                            { return Route }
+func (msg NewOrderMsg) Type() string                            { return NewOrder }
 func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
@@ -164,7 +167,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 var _ sdk.Msg = CancelOrderMsg{}
 
 // nolint
-func (msg CancelOrderMsg) Type() string                            { return Route }
+func (msg CancelOrderMsg) Type() string                            { return CancelOrder }
 func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {

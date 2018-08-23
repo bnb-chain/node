@@ -19,7 +19,8 @@ const (
 	Decimals       int8  = 8
 	MaxTotalSupply int64 = 9000000000000000000 // 90 billions with 8 decimal digits
 
-	DotBSuffix = ".B"
+	DotBSuffix  = ".B"
+	NativeToken = "BNB"
 )
 
 type Token struct {
