@@ -586,9 +586,9 @@ func TestAnteHandlerFeesInCheckTx(t *testing.T) {
 	// set the accounts
 	priv1, acc1 := newAccount(ctx, am)
 
-	ctx.WithIsCheckTx(true)
-	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FreeFeeCalculator())
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 100)})
+	ctx = ctx.WithIsCheckTx(true)
+	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FixedFeeCalculator(10, types.FeeForProposer))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
 	checkFee(t, ctx, types.Fee{})
 }
 

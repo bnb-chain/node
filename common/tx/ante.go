@@ -203,14 +203,12 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account
 	}
 
 	fee.Tokens.Sort()
-
-	// in CheckTx, we only check the funds without deduction
-	if ctx.IsCheckTx() {
-		return ctx, checkSufficientFunds(acc, fee)
-	}
-
 	res := deductFees(ctx, acc, fee, am)
 	if !res.IsOK() {
+		return ctx, res
+	}
+
+	if ctx.IsCheckTx() {
 		return ctx, res
 	}
 
