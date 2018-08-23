@@ -12,7 +12,10 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
-const Route = "dexOrder"
+const (
+	NewOrder    = "orderNew"
+	CancelOrder = "orderCancel"
+)
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
@@ -170,7 +173,7 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 var _ sdk.Msg = NewOrderMsg{}
 
 // nolint
-func (msg NewOrderMsg) Type() string                            { return Route }
+func (msg NewOrderMsg) Type() string                            { return NewOrder }
 func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
@@ -196,7 +199,7 @@ type CancelOrderMsg struct {
 var _ sdk.Msg = CancelOrderMsg{}
 
 // nolint
-func (msg CancelOrderMsg) Type() string                            { return Route }
+func (msg CancelOrderMsg) Type() string                            { return CancelOrder }
 func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {

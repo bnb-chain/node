@@ -3,17 +3,15 @@ package commands
 import (
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const flagQuoteSymbol = "quote-symbol"
