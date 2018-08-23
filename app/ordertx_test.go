@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -20,7 +21,8 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
 	add := Account(0).GetAddress()
-	msg := o.NewNewOrderMsg(add, "order1", 1, "BTC_BNB", 355e8, 100e8)
+	oid := fmt.Sprintf("%s-0", add.String())
+	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 100e8)
 	res, e := testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -31,7 +33,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
-	msg = o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
+	msg = o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -41,7 +43,8 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
 	add = Account(1).GetAddress()
-	msg = o.NewNewOrderMsg(add, "order2.1", 2, "BTC_BNB", 355e8, 250e8)
+	oid = fmt.Sprintf("%s-0", add.String())
+	msg = o.NewNewOrderMsg(add, oid, 2, "BTC_BNB", 355e8, 250e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -51,7 +54,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
-	msg = o.NewNewOrderMsg(add, "order2.2", 2, "BTC_BNB", 355e8, 200e8)
+	msg = o.NewNewOrderMsg(add, oid, 2, "BTC_BNB", 355e8, 200e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -90,7 +93,8 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
 	add := Account(0).GetAddress()
-	msg := o.NewNewOrderMsg(add, "order1.2", 1, "BTC_BNB", 355e8, 1e8)
+	oid := fmt.Sprintf("%s-0", add.String())
+	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
@@ -104,7 +108,6 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 }
 
 func Test_Match(t *testing.T) {
-
 	assert := assert.New(t)
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
 	ctx := testApp.NewContext(false, abci.Header{})
@@ -113,9 +116,15 @@ func Test_Match(t *testing.T) {
 	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("ETH", "BNB", 1e8))
 	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("btc", "BNB", 1e8))
 
+	// setup accounts
 	add := Account(0).GetAddress()
 	add2 := Account(1).GetAddress()
+	add3 := Account(3).GetAddress()
+	oid := fmt.Sprintf("%s-0", add.String())
+	oid2 := fmt.Sprintf("%s-0", add2.String())
+	oid3 := fmt.Sprintf("%s-0", add3.String())
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
 	/*	--------------------------------------------------------------
 		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
 		1500           102      300    300    300          -1200
@@ -126,20 +135,20 @@ func Test_Match(t *testing.T) {
 		1250   250     97              900    900          -350
 		1000   1000    96              900    900          -100*
 	*/
-	msg := o.NewNewOrderMsg(add, "order2.2", 1, "BTC_BNB", 102e8, 300e8)
+	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 102e8, 300e8)
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add, "order2.3", 1, "BTC_BNB", 100e8, 100e8)
+	msg = o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 100e8, 100e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order2.4", 2, "BTC_BNB", 96e8, 1000e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 2, "BTC_BNB", 96e8, 1000e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order2.5", 2, "BTC_BNB", 97e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 2, "BTC_BNB", 97e8, 250e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order2.6", 2, "BTC_BNB", 98e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 2, "BTC_BNB", 98e8, 250e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add, "order2.7", 1, "BTC_BNB", 99e8, 200e8)
+	msg = o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 99e8, 200e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
-	msg = o.NewNewOrderMsg(add, "order2.8", 1, "BTC_BNB", 98e8, 300e8)
+	msg = o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 98e8, 300e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
@@ -176,20 +185,19 @@ func Test_Match(t *testing.T) {
 		50     50      95              105    50           55
 	*/
 
-	add3 := Account(3).GetAddress()
-	msg = o.NewNewOrderMsg(add2, "order3.2", 1, "ETH_BNB", 102e8, 30e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 1, "ETH_BNB", 102e8, 30e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order3.3", 1, "ETH_BNB", 101e8, 10e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 1, "ETH_BNB", 101e8, 10e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, "order3.4", 2, "ETH_BNB", 95e8, 50e8)
+	msg = o.NewNewOrderMsg(add3, oid3, 2, "ETH_BNB", 95e8, 50e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, "order3.5", 2, "ETH_BNB", 98e8, 10e8)
+	msg = o.NewNewOrderMsg(add3, oid3, 2, "ETH_BNB", 98e8, 10e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, "order3.6", 2, "ETH_BNB", 97e8, 50e8)
+	msg = o.NewNewOrderMsg(add3, oid3, 2, "ETH_BNB", 97e8, 50e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order3.7", 1, "ETH_BNB", 96e8, 15e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 1, "ETH_BNB", 96e8, 15e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, "order3.8", 1, "ETH_BNB", 99e8, 50e8)
+	msg = o.NewNewOrderMsg(add2, oid2, 1, "ETH_BNB", 99e8, 50e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
 	buys, sells = getOrderBook("BTC_BNB")
@@ -238,12 +246,16 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	testApp.TradingPairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
+	// setup accounts
 	add := Account(0).GetAddress()
-	msg := o.NewCancelOrderMsg(add, "order5.0", "order5.1")
+	oid := fmt.Sprintf("%s-0", add.String())
+	add2 := Account(1).GetAddress()
+
+	msg := o.NewCancelOrderMsg(add, oid, "doesnotexist")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
-	assert.Regexp(".*Failed to find order \\[order5.1\\].*", res.GetLog())
+	assert.Regexp(".*Failed to find order \\[doesnotexist\\].*", res.GetLog())
 	assert.Nil(e)
-	newMsg := o.NewNewOrderMsg(add, "order5.2", 1, "BTC_BNB", 355e8, 1e8)
+	newMsg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 	res, e = testClient.DeliverTxSync(newMsg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -251,10 +263,10 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(355e8), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
-	msg = o.NewCancelOrderMsg(Account(1).GetAddress(), "order5.3", "order5.2")
+	msg = o.NewCancelOrderMsg(add2, oid, oid)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*does not belong to transaction sender.*", res.GetLog())
-	msg = o.NewCancelOrderMsg(add, "order5.3", "order5.2")
+	msg = o.NewCancelOrderMsg(add, oid, oid)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
