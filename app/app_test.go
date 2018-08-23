@@ -64,7 +64,7 @@ var (
 	testClient = NewTestClient(testApp)
 )
 
-func InitAccounts(ctx sdk.Context, app *BinanceChain) {
+func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{BaseAccount: auth.BaseAccount{Address: acc.GetAddress(), Coins: acc.GetCoins()}}
 		if app.AccountMapper.GetAccount(ctx, acc.GetAddress()) == nil {
@@ -72,6 +72,7 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) {
 		}
 		app.AccountMapper.SetAccount(ctx, aacc)
 	}
+	return &genAccs
 }
 
 func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {

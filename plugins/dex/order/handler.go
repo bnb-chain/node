@@ -38,10 +38,17 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 	accountMapper.SetAccount(ctx, account)
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
 	tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
 	if err != nil {
 		return err
+	}
+
+	acc := accountMapper.GetAccount(ctx, msg.Sender)
+	seq := acc.GetSequence()
+	expectedID := GenerateOrderID(seq, msg.Sender)
+	if expectedID != msg.Id {
+		return fmt.Errorf("the order ID given does not match the expected one: `%s`", expectedID)
 	}
 
 	pair, err := pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
@@ -67,7 +74,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewO
 func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
 	msg NewOrderMsg) sdk.Result {
 
-	err := validateOrder(ctx, pairMapper, msg)
+	err := validateOrder(ctx, pairMapper, accountMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}

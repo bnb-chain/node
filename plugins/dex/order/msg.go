@@ -33,13 +33,9 @@ var sideNames = map[string]int8{
 }
 
 // GenerateOrderID generates an order ID
-func GenerateOrderID(ctx context.CoreContext, from sdk.AccAddress) (string, context.CoreContext, error) {
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		panic(err)
-	}
-	id := fmt.Sprintf("%s-%d", from.String(), ctx.Sequence)
-	return id, ctx, err
+func GenerateOrderID(sequence int64, from sdk.AccAddress) string {
+	id := fmt.Sprintf("%s-%d", from.String(), sequence)
+	return id
 }
 
 // IsValidSide validates that a side is valid and supported by the matching engine
@@ -154,10 +150,11 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 	if err != nil {
 		return NewOrderMsg{}, err
 	}
-	id, _, err = GenerateOrderID(ctx, from)
+	ctx, err = context.EnsureSequence(ctx)
 	if err != nil {
 		return NewOrderMsg{}, err
 	}
+	id = GenerateOrderID(ctx.Sequence, from)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,
@@ -229,7 +226,10 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
-
+	// `-` is required in the compound order id: <address>-<sequence>
+	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
+		return types.ErrInvalidOrderParam("Id", fmt.Sprintf("Invalid order ID:%s", msg.Id))
+	}
 	if msg.Quantity <= 0 {
 		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
 	}
@@ -253,6 +253,9 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
+	}
+	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
+		return types.ErrInvalidOrderParam("Id", fmt.Sprintf("Invalid order ID:%s", msg.Id))
 	}
 	return nil
 }
