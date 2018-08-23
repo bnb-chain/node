@@ -8,12 +8,13 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
-func Routes(tradingPairMapper TradingPairMapper, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
+func Routes(cdc *wire.Codec, tradingPairMapper TradingPairMapper, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
 	accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	routes[order.Route] = order.NewHandler(dexKeeper, accountMapper, tradingPairMapper)
+	routes[order.Route] = order.NewHandler(cdc, dexKeeper, accountMapper, tradingPairMapper)
 	routes[list.Route] = list.NewHandler(tradingPairMapper, tokenMapper)
 	return routes
 }
