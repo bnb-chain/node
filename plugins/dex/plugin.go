@@ -3,23 +3,21 @@ package dex
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
-	"github.com/BiJie/BinanceChain/common/utils"
 )
 
-func EndBreatheBlock(ctx sdk.Context, tradingPairMapper TradingPairMapper,
-	accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
-	updateTickSizeAndLotSize(ctx, tradingPairMapper, dexKeeper)
+func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
+	updateTickSizeAndLotSize(ctx, dexKeeper)
 	dexKeeper.ExpireOrders(ctx, height, accountMapper)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	dexKeeper.SnapShotOrderBook(ctx, height)
 }
 
-func updateTickSizeAndLotSize(ctx sdk.Context, tradingPairMapper TradingPairMapper, dexKeeper DexKeeper) {
+func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
+	tradingPairMapper := dexKeeper.GetTradingPairMapper()
 	tradingPairs := tradingPairMapper.ListAllTradingPairs(ctx)
 
 	for _, pair := range tradingPairs {
-		symbol := utils.Ccy2TradeSymbol(pair.TradeAsset, pair.QuoteAsset)
+		symbol := pair.GetSymbol()
 		_, lastPrice := dexKeeper.GetLastTrades(symbol)
 		if lastPrice == 0 {
 			continue

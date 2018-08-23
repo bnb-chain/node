@@ -24,11 +24,13 @@ import (
 
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
+	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	ck             bank.Keeper
+	pairMapper     store.TradingPairMapper
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
@@ -59,9 +61,8 @@ type ActiveOrders struct {
 	Orders []NewOrderMsg `json:"orders"`
 }
 
-func CreateMatchEng(symbol string) *me.MatchEng {
-	//TODO: read lot size
-	return me.NewMatchEng(1000, 1, 0.05)
+func CreateMatchEng(pair dexTypes.TradingPair) *me.MatchEng {
+	return me.NewMatchEng(1000, pair.LotSize, 0.05)
 }
 
 func genOrderBookSnapshotKey(height int64, pair string) string {
@@ -73,21 +74,43 @@ func genActiveOrdersSnapshotKey(height int64) string {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, codespace sdk.CodespaceType,
+func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
-	return &Keeper{ck: bankKeeper, storeKey: key, codespace: codespace,
-		engines: engines, allOrders: make(map[string]NewOrderMsg, 1000000),
-		roundOrders: make(map[string]int, 256), roundIOCOrders: make(map[string][]string, 256),
-		poolSize: concurrency, cdc: cdc}, nil
+	return &Keeper{
+		ck:             bankKeeper,
+		pairMapper:     tradingPairMapper,
+		storeKey:       key,
+		codespace:      codespace,
+		engines:        engines,
+		allOrders:      make(map[string]NewOrderMsg, 1000000),
+		roundOrders:    make(map[string]int, 256),
+		roundIOCOrders: make(map[string][]string, 256),
+		poolSize:       concurrency,
+		cdc:            cdc,
+	}, nil
 }
 
-func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
+func (kp *Keeper) GetTradingPairMapper() store.TradingPairMapper {
+	return kp.pairMapper
+}
+
+func (kp *Keeper) AddOrder(ctx sdk.Context, msg NewOrderMsg, height int64) (err error) {
 	//try update order book first
 	symbol := msg.Symbol
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		eng = CreateMatchEng(symbol)
+		tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
+		if err != nil {
+			return nil
+		}
+
+		pair, err := kp.pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
+		if err != nil {
+			return nil
+		}
+
+		eng = CreateMatchEng(pair)
 		kp.engines[symbol] = eng
 	}
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
@@ -401,7 +424,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 	return compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(allPairs []string, kvstore sdk.KVStore, daysBack int) (int64, error) {
+func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, kvstore sdk.KVStore, daysBack int) (int64, error) {
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
 	if height == 0 {
@@ -409,13 +432,14 @@ func (kp *Keeper) LoadOrderBookSnapshot(allPairs []string, kvstore sdk.KVStore, 
 		return height, nil
 	}
 
+	allPairs := kp.pairMapper.ListAllTradingPairs(ctx)
 	for _, pair := range allPairs {
-		eng, ok := kp.engines[pair]
+		eng, ok := kp.engines[pair.GetSymbol()]
 		if !ok {
 			eng = CreateMatchEng(pair)
-			kp.engines[pair] = eng
+			kp.engines[pair.GetSymbol()] = eng
 		}
-		key := genOrderBookSnapshotKey(height, pair)
+		key := genOrderBookSnapshotKey(height, pair.GetSymbol())
 		bz := kvstore.Get([]byte(key))
 		if bz == nil {
 			// maybe that is a new listed pair
@@ -466,7 +490,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(allPairs []string, kvstore sdk.KVStore, 
 	return height, nil
 }
 
-func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
+func (kp *Keeper) replayOneBlocks(ctx sdk.Context, block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
 	if block == nil {
 		//TODO: Log
 		return
@@ -480,7 +504,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
-				kp.AddOrder(msg, height)
+				kp.AddOrder(ctx, msg, height)
 			case CancelOrderMsg:
 				ord, ok := kp.allOrders[msg.RefId]
 				if !ok {
@@ -496,23 +520,24 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 	kp.MatchAll() //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
+func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
-		kp.replayOneBlocks(block, txDecoder, i)
+		kp.replayOneBlocks(ctx, block, txDecoder, i)
 	}
 	return nil
 }
 
-func (kp *Keeper) InitOrderBook(allPairs []string, kvstore sdk.KVStore,
-	daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	height, err := kp.LoadOrderBookSnapshot(allPairs, kvstore, daysBack)
+func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kvstore := ctx.KVStore(kp.storeKey)
+	height, err := kp.LoadOrderBookSnapshot(ctx, kvstore, daysBack)
 	if err != nil {
 		panic(err)
 	}
+
 	blockStore := bc.NewBlockStore(blockDB)
-	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
+	err = kp.ReplayOrdersFromBlock(ctx, blockStore, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}
