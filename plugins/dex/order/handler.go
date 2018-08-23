@@ -14,14 +14,19 @@ import (
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
+type NewOrderResponse struct {
+	OrderID string `json:"order_id"`
+}
+
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(k Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, k, accountMapper, pairMapper, msg)
+			return handleNewOrder(ctx, cdc, k, accountMapper, pairMapper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, k, accountMapper, msg)
 		default:
@@ -48,7 +53,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	seq := acc.GetSequence()
 	expectedID := GenerateOrderID(seq, msg.Sender)
 	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID given does not match the expected one: `%s`", expectedID)
+		return fmt.Errorf("the order ID given did not match the expected one: `%s`", expectedID)
 	}
 
 	pair, err := pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
@@ -71,7 +76,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	return nil
 }
 
-func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
+func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
 	msg NewOrderMsg) sdk.Result {
 
 	err := validateOrder(ctx, pairMapper, accountMapper, msg)
@@ -118,7 +123,18 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 			return sdk.NewError(DefaultCodespace, CodeFailInsertOrder, err.Error()).Result()
 		}
 	}
-	return sdk.Result{}
+
+	response := NewOrderResponse{
+		OrderID: msg.Id,
+	}
+	serialized, err := cdc.MarshalJSON(&response)
+	if err != nil {
+		return sdkError.Result()
+	}
+
+	return sdk.Result{
+		Data: serialized,
+	}
 }
 
 // Handle CancelOffer -

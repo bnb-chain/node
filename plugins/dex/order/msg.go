@@ -154,7 +154,7 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 	if err != nil {
 		return NewOrderMsg{}, err
 	}
-	id = GenerateOrderID(ctx.Sequence, from)
+	id = GenerateOrderID(ctx.Sequence+1, from)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,
