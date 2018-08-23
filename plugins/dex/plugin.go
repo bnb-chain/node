@@ -17,8 +17,7 @@ func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
 	tradingPairs := tradingPairMapper.ListAllTradingPairs(ctx)
 
 	for _, pair := range tradingPairs {
-		symbol := pair.GetSymbol()
-		_, lastPrice := dexKeeper.GetLastTrades(symbol)
+		_, lastPrice := dexKeeper.GetLastTrades(pair.GetSymbol())
 		if lastPrice == 0 {
 			continue
 		}

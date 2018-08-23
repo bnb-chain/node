@@ -161,7 +161,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix()*1000)
 	keeper2 := MakeKeeper(cdc)
-	h, err := keeper2.LoadOrderBookSnapshot(ctx, cms.GetKVStore(common.DexStoreKey), 10)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(7, len(keeper2.allOrders))
 	assert.Equal(int64(98000), keeper2.allOrders["123459"].Price)
 	assert.Equal(1, len(keeper2.engines))
@@ -196,7 +196,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix()*1000)
 
 	keeper2 := MakeKeeper(cdc)
-	h, err := keeper2.LoadOrderBookSnapshot(ctx, cms.GetKVStore(common.DexStoreKey), 10)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(int64(43), h)
 	assert.Equal(0, len(keeper2.allOrders))
 	buys, sells = keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
@@ -212,9 +212,8 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
 
-	kvstore := cms.GetKVStore(common.DexStoreKey)
 	keeper.GetTradingPairMapper().AddTradingPair(ctx, dextypes.NewTradingPair("XYZ", "BNB", 1e8))
-	h, err := keeper.LoadOrderBookSnapshot(ctx, kvstore, 10)
+	h, err := keeper.LoadOrderBookSnapshot(ctx, 10)
 	assert.Zero(h)
 	assert.Nil(err)
 }

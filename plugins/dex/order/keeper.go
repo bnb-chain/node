@@ -29,8 +29,9 @@ import (
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
-	ck             bank.Keeper
-	pairMapper     store.TradingPairMapper
+	ck         bank.Keeper
+	pairMapper store.TradingPairMapper
+
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
@@ -102,12 +103,12 @@ func (kp *Keeper) AddOrder(ctx sdk.Context, msg NewOrderMsg, height int64) (err 
 	if !ok {
 		tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		pair, err := kp.pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		eng = CreateMatchEng(pair)
@@ -364,12 +365,12 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
 	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvstore sdk.KVStore, daysBack int) int64 {
+func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, daysBack int) int64 {
 	bz := []byte(nil)
 	for i := 0; bz == nil && i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
 		key := utils.Int642Bytes(t)
-		bz = kvstore.Get([]byte(key))
+		bz = kvStore.Get([]byte(key))
 	}
 	if bz == nil {
 		//TODO: logging
@@ -424,9 +425,10 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 	return compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, kvstore sdk.KVStore, daysBack int) (int64, error) {
+func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
+	kvStore := ctx.KVStore(kp.storeKey)
 	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvstore, daysBack)
+	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
 	if height == 0 {
 		//TODO: Log. this might be the first day online and no breathe block is saved.
 		return height, nil
@@ -440,7 +442,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, kvstore sdk.KVStore, da
 			kp.engines[pair.GetSymbol()] = eng
 		}
 		key := genOrderBookSnapshotKey(height, pair.GetSymbol())
-		bz := kvstore.Get([]byte(key))
+		bz := kvStore.Get([]byte(key))
 		if bz == nil {
 			// maybe that is a new listed pair
 			//TODO: logging
@@ -466,7 +468,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, kvstore sdk.KVStore, da
 		}
 	}
 	key := genActiveOrdersSnapshotKey(height)
-	bz := kvstore.Get([]byte(key))
+	bz := kvStore.Get([]byte(key))
 	if bz == nil {
 		//TODO: log
 		return height, nil
@@ -530,8 +532,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, last
 }
 
 func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	kvstore := ctx.KVStore(kp.storeKey)
-	height, err := kp.LoadOrderBookSnapshot(ctx, kvstore, daysBack)
+	height, err := kp.LoadOrderBookSnapshot(ctx, daysBack)
 	if err != nil {
 		panic(err)
 	}
