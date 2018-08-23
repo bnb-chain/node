@@ -28,15 +28,6 @@ const (
 	flagTimeInForce = "tif"
 )
 
-func generateOrderID(ctx context.CoreContext, from sdk.AccAddress) (string, context.CoreContext, error) {
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		panic(err)
-	}
-	id := fmt.Sprintf("%s-%d", from.String(), ctx.Sequence)
-	return id, ctx, err
-}
-
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
@@ -89,7 +80,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
 	cmd.Flags().StringP(flagSide, "s", "", "side (buy as 1 or sell as 2) of the order")
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
@@ -158,7 +148,7 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringP(flagId, "i", "", "id string of the order")
+	cmd.Flags().StringP(flagId, "i", "", "id string of the cancellation")
 	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd
 }
