@@ -15,6 +15,6 @@ func Routes(dexKeeper DexKeeper, tokenMapper tokens.Mapper,
 	orderHandler := order.NewHandler(dexKeeper, accountMapper)
 	routes[order.NewOrder] = orderHandler
 	routes[order.CancelOrder] = orderHandler
-	routes[list.Route] = list.NewHandler(dexKeeper.GetTradingPairMapper(), tokenMapper)
+	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper)
 	return routes
 }

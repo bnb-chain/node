@@ -65,7 +65,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewO
 }
 
 func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
-	err := validateOrder(ctx, keeper.GetTradingPairMapper(), msg)
+	err := validateOrder(ctx, keeper.PairMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
@@ -104,7 +104,7 @@ func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMa
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
-		err := keeper.AddOrder(ctx, msg, ctx.BlockHeight())
+		err := keeper.AddOrder(msg, ctx.BlockHeight())
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 		}

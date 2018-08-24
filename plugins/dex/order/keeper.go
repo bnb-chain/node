@@ -29,8 +29,9 @@ import (
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
-	ck         bank.Keeper
-	pairMapper store.TradingPairMapper
+	PairMapper store.TradingPairMapper
+
+	ck bank.Keeper
 
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
@@ -79,8 +80,8 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
 	return &Keeper{
+		PairMapper:     tradingPairMapper,
 		ck:             bankKeeper,
-		pairMapper:     tradingPairMapper,
 		storeKey:       key,
 		codespace:      codespace,
 		engines:        engines,
@@ -93,27 +94,23 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 }
 
 func (kp *Keeper) GetTradingPairMapper() store.TradingPairMapper {
-	return kp.pairMapper
+	return kp.PairMapper
 }
 
-func (kp *Keeper) AddOrder(ctx sdk.Context, msg NewOrderMsg, height int64) (err error) {
+func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
+	eng := CreateMatchEng(pair)
+	kp.engines[pair.GetSymbol()] = eng
+	return eng
+}
+
+func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	//try update order book first
 	symbol := msg.Symbol
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
-		if err != nil {
-			return err
-		}
-
-		pair, err := kp.pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
-		if err != nil {
-			return err
-		}
-
-		eng = CreateMatchEng(pair)
-		kp.engines[symbol] = eng
+		panic(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
 	}
+
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
 	if err != nil {
 		return err
@@ -434,13 +431,13 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		return height, nil
 	}
 
-	allPairs := kp.pairMapper.ListAllTradingPairs(ctx)
+	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	for _, pair := range allPairs {
 		eng, ok := kp.engines[pair.GetSymbol()]
 		if !ok {
-			eng = CreateMatchEng(pair)
-			kp.engines[pair.GetSymbol()] = eng
+			eng = kp.AddEngine(pair)
 		}
+
 		key := genOrderBookSnapshotKey(height, pair.GetSymbol())
 		bz := kvStore.Get([]byte(key))
 		if bz == nil {
@@ -492,7 +489,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	return height, nil
 }
 
-func (kp *Keeper) replayOneBlocks(ctx sdk.Context, block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
+func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
 	if block == nil {
 		//TODO: Log
 		return
@@ -506,7 +503,7 @@ func (kp *Keeper) replayOneBlocks(ctx sdk.Context, block *tmtypes.Block, txDecod
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
-				kp.AddOrder(ctx, msg, height)
+				kp.AddOrder(msg, height)
 			case CancelOrderMsg:
 				ord, ok := kp.allOrders[msg.RefId]
 				if !ok {
@@ -522,11 +519,11 @@ func (kp *Keeper) replayOneBlocks(ctx sdk.Context, block *tmtypes.Block, txDecod
 	kp.MatchAll() //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, lastHeight, breatheHeight int64,
+func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
-		kp.replayOneBlocks(ctx, block, txDecoder, i)
+		kp.replayOneBlocks(block, txDecoder, i)
 	}
 	return nil
 }
@@ -538,7 +535,7 @@ func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, l
 	}
 
 	blockStore := bc.NewBlockStore(blockDB)
-	err = kp.ReplayOrdersFromBlock(ctx, blockStore, lastHeight, height, txDecoder)
+	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}

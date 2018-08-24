@@ -13,8 +13,7 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 }
 
 func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
-	tradingPairMapper := dexKeeper.GetTradingPairMapper()
-	tradingPairs := tradingPairMapper.ListAllTradingPairs(ctx)
+	tradingPairs := dexKeeper.PairMapper.ListAllTradingPairs(ctx)
 
 	for _, pair := range tradingPairs {
 		_, lastPrice := dexKeeper.GetLastTrades(pair.GetSymbol())
@@ -22,6 +21,6 @@ func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
 			continue
 		}
 
-		tradingPairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
+		dexKeeper.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
 	}
 }
