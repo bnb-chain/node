@@ -128,7 +128,7 @@ func NewULList(capacity int, bucketSize int, comp Comparator) *ULList {
 		return nil
 	}
 	if capacity < bucketSize || capacity%bucketSize != 0 {
-		capacity = capacity/bucketSize + bucketSize
+		capacity = capacity/bucketSize*bucketSize + bucketSize
 	}
 	bucketNumber := capacity/bucketSize + 1
 	realCapacity := bucketNumber * bucketSize
