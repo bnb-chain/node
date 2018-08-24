@@ -77,7 +77,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 }
 
 func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
-	err := validateOrder(ctx, keeper.PairMapper, msg)
+	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
