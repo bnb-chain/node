@@ -22,7 +22,6 @@ import (
 func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
 	type formParams struct {
 		address string
-		orderID string
 		pair    string
 		side    string
 		price   string
@@ -32,14 +31,12 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 	type response struct {
 		OK       bool   `json:"ok"`
 		OrderID  string `json:"order_id"`
-		HexBytes string `json:"bytes_to_sign"`
+		HexBytes string `json:"tx_to_sign"`
+		Sequence int64  `json:"sequence"`
 	}
 	validateFormParams := func(params formParams) bool {
 		// TODO: there might be a better way to do this
 		if strings.TrimSpace(params.address) == "" {
-			return false
-		}
-		if strings.TrimSpace(params.orderID) == "" {
 			return false
 		}
 		if strings.TrimSpace(params.pair) == "" {
@@ -69,7 +66,6 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 		// parse application/x-www-form-urlencoded or multipart/form-data form params
 		params := formParams{
 			address: r.FormValue("address"),
-			orderID: r.FormValue("order_id"),
 			pair:    r.FormValue("pair"),
 			side:    r.FormValue("side"),
 			price:   r.FormValue("price"),
@@ -88,25 +84,23 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 			throw(w, http.StatusNotFound, err)
 			return
 		}
-		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
+		accbz, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
 		// the query will return empty if there is no data for this account
-		if len(res) == 0 {
+		if len(accbz) == 0 {
 			throw(w, http.StatusNotFound, err)
 			return
 		}
 
 		// decode the account
-		account, err := accDecoder(res)
+		account, err := accDecoder(accbz)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
-
-		id := params.orderID
 
 		err = store.ValidatePairSymbol(params.pair)
 		if err != nil {
@@ -139,7 +133,10 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 			return
 		}
 
+		seq := account.GetSequence()
+		id := order.GenerateOrderID(seq, addr)
 		msg := order.NewNewOrderMsg(addr, id, side, pair, price, qty)
+
 		if tif > -1 {
 			msg.TimeInForce = tif
 		}
@@ -154,7 +151,8 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 
 		resp := response{
 			OK:       true,
-			OrderID:  id,
+			OrderID:  msg.Id,
+			Sequence: seq,
 			HexBytes: hex.EncodeToString(*txBytes),
 		}
 
