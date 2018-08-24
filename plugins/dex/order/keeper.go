@@ -365,7 +365,7 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, 
 	for i := 0; bz == nil && i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
 		key := utils.Int642Bytes(t / SecondsInOneDay)
-		bz = kvstore.Get([]byte(key))
+		bz = kvStore.Get([]byte(key))
 	}
 	if bz == nil {
 		//TODO: logging
