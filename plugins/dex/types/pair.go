@@ -1,6 +1,9 @@
 package types
 
-import "github.com/BiJie/BinanceChain/plugins/dex/utils"
+import (
+	ctuils "github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/dex/utils"
+)
 
 type TradingPair struct {
 	TradeAsset string `json:"trade_asset"`
@@ -20,4 +23,8 @@ func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
 		TickSize:   tickSize,
 		LotSize:    lotSize,
 	}
+}
+
+func (pair *TradingPair) GetSymbol() string {
+	return ctuils.Ccy2TradeSymbol(pair.TradeAsset, pair.QuoteAsset)
 }

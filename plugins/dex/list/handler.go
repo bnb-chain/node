@@ -6,16 +6,16 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 )
 
-func NewHandler(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) sdk.Handler {
+func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case Msg:
-			return handleList(ctx, pairMapper, tokenMapper, msg)
+			return handleList(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -23,8 +23,8 @@ func NewHandler(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) s
 	}
 }
 
-func handleList(ctx sdk.Context, pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
-	if pairMapper.Exists(ctx, msg.Symbol, msg.QuoteSymbol) || pairMapper.Exists(ctx, msg.QuoteSymbol, msg.Symbol) {
+func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
+	if keeper.PairMapper.Exists(ctx, msg.Symbol, msg.QuoteSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteSymbol, msg.Symbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
@@ -42,9 +42,13 @@ func handleList(ctx sdk.Context, pairMapper store.TradingPairMapper, tokenMapper
 	}
 
 	pair := types.NewTradingPair(msg.Symbol, msg.QuoteSymbol, msg.InitPrice)
-	err = pairMapper.AddTradingPair(ctx, pair)
+	err = keeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {
 		return sdk.ErrInternal(err.Error()).Result()
+	}
+
+	if !ctx.IsCheckTx() { // only add engine during DeliverTx
+		keeper.AddEngine(pair)
 	}
 
 	return sdk.Result{}

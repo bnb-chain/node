@@ -17,11 +17,11 @@ import (
 )
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(k Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper) sdk.Handler {
+func NewHandler(k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, k, accountMapper, pairMapper, msg)
+			return handleNewOrder(ctx, k, accountMapper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, k, accountMapper, msg)
 		default:
@@ -64,10 +64,8 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewO
 	return nil
 }
 
-func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
-	msg NewOrderMsg) sdk.Result {
-
-	err := validateOrder(ctx, pairMapper, msg)
+func handleNewOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+	err := validateOrder(ctx, keeper.PairMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
