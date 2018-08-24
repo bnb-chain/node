@@ -538,7 +538,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	l.InsertOrder("123462", SELLSIDE, 10005, 10032, 1000)
 	l.InsertOrder("123463", SELLSIDE, 10005, 10033, 1000)
 	t.Log(l.sellQueue)
-	assert.Equal(l.sellQueue.capacity, 14, "Capacity expansion")
+	assert.Equal(l.sellQueue.capacity, 18, "Capacity expansion")
 	assert.Equal(0, l.GetOverlappedRange(&overlap, &buyBuf, &sellBuf))
 
 	l.InsertOrder("223451", BUYSIDE, 10000, 9950, 1000)
@@ -555,7 +555,7 @@ func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	l.InsertOrder("223462", BUYSIDE, 10005, 10032, 1000)
 	l.InsertOrder("223463", BUYSIDE, 10005, 10033, 1000)
 	t.Log(l.buyQueue)
-	assert.Equal(l.buyQueue.capacity, 14, "Capacity expansion")
+	assert.Equal(l.buyQueue.capacity, 18, "Capacity expansion")
 
 	assert.Equal(10, l.GetOverlappedRange(&overlap, &buyBuf, &sellBuf), "10 price overlap")
 	t.Log(overlap)

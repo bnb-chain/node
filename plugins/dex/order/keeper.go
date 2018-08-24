@@ -27,6 +27,8 @@ import (
 	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
+const SecondsInOneDay = 24 * 60 * 60
+
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	PairMapper store.TradingPairMapper
@@ -36,8 +38,8 @@ type Keeper struct {
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
-	allOrders      map[string]NewOrderMsg
-	roundOrders    map[string]int // limit to the total tx number in a block
+	allOrders      map[string]NewOrderMsg // symbol -> order ID -> order
+	roundOrders    map[string]int         // limit to the total tx number in a block
 	roundIOCOrders map[string][]string
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
 	cdc            *wire.Codec
@@ -349,7 +351,7 @@ func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64, accountMapper auth
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
-	key := utils.Int642Bytes(blockTime / 1000)
+	key := utils.Int642Bytes(blockTime / SecondsInOneDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {
@@ -362,7 +364,7 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, 
 	bz := []byte(nil)
 	for i := 0; bz == nil && i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
-		key := utils.Int642Bytes(t)
+		key := utils.Int642Bytes(t / SecondsInOneDay)
 		bz = kvStore.Get([]byte(key))
 	}
 	if bz == nil {

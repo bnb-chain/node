@@ -73,7 +73,7 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
-	ts := tt.UnixNano() / 1000000
+	ts := tt.Unix()
 	keeper.MarkBreatheBlock(ctx, 42, ts)
 	kvstore := ctx.KVStore(common.DexStoreKey)
 	h := keeper.GetBreatheBlockHeight(tt, kvstore, 10)
@@ -82,7 +82,7 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	h = keeper.GetBreatheBlockHeight(tt, kvstore, 10)
 	assert.Equal(int64(42), h)
 	tt, _ = time.Parse(time.RFC3339, "2018-01-03T15:04:05Z")
-	ts = tt.UnixNano() / 1000000
+	ts = tt.Unix()
 	keeper.MarkBreatheBlock(ctx, 43, ts)
 	h = keeper.GetBreatheBlockHeight(tt, kvstore, 10)
 	assert.Equal(int64(43), h)
@@ -161,7 +161,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(1, len(keeper.engines))
 	err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix()*1000)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(7, len(keeper2.allOrders))
@@ -198,7 +198,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert.Equal(0, len(sells))
 	err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix()*1000)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
 
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
