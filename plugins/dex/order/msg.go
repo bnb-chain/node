@@ -149,15 +149,11 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
 	var id string
-	from, err := ctx.GetFromAddress()
+	ctx, err := context.EnsureSequence(ctx)
 	if err != nil {
 		return NewOrderMsg{}, err
 	}
-	ctx, err = context.EnsureSequence(ctx)
-	if err != nil {
-		return NewOrderMsg{}, err
-	}
-	id = GenerateOrderID(ctx.Sequence+1, from)
+	id = GenerateOrderID(ctx.Sequence+1, sender)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,
