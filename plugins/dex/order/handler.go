@@ -22,11 +22,11 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, accountMapper, pairMapper, msg)
+			return handleNewOrder(ctx, cdc, k, accountMapper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, k, accountMapper, msg)
 		default:
@@ -76,10 +76,8 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	return nil
 }
 
-func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, pairMapper store.TradingPairMapper,
-	msg NewOrderMsg) sdk.Result {
-
-	err := validateOrder(ctx, pairMapper, accountMapper, msg)
+func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+	err := validateOrder(ctx, keeper.PairMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}

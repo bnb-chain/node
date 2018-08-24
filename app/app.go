@@ -45,7 +45,6 @@ type BinanceChain struct {
 	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
-	TradingPairMapper   dex.TradingPairMapper
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -67,13 +66,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	// mappers
 	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
-	app.TradingPairMapper = dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 
 	// Add handlers.
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
+
+	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 	var err error
-	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper,
+	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
 	if err != nil {
 		logger.Error("Failed to create an order keep", "error", err)
@@ -104,10 +104,9 @@ func (app *BinanceChain) InitDexKeeperBook() {
 	if app.checkState == nil {
 		return
 	}
-	allPairs := app.TradingPairMapper.ListAllTradingPairStrings(app.checkState.ctx)
-	store := app.checkState.ctx.KVStore(common.DexStoreKey)
+
 	//count back to 7 days.
-	app.DexKeeper.InitOrderBook(allPairs, store, 7, app.db, app.LastBlockHeight(), app.txDecoder)
+	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, app.db, app.LastBlockHeight(), app.txDecoder)
 }
 
 //TODO???: where to init checkState in reboot
@@ -127,7 +126,7 @@ func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
 		app.Router().AddRoute(route, handler)
 	}
 
-	for route, handler := range dex.Routes(cdc, app.TradingPairMapper, *app.DexKeeper, app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
+	for route, handler := range dex.Routes(cdc, *app.DexKeeper, app.TokenMapper, app.AccountMapper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -197,7 +196,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 		icoDone := ico.EndBlockAsync(ctx)
 
-		dex.EndBreatheBlock(ctx, app.TradingPairMapper, app.AccountMapper, *app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
