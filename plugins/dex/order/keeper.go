@@ -63,8 +63,8 @@ type ActiveOrders struct {
 	Orders []NewOrderMsg `json:"orders"`
 }
 
-func CreateMatchEng(pair dexTypes.TradingPair) *me.MatchEng {
-	return me.NewMatchEng(1000, pair.LotSize, 0.05)
+func CreateMatchEng(lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(1000, lotSize, 0.05)
 }
 
 func genOrderBookSnapshotKey(height int64, pair string) string {
@@ -93,12 +93,8 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 	}, nil
 }
 
-func (kp *Keeper) GetTradingPairMapper() store.TradingPairMapper {
-	return kp.PairMapper
-}
-
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair)
+	eng := CreateMatchEng(pair.LotSize)
 	kp.engines[pair.GetSymbol()] = eng
 	return eng
 }
