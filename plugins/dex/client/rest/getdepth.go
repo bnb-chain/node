@@ -15,7 +15,6 @@ import (
 
 const allowedLimits = "5,10,20,50,100"
 const defaultLimit = "100"
-const maxUint = ^uint(0)
 
 // DepthReqHandler creates an http request handler to send coins to a address
 func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
@@ -42,7 +41,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			}
 		}
 
-		limit := int(maxUint >> 1)
+		limit, _ := strconv.Atoi(defaultLimit)
 		if len(limitStrOk) > 0 {
 			var err error
 			limit, err = strconv.Atoi(limitStrOk)
