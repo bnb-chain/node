@@ -7,12 +7,13 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
-func Routes(dexKeeper DexKeeper, tokenMapper tokens.Mapper,
+func Routes(cdc *wire.Codec, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
 	accountMapper auth.AccountMapper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	orderHandler := order.NewHandler(dexKeeper, accountMapper)
+	orderHandler := order.NewHandler(cdc, dexKeeper, accountMapper)
 	routes[order.NewOrder] = orderHandler
 	routes[order.CancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper)

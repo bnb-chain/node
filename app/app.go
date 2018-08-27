@@ -83,7 +83,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
-	app.registerHandlers()
+	app.registerHandlers(cdc)
 
 	// Initialize BaseApp.
 	app.SetInitChainer(app.initChainerFn())
@@ -118,7 +118,7 @@ func (app *BinanceChain) SetCheckState(header abci.Header) {
 	}
 }
 
-func (app *BinanceChain) registerHandlers() {
+func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
 	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
@@ -126,7 +126,7 @@ func (app *BinanceChain) registerHandlers() {
 		app.Router().AddRoute(route, handler)
 	}
 
-	for route, handler := range dex.Routes(*app.DexKeeper, app.TokenMapper, app.AccountMapper) {
+	for route, handler := range dex.Routes(cdc, *app.DexKeeper, app.TokenMapper, app.AccountMapper) {
 		app.Router().AddRoute(route, handler)
 	}
 }

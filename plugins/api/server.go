@@ -1,10 +1,11 @@
 package api
 
 import (
+	"github.com/gorilla/mux"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	keyscli "github.com/cosmos/cosmos-sdk/client/keys"
 	keys "github.com/cosmos/cosmos-sdk/crypto/keys"
-	"github.com/gorilla/mux"
 
 	"github.com/BiJie/BinanceChain/common"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
@@ -24,8 +25,9 @@ type server struct {
 	cdc *wire.Codec
 
 	// stores for handlers
-	keyBase      keys.Keybase
-	tokens       tkstore.Mapper
+	keyBase keys.Keybase
+	tokens  tkstore.Mapper
+
 	accStoreName string
 }
 
