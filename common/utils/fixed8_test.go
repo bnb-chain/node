@@ -17,8 +17,8 @@ var Fixed8DecodeString = utils.Fixed8DecodeString
 var decimals = utils.Fixed8Decimals
 
 func TestFixed8FromInt64(t *testing.T) {
-	value := 100000000 // 1.00000000
-	value2 := 1000     // 0.00001000
+	value := 1e8   // 1.00000000
+	value2 := 1000 // 0.00001000
 	assert.Equal(t, Fixed8(value), NewFixed8(1))
 	value2s, err := Fixed8DecodeString("0.00001")
 	assert.Nil(t, err)
@@ -26,7 +26,7 @@ func TestFixed8FromInt64(t *testing.T) {
 }
 
 func TestNewFixed8(t *testing.T) {
-	values := []int{9000, 100000000, 5, 10945}
+	values := []int{9000, 1e8, 5, 10945}
 	for _, val := range values {
 		assert.Equal(t, Fixed8(val*decimals), NewFixed8(val))
 		assert.Equal(t, int64(val), NewFixed8(val).Value())
