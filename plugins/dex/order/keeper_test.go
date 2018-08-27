@@ -329,63 +329,18 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
-	cdc := wire.NewCodec()
-	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
-	coinKeeper := bank.NewKeeper(mapper)
-	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc)
-	return
-}
+func TestKeeper_UpdateLotSize(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	logger := log.NewTMLogger(os.Stdout)
+	cms := MakeCMS()
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
 
-func TestKeeper_CalcOrderFees(t *testing.T) {
-	ctx, am, keeper := setup()
-	keeper.FeeConfig.SetFeeRate(ctx, 1000)
-	keeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
-	_, acc := testutils.NewAccount(ctx, am, 0)
+	keeper.UpdateLotSize(tradingPair.GetSymbol(), 1e3)
 
-	// InCcy == BNB
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 0)})
-	tran := Transfer{
-		eventType:  eventFilled,
-		accAddress: acc.GetAddress(),
-		inCcy:      types.NativeToken,
-		in:         100e8,
-		outCcy:     "ABC",
-		out:        1000e8,
-		unlock:     1000e8,
-	}
-	fee := keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
-
-	// InCcy != BNB
-	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
-	_, acc = testutils.NewAccount(ctx, am, 100)
-	tran = Transfer{
-		eventType:  eventFilled,
-		accAddress: acc.GetAddress(),
-		inCcy:      "ABC",
-		in:         1000e8,
-		outCcy:     "BNB",
-		out:        100e8,
-		unlock:     110e8,
-	}
-	// has enough bnb
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e8)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
-	// no enough bnb
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e6)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
-}
-
-func TestKeeper_ExpireFees(t *testing.T) {
-
-}
-
-func TestKeeper_IocExpireFees(t *testing.T) {
-
+	assert.Equal(int64(1e3), keeper.engines[tradingPair.GetSymbol()].LotSize)
 }
