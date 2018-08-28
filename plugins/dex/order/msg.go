@@ -35,6 +35,14 @@ var sideNames = map[string]int8{
 	"SELL": sideSell,
 }
 
+func IToSide(side int8) string {
+	switch side {
+	case Side.BUY: return "BUY"
+	case Side.SELL: return "SELL"
+	default: return "UNKNOWN"
+	}
+}
+
 // GenerateOrderID generates an order ID
 func GenerateOrderID(sequence int64, from sdk.AccAddress) string {
 	id := fmt.Sprintf("%s-%d", from.String(), sequence)
@@ -107,6 +115,14 @@ func IsValidTimeInForce(tif int8) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func IToTimeInForce(tif int8) string {
+	switch tif {
+	case TimeInForce.GTC: return "GTC"
+	case TimeInForce.IOC: return "IOC"
+	default: return "UNKNOWN"
 	}
 }
 

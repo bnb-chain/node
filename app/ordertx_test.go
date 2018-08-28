@@ -184,7 +184,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 
-	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC_BNB")
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	//total execution is 900e8 BTC @ price 96e8, notional is 86400e8
@@ -239,7 +239,7 @@ func Test_Match(t *testing.T) {
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
-	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
+	trades, lastPx = testApp.DexKeeper.GetLastTradesForPair("ETH_BNB")
 	assert.Equal(int64(97e8), lastPx)
 	assert.Equal(4, len(trades))
 	//total execution is 90e8 ETH @ price 97e8, notional is 8730e8

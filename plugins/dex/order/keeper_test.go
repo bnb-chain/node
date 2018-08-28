@@ -52,7 +52,7 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper, _ := NewKeeper(common.DexStoreKey, coinKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc)
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return keeper
 }
 

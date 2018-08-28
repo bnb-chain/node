@@ -47,3 +47,11 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/Shopify/sarama"
+  version = "1.17.0"
+
+[[constraint]]
+  name = "github.com/linkedin/goavro"
+  version = "2.3.0"

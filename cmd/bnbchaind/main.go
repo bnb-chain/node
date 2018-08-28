@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/spf13/cobra"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -27,14 +25,9 @@ func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.
 }
 
 func main() {
-	cdc := app.MakeCodec()
-	ctx := server.NewDefaultContext()
-
-	rootCmd := &cobra.Command{
-		Use:               "bnbchaind",
-		Short:             "BNBChain Daemon (server)",
-		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
-	}
+	cdc := app.Codec
+	ctx := app.ServerContext
+	rootCmd := app.RootCmd
 
 	server.AddCommands(ctx, cdc, rootCmd, app.BinanceAppInit(),
 		server.ConstructAppCreator(newApp, "bnbchain"),

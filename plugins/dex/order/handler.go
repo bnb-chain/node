@@ -22,7 +22,7 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
@@ -76,7 +76,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	return nil
 }
 
-func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
@@ -135,8 +135,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 	}
 }
 
-// Handle CancelOffer -
-func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+func handleCancelOrder(ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.RefId)
 
 	//only check whether there exists order to cancel
@@ -155,7 +154,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	var err error
 	if !ctx.IsCheckTx() {
 		//remove order from cache and order book
-		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
+		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled)
 	} else {
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	}

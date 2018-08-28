@@ -10,7 +10,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func Routes(cdc *wire.Codec, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
+func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
 	accountMapper auth.AccountMapper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
 	orderHandler := order.NewHandler(cdc, dexKeeper, accountMapper)

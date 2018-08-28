@@ -35,7 +35,7 @@ func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
 // fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
 // At least one side would be fully filled.
 func (me *MatchEng) fillOrders(i int, j int) {
-	var k, h int
+	var bidx, sidx int
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	origBuyPx := me.overLappedLevel[i].Price
@@ -48,42 +48,42 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
 	bLength := len(buys)
 	sLength := len(sells)
-	for k < bLength && h < sLength {
-		if compareBuy(buys[k].nxtTrade, 0) == 0 {
-			k++
+	for bidx < bLength && sidx < sLength {
+		if compareBuy(buys[bidx].nxtTrade, 0) == 0 {
+			bidx++
 			continue
 		}
-		if compareBuy(sells[h].nxtTrade, 0) == 0 {
-			h++
+		if compareBuy(sells[sidx].nxtTrade, 0) == 0 {
+			sidx++
 			continue
 		}
-		r := compareBuy(buys[k].nxtTrade, sells[h].nxtTrade)
+		r := compareBuy(buys[bidx].nxtTrade, sells[sidx].nxtTrade)
 		switch {
 		case r > 0:
-			trade := sells[h].nxtTrade
-			buys[k].nxtTrade -= trade
-			sells[h].nxtTrade = 0
-			buys[k].CumQty += trade
-			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
-			h++
+			trade := sells[sidx].nxtTrade
+			buys[bidx].nxtTrade -= trade
+			sells[sidx].nxtTrade = 0
+			buys[bidx].CumQty += trade
+			sells[sidx].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[sidx].Id, me.LastTradePrice, trade, origBuyPx, buys[bidx].CumQty, buys[bidx].Id})
+			sidx++
 		case r < 0:
-			trade := buys[k].nxtTrade
-			sells[h].nxtTrade -= trade
-			buys[k].nxtTrade = 0
-			buys[k].CumQty += trade
-			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
-			k++
+			trade := buys[bidx].nxtTrade
+			sells[sidx].nxtTrade -= trade
+			buys[bidx].nxtTrade = 0
+			buys[bidx].CumQty += trade
+			sells[sidx].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[sidx].Id, me.LastTradePrice, trade, origBuyPx, buys[bidx].CumQty, buys[bidx].Id})
+			bidx++
 		case r == 0:
-			trade := sells[h].nxtTrade
-			buys[k].nxtTrade = 0
-			sells[h].nxtTrade = 0
-			buys[k].CumQty += trade
-			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
-			h++
-			k++
+			trade := sells[sidx].nxtTrade
+			buys[bidx].nxtTrade = 0
+			sells[sidx].nxtTrade = 0
+			buys[bidx].CumQty += trade
+			sells[sidx].CumQty += trade
+			me.Trades = append(me.Trades, Trade{sells[sidx].Id, me.LastTradePrice, trade, origBuyPx, buys[bidx].CumQty, buys[bidx].Id})
+			sidx++
+			bidx++
 		}
 	}
 	me.overLappedLevel[i].BuyTotal = sumOrdersTotalLeft(buys, false)

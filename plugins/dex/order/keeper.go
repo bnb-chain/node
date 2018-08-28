@@ -35,14 +35,17 @@ type Keeper struct {
 
 	ck bank.Keeper
 
-	storeKey       sdk.StoreKey // The key used to access the store from the Context.
-	codespace      sdk.CodespaceType
-	engines        map[string]*me.MatchEng
-	allOrders      map[string]NewOrderMsg // symbol -> order ID -> order
-	roundOrders    map[string]int         // limit to the total tx number in a block
-	roundIOCOrders map[string][]string
-	poolSize       uint // number of concurrent channels, counted in the pow of 2
-	cdc            *wire.Codec
+	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
+	codespace                  sdk.CodespaceType
+	engines                    map[string]*me.MatchEng
+	allOrders                  map[string]NewOrderMsg // symbol -> order ID -> order
+	orderChanges               OrderChanges           // order changed in this block, will be cleaned before matching for new block
+	orderChangesMap            OrderChangesMap        // order changed in this block for indexing, will live longer than elements in allOrders TODO(#66): implement removal
+	roundOrders                map[string]int         // limit to the total tx number in a block
+	roundIOCOrders             map[string][]string
+	poolSize                   uint // number of concurrent channels, counted in the pow of 2
+	cdc                        *wire.Codec
+	collectOrderInfoForPublish bool
 }
 
 // Transfer represents a transfer between trade currencies
@@ -79,19 +82,22 @@ func genActiveOrdersSnapshotKey(height int64) string {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
+	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) (*Keeper, error) {
 	engines := make(map[string]*me.MatchEng)
 	return &Keeper{
-		PairMapper:     tradingPairMapper,
-		ck:             bankKeeper,
-		storeKey:       key,
-		codespace:      codespace,
-		engines:        engines,
-		allOrders:      make(map[string]NewOrderMsg, 1000000),
-		roundOrders:    make(map[string]int, 256),
-		roundIOCOrders: make(map[string][]string, 256),
-		poolSize:       concurrency,
-		cdc:            cdc,
+		PairMapper:      tradingPairMapper,
+		ck:              bankKeeper,
+		storeKey:        key,
+		codespace:       codespace,
+		engines:         engines,
+		allOrders:       make(map[string]NewOrderMsg, 1000000),
+		orderChanges:    make(OrderChanges, 0),
+		orderChangesMap: make(OrderChangesMap),
+		roundOrders:     make(map[string]int, 256),
+		roundIOCOrders:  make(map[string][]string, 256),
+		poolSize:        concurrency,
+		cdc:             cdc,
+		collectOrderInfoForPublish: collectOrderInfoForPublish,
 	}, nil
 }
 
@@ -122,6 +128,12 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		return err
 	}
 
+	if kp.collectOrderInfoForPublish {
+		change := OrderChange{msg, Ack, 0, msg.Quantity, 0}
+		kp.orderChanges = append(kp.orderChanges, change)
+		kp.orderChangesMap[msg.Id] = &change
+	}
+
 	kp.allOrders[msg.Id] = msg
 	kp.roundOrders[symbol] += 1
 	if msg.TimeInForce == TimeInForce.IOC {
@@ -130,8 +142,8 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	return nil
 }
 
-func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
-	_, ok := kp.allOrders[id]
+func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64, reason ChangeType) (ord me.OrderPart, err error) {
+	msg, ok := kp.allOrders[id]
 	if !ok {
 		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 	}
@@ -140,7 +152,13 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 	}
 	delete(kp.allOrders, id)
-	return eng.Book.RemoveOrder(id, side, price)
+	ord, err = eng.Book.RemoveOrder(id, side, price)
+	if kp.collectOrderInfoForPublish {
+		change := OrderChange{msg, reason, 0, ord.LeavesQty(), ord.CumQty}
+		kp.orderChanges = append(kp.orderChanges, change)
+		kp.orderChangesMap[msg.Id] = &change
+	}
+	return ord, err
 }
 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
@@ -165,7 +183,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (T
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty) // TODO: can this be optimised into utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)???
 	return Transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
 		Transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
@@ -236,7 +254,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 				iocIDs := kp.roundIOCOrders[ts]
 				for _, id := range iocIDs {
 					if msg, ok := kp.allOrders[id]; ok {
-						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
+						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, IocNoFill); err == nil {
 							if !distributeTrade {
 								continue
 							}
@@ -268,6 +286,7 @@ func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLeve
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
+		// TODO: check considered bucket splitting?
 		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
 			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
@@ -282,17 +301,60 @@ func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLeve
 	return orderbook
 }
 
-func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
+func (kp *Keeper) GetOrderBookForPublish(maxLevels int) ChangedPriceLevels {
+	var res = make(ChangedPriceLevels)
+	for pair, eng := range kp.engines {
+		buys := make(map[int64]int64)
+		sells := make(map[int64]int64)
+		res[pair] = ChangedPriceLevelsPerSymbol{buys, sells}
+
+		// TODO: check considered bucket splitting?
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+			buys[p.Price] = p.TotalLeavesQty()
+		}, func(p *me.PriceLevel) {
+			sells[p.Price] = p.TotalLeavesQty()
+		})
+	}
+	return res
+}
+
+func (kp *Keeper) GetLastTradesCopy() *map[string][]me.Trade {
+	var res = make(map[string][]me.Trade, len(kp.engines))
+	for pair := range kp.engines {
+		trades, _ := kp.GetLastTradesForPair(pair)
+		res[pair] = make([]me.Trade, len(trades))
+		copy(res[pair], trades)
+	}
+	return &res
+}
+
+func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
 	if eng, ok := kp.engines[pair]; ok {
 		return eng.Trades, eng.LastTradePrice
 	}
 	return nil, 0
 }
 
+func (kp *Keeper) GetLastOrdersCopy() (OrderChanges, OrderChangesMap) {
+	var orderChangesSnapshot = make(OrderChanges, len(kp.orderChanges))
+	copy(orderChangesSnapshot, kp.orderChanges)
+
+	var orderChangesMapSnapshot = make(OrderChangesMap, len(kp.orderChangesMap))
+	for k, v := range kp.orderChangesMap {
+		orderChangesMapSnapshot[k] = v
+	}
+
+	return orderChangesSnapshot, orderChangesMapSnapshot
+}
+
 func (kp *Keeper) ClearOrderBook(pair string) {
 	if eng, ok := kp.engines[pair]; ok {
 		eng.Book.Clear()
 	}
+}
+
+func (kp *Keeper) ClearOrderChanges() {
+	kp.orderChanges = kp.orderChanges[:0]
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran Transfer) sdk.Error {
@@ -330,10 +392,10 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
 	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, c <-chan Transfer) {
+		defer wg.Done()
 		for n := range c {
 			kp.doTransfer(ctx, accountMapper, n)
 		}
-		wg.Done()
 	}
 	var wgOrd sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, true)
@@ -515,7 +577,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price)
+				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, Canceled)
 				if err != nil {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

@@ -25,8 +25,13 @@ fi
 ##
 export BCHOME="/bnbchaind/node${ID}/gaiad"
 
+# "$BINARY" --home "$BCHOME" "$@" --publishMarketData | tee "${BCHOME}/${LOG}"
 if [ -d "`dirname ${BCHOME}/${LOG}`" ]; then
-  "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
+  if [ ${ID} == 2 ]; then
+    "$BINARY" --home "$BCHOME" "$@" --publishMarketData | tee "${BCHOME}/${LOG}"
+  else
+    "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
+  fi
 else
   "$BINARY" --home "$BCHOME" "$@"
 fi
