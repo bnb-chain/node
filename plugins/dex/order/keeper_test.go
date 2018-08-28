@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -22,6 +21,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -342,44 +342,44 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 
 func TestKeeper_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.feeConfig.setFeeRate(ctx, 1000)
-	keeper.feeConfig.setFeeRateWithNativeToken(ctx, 500)
+	keeper.FeeConfig.SetFeeRate(ctx, 1000)
+	keeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 
 	// InCcy == BNB
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 0)})
-	tran := Transfer {
-		eventType: eventFilled,
+	tran := Transfer{
+		eventType:  eventFilled,
 		accAddress: acc.GetAddress(),
-		inCcy: types.NativeToken,
-		in: 100e8,
-		outCcy: "ABC",
-		out: 1000e8,
-		unlock: 1000e8,
+		inCcy:      types.NativeToken,
+		in:         100e8,
+		outCcy:     "ABC",
+		out:        1000e8,
+		unlock:     1000e8,
 	}
 	fee := keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{ sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 
 	// InCcy != BNB
-	keeper.engines["ABC_" + types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
+	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	tran = Transfer {
-		eventType: eventFilled,
+	tran = Transfer{
+		eventType:  eventFilled,
 		accAddress: acc.GetAddress(),
-		inCcy: "ABC",
-		in: 1000e8,
-		outCcy: "BNB",
-		out: 100e8,
-		unlock: 110e8,
+		inCcy:      "ABC",
+		in:         1000e8,
+		outCcy:     "BNB",
+		out:        100e8,
+		unlock:     110e8,
 	}
 	// has enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e8)})
 	fee = keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{ sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 	// no enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e6)})
 	fee = keeper.calculateOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{ sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
 }
 
 func TestKeeper_ExpireFees(t *testing.T) {

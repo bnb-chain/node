@@ -85,7 +85,7 @@ localnet-start: localnet-stop
 			sed -i -e "s/pex = false/pex = true/g" ./build/node$$i/gaiad/config/config.toml;\
 		fi;\
 	done
-	#docker-compose up
+	docker-compose up
 
 # Stop testnet
 localnet-stop:
