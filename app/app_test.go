@@ -66,7 +66,11 @@ var (
 
 func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 	for _, acc := range genAccs {
-		aacc := &common.AppAccount{BaseAccount: auth.BaseAccount{Address: acc.GetAddress(), Coins: acc.GetCoins()}}
+		aacc := &common.AppAccount{
+			BaseAccount: auth.BaseAccount{
+				Address: acc.GetAddress(),
+				Coins:   acc.GetCoins(),
+			}}
 		if app.AccountMapper.GetAccount(ctx, acc.GetAddress()) == nil {
 			aacc.BaseAccount.AccountNumber = app.AccountMapper.GetNextAccountNumber(ctx)
 		}
