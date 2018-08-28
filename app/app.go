@@ -186,7 +186,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
 		// only match in the normal block
-		app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
+		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
 	} else {
 		// breathe block
 

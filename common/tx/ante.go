@@ -213,17 +213,9 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account
 	}
 
 	// record fees in ctx.
-	oldFee := Fee(ctx)
-	var newFee types.Fee
-	if oldFee.IsEmpty() {
-		newFee = fee
-	} else {
-		newFee = types.NewFee(oldFee.Tokens.Plus(fee.Tokens), oldFee.Type)
-		if fee.Type == types.FeeForAll {
-			newFee.Type = types.FeeForAll
-		}
-	}
-	ctx = WithFee(ctx, newFee)
+	totalFee := Fee(ctx)
+	totalFee.AddFee(fee)
+	ctx = WithFee(ctx, totalFee)
 	return ctx, sdk.Result{}
 }
 

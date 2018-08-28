@@ -10,6 +10,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/common/tx"
+
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -50,6 +52,8 @@ const (
 
 // Transfer represents a transfer between trade currencies
 type Transfer struct {
+	bid        string
+	sid        string
 	eventType  transferEventType
 	accAddress sdk.AccAddress
 	inCcy      string
@@ -57,6 +61,7 @@ type Transfer struct {
 	outCcy     string
 	out        int64
 	unlock     int64
+	fee        types.Fee
 }
 
 func (tran Transfer) feeFree() bool {
@@ -149,8 +154,8 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (T
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
-	return Transfer{eventFilled, seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
-		Transfer{eventFilled, buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
+	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty, types.Fee{}},
+		Transfer{trade.BId, trade.SId, eventFilled, buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock, types.Fee{}}
 }
 
 //TODO: should get an even hash
@@ -228,12 +233,22 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 								unlock = qty
 							}
 
+							var tranEventType transferEventType
 							if ord.CumQty == 0 {
 								// IOC no fill
-								tradeOuts[c] <- Transfer{eventIocFullyExpire, msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+								tranEventType = eventIocFullyExpire
 							} else {
 								// IOC partially filled
-								tradeOuts[c] <- Transfer{eventIocPartiallyExpire, msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+								tranEventType = eventIocPartiallyExpire
+							}
+							tradeOuts[c] <- Transfer{
+								eventType:  tranEventType,
+								accAddress: msg.Sender,
+								inCcy:      tradeCcy,
+								in:         qty,
+								outCcy:     tradeCcy,
+								out:        qty,
+								unlock:     unlock,
 							}
 						}
 					}
@@ -279,29 +294,30 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
-func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran Transfer) sdk.Error {
+func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
 	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}})
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
 	account.SetLockedCoins(newLocked)
-
 	account.SetCoins(account.GetCoins().Plus(sdk.Coins{
 		sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)},
 		sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}}.Sort()))
 
 	if !tran.feeFree() {
+		var fee types.Fee
 		if tran.eventType == eventFilled {
-			fee := kp.calculateOrderFee(ctx, account, tran)
+			fee = kp.calculateOrderFee(ctx, account, *tran)
 			account.SetCoins(account.GetCoins().Minus(fee.Tokens))
 		} else if tran.eventType == eventFullyExpire {
 			//
 		} else if tran.eventType == eventIocFullyExpire {
 			//
 		}
-	}
 
+		tran.fee = fee
+	}
 	accountMapper.SetAccount(ctx, account)
 	return nil
 }
@@ -347,31 +363,49 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
-	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, c <-chan Transfer) {
-		for n := range c {
-			kp.doTransfer(ctx, accountMapper, n)
+	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, transChan <-chan Transfer, settled chan<- Transfer) {
+		defer wg.Done()
+		for tran := range transChan {
+			kp.doTransfer(ctx, accountMapper, &tran)
+			settled <- tran
 		}
-		wg.Done()
 	}
 	var wgOrd sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, true)
 	if tradeOuts == nil {
 		//TODO: logging
-		return sdk.CodeOK, nil
+		return ctx, sdk.CodeOK, nil
 	}
 
 	wg.Add(len(tradeOuts))
-	for _, c := range tradeOuts {
-		go allocate(ctx, accountMapper, c)
+	settledChan := make(chan Transfer, len(tradeOuts)*2)
+	for _, tran := range tradeOuts {
+		go allocate(ctx, accountMapper, tran, settledChan)
 	}
+
+	settleDone := make(chan struct{})
+	go func() {
+		defer close(settleDone)
+		settledList := make([]Transfer, 0)
+		totalFee := tx.Fee(ctx)
+		for settled := range settledChan {
+			settledList = append(settledList, settled)
+			totalFee.AddFee(settled.fee)
+		}
+		// WithSettlement should only be called once in each block.
+		newCtx = WithSettlement(tx.WithFee(ctx, totalFee), settledList)
+	}()
+
 	wgOrd.Wait()
 	for _, t := range tradeOuts {
 		close(t)
 	}
 	wg.Wait()
-	return sdk.CodeOK, nil
+	close(settledChan)
+	<-settleDone
+	return newCtx, sdk.CodeOK, nil
 }
 
 func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
