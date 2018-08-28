@@ -3,6 +3,8 @@ package matcheng
 import (
 	"math"
 	"sort"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 type MatchEng struct {
@@ -22,6 +24,7 @@ type MatchEng struct {
 	leastSurplus    SurplusIndex
 	Trades          []Trade
 	LastTradePrice  int64
+	LastFees        map[string]types.Fee
 }
 
 // NewMatchEng constructs a new MatchEng.

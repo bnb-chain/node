@@ -75,13 +75,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	// TODO: make the concurrency configurable
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
-	var err error
-	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
-	if err != nil {
-		logger.Error("Failed to create an order keep", "error", err)
-		panic(err)
-	}
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -93,7 +88,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
-	err = app.LoadLatestVersion(common.MainStoreKey)
+	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
 	}

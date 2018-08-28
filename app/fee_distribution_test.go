@@ -7,42 +7,25 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-// generate a priv key and return it with its address
-func privAndAddr() (crypto.PrivKey, sdk.AccAddress) {
-	priv := ed25519.GenPrivKey()
-	addr := sdk.AccAddress(priv.PubKey().Address())
-	return priv, addr
-}
-
-func newAccount(ctx sdk.Context, am auth.AccountMapper) (crypto.PrivKey, auth.Account) {
-	privKey, addr := privAndAddr()
-	acc := am.NewAccountWithAddress(ctx, addr)
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 100)})
-	am.SetAccount(ctx, acc)
-	return privKey, acc
-}
-
 func setup() (mapper auth.AccountMapper, ctx sdk.Context) {
-	ms, capKey, _ := utils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
 	ctx = sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	// setup proposer and other validators
-	_, proposerAcc := newAccount(ctx, mapper)
-	_, valAcc1 := newAccount(ctx, mapper)
-	_, valAcc2 := newAccount(ctx, mapper)
-	_, valAcc3 := newAccount(ctx, mapper)
+	_, proposerAcc := testutils.NewAccount(ctx, mapper, 100)
+	_, valAcc1 := testutils.NewAccount(ctx, mapper, 100)
+	_, valAcc2 := testutils.NewAccount(ctx, mapper, 100)
+	_, valAcc3 := testutils.NewAccount(ctx, mapper, 100)
 
 	proposer := abci.Validator{Address: proposerAcc.GetAddress(), Power: 10}
 	ctx = ctx.WithBlockHeader(abci.Header{Proposer: proposer}).WithSigningValidators([]abci.SigningValidator{

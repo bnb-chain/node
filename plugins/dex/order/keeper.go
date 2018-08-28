@@ -1,30 +1,21 @@
 package order
 
 import (
-	"bytes"
-	"compress/zlib"
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
-
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/wire"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	bc "github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	tmtypes "github.com/tendermint/tendermint/types"
-
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const SecondsInOneDay = 24 * 60 * 60
@@ -41,45 +32,44 @@ type Keeper struct {
 	allOrders      map[string]NewOrderMsg // symbol -> order ID -> order
 	roundOrders    map[string]int         // limit to the total tx number in a block
 	roundIOCOrders map[string][]string
+	roundFees      map[string]sdk.Coins
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
 	cdc            *wire.Codec
+	feeConfig      FeeConfig
 }
+
+type transferEventType int64
+
+const (
+	eventFilled = iota
+	eventFullyExpire
+	eventPartiallyExpire
+	eventIocFullyExpire
+	eventIocPartiallyExpire
+)
 
 // Transfer represents a transfer between trade currencies
 type Transfer struct {
-	account sdk.AccAddress
-	inCcy   string
-	in      int64
-	outCcy  string
-	out     int64
-	unlock  int64
+	eventType  transferEventType
+	accAddress sdk.AccAddress
+	inCcy      string
+	in         int64
+	outCcy     string
+	out        int64
+	unlock     int64
 }
 
-type OrderBookSnapshot struct {
-	Buys           []me.PriceLevel `json:"buys"`
-	Sells          []me.PriceLevel `json:"sells"`
-	LastTradePrice int64           `json:"lasttradeprice"`
-}
-
-type ActiveOrders struct {
-	Orders []NewOrderMsg `json:"orders"`
+func (tran Transfer) feeFree() bool {
+	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIocPartiallyExpire
 }
 
 func CreateMatchEng(lotSize int64) *me.MatchEng {
 	return me.NewMatchEng(1000, lotSize, 0.05)
 }
 
-func genOrderBookSnapshotKey(height int64, pair string) string {
-	return fmt.Sprintf("orderbook_%v_%v", height, pair)
-}
-
-func genActiveOrdersSnapshotKey(height int64) string {
-	return fmt.Sprintf("activeorders_%v", height)
-}
-
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec) (*Keeper, error) {
+	concurrency uint, cdc *wire.Codec) *Keeper {
 	engines := make(map[string]*me.MatchEng)
 	return &Keeper{
 		PairMapper:     tradingPairMapper,
@@ -92,7 +82,8 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		roundIOCOrders: make(map[string][]string, 256),
 		poolSize:       concurrency,
 		cdc:            cdc,
-	}, nil
+		feeConfig:      NewFeeConfig(key),
+	}
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
@@ -157,14 +148,14 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (T
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)
-	return Transfer{seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
-		Transfer{buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
+	return Transfer{eventFilled, seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty},
+		Transfer{eventFilled, buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock}
 }
 
 //TODO: should get an even hash
-func channelHash(account sdk.AccAddress, bucketNumber int) int {
-	return int(account[0]+account[1]) % bucketNumber
+func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
+	return int(accAddress[0]+accAddress[1]) % bucketNumber
 }
 
 func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade bool) []chan Transfer {
@@ -182,16 +173,10 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 	for i, _ := range outs {
 		outs[i] = make([]string, channelSize)
 	}
-	i, j, t, ii := 0, 0, channelSize, 0
-	for k, _ := range kp.roundOrders {
-		if i >= t {
-			j++
-			ii = 0
-			t += channelSize
-		}
-		outs[j][ii] = k
-		i++
-		ii++
+	index := 0
+	for k := range kp.roundOrders {
+		outs[index/channelSize][index%channelSize] = k
+		index++
 	}
 	tradeOuts := make([]chan Transfer, concurrency)
 	if distributeTrade {
@@ -201,7 +186,7 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 		}
 	}
 	wg.Add(concurrency)
-	for i = 0; i < concurrency; i++ {
+	for i := 0; i < concurrency; i++ {
 		channel := outs[i]
 		go func() {
 			for _, ts := range channel {
@@ -215,9 +200,9 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 						for _, t := range engine.Trades {
 							t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
 							//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
-							c := channelHash(t1.account, concurrency)
+							c := channelHash(t1.accAddress, concurrency)
 							tradeOuts[c] <- t1
-							c = channelHash(t2.account, concurrency)
+							c = channelHash(t2.accAddress, concurrency)
 							tradeOuts[c] <- t2
 						}
 					}
@@ -242,7 +227,14 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 							} else {
 								unlock = qty
 							}
-							tradeOuts[c] <- Transfer{msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+
+							if ord.CumQty == 0 {
+								// IOC no fill
+								tradeOuts[c] <- Transfer{eventIocFullyExpire, msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+							} else {
+								// IOC partially filled
+								tradeOuts[c] <- Transfer{eventIocPartiallyExpire, msg.Sender, tradeCcy, qty, tradeCcy, qty, unlock}
+							}
 						}
 					}
 				}
@@ -288,15 +280,48 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 }
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran Transfer) sdk.Error {
-	//for Out, only need to reduce the locked.
-	account := accountMapper.GetAccount(ctx, tran.account).(types.NamedAccount)
+	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	account.SetLockedCoins(
 		account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
+
+	account.SetCoins(account.GetCoins().Plus(
+		sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)},
+			sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}}))
+
+	if !tran.feeFree() {
+		if tran.eventType == eventFilled {
+			fee := kp.calculateOrderFee(ctx, account, tran)
+			account.SetCoins(account.GetCoins().Minus(fee.Tokens))
+		} else if tran.eventType == eventFullyExpire {
+			//
+		} else if tran.eventType == eventIocFullyExpire {
+			//
+		}
+	}
+
 	accountMapper.SetAccount(ctx, account)
-	//TODO: error handling
-	_, _, sdkErr := kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)}})
-	_, _, sdkErr = kp.ck.AddCoins(ctx, tran.account, sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}})
-	return sdkErr
+	return nil
+}
+
+func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
+	var feeToken sdk.Coin
+	if tran.inCcy == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.feeConfig.feeRateWithNativeToken))
+	} else {
+		symbol := utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)
+		// price against native token
+		price := kp.engines[symbol].LastTradePrice
+		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.feeConfig.feeRateWithNativeToken)
+		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
+			// have sufficient native token to pay the fees
+			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+		} else {
+			// no enough NativeToken, use the received tokens as fee
+			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.feeConfig.feeRate))
+		}
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
 func (kp *Keeper) clearAfterMatch() (err error) {
@@ -379,242 +404,6 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, 
 	return height
 }
 
-func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.KVStore) error {
-	var b bytes.Buffer
-	w := zlib.NewWriter(&b)
-	bytes, err := cdc.MarshalBinary(snapshot)
-	if err != nil {
-		panic(err)
-	}
-	_, err = w.Write(bytes)
-	if err != nil {
-		return err
-	}
-	err = w.Flush()
-	if err != nil {
-		return err
-	}
-	bytes = b.Bytes()
-	kv.Set([]byte(key), bytes)
-	w.Close()
-	return nil
-}
-
-func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
-	kvstore := ctx.KVStore(kp.storeKey)
-	for pair, eng := range kp.engines {
-		buys, sells := eng.Book.GetAllLevels()
-		snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
-		key := genOrderBookSnapshotKey(height, pair)
-		err := compressAndSave(snapshot, kp.cdc, key, kvstore)
-		if err != nil {
-			return err
-		}
-	}
-	msgs := make([]NewOrderMsg, 0, len(kp.allOrders))
-	for _, value := range kp.allOrders {
-		msgs = append(msgs, value)
-	}
-	snapshot := ActiveOrders{Orders: msgs}
-	key := genActiveOrdersSnapshotKey(height)
-	return compressAndSave(snapshot, kp.cdc, key, kvstore)
-}
-
-func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
-	kvStore := ctx.KVStore(kp.storeKey)
-	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
-	if height == 0 {
-		//TODO: Log. this might be the first day online and no breathe block is saved.
-		return height, nil
-	}
-
-	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	for _, pair := range allPairs {
-		eng, ok := kp.engines[pair.GetSymbol()]
-		if !ok {
-			eng = kp.AddEngine(pair)
-		}
-
-		key := genOrderBookSnapshotKey(height, pair.GetSymbol())
-		bz := kvStore.Get([]byte(key))
-		if bz == nil {
-			// maybe that is a new listed pair
-			//TODO: logging
-			continue
-		}
-		b := bytes.NewBuffer(bz)
-		var bw bytes.Buffer
-		r, err := zlib.NewReader(b)
-		if err != nil {
-			continue
-		}
-		io.Copy(&bw, r)
-		var ob OrderBookSnapshot
-		err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ob)
-		if err != nil {
-			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", key))
-		}
-		for _, pl := range ob.Buys {
-			eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
-		}
-		for _, pl := range ob.Sells {
-			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
-		}
-	}
-	key := genActiveOrdersSnapshotKey(height)
-	bz := kvStore.Get([]byte(key))
-	if bz == nil {
-		//TODO: log
-		return height, nil
-	}
-	b := bytes.NewBuffer(bz)
-	var bw bytes.Buffer
-	r, err := zlib.NewReader(b)
-	if err != nil {
-		//TODO: log
-		return height, nil
-	}
-	io.Copy(&bw, r)
-	var ao ActiveOrders
-	err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ao)
-	if err != nil {
-		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
-	}
-	for _, m := range ao.Orders {
-		kp.allOrders[m.Id] = m
-	}
-	return height, nil
-}
-
-func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder, height int64) {
-	if block == nil {
-		//TODO: Log
-		return
-	}
-	for _, txBytes := range block.Txs {
-		tx, err := txDecoder(txBytes)
-		if err != nil {
-			panic(err)
-		}
-		msgs := tx.GetMsgs()
-		for _, m := range msgs {
-			switch msg := m.(type) {
-			case NewOrderMsg:
-				kp.AddOrder(msg, height)
-			case CancelOrderMsg:
-				ord, ok := kp.allOrders[msg.RefId]
-				if !ok {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
-				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price)
-				if err != nil {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
-				}
-			}
-		}
-	}
-	kp.MatchAll() //no need to check result
-}
-
-func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
-	txDecoder sdk.TxDecoder) error {
-	for i := breatheHeight + 1; i <= lastHeight; i++ {
-		block := bc.LoadBlock(i)
-		kp.replayOneBlocks(block, txDecoder, i)
-	}
-	return nil
-}
-
-func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	height, err := kp.LoadOrderBookSnapshot(ctx, daysBack)
-	if err != nil {
-		panic(err)
-	}
-
-	blockStore := bc.NewBlockStore(blockDB)
-	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// Key to knowing the trend on the streets!
-var makerFeeKey = []byte("MakerFee")
-var takerFeeKey = []byte("TakerFee")
-var feeFactorKey = []byte("FeeFactor")
-var maxFeeKey = []byte("MaxFee")
-var nativeTokenDiscountKey = []byte("NativeTokenDiscount")
-var volumeBucketDurationKey = []byte("VolumeBucketDuration")
-
-func itob(num int64) []byte {
-	buf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(buf, num)
-	b := buf[:n]
-	return b
-}
-
-func btoi(bytes []byte) int64 {
-	x, _ := binary.Varint(bytes)
-	return x
-}
-
-// GetFees - returns the current fees settings
-func (k Keeper) GetFees(ctx sdk.Context) (
-	makerFee int64, takerFee int64, feeFactor int64, maxFee int64, nativeTokenDiscount int64, volumeBucketDuration int64,
-) {
-	store := ctx.KVStore(k.storeKey)
-	makerFee = btoi(store.Get(makerFeeKey))
-	takerFee = btoi(store.Get(takerFeeKey))
-	feeFactor = btoi(store.Get(feeFactorKey))
-	maxFee = btoi(store.Get(maxFeeKey))
-	nativeTokenDiscount = btoi(store.Get(nativeTokenDiscountKey))
-	volumeBucketDuration = btoi(store.Get(volumeBucketDurationKey))
-	return makerFee, takerFee, feeFactor, maxFee, nativeTokenDiscount, volumeBucketDuration
-}
-
-func (k Keeper) setMakerFee(ctx sdk.Context, makerFee int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(makerFee)
-	store.Set(makerFeeKey, b)
-}
-
-func (k Keeper) setTakerFee(ctx sdk.Context, takerFee int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(takerFee)
-	store.Set(takerFeeKey, b)
-}
-
-func (k Keeper) setFeeFactor(ctx sdk.Context, feeFactor int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(feeFactor)
-	store.Set(feeFactorKey, b)
-}
-
-func (k Keeper) setMaxFee(ctx sdk.Context, maxFee int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(maxFee)
-	store.Set(maxFeeKey, b)
-}
-
-func (k Keeper) setNativeTokenDiscount(ctx sdk.Context, nativeTokenDiscount int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(nativeTokenDiscount)
-	store.Set(nativeTokenDiscountKey, b)
-}
-
-func (k Keeper) setVolumeBucketDuration(ctx sdk.Context, volumeBucketDuration int64) {
-	store := ctx.KVStore(k.storeKey)
-	b := itob(volumeBucketDuration)
-	store.Set(volumeBucketDurationKey, b)
-}
-
-// InitGenesis - store the genesis trend
-func (k Keeper) InitGenesis(ctx sdk.Context, data TradingGenesis) {
-	k.setMakerFee(ctx, data.MakerFee)
-	k.setTakerFee(ctx, data.TakerFee)
-	k.setFeeFactor(ctx, data.FeeFactor)
-	k.setMaxFee(ctx, data.MaxFee)
-	k.setNativeTokenDiscount(ctx, data.NativeTokenDiscount)
-	k.setVolumeBucketDuration(ctx, data.VolumeBucketDuration)
+func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
+	kp.feeConfig.InitGenesis(ctx, genesis)
 }

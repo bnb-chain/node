@@ -3,6 +3,7 @@ package tx_test
 import (
 	"testing"
 
+	"github.com/BiJie/BinanceChain/common/testutils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func TestFixedFeeCalculator(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
 
 	calculator := tx.FixedFeeCalculator(10, types.FeeFree)
@@ -31,7 +32,7 @@ func TestFixedFeeCalculator(t *testing.T) {
 }
 
 func TestFreeFeeCalculator(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
 
 	calculator := tx.FreeFeeCalculator()
@@ -41,7 +42,7 @@ func TestFreeFeeCalculator(t *testing.T) {
 }
 
 func TestRegisterAndGetCalculators(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
 
 	tx.RegisterCalculator(msg.Type(), tx.FixedFeeCalculator(10, types.FeeForProposer))
