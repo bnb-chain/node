@@ -139,6 +139,7 @@ func MakeCodec() *wire.Codec {
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
+	tx.RegisterWire(cdc)
 
 	return cdc
 }
