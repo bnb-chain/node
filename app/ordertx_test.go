@@ -119,7 +119,7 @@ func Test_Match(t *testing.T) {
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
 	testApp.DexKeeper.AddEngine(ethPair)
 
-	btcPair := types.NewTradingPair("btc", "BNB", 1e8)
+	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
 
