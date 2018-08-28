@@ -37,8 +37,8 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-func genOrderID(acc auth.Account, seq int64, ctx sdk.Context, am auth.AccountMapper) string {
-	add := acc.GetAddress()
+func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountMapper) string {
+	acc := am.GetAccount(ctx, add)
 	if acc.GetSequence() != seq {
 		err := acc.SetSequence(seq)
 		if err != nil {
@@ -61,7 +61,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	acc2 := Account(1)
 	add := acc.GetAddress()
 	add2 := acc2.GetAddress()
-	msg := o.NewNewOrderMsg(add, genOrderID(acc, 0, ctx, am), 1, "BTC_BNB", 355e8, 100e8)
+	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC_BNB", 355e8, 100e8)
 	res, e := testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -71,7 +71,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 
-	msg = o.NewNewOrderMsg(add, genOrderID(acc, 0, ctx, am), 1, "BTC_BNB", 355e8, 1e8)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC_BNB", 355e8, 1e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -82,7 +82,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 
 	// using acc2
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 0, ctx, am), 2, "BTC_BNB", 355e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC_BNB", 355e8, 250e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -92,7 +92,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add2, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC"))
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 0, ctx, am), 2, "BTC_BNB", 355e8, 200e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC_BNB", 355e8, 200e8)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -127,142 +127,141 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	assert.Equal(utils.Fixed8(1e8), buys[0].qty)
 }
 
-// func Test_Match(t *testing.T) {
-// 	assert := assert.New(t)
-// 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
-// 	ctx := testApp.NewContext(false, abci.Header{})
-// 	InitAccounts(ctx, testApp)
-// 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-// 	ethPair := types.NewTradingPair("ETH", "BNB", 1e8)
-// 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
-// 	testApp.DexKeeper.AddEngine(ethPair)
+func Test_Match(t *testing.T) {
+	assert := assert.New(t)
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
+	ctx := testApp.NewContext(false, abci.Header{})
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
+	ethPair := types.NewTradingPair("ETH", "BNB", 1e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
+	testApp.DexKeeper.AddEngine(ethPair)
+	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
 
-// 	btcPair := types.NewTradingPair("btc", "BNB", 1e8)
-// 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
-// 	testApp.DexKeeper.AddEngine(btcPair)
+	// setup accounts
+	am := testApp.AccountMapper
+	acc := Account(0)
+	acc2 := Account(1)
+	acc3 := Account(2)
+	add := acc.GetAddress()
+	add2 := acc2.GetAddress()
+	add3 := acc3.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
-// 	// setup accounts
-// 	am := testApp.AccountMapper
-// 	acc := Account(0)
-// 	acc2 := Account(1)
-// 	acc3 := Account(2)
-// 	add := acc.GetAddress()
-// 	add2 := acc2.GetAddress()
-// 	add3 := acc3.GetAddress()
-// 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+	/*	--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		1500           102      300    300    300          -1200
+		1500           101             300    300          -1200
+		1500           100      100    400    400          -1100
+		1500           99       200    600    600          -900
+		1500   250     98       300    900    900          -600
+		1250   250     97              900    900          -350
+		1000   1000    96              900    900          -100*
+	*/
+	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC_BNB", 102e8, 300e8)
+	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 1, ctx, am), 1, "BTC_BNB", 100e8, 100e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC_BNB", 96e8, 1000e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 1, ctx, am), 2, "BTC_BNB", 97e8, 250e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 2, ctx, am), 2, "BTC_BNB", 98e8, 250e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 2, ctx, am), 1, "BTC_BNB", 99e8, 200e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Logf("res is %v and error is %v", res, e)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 3, ctx, am), 1, "BTC_BNB", 98e8, 300e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	buys, sells := getOrderBook("BTC_BNB")
+	assert.Equal(4, len(buys))
+	assert.Equal(3, len(sells))
+	code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
+	t.Logf("res is %v and error is %v", code, e)
+	buys, sells = getOrderBook("BTC_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(3, len(sells))
 
-// 	/*	--------------------------------------------------------------
-// 		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
-// 		1500           102      300    300    300          -1200
-// 		1500           101             300    300          -1200
-// 		1500           100      100    400    400          -1100
-// 		1500           99       200    600    600          -900
-// 		1500   250     98       300    900    900          -600
-// 		1250   250     97              900    900          -350
-// 		1000   1000    96              900    900          -100*
-// 	*/
-// 	msg := o.NewNewOrderMsg(add, genOrderID(acc, 0, ctx, am), 1, "BTC_BNB", 102e8, 300e8)
-// 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add, genOrderID(acc, 1, ctx, am), 1, "BTC_BNB", 100e8, 100e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 0, ctx, am), 2, "BTC_BNB", 96e8, 1000e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 1, ctx, am), 2, "BTC_BNB", 97e8, 250e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 2, ctx, am), 2, "BTC_BNB", 98e8, 250e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add, genOrderID(acc, 2, ctx, am), 1, "BTC_BNB", 99e8, 200e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	t.Logf("res is %v and error is %v", res, e)
-// 	msg = o.NewNewOrderMsg(add, genOrderID(acc, 3, ctx, am), 1, "BTC_BNB", 98e8, 300e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	buys, sells := getOrderBook("BTC_BNB")
-// 	assert.Equal(4, len(buys))
-// 	assert.Equal(3, len(sells))
-// 	code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
-// 	t.Logf("res is %v and error is %v", code, e)
-// 	buys, sells = getOrderBook("BTC_BNB")
-// 	assert.Equal(0, len(buys))
-// 	assert.Equal(3, len(sells))
+	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
+	assert.Equal(int64(96e8), lastPx)
+	assert.Equal(4, len(trades))
+	//total execution is 900e8 BTC @ price 96e8, notional is 86400e8
+	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
+	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
+	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
+	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
+	assert.Equal(int64(186400e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
+	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 
-// 	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
-// 	assert.Equal(int64(96e8), lastPx)
-// 	assert.Equal(4, len(trades))
-// 	//total execution is 900e8 BTC @ price 96e8, notional is 86400e8
-// 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
-// 	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
-// 	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
-// 	assert.Equal(int64(186400e8), GetAvail(ctx, add2, "BNB"))
-// 	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
+	// test ETH_BNB pair
+	/*	--------------------------------------------------------------
+		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
+		110            102      30     30     30           -80
+		110            101      10     40     40           -70
+		110            100             40     40           -70
+		110            99       50     90     90           -20
+		110    10      98              90     90           -20
+		100    50      97              90     90           -10*
+		50             96       15     105    50           55
+		50     50      95              105    50           55
+	*/
 
-// 	// test ETH_BNB pair
-// 	/*	--------------------------------------------------------------
-// 		SUM    SELL    PRICE    BUY    SUM    EXECUTION    IMBALANCE
-// 		110            102      30     30     30           -80
-// 		110            101      10     40     40           -70
-// 		110            100             40     40           -70
-// 		110            99       50     90     90           -20
-// 		110    10      98              90     90           -20
-// 		100    50      97              90     90           -10*
-// 		50             96       15     105    50           55
-// 		50     50      95              105    50           55
-// 	*/
-
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 3, ctx, am), 1, "ETH_BNB", 102e8, 30e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 4, ctx, am), 1, "ETH_BNB", 101e8, 10e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add3, genOrderID(acc3, 0, ctx, am), 2, "ETH_BNB", 95e8, 50e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add3, genOrderID(acc3, 1, ctx, am), 2, "ETH_BNB", 98e8, 10e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add3, genOrderID(acc3, 2, ctx, am), 2, "ETH_BNB", 97e8, 50e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 5, ctx, am), 1, "ETH_BNB", 96e8, 15e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	msg = o.NewNewOrderMsg(add2, genOrderID(acc2, 6, ctx, am), 1, "ETH_BNB", 99e8, 50e8)
-// 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-// 	t.Logf("res is %v and error is %v", res, e)
-// 	buys, sells = getOrderBook("BTC_BNB")
-// 	assert.Equal(0, len(buys))
-// 	assert.Equal(3, len(sells))
-// 	buys, sells = getOrderBook("ETH_BNB")
-// 	assert.Equal(4, len(buys))
-// 	assert.Equal(3, len(sells))
-// 	code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
-// 	t.Logf("res is %v and error is %v", code, e)
-// 	buys, sells = getOrderBook("ETH_BNB")
-// 	assert.Equal(1, len(buys))
-// 	assert.Equal(2, len(sells))
-// 	buys, sells = getOrderBook("BTC_BNB")
-// 	assert.Equal(0, len(buys))
-// 	assert.Equal(3, len(sells))
-// 	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
-// 	assert.Equal(int64(97e8), lastPx)
-// 	assert.Equal(4, len(trades))
-// 	//total execution is 90e8 ETH @ price 97e8, notional is 8730e8
-// 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
-// 	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
-// 	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
-// 	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
-// 	//for buy, still locked = 15*96=1440, spent 8730
-// 	// so reserve 1440+8730 = 10170
-// 	assert.Equal(int64(176230e8), GetAvail(ctx, add2, "BNB"))
-// 	assert.Equal(int64(1440e8), GetLocked(ctx, add2, "BNB"))
-// 	assert.Equal(int64(100090e8), GetAvail(ctx, add2, "ETH"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add2, "ETH"))
-// 	assert.Equal(int64(100000e8), GetAvail(ctx, add3, "BTC"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC"))
-// 	assert.Equal(int64(108730e8), GetAvail(ctx, add3, "BNB"))
-// 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
-// 	assert.Equal(int64(99890e8), GetAvail(ctx, add3, "ETH"))
-// 	assert.Equal(int64(20e8), GetLocked(ctx, add3, "ETH"))
-// }
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 3, ctx, am), 1, "ETH_BNB", 102e8, 30e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 4, ctx, am), 1, "ETH_BNB", 101e8, 10e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "ETH_BNB", 95e8, 50e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 1, ctx, am), 2, "ETH_BNB", 98e8, 10e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 2, ctx, am), 2, "ETH_BNB", 97e8, 50e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 5, ctx, am), 1, "ETH_BNB", 96e8, 15e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 6, ctx, am), 1, "ETH_BNB", 99e8, 50e8)
+	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Logf("res is %v and error is %v", res, e)
+	buys, sells = getOrderBook("BTC_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(3, len(sells))
+	buys, sells = getOrderBook("ETH_BNB")
+	assert.Equal(4, len(buys))
+	assert.Equal(3, len(sells))
+	code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper)
+	t.Logf("res is %v and error is %v", code, e)
+	buys, sells = getOrderBook("ETH_BNB")
+	assert.Equal(1, len(buys))
+	assert.Equal(2, len(sells))
+	buys, sells = getOrderBook("BTC_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(3, len(sells))
+	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
+	assert.Equal(int64(97e8), lastPx)
+	assert.Equal(4, len(trades))
+	//total execution is 90e8 ETH @ price 97e8, notional is 8730e8
+	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
+	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
+	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
+	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
+	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
+	//for buy, still locked = 15*96=1440, spent 8730
+	// so reserve 1440+8730 = 10170
+	assert.Equal(int64(176230e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(1440e8), GetLocked(ctx, add2, "BNB"))
+	assert.Equal(int64(100090e8), GetAvail(ctx, add2, "ETH"))
+	assert.Equal(int64(0), GetLocked(ctx, add2, "ETH"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add3, "BTC"))
+	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC"))
+	assert.Equal(int64(108730e8), GetAvail(ctx, add3, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
+	assert.Equal(int64(99890e8), GetAvail(ctx, add3, "ETH"))
+	assert.Equal(int64(20e8), GetLocked(ctx, add3, "ETH"))
+}
 
 func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert := assert.New(t)
