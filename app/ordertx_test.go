@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
-	"github.com/BiJie/BinanceChain/common/utils"
-
 	"github.com/stretchr/testify/assert"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/BiJie/BinanceChain/common/utils"
 	o "github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
@@ -139,6 +137,8 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
+	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
 
 	// setup accounts
 	am := testApp.AccountMapper
@@ -187,13 +187,13 @@ func Test_Match(t *testing.T) {
 	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
-	//total execution is 900e8 BTC @ price 96e8, notional is 86400e8
+	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 432e7 BNB
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
-	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
-	assert.Equal(int64(186400e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(186356.8e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 
@@ -242,22 +242,23 @@ func Test_Match(t *testing.T) {
 	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
 	assert.Equal(int64(97e8), lastPx)
 	assert.Equal(4, len(trades))
-	//total execution is 90e8 ETH @ price 97e8, notional is 8730e8
+	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8, fee is
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
-	assert.Equal(int64(13600e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(98500e8), GetAvail(ctx, add2, "BTC"))
 	assert.Equal(int64(600e8), GetLocked(ctx, add2, "BTC"))
-	//for buy, still locked = 15*96=1440, spent 8730
+	// for buy, still locked = 15*96=1440, spent 8730
 	// so reserve 1440+8730 = 10170
-	assert.Equal(int64(176230e8), GetAvail(ctx, add2, "BNB"))
+	// fee is 4.365e8 BNB
+	assert.Equal(int64(176182.435e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(1440e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(100090e8), GetAvail(ctx, add2, "ETH"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "ETH"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add3, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC"))
-	assert.Equal(int64(108730e8), GetAvail(ctx, add3, "BNB"))
+	assert.Equal(int64(108725.635e8), GetAvail(ctx, add3, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 	assert.Equal(int64(99890e8), GetAvail(ctx, add3, "ETH"))
 	assert.Equal(int64(20e8), GetLocked(ctx, add3, "ETH"))

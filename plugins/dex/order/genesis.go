@@ -8,8 +8,8 @@ type TradingGenesis struct {
 }
 
 var DefaultTradingGenesis = TradingGenesis{
-	ExpireFee: 100,
-	IocExpireFee: 50,
+	ExpireFee:              100,
+	IocExpireFee:           50,
 	FeeRateWithNativeToken: 500,
-	FeeRate: 1000,
+	FeeRate:                1000,
 }

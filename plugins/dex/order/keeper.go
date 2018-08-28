@@ -35,7 +35,7 @@ type Keeper struct {
 	roundFees      map[string]sdk.Coins
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
 	cdc            *wire.Codec
-	feeConfig      FeeConfig
+	FeeConfig      FeeConfig
 }
 
 type transferEventType int64
@@ -82,7 +82,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		roundIOCOrders: make(map[string][]string, 256),
 		poolSize:       concurrency,
 		cdc:            cdc,
-		feeConfig:      NewFeeConfig(key),
+		FeeConfig:      NewFeeConfig(key),
 	}
 }
 
@@ -281,12 +281,15 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran Transfer) sdk.Error {
 	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	account.SetLockedCoins(
-		account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}}))
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}})
+	if !newLocked.IsNotNegative() {
+		return sdk.ErrInternal("No enough locked tokens to unlock")
+	}
+	account.SetLockedCoins(newLocked)
 
-	account.SetCoins(account.GetCoins().Plus(
-		sdk.Coins{sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)},
-			sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}}))
+	account.SetCoins(account.GetCoins().Plus(sdk.Coins{
+		sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)},
+		sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}}.Sort()))
 
 	if !tran.feeFree() {
 		if tran.eventType == eventFilled {
@@ -306,18 +309,18 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inCcy == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.feeConfig.feeRateWithNativeToken))
+		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.FeeConfig.feeRateWithNativeToken))
 	} else {
 		symbol := utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)
 		// price against native token
 		price := kp.engines[symbol].LastTradePrice
-		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.feeConfig.feeRateWithNativeToken)
+		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.FeeConfig.feeRateWithNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.feeConfig.feeRate))
+			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.FeeConfig.feeRate))
 		}
 	}
 
@@ -405,5 +408,5 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, 
 }
 
 func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
-	kp.feeConfig.InitGenesis(ctx, genesis)
+	kp.FeeConfig.InitGenesis(ctx, genesis)
 }
