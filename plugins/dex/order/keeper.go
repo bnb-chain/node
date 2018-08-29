@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common/tx"
-
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
