@@ -39,14 +39,14 @@ type Keeper struct {
 	FeeConfig      FeeConfig
 }
 
-type transferEventType int64
+type transferEventType uint8
 
 const (
-	eventFilled = iota
+	eventFilled transferEventType = iota
 	eventFullyExpire
 	eventPartiallyExpire
-	eventIocFullyExpire
-	eventIocPartiallyExpire
+	eventIOCFullyExpire
+	eventIOCPartiallyExpire
 )
 
 // Transfer represents a transfer between trade currencies
@@ -64,7 +64,7 @@ type Transfer struct {
 }
 
 func (tran Transfer) feeFree() bool {
-	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIocPartiallyExpire
+	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
 }
 
 func CreateMatchEng(lotSize int64) *me.MatchEng {
@@ -203,10 +203,10 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 				var tranEventType transferEventType
 				if ord.CumQty == 0 {
 					// IOC no fill
-					tranEventType = eventIocFullyExpire
+					tranEventType = eventIOCFullyExpire
 				} else {
 					// IOC partially filled
-					tranEventType = eventIocPartiallyExpire
+					tranEventType = eventIOCPartiallyExpire
 				}
 				tradeOuts[c] <- Transfer{
 					eventType:  tranEventType,
@@ -322,7 +322,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 			account.SetCoins(account.GetCoins().Minus(fee.Tokens))
 		} else if tran.eventType == eventFullyExpire {
 			//
-		} else if tran.eventType == eventIocFullyExpire {
+		} else if tran.eventType == eventIOCFullyExpire {
 			//
 		}
 

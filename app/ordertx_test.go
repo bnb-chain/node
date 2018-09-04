@@ -2,13 +2,11 @@ package app
 
 import (
 	"fmt"
-	_ "net/http/pprof"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/BiJie/BinanceChain/common/tx"
