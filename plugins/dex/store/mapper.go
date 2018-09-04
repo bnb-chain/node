@@ -44,7 +44,7 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 		return errors.New("QuoteAsset cannot be empty")
 	}
 
-	key := []byte(utils.Ccy2TradeSymbol(baseAsset, quoteAsset))
+	key := []byte(utils.Asset2TradingPair(baseAsset, quoteAsset))
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
@@ -54,13 +54,13 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 func (m mapper) Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
-	symbol := utils.Ccy2TradeSymbol(baseAsset, quoteAsset)
+	symbol := utils.Asset2TradingPair(baseAsset, quoteAsset)
 	return store.Has([]byte(symbol))
 }
 
 func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
-	symbol := utils.Ccy2TradeSymbol(baseAsset, quoteAsset)
+	symbol := utils.Asset2TradingPair(baseAsset, quoteAsset)
 	bz := store.Get([]byte(symbol))
 
 	if bz == nil {
