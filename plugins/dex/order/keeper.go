@@ -156,14 +156,14 @@ func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
 	return ord, ok
 }
 
-func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (Transfer, Transfer) {
+func (kp *Keeper) tradeToTransfers(trade me.Trade, baseCcy, quoteCcy string) (Transfer, Transfer) {
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
-	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty, types.Fee{}},
-		Transfer{trade.BId, trade.SId, eventFilled, buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock, types.Fee{}}
+	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteCcy, quoteQty, baseCcy, trade.LastQty, trade.LastQty, types.Fee{}},
+		Transfer{trade.BId, trade.SId, eventFilled, buyer, baseCcy, trade.LastQty, quoteCcy, quoteQty, unlock, types.Fee{}}
 }
 
 //TODO: should get an even hash

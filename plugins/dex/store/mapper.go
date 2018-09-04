@@ -13,8 +13,8 @@ import (
 
 type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
-	Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool
-	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
+	Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool
+	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64)
 }
@@ -34,9 +34,9 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 }
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
-	tradeAsset := pair.TradeAsset
-	if len(tradeAsset) == 0 {
-		return errors.New("TradeAsset cannot be empty")
+	baseAsset := pair.BaseAsset
+	if len(baseAsset) == 0 {
+		return errors.New("BaseAsset cannot be empty")
 	}
 
 	quoteAsset := pair.QuoteAsset
@@ -44,23 +44,23 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 		return errors.New("QuoteAsset cannot be empty")
 	}
 
-	key := []byte(utils.Ccy2TradeSymbol(tradeAsset, quoteAsset))
+	key := []byte(utils.Ccy2TradeSymbol(baseAsset, quoteAsset))
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
 	return nil
 }
 
-func (m mapper) Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool {
+func (m mapper) Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
-	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
+	symbol := utils.Ccy2TradeSymbol(baseAsset, quoteAsset)
 	return store.Has([]byte(symbol))
 }
 
-func (m mapper) GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error) {
+func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
-	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
+	symbol := utils.Ccy2TradeSymbol(baseAsset, quoteAsset)
 	bz := store.Get([]byte(symbol))
 
 	if bz == nil {
