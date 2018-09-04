@@ -12,6 +12,7 @@ import (
 
 const (
 	feeRateDecimals int64 = 6
+	nilFeeValue     int64 = -1
 )
 
 var expireFeeKey = []byte("ExpireFee")
@@ -19,7 +20,7 @@ var iocExpireFeeKey = []byte("IOCExpireFee")
 var feeRateWithNativeTokenKey = []byte("FeeRateWithNativeToken")
 var feeRateKey = []byte("FeeRate")
 
-const nilFeeValue = -1
+var FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
 
 type FeeConfig struct {
 	cdc                    *wire.Codec
@@ -145,5 +146,5 @@ func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 
 func calcFee(amount int64, feeRate int64) int64 {
 	var fee big.Int
-	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))).Int64()
+	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
 }

@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -337,10 +338,16 @@ func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran 
 	if tran.inCcy == types.NativeToken {
 		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.FeeConfig.FeeRateWithNativeToken(ctx)))
 	} else {
-		symbol := utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)
 		// price against native token
-		price := kp.engines[symbol].LastTradePrice
-		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.FeeConfig.FeeRateWithNativeToken(ctx))
+		var amountOfNativeToken int64
+		if engine, ok := kp.engines[utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)]; ok {
+			amountOfNativeToken = utils.CalBigNotional(engine.LastTradePrice, tran.in)
+		} else {
+			price := kp.engines[utils.Ccy2TradeSymbol(types.NativeToken, tran.inCcy)].LastTradePrice
+			var amount big.Int
+			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(1e8)), big.NewInt(price)).Int64()
+		}
+		feeByNativeToken := calcFee(amountOfNativeToken, kp.FeeConfig.FeeRateWithNativeToken(ctx))
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
