@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	_ "net/http/pprof"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

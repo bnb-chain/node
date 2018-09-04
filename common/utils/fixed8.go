@@ -15,6 +15,7 @@ const (
 
 // Fixed8Decimals represents 10^precision (100000000), a value of 1 in Fixed8 format
 var Fixed8Decimals = int(math.Pow10(precision))
+var Fixed8One = NewFixed8(1)
 
 var errInvalidString = errors.New("Fixed8 must satisfy following regex \\d+(\\.\\d{1,8})?")
 

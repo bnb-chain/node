@@ -86,7 +86,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		roundIOCOrders: make(map[string][]string, 256),
 		poolSize:       concurrency,
 		cdc:            cdc,
-		FeeConfig:      NewFeeConfig(key),
+		FeeConfig:      NewFeeConfig(cdc, key),
 	}
 }
 
@@ -162,9 +162,69 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return int(accAddress[0]+accAddress[1]) % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade bool) []chan Transfer {
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTrade bool, tradeOuts []chan Transfer) {
+	engine := kp.engines[symbol]
+	concurrency := len(tradeOuts)
+	if engine.Match() {
+		if distributeTrade {
+			tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(symbol)
+			for _, t := range engine.Trades {
+				t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
+				// TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
+				c := channelHash(t1.accAddress, concurrency)
+				tradeOuts[c] <- t1
+				c = channelHash(t2.accAddress, concurrency)
+				tradeOuts[c] <- t2
+
+			}
+		}
+		engine.DropFilledOrder()
+	} // TODO: when Match() failed, have to unsolicited cancel all the orders
+	// when multiple unsolicited cancel happened, the validator would stop running
+	// and ask for help
+	iocIDs := kp.roundIOCOrders[symbol]
+	for _, id := range iocIDs {
+		if msg, ok := kp.allOrders[id]; ok {
+			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
+				if !distributeTrade {
+					continue
+				}
+				//here is a trick to use the same currency as in and out ccy to simulate cancel
+				qty := ord.LeavesQty()
+				c := channelHash(msg.Sender, concurrency)
+				tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+				var unlock int64
+				if msg.Side == Side.BUY {
+					unlock = utils.CalBigNotional(msg.Price, msg.Quantity) - utils.CalBigNotional(msg.Price, msg.Quantity-qty)
+				} else {
+					unlock = qty
+				}
+
+				var tranEventType transferEventType
+				if ord.CumQty == 0 {
+					// IOC no fill
+					tranEventType = eventIocFullyExpire
+				} else {
+					// IOC partially filled
+					tranEventType = eventIocPartiallyExpire
+				}
+				tradeOuts[c] <- Transfer{
+					eventType:  tranEventType,
+					accAddress: msg.Sender,
+					inCcy:      tradeCcy,
+					in:         qty,
+					outCcy:     tradeCcy,
+					out:        qty,
+					unlock:     unlock,
+				}
+			}
+		}
+	}
+}
+
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer {
 	size := len(kp.roundOrders)
-	//size is the number of pairs that have new orders, i.e. it should call match()
+	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
 		return nil
 	}
@@ -173,90 +233,41 @@ func (kp *Keeper) matchAndDistributeTrades(wg *sync.WaitGroup, distributeTrade b
 	if size%concurrency != 0 {
 		channelSize += 1
 	}
-	outs := make([][]string, concurrency)
-	for i, _ := range outs {
-		outs[i] = make([]string, channelSize)
-	}
-	index := 0
-	for k := range kp.roundOrders {
-		outs[index/channelSize][index%channelSize] = k
-		index++
-	}
+
 	tradeOuts := make([]chan Transfer, concurrency)
-	if distributeTrade {
-		for i, _ := range tradeOuts {
-			//TODO: channelSize is enough for buffer to facilitate ?
-			tradeOuts[i] = make(chan Transfer, channelSize)
+	for i := range tradeOuts {
+		// TODO: channelSize is enough for buffer to facilitate ?
+		if distributeTrade {
+			channelSize = 0
+		}
+		tradeOuts[i] = make(chan Transfer, channelSize*2)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+	symbolCh := make(chan string, concurrency)
+	matchWorker := func() {
+		defer wg.Done()
+		for symbol := range symbolCh {
+			kp.matchAndDistributeTradesForSymbol(symbol, distributeTrade, tradeOuts)
 		}
 	}
-	wg.Add(concurrency)
-	for i := 0; i < concurrency; i++ {
-		channel := outs[i]
-		go func() {
-			for _, ts := range channel {
-				if ts == "" {
-					break
-				}
-				engine := kp.engines[ts]
-				if engine.Match() {
-					if distributeTrade {
-						tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(ts)
-						for _, t := range engine.Trades {
-							t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
-							//TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
-							c := channelHash(t1.accAddress, concurrency)
-							tradeOuts[c] <- t1
-							c = channelHash(t2.accAddress, concurrency)
-							tradeOuts[c] <- t2
-						}
-					}
-					engine.DropFilledOrder()
-				} // TODO: when Match() failed, have to unsolicited cancel all the orders
-				// when multiple unsolicited cancel happened, the validator would stop running
-				// and ask for help
-				iocIDs := kp.roundIOCOrders[ts]
-				for _, id := range iocIDs {
-					if msg, ok := kp.allOrders[id]; ok {
-						if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
-							if !distributeTrade {
-								continue
-							}
-							//here is a trick to use the same currency as in and out ccy to simulate cancel
-							qty := ord.LeavesQty()
-							c := channelHash(msg.Sender, concurrency)
-							tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
-							var unlock int64
-							if msg.Side == Side.BUY {
-								unlock = utils.CalBigNotional(msg.Price, msg.Quantity) - utils.CalBigNotional(msg.Price, msg.Quantity-qty)
-							} else {
-								unlock = qty
-							}
 
-							var tranEventType transferEventType
-							if ord.CumQty == 0 {
-								// IOC no fill
-								tranEventType = eventIocFullyExpire
-							} else {
-								// IOC partially filled
-								tranEventType = eventIocPartiallyExpire
-							}
-							tradeOuts[c] <- Transfer{
-								eventType:  tranEventType,
-								accAddress: msg.Sender,
-								inCcy:      tradeCcy,
-								in:         qty,
-								outCcy:     tradeCcy,
-								out:        qty,
-								unlock:     unlock,
-							}
-						}
-					}
-				}
-			}
-			wg.Done()
-		}()
+	for i := 0; i < concurrency; i++ {
+		go matchWorker()
 	}
 
+	go func() {
+		wg.Wait()
+		for _, tradeOut := range tradeOuts {
+			close(tradeOut)
+		}
+	}()
+
+	for symbol := range kp.roundOrders {
+		symbolCh <- symbol
+	}
+	close(symbolCh)
 	return tradeOuts
 }
 
@@ -324,18 +335,18 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inCcy == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.FeeConfig.feeRateWithNativeToken))
+		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.FeeConfig.FeeRateWithNativeToken(ctx)))
 	} else {
 		symbol := utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)
 		// price against native token
 		price := kp.engines[symbol].LastTradePrice
-		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.FeeConfig.feeRateWithNativeToken)
+		feeByNativeToken := calcFee(utils.CalBigNotional(price, tran.in), kp.FeeConfig.FeeRateWithNativeToken(ctx))
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.FeeConfig.feeRate))
+			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.FeeConfig.FeeRate(ctx)))
 		}
 	}
 
@@ -348,15 +359,29 @@ func (kp *Keeper) clearAfterMatch() (err error) {
 	return nil
 }
 
+func postMatch(wg *sync.WaitGroup, tradeOuts []chan Transfer, postHandler func(tran Transfer)) {
+	for _, tranCh := range tradeOuts {
+		go func(tranCh chan Transfer) {
+			defer wg.Done()
+			for tran := range tranCh {
+				postHandler(tran)
+			}
+		}(tranCh)
+	}
+}
+
 // MatchAll will only concurrently match but do not allocate into accounts
 func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
-	var wgOrd sync.WaitGroup
-	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, false) //only match
+	tradeOuts := kp.matchAndDistributeTrades(false) //only match
 	if tradeOuts == nil {
-		//TODO: logging
+		// TODO: logging
 		return sdk.CodeOK, nil
 	}
-	wgOrd.Wait()
+
+	var wg sync.WaitGroup
+	wg.Add(len(tradeOuts))
+	postMatch(&wg, tradeOuts, func(tran Transfer) {})
+	wg.Wait()
 	return sdk.CodeOK, nil
 }
 
@@ -364,46 +389,33 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 // all the symbols' order books, among all the clients
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
-	allocate := func(ctx sdk.Context, accountMapper auth.AccountMapper, transChan <-chan Transfer, settled chan<- Transfer) {
-		defer wg.Done()
-		for tran := range transChan {
-			kp.doTransfer(ctx, accountMapper, &tran)
-			settled <- tran
-		}
-	}
-	var wgOrd sync.WaitGroup
-	tradeOuts := kp.matchAndDistributeTrades(&wgOrd, true)
+	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
-		//TODO: logging
+		// TODO: logging
 		return ctx, sdk.CodeOK, nil
 	}
 
 	wg.Add(len(tradeOuts))
-	settledChan := make(chan Transfer, len(tradeOuts)*2)
-	for _, tran := range tradeOuts {
-		go allocate(ctx, accountMapper, tran, settledChan)
+	settledCh := make(chan Transfer, len(tradeOuts)*2)
+	allocate := func(tran Transfer) {
+		kp.doTransfer(ctx, accountMapper, &tran)
+		settledCh <- tran
 	}
+	postMatch(&wg, tradeOuts, allocate)
 
-	settleDone := make(chan struct{})
 	go func() {
-		defer close(settleDone)
-		settledList := make([]Transfer, 0)
-		totalFee := tx.Fee(ctx)
-		for settled := range settledChan {
-			settledList = append(settledList, settled)
-			totalFee.AddFee(settled.fee)
-		}
-		// WithSettlement should only be called once in each block.
-		newCtx = WithSettlement(tx.WithFee(ctx, totalFee), settledList)
+		wg.Wait()
+		close(settledCh)
 	}()
 
-	wgOrd.Wait()
-	for _, t := range tradeOuts {
-		close(t)
+	settledList := make([]Transfer, 0)
+	totalFee := tx.Fee(ctx)
+	for settled := range settledCh {
+		settledList = append(settledList, settled)
+		totalFee.AddFee(settled.fee)
 	}
-	wg.Wait()
-	close(settledChan)
-	<-settleDone
+	// WithSettlement should only be called once in each block.
+	newCtx = WithSettlement(tx.WithFee(ctx, totalFee), settledList)
 	return newCtx, sdk.CodeOK, nil
 }
 
