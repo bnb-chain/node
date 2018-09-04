@@ -6,18 +6,18 @@ import (
 )
 
 type TradingPair struct {
-	TradeAsset string        `json:"trade_asset"`
+	BaseAsset  string        `json:"base_asset"`
 	QuoteAsset string        `json:"quote_asset"`
 	Price      ctuils.Fixed8 `json:"price"`
 	TickSize   ctuils.Fixed8 `json:"tick_size"`
 	LotSize    ctuils.Fixed8 `json:"lot_size"`
 }
 
-func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
+func NewTradingPair(baseAsset, quoteAsset string, price int64) TradingPair {
 	tickSize, lotSize := utils.CalcTickSizeAndLotSize(price)
 
 	return TradingPair{
-		TradeAsset: tradeAsset,
+		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		Price:      ctuils.Fixed8(price),
 		TickSize:   ctuils.Fixed8(tickSize),
@@ -26,5 +26,5 @@ func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
 }
 
 func (pair *TradingPair) GetSymbol() string {
-	return ctuils.Ccy2TradeSymbol(pair.TradeAsset, pair.QuoteAsset)
+	return ctuils.Ccy2TradeSymbol(pair.BaseAsset, pair.QuoteAsset)
 }

@@ -35,22 +35,22 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey) {
 func TestMapper_GetAddTradingPair(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	tradeAsset := "XYZ"
+	baseAsset := "XYZ"
 	quoteAsset := "BNB"
-	pair, err := pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
+	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	require.Empty(t, pair)
 	require.Error(t, err)
 
-	pair = types.NewTradingPair(tradeAsset, quoteAsset, 1e8)
+	pair = types.NewTradingPair(baseAsset, quoteAsset, 1e8)
 	pair.TickSize = 1
 	pair.LotSize = 1e8
 	err = pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
-	pair, err = pairMapper.GetTradingPair(ctx, tradeAsset, quoteAsset)
+	pair, err = pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	require.NoError(t, err)
 	require.NotEmpty(t, pair)
-	require.Equal(t, tradeAsset, pair.TradeAsset)
+	require.Equal(t, baseAsset, pair.BaseAsset)
 	require.Equal(t, quoteAsset, pair.QuoteAsset)
 	require.Equal(t, utils.Fixed8(1e8), pair.Price)
 	require.Equal(t, utils.Fixed8(1), pair.TickSize)
@@ -60,13 +60,13 @@ func TestMapper_GetAddTradingPair(t *testing.T) {
 func TestMapper_Exists(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	tradeAsset := "XYZ"
+	baseAsset := "XYZ"
 	quoteAsset := "BNB"
-	exists := pairMapper.Exists(ctx, tradeAsset, quoteAsset)
+	exists := pairMapper.Exists(ctx, baseAsset, quoteAsset)
 	require.False(t, exists)
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair(tradeAsset, quoteAsset, 1e8))
+	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair(baseAsset, quoteAsset, 1e8))
 	require.NoError(t, err)
-	exists = pairMapper.Exists(ctx, tradeAsset, quoteAsset)
+	exists = pairMapper.Exists(ctx, baseAsset, quoteAsset)
 	require.True(t, exists)
 }
 
@@ -81,7 +81,7 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 
 	pairs := pairMapper.ListAllTradingPairs(ctx)
 	require.Len(t, pairs, 3)
-	require.Equal(t, "AAA", pairs[0].TradeAsset)
-	require.Equal(t, "BBB", pairs[1].TradeAsset)
-	require.Equal(t, "CCC", pairs[2].TradeAsset)
+	require.Equal(t, "AAA", pairs[0].BaseAsset)
+	require.Equal(t, "BBB", pairs[1].BaseAsset)
+	require.Equal(t, "CCC", pairs[2].BaseAsset)
 }
