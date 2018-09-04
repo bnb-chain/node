@@ -21,6 +21,7 @@ func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
 			continue
 		}
 
-		dexKeeper.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
+		_, lotSize := dexKeeper.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
+		dexKeeper.UpdateLotSize(pair.GetSymbol(), lotSize)
 	}
 }

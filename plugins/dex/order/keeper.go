@@ -101,6 +101,14 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	return eng
 }
 
+func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
+	eng, ok := kp.engines[symbol]
+	if !ok {
+		panic(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
+	}
+	eng.LotSize = lotSize
+}
+
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	//try update order book first
 	symbol := msg.Symbol
