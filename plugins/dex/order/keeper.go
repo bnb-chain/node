@@ -56,9 +56,9 @@ type Transfer struct {
 	sid        string
 	eventType  transferEventType
 	accAddress sdk.AccAddress
-	inCcy      string
+	inAsset    string
 	in         int64
-	outCcy     string
+	outAsset   string
 	out        int64
 	unlock     int64
 	fee        types.Fee
@@ -156,14 +156,14 @@ func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
 	return ord, ok
 }
 
-func (kp *Keeper) tradeToTransfers(trade me.Trade, tradeCcy, quoteCcy string) (Transfer, Transfer) {
+func (kp *Keeper) tradeToTransfers(trade me.Trade, baseAsset, quoteAsset string) (Transfer, Transfer) {
 	seller := kp.allOrders[trade.SId].Sender
 	buyer := kp.allOrders[trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
-	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteCcy, quoteQty, tradeCcy, trade.LastQty, trade.LastQty, types.Fee{}},
-		Transfer{trade.BId, trade.SId, eventFilled, buyer, tradeCcy, trade.LastQty, quoteCcy, quoteQty, unlock, types.Fee{}}
+	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}},
+		Transfer{trade.BId, trade.SId, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}}
 }
 
 //TODO: should get an even hash
@@ -176,7 +176,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 	concurrency := len(tradeOuts)
 	if engine.Match() {
 		if distributeTrade {
-			tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(symbol)
+			tradeCcy, quoteCcy, _ := utils.TradingPair2Assets(symbol)
 			for _, t := range engine.Trades {
 				t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
 				// TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
@@ -201,7 +201,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 				//here is a trick to use the same currency as in and out ccy to simulate cancel
 				qty := ord.LeavesQty()
 				c := channelHash(msg.Sender, concurrency)
-				tradeCcy, _, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+				tradeCcy, _, _ := utils.TradingPair2Assets(msg.Symbol)
 				var unlock int64
 				if msg.Side == Side.BUY {
 					unlock = utils.CalBigNotional(msg.Price, msg.Quantity) - utils.CalBigNotional(msg.Price, msg.Quantity-qty)
@@ -220,9 +220,9 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 				tradeOuts[c] <- Transfer{
 					eventType:  tranEventType,
 					accAddress: msg.Sender,
-					inCcy:      tradeCcy,
+					inAsset:    tradeCcy,
 					in:         qty,
-					outCcy:     tradeCcy,
+					outAsset:   tradeCcy,
 					out:        qty,
 					unlock:     unlock,
 				}
@@ -314,14 +314,14 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
 	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}})
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outAsset, Amount: sdk.NewInt(tran.unlock)}})
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().Plus(sdk.Coins{
-		sdk.Coin{Denom: tran.inCcy, Amount: sdk.NewInt(tran.in)},
-		sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock - tran.out)}}.Sort()))
+		sdk.Coin{Denom: tran.inAsset, Amount: sdk.NewInt(tran.in)},
+		sdk.Coin{Denom: tran.outAsset, Amount: sdk.NewInt(tran.unlock - tran.out)}}.Sort()))
 
 	if !tran.feeFree() {
 		var fee types.Fee
@@ -342,15 +342,15 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 
 func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
-	if tran.inCcy == types.NativeToken {
+	if tran.inAsset == types.NativeToken {
 		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
-		if engine, ok := kp.engines[utils.Ccy2TradeSymbol(tran.inCcy, types.NativeToken)]; ok {
+		if engine, ok := kp.engines[utils.Assets2TradingPair(tran.inAsset, types.NativeToken)]; ok {
 			amountOfNativeToken = utils.CalBigNotional(engine.LastTradePrice, tran.in)
 		} else {
-			price := kp.engines[utils.Ccy2TradeSymbol(types.NativeToken, tran.inCcy)].LastTradePrice
+			price := kp.engines[utils.Assets2TradingPair(types.NativeToken, tran.inAsset)].LastTradePrice
 			var amount big.Int
 			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.ToInt64())), big.NewInt(price)).Int64()
 		}
@@ -360,7 +360,7 @@ func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran 
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inCcy, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
+			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
 		}
 	}
 

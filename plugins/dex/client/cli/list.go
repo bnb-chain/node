@@ -16,7 +16,8 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-const flagQuoteSymbol = "quote-symbol"
+const flagBaseAsset = "base-asset-symbol"
+const flagQuoteAsset = "quote-asset-symbol"
 const flagInitPrice = "init-price"
 
 func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
@@ -31,20 +32,20 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			symbol := viper.GetString(flagSymbol)
-			err = types.ValidateSymbol(symbol)
+			baseAsset := viper.GetString(flagBaseAsset)
+			err = types.ValidateSymbol(baseAsset)
 			if err != nil {
 				return err
 			}
 
-			quoteSymbol := viper.GetString(flagQuoteSymbol)
-			err = types.ValidateSymbol(quoteSymbol)
+			quoteAsset := viper.GetString(flagQuoteAsset)
+			err = types.ValidateSymbol(quoteAsset)
 			if err != nil {
 				return err
 			}
 
-			symbol = strings.ToUpper(symbol)
-			quoteSymbol = strings.ToUpper(quoteSymbol)
+			baseAsset = strings.ToUpper(baseAsset)
+			quoteAsset = strings.ToUpper(quoteAsset)
 
 			initPriceStr := viper.GetString(flagInitPrice)
 			initPrice, err := utils.ParsePrice(initPriceStr)
@@ -52,7 +53,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := list.NewMsg(from, symbol, quoteSymbol, initPrice)
+			msg := list.NewMsg(from, baseAsset, quoteAsset, initPrice)
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -62,8 +63,8 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the trading concurrency")
-	cmd.Flags().String(flagQuoteSymbol, "", "symbol of the quote concurrency")
+	cmd.Flags().StringP(flagBaseAsset, "s", "", "symbol of the base asset")
+	cmd.Flags().String(flagQuoteAsset, "", "symbol of the quote currency")
 	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
 
 	return cmd

@@ -12,18 +12,18 @@ import (
 const Route = "dexList"
 
 type Msg struct {
-	From        sdk.AccAddress `json:"from"`
-	Symbol      string         `json:"symbol"`
-	QuoteSymbol string         `json:"quote_symbol"`
-	InitPrice   int64          `json:"init_price"`
+	From             sdk.AccAddress `json:"from"`
+	BaseAssetSymbol  string         `json:"base_asset_symbol"`
+	QuoteAssetSymbol string         `json:"quote_asset_symbol"`
+	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.AccAddress, symbol string, quoteSymbol string, initPrice int64) Msg {
+func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) Msg {
 	return Msg{
-		From:        from,
-		Symbol:      symbol,
-		QuoteSymbol: quoteSymbol,
-		InitPrice:   initPrice,
+		From:             from,
+		BaseAssetSymbol:  baseAssetSymbol,
+		QuoteAssetSymbol: quoteAssetSymbol,
+		InitPrice:        initPrice,
 	}
 }
 
@@ -33,12 +33,12 @@ func (msg Msg) Get(key interface{}) (value interface{}) { return nil }
 func (msg Msg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.From} }
 
 func (msg Msg) ValidateBasic() sdk.Error {
-	err := types.ValidateSymbol(msg.Symbol)
+	err := types.ValidateSymbol(msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
 
-	err = types.ValidateSymbol(msg.QuoteSymbol)
+	err = types.ValidateSymbol(msg.QuoteAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
 	}
