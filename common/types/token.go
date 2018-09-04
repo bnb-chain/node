@@ -2,15 +2,11 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/BiJie/BinanceChain/common/utils"
 )
@@ -63,17 +59,4 @@ func ValidateSymbol(symbol string) error {
 	}
 
 	return nil
-}
-
-func GenerateTokenAddress(token Token, sequence int64) (sdk.AccAddress, error) {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(sequence))
-	secret := append(token.Owner, b...)
-	priv := makePrivKey(common.HexBytes(secret))
-	return sdk.AccAddress(priv.PubKey().Address()), nil
-}
-
-func makePrivKey(secret common.HexBytes) crypto.PrivKey {
-	privKey := ed25519.GenPrivKeyFromSecret(secret)
-	return privKey
 }
