@@ -44,7 +44,7 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 }
 
 func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
-	baseAsset, quoteAsset, err := utils.TradingPair2Asset(msg.Symbol)
+	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 		}
 	}
 	var amountToLock int64
-	baseAsset, quoteAsset, _ := utils.TradingPair2Asset(msg.Symbol)
+	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(msg.Symbol)
 	var symbolToLock string
 	if msg.Side == Side.BUY {
 		// TODO: where is 10^8 stored?
@@ -166,7 +166,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	//unlocked the locked qty for the unfilled qty
 	unlockAmount := ord.LeavesQty()
 
-	baseAsset, quoteAsset, _ := utils.TradingPair2Asset(origOrd.Symbol)
+	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(origOrd.Symbol)
 	var symbolToUnlock string
 	if origOrd.Side == Side.BUY {
 		symbolToUnlock = strings.ToUpper(quoteAsset)

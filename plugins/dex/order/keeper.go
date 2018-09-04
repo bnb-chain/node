@@ -176,7 +176,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 	concurrency := len(tradeOuts)
 	if engine.Match() {
 		if distributeTrade {
-			tradeCcy, quoteCcy, _ := utils.TradingPair2Asset(symbol)
+			tradeCcy, quoteCcy, _ := utils.TradingPair2Assets(symbol)
 			for _, t := range engine.Trades {
 				t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
 				// TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
@@ -201,7 +201,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 				//here is a trick to use the same currency as in and out ccy to simulate cancel
 				qty := ord.LeavesQty()
 				c := channelHash(msg.Sender, concurrency)
-				tradeCcy, _, _ := utils.TradingPair2Asset(msg.Symbol)
+				tradeCcy, _, _ := utils.TradingPair2Assets(msg.Symbol)
 				var unlock int64
 				if msg.Side == Side.BUY {
 					unlock = utils.CalBigNotional(msg.Price, msg.Quantity) - utils.CalBigNotional(msg.Price, msg.Quantity-qty)
@@ -347,10 +347,10 @@ func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran 
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
-		if engine, ok := kp.engines[utils.Asset2TradingPair(tran.inAsset, types.NativeToken)]; ok {
+		if engine, ok := kp.engines[utils.Assets2TradingPair(tran.inAsset, types.NativeToken)]; ok {
 			amountOfNativeToken = utils.CalBigNotional(engine.LastTradePrice, tran.in)
 		} else {
-			price := kp.engines[utils.Asset2TradingPair(types.NativeToken, tran.inAsset)].LastTradePrice
+			price := kp.engines[utils.Assets2TradingPair(types.NativeToken, tran.inAsset)].LastTradePrice
 			var amount big.Int
 			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.ToInt64())), big.NewInt(price)).Int64()
 		}

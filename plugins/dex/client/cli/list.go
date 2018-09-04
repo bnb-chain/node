@@ -14,8 +14,8 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-const flagBaseAsset = "base-asset"
-const flagQuoteAsset = "quote-asset"
+const flagBaseAsset = "base-asset-symbol"
+const flagQuoteAsset = "quote-asset-symbol"
 const flagInitPrice = "init-price"
 
 func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
@@ -61,7 +61,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP(flagBaseAsset, "s", "", "symbol of the base currency")
+	cmd.Flags().StringP(flagBaseAsset, "s", "", "symbol of the base asset")
 	cmd.Flags().String(flagQuoteAsset, "", "symbol of the quote currency")
 	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
 

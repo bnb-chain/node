@@ -24,11 +24,11 @@ func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
 }
 
 func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
-	if keeper.PairMapper.Exists(ctx, msg.BaseAsset, msg.QuoteAsset) || keeper.PairMapper.Exists(ctx, msg.QuoteAsset, msg.BaseAsset) {
+	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
-	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAsset)
+	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
@@ -37,11 +37,11 @@ func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper,
 		return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
 	}
 
-	if !tokenMapper.Exists(ctx, msg.QuoteAsset) {
+	if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 
-	pair := types.NewTradingPair(msg.BaseAsset, msg.QuoteAsset, msg.InitPrice)
+	pair := types.NewTradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
 	err = keeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {
 		return sdk.ErrInternal(err.Error()).Result()

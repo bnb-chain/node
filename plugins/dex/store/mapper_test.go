@@ -50,8 +50,8 @@ func TestMapper_GetAddTradingPair(t *testing.T) {
 	pair, err = pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	require.NoError(t, err)
 	require.NotEmpty(t, pair)
-	require.Equal(t, baseAsset, pair.BaseAsset)
-	require.Equal(t, quoteAsset, pair.QuoteAsset)
+	require.Equal(t, baseAsset, pair.BaseAssetSymbol)
+	require.Equal(t, quoteAsset, pair.QuoteAssetSymbol)
 	require.Equal(t, utils.Fixed8(1e8), pair.Price)
 	require.Equal(t, utils.Fixed8(1), pair.TickSize)
 	require.Equal(t, utils.Fixed8(1e8), pair.LotSize)
@@ -81,7 +81,7 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 
 	pairs := pairMapper.ListAllTradingPairs(ctx)
 	require.Len(t, pairs, 3)
-	require.Equal(t, "AAA", pairs[0].BaseAsset)
-	require.Equal(t, "BBB", pairs[1].BaseAsset)
-	require.Equal(t, "CCC", pairs[2].BaseAsset)
+	require.Equal(t, "AAA", pairs[0].BaseAssetSymbol)
+	require.Equal(t, "BBB", pairs[1].BaseAssetSymbol)
+	require.Equal(t, "CCC", pairs[2].BaseAssetSymbol)
 }
