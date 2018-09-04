@@ -8,14 +8,14 @@ import (
 
 const DELIMITER = "_"
 
-func TradeSymbol2Ccy(symbol string) (baseCcy, quoteCcy string, err error) {
-	ccy := strings.Split(symbol, DELIMITER)
-	if len(ccy) != 2 || ccy[0] == "" || ccy[1] == "" {
-		return symbol, "", errors.New("Failed to parse trade symbol into currencies")
+func TradingPair2Asset(symbol string) (baseAsset, quoteAsset string, err error) {
+	assets := strings.Split(symbol, DELIMITER)
+	if len(assets) != 2 || assets[0] == "" || assets[1] == "" {
+		return symbol, "", errors.New("Failed to parse trading pair symbol into assets")
 	}
-	return ccy[0], ccy[1], nil
+	return assets[0], assets[1], nil
 }
 
-func Ccy2TradeSymbol(baseCcy, quoteCcy string) (symbol string) {
-	return fmt.Sprintf("%s_%s", baseCcy, quoteCcy)
+func Asset2TradingPair(baseAsset, quoteAsset string) (symbol string) {
+	return fmt.Sprintf("%s_%s", baseAsset, quoteAsset)
 }

@@ -44,7 +44,7 @@ func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, ad
 }
 
 func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
-	baseAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
+	baseAsset, quoteAsset, err := utils.TradingPair2Asset(msg.Symbol)
 	if err != nil {
 		return err
 	}
@@ -93,15 +93,15 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 		}
 	}
 	var amountToLock int64
-	tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(msg.Symbol)
+	baseAsset, quoteAsset, _ := utils.TradingPair2Asset(msg.Symbol)
 	var symbolToLock string
 	if msg.Side == Side.BUY {
 		// TODO: where is 10^8 stored?
 		amountToLock = utils.CalBigNotional(msg.Quantity, msg.Price)
-		symbolToLock = strings.ToUpper(quoteCcy)
+		symbolToLock = strings.ToUpper(quoteAsset)
 	} else {
 		amountToLock = msg.Quantity
-		symbolToLock = strings.ToUpper(tradeCcy)
+		symbolToLock = strings.ToUpper(baseAsset)
 	}
 	coins := keeper.ck.GetCoins(ctx, msg.Sender)
 	if coins.AmountOf(symbolToLock).Int64() < amountToLock {
@@ -166,13 +166,13 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	//unlocked the locked qty for the unfilled qty
 	unlockAmount := ord.LeavesQty()
 
-	tradeCcy, quoteCcy, _ := utils.TradeSymbol2Ccy(origOrd.Symbol)
+	baseAsset, quoteAsset, _ := utils.TradingPair2Asset(origOrd.Symbol)
 	var symbolToUnlock string
 	if origOrd.Side == Side.BUY {
-		symbolToUnlock = strings.ToUpper(quoteCcy)
+		symbolToUnlock = strings.ToUpper(quoteAsset)
 		unlockAmount = utils.CalBigNotional(origOrd.Price, unlockAmount)
 	} else {
-		symbolToUnlock = strings.ToUpper(tradeCcy)
+		symbolToUnlock = strings.ToUpper(baseAsset)
 	}
 	account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	lockedAmount := account.GetLockedCoins().AmountOf(symbolToUnlock).Int64()

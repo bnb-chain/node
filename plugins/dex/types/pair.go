@@ -26,5 +26,5 @@ func NewTradingPair(baseAsset, quoteAsset string, price int64) TradingPair {
 }
 
 func (pair *TradingPair) GetSymbol() string {
-	return ctuils.Ccy2TradeSymbol(pair.BaseAsset, pair.QuoteAsset)
+	return ctuils.Asset2TradingPair(pair.BaseAsset, pair.QuoteAsset)
 }
