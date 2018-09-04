@@ -387,5 +387,20 @@ func TestKeeper_ExpireFees(t *testing.T) {
 }
 
 func TestKeeper_IocExpireFees(t *testing.T) {
+}
 
+func TestKeeper_UpdateLotSize(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	logger := log.NewTMLogger(os.Stdout)
+	cms := MakeCMS()
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	keeper.UpdateLotSize(tradingPair.GetSymbol(), 1e3)
+
+	assert.Equal(int64(1e3), keeper.engines[tradingPair.GetSymbol()].LotSize)
 }
