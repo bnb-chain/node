@@ -378,7 +378,7 @@ func settle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandler func(in
 		go func(index int, tranCh chan Transfer) {
 			defer wg.Done()
 			for tran := range tranCh {
-				settleHandler(i, tran)
+				settleHandler(index, tran)
 			}
 		}(i, tradeTranCh)
 	}
@@ -392,6 +392,7 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 		return sdk.CodeOK, nil
 	}
 
+	// the following code is to wait for all match finished.
 	var wg sync.WaitGroup
 	wg.Add(len(tradeOuts))
 	settle(&wg, tradeOuts, func(int, Transfer) {})
