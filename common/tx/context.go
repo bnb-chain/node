@@ -6,7 +6,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-type contextKey int // local to the auth module
+type contextKey int
 
 const (
 	contextKeyFee contextKey = iota

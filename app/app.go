@@ -72,13 +72,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	// TODO: make the concurrency configurable
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
-	var err error
-	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
-	if err != nil {
-		logger.Error("Failed to create an order keep", "error", err)
-		panic(err)
-	}
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -90,32 +85,23 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
-	err = app.LoadLatestVersion(common.MainStoreKey)
+	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
 
-	app.InitDexKeeperBook()
-
+	app.initPlugins()
 	return app
 }
 
-func (app *BinanceChain) InitDexKeeperBook() {
+func (app *BinanceChain) initPlugins() {
 	if app.checkState == nil {
 		return
 	}
 
-	//count back to 7 days.
+	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
+	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, app.db, app.LastBlockHeight(), app.txDecoder)
-}
-
-//TODO???: where to init checkState in reboot
-func (app *BinanceChain) SetCheckState(header abci.Header) {
-	ms := app.cms.CacheMultiStore()
-	app.checkState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.Logger),
-	}
 }
 
 func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
@@ -191,7 +177,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
 		// only match in the normal block
-		app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
+		// TODO: add postAllocateHandler
+		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 	} else {
 		// breathe block
 

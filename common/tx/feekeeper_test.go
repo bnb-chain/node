@@ -3,16 +3,14 @@ package tx_test
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/stretchr/testify/require"
-
-	"github.com/BiJie/BinanceChain/common/tx"
-	"github.com/BiJie/BinanceChain/common/utils"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	wire "github.com/cosmos/cosmos-sdk/wire"
+	"github.com/BiJie/BinanceChain/common/testutils"
+	"github.com/BiJie/BinanceChain/common/tx"
 )
 
 var (
@@ -22,7 +20,7 @@ var (
 )
 
 func TestFeeCollectionKeeperGetSet(t *testing.T) {
-	ms, _, capKey2 := utils.SetupMultiStoreForUnitTest()
+	ms, _, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 
 	// make context and keeper
@@ -41,7 +39,7 @@ func TestFeeCollectionKeeperGetSet(t *testing.T) {
 }
 
 func TestFeeCollectionKeeperAdd(t *testing.T) {
-	ms, _, capKey2 := utils.SetupMultiStoreForUnitTest()
+	ms, _, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 
 	// make context and keeper
@@ -61,7 +59,7 @@ func TestFeeCollectionKeeperAdd(t *testing.T) {
 }
 
 func TestFeeCollectionKeeperClear(t *testing.T) {
-	ms, _, capKey2 := utils.SetupMultiStoreForUnitTest()
+	ms, _, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 
 	// make context and keeper

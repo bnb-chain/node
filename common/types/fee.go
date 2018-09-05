@@ -24,6 +24,22 @@ func NewFee(tokens sdk.Coins, distributeType FeeDistributeType) Fee {
 	}
 }
 
+func (fee *Fee) AddFee(other Fee) {
+	if other.IsEmpty() {
+		return
+	}
+
+	if fee.Tokens == nil {
+		fee.Tokens = other.Tokens
+		fee.Type = other.Type
+	} else {
+		fee.Tokens = fee.Tokens.Plus(other.Tokens)
+		if other.Type == FeeForAll {
+			fee.Type = FeeForAll
+		}
+	}
+}
+
 func (fee Fee) IsEmpty() bool {
-	return fee.Tokens == nil
+	return fee.Tokens == nil || fee.Tokens.IsEqual(sdk.Coins{})
 }

@@ -6,14 +6,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
+	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 func TestFixedFeeCalculator(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
-
 	calculator := tx.FixedFeeCalculator(10, types.FeeFree)
 	fee := calculator(msg)
 	require.Equal(t, types.FeeFree, fee.Type)
@@ -31,7 +31,7 @@ func TestFixedFeeCalculator(t *testing.T) {
 }
 
 func TestFreeFeeCalculator(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
 
 	calculator := tx.FreeFeeCalculator()
@@ -41,7 +41,7 @@ func TestFreeFeeCalculator(t *testing.T) {
 }
 
 func TestRegisterAndGetCalculators(t *testing.T) {
-	_, addr := privAndAddr()
+	_, addr := testutils.PrivAndAddr()
 	msg := sdk.NewTestMsg(addr)
 
 	tx.RegisterCalculator(msg.Type(), tx.FixedFeeCalculator(10, types.FeeForProposer))
