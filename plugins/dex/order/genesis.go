@@ -7,6 +7,7 @@ type TradingGenesis struct {
 	FeeRate                int64 `json:"fee_rate"`
 }
 
+// TODO: determine the fee/feeRate
 var DefaultTradingGenesis = TradingGenesis{
 	ExpireFee:              100,
 	IOCExpireFee:           50,

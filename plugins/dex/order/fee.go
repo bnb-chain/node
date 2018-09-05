@@ -10,17 +10,24 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+type FeeType uint8
+
 const (
+	FeeByNativeToken = FeeType(0x01)
+	FeeByTradeToken  = FeeType(0x02)
+
 	feeRateDecimals int64 = 6
 	nilFeeValue     int64 = -1
 )
 
-var expireFeeKey = []byte("ExpireFee")
-var iocExpireFeeKey = []byte("IOCExpireFee")
-var feeRateWithNativeTokenKey = []byte("FeeRateWithNativeToken")
-var feeRateKey = []byte("FeeRate")
+var (
+	expireFeeKey              = []byte("ExpireFee")
+	iocExpireFeeKey           = []byte("IOCExpireFee")
+	feeRateWithNativeTokenKey = []byte("FeeRateWithNativeToken")
+	feeRateKey                = []byte("FeeRate")
 
-var FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
+	FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
+)
 
 type FeeConfig struct {
 	cdc                    *wire.Codec
@@ -44,7 +51,7 @@ func NewFeeConfig(cdc *wire.Codec, storeKey sdk.StoreKey) FeeConfig {
 }
 
 func (config *FeeConfig) itob(num int64) []byte {
-	bz, err := config.cdc.MarshalBinary(num)
+	bz, err := config.cdc.MarshalBinaryBare(num)
 	if err != nil {
 		panic(err)
 	}
@@ -89,51 +96,31 @@ func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
 }
 
 func (config FeeConfig) ExpireFee(ctx sdk.Context) int64 {
-	if config.expireFee == nilFeeValue {
-		config.mtx.Lock()
-		defer config.mtx.Unlock()
-		if config.expireFee == nilFeeValue {
-			store := ctx.KVStore(config.storeKey)
-			config.expireFee = config.btoi(store.Get(expireFeeKey))
-		}
-	}
 	return config.expireFee
 }
 
 func (config FeeConfig) IOCExpireFee(ctx sdk.Context) int64 {
-	if config.iocExpireFee == nilFeeValue {
-		config.mtx.Lock()
-		defer config.mtx.Unlock()
-		if config.iocExpireFee == nilFeeValue {
-			store := ctx.KVStore(config.storeKey)
-			config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
-		}
-	}
 	return config.iocExpireFee
 }
 
 func (config FeeConfig) FeeRateWithNativeToken(ctx sdk.Context) int64 {
-	if config.feeRateWithNativeToken == nilFeeValue {
-		config.mtx.Lock()
-		defer config.mtx.Unlock()
-		if config.feeRateWithNativeToken == nilFeeValue {
-			store := ctx.KVStore(config.storeKey)
-			config.feeRateWithNativeToken = config.btoi(store.Get(feeRateWithNativeTokenKey))
-		}
-	}
 	return config.feeRateWithNativeToken
 }
 
 func (config FeeConfig) FeeRate(ctx sdk.Context) int64 {
-	if config.feeRate == nilFeeValue {
-		config.mtx.Lock()
-		defer config.mtx.Unlock()
-		if config.feeRate == nilFeeValue {
-			store := ctx.KVStore(config.storeKey)
-			config.feeRate = config.btoi(store.Get(feeRateKey))
-		}
-	}
 	return config.feeRate
+}
+
+// either init fee by Init, or by InitGenesis.
+func (config *FeeConfig) Init(ctx sdk.Context) {
+	store := ctx.KVStore(config.storeKey)
+	if bz := store.Get(expireFeeKey); bz != nil {
+		config.expireFee = config.btoi(bz)
+		config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
+		config.feeRateWithNativeToken = config.btoi(store.Get(feeRateWithNativeTokenKey))
+		config.feeRate = config.btoi(store.Get(feeRateKey))
+	}
+	// otherwise, the chain first starts up and InitGenesis would be called.
 }
 
 // InitGenesis - store the genesis trend
@@ -144,7 +131,14 @@ func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	config.SetFeeRate(ctx, data.FeeRate)
 }
 
-func calcFee(amount int64, feeRate int64) int64 {
+func (config *FeeConfig) CalcFee(amount int64, feeType FeeType) int64 {
+	var feeRate int64
+	if feeType == FeeByNativeToken {
+		feeRate = config.feeRateWithNativeToken
+	} else if feeType == FeeByTradeToken {
+		feeRate = config.feeRate
+	}
+
 	var fee big.Int
 	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
 }

@@ -267,16 +267,15 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 
 	go func() {
+		for symbol := range kp.roundOrders {
+			symbolCh <- symbol
+		}
+		close(symbolCh)
 		wg.Wait()
 		for _, tradeOut := range tradeOuts {
 			close(tradeOut)
 		}
 	}()
-
-	for symbol := range kp.roundOrders {
-		symbolCh <- symbol
-	}
-	close(symbolCh)
 	return tradeOuts
 }
 
@@ -344,7 +343,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inCcy == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, calcFee(tran.in, kp.FeeConfig.FeeRateWithNativeToken(ctx)))
+		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
@@ -353,15 +352,15 @@ func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran 
 		} else {
 			price := kp.engines[utils.Ccy2TradeSymbol(types.NativeToken, tran.inCcy)].LastTradePrice
 			var amount big.Int
-			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(1e8)), big.NewInt(price)).Int64()
+			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.Value())), big.NewInt(price)).Int64()
 		}
-		feeByNativeToken := calcFee(amountOfNativeToken, kp.FeeConfig.FeeRateWithNativeToken(ctx))
+		feeByNativeToken := kp.FeeConfig.CalcFee(amountOfNativeToken, FeeByNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inCcy, calcFee(tran.in, kp.FeeConfig.FeeRate(ctx)))
+			feeToken = sdk.NewCoin(tran.inCcy, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
 		}
 	}
 
@@ -374,14 +373,14 @@ func (kp *Keeper) clearAfterMatch() (err error) {
 	return nil
 }
 
-func postMatch(wg *sync.WaitGroup, tradeOuts []chan Transfer, postHandler func(tran Transfer)) {
-	for _, tranCh := range tradeOuts {
-		go func(tranCh chan Transfer) {
+func settle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandler func(int, Transfer)) {
+	for i, tradeTranCh := range tradeOuts {
+		go func(index int, tranCh chan Transfer) {
 			defer wg.Done()
 			for tran := range tranCh {
-				postHandler(tran)
+				settleHandler(i, tran)
 			}
-		}(tranCh)
+		}(i, tradeTranCh)
 	}
 }
 
@@ -395,14 +394,15 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 
 	var wg sync.WaitGroup
 	wg.Add(len(tradeOuts))
-	postMatch(&wg, tradeOuts, func(tran Transfer) {})
+	settle(&wg, tradeOuts, func(int, Transfer) {})
 	wg.Wait()
 	return sdk.CodeOK, nil
 }
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper) (newCtx sdk.Context, code sdk.CodeType, err error) {
+func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper,
+	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
@@ -410,27 +410,24 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 		return ctx, sdk.CodeOK, nil
 	}
 
-	wg.Add(len(tradeOuts))
-	settledCh := make(chan Transfer, len(tradeOuts)*2)
-	allocate := func(tran Transfer) {
+	concurrency := len(tradeOuts)
+	wg.Add(concurrency)
+	feesPerCh := make([]types.Fee, concurrency)
+	allocate := func(index int, tran Transfer) {
 		kp.doTransfer(ctx, accountMapper, &tran)
-		settledCh <- tran
+		feesPerCh[index].AddFee(tran.fee)
+		if postAllocateHandler != nil {
+			postAllocateHandler(tran)
+		}
 	}
-	postMatch(&wg, tradeOuts, allocate)
+	settle(&wg, tradeOuts, allocate)
+	wg.Wait()
 
-	go func() {
-		wg.Wait()
-		close(settledCh)
-	}()
-
-	settledList := make([]Transfer, 0)
 	totalFee := tx.Fee(ctx)
-	for settled := range settledCh {
-		settledList = append(settledList, settled)
-		totalFee.AddFee(settled.fee)
+	for i := 0; i < concurrency; i++ {
+		totalFee.AddFee(feesPerCh[i])
 	}
-	// WithSettlement should only be called once in each block.
-	newCtx = WithSettlement(tx.WithFee(ctx, totalFee), settledList)
+	newCtx = tx.WithFee(ctx, totalFee)
 	return newCtx, sdk.CodeOK, nil
 }
 

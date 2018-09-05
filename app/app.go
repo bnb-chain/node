@@ -90,27 +90,18 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 		cmn.Exit(err.Error())
 	}
 
-	app.InitDexKeeperBook()
-
+	app.initPlugins()
 	return app
 }
 
-func (app *BinanceChain) InitDexKeeperBook() {
+func (app *BinanceChain) initPlugins() {
 	if app.checkState == nil {
 		return
 	}
 
-	//count back to 7 days.
+	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
+	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, app.db, app.LastBlockHeight(), app.txDecoder)
-}
-
-//TODO???: where to init checkState in reboot
-func (app *BinanceChain) SetCheckState(header abci.Header) {
-	ms := app.cms.CacheMultiStore()
-	app.checkState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.Logger),
-	}
 }
 
 func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
@@ -186,7 +177,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
 		// only match in the normal block
-		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper)
+		// TODO: add postAllocateHandler
+		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 	} else {
 		// breathe block
 
