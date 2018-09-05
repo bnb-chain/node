@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,7 +16,6 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -126,8 +126,8 @@ func Test_compressAndSave(t *testing.T) {
 	assert.True(len(bz) < len(bytes))
 }
 
-func MakeAddress() (sdk.AccAddress, ed25519.PrivKeyEd25519) {
-	privKey := ed25519.GenPrivKey()
+func MakeAddress() (sdk.AccAddress, secp256k1.PrivKeySecp256k1) {
+	privKey := secp256k1.GenPrivKey()
 	pubKey := privKey.PubKey()
 	addr := sdk.AccAddress(pubKey.Address())
 	return addr, privKey
@@ -235,7 +235,7 @@ func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *w
 
 const BlockPartSize = 65536
 
-func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey ed25519.PrivKeyEd25519) auth.StdTx {
+func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k1.PrivKeySecp256k1) auth.StdTx {
 	fee, _ := sdk.ParseCoin("100 BNB")
 	signMsg := auth.StdSignMsg{
 		ChainID:       "chainID1",

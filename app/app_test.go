@@ -96,7 +96,7 @@ func Address(i int) sdk.AccAddress {
 }
 
 func NewTestClient(a *BinanceChain) *TestClient {
-	a.SetCheckState(types.Header{})
+	a.setCheckState(types.Header{})
 	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
 	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
@@ -118,7 +118,7 @@ func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAc
 	genesisState := GenesisState{
 		Tokens:     tokens,
 		Accounts:   genaccs,
-		DexGenesis: dex.Genesis{},
+		DexGenesis: dex.DefaultGenesis,
 	}
 
 	stateBytes, err := wire.MarshalJSONIndent(bapp.Codec, genesisState)

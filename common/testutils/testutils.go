@@ -5,7 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 	dbm "github.com/tendermint/tendermint/libs/db"
 
 	"github.com/BiJie/BinanceChain/common/types"
@@ -36,7 +36,7 @@ func NewNativeTokens(amount int64) sdk.Coins {
 
 // generate a priv key and return it with its address
 func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
-	priv := ed25519.GenPrivKey()
+	priv := secp256k1.GenPrivKey()
 	addr := sdk.AccAddress(priv.PubKey().Address())
 	return priv, addr
 }
