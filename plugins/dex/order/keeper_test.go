@@ -379,9 +379,9 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 	tran := Transfer{
 		eventType:  eventFilled,
 		accAddress: acc.GetAddress(),
-		inCcy:      types.NativeToken,
+		inAsset:    types.NativeToken,
 		in:         100e8,
-		outCcy:     "ABC",
+		outAsset:   "ABC",
 		out:        1000e8,
 		unlock:     1000e8,
 	}
@@ -394,9 +394,9 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 	tran = Transfer{
 		eventType:  eventFilled,
 		accAddress: acc.GetAddress(),
-		inCcy:      "ABC",
+		inAsset:    "ABC",
 		in:         1000e8,
-		outCcy:     "BNB",
+		outAsset:   "BNB",
 		out:        100e8,
 		unlock:     110e8,
 	}
