@@ -528,6 +528,48 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(int64(0), toAlloc)
 }
 
+func Test_allocateResidualOddLot(t *testing.T) {
+	assert := assert.New(t)
+
+	var toAlloc int64 = 605
+	orders := []OrderPart{
+		OrderPart{"2", 100, 900, 0, 900},
+		OrderPart{"3", 100, 600, 0, 600},
+		OrderPart{"1", 100, 300, 0, 300},
+	}
+	assert.True(allocateResidual(&toAlloc, orders, 10))
+	assert.Equal(int64(105), orders[0].nxtTrade)
+	assert.Equal(int64(300), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(200), orders[2].nxtTrade)
+	assert.Equal("3", orders[2].Id)
+	assert.Equal(int64(0), toAlloc)
+
+	toAlloc = 5
+	orders = []OrderPart{
+		OrderPart{"2", 100, 900, 0, 900},
+		OrderPart{"3", 100, 600, 0, 600},
+		OrderPart{"1", 100, 300, 0, 300},
+	}
+	assert.True(allocateResidual(&toAlloc, orders, 10))
+	assert.Equal(int64(5), orders[0].nxtTrade)
+	assert.Equal("1", orders[0].Id)
+	assert.Equal(int64(0), toAlloc)
+
+	toAlloc = 15
+	orders = []OrderPart{
+		OrderPart{"2", 100, 25, 0, 25},
+		OrderPart{"3", 100, 25, 0, 25},
+		OrderPart{"1", 100, 25, 0, 25},
+	}
+	assert.True(allocateResidual(&toAlloc, orders, 10))
+	assert.Equal(int64(10), orders[0].nxtTrade)
+	assert.Equal("1", orders[0].Id)
+	assert.Equal(int64(5), orders[1].nxtTrade)
+	assert.Equal("2", orders[1].Id)
+	assert.Equal(int64(0), toAlloc)
+}
+
 func TestMatchEng_reserveQty(t *testing.T) {
 	me := NewMatchEng(100, 0.5)
 	assert := assert.New(t)
