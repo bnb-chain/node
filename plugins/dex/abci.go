@@ -2,6 +2,7 @@ package dex
 
 import (
 	"fmt"
+	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -17,14 +18,38 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			return nil
 		}
 		switch path[1] {
-		case "pairs":
+		case "pairs": // args: [dex, pairs, <offset>, <limit>]
+			// TODO: sync lock
+			if len(path) < 4 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeUnknownRequest),
+					Log:  "pairs query requires offset and limit in the path",
+				}
+			}
 			ctx := app.GetContextForCheckState()
 			pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
-			pairss := make([]string, len(pairs))
-			for _, pair := range pairs {
-				pairss = append(pairss, pair.GetSymbol())
+			offset, err := strconv.Atoi(path[2])
+			if err != nil || offset < 0 || offset > len(pairs)-1 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
 			}
-			resValue, err := app.GetCodec().MarshalBinary(pairss)
+			limit, err := strconv.Atoi(path[3])
+			if err != nil || limit < 0 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			if offset+limit > len(pairs)-1 {
+				limit = 0
+			}
+			if limit == 0 {
+				limit = len(pairs) - offset - 1
+			}
+			pairss := pairs[offset : offset+limit]
+			bz, err := app.GetCodec().MarshalBinary(pairss)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -33,7 +58,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 			return &abci.ResponseQuery{
 				Code:  uint32(sdk.ABCICodeOK),
-				Value: resValue,
+				Value: bz,
 			}
 		case "orderbook":
 			//TODO: sync lock, validate pair, level number
@@ -45,7 +70,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 			pair := path[2]
 			orderbook := keeper.GetOrderBook(pair, 20)
-			resValue, err := app.GetCodec().MarshalBinary(orderbook)
+			bz, err := app.GetCodec().MarshalBinary(orderbook)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -54,7 +79,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 			return &abci.ResponseQuery{
 				Code:  uint32(sdk.ABCICodeOK),
-				Value: resValue,
+				Value: bz,
 			}
 		default:
 			return &abci.ResponseQuery{
