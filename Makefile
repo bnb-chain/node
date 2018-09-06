@@ -59,6 +59,10 @@ test: test_unit
 test_unit:
 	@go test $(PACKAGES)
 
+integration_test:
+	@echo "-->Integration Test"
+	@./integration_test.sh
+
 ########################################
 ### Pre Commit
 pre_commit: build test format
