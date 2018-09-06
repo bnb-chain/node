@@ -2,12 +2,9 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -15,7 +12,9 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/wire"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -38,11 +37,18 @@ var (
 	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
 )
 
+// BinanceChain implements ChainApp
+var _ types.ChainApp = (*BinanceChain)(nil)
+
 // BinanceChain is the BNBChain ABCI application
 type BinanceChain struct {
 	*BaseApp
 	Codec *wire.Codec
 
+	// the abci query handler mapping is `prefix -> handler`
+	queryHandlers map[string]types.AbciQueryHandler
+
+	// keepers
 	FeeCollectionKeeper tx.FeeCollectionKeeper
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
@@ -102,37 +108,48 @@ func (app *BinanceChain) initPlugins() {
 		return
 	}
 
+	dex.InitPlugin(app, app.DexKeeper)
+
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, app.db, app.LastBlockHeight(), app.txDecoder)
 }
 
+// Query performs an abci query.
+func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	path := splitPath(req.Path)
+	if len(path) == 0 {
+		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	prefix := path[0]
+	if handler, ok := app.queryHandlers[prefix]; ok {
+		res := handler(app, req, path)
+		if res == nil {
+			return app.BaseApp.Query(req)
+		}
+		return *res
+	}
+	return app.BaseApp.Query(req)
+}
+
 func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
 	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
-	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
-	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
-
-	for route, handler := range dex.Routes(*app.DexKeeper, app.TokenMapper, app.AccountMapper) {
+	for route, handler := range dex.Routes(cdc, *app.DexKeeper, app.TokenMapper, app.AccountMapper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
 
-// MakeCodec creates a custom tx codec.
-func MakeCodec() *wire.Codec {
-	var cdc = wire.NewCodec()
-
-	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
-	dex.RegisterWire(cdc)
-	tokens.RegisterWire(cdc)
-	types.RegisterWire(cdc)
-	tx.RegisterWire(cdc)
-
-	return cdc
+// RegisterQueryHandler registers an abci query handler.
+func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
+	if _, ok := app.queryHandlers[prefix]; ok {
+		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
+	} else {
+		app.queryHandlers[prefix] = handler
+	}
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -224,19 +241,9 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
-func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	path := splitPath(req.Path)
-	if len(path) == 0 {
-		msg := "no query path provided"
-		return sdk.ErrUnknownRequest(msg).QueryResult()
-	}
-	switch path[0] {
-	// "/app" prefix for special application queries
-	case "app":
-		return handleBinanceChainQuery(app, path, req)
-	default:
-		return app.BaseApp.Query(req)
-	}
+// GetCodec returns the app's Codec.
+func (app *BinanceChain) GetCodec() *wire.Codec {
+	return app.Codec
 }
 
 func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
@@ -266,7 +273,7 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 	default:
 		return abci.ResponseQuery{
 			Code: uint32(sdk.ABCICodeOK),
-			Info: "Unknown 'app' Query Path",
+			Info: "Unknown 'dex' Query Path",
 		}
 	}
 }
@@ -288,4 +295,19 @@ func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
 		}
 		return tx, nil
 	}
+}
+
+// MakeCodec creates a custom tx codec.
+func MakeCodec() *wire.Codec {
+	var cdc = wire.NewCodec()
+
+	wire.RegisterCrypto(cdc) // Register crypto.
+	bank.RegisterWire(cdc)
+	sdk.RegisterWire(cdc) // Register Msgs
+	dex.RegisterWire(cdc)
+	tokens.RegisterWire(cdc)
+	types.RegisterWire(cdc)
+	tx.RegisterWire(cdc)
+
+	return cdc
 }
