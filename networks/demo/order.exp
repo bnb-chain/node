@@ -1,16 +1,20 @@
 #!/usr/bin/expect
 
-set id [lindex $argv 0]
-set pair [lindex $argv 1]
-set side [lindex $argv 2]
-set price [lindex $argv 3]
-set quantity [lindex $argv 4]
-set from [lindex $argv 5]
-set chain_id [lindex $argv 6]
-set tif [lindex $argv 7]
+set pair [lindex $argv 0]
+set side [lindex $argv 1]
+set price [lindex $argv 2]
+set quantity [lindex $argv 3]
+set from [lindex $argv 4]
+set chain_id [lindex $argv 5]
+set tif [lindex $argv 6]
+set home [lindex $argv 7]
 
 set timeout 30
-	spawn ./bnbcli dex order -i $id -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
+	if {"${home}" == ""} {
+		spawn ./bnbcli dex order -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
+	} else {
+		spawn ./bnbcli dex order --home $home -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
+	}
 	expect "Password*"
 	send "12345678\r"
 interact
