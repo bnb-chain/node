@@ -6,11 +6,11 @@ chain_id=$CHAIN_ID
 
 while true ; do
     case "$1" in
-        -s|--base-asset )
+        -s|--base-asset-symbol )
             base_asset=$2
             shift 2
         ;;
-        --quote-asset )
+        --quote-asset-symbol )
             quote_asset=$2
             shift 2
         ;;
