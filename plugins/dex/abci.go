@@ -18,7 +18,23 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 		}
 		switch path[1] {
 		case "pairs":
-			keeper.PairMapper
+			ctx := app.GetContextForCheckState()
+			pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
+			pairss := make([]string, len(pairs))
+			for _, pair := range pairs {
+				pairss = append(pairss, pair.GetSymbol())
+			}
+			resValue, err := app.GetCodec().MarshalBinary(pairss)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			return &abci.ResponseQuery{
+				Code:  uint32(sdk.ABCICodeOK),
+				Value: resValue,
+			}
 		case "orderbook":
 			//TODO: sync lock, validate pair, level number
 			if len(path) < 3 {
@@ -36,7 +52,6 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					Log:  err.Error(),
 				}
 			}
-
 			return &abci.ResponseQuery{
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: resValue,

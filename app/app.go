@@ -67,8 +67,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	// create your application object
 	var app = &BinanceChain{
-		BaseApp: NewBaseApp(appName, cdc, logger, db, decoders),
-		Codec:   cdc,
+		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders),
+		Codec:         cdc,
+		queryHandlers: make(map[string]types.AbciQueryHandler),
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
@@ -244,6 +245,12 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 // GetCodec returns the app's Codec.
 func (app *BinanceChain) GetCodec() *wire.Codec {
 	return app.Codec
+}
+
+// GetContextForCheckState gets the context for the check state.
+func (app *BinanceChain) GetContextForCheckState() sdk.Context {
+	ctx := sdk.NewContext(app.cms.CacheMultiStore(), app.checkState.ctx.BlockHeader(), true, app.Logger)
+	return ctx
 }
 
 func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
