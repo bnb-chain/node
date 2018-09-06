@@ -31,6 +31,8 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	// tokens routes
+	r.HandleFunc(prefix+"/pairs", s.handlePairsReq(s.cdc, s.ctx)).
+		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}", s.handleBalancesReq(s.cdc, s.ctx, s.tokens)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}/{symbol}", s.handleBalanceReq(s.cdc, s.ctx, s.tokens)).

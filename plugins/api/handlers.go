@@ -68,6 +68,10 @@ func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CoreContext, acc
 	return s.withUrlEncForm(s.limitReqSize(h))
 }
 
+func (s *server) handlePairsReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	return dexapi.GetPairsReqHandler(cdc, ctx)
+}
+
 func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
 	return tksapi.BalancesReqHandler(cdc, ctx, tokens)
 }
