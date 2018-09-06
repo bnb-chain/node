@@ -14,6 +14,7 @@ import (
 // ChainApp represents the main ABCI application
 type ChainApp interface {
 	GetCodec() *wire.Codec
+	GetContextForCheckState() sdk.Context
 	Query(req abci.RequestQuery) (res abci.ResponseQuery)
 	RegisterQueryHandler(prefix string, handler AbciQueryHandler)
 	ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error)
