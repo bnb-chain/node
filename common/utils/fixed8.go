@@ -52,6 +52,11 @@ func NewFixed8(val int) Fixed8 {
 	return Fixed8(Fixed8Decimals * val)
 }
 
+// NewFixed864 return a new Fixed8 type multiplied by decimals
+func NewFixed864(val int64) Fixed8 {
+	return Fixed8(int64(Fixed8Decimals) * val)
+}
+
 // Fixed8DecodeString parses s which must be a fixed point number
 // with precision up to 10^-8
 func Fixed8DecodeString(s string) (Fixed8, error) {

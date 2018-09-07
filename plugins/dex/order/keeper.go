@@ -92,7 +92,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.LotSize)
+	eng := CreateMatchEng(pair.LotSize.Value())
 	kp.engines[pair.GetSymbol()] = eng
 	return eng
 }
