@@ -46,8 +46,9 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			if end > len(pairs) {
 				end = len(pairs)
 			}
-			pairss := pairs[offset:end]
-			bz, err := app.GetCodec().MarshalBinary(pairss)
+			bz, err := app.GetCodec().MarshalBinary(
+				pairs[offset:end],
+			)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
