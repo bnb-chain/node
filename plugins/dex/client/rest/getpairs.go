@@ -12,6 +12,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+const maxPairsLimit = 1000
 const defaultPairsLimit = 100
 const defaultPairsOffset = 0
 
@@ -66,6 +67,11 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 		params := params{
 			limit:  limit,
 			offset: offset,
+		}
+
+		// apply max pairs limit
+		if params.limit > maxPairsLimit {
+			params.limit = maxPairsLimit
 		}
 
 		pairs, err := listAllTradingPairs(ctx, cdc, params.offset, params.limit)
