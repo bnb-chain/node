@@ -32,23 +32,21 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			if err != nil || offset < 0 || offset > len(pairs)-1 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
+					Log:  "unable to parse offset",
 				}
 			}
 			limit, err := strconv.Atoi(path[3])
 			if err != nil || limit < 0 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
+					Log:  "unable to parse limit",
 				}
 			}
-			if offset+limit > len(pairs)-1 {
-				limit = 0
+			end := offset + limit
+			if end > len(pairs) {
+				end = len(pairs)
 			}
-			if limit == 0 {
-				limit = len(pairs) - offset - 1
-			}
-			pairss := pairs[offset : offset+limit]
+			pairss := pairs[offset:end]
 			bz, err := app.GetCodec().MarshalBinary(pairss)
 			if err != nil {
 				return &abci.ResponseQuery{
