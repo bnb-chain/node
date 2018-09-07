@@ -92,10 +92,10 @@ check_chain_operation "List Trading Pair" "${result}"
 
 sleep 1s
 # place buy order
-buy_order=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ./testnodecli/)
+result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ./testnodecli/)
 check_chain_operation "Place Order" "${result}"
 
-order_id=$(echo "${buy_order}" | grep -o "cosmosaccaddr[0-9a-zA-Z]*-[0-9]*")
+order_id=$(echo "${result}" | grep -o "cosmosaccaddr[0-9a-zA-Z]*-[0-9]*")
 
 sleep 1s
 # cancel order
