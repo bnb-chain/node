@@ -6,11 +6,11 @@ import (
 )
 
 type TradingPair struct {
-	TradeAsset string `json:"trade_asset"`
-	QuoteAsset string `json:"quote_asset"`
-	Price      int64  `json:"price"`
-	TickSize   int64  `json:"tick_size"`
-	LotSize    int64  `json:"lot_size"`
+	TradeAsset string        `json:"trade_asset"`
+	QuoteAsset string        `json:"quote_asset"`
+	Price      ctuils.Fixed8 `json:"price"`
+	TickSize   ctuils.Fixed8 `json:"tick_size"`
+	LotSize    ctuils.Fixed8 `json:"lot_size"`
 }
 
 func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
@@ -19,9 +19,9 @@ func NewTradingPair(tradeAsset, quoteAsset string, price int64) TradingPair {
 	return TradingPair{
 		TradeAsset: tradeAsset,
 		QuoteAsset: quoteAsset,
-		Price:      price,
-		TickSize:   tickSize,
-		LotSize:    lotSize,
+		Price:      ctuils.Fixed8(price),
+		TickSize:   ctuils.Fixed8(tickSize),
+		LotSize:    ctuils.Fixed8(lotSize),
 	}
 }
 
