@@ -61,7 +61,6 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 		return err
 	}
 
-	fmt.Println(pair.LotSize)
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
 		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize))
 	}
