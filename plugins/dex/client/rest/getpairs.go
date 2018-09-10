@@ -42,25 +42,25 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 		offsetStr := r.FormValue("offset")
 
 		// validate and use limit param
-		limit, err := strconv.Atoi(limitStr)
-		if err != nil {
-			if len(limitStr) > 0 {
+		limit := defaultPairsLimit
+		if limitStr != "" && len(limitStr) < 100 {
+			parsed, err := strconv.Atoi(limitStr)
+			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return
-			} else {
-				limit = defaultPairsLimit
 			}
+			limit = parsed
 		}
 
 		// validate and use offset param
-		offset, err := strconv.Atoi(offsetStr)
-		if err != nil {
-			if len(offsetStr) > 0 {
+		offset := defaultPairsOffset
+		if offsetStr != "" && len(offsetStr) < 100 {
+			parsed, err := strconv.Atoi(offsetStr)
+			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid offset"))
 				return
-			} else {
-				offset = defaultPairsOffset
 			}
+			offset = parsed
 		}
 
 		// collect params
