@@ -42,7 +42,12 @@ func (f Fixed8) String() string {
 	return buf.String()
 }
 
-// Value returns the original value representing the Fixed8
+// ToInt64 returns the original value representing the Fixed8
+func (f Fixed8) ToInt64() int64 {
+	return int64(f)
+}
+
+// Value returns the original value representing the Fixed8 divided by 10^8
 func (f Fixed8) Value() int64 {
 	return int64(f) / int64(Fixed8Decimals)
 }

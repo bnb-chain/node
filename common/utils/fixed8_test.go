@@ -30,6 +30,7 @@ func TestNewFixed8(t *testing.T) {
 	for _, val := range values {
 		assert.Equal(t, Fixed8(val*int64(decimals)), NewFixed8(val))
 		assert.Equal(t, int64(val), NewFixed8(val).Value())
+		assert.Equal(t, int64(val*int64(decimals)), NewFixed8(val).ToInt64())
 	}
 }
 
