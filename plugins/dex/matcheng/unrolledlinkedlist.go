@@ -10,9 +10,9 @@ import (
 1. only handful orders on one of the edges would be touched frequently
  - in the sequence way iteration for match
  - more frequent insert and delete
-2. interation across ~hundreds of orders on one of the edges would be frequent
+2. iteration across ~hundreds of orders on one of the edges would be frequent
  - publish market data
-3. interfation across all orders would be less frequent
+3. iteration across all orders would be less frequent
  - expire orders
 */
 

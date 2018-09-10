@@ -1,0 +1,19 @@
+#!/usr/bin/expect
+
+set clipath [lindex $argv 0]
+set clihome [lindex $argv 1]
+set symbol [lindex $argv 2]
+set side [lindex $argv 3]
+set price [lindex $argv 4]
+set qty [lindex $argv 5]
+set from [lindex $argv 6]
+set chainId [lindex $argv 7]
+
+set timeout 30
+    log_user 0
+	spawn $clipath --home $clihome dex order --symbol=$symbol --side=$side --price=$price --qty=$qty --tif=GTC --from=$from --chain-id=$chainId
+	expect "Password to sign with*"
+	send "1234qwerasdf\r"
+	expect "Committed at block*"
+	puts $expect_out(buffer)
+interact

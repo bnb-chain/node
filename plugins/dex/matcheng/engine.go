@@ -66,7 +66,16 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].CumQty += trade
 			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
+			me.Trades = append(
+				me.Trades,
+				Trade{
+					sells[h].Id,
+					me.LastTradePrice,
+					trade,
+					origBuyPx,
+					buys[k].CumQty,
+					sells[h].CumQty,
+					buys[k].Id})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -74,7 +83,16 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].nxtTrade = 0
 			buys[k].CumQty += trade
 			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
+			me.Trades = append(
+				me.Trades,
+				Trade{
+					sells[h].Id,
+					me.LastTradePrice,
+					trade,
+					origBuyPx,
+					buys[k].CumQty,
+					sells[h].CumQty,
+					buys[k].Id})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -82,7 +100,14 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			sells[h].nxtTrade = 0
 			buys[k].CumQty += trade
 			sells[h].CumQty += trade
-			me.Trades = append(me.Trades, Trade{sells[h].Id, me.LastTradePrice, trade, origBuyPx, buys[k].CumQty, buys[k].Id})
+			me.Trades = append(me.Trades, Trade{
+				sells[h].Id,
+				me.LastTradePrice,
+				trade,
+				origBuyPx,
+				buys[k].CumQty,
+				sells[h].CumQty,
+				buys[k].Id})
 			h++
 			k++
 		}

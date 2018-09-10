@@ -107,7 +107,7 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	for _, msg := range msgs {
 		err := validateOrder(ctx, pairMapper, accMapper, msg)
 		require.Error(t, err)
-		require.Equal(t, "Failed to parse trading pair symbol into assets", err.Error())
+		require.Equal(t, fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", msg.Symbol), err.Error())
 	}
 }
 

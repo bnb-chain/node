@@ -27,9 +27,9 @@ func (li *SurplusIndex) clear() {
 }
 
 //sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
-//recalNxtTrade should be true at the begining and false when nxtTrade is changed by allocation logic
-func sumOrdersTotalLeft(orders []OrderPart, recalNxtTrade bool) float64 {
-	var s float64
+//reCalNxtTrade should be true at the beginning and false when nxtTrade is changed by allocation logic
+func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
+	var s int64
 	k := len(orders)
 	for i := 0; i < k; i++ {
 		o := &orders[i]

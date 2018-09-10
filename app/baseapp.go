@@ -6,12 +6,13 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/pkg/errors"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -22,12 +23,12 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/list"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
+	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
+	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -47,18 +48,21 @@ const (
 	runTxModeSimulate runTxMode = iota
 	// Deliver a transaction
 	runTxModeDeliver runTxMode = iota
+
+	InvolvedAddressKey = "involvedAddresses"
 )
 
 // BaseApp reflects the ABCI application implementation.
 type BaseApp struct {
 	// initialized on creation
-	Logger     log.Logger
-	name       string               // application name from abci.Info
-	cdc        *wire.Codec          // Amino codec
-	db         dbm.DB               // common DB backend
-	cms        sdk.CommitMultiStore // Main (uncached) state
-	router     Router               // handle any kind of message
-	codespacer *sdk.Codespacer      // handle module codespacing
+	Logger                  log.Logger
+	name                    string               // application name from abci.Info
+	cdc                     *wire.Codec          // Amino codec
+	db                      dbm.DB               // common DB backend
+	cms                     sdk.CommitMultiStore // Main (uncached) state
+	router                  Router       // handle any kind of message
+	codespacer              *sdk.Codespacer      // handle module codespacing
+	isPublishAccountBalance bool
 
 	// must be set
 	txDecoder   sdk.TxDecoder   // unmarshal []byte into sdk.Tx
@@ -92,16 +96,17 @@ var _ abci.Application = (*BaseApp)(nil)
 // NOTE: The db is used to store the version number for now.
 // Accepts a user-defined txDecoder
 // Accepts variable number of option functions, which act on the BaseApp to set configuration choices
-func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, options ...func(*BaseApp)) *BaseApp {
+func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, isPublish bool, options ...func(*BaseApp)) *BaseApp {
 	app := &BaseApp{
-		Logger:     logger,
-		name:       name,
-		cdc:        cdc,
-		db:         db,
-		cms:        store.NewCommitMultiStore(db),
-		router:     NewRouter(),
-		codespacer: sdk.NewCodespacer(),
-		txDecoder:  txDecoder,
+		Logger:                  logger,
+		name:                    name,
+		cdc:                     cdc,
+		db:                      db,
+		cms:                     store.NewCommitMultiStore(db),
+		router:                  NewRouter(),
+		codespacer:              sdk.NewCodespacer(),
+		txDecoder:               txDecoder,
+		isPublishAccountBalance: isPublish,
 	}
 
 	// Register the undefined & root codespaces, which should not be used by
@@ -531,7 +536,7 @@ func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx sdk.C
 }
 
 // Iterates through msgs and executes them
-func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, simulate bool) (result sdk.Result) {
+func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, txHash string, simulate bool) (result sdk.Result) {
 	// accumulate results
 	logs := make([]string, 0, len(msgs))
 	var data []byte   // NOTE: we just append them all (?!)
@@ -545,7 +550,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, simulate bool) (res
 			return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
 		}
 
-		msgResult := handler(ctx, msg, simulate)
+		msgResult := handler(ctx.WithValue(types.TxHashKey, txHash), msg, simulate)
 
 		// NOTE: GasWanted is determined by ante handler and
 		// GasUsed by the GasMeter
@@ -597,7 +602,7 @@ func (app *BaseApp) initializeContext(ctx sdk.Context, mode runTxMode) sdk.Conte
 // runTx processes a transaction. The transactions is proccessed via an
 // anteHandler. txBytes may be nil in some cases, eg. in tests. Also, in the
 // future we may support "internal" transactions.
-func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk.Result) {
+func (app *BaseApp) runTx(mode runTxMode, txBytes tmtypes.Tx, tx sdk.Tx) (result sdk.Result) {
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -624,7 +629,6 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	}()
 
 	var msgs = tx.GetMsgs()
-
 	err := validateBasicTxMsgs(msgs)
 	if err != nil {
 		return err.Result()
@@ -645,16 +649,21 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	// Keep the state in a transient CacheWrap in case processing the messages
 	// fails.
+	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 	msCache := getState(app, mode).CacheMultiStore()
 	if msCache.TracingEnabled() {
 		msCache = msCache.WithTracingContext(sdk.TraceContext(
-			map[string]interface{}{"txHash": cmn.HexBytes(tmhash.Sum(txBytes)).String()},
+			map[string]interface{}{"txHash": txHash},
 		)).(sdk.CacheMultiStore)
 	}
 
 	ctx = ctx.WithMultiStore(msCache)
-	result = app.runMsgs(ctx, msgs, simulate)
+	result = app.runMsgs(ctx, msgs, txHash, simulate)
 	result.GasWanted = gasWanted
+
+	if mode == runTxModeDeliver && app.isPublishAccountBalance {
+		app.deliverState.ctx = collectInvolvedAddresses(app.deliverState.ctx, msgs[0])
+	}
 
 	// only update state if all messages pass and we're not in a simulation
 	if result.IsOK() && mode != runTxModeSimulate {
@@ -708,4 +717,42 @@ func (app *BaseApp) Commit() (res abci.ResponseCommit) {
 	return abci.ResponseCommit{
 		Data: commitID.Hash,
 	}
+}
+
+func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context) {
+	switch ct := msg.(type) {
+	case list.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case order.NewOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case order.CancelOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case issue.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case burn.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.FreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.UnfreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case bank.MsgSend:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Inputs[0].Address, ct.Outputs[0].Address)
+	default:
+		// TODO(#66): correct error handling
+	}
+	return
+}
+
+func addInvolvedAddressesToCtx(ctx sdk.Context, addresses ...sdk.AccAddress) (newCtx sdk.Context) {
+	var newAddress []string
+	if addresses, ok := ctx.Value(InvolvedAddressKey).([]string); ok {
+		newAddress = addresses
+	} else {
+		newAddress = make([]string, 0)
+	}
+	for _, address := range addresses {
+		newAddress = append(newAddress, string(address.Bytes()))
+	}
+	newCtx = ctx.WithValue(InvolvedAddressKey, newAddress)
+	return
 }

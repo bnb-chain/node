@@ -11,7 +11,7 @@ import (
 )
 
 // Routes exports dex message routes
-func Routes(cdc *wire.Codec, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
+func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
 	accountMapper auth.AccountMapper) map[string]common.Handler {
 	routes := make(map[string]common.Handler)
 	orderHandler := order.NewHandler(cdc, dexKeeper, accountMapper)
