@@ -36,7 +36,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			limit, err := strconv.Atoi(path[3])
-			if err != nil || limit < 0 {
+			if err != nil || limit <= 0 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse limit",
