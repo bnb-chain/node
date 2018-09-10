@@ -18,7 +18,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-// PutOrderReqHandler creates an http request handler to send coins to a address
+// PutOrderReqHandler creates an http request handler to create a new order transaction and return its binary tx
 func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
 	type formParams struct {
 		address string
