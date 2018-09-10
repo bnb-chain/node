@@ -9,6 +9,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -127,8 +128,8 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 
 	toBeUpdated := m.decodeToken(bz)
 
-	if toBeUpdated.TotalSupply != supply {
-		toBeUpdated.TotalSupply = supply
+	if toBeUpdated.TotalSupply.ToInt64() != supply {
+		toBeUpdated.TotalSupply = utils.Fixed8(supply)
 		store.Set(key, m.encodeToken(toBeUpdated))
 	}
 	return nil
