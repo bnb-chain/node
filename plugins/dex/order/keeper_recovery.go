@@ -55,7 +55,7 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	return nil
 }
 
-func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
+func (kp *Keeper) SnapShotOrderBook(ctx types.Context, height int64) (err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
@@ -75,7 +75,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 	return compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
+func (kp *Keeper) LoadOrderBookSnapshot(ctx types.Context, daysBack int) (int64, error) {
 	kvStore := ctx.KVStore(kp.storeKey)
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
@@ -181,7 +181,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHe
 	return nil
 }
 
-func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func (kp *Keeper) InitOrderBook(ctx types.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	height, err := kp.LoadOrderBookSnapshot(ctx, daysBack)
 	if err != nil {
 		panic(err)

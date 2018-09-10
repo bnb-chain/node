@@ -7,7 +7,7 @@ import (
 )
 
 // TODO: just a template
-func EndBlockAsync(ctx sdk.Context) chan interface{} {
+func EndBlockAsync(ctx types.Context) chan interface{} {
 	// scan and clearing.
 	finish := make(chan interface{})
 	go func() {

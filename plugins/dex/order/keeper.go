@@ -312,7 +312,7 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
-func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
+func (kp *Keeper) doTransfer(ctx types.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
 	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}})
 	if !newLocked.IsNotNegative() {
@@ -340,7 +340,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, 
 	return nil
 }
 
-func (kp *Keeper) calculateOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
+func (kp *Keeper) calculateOrderFee(ctx types.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inCcy == types.NativeToken {
 		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
@@ -402,8 +402,8 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.AccountMapper,
-	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+func (kp *Keeper) MatchAndAllocateAll(ctx types.Context, accountMapper auth.AccountMapper,
+	postAllocateHandler func(tran Transfer)) (newCtx types.Context, code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
@@ -432,11 +432,11 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 	return newCtx, sdk.CodeOK, nil
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(ctx types.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
 	return sdk.CodeOK, nil
 }
 
-func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
+func (kp *Keeper) MarkBreatheBlock(ctx types.Context, height, blockTime int64) {
 	key := utils.Int642Bytes(blockTime / SecondsInOneDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
@@ -465,6 +465,6 @@ func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, 
 	return height
 }
 
-func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
+func (kp *Keeper) InitGenesis(ctx types.Context, genesis TradingGenesis) {
 	kp.FeeConfig.InitGenesis(ctx, genesis)
 }

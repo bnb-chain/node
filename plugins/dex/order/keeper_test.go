@@ -329,7 +329,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
+func setup() (ctx types.Context, mapper auth.AccountMapper, keeper *Keeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)

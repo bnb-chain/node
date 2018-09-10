@@ -134,7 +134,7 @@ func MakeCodec() *wire.Codec {
 
 // initChainerFn performs custom logic for chain initialization.
 func (app *BinanceChain) initChainerFn() sdk.InitChainer {
-	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	return func(ctx types.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 
 		genesisState := new(GenesisState)
@@ -170,7 +170,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	}
 }
 
-func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+func (app *BinanceChain) EndBlocker(ctx types.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeight()

@@ -67,52 +67,52 @@ func (config *FeeConfig) btoi(bz []byte) (i int64) {
 }
 
 // warning: all set methods are not thread safe. They would only be called in DeliverTx
-func (config *FeeConfig) SetExpireFee(ctx sdk.Context, expireFee int64) {
+func (config *FeeConfig) SetExpireFee(ctx types.Context, expireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(expireFee)
 	store.Set(expireFeeKey, b)
 	config.expireFee = expireFee
 }
 
-func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
+func (config *FeeConfig) SetIOCExpireFee(ctx types.Context, iocExpireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(iocExpireFee)
 	store.Set(iocExpireFeeKey, b)
 	config.iocExpireFee = iocExpireFee
 }
 
-func (config *FeeConfig) SetFeeRateWithNativeToken(ctx sdk.Context, feeRateWithNativeToken int64) {
+func (config *FeeConfig) SetFeeRateWithNativeToken(ctx types.Context, feeRateWithNativeToken int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(feeRateWithNativeToken)
 	store.Set(feeRateWithNativeTokenKey, b)
 	config.feeRateWithNativeToken = feeRateWithNativeToken
 }
 
-func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
+func (config *FeeConfig) SetFeeRate(ctx types.Context, feeRate int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(feeRate)
 	store.Set(feeRateKey, b)
 	config.feeRate = feeRate
 }
 
-func (config FeeConfig) ExpireFee(ctx sdk.Context) int64 {
+func (config FeeConfig) ExpireFee(ctx ) int64 {
 	return config.expireFee
 }
 
-func (config FeeConfig) IOCExpireFee(ctx sdk.Context) int64 {
+func (config FeeConfig) IOCExpireFee(ctx types.Context) int64 {
 	return config.iocExpireFee
 }
 
-func (config FeeConfig) FeeRateWithNativeToken(ctx sdk.Context) int64 {
+func (config FeeConfig) FeeRateWithNativeToken(ctx types.Context) int64 {
 	return config.feeRateWithNativeToken
 }
 
-func (config FeeConfig) FeeRate(ctx sdk.Context) int64 {
+func (config FeeConfig) FeeRate(ctx types.Context) int64 {
 	return config.feeRate
 }
 
 // either init fee by Init, or by InitGenesis.
-func (config *FeeConfig) Init(ctx sdk.Context) {
+func (config *FeeConfig) Init(ctx types.Context) {
 	store := ctx.KVStore(config.storeKey)
 	if bz := store.Get(expireFeeKey); bz != nil {
 		config.expireFee = config.btoi(bz)
@@ -124,7 +124,7 @@ func (config *FeeConfig) Init(ctx sdk.Context) {
 }
 
 // InitGenesis - store the genesis trend
-func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
+func (config *FeeConfig) InitGenesis(ctx types.Context, data TradingGenesis) {
 	config.SetExpireFee(ctx, data.ExpireFee)
 	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
 	config.SetFeeRateWithNativeToken(ctx, data.FeeRateWithNativeToken)

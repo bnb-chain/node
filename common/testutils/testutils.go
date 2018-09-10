@@ -41,7 +41,7 @@ func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
 	return priv, addr
 }
 
-func NewAccount(ctx sdk.Context, am auth.AccountMapper, free int64) (crypto.PrivKey, auth.Account) {
+func NewAccount(ctx types.Context, am auth.AccountMapper, free int64) (crypto.PrivKey, auth.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	acc.SetCoins(NewNativeTokens(free))

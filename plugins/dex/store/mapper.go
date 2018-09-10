@@ -12,11 +12,11 @@ import (
 )
 
 type TradingPairMapper interface {
-	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
-	Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool
-	GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
-	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
-	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64)
+	AddTradingPair(ctx types.Context, pair types.TradingPair) error
+	Exists(ctx types.Context, tradeAsset, quoteAsset string) bool
+	GetTradingPair(ctx types.Context, tradeAsset, quoteAsset string) (types.TradingPair, error)
+	ListAllTradingPairs(ctx types.Context) []types.TradingPair
+	UpdateTickSizeAndLotSize(ctx types.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64)
 }
 
 var _ TradingPairMapper = mapper{}
@@ -33,7 +33,7 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 	}
 }
 
-func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
+func (m mapper) AddTradingPair(ctx types.Context, pair types.TradingPair) error {
 	tradeAsset := pair.TradeAsset
 	if len(tradeAsset) == 0 {
 		return errors.New("TradeAsset cannot be empty")
@@ -51,14 +51,14 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	return nil
 }
 
-func (m mapper) Exists(ctx sdk.Context, tradeAsset, quoteAsset string) bool {
+func (m mapper) Exists(ctx types.Context, tradeAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
 	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
 	return store.Has([]byte(symbol))
 }
 
-func (m mapper) GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (types.TradingPair, error) {
+func (m mapper) GetTradingPair(ctx types.Context, tradeAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
 	symbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
 	bz := store.Get([]byte(symbol))
@@ -70,7 +70,7 @@ func (m mapper) GetTradingPair(ctx sdk.Context, tradeAsset, quoteAsset string) (
 	return m.decodeTradingPair(bz), nil
 }
 
-func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
+func (m mapper) ListAllTradingPairs(ctx types.Context) (res []types.TradingPair) {
 	store := ctx.KVStore(m.key)
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
@@ -83,7 +83,7 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	return res
 }
 
-func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64) {
+func (m mapper) UpdateTickSizeAndLotSize(ctx types.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64) {
 	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(price)
 
 	if tickSize != pair.TickSize || lotSize != pair.LotSize {

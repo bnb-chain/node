@@ -11,7 +11,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
+func distributeFee(ctx types.Context, am auth.AccountMapper) {
 	proposerAddr := ctx.BlockHeader().Proposer.Address
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
@@ -26,7 +26,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
 		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 		am.SetAccount(ctx, proposerAcc)
 	} else if fee.Type == types.FeeForAll {
-		signingValidators := ctx.SigningValidators()
+		signingValidators := ctx.VoteInfos()
 		valSize := int64(len(signingValidators))
 		avgTokens := sdk.Coins{}
 		roundingTokens := sdk.Coins{}

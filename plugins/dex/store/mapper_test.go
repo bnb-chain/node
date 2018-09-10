@@ -14,7 +14,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
-func setup() (TradingPairMapper, sdk.Context) {
+func setup() (TradingPairMapper, types.Context) {
 	ms, key := setupMultiStore()
 	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	var cdc = wire.NewCodec()

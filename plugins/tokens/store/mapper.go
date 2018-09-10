@@ -23,13 +23,13 @@ func (t Tokens) GetSymbols() *[]string {
 }
 
 type Mapper interface {
-	NewToken(ctx sdk.Context, token types.Token) error
-	Exists(ctx sdk.Context, symbol string) bool
-	ExistsCC(ctx context.CoreContext, symbol string) bool
-	GetTokenList(ctx sdk.Context) Tokens
-	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
+	NewToken(ctx types.Context, token types.Token) error
+	Exists(ctx types.Context, symbol string) bool
+	ExistsCC(ctx context.CLIContext, symbol string) bool
+	GetTokenList(ctx types.Context) Tokens
+	GetToken(ctx types.Context, symbol string) (types.Token, error)
 	// we do not provide the updateToken method
-	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
+	UpdateTotalSupply(ctx types.Context, symbol string, supply int64) error
 }
 
 var _ Mapper = mapper{}
@@ -46,7 +46,7 @@ func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
 	}
 }
 
-func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
+func (m mapper) GetToken(ctx types.Context, symbol string) (types.Token, error) {
 	store := ctx.KVStore(m.key)
 	key := []byte(symbol)
 
@@ -58,7 +58,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
 }
 
-func (m mapper) GetTokenCC(ctx context.CoreContext, symbol string) (types.Token, error) {
+func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
 	key := []byte(symbol)
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
@@ -70,7 +70,7 @@ func (m mapper) GetTokenCC(ctx context.CoreContext, symbol string) (types.Token,
 	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
 }
 
-func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
+func (m mapper) GetTokenList(ctx types.Context) Tokens {
 	var res Tokens
 	store := ctx.KVStore(m.key)
 	iter := store.Iterator(nil, nil)
@@ -82,13 +82,13 @@ func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
 	return res
 }
 
-func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
+func (m mapper) Exists(ctx types.Context, symbol string) bool {
 	store := ctx.KVStore(m.key)
 	key := []byte(symbol)
 	return store.Has(key)
 }
 
-func (m mapper) ExistsCC(ctx context.CoreContext, symbol string) bool {
+func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 	key := []byte(symbol)
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
@@ -100,7 +100,7 @@ func (m mapper) ExistsCC(ctx context.CoreContext, symbol string) bool {
 	return false
 }
 
-func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
+func (m mapper) NewToken(ctx types.Context, token types.Token) error {
 	symbol := token.Symbol
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
@@ -113,7 +113,7 @@ func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 	return nil
 }
 
-func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error {
+func (m mapper) UpdateTotalSupply(ctx types.Context, symbol string, supply int64) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
 	}

@@ -64,7 +64,7 @@ var (
 	testClient = NewTestClient(testApp)
 )
 
-func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
+func InitAccounts(ctx types.Context, app *BinanceChain) *[]auth.Account {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{
 			BaseAccount: auth.BaseAccount{
@@ -79,7 +79,7 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 	return &genAccs
 }
 
-func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
+func ResetAccounts(ctx types.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountMapper.GetAccount(ctx, acc.GetAddress())
 		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
@@ -101,11 +101,11 @@ func NewTestClient(a *BinanceChain) *TestClient {
 	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
 
-func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
+func GetAvail(ctx types.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.CoinKeeper.GetCoins(ctx, add).AmountOf(ccy).Int64()
 }
 
-func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
+func GetLocked(ctx types.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
 

@@ -35,7 +35,7 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountMapper) string {
+func genOrderID(add sdk.AccAddress, seq int64, ctx types.Context, am auth.AccountMapper) string {
 	acc := am.GetAccount(ctx, add)
 	if acc.GetSequence() != seq {
 		err := acc.SetSequence(seq)

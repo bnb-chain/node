@@ -48,9 +48,8 @@ type BaseApp struct {
 	cms        sdk.CommitMultiStore // Main (uncached) state
 	router     baseapp.Router       // handle any kind of message
 	codespacer *sdk.Codespacer      // handle module codespacing
+	txDecoder  sdk.TxDecoder        // unmarshal []byte into sdk.Tx
 
-	// must be set
-	txDecoder   sdk.TxDecoder   // unmarshal []byte into sdk.Tx
 	anteHandler sdk.AnteHandler // ante handler for fee and auth
 
 	// may be nil
@@ -65,9 +64,9 @@ type BaseApp struct {
 	// checkState is set on initialization and reset on Commit.
 	// deliverState is set in InitChain and BeginBlock and cleared on Commit.
 	// See methods setCheckState and setDeliverState.
-	checkState       *state                  // for CheckTx
-	deliverState     *state                  // for DeliverTx
-	signedValidators []abci.SigningValidator // absent validators from begin block
+	checkState       *state          // for CheckTx
+	deliverState     *state          // for DeliverTx
+	signedValidators []abci.VoteInfo // absent validators from begin block
 }
 
 var _ abci.Application = (*BaseApp)(nil)
@@ -135,32 +134,6 @@ func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
 	app.cms.MountStoreWithDB(key, typ, nil)
 }
 
-// Set the txDecoder function
-func (app *BaseApp) SetTxDecoder(txDecoder sdk.TxDecoder) {
-	app.txDecoder = txDecoder
-}
-
-// nolint - Set functions
-func (app *BaseApp) SetInitChainer(initChainer sdk.InitChainer) {
-	app.initChainer = initChainer
-}
-func (app *BaseApp) SetBeginBlocker(beginBlocker sdk.BeginBlocker) {
-	app.beginBlocker = beginBlocker
-}
-func (app *BaseApp) SetEndBlocker(endBlocker sdk.EndBlocker) {
-	app.endBlocker = endBlocker
-}
-func (app *BaseApp) SetAnteHandler(ah sdk.AnteHandler) {
-	app.anteHandler = ah
-}
-func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
-	app.addrPeerFilter = pf
-}
-func (app *BaseApp) SetPubKeyPeerFilter(pf sdk.PeerFilter) {
-	app.pubkeyPeerFilter = pf
-}
-func (app *BaseApp) Router() baseapp.Router { return app.router }
-
 // load latest application version
 func (app *BaseApp) LoadLatestVersion(mainKey sdk.StoreKey) error {
 	err := app.cms.LoadLatestVersion()
@@ -203,7 +176,7 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 }
 
 // NewContext returns a new Context with the correct store, the given header, and nil txBytes.
-func (app *BaseApp) NewContext(isCheckTx bool, header abci.Header) sdk.Context {
+func (app *BaseApp) NewContext(isCheckTx bool, header abci.Header) types.Context {
 	if isCheckTx {
 		return sdk.NewContext(app.checkState.ms, header, true, app.Logger)
 	}
@@ -212,7 +185,7 @@ func (app *BaseApp) NewContext(isCheckTx bool, header abci.Header) sdk.Context {
 
 type state struct {
 	ms  sdk.CacheMultiStore
-	ctx sdk.Context
+	ctx types.Context
 }
 
 func (st *state) CacheMultiStore() sdk.CacheMultiStore {
@@ -399,7 +372,7 @@ func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeg
 	} else {
 		// In the first block, app.deliverState.ctx will already be initialized
 		// by InitChain. Context is now updated with Header information.
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockHeader(req.Header)
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockHeader(req.Header).WithBlockHeight(req.Header.Height)
 	}
 
 	if app.beginBlocker != nil {
@@ -407,7 +380,7 @@ func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeg
 	}
 
 	// set the signed validators for addition to context in deliverTx
-	app.signedValidators = req.Validators
+	app.signedValidators = req.LastCommitInfo.GetVotes()
 	return
 }
 
@@ -428,11 +401,7 @@ func (app *BaseApp) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 		Log:       result.Log,
 		GasWanted: result.GasWanted,
 		GasUsed:   result.GasUsed,
-		Fee: cmn.KI64Pair{
-			[]byte(result.FeeDenom),
-			result.FeeAmount,
-		},
-		Tags: result.Tags,
+		Tags:      result.Tags,
 	}
 }
 
@@ -480,7 +449,7 @@ func validateBasicTxMsgs(msgs []sdk.Msg) sdk.Error {
 	return nil
 }
 
-func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx sdk.Context) {
+func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx types.Context) {
 	// Get the context
 	if mode == runTxModeCheck || mode == runTxModeSimulate {
 		ctx = app.checkState.ctx.WithTxBytes(txBytes)
@@ -498,7 +467,7 @@ func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx sdk.C
 }
 
 // Iterates through msgs and executes them
-func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg) (result sdk.Result) {
+func (app *BaseApp) runMsgs(ctx types.Context, msgs []sdk.Msg) (result sdk.Result) {
 	// accumulate results
 	logs := make([]string, 0, len(msgs))
 	var data []byte   // NOTE: we just append them all (?!)

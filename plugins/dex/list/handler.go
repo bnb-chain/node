@@ -12,7 +12,7 @@ import (
 )
 
 func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case Msg:
 			return handleList(ctx, keeper, tokenMapper, msg)
@@ -23,7 +23,7 @@ func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
 	}
 }
 
-func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
+func handleList(ctx types.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
 	if keeper.PairMapper.Exists(ctx, msg.Symbol, msg.QuoteSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteSymbol, msg.Symbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}

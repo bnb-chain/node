@@ -32,7 +32,7 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 	return ms, key, key2
 }
 
-func setupMappers() (store.TradingPairMapper, auth.AccountMapper, sdk.Context) {
+func setupMappers() (store.TradingPairMapper, auth.AccountMapper, types.Context) {
 	ms, key, key2 := setupMultiStore()
 	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	var cdc = wire.NewCodec()
@@ -43,7 +43,7 @@ func setupMappers() (store.TradingPairMapper, auth.AccountMapper, sdk.Context) {
 	return pairMapper, accMapper, ctx
 }
 
-func setupAccount(ctx sdk.Context, accMapper auth.AccountMapper) (auth.Account, sdk.AccAddress) {
+func setupAccount(ctx types.Context, accMapper auth.AccountMapper) (auth.Account, sdk.AccAddress) {
 	saddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj" // TODO: temporary
 	addr, err := sdk.AccAddressFromBech32(saddr)
 	if err != nil {

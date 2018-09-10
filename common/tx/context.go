@@ -13,12 +13,12 @@ const (
 )
 
 // add the signers to the context
-func WithFee(ctx sdk.Context, fee types.Fee) sdk.Context {
+func WithFee(ctx types.Context, fee types.Fee) types.Context {
 	return ctx.WithValue(contextKeyFee, fee)
 }
 
 // get the signers from the context
-func Fee(ctx sdk.Context) types.Fee {
+func Fee(ctx types.Context) types.Fee {
 	v := ctx.Value(contextKeyFee)
 	if v == nil {
 		return types.Fee{}

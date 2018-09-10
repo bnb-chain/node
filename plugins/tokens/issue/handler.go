@@ -13,7 +13,7 @@ import (
 )
 
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		}
@@ -23,7 +23,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleIssueToken(ctx types.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	exists := tokenMapper.Exists(ctx, symbol)
 	if exists {

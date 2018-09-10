@@ -11,7 +11,7 @@ import (
 )
 
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
 		}
@@ -21,7 +21,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleBurnToken(ctx types.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
 	burnAmount := msg.Amount
 	if burnAmount <= 0 {
 		return sdk.ErrInsufficientCoins("burn amount should be greater than 0").Result()

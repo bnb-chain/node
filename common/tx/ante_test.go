@@ -43,7 +43,7 @@ func newCoins() sdk.Coins {
 }
 
 // run the tx through the anteHandler and ensure its valid
-func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx) {
+func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx types.Context, tx sdk.Tx) {
 	_, result, abort := anteHandler(ctx, tx)
 	require.False(t, abort)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
@@ -51,7 +51,7 @@ func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx
 }
 
 // run the tx through the anteHandler and ensure it fails with the given code
-func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx, code sdk.CodeType) {
+func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx types.Context, tx sdk.Tx, code sdk.CodeType) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch r.(type) {
@@ -69,7 +69,7 @@ func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, 
 		fmt.Sprintf("Expected %v, got %v", sdk.ToABCICode(sdk.CodespaceRoot, code), result))
 }
 
-func newTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64, fee tx.StdFee) sdk.Tx {
+func newTestTx(ctx types.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64, fee tx.StdFee) sdk.Tx {
 	sigs := make([]tx.StdSignature, len(privs))
 	for i, priv := range privs {
 		signBytes := tx.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], fee, msgs, "")
@@ -83,7 +83,7 @@ func newTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums 
 	return tx
 }
 
-func newTestTxWithMemo(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64, fee tx.StdFee, memo string) sdk.Tx {
+func newTestTxWithMemo(ctx types.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64, fee tx.StdFee, memo string) sdk.Tx {
 	sigs := make([]tx.StdSignature, len(privs))
 	for i, priv := range privs {
 		signBytes := tx.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], fee, msgs, memo)
@@ -531,7 +531,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	require.Nil(t, acc2.GetPubKey())
 }
 
-func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
+func setup() (mapper auth.AccountMapper, ctx types.Context, anteHandler sdk.AnteHandler) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
@@ -542,7 +542,7 @@ func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHa
 	return
 }
 
-func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...tx.FeeCalculator) sdk.Context {
+func runAnteHandlerWithMultiTxFees(ctx types.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...tx.FeeCalculator) types.Context {
 	for i := 0; i < len(fees); i++ {
 		msg := newTestMsgWithFeeCalculator(fees[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)}, newStdFee())
@@ -552,12 +552,12 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 	return ctx
 }
 
-func checkBalance(t *testing.T, am auth.AccountMapper, ctx sdk.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
+func checkBalance(t *testing.T, am auth.AccountMapper, ctx types.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
 	newBalance := am.GetAccount(ctx, addr).GetCoins()
 	require.Equal(t, accNewBalance, newBalance)
 }
 
-func checkFee(t *testing.T, ctx sdk.Context, expectFee types.Fee) {
+func checkFee(t *testing.T, ctx types.Context, expectFee types.Fee) {
 	fee := tx.Fee(ctx)
 	require.Equal(t, expectFee, fee)
 }
