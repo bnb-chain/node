@@ -22,7 +22,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
-					Log:  "pairs query requires offset and limit in the path",
+					Log:  "tokens list query requires offset and limit in the path",
 				}
 			}
 			ctx := app.GetContextForCheckState()
