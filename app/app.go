@@ -179,8 +179,11 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 				panic(err)
 			}
 
-			_, _, sdkErr := app.coinKeeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil),
-				sdk.Coin{Denom: token.Symbol, Amount: sdk.NewInt(token.TotalSupply)}))
+			_, _, sdkErr := app.CoinKeeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil),
+				sdk.Coin{
+					Denom:  token.Symbol,
+					Amount: sdk.NewInt(token.TotalSupply.ToInt64()),
+				}))
 			if sdkErr != nil {
 				panic(sdkErr)
 			}
