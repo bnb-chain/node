@@ -61,11 +61,12 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 		return err
 	}
 
-	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.Value() != 0 {
+	fmt.Println(pair.LotSize)
+	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
 		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize))
 	}
 
-	if msg.Price <= 0 || msg.Price%pair.TickSize.Value() != 0 {
+	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
 		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize))
 	}
 
