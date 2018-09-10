@@ -1,0 +1,139 @@
+package config
+
+import (
+	"bytes"
+	"path/filepath"
+	"text/template"
+
+	"github.com/spf13/viper"
+
+	"github.com/cosmos/cosmos-sdk/server"
+
+	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/tendermint/tendermint/libs/common"
+)
+
+var configTemplate *template.Template
+
+func init() {
+	var err error
+	if configTemplate, err = template.New("configFileTemplate").Parse(appConfigTemplate); err != nil {
+		panic(err)
+	}
+}
+
+const (
+	AppConfigFileName = "app"
+)
+
+// Note: any changes to the comments/variables/mapstructure
+// must be reflected in the appropriate struct in config/config.go
+const appConfigTemplate = `# This is a TOML config file.
+# For more information, see https://github.com/toml-lang/toml
+
+##### publication related configurations #####
+[publication]
+
+# Whether we want publish market data (this includes trades and order)
+publishMarketData = {{ .PublicationConfig.PublishMarketData }}
+marketDataTopic = "{{ .PublicationConfig.MarketDataTopic }}"
+marketDataKafka = "{{ .PublicationConfig.MarketDataKafka }}"
+
+# Whether we want publish account balance to notify browser db indexer persist latest account balance change
+publishAccountBalance = {{ .PublicationConfig.PublishAccountBalance }}
+accountBalanceTopic = "{{ .PublicationConfig.AccountBalanceTopic }}"
+accountBalanceKafka = "{{ .PublicationConfig.AccountBalanceKafka }}"
+
+# Whether we want publish order book changes
+publishOrderBook = {{ .PublicationConfig.PublishOrderBook }}
+orderBookTopic = "{{ .PublicationConfig.OrderBookTopic }}"
+orderBookKafka = "{{ .PublicationConfig.OrderBookKafka }}"
+`
+
+type BinanceChainContext struct {
+	*server.Context
+	*viper.Viper
+	*BinanceChainConfig
+}
+
+func NewDefaultContext() *BinanceChainContext {
+	return &BinanceChainContext{server.NewDefaultContext(), viper.New(), DefaultBinanceChainConfig()}
+}
+
+func (context *BinanceChainContext) ToCosmosServerCtx() *server.Context {
+	return context.Context
+}
+
+type BinanceChainConfig struct {
+	*PublicationConfig `mapstructure:"publication"`
+}
+
+func DefaultBinanceChainConfig() *BinanceChainConfig {
+	return &BinanceChainConfig{
+		PublicationConfig: defaultPublicationConfig(),
+	}
+}
+
+type PublicationConfig struct {
+	PublishMarketData bool   `mapstructure:"publishMarketData"`
+	MarketDataTopic   string `mapstructure:"marketDataTopic"`
+	MarketDataKafka   string `mapstructure:"marketDataKafka"`
+
+	PublishAccountBalance bool   `mapstructure:"publishAccountBalance"`
+	AccountBalanceTopic   string `mapstructure:"accountBalanceTopic"`
+	AccountBalanceKafka   string `mapstructure:"accountBalanceKafka"`
+
+	PublishOrderBook bool   `mapstructure:"publishOrderBook"`
+	OrderBookTopic   string `mapstructure:"orderBookTopic"`
+	OrderBookKafka   string `mapstructure:"orderBookKafka"`
+}
+
+func defaultPublicationConfig() *PublicationConfig {
+	return &PublicationConfig{
+		PublishMarketData: false,
+		MarketDataTopic:   "test",
+		MarketDataKafka:   "127.0.0.1:9092",
+
+		PublishAccountBalance: false,
+		AccountBalanceTopic:   "accounts",
+		AccountBalanceKafka:   "127.0.0.1:9092",
+
+		PublishOrderBook: false,
+		OrderBookTopic:   "books",
+		OrderBookKafka:   "127.0.0.1:9092",
+	}
+}
+
+func (context *BinanceChainContext) ParseAppConfigInPlace() error {
+	// this piece of code should be consistent with bindFlagsLoadViper vendor/github.com/tendermint/tendermint/libs/cli/setup.go:125
+	homeDir := viper.GetString(cli.HomeFlag)
+	context.Viper.SetConfigName(AppConfigFileName)
+	context.Viper.AddConfigPath(homeDir)
+	context.Viper.AddConfigPath(filepath.Join(homeDir, "config"))
+
+	// If a config file is found, read it in.
+	if err := context.Viper.ReadInConfig(); err == nil {
+		// stderr, so if we redirect output to json file, this doesn't appear
+		// fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// ignore not found error, return other errors
+		return err
+	}
+
+	err := context.Viper.Unmarshal(context.BinanceChainConfig)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// WriteConfigFile renders config using the template and writes it to configFilePath.
+func WriteConfigFile(configFilePath string, config *BinanceChainConfig) {
+	var buffer bytes.Buffer
+
+	if err := configTemplate.Execute(&buffer, config); err != nil {
+		panic(err)
+	}
+
+	common.MustWriteFile(configFilePath, buffer.Bytes(), 0644)
+}

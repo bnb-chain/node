@@ -54,7 +54,7 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper := NewKeeper(common.DexStoreKey, coinKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc)
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return keeper
 }
 
@@ -156,19 +156,19 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 101000, 1000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ_BNB", 99000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ_BNB", 98000, 1000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ_BNB", 97000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ_BNB", 95000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ_BNB", 96000, 1500000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(msg, 42, "", false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(7, len(keeper.allOrders["XYZ_BNB"]))
 	assert.Equal(1, len(keeper.engines))
@@ -210,8 +210,8 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 300000)
-	keeper.AddOrder(msg, 42)
-	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price)
+	keeper.AddOrder(msg, 42, "", false)
+	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, "", Canceled, false)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
@@ -380,7 +380,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	coinKeeper := bank.NewKeeper(mapper)
-	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc)
+	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
@@ -498,12 +498,12 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC", "BNB", 1e6))
 	keeper.AddEngine(dextypes.NewTradingPair("XYZ", "BNB", 1e6))
-	keeper.AddOrder(NewNewOrderMsg(addr, "1", Side.BUY, "ABC_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "2", Side.BUY, "ABC_BNB", 2e6, 2e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "3", Side.BUY, "XYZ_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "1", Side.BUY, "ABC_BNB", 1e6, 1e8), 10000, "", false)
+	keeper.AddOrder(NewNewOrderMsg(addr, "2", Side.BUY, "ABC_BNB", 2e6, 2e8), 10000, "", false)
+	keeper.AddOrder(NewNewOrderMsg(addr, "3", Side.BUY, "XYZ_BNB", 1e6, 1e8), 10000, "", false)
+	keeper.AddOrder(NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 10000, "", false)
+	keeper.AddOrder(NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000, "", false)
+	keeper.AddOrder(NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000, "", false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
 		sdk.NewCoin("ABC", 3e8),
 		sdk.NewCoin("BNB", 10e6),

@@ -1,11 +1,15 @@
 package dex
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/app/pub"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	app "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 const abciQueryPrefix = "dex"
@@ -21,12 +25,49 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
+func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper *DexKeeper, height, blockTime int64) {
 	logger := bnclog.With("module", "dex")
 	logger.Info("Start updating tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	logger.Info("Staring Expiring stale orders")
-	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+	if dexKeeper.CollectOrderInfoForPublish {
+		transCh := make(chan order.Transfer, pub.FeeCollectionChannelSize)
+
+		var feeCollectorForTrades = func(tran order.Transfer) {
+			transCh <- tran
+		}
+
+		dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, feeCollectorForTrades)
+		close(transCh)
+
+		for tran := range transCh {
+			logger.Debug(fmt.Sprintf("fee Collector for tran: %s", tran.String()))
+
+			var id string
+			if tran.IsBuyer() {
+				id = tran.Bid
+			} else {
+				id = tran.Sid
+			}
+			originOrd := dexKeeper.OrderChangesMap[id]
+			var fee int64
+			var feeAsset string
+			if !tran.FeeFree() {
+				fee = tran.Fee.Tokens[0].Amount.Int64() // TODO(#66): Fix potential fee precision loss
+				feeAsset = tran.Fee.Tokens[0].Denom
+			}
+			change := order.OrderChange{
+				OrderMsg:  originOrd.OrderMsg,
+				Tpe:       order.Expired,
+				Fee:       fee,
+				FeeAsset:  feeAsset,
+				LeavesQty: originOrd.LeavesQty,
+				CumQty:    originOrd.CumQty}
+			dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
+		}
+	} else {
+		dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	logger.Info("Save Orderbook snapshot", "blockHeight", height)
@@ -35,11 +76,11 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	}
 }
 
-func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
+func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper *DexKeeper) {
 	tradingPairs := dexKeeper.PairMapper.ListAllTradingPairs(ctx)
 
 	for _, pair := range tradingPairs {
-		_, lastPrice := dexKeeper.GetLastTrades(pair.GetSymbol())
+		_, lastPrice := dexKeeper.GetLastTradesForPair(pair.GetSymbol())
 		if lastPrice == 0 {
 			continue
 		}

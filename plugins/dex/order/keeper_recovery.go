@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"io"
 	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
+	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmtypes "github.com/tendermint/tendermint/types"
 
@@ -52,7 +54,7 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 		return err
 	}
 	bytes = b.Bytes()
-	bnclog.Debug(fmt.Sprintf("update dex store for key: %s, value: %v\n", key, bytes))
+	bnclog.Debug(fmt.Sprintf("compressAndSave key: %s, value: %v", key, bytes))
 	kv.Set([]byte(key), bytes)
 	w.Close()
 	return nil
@@ -142,9 +144,21 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		}
 		for _, pl := range ob.Buys {
 			eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
+			if kp.CollectOrderInfoForPublish {
+				for _, orderPart := range pl.Orders {
+					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
+					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, LeavesQty: orderPart.LeavesQty()}
+				}
+			}
 		}
 		for _, pl := range ob.Sells {
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
+			if kp.CollectOrderInfoForPublish {
+				for _, orderPart := range pl.Orders {
+					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
+					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, LeavesQty: orderPart.LeavesQty(), CumQuoteAssetQty: orderPart.CumQty}
+				}
+			}
 		}
 		logger.Info("Successfully Loaded order snapshot", "pair", pair)
 	}
@@ -168,6 +182,15 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	}
 	for _, m := range ao.Orders {
 		kp.allOrders[m.Symbol][m.Id] = m
+		if kp.CollectOrderInfoForPublish {
+			if pOrderChange, exists := kp.OrderChangesMap[m.Id]; exists {
+				pOrderChange.OrderMsg = m
+			} else {
+				// This order hasn't been executed before
+				bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from active orders", m.Id))
+				kp.OrderChangesMap[m.Id] = &OrderChange{OrderMsg: m, Tpe: Ack, LeavesQty: m.Quantity}
+			}
+		}
 	}
 	logger.Info("Recovered active orders. Snapshot is fully loaded")
 	return height, nil
@@ -189,14 +212,16 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
-				kp.AddOrder(msg, height)
+				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+				kp.AddOrder(msg, height, txHash, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
+				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price)
+				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, txHash, Canceled, true)
 				if err != nil {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

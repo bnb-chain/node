@@ -25,7 +25,7 @@ type Trade struct {
 	LastPx    int64  // execution price
 	LastQty   int64  // execution quantity
 	OrigBuyPx int64  // original intended price for the trade
-	BuyCumQty int64  // original intended price for the trade
+	BuyCumQty int64  // cumulative executed quantity for the buy order
 	BId       string // buy order Id
 }
 

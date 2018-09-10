@@ -26,8 +26,8 @@ func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.
 }
 
 func main() {
-	cdc := app.MakeCodec()
-	ctx := server.NewDefaultContext()
+	cdc := app.Codec
+	ctx := app.ServerContext
 
 	rootCmd := &cobra.Command{
 		Use:               "bnbchaind",
@@ -35,7 +35,7 @@ func main() {
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
-	server.AddCommands(ctx, cdc, rootCmd, app.BinanceAppInit(),
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
 		server.ConstructAppCreator(newApp, "bnbchain"),
 		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))
 
