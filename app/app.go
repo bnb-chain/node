@@ -2,12 +2,12 @@ package app
 
 import (
 	"encoding/json"
+	"github.com/BiJie/BinanceChain/app/config"
 	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	appName = "BNBChain"
+	appName               = "BNBChain"
 	publishMarketDataFlag = "publishMarketData"
 )
 
@@ -42,9 +42,9 @@ var (
 )
 
 var (
-	Codec = makeCodec()
-	ServerContext = server.NewDefaultContext()
-	RootCmd = makeRootCmd()
+	Codec         = makeCodec()
+	ServerContext = config.NewDefaultContext()
+	RootCmd       = makeRootCmd()
 )
 
 // BinanceChain is the BNBChain ABCI application
@@ -58,8 +58,8 @@ type BinanceChain struct {
 	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
 
-	isPublishMarketData bool
-	publisher           pub.MarketDataPublisher
+	publicationConfig *config.PublicationConfig
+	publisher         pub.MarketDataPublisher
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -73,9 +73,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	// create your application object
 	var app = &BinanceChain{
-		BaseApp: NewBaseApp(appName, cdc, logger, db, decoders),
-		Codec:   cdc,
-		isPublishMarketData: RootCmd.Flag(publishMarketDataFlag).Value.String() == "true",
+		BaseApp:           NewBaseApp(appName, cdc, logger, db, decoders),
+		Codec:             cdc,
+		publicationConfig: ServerContext.Config.Publication,
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
@@ -90,7 +90,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 	var err error
 	app.DexKeeper, err = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.isPublishMarketData)
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishMarketData)
 	if err != nil {
 		logger.Error("Failed to create an order keep", "error", err)
 		panic(err)
@@ -101,7 +101,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	app.registerHandlers(cdc)
 
-	if app.isPublishMarketData {
+	if app.publicationConfig.PublishMarketData {
 		app.publisher = pub.MarketDataPublisher{Logger: app.Logger, ToPublishChannel: make(chan pub.BlockInfoToPublish, pub.PublicationBufferSize)}
 		if err := app.publisher.Init(); err != nil {
 			app.publisher.Stop()
@@ -110,7 +110,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 			  TODO(#66): we should return nil here, but cosmos start-up logic doesn't process nil newapp vendor/github.com/cosmos/cosmos-sdk/server/constructors.go:34
 			  app := appFn(logger, db, traceStoreWriter)
 			  return app, nil
-			 */
+			*/
 		}
 	}
 
@@ -184,9 +184,8 @@ func makeRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:               "bnbchaind",
 		Short:             "BNBChain Daemon (server)",
-		PersistentPreRunE: server.PersistentPreRunEFn(ServerContext),
+		PersistentPreRunE: PersistentPreRunEFn(ServerContext),
 	}
-	rootCmd.PersistentFlags().Bool(publishMarketDataFlag, false, "whether this node should publish market data")
 	return rootCmd
 }
 
@@ -247,7 +246,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		<-icoDone
 	}
 
-	if app.isPublishMarketData && app.publisher.IsLive {
+	if app.publicationConfig.PublishMarketData && app.publisher.IsLive {
 		app.Logger.Info("start to publish market data")
 		// TODO(#66): confirm the performance is acceptable when there are a lot of orders and books here (orders might get accmulated for 3 days - the time limit of GTC order to expire)
 		orders, ordersMap := app.DexKeeper.GetLastOrdersCopy()

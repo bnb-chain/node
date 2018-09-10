@@ -29,7 +29,7 @@ func main() {
 	ctx := app.ServerContext
 	rootCmd := app.RootCmd
 
-	server.AddCommands(ctx, cdc, rootCmd, app.BinanceAppInit(),
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
 		server.ConstructAppCreator(newApp, "bnbchain"),
 		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))
 

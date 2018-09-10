@@ -27,7 +27,7 @@ var (
 type MarketDataPublisher struct {
 	Logger           log.Logger
 	ToPublishChannel chan BlockInfoToPublish
-	IsLive           bool	// TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
+	IsLive           bool // TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
 
 	producer sarama.SyncProducer
 }
@@ -123,7 +123,6 @@ func (publisher *MarketDataPublisher) publishOrderData(height int64, timestamp i
 	return len(os)
 }
 
-
 // we collect OrderPart here to make matcheng module independent
 func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *map[string][]matcheng.Trade, orderChanges orderPkg.OrderChanges, orderChangesMap orderPkg.OrderChangesMap) (ordersToPublish []order) {
 	ordersToPublish = make([]order, len(orderChanges))
@@ -133,10 +132,14 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *map[s
 	for _, o := range orderChanges {
 		var executedQty int64
 		switch o.Tpe {
-			case orderPkg.Canceled: executedQty = o.LeavesQty
-			case orderPkg.IocNoFill: executedQty = o.LeavesQty
-			case orderPkg.Expired: executedQty = o.LeavesQty
-			default: executedQty = o.OrderMsg.Quantity
+		case orderPkg.Canceled:
+			executedQty = o.LeavesQty
+		case orderPkg.IocNoFill:
+			executedQty = o.LeavesQty
+		case orderPkg.Expired:
+			executedQty = o.LeavesQty
+		default:
+			executedQty = o.OrderMsg.Quantity
 		}
 		// TODO: fill up cumQuoteAssetQty
 		ordersToPublish[idx] = order{o.OrderMsg.Symbol, o.Tpe.String(), o.OrderMsg.Id, "-1", o.OrderMsg.Sender.String(), orderPkg.IToSide(o.OrderMsg.Side), "LIMIT", o.OrderMsg.Price, o.OrderMsg.Quantity, o.OrderMsg.Price, executedQty, o.CumQty, 0, 0, "", 0, 0, orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce), "NEW"}
@@ -154,7 +157,7 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *map[s
 				} else {
 					status = orderPkg.PartialFill
 				}
-				ordersToPublish = append(ordersToPublish, order{o.OrderMsg.Symbol, status.String(), o.OrderMsg.Id, "-1", o.OrderMsg.Sender.String(), orderPkg.IToSide(o.OrderMsg.Side), "LIMIT",o.OrderMsg.Price, o.OrderMsg.Quantity, t.LastPx, t.LastQty, t.BuyCumQty, 0, 0, "", 0, 0, orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce), "NEW"})
+				ordersToPublish = append(ordersToPublish, order{o.OrderMsg.Symbol, status.String(), o.OrderMsg.Id, "-1", o.OrderMsg.Sender.String(), orderPkg.IToSide(o.OrderMsg.Side), "LIMIT", o.OrderMsg.Price, o.OrderMsg.Quantity, t.LastPx, t.LastQty, t.BuyCumQty, 0, 0, "", 0, 0, orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce), "NEW"})
 			} else {
 				publisher.Logger.Error("failed to resolve order information for id: from orderChangesMap" + t.BId)
 			}
@@ -167,7 +170,7 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *map[s
 				} else {
 					status = orderPkg.PartialFill
 				}
-				ordersToPublish = append(ordersToPublish, order{o.OrderMsg.Symbol, status.String(), o.OrderMsg.Id, "-1",o.OrderMsg.Sender.String(), orderPkg.IToSide(o.OrderMsg.Side), "LIMIT",o.OrderMsg.Price, o.OrderMsg.Quantity, t.LastPx, t.LastQty, t.BuyCumQty, 0, 0, "", 0, 0, orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce), "NEW"})
+				ordersToPublish = append(ordersToPublish, order{o.OrderMsg.Symbol, status.String(), o.OrderMsg.Id, "-1", o.OrderMsg.Sender.String(), orderPkg.IToSide(o.OrderMsg.Side), "LIMIT", o.OrderMsg.Price, o.OrderMsg.Quantity, t.LastPx, t.LastQty, t.BuyCumQty, 0, 0, "", 0, 0, orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce), "NEW"})
 			} else {
 				publisher.Logger.Error("failed to resolve order information for id: from orderChangesMap" + t.SId)
 			}
@@ -227,7 +230,7 @@ func (publisher *MarketDataPublisher) publishOrderBookData(height int64, timesta
 	}
 
 	if len(deltas) != 0 {
-		books := books {height, len(deltas),	deltas, }
+		books := books{height, len(deltas), deltas}
 		if msg, err := marshal(&books, booksTpe); err == nil {
 			kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, booksTpe, msg)
 			if partition, offset, err := publisher.producer.SendMessage(kafkaMsg); err == nil {
@@ -262,6 +265,7 @@ func newProducer() (sarama.SyncProducer, error) {
 	// TODO: revisit configurations here
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
+	config.Producer.Return.Successes = true
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = 20
 	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection to make sure messages won't out-of-order
@@ -276,7 +280,7 @@ func (publisher *MarketDataPublisher) prepareMessage(topic string, msgId string,
 	msg := &sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: -1,
-		Key: 	   sarama.StringEncoder(fmt.Sprintf("%s_%d_%s", msgId, timeStamp, msgTpe.String())),
+		Key:       sarama.StringEncoder(fmt.Sprintf("%s_%d_%s", msgId, timeStamp, msgTpe.String())),
 		Value:     sarama.ByteEncoder(message),
 	}
 
