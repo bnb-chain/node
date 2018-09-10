@@ -19,7 +19,6 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 		}
 		switch path[1] {
 		case "pairs": // args: [dex, pairs, <offset>, <limit>]
-			// TODO: sync lock
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
