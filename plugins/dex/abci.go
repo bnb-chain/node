@@ -18,7 +18,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			return nil
 		}
 		switch path[1] {
-		case "pairs": // args: [dex, pairs, <offset>, <limit>]
+		case "pairs": // args: ["dex", "pairs", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -58,7 +58,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
-		case "orderbook":
+		case "orderbook": // args: ["dex", "orderbook"]
 			//TODO: sync lock, validate pair, level number
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
