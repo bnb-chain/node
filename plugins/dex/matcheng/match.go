@@ -197,6 +197,7 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 
 // allocateResidual() assumes toAlloc is less than sum of quantity in orders.
 // It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
+// Due to lotsize change, it is possible the order would not be allocated with a full lot.
 func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	if len(orders) == 1 {
 		qty := utils.MinInt(*toAlloc, orders[0].nxtTrade)
@@ -217,7 +218,8 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 		nLot := float64(residual / lotSize)
 		totalF := float64(t)
 		k := len(orders)
-		for i := 0; i < k; i++ {
+		i := 0
+		for i = 0; i < k; i++ {
 			a := int64(math.Floor(nLot*float64(orders[i].nxtTrade)/totalF)) * lotSize // this is supposed to be the main portion
 			if compareBuy(a, residual) >= 0 {
 				orders[i].nxtTrade = residual
@@ -228,16 +230,16 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 				residual -= a
 			}
 		}
-		remainderLot := residual / lotSize
-		for i := 0; i < k; i++ {
-			if remainderLot > 0 { // remainder distribution, every one can only get 1 lot or zero
-				orders[i].nxtTrade += lotSize
-				remainderLot -= 1
+		for j := i % k; j < k; j++ {
+			if residual > lotSize { // remainder distribution, every one can only get 1 lot or zero
+				orders[j].nxtTrade += lotSize
 				residual -= lotSize
-				if i == k-1 { //restart from the beginning
+				if j == k-1 { //restart from the beginning
 					i = 0
 				}
-			} else {
+			} else { // residual may has odd lot remainder
+				orders[j].nxtTrade += residual
+				residual = 0
 				break
 			}
 		}

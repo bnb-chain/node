@@ -79,12 +79,19 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	kvStore := ctx.KVStore(kp.storeKey)
 	timeNow := time.Now()
 	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
+	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
+		// just initialize engines for all pairs
+		for _, pair := range allPairs {
+			_, ok := kp.engines[pair.GetSymbol()]
+			if !ok {
+				kp.AddEngine(pair)
+			}
+		}
 		//TODO: Log. this might be the first day online and no breathe block is saved.
 		return height, nil
 	}
 
-	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	for _, pair := range allPairs {
 		eng, ok := kp.engines[pair.GetSymbol()]
 		if !ok {
