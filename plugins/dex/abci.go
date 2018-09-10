@@ -22,7 +22,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
-					Log:  "pairs query requires offset and limit in the path",
+					Log:  fmt.Sprintf("%s %s query requires offset and limit in the path", abciQueryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
