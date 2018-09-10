@@ -35,6 +35,7 @@ src_ips=("172.20.0.2" "172.20.0.3" "172.20.0.4" "172.20.0.5")
 machines=("172.31.47.173" "172.31.47.252" "172.31.35.68")
 bridge_ip="172.31.35.68"
 witness_ip="172.31.35.68"
+home_path="/server/bnc"
 
 if [ "${is_build}" = true ]
 then
@@ -109,16 +110,16 @@ for i in {0..3}
 do
 	echo "Stop validator ${paths[$i]} in host ${des_ips[$i]}..."
 	ssh bijieprd@${des_ips[$i]} "ps -ef | grep bnbchain | grep ${paths[$i]} | awk '{print \$2}' | xargs kill -9"
-	ssh bijieprd@${des_ips[$i]} "rm -rf ~/${paths[$i]}"
+	ssh bijieprd@${des_ips[$i]} "rm -rf ${home_path}/${paths[$i]}"
 	echo "Copying ${paths[$i]} config to host ${des_ips[$i]}..."
-	scp -r ${paths[$i]} bijieprd@${des_ips[$i]}:/home/bijieprd > /dev/null
+	scp -r ${paths[$i]} bijieprd@${des_ips[$i]}:${home_path} > /dev/null
 done
 
 # deploy
 for i in {0..3}
 do
 	echo "Starting validator ${paths[$i]} in host ${des_ips[$i]}..."
-	ssh bijieprd@${des_ips[$i]} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ~/${paths[$i]}/gaiad start > ~/${paths[$i]}.log 2>&1 &"
+	ssh bijieprd@${des_ips[$i]} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/${paths[$i]}/gaiad start > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
 done
 
 ## prepare bridge node
@@ -143,16 +144,16 @@ sed -i -e "s/private_peer_ids = \"\"/private_peer_ids = ${private_ids}/g" node_b
 # distribute config
 echo "Stopping bridge node in host  ${bridge_ip}..."
 ssh bijieprd@${bridge_ip} "ps -ef | grep bnbchain | grep node_bridge | awk '{print \$2}' | xargs kill -9"
-ssh bijieprd@${bridge_ip} "rm -rf ~/node_bridge"
+ssh bijieprd@${bridge_ip} "rm -rf ${home_path}/node_bridge"
 
 echo "Copying config to bridge node ${bridge_ip}..."
-scp -r node_bridge bijieprd@${bridge_ip}:/home/bijieprd > /dev/null
+scp -r node_bridge bijieprd@${bridge_ip}:${home_path} > /dev/null
 
 echo "Starting bridge node..."
-ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ~/node_bridge/gaiad start > ~/node_bridge.log 2>&1 &"
+ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_bridge/gaiad start > ${home_path}/node_bridge/node_bridge.log 2>&1 &"
 
 ## prepare seed node
-bridge_id=$(ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && ./bnbcli --home ~/node_bridge/gaiad status")
+bridge_id=$(ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && ./bnbcli --home ${home_path}/node_bridge/gaiad status")
 bridge_id=$(echo ${bridge_id} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
 
 # prepare config directory
@@ -174,11 +175,11 @@ echo "Stopping seed node..."
 ps -ef | grep bnbchain | grep seed | awk '{print $2}' | xargs kill -9
 
 # start seed node
-rm -rf ~/node_seed
-cp -r node_seed ~/node_seed
+rm -rf ${home_path}/node_seed
+cp -r node_seed ${home_path}/node_seed
 
 echo "Starting seed node..."
-nohup ./bnbchaind --home ~/node_seed/gaiad start > ~/node_seed.log 2>&1 &
+nohup ./bnbchaind --home ${home_path}/node_seed/gaiad start > ${home_path}/node_seed/node_seed.log 2>&1 &
 
 ## prepare witness
 rm -rf node_witness
@@ -204,10 +205,10 @@ sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' node_witness/gaiad
 # distribute config
 echo "Stopping witness node in host  ${witness_ip}..."
 ssh bijieprd@${witness_ip} "ps -ef | grep bnbchain | grep node_witness | awk '{print \$2}' | xargs kill -9"
-ssh bijieprd@${witness_ip} "rm -rf ~/node_witness"
+ssh bijieprd@${witness_ip} "rm -rf ${home_path}/node_witness"
 
 echo "Copying config to witness node ${witness_ip}..."
-scp -r node_witness bijieprd@${witness_ip}:/home/bijieprd > /dev/null
+scp -r node_witness bijieprd@${witness_ip}:${home_path} > /dev/null
 
 echo "Starting witness node..."
-ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ~/node_witness/gaiad start > ~/node_witness.log 2>&1 &"
+ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_witness/gaiad start > ${home_path}/node_witness/node_witness.log 2>&1 &"
