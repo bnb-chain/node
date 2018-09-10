@@ -33,7 +33,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:               "bnbchaind",
 		Short:             "BNBChain Daemon (server)",
-		PersistentPreRunE: server.PersistentPreRunEFn(ctx),
+		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
 	server.AddCommands(ctx, cdc, rootCmd, app.BinanceAppInit(),
