@@ -16,7 +16,7 @@ import (
 const allowedLimits = "5,10,20,50,100"
 const defaultLimit = "100"
 
-// DepthReqHandler creates an http request handler to send coins to a address
+// DepthReqHandler creates an http request handler to show market depth data
 func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	allowedLimitsA := strings.Split(allowedLimits, ",")
 	type params struct {
@@ -29,7 +29,6 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 		return
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		// collect params
 		limitStr := r.FormValue("limit")
 
 		// validate limit param
@@ -51,6 +50,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			}
 		}
 
+		// collect params
 		params := params{
 			symbol: r.FormValue("symbol"),
 			limit:  limit,
