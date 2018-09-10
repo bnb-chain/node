@@ -109,6 +109,7 @@ func (app *BinanceChain) initPlugins() {
 		return
 	}
 
+	tokens.InitPlugin(app, app.TokenMapper)
 	dex.InitPlugin(app, app.DexKeeper)
 
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
