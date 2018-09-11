@@ -45,6 +45,12 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 			if end > len(tokens) {
 				end = len(tokens)
 			}
+			if end <= 0 || end <= offset {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "malformed range",
+				}
+			}
 			bz, err := app.GetCodec().MarshalBinary(
 				tokens[offset:end],
 			)
