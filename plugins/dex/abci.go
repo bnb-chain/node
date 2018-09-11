@@ -45,6 +45,12 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			if end > len(pairs) {
 				end = len(pairs)
 			}
+			if end <= 0 || end <= offset {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "malformed range",
+				}
+			}
 			bz, err := app.GetCodec().MarshalBinary(
 				pairs[offset:end],
 			)
