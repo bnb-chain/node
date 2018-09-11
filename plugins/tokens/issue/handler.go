@@ -36,7 +36,11 @@ func handleIssueToken(ctx types.Context, tokenMapper store.Mapper, keeper accoun
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
-	_, _, sdkError := keeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil), sdk.Coin{Denom: token.Symbol, Amount: sdk.NewInt(token.TotalSupply)}))
+	_, _, sdkError := keeper.AddCoins(ctx, token.Owner,
+		append((sdk.Coins)(nil), sdk.Coin{
+			Denom:  token.Symbol,
+			Amount: sdk.NewInt(token.TotalSupply.ToInt64()),
+		}))
 	if sdkError != nil {
 		return sdkError.Result()
 	}

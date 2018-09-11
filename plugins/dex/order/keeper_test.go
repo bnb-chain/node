@@ -59,8 +59,10 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	return keeper
 }
 
-func MakeCMS() sdk.CacheMultiStore {
-	memDB := db.NewMemDB()
+func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
+	if memDB == nil {
+		memDB = db.NewMemDB()
+	}
 	ms := sdkstore.NewCommitMultiStore(memDB)
 	ms.MountStoreWithDB(common.DexStoreKey, sdk.StoreTypeIAVL, nil)
 	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, nil)
@@ -72,7 +74,7 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
@@ -96,7 +98,7 @@ func Test_compressAndSave(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	//keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 
 	l := me.NewOrderBookOnULList(7, 3)
 	l.InsertOrder("123451", me.SELLSIDE, 10000, 9950, 1000)
@@ -136,7 +138,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 	accAdd, _ := MakeAddress()
@@ -182,7 +184,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 	accAdd, _ := MakeAddress()
@@ -214,7 +216,7 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 
@@ -311,7 +313,8 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	memDB := db.NewMemDB()
 	blockStore := GenerateBlocksAndSave(memDB, cdc)
 	logger := log.NewTMLogger(os.Stdout)
-	cms := MakeCMS()
+
+	cms := MakeCMS(nil)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
@@ -320,6 +323,32 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), tx.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
+	assert.Equal(2, len(buys))
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(98000), sells[0].Price)
+	assert.Equal(int64(97000), buys[0].Price)
+	assert.Equal(int64(1000000), buys[0].Orders[0].CumQty)
+	assert.Equal(int64(96000), buys[1].Price)
+}
+
+func TestKeeper_InitOrderBookDay1(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	memDB := db.NewMemDB()
+	GenerateBlocksAndSave(memDB, cdc)
+	logger := log.NewTMLogger(os.Stdout)
+	cms := MakeCMS(memDB)
+	ctx := types.NewContext(cms, abci.Header{}, true, logger)
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	keeper2 := MakeKeeper(cdc)
+	ctx = types.NewContext(cms, abci.Header{}, true, logger)
+	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper2.InitOrderBook(ctx, 7, memDB, 3, tx.DefaultTxDecoder(cdc))
+	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
 	assert.Equal(1, len(sells))
 	assert.Equal(int64(98000), sells[0].Price)
@@ -393,7 +422,7 @@ func TestKeeper_UpdateLotSize(t *testing.T) {
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
 	logger := log.NewTMLogger(os.Stdout)
-	cms := MakeCMS()
+	cms := MakeCMS(nil)
 	ctx := types.NewContext(cms, abci.Header{}, true, logger)
 	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)

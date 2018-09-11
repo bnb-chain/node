@@ -13,3 +13,6 @@ type EndBlocker func(ctx Context, req abci.RequestEndBlock) abci.ResponseEndBloc
 
 // respond to p2p filtering queries from Tendermint
 type PeerFilter func(info string) abci.ResponseQuery
+
+// AbciQueryHandler represents an abci query handler, registered by a plugin's InitPlugin.
+type AbciQueryHandler func(app ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery)

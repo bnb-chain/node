@@ -42,14 +42,19 @@ func (f Fixed8) String() string {
 	return buf.String()
 }
 
-// Value returns the original value representing the Fixed8
+// ToInt64 returns the original value representing the Fixed8
+func (f Fixed8) ToInt64() int64 {
+	return int64(f)
+}
+
+// Value returns the original value representing the Fixed8 divided by 10^8
 func (f Fixed8) Value() int64 {
 	return int64(f) / int64(Fixed8Decimals)
 }
 
-// NewFixed8 return a new Fixed8 type multiplied by decimals
-func NewFixed8(val int) Fixed8 {
-	return Fixed8(Fixed8Decimals * val)
+// NewFixed8 returns a new Fixed8 with the supplied int multiplied by 10^8
+func NewFixed8(val int64) Fixed8 {
+	return Fixed8(int64(Fixed8Decimals) * val)
 }
 
 // Fixed8DecodeString parses s which must be a fixed point number
@@ -60,7 +65,7 @@ func Fixed8DecodeString(s string) (Fixed8, error) {
 	if err != nil {
 		return 0, errInvalidString
 	} else if len(parts) == 1 {
-		return NewFixed8(ip), nil
+		return NewFixed8(int64(ip)), nil
 	}
 
 	fp, err := strconv.Atoi(parts[1])

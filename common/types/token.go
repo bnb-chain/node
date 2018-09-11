@@ -26,7 +26,7 @@ const (
 type Token struct {
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
-	TotalSupply int64          `json:"total_supply"`
+	TotalSupply utils.Fixed8   `json:"total_supply"`
 	Owner       sdk.AccAddress `json:"owner"`
 }
 
@@ -34,7 +34,7 @@ func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress) Toke
 	return Token{
 		Name:        name,
 		Symbol:      symbol,
-		TotalSupply: totalSupply,
+		TotalSupply: utils.Fixed8(totalSupply),
 		Owner:       owner,
 	}
 }

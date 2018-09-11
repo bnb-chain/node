@@ -91,7 +91,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper account.Keeper, tradingPairMapper st
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.LotSize)
+	eng := CreateMatchEng(pair.LotSize.ToInt64())
 	kp.engines[pair.GetSymbol()] = eng
 	return eng
 }
@@ -351,7 +351,7 @@ func (kp *Keeper) calculateOrderFee(ctx types.Context, account auth.Account, tra
 		} else {
 			price := kp.engines[utils.Ccy2TradeSymbol(types.NativeToken, tran.inCcy)].LastTradePrice
 			var amount big.Int
-			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.Value())), big.NewInt(price)).Int64()
+			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.ToInt64())), big.NewInt(price)).Int64()
 		}
 		feeByNativeToken := kp.FeeConfig.CalcFee(amountOfNativeToken, FeeByNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {

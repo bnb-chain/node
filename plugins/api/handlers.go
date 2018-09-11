@@ -59,6 +59,10 @@ func (s *server) handleNodeVersionReq() http.HandlerFunc {
 	return hnd.NodeVersionReqHandler(s.ctx)
 }
 
+func (s *server) handlePairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return dexapi.GetPairsReqHandler(cdc, ctx)
+}
+
 func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return dexapi.DepthReqHandler(cdc, ctx)
 }
@@ -66,6 +70,10 @@ func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http
 func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CLIContext, accStoreName string) http.HandlerFunc {
 	h := dexapi.PutOrderReqHandler(cdc, ctx, accStoreName)
 	return s.withUrlEncForm(s.limitReqSize(h))
+}
+
+func (s *server) handleTokensReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.GetTokensReqHandler(cdc, ctx)
 }
 
 func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {

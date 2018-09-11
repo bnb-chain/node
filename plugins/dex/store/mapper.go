@@ -87,9 +87,10 @@ func (m mapper) ListAllTradingPairs(ctx cmntypes.Context) (res []types.TradingPa
 func (m mapper) UpdateTickSizeAndLotSize(ctx cmntypes.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64) {
 	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(price)
 
-	if tickSize != pair.TickSize || lotSize != pair.LotSize {
-		pair.TickSize = tickSize
-		pair.LotSize = lotSize
+	if tickSize != pair.TickSize.ToInt64() ||
+		lotSize != pair.LotSize.ToInt64() {
+		pair.TickSize = utils.Fixed8(tickSize)
+		pair.LotSize = utils.Fixed8(lotSize)
 
 		m.AddTradingPair(ctx, pair)
 	}

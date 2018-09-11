@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	cmntypes "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
@@ -52,9 +53,9 @@ func TestMapper_GetAddTradingPair(t *testing.T) {
 	require.NotEmpty(t, pair)
 	require.Equal(t, tradeAsset, pair.TradeAsset)
 	require.Equal(t, quoteAsset, pair.QuoteAsset)
-	require.Equal(t, int64(1e8), pair.Price)
-	require.Equal(t, int64(1), pair.TickSize)
-	require.Equal(t, int64(1e8), pair.LotSize)
+	require.Equal(t, utils.Fixed8(1e8), pair.Price)
+	require.Equal(t, utils.Fixed8(1), pair.TickSize)
+	require.Equal(t, utils.Fixed8(1e8), pair.LotSize)
 }
 
 func TestMapper_Exists(t *testing.T) {

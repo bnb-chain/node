@@ -21,16 +21,20 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	// dex routes
-	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx, s.accStoreName)).
-		Methods("PUT", "POST")
+	r.HandleFunc(prefix+"/pairs", s.handlePairsReq(s.cdc, s.ctx)).
+		Methods("GET")
 	r.HandleFunc(prefix+"/depth", s.handleDexDepthReq(s.cdc, s.ctx)).
 		Queries("symbol", "{symbol}", "limit", "{limit:[0-9]+}").
 		Methods("GET")
 	r.HandleFunc(prefix+"/depth", s.handleDexDepthReq(s.cdc, s.ctx)).
 		Queries("symbol", "{symbol}").
 		Methods("GET")
+	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx, s.accStoreName)).
+		Methods("PUT", "POST")
 
 	// tokens routes
+	r.HandleFunc(prefix+"/tokens", s.handleTokensReq(s.cdc, s.ctx)).
+		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}", s.handleBalancesReq(s.cdc, s.ctx, s.tokens)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}/{symbol}", s.handleBalanceReq(s.cdc, s.ctx, s.tokens)).

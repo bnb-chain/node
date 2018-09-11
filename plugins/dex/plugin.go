@@ -7,6 +7,19 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
+const abciQueryPrefix = "dex"
+
+// InitPlugin initializes the dex plugin.
+func InitPlugin(appp types.ChainApp, keeper *DexKeeper) {
+	handler := createQueryHandler(keeper)
+	appp.RegisterQueryHandler(abciQueryPrefix, handler)
+}
+
+func createQueryHandler(keeper *DexKeeper) types.AbciQueryHandler {
+	return createAbciQueryHandler(keeper)
+}
+
+// EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx types.Context, accountMapper account.Mapper, dexKeeper DexKeeper, height int64, blockTime time.Time) {
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	dexKeeper.ExpireOrders(ctx, height, accountMapper)
