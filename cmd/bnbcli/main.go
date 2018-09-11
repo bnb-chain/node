@@ -3,15 +3,13 @@ package main
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/tendermint/tendermint/libs/cli"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
+	"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common"
@@ -52,10 +50,10 @@ func main() {
 		client.GetCommands(
 			authcmd.GetAccountCmd(common.AccountStoreName, cdc, types.GetAccountDecoder(cdc)),
 		)...)
-	rootCmd.AddCommand(
-		client.PostCommands(
-			ibccmd.IBCTransferCmd(cdc),
-		)...)
+	// rootCmd.AddCommand(
+	// 	client.PostCommands(
+	// 		ibccmd.IBCTransferCmd(cdc),
+	// 	)...)
 
 	// temp. disabled staking commands
 	// rootCmd.AddCommand(
