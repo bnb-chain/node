@@ -8,21 +8,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
-
+	"github.com/tendermint/tendermint/abci/client"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/libs/db"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
-
-	"github.com/tendermint/tendermint/libs/db"
-
-	common "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type TestClient struct {
@@ -42,13 +37,13 @@ func (tc *TestClient) CheckTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes
 	return tc.cl.CheckTxAsync(tx)
 }
 
-func (tc *TestClient) DeliverTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseDeliverTx, error) {
+func (tc *TestClient) DeliverTxSync(msg sdk.Msg, cdc *wire.Codec) (*abci.ResponseDeliverTx, error) {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.DeliverTxSync(tx)
 }
 
-func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseCheckTx, error) {
+func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*abci.ResponseCheckTx, error) {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, auth.NewStdFee(0), nil, "test")
 	tx, _ := tc.cdc.MarshalBinary(stdtx)
 	return tc.cl.CheckTxSync(tx)
@@ -60,13 +55,13 @@ var (
 	logger                            = log.NewTMLogger(os.Stdout)
 	testApp                           = NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
-		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
+		sdk.Coins{sdk.NewInt64Coin("BNB", 500e8), sdk.NewInt64Coin("BTC", 200e8)})
 	testClient = NewTestClient(testApp)
 )
 
 func InitAccounts(ctx types.Context, app *BinanceChain) *[]auth.Account {
 	for _, acc := range genAccs {
-		aacc := &common.AppAccount{
+		aacc := &types.AppAccount{
 			BaseAccount: auth.BaseAccount{
 				Address: acc.GetAddress(),
 				Coins:   acc.GetCoins(),
@@ -82,7 +77,7 @@ func InitAccounts(ctx types.Context, app *BinanceChain) *[]auth.Account {
 func ResetAccounts(ctx types.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountMapper.GetAccount(ctx, acc.GetAddress())
-		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
+		a.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", ccy1), sdk.NewInt64Coin("BTC", ccy2), sdk.NewInt64Coin("ETH", ccy3)})
 		app.AccountMapper.SetAccount(ctx, a)
 	}
 }
@@ -96,7 +91,7 @@ func Address(i int) sdk.AccAddress {
 }
 
 func NewTestClient(a *BinanceChain) *TestClient {
-	a.setCheckState(types.Header{})
+	a.setCheckState(abci.Header{})
 	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
 	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
@@ -106,10 +101,10 @@ func GetAvail(ctx types.Context, add sdk.AccAddress, ccy string) int64 {
 }
 
 func GetLocked(ctx types.Context, add sdk.AccAddress, ccy string) int64 {
-	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+	return testApp.AccountMapper.GetAccount(ctx, add).(types.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
 
-func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
+func setGenesis(bapp *BinanceChain, tokens []types.Token, accs ...*types.AppAccount) error {
 	genaccs := make([]GenesisAccount, len(accs))
 	for i, acc := range accs {
 		genaccs[i] = NewGenesisAccount(acc)
@@ -127,7 +122,7 @@ func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAc
 	}
 
 	// Initialize the chain
-	vals := []abci.Validator{}
+	var vals []abci.ValidatorUpdate
 	bapp.InitChain(abci.RequestInitChain{Validators: vals, AppStateBytes: stateBytes})
 	bapp.Commit()
 
@@ -145,21 +140,21 @@ func TestGenesis(t *testing.T) {
 	baseAcc := auth.BaseAccount{
 		Address: addr,
 	}
-	tokens := []common.Token{{"BNB", "BNB", int64(100000), addr}}
-	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
+	tokens := []types.Token{{"BNB", "BNB", int64(100000), addr}}
+	acc := &types.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
 	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
 	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", sdk.NewInt(100000)}})
-	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
+	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(types.NamedAccount)
 	require.Equal(t, acc, res1)
 
 	// reload app and ensure the account is still there
 	bapp = NewBinanceChain(logger, db, os.Stdout)
 	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
 	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
-	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
+	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(types.NamedAccount)
 	require.Equal(t, acc, res1)
 }

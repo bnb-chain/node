@@ -5,26 +5,22 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/pkg/errors"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
-	deductFeesCost    sdk.Gas = 10
-	memoCostPerByte   sdk.Gas = 1
-	verifyCost                = 100
-	maxMemoCharacters         = 100
+	maxMemoCharacters = 100
 )
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
 // nolint: gocyclo
-// TODO: remove gas
-func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
+func NewAnteHandler(am account.Mapper, fck FeeCollectionKeeper) types.AnteHandler {
 	return func(
 		ctx types.Context, tx sdk.Tx,
 	) (newCtx types.Context, res sdk.Result, abort bool) {
@@ -35,27 +31,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 			return ctx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		// set the gas meter
-		newCtx = ctx.WithGasMeter(sdk.NewGasMeter(stdTx.Fee.Gas))
-
-		// AnteHandlers must have their own defer/recover in order
-		// for the BaseApp to know how much gas was used!
-		// This is because the GasMeter is created in the AnteHandler,
-		// but if it panics the context won't be set properly in runTx's recover ...
-		defer func() {
-			if r := recover(); r != nil {
-				switch rType := r.(type) {
-				case sdk.ErrorOutOfGas:
-					log := fmt.Sprintf("out of gas in location: %v", rType.Descriptor)
-					res = sdk.ErrOutOfGas(log).Result()
-					res.GasWanted = stdTx.Fee.Gas
-					res.GasUsed = newCtx.GasMeter().GasConsumed()
-					abort = true
-				default:
-					panic(r)
-				}
-			}
-		}()
+		newCtx = ctx
 
 		err := validateBasic(stdTx)
 		if err != nil {
@@ -65,9 +41,6 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 		sigs := stdTx.GetSignatures()
 		signerAddrs := stdTx.GetSigners()
 		msgs := tx.GetMsgs()
-
-		// charge gas for the memo
-		newCtx.GasMeter().ConsumeGas(memoCostPerByte*sdk.Gas(len(stdTx.GetMemo())), "memo")
 
 		// Get the sign bytes (requires all account & sequence numbers and the fee)
 		sequences := make([]int64, len(sigs))
@@ -100,7 +73,7 @@ func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHand
 		}
 
 		// cache the signer accounts in the context
-		newCtx = auth.WithSigners(newCtx, signerAccs)
+		// newCtx = auth.WithSigners(newCtx, signerAccs)
 
 		// TODO: tx tags (?)
 		return newCtx, sdk.Result{GasWanted: stdTx.Fee.Gas}, false // continue...
@@ -133,7 +106,7 @@ func validateBasic(tx StdTx) (err sdk.Error) {
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
 func processSig(
-	ctx types.Context, am auth.AccountMapper,
+	ctx types.Context, am account.Mapper,
 	addr sdk.AccAddress, sig StdSignature, signBytes []byte) (
 	acc auth.Account, res sdk.Result) {
 
@@ -180,7 +153,6 @@ func processSig(
 	}
 
 	// Check sig.
-	ctx.GasMeter().ConsumeGas(verifyCost, "ante verify")
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return nil, sdk.ErrUnauthorized("signature verification failed").Result()
 	}
@@ -188,7 +160,7 @@ func processSig(
 	return
 }
 
-func calcAndCollectFees(ctx types.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (types.Context, sdk.Result) {
+func calcAndCollectFees(ctx types.Context, am account.Mapper, acc auth.Account, msg sdk.Msg) (types.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -239,7 +211,7 @@ func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx types.Context, acc auth.Account, fee types.Fee, am auth.AccountMapper) sdk.Result {
+func deductFees(ctx types.Context, acc auth.Account, fee types.Fee, am account.Mapper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}

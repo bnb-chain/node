@@ -14,4 +14,5 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(burn.Msg{}, "tokens/BurnMsg", nil)
 	cdc.RegisterConcrete(freeze.FreezeMsg{}, "tokens/FreezeMsg", nil)
 	cdc.RegisterConcrete(freeze.UnfreezeMsg{}, "tokens/UnfreezeMsg", nil)
+	// cdc.RegisterConcrete(transfer.MsgTransfer{}, "tokens/transferMsg", nil)
 }

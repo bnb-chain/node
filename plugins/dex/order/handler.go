@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -22,8 +22,8 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
-	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
+func NewHandler(cdc *wire.Codec, k Keeper, accountMapper account.Mapper) common.Handler {
+	return func(ctx common.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
 			return handleNewOrder(ctx, cdc, k, accountMapper, msg)
@@ -37,13 +37,13 @@ func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) sdk
 }
 
 // TODO: duplicated with plugins/tokens/freeze/handler.go
-func updateLockedOfAccount(ctx types.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, lockedAmount int64) {
+func updateLockedOfAccount(ctx common.Context, accountMapper account.Mapper, address sdk.AccAddress, symbol string, lockedAmount int64) {
 	account := accountMapper.GetAccount(ctx, address).(common.NamedAccount)
 	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(lockedAmount)})))
 	accountMapper.SetAccount(ctx, account)
 }
 
-func validateOrder(ctx types.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
+func validateOrder(ctx common.Context, pairMapper store.TradingPairMapper, accountMapper account.Mapper, msg NewOrderMsg) error {
 	tradeAsset, quoteAsset, err := utils.TradeSymbol2Ccy(msg.Symbol)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func validateOrder(ctx types.Context, pairMapper store.TradingPairMapper, accoun
 	return nil
 }
 
-func handleNewOrder(ctx types.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+func handleNewOrder(ctx common.Context, cdc *wire.Codec, keeper Keeper, accountMapper account.Mapper, msg NewOrderMsg) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
@@ -136,7 +136,7 @@ func handleNewOrder(ctx types.Context, cdc *wire.Codec, keeper Keeper, accountMa
 }
 
 // Handle CancelOffer -
-func handleCancelOrder(ctx types.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+func handleCancelOrder(ctx common.Context, keeper Keeper, accountMapper account.Mapper, msg CancelOrderMsg) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.RefId)
 
 	//only check whether there exists order to cancel

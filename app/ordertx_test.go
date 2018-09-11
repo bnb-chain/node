@@ -5,14 +5,15 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	o "github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	dex "github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 type level struct {
@@ -35,7 +36,7 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-func genOrderID(add sdk.AccAddress, seq int64, ctx types.Context, am auth.AccountMapper) string {
+func genOrderID(add sdk.AccAddress, seq int64, ctx types.Context, am account.Mapper) string {
 	acc := am.GetAccount(ctx, add)
 	if acc.GetSequence() != seq {
 		err := acc.SetSequence(seq)
@@ -52,7 +53,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert := assert.New(t)
 	ctx := testApp.NewContext(true, abci.Header{})
 	InitAccounts(ctx, testApp)
-	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, dex.NewTradingPair("BTC", "BNB", 1e8))
 
 	am := testApp.AccountMapper
 	acc := Account(0)
@@ -106,7 +107,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	tradingPair := dex.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
 
@@ -131,10 +132,10 @@ func Test_Match(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-	ethPair := types.NewTradingPair("ETH", "BNB", 1e8)
+	ethPair := dex.NewTradingPair("ETH", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
 	testApp.DexKeeper.AddEngine(ethPair)
-	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	btcPair := dex.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
 	testApp.DexKeeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
@@ -188,7 +189,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 43.2e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -245,7 +246,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(trades))
 	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8
 	// fee for this round is 8.73e8 BNB, totalFee is 95.13e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -273,7 +274,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	tradingPair := dex.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
 

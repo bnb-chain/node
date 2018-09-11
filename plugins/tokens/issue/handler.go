@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper account.Keeper) types.Handler {
 	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
@@ -23,7 +23,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleIssueToken(ctx types.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleIssueToken(ctx types.Context, tokenMapper store.Mapper, keeper account.Keeper, msg Msg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	exists := tokenMapper.Exists(ctx, symbol)
 	if exists {

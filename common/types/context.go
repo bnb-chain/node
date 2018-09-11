@@ -41,6 +41,7 @@ func NewContext(ms sdk.MultiStore, header abci.Header, isCheckTx bool, logger lo
 	c = c.WithBlockHeader(header)
 	c = c.WithBlockHeight(header.Height)
 	c = c.WithChainID(header.ChainID)
+	c = c.WithIsCheckTx(isCheckTx)
 	c = c.WithTxBytes(nil)
 	c = c.WithLogger(logger)
 	c = c.WithVoteInfos(nil)
@@ -131,6 +132,7 @@ const (
 	contextKeyBlockHeight
 	contextKeyConsensusParams
 	contextKeyChainID
+	contextKeyIsCheckTx
 	contextKeyTxBytes
 	contextKeyLogger
 	contextKeyVoteInfos
@@ -155,6 +157,9 @@ func (c Context) ConsensusParams() abci.ConsensusParams {
 }
 func (c Context) ChainID() string {
 	return c.Value(contextKeyChainID).(string)
+}
+func (c Context) IsCheckTx() bool {
+	return c.Value(contextKeyIsCheckTx).(bool)
 }
 func (c Context) TxBytes() []byte {
 	return c.Value(contextKeyTxBytes).([]byte)
@@ -183,6 +188,9 @@ func (c Context) WithConsensusParams(params *abci.ConsensusParams) Context {
 }
 func (c Context) WithChainID(chainID string) Context {
 	return c.withValue(contextKeyChainID, chainID)
+}
+func (c Context) WithIsCheckTx(isCheckTx bool) Context {
+	return c.withValue(contextKeyIsCheckTx, isCheckTx)
 }
 func (c Context) WithTxBytes(txBytes []byte) Context {
 	return c.withValue(contextKeyTxBytes, txBytes)

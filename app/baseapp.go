@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -17,6 +16,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -46,18 +46,18 @@ type BaseApp struct {
 	cdc        *wire.Codec          // Amino codec
 	db         dbm.DB               // common DB backend
 	cms        sdk.CommitMultiStore // Main (uncached) state
-	router     baseapp.Router       // handle any kind of message
+	router     Router               // handle any kind of message
 	codespacer *sdk.Codespacer      // handle module codespacing
 	txDecoder  sdk.TxDecoder        // unmarshal []byte into sdk.Tx
 
-	anteHandler sdk.AnteHandler // ante handler for fee and auth
+	anteHandler types.AnteHandler // ante handler for fee and auth
 
 	// may be nil
-	initChainer      sdk.InitChainer  // initialize state with validators and state blob
-	beginBlocker     sdk.BeginBlocker // logic to run before any txs
-	endBlocker       sdk.EndBlocker   // logic to run after all txs, and to determine valset changes
-	addrPeerFilter   sdk.PeerFilter   // filter peers by address and port
-	pubkeyPeerFilter sdk.PeerFilter   // filter peers by public key
+	initChainer      types.InitChainer  // initialize state with validators and state blob
+	beginBlocker     types.BeginBlocker // logic to run before any txs
+	endBlocker       types.EndBlocker   // logic to run after all txs, and to determine valset changes
+	addrPeerFilter   types.PeerFilter   // filter peers by address and port
+	pubkeyPeerFilter types.PeerFilter   // filter peers by public key
 
 	//--------------------
 	// Volatile
@@ -67,6 +67,8 @@ type BaseApp struct {
 	checkState       *state          // for CheckTx
 	deliverState     *state          // for DeliverTx
 	signedValidators []abci.VoteInfo // absent validators from begin block
+
+	sealed bool
 }
 
 var _ abci.Application = (*BaseApp)(nil)
@@ -87,7 +89,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDe
 		cdc:        cdc,
 		db:         db,
 		cms:        store.NewCommitMultiStore(db),
-		router:     baseapp.NewRouter(),
+		router:     NewRouter(),
 		codespacer: sdk.NewCodespacer(),
 		txDecoder:  txDecoder,
 	}
@@ -178,9 +180,9 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 // NewContext returns a new Context with the correct store, the given header, and nil txBytes.
 func (app *BaseApp) NewContext(isCheckTx bool, header abci.Header) types.Context {
 	if isCheckTx {
-		return sdk.NewContext(app.checkState.ms, header, true, app.Logger)
+		return types.NewContext(app.checkState.ms, header, true, app.Logger)
 	}
-	return sdk.NewContext(app.deliverState.ms, header, false, app.Logger)
+	return types.NewContext(app.deliverState.ms, header, false, app.Logger)
 }
 
 type state struct {
@@ -196,7 +198,7 @@ func (app *BaseApp) setCheckState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.checkState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.Logger),
+		ctx: types.NewContext(ms, header, true, app.Logger),
 	}
 }
 
@@ -204,7 +206,7 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.Logger),
+		ctx: types.NewContext(ms, header, false, app.Logger),
 	}
 }
 
@@ -455,7 +457,7 @@ func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx types
 		ctx = app.checkState.ctx.WithTxBytes(txBytes)
 	} else {
 		ctx = app.deliverState.ctx.WithTxBytes(txBytes)
-		ctx = ctx.WithSigningValidators(app.signedValidators)
+		ctx = ctx.WithVoteInfos(app.signedValidators)
 	}
 
 	// Simulate a DeliverTx for gas calculation
@@ -503,10 +505,9 @@ func (app *BaseApp) runMsgs(ctx types.Context, msgs []sdk.Msg) (result sdk.Resul
 
 	// Set the final gas values.
 	result = sdk.Result{
-		Code:    code,
-		Data:    data,
-		Log:     strings.Join(logs, "\n"),
-		GasUsed: ctx.GasMeter().GasConsumed(),
+		Code: code,
+		Data: data,
+		Log:  strings.Join(logs, "\n"),
 		// TODO: FeeAmount/FeeDenom
 		Tags: tags,
 	}
@@ -528,26 +529,13 @@ func getState(app *BaseApp, mode runTxMode) *state {
 // anteHandler. txBytes may be nil in some cases, eg. in tests. Also, in the
 // future we may support "internal" transactions.
 func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk.Result) {
-	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
-	// determined by the GasMeter. We need access to the context to get the gas
-	// meter so we initialize upfront.
-	var gasWanted int64
 	ctx := app.getContextForAnte(mode, txBytes)
 
 	defer func() {
 		if r := recover(); r != nil {
-			switch rType := r.(type) {
-			case sdk.ErrorOutOfGas:
-				log := fmt.Sprintf("out of gas in location: %v", rType.Descriptor)
-				result = sdk.ErrOutOfGas(log).Result()
-			default:
-				log := fmt.Sprintf("recovered: %v\nstack:\n%v", r, string(debug.Stack()))
-				result = sdk.ErrInternal(log).Result()
-			}
+			log := fmt.Sprintf("recovered: %v\nstack:\n%v", r, string(debug.Stack()))
+			result = sdk.ErrInternal(log).Result()
 		}
-
-		result.GasWanted = gasWanted
-		result.GasUsed = ctx.GasMeter().GasConsumed()
 	}()
 
 	var msgs = tx.GetMsgs()
@@ -566,8 +554,6 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		if !newCtx.IsZero() {
 			ctx = newCtx
 		}
-
-		gasWanted = result.GasWanted
 	}
 
 	// Keep the state in a transient CacheWrap in case processing the messages
@@ -581,8 +567,6 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	ctx = ctx.WithMultiStore(msCache)
 	result = app.runMsgs(ctx, msgs)
-	result.GasWanted = gasWanted
-
 	// only update state if all messages pass and we're not in a simulation
 	if result.IsOK() && mode != runTxModeSimulate {
 		msCache.Write()

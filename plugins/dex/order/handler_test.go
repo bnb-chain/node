@@ -7,6 +7,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/account"
+
 	"github.com/stretchr/testify/require"
 
 	cstore "github.com/cosmos/cosmos-sdk/store"
@@ -16,6 +18,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/common"
+	cmntypes "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/wire"
@@ -32,18 +35,18 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 	return ms, key, key2
 }
 
-func setupMappers() (store.TradingPairMapper, auth.AccountMapper, types.Context) {
+func setupMappers() (store.TradingPairMapper, account.Mapper, cmntypes.Context) {
 	ms, key, key2 := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := cmntypes.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 	pairMapper := store.NewTradingPairMapper(cdc, key)
-	accMapper := auth.NewAccountMapper(cdc, key2, auth.ProtoBaseAccount)
+	accMapper := account.NewMapper(cdc, key2, auth.ProtoBaseAccount)
 	return pairMapper, accMapper, ctx
 }
 
-func setupAccount(ctx types.Context, accMapper auth.AccountMapper) (auth.Account, sdk.AccAddress) {
+func setupAccount(ctx cmntypes.Context, accMapper account.Mapper) (auth.Account, sdk.AccAddress) {
 	saddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj" // TODO: temporary
 	addr, err := sdk.AccAddressFromBech32(saddr)
 	if err != nil {

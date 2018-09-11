@@ -9,14 +9,16 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/types"
+
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 )
 
 var (
 	emptyCoins = sdk.Coins{}
-	oneCoin    = sdk.Coins{sdk.NewCoin("foocoin", 1)}
-	twoCoins   = sdk.Coins{sdk.NewCoin("foocoin", 2)}
+	oneCoin    = sdk.Coins{sdk.NewInt64Coin("foocoin", 1)}
+	twoCoins   = sdk.Coins{sdk.NewInt64Coin("foocoin", 2)}
 )
 
 func TestFeeCollectionKeeperGetSet(t *testing.T) {
@@ -24,7 +26,7 @@ func TestFeeCollectionKeeperGetSet(t *testing.T) {
 	cdc := wire.NewCodec()
 
 	// make context and keeper
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	fck := tx.NewFeeCollectionKeeper(cdc, capKey2)
 
 	// no coins initially
@@ -43,7 +45,7 @@ func TestFeeCollectionKeeperAdd(t *testing.T) {
 	cdc := wire.NewCodec()
 
 	// make context and keeper
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	fck := tx.NewFeeCollectionKeeper(cdc, capKey2)
 
 	// no coins initially
@@ -63,7 +65,7 @@ func TestFeeCollectionKeeperClear(t *testing.T) {
 	cdc := wire.NewCodec()
 
 	// make context and keeper
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	fck := tx.NewFeeCollectionKeeper(cdc, capKey2)
 
 	// set coins initially

@@ -1,11 +1,13 @@
 package dex
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"time"
+
+	"github.com/BiJie/BinanceChain/common/account"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func EndBreatheBlock(ctx types.Context, accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
+func EndBreatheBlock(ctx types.Context, accountMapper account.Mapper, dexKeeper DexKeeper, height int64, blockTime time.Time) {
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	dexKeeper.ExpireOrders(ctx, height, accountMapper)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

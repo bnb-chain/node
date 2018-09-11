@@ -1,9 +1,8 @@
 package dex
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
+	"github.com/BiJie/BinanceChain/common/account"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -11,8 +10,8 @@ import (
 )
 
 func Routes(cdc *wire.Codec, dexKeeper DexKeeper, tokenMapper tokens.Mapper,
-	accountMapper auth.AccountMapper) map[string]sdk.Handler {
-	routes := make(map[string]sdk.Handler)
+	accountMapper account.Mapper) map[string]types.Handler {
+	routes := make(map[string]types.Handler)
 	orderHandler := order.NewHandler(cdc, dexKeeper, accountMapper)
 	routes[order.NewOrder] = orderHandler
 	routes[order.CancelOrder] = orderHandler

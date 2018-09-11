@@ -19,7 +19,7 @@ import (
 )
 
 // PutOrderReqHandler creates an http request handler to send coins to a address
-func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
+func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName string) http.HandlerFunc {
 	type formParams struct {
 		address string
 		pair    string
@@ -60,9 +60,6 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 	}
 	accDecoder := authcmd.GetAccountDecoder(cdc)
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: collect chainID too
-		ctx.ChainID = "bnbchain-1000"
-
 		// parse application/x-www-form-urlencoded or multipart/form-data form params
 		params := formParams{
 			address: r.FormValue("address"),

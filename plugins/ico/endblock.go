@@ -3,7 +3,7 @@ package ico
 import (
 	"fmt"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // TODO: just a template

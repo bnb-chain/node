@@ -9,7 +9,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	"github.com/BiJie/BinanceChain/common/account"
 
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -24,10 +25,8 @@ const SecondsInOneDay = 24 * 60 * 60
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
-	PairMapper store.TradingPairMapper
-
-	ck bank.Keeper
-
+	PairMapper     store.TradingPairMapper
+	ck             account.Keeper
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
@@ -73,7 +72,7 @@ func CreateMatchEng(lotSize int64) *me.MatchEng {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
+func NewKeeper(key sdk.StoreKey, bankKeeper account.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec) *Keeper {
 	engines := make(map[string]*me.MatchEng)
 	return &Keeper{
@@ -312,7 +311,7 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
-func (kp *Keeper) doTransfer(ctx types.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
+func (kp *Keeper) doTransfer(ctx types.Context, accountMapper account.Mapper, tran *Transfer) sdk.Error {
 	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outCcy, Amount: sdk.NewInt(tran.unlock)}})
 	if !newLocked.IsNotNegative() {
@@ -343,7 +342,7 @@ func (kp *Keeper) doTransfer(ctx types.Context, accountMapper auth.AccountMapper
 func (kp *Keeper) calculateOrderFee(ctx types.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inCcy == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
+		feeToken = sdk.NewInt64Coin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
@@ -357,10 +356,10 @@ func (kp *Keeper) calculateOrderFee(ctx types.Context, account auth.Account, tra
 		feeByNativeToken := kp.FeeConfig.CalcFee(amountOfNativeToken, FeeByNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
-			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+			feeToken = sdk.NewInt64Coin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inCcy, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
+			feeToken = sdk.NewInt64Coin(tran.inCcy, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
 		}
 	}
 
@@ -402,7 +401,7 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
-func (kp *Keeper) MatchAndAllocateAll(ctx types.Context, accountMapper auth.AccountMapper,
+func (kp *Keeper) MatchAndAllocateAll(ctx types.Context, accountMapper account.Mapper,
 	postAllocateHandler func(tran Transfer)) (newCtx types.Context, code sdk.CodeType, err error) {
 	var wg sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(true)
@@ -432,12 +431,12 @@ func (kp *Keeper) MatchAndAllocateAll(ctx types.Context, accountMapper auth.Acco
 	return newCtx, sdk.CodeOK, nil
 }
 
-func (kp *Keeper) ExpireOrders(ctx types.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(ctx types.Context, height int64, accountMapper account.Mapper) (code sdk.CodeType, err error) {
 	return sdk.CodeOK, nil
 }
 
-func (kp *Keeper) MarkBreatheBlock(ctx types.Context, height, blockTime int64) {
-	key := utils.Int642Bytes(blockTime / SecondsInOneDay)
+func (kp *Keeper) MarkBreatheBlock(ctx types.Context, height int64, blockTime time.Time) {
+	key := utils.Int642Bytes(blockTime.Unix() / SecondsInOneDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {

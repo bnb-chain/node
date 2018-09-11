@@ -67,7 +67,7 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "cosmosacc
 sleep 10s
 
 # send
-result=$(expect ./send.exp ${cli_home} alice ${chain_id} 100000000000000BNB ${bob_addr})
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} BNB:100000000000000 ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
 sleep 1s

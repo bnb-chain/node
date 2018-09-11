@@ -15,6 +15,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -41,9 +42,9 @@ type BinanceChain struct {
 	Codec *wire.Codec
 
 	FeeCollectionKeeper tx.FeeCollectionKeeper
-	CoinKeeper          bank.Keeper
+	AccountMapper       account.Mapper
+	CoinKeeper          account.Keeper
 	DexKeeper           *dex.DexKeeper
-	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
 }
 
@@ -64,11 +65,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	app.SetCommitMultiStoreTracer(traceStore)
 	// mappers
-	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	app.AccountMapper = account.NewMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
 
 	// Add handlers.
-	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
+	app.CoinKeeper = account.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
@@ -105,7 +106,6 @@ func (app *BinanceChain) initPlugins() {
 }
 
 func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
-	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
 	// AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
 	// AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
 	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
@@ -133,7 +133,7 @@ func MakeCodec() *wire.Codec {
 }
 
 // initChainerFn performs custom logic for chain initialization.
-func (app *BinanceChain) initChainerFn() sdk.InitChainer {
+func (app *BinanceChain) initChainerFn() types.InitChainer {
 	return func(ctx types.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 		stateJSON := req.AppStateBytes
 

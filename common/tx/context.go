@@ -1,8 +1,6 @@
 package tx
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/BiJie/BinanceChain/common/types"
 )
 

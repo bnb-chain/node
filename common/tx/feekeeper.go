@@ -3,6 +3,8 @@ package tx
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	wire "github.com/cosmos/cosmos-sdk/wire"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 var (

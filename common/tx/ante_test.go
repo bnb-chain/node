@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -33,7 +34,7 @@ func newTestMsgWithFeeCalculator(calculator tx.FeeCalculator, addrs ...sdk.AccAd
 
 func newStdFee() tx.StdFee {
 	return tx.NewStdFee(5000,
-		sdk.NewCoin("atom", 150),
+		sdk.NewInt64Coin("atom", 150),
 	)
 }
 
@@ -43,7 +44,7 @@ func newCoins() sdk.Coins {
 }
 
 // run the tx through the anteHandler and ensure its valid
-func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx types.Context, tx sdk.Tx) {
+func checkValidTx(t *testing.T, anteHandler types.AnteHandler, ctx types.Context, tx sdk.Tx) {
 	_, result, abort := anteHandler(ctx, tx)
 	require.False(t, abort)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
@@ -51,7 +52,7 @@ func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx types.Context, 
 }
 
 // run the tx through the anteHandler and ensure it fails with the given code
-func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx types.Context, tx sdk.Tx, code sdk.CodeType) {
+func checkInvalidTx(t *testing.T, anteHandler types.AnteHandler, ctx types.Context, tx sdk.Tx, code sdk.CodeType) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch r.(type) {
@@ -117,10 +118,10 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -170,10 +171,10 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -229,10 +230,10 @@ func TestAnteHandlerSequences(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -301,59 +302,15 @@ func TestAnteHandlerSequences(t *testing.T) {
 	checkValidTx(t, anteHandler, ctx, tx)
 }
 
-// Test logic around memo gas consumption.
-func TestAnteHandlerMemoGas(t *testing.T) {
-	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
-	cdc := wire.NewCodec()
-	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
-
-	// keys and addresses
-	priv1, addr1 := testutils.PrivAndAddr()
-
-	// set the accounts
-	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
-	mapper.SetAccount(ctx, acc1)
-
-	// msg and signatures
-	var txn sdk.Tx
-	msg := newTestMsg(addr1)
-	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
-	fee := tx.NewStdFee(0, sdk.NewCoin("atom", 0))
-
-	// tx does not have enough gas
-	txn = newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee)
-	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeOutOfGas)
-
-	// tx with memo doesn't have enough gas
-	fee = tx.NewStdFee(801, sdk.NewCoin("atom", 0))
-	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
-	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeOutOfGas)
-
-	// memo too large
-	fee = tx.NewStdFee(2001, sdk.NewCoin("atom", 0))
-	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsdabcininasidniandsinasindiansdiansdinaisndiasndiadninsdabcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
-	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeMemoTooLarge)
-
-	// tx with memo has enough gas
-	fee = tx.NewStdFee(1100, sdk.NewCoin("atom", 0))
-	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
-	checkValidTx(t, anteHandler, ctx, txn)
-}
-
 func TestAnteHandlerMultiSigner(t *testing.T) {
 	// setup
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -401,10 +358,10 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -482,10 +439,10 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -531,18 +488,18 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	require.Nil(t, acc2.GetPubKey())
 }
 
-func setup() (mapper auth.AccountMapper, ctx types.Context, anteHandler sdk.AnteHandler) {
+func setup() (mapper account.Mapper, ctx types.Context, anteHandler types.AnteHandler) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper = account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler = tx.NewAnteHandler(mapper, feeCollector)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx = types.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	return
 }
 
-func runAnteHandlerWithMultiTxFees(ctx types.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...tx.FeeCalculator) types.Context {
+func runAnteHandlerWithMultiTxFees(ctx types.Context, anteHandler types.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...tx.FeeCalculator) types.Context {
 	for i := 0; i < len(fees); i++ {
 		msg := newTestMsgWithFeeCalculator(fees[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)}, newStdFee())
@@ -552,7 +509,7 @@ func runAnteHandlerWithMultiTxFees(ctx types.Context, anteHandler sdk.AnteHandle
 	return ctx
 }
 
-func checkBalance(t *testing.T, am auth.AccountMapper, ctx types.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
+func checkBalance(t *testing.T, am account.Mapper, ctx types.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
 	newBalance := am.GetAccount(ctx, addr).GetCoins()
 	require.Equal(t, accNewBalance, newBalance)
 }
@@ -570,7 +527,7 @@ func TestAnteHandlerFeesInCheckTx(t *testing.T) {
 
 	ctx = ctx.WithIsCheckTx(true)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FixedFeeCalculator(10, types.FeeForProposer))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
 	checkFee(t, ctx, types.Fee{})
 }
 
@@ -579,22 +536,22 @@ func TestAnteHandlerOneTxFee(t *testing.T) {
 	am, ctx, anteHandler := setup()
 	priv1, acc1 := testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FreeFeeCalculator())
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 100)})
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 100)})
 	checkFee(t, ctx, types.Fee{})
 
 	// one tx, FeeForProposer
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FixedFeeCalculator(10, types.FeeForProposer))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
 
 	// one tx, FeeForAll
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FixedFeeCalculator(10, types.FeeForAll))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForAll))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForAll))
 }
 
 func TestAnteHandlerMultiTxFees(t *testing.T) {
@@ -604,8 +561,8 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
 		tx.FreeFeeCalculator(),
 		tx.FixedFeeCalculator(10, types.FeeForProposer))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
 
 	// two txs, 1. FeeProposer 2. FeeFree
 	am, ctx, anteHandler = setup()
@@ -613,8 +570,8 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
 		tx.FixedFeeCalculator(10, types.FeeForProposer),
 		tx.FreeFeeCalculator())
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 90)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
 
 	// two txs, 1. FeeProposer 2. FeeForAll
 	am, ctx, anteHandler = setup()
@@ -622,8 +579,8 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
 		tx.FixedFeeCalculator(10, types.FeeForProposer),
 		tx.FixedFeeCalculator(10, types.FeeForAll))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 80)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 20)}, types.FeeForAll))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 80)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 20)}, types.FeeForAll))
 
 	// two txs, 1. FeeForAll 2. FeeProposer
 	am, ctx, anteHandler = setup()
@@ -631,8 +588,8 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
 		tx.FixedFeeCalculator(10, types.FeeForAll),
 		tx.FixedFeeCalculator(10, types.FeeForProposer))
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 80)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 20)}, types.FeeForAll))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 80)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 20)}, types.FeeForAll))
 
 	// three txs, 1. FeeForAll 2. FeeProposer 3. FeeFree
 	am, ctx, anteHandler = setup()
@@ -641,6 +598,6 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 		tx.FixedFeeCalculator(10, types.FeeForAll),
 		tx.FixedFeeCalculator(10, types.FeeForProposer),
 		tx.FreeFeeCalculator())
-	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeToken, 80)})
-	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 20)}, types.FeeForAll))
+	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 80)})
+	checkFee(t, ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 20)}, types.FeeForAll))
 }

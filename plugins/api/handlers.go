@@ -59,19 +59,19 @@ func (s *server) handleNodeVersionReq() http.HandlerFunc {
 	return hnd.NodeVersionReqHandler(s.ctx)
 }
 
-func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return dexapi.DepthReqHandler(cdc, ctx)
 }
 
-func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
+func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CLIContext, accStoreName string) http.HandlerFunc {
 	h := dexapi.PutOrderReqHandler(cdc, ctx, accStoreName)
 	return s.withUrlEncForm(s.limitReqSize(h))
 }
 
-func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
+func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {
 	return tksapi.BalancesReqHandler(cdc, ctx, tokens)
 }
 
-func (s *server) handleBalanceReq(cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper) http.HandlerFunc {
+func (s *server) handleBalanceReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {
 	return tksapi.BalanceReqHandler(cdc, ctx, tokens)
 }

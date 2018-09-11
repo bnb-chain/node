@@ -1,11 +1,11 @@
 package app
 
-
 import (
-	dbm "github.com/tendermint/tendermint/libs/db"
-
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	dbm "github.com/tendermint/tendermint/libs/db"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // nolint - Setter functions
@@ -33,37 +33,37 @@ func (app *BaseApp) SetTxDecoder(txDecoder sdk.TxDecoder) {
 	}
 	app.txDecoder = txDecoder
 }
-func (app *BaseApp) SetInitChainer(initChainer sdk.InitChainer) {
+func (app *BaseApp) SetInitChainer(initChainer types.InitChainer) {
 	if app.sealed {
 		panic("SetInitChainer() on sealed BaseApp")
 	}
 	app.initChainer = initChainer
 }
-func (app *BaseApp) SetBeginBlocker(beginBlocker sdk.BeginBlocker) {
+func (app *BaseApp) SetBeginBlocker(beginBlocker types.BeginBlocker) {
 	if app.sealed {
 		panic("SetBeginBlocker() on sealed BaseApp")
 	}
 	app.beginBlocker = beginBlocker
 }
-func (app *BaseApp) SetEndBlocker(endBlocker sdk.EndBlocker) {
+func (app *BaseApp) SetEndBlocker(endBlocker types.EndBlocker) {
 	if app.sealed {
 		panic("SetEndBlocker() on sealed BaseApp")
 	}
 	app.endBlocker = endBlocker
 }
-func (app *BaseApp) SetAnteHandler(ah sdk.AnteHandler) {
+func (app *BaseApp) SetAnteHandler(ah types.AnteHandler) {
 	if app.sealed {
 		panic("SetAnteHandler() on sealed BaseApp")
 	}
 	app.anteHandler = ah
 }
-func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
+func (app *BaseApp) SetAddrPeerFilter(pf types.PeerFilter) {
 	if app.sealed {
 		panic("SetAddrPeerFilter() on sealed BaseApp")
 	}
 	app.addrPeerFilter = pf
 }
-func (app *BaseApp) SetPubKeyPeerFilter(pf sdk.PeerFilter) {
+func (app *BaseApp) SetPubKeyPeerFilter(pf types.PeerFilter) {
 	if app.sealed {
 		panic("SetPubKeyPeerFilter() on sealed BaseApp")
 	}

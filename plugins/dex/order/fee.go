@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -95,19 +96,19 @@ func (config *FeeConfig) SetFeeRate(ctx types.Context, feeRate int64) {
 	config.feeRate = feeRate
 }
 
-func (config FeeConfig) ExpireFee(ctx ) int64 {
+func (config FeeConfig) ExpireFee() int64 {
 	return config.expireFee
 }
 
-func (config FeeConfig) IOCExpireFee(ctx types.Context) int64 {
+func (config FeeConfig) IOCExpireFee() int64 {
 	return config.iocExpireFee
 }
 
-func (config FeeConfig) FeeRateWithNativeToken(ctx types.Context) int64 {
+func (config FeeConfig) FeeRateWithNativeToken() int64 {
 	return config.feeRateWithNativeToken
 }
 
-func (config FeeConfig) FeeRate(ctx types.Context) int64 {
+func (config FeeConfig) FeeRate() int64 {
 	return config.feeRate
 }
 

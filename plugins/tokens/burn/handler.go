@@ -5,12 +5,13 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/common/account"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper account.Keeper) types.Handler {
 	return func(ctx types.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
@@ -21,7 +22,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleBurnToken(ctx types.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleBurnToken(ctx types.Context, tokenMapper store.Mapper, keeper account.Keeper, msg Msg) sdk.Result {
 	burnAmount := msg.Amount
 	if burnAmount <= 0 {
 		return sdk.ErrInsufficientCoins("burn amount should be greater than 0").Result()

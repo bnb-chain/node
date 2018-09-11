@@ -8,6 +8,8 @@ import (
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	dbm "github.com/tendermint/tendermint/libs/db"
 
+	"github.com/BiJie/BinanceChain/common/account"
+
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -30,7 +32,7 @@ func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey
 // coins to more than cover the fee
 func NewNativeTokens(amount int64) sdk.Coins {
 	return sdk.Coins{
-		sdk.NewCoin(types.NativeToken, amount),
+		sdk.NewInt64Coin(types.NativeToken, amount),
 	}
 }
 
@@ -41,7 +43,7 @@ func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
 	return priv, addr
 }
 
-func NewAccount(ctx types.Context, am auth.AccountMapper, free int64) (crypto.PrivKey, auth.Account) {
+func NewAccount(ctx types.Context, am account.Mapper, free int64) (crypto.PrivKey, auth.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	acc.SetCoins(NewNativeTokens(free))

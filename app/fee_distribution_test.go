@@ -9,18 +9,20 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/account"
+
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func setup() (mapper auth.AccountMapper, ctx types.Context) {
+func setup() (mapper account.Mapper, ctx types.Context) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	ctx = sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	mapper = account.NewMapper(cdc, capKey, auth.ProtoBaseAccount)
+	ctx = types.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	// setup proposer and other validators
 	_, proposerAcc := testutils.NewAccount(ctx, mapper, 100)
 	_, valAcc1 := testutils.NewAccount(ctx, mapper, 100)
@@ -28,18 +30,18 @@ func setup() (mapper auth.AccountMapper, ctx types.Context) {
 	_, valAcc3 := testutils.NewAccount(ctx, mapper, 100)
 
 	proposer := abci.Validator{Address: proposerAcc.GetAddress(), Power: 10}
-	ctx = ctx.WithBlockHeader(abci.Header{Proposer: proposer}).WithSigningValidators([]abci.SigningValidator{
-		{proposer, true},
-		{abci.Validator{Address: valAcc1.GetAddress(), Power: 10}, true},
-		{abci.Validator{Address: valAcc2.GetAddress(), Power: 10}, true},
-		{abci.Validator{Address: valAcc3.GetAddress(), Power: 10}, true},
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposer.Address}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: proposer, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc1.GetAddress(), Power: 10}, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc2.GetAddress(), Power: 10}, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc3.GetAddress(), Power: 10}, SignedLastBlock: true},
 	})
 
 	return
 }
 
-func checkBalance(t *testing.T, ctx types.Context, am auth.AccountMapper, vals []int64) {
-	for i, val := range ctx.SigningValidators() {
+func checkBalance(t *testing.T, ctx types.Context, am account.Mapper, vals []int64) {
+	for i, val := range ctx.VoteInfos() {
 		valAcc := am.GetAccount(ctx, val.Validator.Address)
 		require.Equal(t, vals[i], valAcc.GetCoins().AmountOf(types.NativeToken).Int64())
 	}
@@ -58,7 +60,7 @@ func TestNoFeeDistribution(t *testing.T) {
 func TestFeeDistribution2Proposer(t *testing.T) {
 	// setup
 	am, ctx := setup()
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{110, 100, 100, 100})
 }
@@ -67,12 +69,12 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// setup
 	am, ctx := setup()
 	// fee amount can be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 40)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 40)}, types.FeeForAll))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 50)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 50)}, types.FeeForAll))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{124, 122, 122, 122})
 }

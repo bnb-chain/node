@@ -18,7 +18,9 @@ import (
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	return app.NewBinanceChain(logger, db, storeTracer)
+	app := app.NewBinanceChain(logger, db, storeTracer)
+	app.Seal()
+	return app
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {

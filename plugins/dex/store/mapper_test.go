@@ -11,12 +11,13 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	cmntypes "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
-func setup() (TradingPairMapper, types.Context) {
+func setup() (TradingPairMapper, cmntypes.Context) {
 	ms, key := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := cmntypes.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 	return NewTradingPairMapper(cdc, key), ctx

@@ -26,7 +26,7 @@ func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc auth.Account, err error) {
 	return acc, err
 }
 
-func getAccount(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (auth.Account, error) {
+func getAccount(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (auth.Account, error) {
 	key := auth.AddressStoreKey(addr)
 	bz, err := ctx.QueryStore(key, common.AccountStoreName)
 	if err != nil {
@@ -39,7 +39,7 @@ func getAccount(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (
 	return acc, err
 }
 
-func getCoinsCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (sdk.Coins, error) {
+func getCoinsCC(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (sdk.Coins, error) {
 	acc, err := getAccount(cdc, ctx, addr)
 	if err != nil {
 		return sdk.Coins{}, err
@@ -50,7 +50,7 @@ func getCoinsCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (
 	return acc.GetCoins(), nil
 }
 
-func getLockedCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (sdk.Coins, error) {
+func getLockedCC(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (sdk.Coins, error) {
 	acc, err := getAccount(cdc, ctx, addr)
 	nacc := acc.(types.NamedAccount)
 	if err != nil {
@@ -62,7 +62,7 @@ func getLockedCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) 
 	return nacc.GetLockedCoins(), nil
 }
 
-func getFrozenCC(cdc *wire.Codec, ctx context.CoreContext, addr sdk.AccAddress) (sdk.Coins, error) {
+func getFrozenCC(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (sdk.Coins, error) {
 	acc, err := getAccount(cdc, ctx, addr)
 	nacc := acc.(types.NamedAccount)
 	if err != nil {

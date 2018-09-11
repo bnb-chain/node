@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	cli "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authctx "github.com/cosmos/cosmos-sdk/x/auth/client/context"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -21,9 +23,10 @@ type Commander struct {
 type msgBuilder func(from sdk.AccAddress, symbol string, amount int64) sdk.Msg
 
 func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msgBuilder) error {
-	ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(c.Cdc))
+	txCtx := authctx.NewTxContextFromCLI().WithCodec(c.Cdc)
+	cliCtx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(c.Cdc))
 
-	from, err := ctx.GetFromAddress()
+	from, err := cliCtx.GetFromAddress()
 	if err != nil {
 		return err
 	}
@@ -44,16 +47,7 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 
 	// build message
 	msg := builder(from, symbol, amount)
-	return c.sendTx(ctx, msg)
-}
-
-func (c Commander) sendTx(ctx context.CoreContext, msg sdk.Msg) error {
-	err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, c.Cdc)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cli.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
 }
 
 func parseAmount(amountStr string) (int64, error) {

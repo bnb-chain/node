@@ -4,7 +4,9 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	cli "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authctx "github.com/cosmos/cosmos-sdk/x/auth/client/context"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -22,9 +24,10 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "list",
 		Short: "",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(cdc))
 
-			from, err := ctx.GetFromAddress()
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -51,7 +54,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg := list.NewMsg(from, symbol, quoteSymbol, initPrice)
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			err = cli.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}

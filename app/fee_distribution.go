@@ -4,15 +4,13 @@ import (
 	"bytes"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/account"
 	"github.com/BiJie/BinanceChain/common/tx"
-
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func distributeFee(ctx types.Context, am auth.AccountMapper) {
-	proposerAddr := ctx.BlockHeader().Proposer.Address
+func distributeFee(ctx types.Context, am account.Mapper) {
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
 	if fee.IsEmpty() {
@@ -20,6 +18,7 @@ func distributeFee(ctx types.Context, am auth.AccountMapper) {
 		return
 	}
 
+	proposerAddr := sdk.AccAddress(ctx.BlockHeader().ProposerAddress)
 	if fee.Type == types.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
 		proposerAcc := am.GetAccount(ctx, proposerAddr)
@@ -37,11 +36,11 @@ func distributeFee(ctx types.Context, am auth.AccountMapper) {
 			avgAmount := amount / valSize
 			roundingAmount := amount - avgAmount*valSize
 			if avgAmount != 0 {
-				avgTokens = append(avgTokens, sdk.NewCoin(token.Denom, avgAmount))
+				avgTokens = append(avgTokens, sdk.NewInt64Coin(token.Denom, avgAmount))
 			}
 
 			if roundingAmount != 0 {
-				roundingTokens = append(roundingTokens, sdk.NewCoin(token.Denom, roundingAmount))
+				roundingTokens = append(roundingTokens, sdk.NewInt64Coin(token.Denom, roundingAmount))
 			}
 		}
 

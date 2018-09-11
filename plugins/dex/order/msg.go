@@ -146,14 +146,14 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 }
 
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
-func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int8,
+func NewNewOrderMsgAuto(ctx context.CLIContext, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
 	var id string
-	ctx, err := context.EnsureSequence(ctx)
+	seq, err := ctx.GetAccountSequence(sender)
 	if err != nil {
 		return NewOrderMsg{}, err
 	}
-	id = GenerateOrderID(ctx.Sequence+1, sender)
+	id = GenerateOrderID(seq+1, sender)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,

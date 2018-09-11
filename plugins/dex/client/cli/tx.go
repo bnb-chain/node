@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	cli "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authctx "github.com/cosmos/cosmos-sdk/x/auth/client/context"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,9 +33,10 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
 		Short: "Submit a new order",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(cdc))
 
-			from, err := ctx.GetFromAddress()
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -64,13 +67,13 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			msg, err := order.NewNewOrderMsgAuto(ctx, from, side, symbol, price, qty)
+			msg, err := order.NewNewOrderMsgAuto(cliCtx, from, side, symbol, price, qty)
 			if err != nil {
 				panic(err)
 			}
 
 			msg.TimeInForce = tif
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			err = cli.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -91,7 +94,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "show -l <listed pair>",
 		Short: "Show order book of the listed currency pair",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			ctx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(cdc))
 
 			symbol := viper.GetString(flagSymbol)
 			err := validatePairSymbol(symbol)
@@ -122,9 +125,10 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "cancel -i <order id> -f <ref order id>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(cdc))
 
-			from, err := ctx.GetFromAddress()
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -138,7 +142,7 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 				fmt.Println("please input reference order id")
 			}
 			msg := order.NewCancelOrderMsg(from, id, refId)
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			err = cli.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
