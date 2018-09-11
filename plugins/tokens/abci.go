@@ -61,7 +61,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 		default:
 			return &abci.ResponseQuery{
 				Code: uint32(sdk.ABCICodeOK),
-				Info: fmt.Sprintf("Unknown `%s` query path", abciQueryPrefix),
+				Info: fmt.Sprintf("Unknown `%s` query path: %v", abciQueryPrefix, path),
 			}
 		}
 	}
