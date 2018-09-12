@@ -18,17 +18,54 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 			return nil
 		}
 		switch path[1] {
+		case "info": // args: ["tokens", "info", <symbol>]
+			if len(path) < 3 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeUnknownRequest),
+					Log: fmt.Sprintf(
+						"%s %s query requires a symbol path arg",
+						abciQueryPrefix, path[1]),
+				}
+			}
+			ctx := app.GetContextForCheckState()
+			symbol := path[2]
+			if len(symbol) == 0 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "empty symbol not permitted",
+				}
+			}
+			token, err := mapper.GetToken(ctx, symbol)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			bz, err := app.GetCodec().MarshalBinary(token)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			return &abci.ResponseQuery{
+				Code:  uint32(sdk.ABCICodeOK),
+				Value: bz,
+			}
 		case "list": // args: ["tokens", "list", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
-					Log:  fmt.Sprintf("%s %s query requires offset and limit in the path", abciQueryPrefix, path[1]),
+					Log: fmt.Sprintf(
+						"%s %s query requires offset and limit path segments",
+						abciQueryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
 			tokens := mapper.GetTokenList(ctx)
 			offset, err := strconv.Atoi(path[2])
-			if err != nil || offset < 0 || offset > len(tokens)-1 {
+			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse offset",
@@ -67,7 +104,9 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 		default:
 			return &abci.ResponseQuery{
 				Code: uint32(sdk.ABCICodeOK),
-				Info: fmt.Sprintf("Unknown `%s` query path: %v", abciQueryPrefix, path),
+				Info: fmt.Sprintf(
+					"Unknown `%s` query path: %v",
+					abciQueryPrefix, path),
 			}
 		}
 	}
