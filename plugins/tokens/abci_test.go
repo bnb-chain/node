@@ -22,25 +22,24 @@ var (
 	db     = dbm.NewMemDB()
 	logger = log.NewTMLogger(os.Stdout)
 	app    = bca.NewBinanceChain(logger, db, os.Stdout)
+	pk     = ed25519.GenPrivKey().PubKey()
+	addr   = sdk.AccAddress(pk.Address())
+	token1 = common.NewToken("XXX", "XXX", 10000000000, addr)
+	token2 = common.NewToken("XXY", "XXY", 10000000000, addr)
 )
 
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 	path := "/tokens/info/XXX" // XXX created below
 
-	pk := ed25519.GenPrivKey().PubKey()
-	addr := sdk.AccAddress(pk.Address())
-
 	ctx := app.NewContext(true, abci.Header{})
-	token := common.NewToken("XXX", "XXX", 10000000000, addr)
-	err := app.TokenMapper.NewToken(ctx, token)
+	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	query := abci.RequestQuery{
-		Path:   path,
-		Data:   []byte(""),
-		Height: 100,
+		Path: path,
+		Data: []byte(""),
 	}
 	res := app.Query(query)
 
@@ -52,42 +51,220 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 	}
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
-	assert.Equal(t, token, actual)
+	assert.Equal(t, token1, actual)
 }
 
-func Test_Tokens_ABCI_GetInfo_NotFound(t *testing.T) {
+func Test_Tokens_ABCI_GetInfo_Error_NotFound(t *testing.T) {
 	path := "/tokens/info/XXY" // will not exist!
 
-	pk := ed25519.GenPrivKey().PubKey()
-	addr := sdk.AccAddress(pk.Address())
-
 	ctx := app.NewContext(true, abci.Header{})
-	token := common.NewToken("XXX", "XXX", 10000000000, addr)
-	err := app.TokenMapper.NewToken(ctx, token)
+	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	query := abci.RequestQuery{
-		Path:   path,
-		Data:   []byte(""),
-		Height: 100,
+		Path: path,
+		Data: []byte(""),
 	}
 	res := app.Query(query)
 
 	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
 }
 
-func Test_Tokens_ABCI_GetInfo_EmptySymbol(t *testing.T) {
+func Test_Tokens_ABCI_GetInfo_Error_EmptySymbol(t *testing.T) {
 	path := "/tokens/info/" // blank symbol param!
 
 	query := abci.RequestQuery{
-		Path:   path, // does not exist!
-		Data:   []byte(""),
-		Height: 100,
+		Path: path, // does not exist!
+		Data: []byte(""),
 	}
 	res := app.Query(query)
 
 	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
 	assert.Equal(t, "empty symbol not permitted", res.GetLog())
+}
+
+func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
+	path := "/tokens/list/0/5"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	cdc := app.GetCodec()
+	actual := make([]common.Token, 2)
+	err = cdc.UnmarshalBinary(res.Value, &actual)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
+	assert.Equal(t, []common.Token{
+		token1, token2,
+	}, actual)
+}
+
+func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
+	path := "/tokens/list/1/5"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	cdc := app.GetCodec()
+	actual := make([]common.Token, 1)
+	err = cdc.UnmarshalBinary(res.Value, &actual)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
+	assert.Equal(t, []common.Token{
+		token2,
+	}, actual)
+}
+
+func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
+	path := "/tokens/list/0/1"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	cdc := app.GetCodec()
+	actual := make([]common.Token, 1)
+	err = cdc.UnmarshalBinary(res.Value, &actual)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
+	assert.Equal(t, []common.Token{
+		token1,
+	}, actual)
+}
+
+func Test_Tokens_ABCI_GetTokens_Error_ZeroLimit(t *testing.T) {
+	path := "/tokens/list/0/0"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
+}
+
+func Test_Tokens_ABCI_GetTokens_Error_NegativeLimit(t *testing.T) {
+	path := "/tokens/list/0/-1"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
+}
+
+func Test_Tokens_ABCI_GetTokens_Error_NegativeOffset(t *testing.T) {
+	path := "/tokens/list/-1/0"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
+}
+
+func Test_Tokens_ABCI_GetTokens_Error_InvalidLimit(t *testing.T) {
+	path := "/tokens/list/0/x"
+
+	ctx := app.NewContext(true, abci.Header{})
+	err := app.TokenMapper.NewToken(ctx, token1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	err = app.TokenMapper.NewToken(ctx, token2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	query := abci.RequestQuery{
+		Path: path,
+		Data: []byte(""),
+	}
+	res := app.Query(query)
+
+	assert.False(t, sdk.ABCICodeType(res.Code).IsOK())
 }
