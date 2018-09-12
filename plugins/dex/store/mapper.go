@@ -44,10 +44,12 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 		return errors.New("QuoteAsset cannot be empty")
 	}
 
-	key := []byte(utils.Ccy2TradeSymbol(tradeAsset, quoteAsset))
+	tradeSymbol := utils.Ccy2TradeSymbol(tradeAsset, quoteAsset)
+	key := []byte(tradeSymbol)
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
+	ctx.Logger().Info("Added trading pair", "pair", tradeSymbol)
 	return nil
 }
 
@@ -88,10 +90,14 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 
 	if tickSize != pair.TickSize.ToInt64() ||
 		lotSize != pair.LotSize.ToInt64() {
+		ctx.Logger().Info("Updating tick/lotsize",
+			"pair", pair.GetSymbol(), "old ticksize", pair.TickSize, "new ticksize", tickSize,
+			"old lotsize", pair.LotSize, "new lotsize", lotSize)
 		pair.TickSize = utils.Fixed8(tickSize)
 		pair.LotSize = utils.Fixed8(lotSize)
 
 		m.AddTradingPair(ctx, pair)
+
 	}
 	return tickSize, lotSize
 }

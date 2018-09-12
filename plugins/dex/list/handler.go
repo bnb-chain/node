@@ -49,6 +49,7 @@ func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper,
 
 	if !ctx.IsCheckTx() { // only add engine during DeliverTx
 		keeper.AddEngine(pair)
+		ctx.Logger().Info("Created new match engine", "pair", pair)
 	}
 
 	return sdk.Result{}
