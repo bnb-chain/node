@@ -25,7 +25,7 @@ var (
 )
 
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
-	path := "tokens/info/XXX" // XXX created below
+	path := "/tokens/info/XXX" // XXX created below
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())
@@ -56,7 +56,7 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 }
 
 func Test_Tokens_ABCI_GetInfo_NotFound(t *testing.T) {
-	path := "tokens/info/XXY" // will not exist!
+	path := "/tokens/info/XXY" // will not exist!
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())
@@ -79,7 +79,7 @@ func Test_Tokens_ABCI_GetInfo_NotFound(t *testing.T) {
 }
 
 func Test_Tokens_ABCI_GetInfo_EmptySymbol(t *testing.T) {
-	path := "tokens/info/" // blank symbol param!
+	path := "/tokens/info/" // blank symbol param!
 
 	query := abci.RequestQuery{
 		Path:   path, // does not exist!
