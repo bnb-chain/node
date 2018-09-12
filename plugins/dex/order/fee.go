@@ -71,6 +71,7 @@ func (config *FeeConfig) SetExpireFee(ctx sdk.Context, expireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(expireFee)
 	store.Set(expireFeeKey, b)
+	ctx.Logger().Info("Set Expire Fee", "fee", expireFee)
 	config.expireFee = expireFee
 }
 
@@ -78,6 +79,7 @@ func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(iocExpireFee)
 	store.Set(iocExpireFeeKey, b)
+	ctx.Logger().Info("Set IOCExpire Fee", "fee", iocExpireFee)
 	config.iocExpireFee = iocExpireFee
 }
 
@@ -85,6 +87,7 @@ func (config *FeeConfig) SetFeeRateWithNativeToken(ctx sdk.Context, feeRateWithN
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(feeRateWithNativeToken)
 	store.Set(feeRateWithNativeTokenKey, b)
+	ctx.Logger().Info("Set Fee Rate with native token", "rate", feeRateWithNativeToken)
 	config.feeRateWithNativeToken = feeRateWithNativeToken
 }
 
@@ -92,6 +95,7 @@ func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(feeRate)
 	store.Set(feeRateKey, b)
+	ctx.Logger().Info("Set Fee Rate for tokens", "rate", feeRate)
 	config.feeRate = feeRate
 }
 
@@ -125,6 +129,7 @@ func (config *FeeConfig) Init(ctx sdk.Context) {
 
 // InitGenesis - store the genesis trend
 func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
+	ctx.Logger().Info("Setting Genesis Fee/Rate")
 	config.SetExpireFee(ctx, data.ExpireFee)
 	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
 	config.SetFeeRateWithNativeToken(ctx, data.FeeRateWithNativeToken)
