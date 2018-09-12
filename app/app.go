@@ -253,8 +253,7 @@ func (app *BinanceChain) GetCodec() *wire.Codec {
 
 // GetContextForCheckState gets the context for the check state.
 func (app *BinanceChain) GetContextForCheckState() sdk.Context {
-	ctx := sdk.NewContext(app.cms.CacheMultiStore(), app.checkState.ctx.BlockHeader(), true, app.Logger)
-	return ctx
+	return app.checkState.ctx
 }
 
 func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
