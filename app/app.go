@@ -200,7 +200,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeight()
 
-	if utils.SameDayInUTC(lastBlockTime, blockTime) {
+	// TODO(#139): Need a proper fix, lastBlockTime = 0 indicates we are started, doesn't means current block is a cross day one or not
+	if utils.SameDayInUTC(lastBlockTime, blockTime) || lastBlockTime == 0 {
 		// only match in the normal block
 		// TODO: add postAllocateHandler
 		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
