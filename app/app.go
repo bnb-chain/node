@@ -62,7 +62,7 @@ type BinanceChain struct {
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
-func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *BinanceChain {
+func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*BaseApp)) *BinanceChain {
 
 	// create app-level codec for txs and accounts
 	var cdc = MakeCodec()
@@ -72,7 +72,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	// create your application object
 	var app = &BinanceChain{
-		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders),
+		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders, baseAppOptions...),
 		Codec:         cdc,
 		queryHandlers: make(map[string]types.AbciQueryHandler),
 	}
