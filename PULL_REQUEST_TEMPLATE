@@ -20,6 +20,7 @@ Notable changes:
 
 - [ ] build passed (`make build`)
 - [ ] tests passed (`make test`)
+- [ ] integration tests passed (`make integration_test`)
 - [ ] manual transaction test passed (cli invoke)
 
 ### Already reviewed by
