@@ -83,7 +83,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	logger := ctx.Logger()
 	kvStore := ctx.KVStore(kp.storeKey)
 	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
+	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack, logger)
 	logger.Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
@@ -189,7 +189,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		}
 	}
 	logger.Info("replayed all tx. Starting match")
-	kp.MatchAll() //no need to check result
+	kp.MatchAll(logger) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,

@@ -28,6 +28,8 @@ func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
 	} else if fee.Type == types.FeeForAll {
 		signingValidators := ctx.SigningValidators()
 		valSize := int64(len(signingValidators))
+		ctx.Logger().Info("Distributing the fees to all the validators",
+			"totalFees", fee.Tokens, "validatorSize", valSize)
 		avgTokens := sdk.Coins{}
 		roundingTokens := sdk.Coins{}
 		for _, token := range fee.Tokens {
