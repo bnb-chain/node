@@ -199,14 +199,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeight()
-
+	logger := ctx.Logger()
 	if utils.SameDayInUTC(lastBlockTime, blockTime) {
 		// only match in the normal block
 		// TODO: add postAllocateHandler
-		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, logger, nil)
 	} else {
 		// breathe block
-
+		logger.Info("Start Breathe Block Handling",
+			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
 
 		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
