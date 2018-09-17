@@ -118,7 +118,7 @@ func PersistentPreRunEFn(context *sdk_server.Context) func(*cobra.Command, []str
 			logger = log.NewTracingLogger(logger)
 		}
 		logger = logger.With("module", "main")
-		blog.Init(logger)
+		blog.InitLogger(logger)
 
 		context.Config = config
 		context.Logger = logger

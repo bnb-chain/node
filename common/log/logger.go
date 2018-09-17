@@ -7,43 +7,42 @@ import (
 )
 
 var (
-	defaultFileWriter *AsyncFileWriter
-	defaultLogger     tmlog.Logger
+	fileWriter *AsyncFileWriter
+	logger     tmlog.Logger
 )
 
 func init() {
-	defaultLogger = tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
+	logger = tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
 }
 
-func Init(logger tmlog.Logger) {
+func InitLogger(l tmlog.Logger) {
 	// TODO: close log file when node stopped
-	defaultLogger = logger
+	logger = l
 }
 
 func NewAsyncFileLogger(filePath string, buffSize int64) tmlog.Logger {
-	if defaultFileWriter != nil {
-		defaultFileWriter.Stop()
+	if fileWriter != nil {
+		fileWriter.Stop()
 	}
 
-	defaultFileWriter = NewAsyncFileWriter(filePath, buffSize)
-	defaultFileWriter.Start()
+	fileWriter = NewAsyncFileWriter(filePath, buffSize)
+	fileWriter.Start()
 
-	logger := tmlog.NewTMLogger(defaultFileWriter)
-	return logger
+	return tmlog.NewTMLogger(fileWriter)
 }
 
 func Debug(msg string, keyvals ...interface{}) {
-	defaultLogger.Debug(msg, keyvals...)
+	logger.Debug(msg, keyvals...)
 }
 
 func Info(msg string, keyvals ...interface{}) {
-	defaultLogger.Info(msg, keyvals...)
+	logger.Info(msg, keyvals...)
 }
 
 func Error(msg string, keyvals ...interface{}) {
-	defaultLogger.Error(msg, keyvals...)
+	logger.Error(msg, keyvals...)
 }
 
 func With(keyvals ...interface{}) tmlog.Logger {
-	return defaultLogger.With(keyvals...)
+	return logger.With(keyvals...)
 }
