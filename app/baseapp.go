@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"runtime/debug"
 	"strings"
@@ -12,10 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
+	bc "github.com/tendermint/tendermint/blockchain"
+	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -90,7 +94,6 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDe
 		cms:        store.NewCommitMultiStore(db),
 		router:     baseapp.NewRouter(),
 		codespacer: sdk.NewCodespacer(),
-		txDecoder:  txDecoder,
 	}
 
 	// Register the undefined & root codespaces, which should not be used by
@@ -189,6 +192,17 @@ func (app *BaseApp) LastBlockHeight() int64 {
 	return app.cms.LastCommitID().Version
 }
 
+func loadBlockDB() dbm.DB {
+	conf := cfg.DefaultConfig()
+	err := viper.Unmarshal(conf)
+	if err != nil {
+		panic(err)
+	}
+
+	dbType := dbm.DBBackendType(conf.DBBackend)
+	return dbm.NewDB("blockstore", dbType, conf.DBDir())
+}
+
 // initializes the remaining logic from app.cms
 func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 	// main store should exist.
@@ -198,7 +212,21 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 		return errors.New("baseapp expects MultiStore with 'main' KVStore")
 	}
 
-	app.setCheckState(abci.Header{})
+	blockDB := loadBlockDB()
+	defer blockDB.Close()
+	blockStore := bc.NewBlockStore(blockDB)
+	blockStoreHeight := blockStore.Height()
+	appHeight := app.LastBlockHeight()
+	if blockStoreHeight != appHeight {
+		return fmt.Errorf("app height(%d) is inconsistent with block store height(%d)", appHeight, blockStoreHeight)
+	}
+
+	if blockStoreHeight == 0 {
+		app.setCheckState(abci.Header{})
+	} else {
+		lastHeader := blockStore.LoadBlock(blockStoreHeight).Header
+		app.setCheckState(tmtypes.TM2PB.Header(&lastHeader))
+	}
 	return nil
 }
 
