@@ -92,10 +92,7 @@ func interceptLoadConfig() (conf *cfg.Config, err error) {
 }
 
 func newAsyncLogger(conf *cfg.Config) log.Logger {
-	w := blog.NewAsyncFileWriter(path.Join(conf.RootDir, DefaultLogFile), DefaultLogBuffSize)
-	w.Start()
-
-	return log.NewTMLogger(w)
+	return blog.NewAsyncFileLogger(path.Join(conf.RootDir, DefaultLogFile), DefaultLogBuffSize)
 }
 
 // PersistentPreRunEFn returns a PersistentPreRunE function for cobra
@@ -121,6 +118,8 @@ func PersistentPreRunEFn(context *sdk_server.Context) func(*cobra.Command, []str
 			logger = log.NewTracingLogger(logger)
 		}
 		logger = logger.With("module", "main")
+		blog.Init(logger)
+
 		context.Config = config
 		context.Logger = logger
 		return nil
