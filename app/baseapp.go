@@ -94,6 +94,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDe
 		cms:        store.NewCommitMultiStore(db),
 		router:     baseapp.NewRouter(),
 		codespacer: sdk.NewCodespacer(),
+		txDecoder:  txDecoder,
 	}
 
 	// Register the undefined & root codespaces, which should not be used by
@@ -212,20 +213,16 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 		return errors.New("baseapp expects MultiStore with 'main' KVStore")
 	}
 
-	blockDB := loadBlockDB()
-	defer blockDB.Close()
-	blockStore := bc.NewBlockStore(blockDB)
-	blockStoreHeight := blockStore.Height()
 	appHeight := app.LastBlockHeight()
-	if blockStoreHeight != appHeight {
-		return fmt.Errorf("app height(%d) is inconsistent with block store height(%d)", appHeight, blockStoreHeight)
-	}
-
-	if blockStoreHeight == 0 {
+	if appHeight == 0 {
 		app.setCheckState(abci.Header{})
 	} else {
-		lastHeader := blockStore.LoadBlock(blockStoreHeight).Header
+		blockDB := loadBlockDB()
+		blockStore := bc.NewBlockStore(blockDB)
+		// note here we use appHeight, not current block store height, appHeight may be far behind storeHeight
+		lastHeader := blockStore.LoadBlock(appHeight).Header
 		app.setCheckState(tmtypes.TM2PB.Header(&lastHeader))
+		blockDB.Close()
 	}
 	return nil
 }
