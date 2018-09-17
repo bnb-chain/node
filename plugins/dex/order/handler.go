@@ -86,6 +86,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	_, ok := keeper.OrderExists(msg.Id)
 	if ctx.IsCheckTx() {
+		ctx.Logger().Info("Incoming New Order", "order", msg)
 		//only check whether there exists order to cancel
 		if ok {
 			errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
@@ -158,6 +159,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 		//remove order from cache and order book
 		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	} else {
+		ctx.Logger().Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	}
 	if err != nil {
