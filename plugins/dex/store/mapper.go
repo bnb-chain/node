@@ -43,8 +43,8 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	if len(quoteAsset) == 0 {
 		return errors.New("QuoteAssetSymbol cannot be empty")
 	}
-
-	key := []byte(utils.Assets2TradingPair(baseAsset, quoteAsset))
+	tradeSymbol := utils.Assets2TradingPair(baseAsset, quoteAsset)
+	key := []byte(tradeSymbol)
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)

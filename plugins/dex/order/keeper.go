@@ -72,7 +72,7 @@ func (tran Transfer) feeFree() bool {
 
 func (tran *Transfer) String() string {
 	return fmt.Sprintf("[eventType:%v, bid:%v, sid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
-		tran.eventType, tran.bid, tran.sid, tran.inCcy, tran.in, tran.outCcy, tran.out, tran.unlock, tran.fee)
+		tran.eventType, tran.bid, tran.sid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.fee)
 }
 
 func CreateMatchEng(lotSize int64) *me.MatchEng {
