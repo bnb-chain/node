@@ -189,6 +189,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHe
 }
 
 func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	defer blockDB.Close()
 	height, err := kp.LoadOrderBookSnapshot(ctx, daysBack)
 	if err != nil {
 		panic(err)
