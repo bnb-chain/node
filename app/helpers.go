@@ -19,7 +19,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tmlibs/cli"
 
-	blog "github.com/BiJie/BinanceChain/common/log"
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 )
 
 // nolint - Mostly for testing
@@ -92,7 +92,7 @@ func interceptLoadConfig() (conf *cfg.Config, err error) {
 }
 
 func newAsyncLogger(conf *cfg.Config) log.Logger {
-	return blog.NewAsyncFileLogger(path.Join(conf.RootDir, DefaultLogFile), DefaultLogBuffSize)
+	return bnclog.NewAsyncFileLogger(path.Join(conf.RootDir, DefaultLogFile), DefaultLogBuffSize)
 }
 
 // PersistentPreRunEFn returns a PersistentPreRunE function for cobra
@@ -118,7 +118,7 @@ func PersistentPreRunEFn(context *sdk_server.Context) func(*cobra.Command, []str
 			logger = log.NewTracingLogger(logger)
 		}
 		logger = logger.With("module", "main")
-		blog.InitLogger(logger)
+		bnclog.InitLogger(logger)
 
 		context.Config = config
 		context.Logger = logger
