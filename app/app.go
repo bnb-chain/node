@@ -119,7 +119,7 @@ func (app *BinanceChain) initPlugins() {
 
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
 	// count back to 7 days.
-	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, app.db, app.LastBlockHeight(), app.txDecoder)
+	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
 }
 
 // Query performs an abci query.
@@ -201,27 +201,26 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 }
 
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeight()
 
-	if utils.SameDayInUTC(lastBlockTime, blockTime) {
+	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		// TODO: add postAllocateHandler
 		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 	} else {
 		// breathe block
-
 		icoDone := ico.EndBlockAsync(ctx)
-
 		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
 	}
 
-	// distribute fees
-	distributeFee(ctx, app.AccountMapper)
+	// distribute fees TODO: enable it after upgraded to tm 0.24.0
+	// distributeFee(ctx, app.AccountMapper)
 	// TODO: update validators
 	return abci.ResponseEndBlock{}
 }

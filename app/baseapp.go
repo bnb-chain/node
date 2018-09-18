@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"runtime/debug"
 	"strings"
@@ -12,10 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
+	bc "github.com/tendermint/tendermint/blockchain"
+	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -189,6 +193,17 @@ func (app *BaseApp) LastBlockHeight() int64 {
 	return app.cms.LastCommitID().Version
 }
 
+func loadBlockDB() dbm.DB {
+	conf := cfg.DefaultConfig()
+	err := viper.Unmarshal(conf)
+	if err != nil {
+		panic(err)
+	}
+
+	dbType := dbm.DBBackendType(conf.DBBackend)
+	return dbm.NewDB("blockstore", dbType, conf.DBDir())
+}
+
 // initializes the remaining logic from app.cms
 func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 	// main store should exist.
@@ -198,7 +213,17 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 		return errors.New("baseapp expects MultiStore with 'main' KVStore")
 	}
 
-	app.setCheckState(abci.Header{})
+	appHeight := app.LastBlockHeight()
+	if appHeight == 0 {
+		app.setCheckState(abci.Header{})
+	} else {
+		blockDB := loadBlockDB()
+		blockStore := bc.NewBlockStore(blockDB)
+		// note here we use appHeight, not current block store height, appHeight may be far behind storeHeight
+		lastHeader := blockStore.LoadBlock(appHeight).Header
+		app.setCheckState(tmtypes.TM2PB.Header(&lastHeader))
+		blockDB.Close()
+	}
 	return nil
 }
 

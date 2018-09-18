@@ -4,18 +4,18 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/db"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/abci/client"
+	"github.com/tendermint/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	cfg "github.com/tendermint/tendermint/config"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -61,6 +61,11 @@ var (
 		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
 	testClient = NewTestClient(testApp)
 )
+
+func TearDown() {
+	// remove block db
+	os.RemoveAll(cfg.DefaultConfig().DBDir())
+}
 
 func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 	for _, acc := range genAccs {
@@ -155,9 +160,9 @@ func TestGenesis(t *testing.T) {
 	require.Equal(t, acc, res1)
 
 	// reload app and ensure the account is still there
-	bapp = NewBinanceChain(logger, db, os.Stdout)
 	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
 	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
 	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
+	TearDown()
 }
