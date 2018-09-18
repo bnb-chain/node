@@ -25,6 +25,9 @@ work_path=$(pwd)
 
 if ! [ -f build/node0/gaiad/config/genesis.json ];
 then
+	# these two lines are just used for generate a build directory own by bijieprd otherwise docker would create a build directory own by root
+	make build-linux
+	make build-docker-node
 	docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2
 fi
 
@@ -50,9 +53,9 @@ then
 	for i in {0..2}
 	do
 		echo "Copying repo to host ${machines[$i]}..."
-		ssh bijieprd@${des_ips[$i]} "sudo rm -rf ~/gowork/src/github.com/BiJie/BinanceChain"
-		scp BinanceChain.tar.gz bijieprd@${des_ips[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
-		ssh bijieprd@${des_ips[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
+		ssh bijieprd@${machines[$i]} "sudo rm -rf ~/gowork/src/github.com/BiJie/BinanceChain"
+		scp BinanceChain.tar.gz bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
+		ssh bijieprd@${machines[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
 	done
 fi
 
