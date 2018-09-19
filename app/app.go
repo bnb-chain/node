@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common"
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -212,6 +213,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 	} else {
 		// breathe block
+		bnclog.Info("Start Breathe Block Handling",
+			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
 

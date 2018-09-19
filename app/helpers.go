@@ -2,14 +2,12 @@ package app
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 
-	sdk_server "github.com/cosmos/cosmos-sdk/server"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/golang/go/src/path"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	"github.com/tendermint/tendermint/abci/server"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
@@ -18,6 +16,10 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tmlibs/cli"
+
+	sdk_server "github.com/cosmos/cosmos-sdk/server"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 )

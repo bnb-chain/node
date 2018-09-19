@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/pkg/errors"
 
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -67,8 +68,13 @@ func (tran Transfer) feeFree() bool {
 	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
 }
 
-func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(basePrice, lotSize, 0.05)
+func (tran *Transfer) String() string {
+	return fmt.Sprintf("[eventType:%v, bid:%v, sid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
+		tran.eventType, tran.bid, tran.sid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.fee)
+}
+
+func CreateMatchEng(lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(1000, lotSize, 0.05)
 }
 
 // NewKeeper - Returns the Keeper
@@ -223,10 +229,15 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return int(accAddress[0]+accAddress[1]) % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]NewOrderMsg, distributeTrade bool, tradeOuts []chan Transfer) {
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTrade bool,
+	tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
+	logger := bnclog.With("module", "dex")
+	// please note there is no logging in matching, expecting to see the order book details
+	// from the exchange's order book stream.
 	if engine.Match() {
+		logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		if distributeTrade {
 			for _, t := range engine.Trades {
 				t1, t2 := kp.tradeToTransfers(t, symbol)
@@ -236,7 +247,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 				tradeOuts[c] <- t2
 			}
 		}
-		engine.DropFilledOrder()
+		n := engine.DropFilledOrder()
+		logger.Debug("Drop filled orders", "total", n)
 	} // TODO: when Match() failed, have to unsolicited cancel all the orders
 	// when multiple unsolicited cancel happened, the validator would stop running
 	// and ask for help
@@ -244,6 +256,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
+				logger.Debug("Removed unclosed IOC order", "ordID", msg.Id)
 				if !distributeTrade {
 					continue
 				}
@@ -329,9 +342,10 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
-func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Transfer) sdk.Error {
-	account := am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
+func (kp *Keeper) doTransfer(ctx sdk.Context, accountMapper auth.AccountMapper, tran *Transfer) sdk.Error {
+	logger := bnclog.With("module", "dex")
+	account := accountMapper.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outAsset, Amount: sdk.NewInt(tran.unlock)}})
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
@@ -347,7 +361,8 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Trans
 		}
 		tran.fee = fee
 	}
-	am.SetAccount(ctx, account)
+	accountMapper.SetAccount(ctx, account)
+	logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
 	return nil
 }
 
@@ -384,6 +399,8 @@ func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Trans
 		} else {
 			// no enough NativeToken, use the received tokens as fee
 			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
+			logger := bnclog.With("module", "dex")
+			logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
 
@@ -545,16 +562,9 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	return transferChs
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
-	transferChs := kp.expireOrders(ctx, blockTime, am)
-	if transferChs == nil {
-		// TODO: logging
-		return ctx, sdk.CodeOK, nil
-	}
-
-	totalFee := kp.allocateAndCalcFee(ctx, transferChs, am, postExpireHandler)
-	newCtx = tx.WithFee(ctx, totalFee)
-	return newCtx, sdk.CodeOK, nil
+func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64,
+	accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+	return sdk.CodeOK, nil
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
@@ -567,33 +577,21 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
 	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
-	t := timeNow.AddDate(0, 0, -daysBack).Unix()
-	key := utils.Int642Bytes(t / utils.SecondsPerDay)
-	bz := store.Get([]byte(key))
-	if bz == nil {
-		panic(errors.Errorf("breathe block not found for day %v", key))
-	}
-
-	var height int64
-	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-	if err != nil {
-		panic(err)
-	}
-	return height
-}
-
-func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
+func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore,
+	daysBack int) int64 {
 	bz := []byte(nil)
-	for i := 0; bz == nil && i <= daysBack; i++ {
+	logger := bnclog.With("module", "dex")
+	for i := 0; i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
-		key := utils.Int642Bytes(t / utils.SecondsPerDay)
-		bz = store.Get([]byte(key))
+		key := utils.Int642Bytes(t / SecondsInOneDay)
+		bz = kvStore.Get([]byte(key))
+		if bz != nil {
+			logger.Info("Located day to load breathe block height", "epochDay", key)
+			break
+		}
 	}
 	if bz == nil {
-		//TODO: logging
+		logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
 		return 0
 	}
 	var height int64
@@ -601,9 +599,11 @@ func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, 
 	if err != nil {
 		panic(err)
 	}
+	logger.Info("Loaded breathe block height", "height", height)
 	return height
 }
 
 func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
+	bnclog.With("module", "dex").Info("Initializing Fees from Genesis")
 	kp.FeeConfig.InitGenesis(ctx, genesis)
 }

@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -71,6 +72,7 @@ func (config *FeeConfig) SetExpireFee(ctx sdk.Context, expireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(expireFee)
 	store.Set(expireFeeKey, b)
+	log.With("module", "dex").Info("Set Expire Fee", "fee", expireFee)
 	config.expireFee = expireFee
 }
 
@@ -78,20 +80,23 @@ func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(iocExpireFee)
 	store.Set(iocExpireFeeKey, b)
+	log.With("module", "dex").Info("Set IOCExpire Fee", "fee", iocExpireFee)
 	config.iocExpireFee = iocExpireFee
 }
 
 func (config *FeeConfig) SetFeeRateNative(ctx sdk.Context, feeRateNative int64) {
 	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRateNative)
-	store.Set(feeRateNativeKey, b)
-	config.feeRateNative = feeRateNative
+	b := config.itob(feeRateWithNativeToken)
+	store.Set(feeRateWithNativeTokenKey, b)
+	log.With("module", "dex").Info("Set Fee Rate with native token", "rate", feeRateWithNativeToken)
+	config.feeRateWithNativeToken = feeRateWithNativeToken
 }
 
 func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
 	store := ctx.KVStore(config.storeKey)
 	b := config.itob(feeRate)
 	store.Set(feeRateKey, b)
+	log.With("module", "dex").Info("Set Fee Rate for tokens", "rate", feeRate)
 	config.feeRate = feeRate
 }
 
@@ -119,12 +124,16 @@ func (config *FeeConfig) Init(ctx sdk.Context) {
 		config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
 		config.feeRateNative = config.btoi(store.Get(feeRateNativeKey))
 		config.feeRate = config.btoi(store.Get(feeRateKey))
+		log.With("module", "dex").Info("Initialized fees from storage", "ExpireFee", config.expireFee,
+			"IOCExpireFee", config.iocExpireFee, "FeeRateWithNativeToken", config.feeRateWithNativeToken,
+			"FeeRate", config.feeRate)
 	}
 	// otherwise, the chain first starts up and InitGenesis would be called.
 }
 
 // InitGenesis - store the genesis trend
 func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
+	log.With("module", "dex").Info("Setting Genesis Fee/Rate")
 	config.SetExpireFee(ctx, data.ExpireFee)
 	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
 	config.SetFeeRateNative(ctx, data.FeeRateNative)
