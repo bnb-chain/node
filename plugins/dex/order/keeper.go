@@ -481,7 +481,7 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	tradeOuts := kp.matchAndDistributeTrades(false) //only match
 	if tradeOuts == nil {
-		// TODO: logging
+		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return sdk.CodeOK, nil
 	}
 
@@ -499,7 +499,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
-		// TODO: logging
+		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil
 	}
 
