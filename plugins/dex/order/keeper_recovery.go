@@ -5,13 +5,13 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -67,8 +67,10 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 		}
 	}
 	msgs := make([]NewOrderMsg, 0, len(kp.allOrders))
-	for _, value := range kp.allOrders {
-		msgs = append(msgs, value)
+	for _, orderMap := range kp.allOrders {
+		for _, msg := range orderMap {
+			msgs = append(msgs, msg)
+		}
 	}
 	snapshot := ActiveOrders{Orders: msgs}
 	key := genActiveOrdersSnapshotKey(height)
@@ -76,9 +78,8 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
 }
 
 func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
-	kvStore := ctx.KVStore(kp.storeKey)
-	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
+	timeNow := utils.Now()
+	height := kp.getLastBreatheBlockHeight(ctx, timeNow, daysBack)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
 		// just initialize engines for all pairs
@@ -92,6 +93,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		return height, nil
 	}
 
+	kvStore := ctx.KVStore(kp.storeKey)
 	for _, pair := range allPairs {
 		eng, ok := kp.engines[pair.GetSymbol()]
 		if !ok {
@@ -144,7 +146,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
 	}
 	for _, m := range ao.Orders {
-		kp.allOrders[m.Id] = m
+		kp.allOrders[m.Symbol][m.Id] = m
 	}
 	return height, nil
 }
@@ -165,7 +167,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 			case NewOrderMsg:
 				kp.AddOrder(msg, height)
 			case CancelOrderMsg:
-				ord, ok := kp.allOrders[msg.RefId]
+				ord, ok := kp.OrderExists(msg.RefId)
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

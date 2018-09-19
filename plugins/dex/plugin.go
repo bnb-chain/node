@@ -22,7 +22,7 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
 	updateTickSizeAndLotSize(ctx, dexKeeper)
-	dexKeeper.ExpireOrders(ctx, height, accountMapper)
+	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	dexKeeper.SnapShotOrderBook(ctx, height)
 }

@@ -2,11 +2,16 @@ package app
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"runtime/debug"
 	"strings"
 
+	"github.com/spf13/viper"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/pkg/errors"
 
 	abci "github.com/tendermint/tendermint/abci/types"

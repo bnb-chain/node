@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -51,7 +52,7 @@ func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
 
 func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 	store := ctx.KVStore(m.key)
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 
 	bz := store.Get(key)
 	if bz != nil {
@@ -62,7 +63,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 }
 
 func (m mapper) GetTokenCC(ctx context.CoreContext, symbol string) (types.Token, error) {
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return types.Token{}, err
@@ -87,12 +88,12 @@ func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
 
 func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
 	store := ctx.KVStore(m.key)
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 	return store.Has(key)
 }
 
 func (m mapper) ExistsCC(ctx context.CoreContext, symbol string) bool {
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return false
@@ -109,7 +110,7 @@ func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 		return errors.New("symbol cannot be empty")
 	}
 
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 	store := ctx.KVStore(m.key)
 	value := m.encodeToken(token)
 	store.Set(key, value)
@@ -121,7 +122,7 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 		return errors.New("symbol cannot be empty")
 	}
 
-	key := []byte(symbol)
+	key := []byte(strings.ToUpper(symbol))
 	store := ctx.KVStore(m.key)
 	bz := store.Get(key)
 	if bz == nil {

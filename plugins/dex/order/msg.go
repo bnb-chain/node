@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
@@ -19,20 +20,14 @@ const (
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
-const (
-	_        int8 = iota
-	sideBuy  int8 = iota
-	sideSell int8 = iota
-)
-
 var Side = struct {
 	BUY  int8
 	SELL int8
-}{sideBuy, sideSell}
+}{matcheng.BUYSIDE, matcheng.SELLSIDE}
 
 var sideNames = map[string]int8{
-	"BUY":  sideBuy,
-	"SELL": sideSell,
+	"BUY":  matcheng.BUYSIDE,
+	"SELL": matcheng.SELLSIDE,
 }
 
 // GenerateOrderID generates an order ID
