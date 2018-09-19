@@ -2,6 +2,7 @@ package matcheng
 
 import (
 	"fmt"
+	"sort"
 
 	bt "github.com/google/btree"
 )
@@ -44,13 +45,10 @@ func (o *OrderPart) LeavesQty() int64 {
 	}
 }
 
-func (l *SellPriceLevel) Less(than bt.Item) bool {
-	return (than.(*SellPriceLevel).Price - l.Price) >= PRECISION
-}
-
 type PriceLevelInterface interface {
 	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
+	removeOrders(beforeTime int64)
 	getOrder(id string) (OrderPart, error)
 	Less(than bt.Item) bool
 	TotalLeavesQty() int64
@@ -71,6 +69,10 @@ func (l *BuyPriceLevel) Less(than bt.Item) bool {
 
 type SellPriceLevel struct {
 	PriceLevel
+}
+
+func (l *SellPriceLevel) Less(than bt.Item) bool {
+	return (than.(*SellPriceLevel).Price - l.Price) >= PRECISION
 }
 
 func (l *PriceLevel) String() string {
@@ -105,6 +107,15 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 	}
 	// not found
 	return OrderPart{}, 0, fmt.Errorf("order %s doesn't exist.", id)
+}
+
+// since the orders in one PriceLevel are sorted by time(height), the orders to be removed are all in the front of the slice.
+func (l *PriceLevel) removeOrders(beforeTime int64) {
+	i := sort.Search(len(l.Orders), func(i int) bool {
+		return l.Orders[i].Time >= beforeTime
+	})
+
+	l.Orders = l.Orders[i:]
 }
 
 func (l *PriceLevel) getOrder(id string) (OrderPart, error) {

@@ -1,15 +1,16 @@
 package order
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/pkg/errors"
 
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -20,8 +21,6 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-const SecondsInOneDay = 24 * 60 * 60
-
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	PairMapper store.TradingPairMapper
@@ -31,8 +30,8 @@ type Keeper struct {
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
-	allOrders      map[string]NewOrderMsg // symbol -> order ID -> order
-	roundOrders    map[string]int         // limit to the total tx number in a block
+	allOrders      map[string]map[string]NewOrderMsg // symbol -> order ID -> order
+	roundOrders    map[string]int                    // limit to the total tx number in a block
 	roundIOCOrders map[string][]string
 	roundFees      map[string]sdk.Coins
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
@@ -82,7 +81,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		storeKey:       key,
 		codespace:      codespace,
 		engines:        engines,
-		allOrders:      make(map[string]NewOrderMsg, 1000000),
+		allOrders:      make(map[string]map[string]NewOrderMsg, 256), // need to init the nested map when a new symbol added.
 		roundOrders:    make(map[string]int, 256),
 		roundIOCOrders: make(map[string][]string, 256),
 		poolSize:       concurrency,
@@ -93,7 +92,9 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.LotSize.ToInt64())
-	kp.engines[pair.GetSymbol()] = eng
+	symbol := strings.ToUpper(pair.GetSymbol())
+	kp.engines[symbol] = eng
+	kp.allOrders[symbol] = map[string]NewOrderMsg{}
 	return eng
 }
 
@@ -107,10 +108,11 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 
 func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	//try update order book first
-	symbol := msg.Symbol
+	symbol := strings.ToUpper(msg.Symbol)
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		panic(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
+		err = errors.New(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
+		return
 	}
 
 	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
@@ -118,7 +120,7 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		return err
 	}
 
-	kp.allOrders[msg.Id] = msg
+	kp.allOrders[symbol][msg.Id] = msg
 	kp.roundOrders[symbol] += 1
 	if msg.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
@@ -127,38 +129,56 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 }
 
 func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
-	_, ok := kp.allOrders[id]
+	symbol = strings.ToUpper(symbol)
+	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	_, ok := kp.allOrders[symbol]
 	if !ok {
-		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+		return me.OrderPart{}, notFoundErr
+	}
+	_, ok = kp.allOrders[symbol][id]
+	if !ok {
+		return me.OrderPart{}, notFoundErr
 	}
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+		return me.OrderPart{}, notFoundErr
 	}
-	delete(kp.allOrders, id)
+	delete(kp.allOrders[symbol], id)
 	return eng.Book.RemoveOrder(id, side, price)
 }
 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
-	_, ok := kp.allOrders[id]
+	symbol = strings.ToUpper(symbol)
+	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	_, ok := kp.allOrders[symbol]
 	if !ok {
-		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+		return me.OrderPart{}, notFoundErr
+	}
+	_, ok = kp.allOrders[symbol][id]
+	if !ok {
+		return me.OrderPart{}, notFoundErr
 	}
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		return me.OrderPart{}, errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+		return me.OrderPart{}, notFoundErr
 	}
 	return eng.Book.GetOrder(id, side, price)
 }
 
 func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
-	ord, ok := kp.allOrders[id]
-	return ord, ok
+	// TODO: need to be optimized.
+	for _, orderMap := range kp.allOrders {
+		if msg, ok := orderMap[id]; ok {
+			return msg, ok
+		}
+	}
+	return NewOrderMsg{}, false
 }
 
-func (kp *Keeper) tradeToTransfers(trade me.Trade, baseAsset, quoteAsset string) (Transfer, Transfer) {
-	seller := kp.allOrders[trade.SId].Sender
-	buyer := kp.allOrders[trade.BId].Sender
+func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Transfer) {
+	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
+	seller := kp.allOrders[symbol][trade.SId].Sender
+	buyer := kp.allOrders[symbol][trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
@@ -176,15 +196,12 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 	concurrency := len(tradeOuts)
 	if engine.Match() {
 		if distributeTrade {
-			tradeCcy, quoteCcy, _ := utils.TradingPair2Assets(symbol)
 			for _, t := range engine.Trades {
-				t1, t2 := kp.tradeToTransfers(t, tradeCcy, quoteCcy)
-				// TODO: calculate fees as transfer, f1, f2, and push into the tradeOuts
+				t1, t2 := kp.tradeToTransfers(t, symbol)
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
 				c = channelHash(t2.accAddress, concurrency)
 				tradeOuts[c] <- t2
-
 			}
 		}
 		engine.DropFilledOrder()
@@ -192,8 +209,9 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 	// when multiple unsolicited cancel happened, the validator would stop running
 	// and ask for help
 	iocIDs := kp.roundIOCOrders[symbol]
+	orders := kp.allOrders[symbol]
 	for _, id := range iocIDs {
-		if msg, ok := kp.allOrders[id]; ok {
+		if msg, ok := orders[id]; ok {
 			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
 				if !distributeTrade {
 					continue
@@ -252,30 +270,24 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 		tradeOuts[i] = make(chan Transfer, channelSize*2)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(concurrency)
 	symbolCh := make(chan string, concurrency)
-	matchWorker := func() {
-		defer wg.Done()
-		for symbol := range symbolCh {
-			kp.matchAndDistributeTradesForSymbol(symbol, distributeTrade, tradeOuts)
-		}
-	}
-
-	for i := 0; i < concurrency; i++ {
-		go matchWorker()
-	}
-
-	go func() {
+	producer := func() {
 		for symbol := range kp.roundOrders {
 			symbolCh <- symbol
 		}
 		close(symbolCh)
-		wg.Wait()
+	}
+	matchWorker := func() {
+		for symbol := range symbolCh {
+			kp.matchAndDistributeTradesForSymbol(symbol, distributeTrade, tradeOuts)
+		}
+	}
+	utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
 		for _, tradeOut := range tradeOuts {
 			close(tradeOut)
 		}
-	}()
+	})
+
 	return tradeOuts
 }
 
@@ -432,12 +444,45 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 	return newCtx, sdk.CodeOK, nil
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
+	// TODO: make effectiveDays configurable
+	const effectiveDays = 3
+	expireHeight := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
+	remove := func(symbol string, engine *me.MatchEng, pls []me.PriceLevel, side int8) {
+		orderMap := kp.allOrders[symbol]
+		for _, level := range pls {
+			var expiredOrders []string
+			for _, order := range level.Orders {
+				if order.Time < expireHeight {
+					expiredOrders = append(expiredOrders, order.Id)
+					delete(orderMap, order.Id)
+				}
+			}
+			engine.Book.RemoveOrders(expireHeight, side, level.Price)
+		}
+	}
+
+	concurrency := 1 << kp.poolSize
+	symbolCh := make(chan string, concurrency)
+	utils.ConcurrentExecuteSync(concurrency,
+		func() {
+			for symbol, _ := range kp.allOrders {
+				symbolCh <- symbol
+			}
+			close(symbolCh)
+		}, func() {
+			for symbol := range symbolCh {
+				engine := kp.engines[symbol]
+				buys, sells := engine.Book.GetAllLevels()
+				remove(symbol, engine, buys, me.BUYSIDE)
+				remove(symbol, engine, sells, me.SELLSIDE)
+			}
+		})
 	return sdk.CodeOK, nil
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
-	key := utils.Int642Bytes(blockTime / SecondsInOneDay)
+	key := utils.Int642Bytes(blockTime / utils.SecondsPerDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {
@@ -446,12 +491,30 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
 	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) GetBreatheBlockHeight(timeNow time.Time, kvStore sdk.KVStore, daysBack int) int64 {
+func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
+	store := ctx.KVStore(kp.storeKey)
+	t := timeNow.AddDate(0, 0, -daysBack).Unix()
+	key := utils.Int642Bytes(t / utils.SecondsPerDay)
+	bz := store.Get([]byte(key))
+	if bz == nil {
+		panic(errors.Errorf("breathe block not found for day %v", key))
+	}
+
+	var height int64
+	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
+	if err != nil {
+		panic(err)
+	}
+	return height
+}
+
+func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
+	store := ctx.KVStore(kp.storeKey)
 	bz := []byte(nil)
 	for i := 0; bz == nil && i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
-		key := utils.Int642Bytes(t / SecondsInOneDay)
-		bz = kvStore.Get([]byte(key))
+		key := utils.Int642Bytes(t / utils.SecondsPerDay)
+		bz = store.Get([]byte(key))
 	}
 	if bz == nil {
 		//TODO: logging

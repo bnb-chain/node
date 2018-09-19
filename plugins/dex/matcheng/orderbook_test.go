@@ -8,6 +8,7 @@ import (
 
 	bt "github.com/google/btree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_compareBuy(t *testing.T) {
@@ -137,6 +138,27 @@ func TestPriceLevel_removeOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPriceLevel_removeOrders(t *testing.T) {
+	l := PriceLevel{
+		Price: 1000,
+		Orders: []OrderPart{
+			{"1", 0, 1, 0, 0},
+			{"2", 1, 2, 0, 0},
+			{"3", 1, 4, 0, 0},
+			{"4", 2, 8, 0, 0},
+			{"5", 2, 16, 0, 0},
+		},
+	}
+
+	l.removeOrders(2)
+	require.Len(t, l.Orders, 2)
+	require.Equal(t, int64(24), l.TotalLeavesQty())
+
+	l.removeOrders(4)
+	require.Len(t, l.Orders, 0)
+	require.Equal(t, int64(0), l.TotalLeavesQty())
 }
 
 func Test_mergeLevels(t *testing.T) {
@@ -516,6 +538,26 @@ func TestOrderBookOnBTree_RemoveOrder(t *testing.T) {
 	assert.Equal(ord, OrderPart{"123458", 10002, 1000, 0, 0}, "Failed to remove last order")
 	assert.Equal("",
 		printOrderQueueString(l.sellQueue, SELLSIDE), "Level at 1000 be removed.")
+}
+
+func TestOrderBookOnULList_RemoveOrders(t *testing.T) {
+	book := NewOrderBookOnULList(16, 4)
+	book.InsertOrder("1", BUYSIDE, 10000, 1000, 10000)
+	book.InsertOrder("2", BUYSIDE, 10001, 1000, 10000)
+	book.InsertOrder("3", BUYSIDE, 10002, 1000, 10000)
+	err := book.RemoveOrders(10001, BUYSIDE, 1001)
+	require.EqualError(t, err, fmt.Sprintf("order price %d doesn't exist at side %d.", 1001, BUYSIDE))
+	err = book.RemoveOrders(10001, BUYSIDE, 1000)
+	require.NoError(t, err)
+	buys, sells := book.GetAllLevels()
+	require.Len(t, buys, 1)
+	require.Len(t, buys[0].Orders, 2)
+	require.Len(t, sells, 0)
+	err = book.RemoveOrders(10004, BUYSIDE, 1000)
+	require.NoError(t, err)
+	buys, sells = book.GetAllLevels()
+	require.Len(t, buys, 0)
+	require.Len(t, sells, 0)
 }
 
 func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {

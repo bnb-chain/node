@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -44,7 +45,7 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 		return errors.New("QuoteAssetSymbol cannot be empty")
 	}
 
-	key := []byte(utils.Assets2TradingPair(baseAsset, quoteAsset))
+	key := []byte(utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)))
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
@@ -54,13 +55,13 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 func (m mapper) Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
-	symbol := utils.Assets2TradingPair(baseAsset, quoteAsset)
+	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	return store.Has([]byte(symbol))
 }
 
 func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
-	symbol := utils.Assets2TradingPair(baseAsset, quoteAsset)
+	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	bz := store.Get([]byte(symbol))
 
 	if bz == nil {

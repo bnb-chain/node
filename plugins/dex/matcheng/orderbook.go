@@ -19,6 +19,7 @@ type OrderBookInterface interface {
 	InsertPriceLevel(p *PriceLevel, side int8) error
 	GetOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
+	RemoveOrders(beforeTime int64, side int8, price int64) error
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(maxLevels int, iterBuy LevelIter, iterSell LevelIter)
 	GetAllLevels() ([]PriceLevel, []PriceLevel)
@@ -124,6 +125,21 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int8, price int64) (Ord
 		q.DeletePriceLevel(pl.Price)
 	}
 	return op, ok
+}
+
+func (ob *OrderBookOnULList) RemoveOrders(beforeTime int64, side int8, price int64) error {
+	q := ob.getSideQueue(side)
+	var pl *PriceLevel
+	if pl = q.GetPriceLevel(price); pl == nil {
+		return fmt.Errorf("order price %d doesn't exist at side %d.", price, side)
+	}
+	pl.removeOrders(beforeTime)
+	//price level is gone
+	if len(pl.Orders) == 0 {
+		q.DeletePriceLevel(pl.Price)
+	}
+
+	return nil
 }
 
 func (ob *OrderBookOnULList) GetOrder(id string, side int8, price int64) (OrderPart, error) {
@@ -264,6 +280,25 @@ func (ob *OrderBookOnBTree) RemoveOrder(id string, side int8, price int64) (Orde
 			q.Delete(pl)
 		}
 		return op, err
+	}
+}
+
+func (ob *OrderBookOnBTree) RemoveOrders(beforeTime int64, side int8, price int64) error {
+	q := ob.getSideQueue(side)
+	var pl bt.Item
+	if pl = q.Get(newPriceLevelKey(price, side)); pl == nil {
+		return fmt.Errorf("order price %d doesn't exist at side %d.", price, side)
+	}
+
+	if pl2, ok := pl.(PriceLevelInterface); !ok {
+		return errors.New("Severe error: Wrong type item inserted into OrderBook")
+	} else {
+		pl2.removeOrders(beforeTime)
+		//price level is gone
+		if pl2.TotalLeavesQty() == 0 {
+			q.Delete(pl)
+		}
+		return nil
 	}
 }
 
