@@ -1,8 +1,0 @@
-=============== Sep 19, 2018 (HKT) ===============
-19:39:02.224133 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-19:39:02.243757 db@open opening
-19:39:02.244125 version@stat F·[] S·0B[] Sc·[]
-19:39:02.251695 db@janitor F·2 G·0
-19:39:02.251717 db@open done T·7.940362ms
-19:39:02.252441 db@close closing
-19:39:02.252987 db@close done T·544.785µs
