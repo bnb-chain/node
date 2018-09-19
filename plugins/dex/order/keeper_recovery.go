@@ -95,28 +95,28 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			}
 		}
 		logger.Info("No breathe block is ever saved. just created match engines for all the pairs.")
-		//TODO: Log. this might be the first day online and no breathe block is saved.
 		return height, nil
 	}
 
 	for _, pair := range allPairs {
-		eng, ok := kp.engines[pair.GetSymbol()]
+		symbol := pair.GetSymbol()
+		eng, ok := kp.engines[symbol]
 		if !ok {
 			eng = kp.AddEngine(pair)
 		}
 
-		key := genOrderBookSnapshotKey(height, pair.GetSymbol())
+		key := genOrderBookSnapshotKey(height, symbol)
 		bz := kvStore.Get([]byte(key))
 		if bz == nil {
 			// maybe that is a new listed pair
-			//TODO: logging
+			logger.Info("Pair is newly listed, no order book snapshot was saved", "pair", key)
 			continue
 		}
 		b := bytes.NewBuffer(bz)
 		var bw bytes.Buffer
 		r, err := zlib.NewReader(b)
 		if err != nil {
-			continue
+			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s]", key))
 		}
 		io.Copy(&bw, r)
 		var ob OrderBookSnapshot
@@ -135,15 +135,14 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	key := genActiveOrdersSnapshotKey(height)
 	bz := kvStore.Get([]byte(key))
 	if bz == nil {
-		//TODO: log
+		logger.Info("Pair is newly listed, no active order snapshot was saved", "pair", key)
 		return height, nil
 	}
 	b := bytes.NewBuffer(bz)
 	var bw bytes.Buffer
 	r, err := zlib.NewReader(b)
 	if err != nil {
-		//TODO: log
-		return height, nil
+		panic(fmt.Sprintf("failed to unmarshal snapshort for active order [%s]", key))
 	}
 	io.Copy(&bw, r)
 	var ao ActiveOrders

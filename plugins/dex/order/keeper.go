@@ -405,7 +405,7 @@ func settle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandler func(in
 func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	tradeOuts := kp.matchAndDistributeTrades(false) //only match
 	if tradeOuts == nil {
-		// TODO: logging
+		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return sdk.CodeOK, nil
 	}
 
@@ -424,7 +424,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, accountMapper auth.Accoun
 	var wg sync.WaitGroup
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
-		// TODO: logging
+		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil
 	}
 
