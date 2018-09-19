@@ -6,8 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
-
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -28,6 +28,8 @@ func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
 	} else if fee.Type == types.FeeForAll {
 		signingValidators := ctx.SigningValidators()
 		valSize := int64(len(signingValidators))
+		log.Info("Distributing the fees to all the validators",
+			"totalFees", fee.Tokens, "validatorSize", valSize)
 		avgTokens := sdk.Coins{}
 		roundingTokens := sdk.Coins{}
 		for _, token := range fee.Tokens {
