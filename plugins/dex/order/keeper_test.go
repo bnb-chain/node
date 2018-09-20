@@ -360,8 +360,9 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
-	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	types.RegisterWire(cdc)
+	wire.RegisterCrypto(cdc)
+	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	coinKeeper := bank.NewKeeper(mapper)
 	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc)
@@ -371,7 +372,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 func TestKeeper_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
 	keeper.FeeConfig.SetFeeRate(ctx, 1000)
-	keeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
+	keeper.FeeConfig.SetFeeRateNative(ctx, 500)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 
 	// InCcy == BNB
@@ -385,7 +386,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		out:        1000e8,
 		unlock:     1000e8,
 	}
-	fee := keeper.calculateOrderFee(ctx, acc, tran)
+	fee := keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 
 	// InCcy != BNB
@@ -402,11 +403,11 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 	}
 	// has enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e8)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
+	fee = keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 	// no enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e6)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
+	fee = keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
 }
 
@@ -426,7 +427,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
 
-	keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am)
+	keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am, nil)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)
