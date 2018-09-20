@@ -137,7 +137,7 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
+	testApp.DexKeeper.FeeConfig.SetFeeRateNative(ctx, 500)
 	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
 
 	// setup accounts
