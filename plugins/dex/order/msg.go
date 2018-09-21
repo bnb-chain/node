@@ -172,9 +172,10 @@ func (msg NewOrderMsg) String() string {
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
+		Symbol: symbol,
 		Id:     id,
 		RefId:  refId,
 	}
@@ -183,6 +184,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
 	Sender sdk.AccAddress
+	Symbol string `json:"symbol"`
 	Id     string `json:"id"`
 	RefId  string `json:"refid"`
 }

@@ -293,8 +293,8 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *bc.BlockStore {
 	msgs11 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123463", Side.BUY, "XYZ_BNB", 96000, 2500000)}
 	msgs12 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123464", Side.BUY, "XYZ_BNB", 97000, 1500000)}
 	msgs13 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123465", Side.SELL, "XYZ_BNB", 107000, 1500000)}
-	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "123466", "123462")}
-	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "123467", "123465")}
+	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "XYZ_BNB", "123466", "123462")}
+	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "XYZ_BNB", "123467", "123465")}
 	txs = make([]auth.StdTx, 5)
 	txs[0] = MakeTxFromMsg(msgs11, int64(100), int64(9005), buyerPrivKey)
 	txs[1] = MakeTxFromMsg(msgs12, int64(100), int64(9006), buyerPrivKey)
@@ -517,6 +517,15 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 		sdk.NewCoin("ABC", 1000000),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, tx.Fee(ctx))
+	acc = am.GetAccount(ctx, acc.GetAddress())
+	require.Equal(t, sdk.Coins{
+		sdk.NewCoin("ABC", 2e8),
+		sdk.NewCoin("BNB", 4e6),
+	}.Sort(), acc.(types.NamedAccount).GetLockedCoins())
+	require.Equal(t, sdk.Coins{
+		sdk.NewCoin("ABC", 99e6),
+		sdk.NewCoin("BNB", 597e4),
+	}.Sort(), acc.GetCoins())
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {

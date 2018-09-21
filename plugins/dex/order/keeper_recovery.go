@@ -167,7 +167,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 			case NewOrderMsg:
 				kp.AddOrder(msg, height)
 			case CancelOrderMsg:
-				ord, ok := kp.OrderExists(msg.RefId)
+				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

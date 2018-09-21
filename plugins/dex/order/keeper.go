@@ -131,11 +131,7 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
 	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
-	_, ok := kp.allOrders[symbol]
-	if !ok {
-		return me.OrderPart{}, notFoundErr
-	}
-	_, ok = kp.allOrders[symbol][id]
+	_, ok := kp.OrderExists(symbol, id)
 	if !ok {
 		return me.OrderPart{}, notFoundErr
 	}
@@ -150,11 +146,7 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
 	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
-	_, ok := kp.allOrders[symbol]
-	if !ok {
-		return me.OrderPart{}, notFoundErr
-	}
-	_, ok = kp.allOrders[symbol][id]
+	_, ok := kp.OrderExists(symbol, id)
 	if !ok {
 		return me.OrderPart{}, notFoundErr
 	}
@@ -165,10 +157,9 @@ func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (or
 	return eng.Book.GetOrder(id, side, price)
 }
 
-func (kp *Keeper) OrderExists(id string) (NewOrderMsg, bool) {
-	// TODO: need to be optimized.
-	for _, orderMap := range kp.allOrders {
-		if msg, ok := orderMap[id]; ok {
+func (kp *Keeper) OrderExists(symbol, id string) (NewOrderMsg, bool) {
+	if orders, ok := kp.allOrders[symbol]; ok {
+		if msg, ok := orders[id]; ok {
 			return msg, ok
 		}
 	}
@@ -343,9 +334,9 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Trans
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
 	account.SetLockedCoins(newLocked)
-	account.SetCoins(account.GetCoins().Plus(sdk.Coins{
-		sdk.Coin{Denom: tran.inAsset, Amount: sdk.NewInt(tran.in)},
-		sdk.Coin{Denom: tran.outAsset, Amount: sdk.NewInt(tran.unlock - tran.out)}}.Sort()))
+	account.SetCoins(account.GetCoins().
+		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
+		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
 
 	if !tran.feeFree() {
 		fee := kp.calcFeeFromTransfer(ctx, account, *tran)
