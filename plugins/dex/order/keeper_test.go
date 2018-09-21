@@ -397,7 +397,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		accAddress: acc.GetAddress(),
 		inAsset:    "ABC",
 		in:         1000e8,
-		outAsset:   "BNB",
+		outAsset:   types.NativeToken,
 		out:        100e8,
 		unlock:     110e8,
 	}
@@ -411,8 +411,74 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
 }
 
+func TestKeeper_CalcExpireFee(t *testing.T) {
+	ctx, am, keeper := setup()
+	keeper.FeeConfig.SetExpireFee(ctx, 10000)
+	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	// in BNB
+	tran := Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    types.NativeToken,
+		in:         100e8,
+		outAsset:   types.NativeToken,
+		out:        100e8,
+		unlock:     100e8,
+	}
+	fee := keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10000)}, fee.Tokens)
+	tran.eventType = eventIOCFullyExpire
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5000)}, fee.Tokens)
+	tran.out, tran.in, tran.out = 4000, 4000, 4000
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 4000)}, fee.Tokens)
+
+	// sell ABC, and BNB as quote asset
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "ABC",
+		in:         1000e8,
+		outAsset:   "ABC",
+		out:        1000e8,
+		unlock:     1000e8,
+	}
+	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 100000)}, fee.Tokens)
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "ABC",
+		in:         900,
+		outAsset:   "ABC",
+		out:        900,
+		unlock:     900,
+	}
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 900)}, fee.Tokens)
+
+	// sell BTC, BNB as base asset
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "BTC",
+		in:         1e5,
+		outAsset:   "BTC",
+		out:        1e5,
+		unlock:     1e5,
+	}
+	keeper.engines[types.NativeToken+"_BTC"] = me.NewMatchEng(1e5, 1, 1)
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC", 10)}, fee.Tokens)
+}
+
 func TestKeeper_ExpireOrders(t *testing.T) {
 	ctx, am, keeper := setup()
+	keeper.FeeConfig.SetExpireFee(ctx, 10000)
+	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC", "BNB", 1e6))
@@ -423,11 +489,17 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	keeper.AddOrder(NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 10000)
 	keeper.AddOrder(NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000)
 	keeper.AddOrder(NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000)
+	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
+		sdk.NewCoin("ABC", 3e8),
+		sdk.NewCoin("BNB", 10e6),
+	}.Sort())
+	am.SetAccount(ctx, acc)
 
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
 
-	keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am, nil)
+	ctx, _, err := keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am, nil)
+	require.NoError(t, err)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)
@@ -440,13 +512,11 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Len(t, buys[0].Orders, 1)
 	require.Equal(t, int64(2e8), buys[0].TotalLeavesQty())
 	require.Len(t, keeper.allOrders["XYZ_BNB"], 1)
-}
-
-func TestKeeper_ExpireFees(t *testing.T) {
-
-}
-
-func TestKeeper_IocExpireFees(t *testing.T) {
+	expectFees := types.NewFee(sdk.Coins{
+		sdk.NewCoin("BNB", 30000),
+		sdk.NewCoin("ABC", 1000000),
+	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, tx.Fee(ctx))
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {

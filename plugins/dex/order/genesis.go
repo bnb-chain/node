@@ -9,8 +9,8 @@ type TradingGenesis struct {
 
 // TODO: determine the fee/feeRate
 var DefaultTradingGenesis = TradingGenesis{
-	ExpireFee:     100,
-	IOCExpireFee:  50,
+	ExpireFee:     10000,
+	IOCExpireFee:  5000,
 	FeeRateNative: 500,
 	FeeRate:       1000,
 }
