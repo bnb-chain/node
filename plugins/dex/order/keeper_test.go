@@ -134,6 +134,15 @@ func MakeAddress() (sdk.AccAddress, secp256k1.PrivKeySecp256k1) {
 	return addr, privKey
 }
 
+func effectedStoredKVPairs(keeper *Keeper, ctx sdk.Context, keys []string) map[string][]byte {
+	res := make(map[string][]byte, len(keys))
+	store := ctx.KVStore(keeper.storeKey)
+	for _, key := range keys {
+		res[key] = store.Get([]byte(key))
+	}
+	return res
+}
+
 func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
@@ -163,7 +172,13 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(7, len(keeper.allOrders["XYZ_BNB"]))
 	assert.Equal(1, len(keeper.engines))
-	err := keeper.SnapShotOrderBook(ctx, 43)
+
+	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs1 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys1)
+	effectedStoredKeys2, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs2 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys2)
+	assert.Equal(storedKVPairs1, storedKVPairs2)
+
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
 	keeper2 := MakeKeeper(cdc)
@@ -200,7 +215,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
-	err := keeper.SnapShotOrderBook(ctx, 43)
+	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
 
