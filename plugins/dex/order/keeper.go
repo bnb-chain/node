@@ -67,8 +67,8 @@ func (tran Transfer) feeFree() bool {
 	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
 }
 
-func CreateMatchEng(lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(1000, lotSize, 0.05)
+func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(basePrice, lotSize, 0.05)
 }
 
 // NewKeeper - Returns the Keeper
@@ -91,7 +91,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.LotSize.ToInt64())
+	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]NewOrderMsg{}
@@ -189,11 +189,14 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Tra
 func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg NewOrderMsg) Transfer {
 	//here is a trick to use the same currency as in and out ccy to simulate cancel
 	qty := ord.LeavesQty()
-	tradeCcy, _, _ := utils.TradingPair2Assets(ordMsg.Symbol)
+	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(ordMsg.Symbol)
 	var unlock int64
+	var unlockAsset string
 	if ordMsg.Side == Side.BUY {
+		unlockAsset = quoteAsset
 		unlock = utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity) - utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity-qty)
 	} else {
+		unlockAsset = baseAsset
 		unlock = qty
 	}
 
@@ -214,10 +217,10 @@ func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg NewOrderMsg) Transf
 	return Transfer{
 		eventType:  tranEventType,
 		accAddress: ordMsg.Sender,
-		inAsset:    tradeCcy,
-		in:         qty,
-		outAsset:   tradeCcy,
-		out:        qty,
+		inAsset:    unlockAsset,
+		in:         unlock,
+		outAsset:   unlockAsset,
+		out:        unlock,
 		unlock:     unlock,
 	}
 }
@@ -227,7 +230,7 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return int(accAddress[0]+accAddress[1]) % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTrade bool, tradeOuts []chan Transfer) {
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]NewOrderMsg, distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
 	if engine.Match() {
@@ -245,7 +248,6 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, distributeTra
 	// when multiple unsolicited cancel happened, the validator would stop running
 	// and ask for help
 	iocIDs := kp.roundIOCOrders[symbol]
-	orders := kp.allOrders[symbol]
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
@@ -289,7 +291,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 	matchWorker := func() {
 		for symbol := range symbolCh {
-			kp.matchAndDistributeTradesForSymbol(symbol, distributeTrade, tradeOuts)
+			kp.matchAndDistributeTradesForSymbol(symbol, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
 	utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
@@ -336,7 +338,7 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Transfer) sdk.Error {
 	account := am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.Coin{Denom: tran.outAsset, Amount: sdk.NewInt(tran.unlock)}})
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
@@ -359,7 +361,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Trans
 func (kp *Keeper) calcFeeFromTransfer(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	if tran.eventType == eventFilled {
 		return kp.calcOrderFee(ctx, account, tran)
-	} else if tran.eventType == eventFullyExpire || tran.eventType == eventIOCPartiallyExpire {
+	} else if tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire {
 		return kp.calcExpireFee(ctx, tran)
 	}
 
@@ -399,11 +401,12 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 	var feeAmount int64
 	if tran.eventType == eventFullyExpire {
 		feeAmount = kp.FeeConfig.ExpireFee()
-	} else if tran.eventType == eventIOCPartiallyExpire {
+	} else if tran.eventType == eventIOCFullyExpire {
 		feeAmount = kp.FeeConfig.IOCExpireFee()
 	} else {
 		// should not be here
 		// TODO: log
+		return types.Fee{}
 	}
 
 	if tran.inAsset != types.NativeToken {
@@ -420,8 +423,8 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 		}
 	}
 
-	if tran.in < feeAmount {
-		feeAmount = tran.in
+	if tran.out < feeAmount {
+		feeAmount = tran.out
 	}
 	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
 }
@@ -515,17 +518,16 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	// TODO: make effectiveDays configurable
 	const effectiveDays = 3
 	expireHeight := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
-	expire := func(symbol string, engine *me.MatchEng, pls []me.PriceLevel, side int8) {
-		orderMap := kp.allOrders[symbol]
+	expire := func(symbol string, orders map[string]NewOrderMsg, engine *me.MatchEng, pls []me.PriceLevel, side int8) {
 		for _, level := range pls {
 			for _, ord := range level.Orders {
 				if ord.Time < expireHeight {
 					// gen transfer
-					ordMsg := orderMap[ord.Id]
+					ordMsg := orders[ord.Id]
 					h := channelHash(ordMsg.Sender, concurrency)
 					transferChs[h] <- kp.expiredToTransfer(ord, ordMsg)
 					// delete from allOrders
-					delete(orderMap, ord.Id)
+					delete(orders, ord.Id)
 				}
 			}
 			// delete from order book
@@ -543,9 +545,10 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 		}, func() {
 			for symbol := range symbolCh {
 				engine := kp.engines[symbol]
+				orders := kp.allOrders[symbol]
 				buys, sells := engine.Book.GetAllLevels()
-				expire(symbol, engine, buys, me.BUYSIDE)
-				expire(symbol, engine, sells, me.SELLSIDE)
+				expire(symbol, orders, engine, buys, me.BUYSIDE)
+				expire(symbol, orders, engine, sells, me.SELLSIDE)
 			}
 		}, func() {
 			for _, transferCh := range transferChs {
