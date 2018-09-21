@@ -30,7 +30,9 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	logger.Info("Save Orderbook snapshot", "blockHeight", height)
-	dexKeeper.SnapShotOrderBook(ctx, height)
+	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
+		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
+	}
 }
 
 func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
