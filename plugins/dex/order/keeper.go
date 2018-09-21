@@ -128,16 +128,19 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 	return nil
 }
 
+func orderNotFound(symbol, id string) error {
+	return errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+}
+
 func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
-	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 	_, ok := kp.OrderExists(symbol, id)
 	if !ok {
-		return me.OrderPart{}, notFoundErr
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		return me.OrderPart{}, notFoundErr
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	delete(kp.allOrders[symbol], id)
 	return eng.Book.RemoveOrder(id, side, price)
@@ -145,14 +148,13 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
-	notFoundErr := errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 	_, ok := kp.OrderExists(symbol, id)
 	if !ok {
-		return me.OrderPart{}, notFoundErr
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		return me.OrderPart{}, notFoundErr
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	return eng.Book.GetOrder(id, side, price)
 }
