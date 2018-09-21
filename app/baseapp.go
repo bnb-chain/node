@@ -2,10 +2,11 @@ package app
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"runtime/debug"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"

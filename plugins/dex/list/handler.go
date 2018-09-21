@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -49,6 +50,7 @@ func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper,
 
 	if !ctx.IsCheckTx() { // only add engine during DeliverTx
 		keeper.AddEngine(pair)
+		log.With("module", "dex").Info("List new Pair and created new match engine", "pair", pair)
 	}
 
 	return sdk.Result{}
