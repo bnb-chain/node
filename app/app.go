@@ -207,8 +207,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeight()
 
-	if utils.SameDayInUTC(lastBlockTime, blockTime) && (height%2500 != 0) {
-		//if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
+	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		// TODO: add postAllocateHandler
 		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
