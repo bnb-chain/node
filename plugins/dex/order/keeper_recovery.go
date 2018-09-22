@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -51,32 +52,45 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 		return err
 	}
 	bytes = b.Bytes()
+	bnclog.Debug(fmt.Sprintf("update dex store for key: %s, value: %v\n", key, bytes))
 	kv.Set([]byte(key), bytes)
 	w.Close()
 	return nil
 }
 
-func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (err error) {
+func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
 	logger := bnclog.With("module", "dex")
+	effectedStoreKeys = make([]string, 0)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
 		snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
 		key := genOrderBookSnapshotKey(height, pair)
+		effectedStoreKeys = append(effectedStoreKeys, key)
 		err := compressAndSave(snapshot, kp.cdc, key, kvstore)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		logger.Info("Compressed and Saved order book snapshot", "pair", pair)
 	}
-	msgs := make([]NewOrderMsg, 0, len(kp.allOrders))
-	for _, value := range kp.allOrders {
-		msgs = append(msgs, value)
+
+	msgs := make([]NewOrderMsg, len(kp.allOrders), len(kp.allOrders))
+	msgKeys := make([]string, len(kp.allOrders), len(kp.allOrders))
+	i := 0
+	for key := range kp.allOrders {
+		msgKeys[i] = key
+		i++
 	}
+	sort.Strings(msgKeys)
+	for idx, key := range msgKeys {
+		msgs[idx] = kp.allOrders[key]
+	}
+
 	snapshot := ActiveOrders{Orders: msgs}
 	key := genActiveOrdersSnapshotKey(height)
+	effectedStoreKeys = append(effectedStoreKeys, key)
 	logger.Info("Saving active orders", "height", height)
-	return compressAndSave(snapshot, kp.cdc, key, kvstore)
+	return effectedStoreKeys, compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
 func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
