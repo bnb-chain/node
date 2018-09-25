@@ -39,3 +39,31 @@ func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]Ord
 	book, err := decodeOrderBook(cdc, bz)
 	return book, err
 }
+
+func queryOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) (*[]byte, error) {
+	if bz, err := ctx.Query(fmt.Sprintf("dex/openorders/%s/%s", pair, addr)); err != nil {
+		return nil, err
+	} else {
+		return &bz, nil
+	}
+}
+
+func decodeOpenOrders(cdc *wire.Codec, bz *[]byte) (*[]OpenOrder, error) {
+	openOrders := make([]OpenOrder, 0)
+	if err := cdc.UnmarshalBinary(*bz, &openOrders); err != nil {
+		return nil, err
+	} else {
+		return &openOrders, nil
+	}
+}
+
+func GetOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) (*[]OpenOrder, error) {
+	if bz, err := queryOpenOrders(cdc, ctx, pair, addr); err != nil {
+		return nil, err
+	} else if bz == nil {
+		return nil, nil
+	} else {
+		openOrders, err := decodeOpenOrders(cdc, bz)
+		return openOrders, err
+	}
+}

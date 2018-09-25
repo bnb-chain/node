@@ -31,8 +31,8 @@ type Keeper struct {
 	storeKey       sdk.StoreKey // The key used to access the store from the Context.
 	codespace      sdk.CodespaceType
 	engines        map[string]*me.MatchEng
-	allOrders      map[string]map[string]NewOrderMsg // symbol -> order ID -> order
-	roundOrders    map[string]int                    // limit to the total tx number in a block
+	allOrders      map[string]map[string]OrderMsg // symbol -> order ID -> order
+	roundOrders    map[string]int                 // limit to the total tx number in a block
 	roundIOCOrders map[string][]string
 	roundFees      map[string]sdk.Coins
 	poolSize       uint // number of concurrent channels, counted in the pow of 2
@@ -87,7 +87,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		storeKey:       key,
 		codespace:      codespace,
 		engines:        engines,
-		allOrders:      make(map[string]map[string]NewOrderMsg, 256), // need to init the nested map when a new symbol added.
+		allOrders:      make(map[string]map[string]OrderMsg, 256), // need to init the nested map when a new symbol added.
 		roundOrders:    make(map[string]int, 256),
 		roundIOCOrders: make(map[string][]string, 256),
 		poolSize:       concurrency,
@@ -100,7 +100,7 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
-	kp.allOrders[symbol] = map[string]NewOrderMsg{}
+	kp.allOrders[symbol] = map[string]OrderMsg{}
 	return eng
 }
 
@@ -112,7 +112,7 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
+func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64, timestamp int64) (err error) {
 	//try update order book first
 	symbol := strings.ToUpper(msg.Symbol)
 	eng, ok := kp.engines[symbol]
@@ -126,7 +126,10 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		return err
 	}
 
-	kp.allOrders[symbol][msg.Id] = msg
+	// if we are replay, orders has been restored when we load snapshot
+	if _, exists := kp.allOrders[symbol][msg.Id]; !exists {
+		kp.allOrders[symbol][msg.Id] = OrderMsg{msg, height, timestamp, height, timestamp, 0}
+	}
 	kp.roundOrders[symbol] += 1
 	if msg.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
@@ -168,7 +171,7 @@ func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (or
 func (kp *Keeper) OrderExists(symbol, id string) (NewOrderMsg, bool) {
 	if orders, ok := kp.allOrders[symbol]; ok {
 		if msg, ok := orders[id]; ok {
-			return msg, ok
+			return msg.NewOrderMsg, ok
 		}
 	}
 	return NewOrderMsg{}, false
@@ -229,7 +232,7 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return int(accAddress[0]+accAddress[1]) % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]NewOrderMsg, distributeTrade bool,
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, timestamp int64, orders map[string]OrderMsg, distributeTrade bool,
 	tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
@@ -241,6 +244,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 		if distributeTrade {
 			for _, t := range engine.Trades {
 				t1, t2 := kp.tradeToTransfers(t, symbol)
+				updateOrderMsg(orders, t.BId, t.LastQty, height, timestamp)
+				updateOrderMsg(orders, t.SId, t.LastQty, height, timestamp)
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
 				c = channelHash(t2.accAddress, concurrency)
@@ -261,13 +266,22 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 					continue
 				}
 				c := channelHash(msg.Sender, concurrency)
-				tradeOuts[c] <- kp.expiredToTransfer(ord, msg)
+				tradeOuts[c] <- kp.expiredToTransfer(ord, msg.NewOrderMsg)
 			}
 		}
 	}
 }
 
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer {
+// Run as postConsume procedure of async, no concurrent updates of orders map
+func updateOrderMsg(orders map[string]OrderMsg, orderId string, qty, height, timestamp int64) {
+	newOrder := orders[orderId]
+	newOrder.CumQty += qty
+	newOrder.LastUpdatedHeight = height
+	newOrder.LastUpdatedTimestamp = timestamp
+	orders[orderId] = newOrder
+}
+
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -297,7 +311,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 	matchWorker := func() {
 		for symbol := range symbolCh {
-			kp.matchAndDistributeTradesForSymbol(symbol, kp.allOrders[symbol], distributeTrade, tradeOuts)
+			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
 	utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
@@ -327,6 +341,30 @@ func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLeve
 			})
 	}
 	return orderbook
+}
+
+func (kp *Keeper) GetOpenOrders(pair string, addr string) []store.OpenOrder {
+	openOrders := make([]store.OpenOrder, 0)
+
+	for _, order := range kp.allOrders[pair] {
+		if order.Sender.String() == addr {
+			openOrders = append(
+				openOrders,
+				store.OpenOrder{
+					order.Id,
+					pair,
+					utils.Fixed8(order.Price),
+					utils.Fixed8(order.Quantity),
+					utils.Fixed8(order.CumQty),
+					order.CreatedHeight,
+					order.CreatedTimestamp,
+					order.LastUpdatedHeight,
+					order.LastUpdatedTimestamp,
+				})
+		}
+	}
+
+	return openOrders
 }
 
 func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
@@ -480,8 +518,8 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 }
 
 // MatchAll will only concurrently match but do not allocate into accounts
-func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
-	tradeOuts := kp.matchAndDistributeTrades(false) //only match
+func (kp *Keeper) MatchAll(height, timestamp int64) (code sdk.CodeType, err error) {
+	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp) //only match
 	if tradeOuts == nil {
 		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return sdk.CodeOK, nil
@@ -499,7 +537,7 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 // all the symbols' order books, among all the clients
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
-	tradeOuts := kp.matchAndDistributeTrades(true)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time)
 	if tradeOuts == nil {
 		bnclog.With("module", "dex").Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil
@@ -539,12 +577,12 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 		transferChs[i] = make(chan Transfer, channelSize*2)
 	}
 
-	expire := func(orders map[string]NewOrderMsg, engine *me.MatchEng, side int8) {
+	expire := func(orders map[string]OrderMsg, engine *me.MatchEng, side int8) {
 		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
 			// gen transfer
 			ordMsg := orders[ord.Id]
 			h := channelHash(ordMsg.Sender, concurrency)
-			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg)
+			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg.NewOrderMsg)
 			// delete from allOrders
 			delete(orders, ord.Id)
 		})

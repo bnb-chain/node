@@ -117,7 +117,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
-		err := keeper.AddOrder(msg, ctx.BlockHeight())
+		err := keeper.AddOrder(msg, ctx.BlockHeight(), ctx.BlockHeader().Time)
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 		}

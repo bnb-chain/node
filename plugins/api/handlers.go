@@ -72,6 +72,10 @@ func (s *server) handleDexOrderReq(cdc *wire.Codec, ctx context.CoreContext, acc
 	return s.withUrlEncForm(s.limitReqSize(h))
 }
 
+func (s *server) handleDexOpenOrdersReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	return dexapi.OpenOrdersReqHandler(cdc, ctx)
+}
+
 func (s *server) handleTokenReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	return tksapi.GetTokenReqHandler(cdc, ctx)
 }
