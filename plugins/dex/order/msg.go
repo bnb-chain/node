@@ -208,7 +208,10 @@ func (msg NewOrderMsg) String() string {
 
 type OrderInfo struct {
 	NewOrderMsg
+	CreatedHeight        int64
 	CreatedTimestamp int64
+	LastUpdatedHeight    int64
+	LastUpdatedTimestamp int64
 	CumQty           int64
 	TxHash           string
 }

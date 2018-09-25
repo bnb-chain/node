@@ -95,6 +95,28 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
+		case "openorders": // args: ["dex", "openorders", <pair>, <addr>]
+			//TODO(#151): sync lock
+			if len(path) < 4 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeUnknownRequest),
+					Log:  "OpenOrders query requires the pair symbol and address",
+				}
+			}
+			pair := path[2]
+			addr := path[3]
+			openOrders := keeper.GetOpenOrders(pair, addr)
+			bz, err := app.GetCodec().MarshalBinary(openOrders)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			return &abci.ResponseQuery{
+				Code:  uint32(sdk.ABCICodeOK),
+				Value: bz,
+			}
 		default:
 			return &abci.ResponseQuery{
 				Code: uint32(sdk.ABCICodeOK),
