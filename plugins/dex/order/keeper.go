@@ -511,6 +511,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper) []chan Transfer {
 	size := len(kp.allOrders)
 	if size == 0 {
+		bnclog.With("module", "dex").Info("No orders to expire")
 		return nil
 	}
 	channelSize := size >> kp.poolSize
@@ -562,9 +563,15 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	return transferChs
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, height int64,
-	accountMapper auth.AccountMapper) (code sdk.CodeType, err error) {
-	return sdk.CodeOK, nil
+func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+	transferChs := kp.expireOrders(ctx, blockTime, am)
+	if transferChs == nil {
+		return ctx, sdk.CodeOK, nil
+	}
+
+	totalFee := kp.allocateAndCalcFee(ctx, transferChs, am, postExpireHandler)
+	newCtx = tx.WithFee(ctx, totalFee)
+	return newCtx, sdk.CodeOK, nil
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
