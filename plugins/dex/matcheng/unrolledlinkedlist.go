@@ -88,19 +88,25 @@ func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 	return len(b.elements)
 }
 
-func (b *bucket) delete(p float64, compare Comparator) *PriceLevel {
+func (b *bucket) deleteElement(i int) {
+	k := len(b.elements)
+	if i == k-1 {
+		b.elements = b.elements[:i]
+	} else if i == 0 {
+		copy(b.elements[:k-1], b.elements[1:k])
+		b.elements = b.elements[:k-1]
+	} else {
+		b.elements = append(b.elements[:i], b.elements[i+1:]...)
+	}
+}
+
+func (b *bucket) delete(p int64, compare Comparator) *PriceLevel {
 	k := len(b.elements)
 	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p) < 0 })
 	if i > 0 && compare(b.elements[i-1].Price, p) == 0 {
 		i = i - 1
 		pl := &b.elements[i]
-		if i == k-1 {
-			b.elements = b.elements[:i]
-		} else if i == 0 {
-			b.elements = b.elements[1:]
-		} else {
-			b.elements = append(b.elements[:i], b.elements[i+1:]...)
-		}
+		b.deleteElement(i)
 		return pl
 	}
 	return nil
@@ -381,4 +387,44 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 		}
 	}
 	return nil
+}
+
+func (ull *ULList) UpdateForEach(updater LevelIter) {
+	b := ull.begin
+	var last *bucket
+	for b != ull.dend {
+		for i := 0; ; {
+			k := len(b.elements)
+			if i >= k {
+				break
+			}
+			pl := &b.elements[i]
+			updater(pl)
+			if len(pl.Orders) == 0 {
+				b.deleteElement(i)
+			} else {
+				i++
+			}
+		}
+
+		oldNext := b.next
+		if b.size() == 0 {
+			if last == nil {
+				if oldNext == ull.dend {
+					b = oldNext
+					continue
+				}
+				ull.begin = oldNext
+			} else {
+				last.next = oldNext
+			}
+			//insert at the data end instead of the final end, so it is closer of the beginning of the memory allocation
+			oldDataEnd := ull.dend.next
+			ull.dend.next = b
+			b.next = oldDataEnd
+		} else {
+			last = b
+		}
+		b = oldNext
+	}
 }

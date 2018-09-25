@@ -48,7 +48,7 @@ func (o *OrderPart) LeavesQty() int64 {
 type PriceLevelInterface interface {
 	addOrder(id string, time int64, qty int64) (int, error)
 	removeOrder(id string) (OrderPart, int, error)
-	removeOrders(beforeTime int64)
+	removeOrders(beforeTime int64, callback func(OrderPart))
 	getOrder(id string) (OrderPart, error)
 	Less(than bt.Item) bool
 	TotalLeavesQty() int64
@@ -110,11 +110,16 @@ func (l *PriceLevel) removeOrder(id string) (OrderPart, int, error) {
 }
 
 // since the orders in one PriceLevel are sorted by time(height), the orders to be removed are all in the front of the slice.
-func (l *PriceLevel) removeOrders(beforeTime int64) {
+func (l *PriceLevel) removeOrders(beforeTime int64, callback func(OrderPart)) {
 	i := sort.Search(len(l.Orders), func(i int) bool {
 		return l.Orders[i].Time >= beforeTime
 	})
 
+	if callback != nil {
+		for _, ord := range l.Orders[:i] {
+			callback(ord)
+		}
+	}
 	l.Orders = l.Orders[i:]
 }
 

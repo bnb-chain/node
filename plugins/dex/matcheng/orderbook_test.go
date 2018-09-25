@@ -153,11 +153,11 @@ func TestPriceLevel_removeOrders(t *testing.T) {
 		},
 	}
 
-	l.removeOrders(2)
+	l.removeOrders(2, nil)
 	require.Len(t, l.Orders, 2)
 	require.Equal(t, int64(24), l.TotalLeavesQty())
 
-	l.removeOrders(4)
+	l.removeOrders(4, nil)
 	require.Len(t, l.Orders, 0)
 	require.Equal(t, int64(0), l.TotalLeavesQty())
 }
@@ -546,15 +546,13 @@ func TestOrderBookOnULList_RemoveOrders(t *testing.T) {
 	book.InsertOrder("1", BUYSIDE, 10000, 1000, 10000)
 	book.InsertOrder("2", BUYSIDE, 10001, 1000, 10000)
 	book.InsertOrder("3", BUYSIDE, 10002, 1000, 10000)
-	err := book.RemoveOrders(10001, BUYSIDE, 1001)
-	require.EqualError(t, err, fmt.Sprintf("order price %d doesn't exist at side %d.", 1001, BUYSIDE))
-	err = book.RemoveOrders(10001, BUYSIDE, 1000)
+	err := book.RemoveOrders(10001, BUYSIDE, nil)
 	require.NoError(t, err)
 	buys, sells := book.GetAllLevels()
 	require.Len(t, buys, 1)
 	require.Len(t, buys[0].Orders, 2)
 	require.Len(t, sells, 0)
-	err = book.RemoveOrders(10004, BUYSIDE, 1000)
+	err = book.RemoveOrders(10004, BUYSIDE, nil)
 	require.NoError(t, err)
 	buys, sells = book.GetAllLevels()
 	require.Len(t, buys, 0)

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_bucket_head(t *testing.T) {
@@ -429,20 +430,48 @@ func Test_bucket_getRange(t *testing.T) {
 		PriceLevel{Price: 105},
 		PriceLevel{Price: 106},
 	}}
-	assert.Equal(-1, b2.getRange(81.0, 90.0, compareSell, &buyBuf), "no overlap")
-	assert.Equal(0, b2.getRange(107, 108, compareSell, &buyBuf), "no overlap")
-	assert.Equal(-1, b2.getRange(110, 107, compareSell, &buyBuf), "no overlap")
-	assert.Equal(1, b2.getRange(100, 100, compareSell, &buyBuf), "1 overlap")
-	assert.Equal(1, b2.getRange(106, 106, compareSell, &buyBuf), "1 overlap")
-	assert.Equal(1, b2.getRange(103, 103, compareSell, &buyBuf), "1 overlap")
-	assert.Equal(2, b2.getRange(105, 106, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(1, b2.getRange(105.6, 106, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(2, b2.getRange(105, 108, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(2, b2.getRange(104.5, 108, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(2, b2.getRange(103.5, 105.5, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(3, b2.getRange(103, 105, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(3, b2.getRange(102.6, 105, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(3, b2.getRange(100, 102, compareSell, &buyBuf), "2 overlap")
-	assert.Equal(3, b2.getRange(99, 102.5, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(-1, b2.getRange(810, 900, compareSell, &buyBuf), "no overlap")
+	assert.Equal(0, b2.getRange(1070, 1080, compareSell, &buyBuf), "no overlap")
+	assert.Equal(-1, b2.getRange(1100, 1070, compareSell, &buyBuf), "no overlap")
+	assert.Equal(1, b2.getRange(1000, 1000, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(1, b2.getRange(1060, 1060, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(1, b2.getRange(1030, 1030, compareSell, &buyBuf), "1 overlap")
+	assert.Equal(2, b2.getRange(1050, 1060, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(1, b2.getRange(1056, 1060, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(1050, 1080, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(1045, 1080, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(2, b2.getRange(1035, 1055, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(1030, 1050, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(1026, 1050, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(1000, 1020, compareSell, &buyBuf), "2 overlap")
+	assert.Equal(3, b2.getRange(990, 1025, compareSell, &buyBuf), "2 overlap")
+}
 
+func TestULList_UpdateForEach(t *testing.T) {
+	l := NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel) {
+		if pl.Price <= 1003 {
+			pl.Orders = pl.Orders[:0]
+		}
+	})
+	require.Len(t, l.begin.elements, 1)
+	require.Equal(t, l.dend, l.begin.next)
+	require.Equal(t, int64(1006), l.begin.elements[0].Price)
+
+	l = NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel) {
+		if pl.Price <= 1006 {
+			pl.Orders = pl.Orders[:0]
+		}
+	})
+	require.Len(t, l.begin.elements, 0)
+	require.Equal(t, l.dend, l.begin.next)
 }

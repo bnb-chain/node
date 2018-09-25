@@ -511,21 +511,15 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	// TODO: make effectiveDays configurable
 	const effectiveDays = 3
 	expireHeight := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
-	expire := func(symbol string, orders map[string]NewOrderMsg, engine *me.MatchEng, pls []me.PriceLevel, side int8) {
-		for _, level := range pls {
-			for _, ord := range level.Orders {
-				if ord.Time < expireHeight {
-					// gen transfer
-					ordMsg := orders[ord.Id]
-					h := channelHash(ordMsg.Sender, concurrency)
-					transferChs[h] <- kp.expiredToTransfer(ord, ordMsg)
-					// delete from allOrders
-					delete(orders, ord.Id)
-				}
-			}
-			// delete from order book
-			engine.Book.RemoveOrders(expireHeight, side, level.Price)
-		}
+	expire := func(orders map[string]NewOrderMsg, engine *me.MatchEng, side int8) {
+		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
+			// gen transfer
+			ordMsg := orders[ord.Id]
+			h := channelHash(ordMsg.Sender, concurrency)
+			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg)
+			// delete from allOrders
+			delete(orders, ord.Id)
+		})
 	}
 
 	symbolCh := make(chan string, concurrency)
@@ -539,9 +533,8 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 			for symbol := range symbolCh {
 				engine := kp.engines[symbol]
 				orders := kp.allOrders[symbol]
-				buys, sells := engine.Book.GetAllLevels()
-				expire(symbol, orders, engine, buys, me.BUYSIDE)
-				expire(symbol, orders, engine, sells, me.SELLSIDE)
+				expire(orders, engine, me.BUYSIDE)
+				expire(orders, engine, me.SELLSIDE)
 			}
 		}, func() {
 			for _, transferCh := range transferChs {
