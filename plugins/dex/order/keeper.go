@@ -511,6 +511,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper) []chan Transfer {
 	size := len(kp.allOrders)
 	if size == 0 {
+		bnclog.With("module", "dex").Info("No orders to expire")
 		return nil
 	}
 	channelSize := size >> kp.poolSize
@@ -565,7 +566,6 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	transferChs := kp.expireOrders(ctx, blockTime, am)
 	if transferChs == nil {
-		// TODO: logging
 		return ctx, sdk.CodeOK, nil
 	}
 
