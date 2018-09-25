@@ -114,7 +114,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		cdc:                        cdc,
 		FeeConfig:                  NewFeeConfig(cdc, key),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		logger: bnclog.With("module", "dexkeeper"),
+		logger:                     bnclog.With("module", "dexkeeper"),
 	}
 }
 
@@ -134,41 +134,41 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err error) {
+func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	//try update order book first
-	symbol := strings.ToUpper(msg.Symbol)
+	symbol := strings.ToUpper(info.Symbol)
 	eng, ok := kp.engines[symbol]
 	if !ok {
 		err = errors.New(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
 		return
 	}
 
-	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
+	_, err = eng.Book.InsertOrder(info.Id, info.Side, info.CreatedHeight, info.Price, info.Quantity)
 	if err != nil {
 		return err
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{msg.Id, Ack, 0, ""}
+		change := OrderChange{info.Id, Ack, 0, ""}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
-		kp.OrderChangesMap[msg.Id] = &msg
+		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
+		kp.OrderChangesMap[info.Id] = &info
 	}
 
-	kp.allOrders[symbol][msg.Id] = &msg
+	kp.allOrders[symbol][info.Id] = &info
 	if ids, ok := kp.roundOrders[symbol]; ok {
-		kp.roundOrders[symbol] = append(ids, msg.Id)
+		kp.roundOrders[symbol] = append(ids, info.Id)
 	} else {
 		newIds := make([]string, 0, 16)
-		kp.roundOrders[symbol] = append(newIds, msg.Id)
+		kp.roundOrders[symbol] = append(newIds, info.Id)
 	}
-	if msg.TimeInForce == TimeInForce.IOC {
-		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
+	if info.TimeInForce == TimeInForce.IOC {
+		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	bnclog.Debug("Added orders", "symbol", symbol, "id", msg.Id)
+	bnclog.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
 
@@ -280,7 +280,7 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return sum % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]*OrderInfo,
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, timestamp int64, orders map[string]*OrderInfo,
 	distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
@@ -289,8 +289,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 	if engine.Match() {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for _, t := range engine.Trades {
-			orders[t.Bid].CumQty = t.BuyCumQty
-			orders[t.Sid].CumQty = t.SellCumQty
+			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
+			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 
 			if distributeTrade {
 				t1, t2 := kp.tradeToTransfers(t, symbol)
@@ -352,7 +352,14 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 	}
 }
 
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer {
+// Run as postConsume procedure of async, no concurrent updates of orders map
+func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
+	order.CumQty = cumQty
+	order.LastUpdatedHeight = height
+	order.LastUpdatedTimestamp = timestamp
+}
+
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -384,8 +391,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 	matchWorker := func() {
 		for symbol := range symbolCh {
-			kp.logger.Debug("start matching", "symbol", symbol)
-			kp.matchAndDistributeTradesForSymbol(symbol, kp.allOrders[symbol], distributeTrade, tradeOuts)
+			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
 	utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
@@ -416,6 +422,30 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 			})
 	}
 	return orderbook
+}
+
+func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
+	openOrders := make([]store.OpenOrder, 0)
+
+	for _, order := range kp.allOrders[pair] {
+		if string(order.Sender.Bytes()) == string(addr.Bytes()) {
+			openOrders = append(
+				openOrders,
+				store.OpenOrder{
+					order.Id,
+					pair,
+					utils.Fixed8(order.Price),
+					utils.Fixed8(order.Quantity),
+					utils.Fixed8(order.CumQty),
+					order.CreatedHeight,
+					order.CreatedTimestamp,
+					order.LastUpdatedHeight,
+					order.LastUpdatedTimestamp,
+				})
+		}
+	}
+
+	return openOrders
 }
 
 func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
@@ -612,8 +642,8 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 }
 
 // MatchAll will only concurrently match but do not allocate into accounts
-func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
-	tradeOuts := kp.matchAndDistributeTrades(false) //only match
+func (kp *Keeper) MatchAll(height, timestamp int64) (code sdk.CodeType, err error) {
+	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return sdk.CodeOK, nil
@@ -634,7 +664,7 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
-	tradeOuts := kp.matchAndDistributeTrades(true)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil

@@ -126,8 +126,14 @@ func handleNewOrder(
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
-			msg := OrderInfo{msg, ctx.BlockHeader().Time, 0, txHash}
-			err := keeper.AddOrder(msg, ctx.BlockHeight(), false)
+			height := ctx.BlockHeader().Height
+			timestamp := ctx.BlockHeader().Time
+			msg := OrderInfo{
+				msg,
+				height, timestamp,
+				height, timestamp,
+				0, txHash}
+			err := keeper.AddOrder(msg, false)
 			if err != nil {
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 			}

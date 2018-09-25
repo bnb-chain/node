@@ -9,12 +9,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
-const abciQueryPrefix = "dex"
+const AbciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(appp app.ChainApp, keeper *DexKeeper) {
 	handler := createQueryHandler(keeper)
-	appp.RegisterQueryHandler(abciQueryPrefix, handler)
+	appp.RegisterQueryHandler(AbciQueryPrefix, handler)
 }
 
 func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {

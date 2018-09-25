@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
@@ -17,7 +18,7 @@ const OB_LEVELS = 20
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
-		if path[0] != abciQueryPrefix || len(path) < 2 {
+		if path[0] != AbciQueryPrefix || len(path) < 2 {
 			return nil
 		}
 		switch path[1] {
@@ -27,7 +28,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires offset and limit in the path",
-						abciQueryPrefix, path[1]),
+						AbciQueryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
@@ -95,12 +96,58 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
+		case "openorders": // args: ["dex", "openorders", <pair>, <bech32Str>]
+			if len(path) < 4 {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeUnknownRequest),
+					Log:  "OpenOrders query requires the pair symbol and address",
+				}
+			}
+
+			// verify pair is legal
+			pair := path[2]
+			baseAsset, quoteAsset, err := utils.TradingPair2Assets(pair)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "pair is not valid",
+				}
+			}
+			ctx := app.GetContextForCheckState()
+			existingPair, err := keeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
+			if pair != existingPair.GetSymbol() || err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "pair is not listed",
+				}
+			}
+
+			bech32Str := path[3]
+			addr, err := sdk.AccAddressFromBech32(bech32Str)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "address is not valid",
+				}
+			}
+			openOrders := keeper.GetOpenOrders(pair, addr)
+			bz, err := app.GetCodec().MarshalBinary(openOrders)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  err.Error(),
+				}
+			}
+			return &abci.ResponseQuery{
+				Code:  uint32(sdk.ABCICodeOK),
+				Value: bz,
+			}
 		default:
 			return &abci.ResponseQuery{
 				Code: uint32(sdk.ABCICodeOK),
 				Info: fmt.Sprintf(
 					"Unknown `%s` query path: %v",
-					abciQueryPrefix, path),
+					AbciQueryPrefix, path),
 			}
 		}
 	}

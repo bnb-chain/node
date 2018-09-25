@@ -8,13 +8,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto/tmhash"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -185,7 +185,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 }
 
 func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
-	height int64) {
+	height int64, timestamp time.Time) {
 	logger := bnclog.With("module", "dex")
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
@@ -203,8 +203,13 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				// the time we replay should be consistent with ctx.BlockHeader().Time
 				// TODO(#118): after upgrade to tendermint 0.24 we should have better and more consistent time representation
-				orderInfo := OrderInfo{msg, block.Time.Unix(), 0, txHash}
-				kp.AddOrder(orderInfo, height, true)
+				t := timestamp.Unix()
+				orderInfo := OrderInfo{
+					msg,
+					height, t,
+					height, t,
+					0, txHash}
+				kp.AddOrder(orderInfo, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
 				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
@@ -220,7 +225,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	kp.MatchAll() //no need to check result
+	kp.MatchAll(height, timestamp.UnixNano()) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
@@ -229,7 +234,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHe
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		logger.Info("Relaying block for order book", "height", i)
-		kp.replayOneBlocks(block, txDecoder, i)
+		kp.replayOneBlocks(block, txDecoder, i, block.Time)
 	}
 	return nil
 }
