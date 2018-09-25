@@ -89,7 +89,7 @@ order_id=$(echo "${result}" | grep -o "cosmosaccaddr[0-9a-zA-Z]*-[0-9]*")
 
 sleep 1s
 # cancel order
-result=$(expect ./cancel.exp ${order_id} alice ${chain_id} ${cli_home})
+result=$(expect ./cancel.exp BTC_BNB ${order_id} alice ${chain_id} ${cli_home})
 check_operation "Cancel Order" "${result}" "${chain_operation_words}"
 
 sleep 1s

@@ -20,6 +20,6 @@ while true ; do
     esac
 done;
 
-expect ./cancel.exp $id $from $chain_id > /dev/null
+expect ./cancel.exp $symbol $id $from $chain_id > /dev/null
 
 echo "Order ${id} cancelled success."

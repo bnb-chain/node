@@ -415,10 +415,12 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 		feeAmount = kp.FeeConfig.IOCExpireFee()
 	} else {
 		// should not be here
-		// TODO: log
+		bnclog.With("module", "dex").Error("Invalid expire eventType", "eventType", tran.eventType)
 		return types.Fee{}
 	}
 
+	// in a Transfer of expire event type, inAsset == outAsset, in == out == unlock
+	// to make the calc logic consistent with calcOrderFee, we always use in/inAsset to calc the fee.
 	if tran.inAsset != types.NativeToken {
 		if engine, ok := kp.engines[utils.Assets2TradingPair(tran.inAsset, types.NativeToken)]; ok {
 			// XYZ_BNB
@@ -433,8 +435,8 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 		}
 	}
 
-	if tran.out < feeAmount {
-		feeAmount = tran.out
+	if tran.in < feeAmount {
+		feeAmount = tran.in
 	}
 	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
 }
@@ -509,11 +511,22 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper) []chan Transfer {
+	logger := bnclog.With("module", "dex")
 	size := len(kp.allOrders)
 	if size == 0 {
-		bnclog.With("module", "dex").Info("No orders to expire")
+		logger.Info("No orders to expire")
 		return nil
 	}
+
+	// TODO: make effectiveDays configurable
+	const effectiveDays = 3
+	expireHeight, err := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
+	if err != nil {
+		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
+		logger.Info(err.Error())
+		return nil
+	}
+
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	if size%concurrency != 0 {
@@ -526,9 +539,6 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 		transferChs[i] = make(chan Transfer, channelSize*2)
 	}
 
-	// TODO: make effectiveDays configurable
-	const effectiveDays = 3
-	expireHeight := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
 	expire := func(orders map[string]NewOrderMsg, engine *me.MatchEng, side int8) {
 		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
 			// gen transfer
@@ -585,13 +595,13 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
 	store.Set([]byte(key), bz)
 }
 
-func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
+func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) (int64, error) {
 	store := ctx.KVStore(kp.storeKey)
 	t := timeNow.AddDate(0, 0, -daysBack).Unix()
-	key := utils.Int642Bytes(t / utils.SecondsPerDay)
-	bz := store.Get([]byte(key))
+	day := t / utils.SecondsPerDay
+	bz := store.Get(utils.Int642Bytes(day))
 	if bz == nil {
-		panic(errors.Errorf("breathe block not found for day %v", key))
+		return 0, errors.Errorf("breathe block not found for day %v", day)
 	}
 
 	var height int64
@@ -599,7 +609,7 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 	if err != nil {
 		panic(err)
 	}
-	return height
+	return height, nil
 }
 
 func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
