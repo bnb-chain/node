@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 	app "github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -21,10 +22,17 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper DexKeeper, height, blockTime int64) {
+	logger := bnclog.With("module", "dex")
+	logger.Info("Start updating tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
+	logger.Info("Staring Expiring stale orders")
 	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
-	dexKeeper.SnapShotOrderBook(ctx, height)
+	logger.Info("Save Orderbook snapshot", "blockHeight", height)
+	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
+		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
+	}
 }
 
 func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
@@ -35,7 +43,6 @@ func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper DexKeeper) {
 		if lastPrice == 0 {
 			continue
 		}
-
 		_, lotSize := dexKeeper.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
 		dexKeeper.UpdateLotSize(pair.GetSymbol(), lotSize)
 	}

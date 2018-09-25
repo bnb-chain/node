@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -61,7 +62,6 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 		return err
 	}
 
-	fmt.Println(pair.LotSize)
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
 		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize))
 	}
@@ -85,6 +85,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	if ctx.IsCheckTx() {
+		log.With("module", "dex").Info("Incoming New Order", "order", msg)
 		//only check whether there exists order to cancel
 		if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
 			errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
@@ -157,6 +158,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 		//remove order from cache and order book
 		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	} else {
+		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	}
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common"
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -29,6 +30,11 @@ import (
 
 const (
 	appName = "BNBChain"
+)
+
+const (
+	DefaultLogFile     = "bnc.log"
+	DefaultLogBuffSize = 10000
 )
 
 // default home directories for expected binaries
@@ -57,7 +63,7 @@ type BinanceChain struct {
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
-func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *BinanceChain {
+func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*BaseApp)) *BinanceChain {
 
 	// create app-level codec for txs and accounts
 	var cdc = MakeCodec()
@@ -67,7 +73,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer) *Binanc
 
 	// create your application object
 	var app = &BinanceChain{
-		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders),
+		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders, baseAppOptions...),
 		Codec:         cdc,
 		queryHandlers: make(map[string]types.AbciQueryHandler),
 	}
@@ -207,6 +213,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 	} else {
 		// breathe block
+		app.Logger.Debug(fmt.Sprintf("breathe block: %d", height))
+		bnclog.Info("Start Breathe Block Handling",
+			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
 
