@@ -396,6 +396,8 @@ func (ull *ULList) UpdateForEach(updater LevelIter) {
 	for b != ull.dend {
 		for i := 0; ; {
 			k := len(b.elements)
+			// TODO: optimize. The most common call to remove a price level is the removal after match (DropFilledOrders),
+			// which is very likely only operate the 1st bucket and remove a few of elements.
 			if i >= k {
 				break
 			}
