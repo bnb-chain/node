@@ -79,19 +79,18 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
 	ts := tt.Unix()
 	keeper.MarkBreatheBlock(ctx, 42, ts)
-	kvstore := ctx.KVStore(common.DexStoreKey)
-	h := keeper.GetBreatheBlockHeight(tt, kvstore, 10)
+	h := keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt.AddDate(0, 0, 9)
-	h = keeper.GetBreatheBlockHeight(tt, kvstore, 10)
+	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt, _ = time.Parse(time.RFC3339, "2018-01-03T15:04:05Z")
 	ts = tt.Unix()
 	keeper.MarkBreatheBlock(ctx, 43, ts)
-	h = keeper.GetBreatheBlockHeight(tt, kvstore, 10)
+	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(43), h)
 	tt.AddDate(0, 0, 9)
-	h = keeper.GetBreatheBlockHeight(tt, kvstore, 10)
+	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(43), h)
 }
 
@@ -170,7 +169,8 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddOrder(msg, 42)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ_BNB", 96000, 1500000)
 	keeper.AddOrder(msg, 42)
-	assert.Equal(7, len(keeper.allOrders))
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(7, len(keeper.allOrders["XYZ_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
 	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
@@ -183,8 +183,8 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
-	assert.Equal(7, len(keeper2.allOrders))
-	assert.Equal(int64(98000), keeper2.allOrders["123459"].Price)
+	assert.Equal(7, len(keeper2.allOrders["XYZ_BNB"]))
+	assert.Equal(int64(98000), keeper2.allOrders["XYZ_BNB"]["123459"].Price)
 	assert.Equal(1, len(keeper2.engines))
 	assert.Equal(int64(43), h)
 	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
@@ -222,7 +222,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(int64(43), h)
-	assert.Equal(0, len(keeper2.allOrders))
+	assert.Equal(0, len(keeper2.allOrders["XYZ_BNB"]))
 	buys, sells = keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
@@ -308,8 +308,8 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *bc.BlockStore {
 	msgs11 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123463", Side.BUY, "XYZ_BNB", 96000, 2500000)}
 	msgs12 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123464", Side.BUY, "XYZ_BNB", 97000, 1500000)}
 	msgs13 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123465", Side.SELL, "XYZ_BNB", 107000, 1500000)}
-	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "123466", "123462")}
-	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "123467", "123465")}
+	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "XYZ_BNB", "123466", "123462")}
+	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "XYZ_BNB", "123467", "123465")}
 	txs = make([]auth.StdTx, 5)
 	txs[0] = MakeTxFromMsg(msgs11, int64(100), int64(9005), buyerPrivKey)
 	txs[1] = MakeTxFromMsg(msgs12, int64(100), int64(9006), buyerPrivKey)
@@ -375,8 +375,9 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
-	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	types.RegisterWire(cdc)
+	wire.RegisterCrypto(cdc)
+	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	coinKeeper := bank.NewKeeper(mapper)
 	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc)
@@ -386,7 +387,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 func TestKeeper_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
 	keeper.FeeConfig.SetFeeRate(ctx, 1000)
-	keeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
+	keeper.FeeConfig.SetFeeRateNative(ctx, 500)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 
 	// InCcy == BNB
@@ -400,7 +401,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		out:        1000e8,
 		unlock:     1000e8,
 	}
-	fee := keeper.calculateOrderFee(ctx, acc, tran)
+	fee := keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 
 	// InCcy != BNB
@@ -411,25 +412,135 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		accAddress: acc.GetAddress(),
 		inAsset:    "ABC",
 		in:         1000e8,
-		outAsset:   "BNB",
+		outAsset:   types.NativeToken,
 		out:        100e8,
 		unlock:     110e8,
 	}
 	// has enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e8)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
+	fee = keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
 	// no enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e6)})
-	fee = keeper.calculateOrderFee(ctx, acc, tran)
+	fee = keeper.calcOrderFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
 }
 
-func TestKeeper_ExpireFees(t *testing.T) {
+func TestKeeper_CalcExpireFee(t *testing.T) {
+	ctx, am, keeper := setup()
+	keeper.FeeConfig.SetExpireFee(ctx, 10000)
+	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	// in BNB
+	tran := Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    types.NativeToken,
+		in:         100e8,
+		outAsset:   types.NativeToken,
+		out:        100e8,
+		unlock:     100e8,
+	}
+	fee := keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10000)}, fee.Tokens)
+	tran.eventType = eventIOCFullyExpire
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5000)}, fee.Tokens)
+	tran.out, tran.in, tran.out = 4000, 4000, 4000
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 4000)}, fee.Tokens)
 
+	// sell ABC, and BNB as quote asset
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "ABC",
+		in:         1000e8,
+		outAsset:   "ABC",
+		out:        1000e8,
+		unlock:     1000e8,
+	}
+	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 100000)}, fee.Tokens)
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "ABC",
+		in:         900,
+		outAsset:   "ABC",
+		out:        900,
+		unlock:     900,
+	}
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 900)}, fee.Tokens)
+
+	// sell BTC, BNB as base asset
+	tran = Transfer{
+		eventType:  eventFullyExpire,
+		accAddress: acc.GetAddress(),
+		inAsset:    "BTC",
+		in:         1e5,
+		outAsset:   "BTC",
+		out:        1e5,
+		unlock:     1e5,
+	}
+	keeper.engines[types.NativeToken+"_BTC"] = me.NewMatchEng(1e5, 1, 1)
+	fee = keeper.calcExpireFee(ctx, tran)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC", 10)}, fee.Tokens)
 }
 
-func TestKeeper_IocExpireFees(t *testing.T) {
+func TestKeeper_ExpireOrders(t *testing.T) {
+	ctx, am, keeper := setup()
+	keeper.FeeConfig.SetExpireFee(ctx, 10000)
+	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	addr := acc.GetAddress()
+	keeper.AddEngine(dextypes.NewTradingPair("ABC", "BNB", 1e6))
+	keeper.AddEngine(dextypes.NewTradingPair("XYZ", "BNB", 1e6))
+	keeper.AddOrder(NewNewOrderMsg(addr, "1", Side.BUY, "ABC_BNB", 1e6, 1e8), 10000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "2", Side.BUY, "ABC_BNB", 2e6, 2e8), 10000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "3", Side.BUY, "XYZ_BNB", 1e6, 1e8), 10000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 10000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000)
+	keeper.AddOrder(NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000)
+	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
+		sdk.NewCoin("ABC", 3e8),
+		sdk.NewCoin("BNB", 10e6),
+	}.Sort())
+	am.SetAccount(ctx, acc)
+
+	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
+	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
+
+	ctx, _, err := keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am, nil)
+	require.NoError(t, err)
+	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
+	require.Len(t, buys, 0)
+	require.Len(t, sells, 1)
+	require.Len(t, sells[0].Orders, 1)
+	require.Equal(t, int64(2e8), sells[0].TotalLeavesQty())
+	require.Len(t, keeper.allOrders["ABC_BNB"], 1)
+	buys, sells = keeper.engines["XYZ_BNB"].Book.GetAllLevels()
+	require.Len(t, buys, 1)
+	require.Len(t, sells, 0)
+	require.Len(t, buys[0].Orders, 1)
+	require.Equal(t, int64(2e8), buys[0].TotalLeavesQty())
+	require.Len(t, keeper.allOrders["XYZ_BNB"], 1)
+	expectFees := types.NewFee(sdk.Coins{
+		sdk.NewCoin("BNB", 30000),
+		sdk.NewCoin("ABC", 1000000),
+	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, tx.Fee(ctx))
+	acc = am.GetAccount(ctx, acc.GetAddress())
+	require.Equal(t, sdk.Coins{
+		sdk.NewCoin("ABC", 2e8),
+		sdk.NewCoin("BNB", 4e6),
+	}.Sort(), acc.(types.NamedAccount).GetLockedCoins())
+	require.Equal(t, sdk.Coins{
+		sdk.NewCoin("ABC", 99e6),
+		sdk.NewCoin("BNB", 597e4),
+	}.Sort(), acc.GetCoins())
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {

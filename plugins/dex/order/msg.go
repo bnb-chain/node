@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
@@ -19,20 +20,14 @@ const (
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
 // Used as Enum
-const (
-	_        int8 = iota
-	sideBuy  int8 = iota
-	sideSell int8 = iota
-)
-
 var Side = struct {
 	BUY  int8
 	SELL int8
-}{sideBuy, sideSell}
+}{matcheng.BUYSIDE, matcheng.SELLSIDE}
 
 var sideNames = map[string]int8{
-	"BUY":  sideBuy,
-	"SELL": sideSell,
+	"BUY":  matcheng.BUYSIDE,
+	"SELL": matcheng.SELLSIDE,
 }
 
 // GenerateOrderID generates an order ID
@@ -177,9 +172,10 @@ func (msg NewOrderMsg) String() string {
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
+		Symbol: symbol,
 		Id:     id,
 		RefId:  refId,
 	}
@@ -188,6 +184,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, id, refId string) CancelOrderMsg {
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
 	Sender sdk.AccAddress
+	Symbol string `json:"symbol"`
 	Id     string `json:"id"`
 	RefId  string `json:"refid"`
 }

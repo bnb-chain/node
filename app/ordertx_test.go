@@ -137,7 +137,7 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeConfig.SetFeeRateWithNativeToken(ctx, 500)
+	testApp.DexKeeper.FeeConfig.SetFeeRateNative(ctx, 500)
 	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
 
 	// setup accounts
@@ -282,7 +282,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	oid := fmt.Sprintf("%s-0", add.String())
 	add2 := Account(1).GetAddress()
 
-	msg := o.NewCancelOrderMsg(add, oid, "doesnotexist")
+	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*Failed to find order \\[doesnotexist\\].*", res.GetLog())
 	assert.Nil(e)
@@ -294,10 +294,10 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(355e8), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
-	msg = o.NewCancelOrderMsg(add2, oid, oid)
+	msg = o.NewCancelOrderMsg(add2, "BTC_BNB", oid, oid)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*does not belong to transaction sender.*", res.GetLog())
-	msg = o.NewCancelOrderMsg(add, oid, oid)
+	msg = o.NewCancelOrderMsg(add, "BTC_BNB", oid, oid)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)

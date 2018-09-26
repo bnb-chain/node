@@ -128,16 +128,20 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			symbol := viper.GetString(flagSymbol)
+			err = validatePairSymbol(symbol)
+			if err != nil {
+				return err
+			}
 			id := viper.GetString(flagId)
 			if id == "" {
-				fmt.Println("please input order id")
+				return errors.New("please input order id")
 			}
 			refId := viper.GetString(flagRefId)
 			if refId == "" {
-				fmt.Println("please input reference order id")
+				return errors.New("please input reference order id")
 			}
-			msg := order.NewCancelOrderMsg(from, id, refId)
+			msg := order.NewCancelOrderMsg(from, symbol, id, refId)
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -146,6 +150,7 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
 	cmd.Flags().StringP(flagId, "i", "", "id string of the cancellation")
 	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd

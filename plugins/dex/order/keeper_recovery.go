@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -14,6 +13,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	bnclog "github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -74,16 +74,18 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 		logger.Info("Compressed and Saved order book snapshot", "pair", pair)
 	}
 
-	msgs := make([]NewOrderMsg, len(kp.allOrders), len(kp.allOrders))
-	msgKeys := make([]string, len(kp.allOrders), len(kp.allOrders))
-	i := 0
-	for key := range kp.allOrders {
-		msgKeys[i] = key
-		i++
+	msgKeys := make([]string, 0)
+	idSymbolMap := make(map[string]string)
+	for symbol, orderMap := range kp.allOrders {
+		for id := range orderMap {
+			idSymbolMap[id] = symbol
+			msgKeys = append(msgKeys, id)
+		}
 	}
 	sort.Strings(msgKeys)
-	for idx, key := range msgKeys {
-		msgs[idx] = kp.allOrders[key]
+	msgs := make([]NewOrderMsg, len(msgKeys), len(msgKeys))
+	for i, key := range msgKeys {
+		msgs[i] = kp.allOrders[idSymbolMap[key]][key]
 	}
 
 	snapshot := ActiveOrders{Orders: msgs}
@@ -95,9 +97,8 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 
 func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
 	logger := bnclog.With("module", "dex")
-	kvStore := ctx.KVStore(kp.storeKey)
-	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
+	timeNow := utils.Now()
+	height := kp.getLastBreatheBlockHeight(ctx, timeNow, daysBack)
 	logger.Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
@@ -112,6 +113,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		return height, nil
 	}
 
+	kvStore := ctx.KVStore(kp.storeKey)
 	for _, pair := range allPairs {
 		symbol := pair.GetSymbol()
 		eng, ok := kp.engines[symbol]
@@ -165,7 +167,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
 	}
 	for _, m := range ao.Orders {
-		kp.allOrders[m.Id] = m
+		kp.allOrders[m.Symbol][m.Id] = m
 	}
 	logger.Info("Recovered active orders. Snapshot is fully loaded")
 	return height, nil
@@ -190,7 +192,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				kp.AddOrder(msg, height)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				ord, ok := kp.allOrders[msg.RefId]
+				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

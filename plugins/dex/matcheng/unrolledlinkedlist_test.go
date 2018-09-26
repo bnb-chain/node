@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_bucket_head(t *testing.T) {
@@ -444,5 +445,33 @@ func Test_bucket_getRange(t *testing.T) {
 	assert.Equal(3, b2.getRange(1026, 1050, compareSell, &buyBuf), "2 overlap")
 	assert.Equal(3, b2.getRange(1000, 1020, compareSell, &buyBuf), "2 overlap")
 	assert.Equal(3, b2.getRange(990, 1025, compareSell, &buyBuf), "2 overlap")
+}
 
+func TestULList_UpdateForEach(t *testing.T) {
+	l := NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel) {
+		if pl.Price <= 1003 {
+			pl.Orders = pl.Orders[:0]
+		}
+	})
+	require.Len(t, l.begin.elements, 1)
+	require.Equal(t, l.dend, l.begin.next)
+	require.Equal(t, int64(1006), l.begin.elements[0].Price)
+
+	l = NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel) {
+		if pl.Price <= 1006 {
+			pl.Orders = pl.Orders[:0]
+		}
+	})
+	require.Len(t, l.begin.elements, 0)
+	require.Equal(t, l.dend, l.begin.next)
 }

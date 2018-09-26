@@ -26,7 +26,7 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	logger.Info("Start updating tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	logger.Info("Staring Expiring stale orders")
-	dexKeeper.ExpireOrders(ctx, height, accountMapper)
+	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	logger.Info("Save Orderbook snapshot", "blockHeight", height)

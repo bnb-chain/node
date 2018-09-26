@@ -22,32 +22,32 @@ const (
 )
 
 var (
-	expireFeeKey              = []byte("ExpireFee")
-	iocExpireFeeKey           = []byte("IOCExpireFee")
-	feeRateWithNativeTokenKey = []byte("FeeRateWithNativeToken")
-	feeRateKey                = []byte("FeeRate")
+	expireFeeKey     = []byte("ExpireFee")
+	iocExpireFeeKey  = []byte("IOCExpireFee")
+	feeRateNativeKey = []byte("FeeRateNative")
+	feeRateKey       = []byte("FeeRate")
 
 	FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
 )
 
 type FeeConfig struct {
-	cdc                    *wire.Codec
-	mtx                    sync.Mutex
-	storeKey               sdk.StoreKey
-	expireFee              int64
-	iocExpireFee           int64
-	feeRateWithNativeToken int64
-	feeRate                int64
+	cdc           *wire.Codec
+	mtx           sync.Mutex
+	storeKey      sdk.StoreKey
+	expireFee     int64
+	iocExpireFee  int64
+	feeRateNative int64
+	feeRate       int64
 }
 
 func NewFeeConfig(cdc *wire.Codec, storeKey sdk.StoreKey) FeeConfig {
 	return FeeConfig{
-		cdc:                    cdc,
-		storeKey:               storeKey,
-		expireFee:              nilFeeValue,
-		iocExpireFee:           nilFeeValue,
-		feeRateWithNativeToken: nilFeeValue,
-		feeRate:                nilFeeValue,
+		cdc:           cdc,
+		storeKey:      storeKey,
+		expireFee:     nilFeeValue,
+		iocExpireFee:  nilFeeValue,
+		feeRateNative: nilFeeValue,
+		feeRate:       nilFeeValue,
 	}
 }
 
@@ -84,12 +84,12 @@ func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
 	config.iocExpireFee = iocExpireFee
 }
 
-func (config *FeeConfig) SetFeeRateWithNativeToken(ctx sdk.Context, feeRateWithNativeToken int64) {
+func (config *FeeConfig) SetFeeRateNative(ctx sdk.Context, feeRateNative int64) {
 	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRateWithNativeToken)
-	store.Set(feeRateWithNativeTokenKey, b)
-	log.With("module", "dex").Info("Set Fee Rate with native token", "rate", feeRateWithNativeToken)
-	config.feeRateWithNativeToken = feeRateWithNativeToken
+	b := config.itob(feeRateNative)
+	store.Set(feeRateNativeKey, b)
+	log.With("module", "dex").Info("Set Fee Rate with native token", "rate", feeRateNative)
+	config.feeRateNative = feeRateNative
 }
 
 func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
@@ -100,19 +100,19 @@ func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
 	config.feeRate = feeRate
 }
 
-func (config FeeConfig) ExpireFee(ctx sdk.Context) int64 {
+func (config FeeConfig) ExpireFee() int64 {
 	return config.expireFee
 }
 
-func (config FeeConfig) IOCExpireFee(ctx sdk.Context) int64 {
+func (config FeeConfig) IOCExpireFee() int64 {
 	return config.iocExpireFee
 }
 
-func (config FeeConfig) FeeRateWithNativeToken(ctx sdk.Context) int64 {
-	return config.feeRateWithNativeToken
+func (config FeeConfig) FeeRateWithNativeToken() int64 {
+	return config.feeRateNative
 }
 
-func (config FeeConfig) FeeRate(ctx sdk.Context) int64 {
+func (config FeeConfig) FeeRate() int64 {
 	return config.feeRate
 }
 
@@ -122,10 +122,10 @@ func (config *FeeConfig) Init(ctx sdk.Context) {
 	if bz := store.Get(expireFeeKey); bz != nil {
 		config.expireFee = config.btoi(bz)
 		config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
-		config.feeRateWithNativeToken = config.btoi(store.Get(feeRateWithNativeTokenKey))
+		config.feeRateNative = config.btoi(store.Get(feeRateNativeKey))
 		config.feeRate = config.btoi(store.Get(feeRateKey))
 		log.With("module", "dex").Info("Initialized fees from storage", "ExpireFee", config.expireFee,
-			"IOCExpireFee", config.iocExpireFee, "FeeRateWithNativeToken", config.feeRateWithNativeToken,
+			"IOCExpireFee", config.iocExpireFee, "FeeRateWithNativeToken", config.feeRateNative,
 			"FeeRate", config.feeRate)
 	}
 	// otherwise, the chain first starts up and InitGenesis would be called.
@@ -136,14 +136,14 @@ func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	log.With("module", "dex").Info("Setting Genesis Fee/Rate")
 	config.SetExpireFee(ctx, data.ExpireFee)
 	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
-	config.SetFeeRateWithNativeToken(ctx, data.FeeRateWithNativeToken)
+	config.SetFeeRateNative(ctx, data.FeeRateNative)
 	config.SetFeeRate(ctx, data.FeeRate)
 }
 
 func (config *FeeConfig) CalcFee(amount int64, feeType FeeType) int64 {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
-		feeRate = config.feeRateWithNativeToken
+		feeRate = config.feeRateNative
 	} else if feeType == FeeByTradeToken {
 		feeRate = config.feeRate
 	}
