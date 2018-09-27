@@ -19,15 +19,21 @@ const defaultLimit = "100"
 // DepthReqHandler creates an http request handler to show market depth data
 func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	allowedLimitsA := strings.Split(allowedLimits, ",")
+
 	type params struct {
 		symbol string
 		limit  int
 	}
+
+	responseType := "application/json"
+
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		limitStr := r.FormValue("limit")
 
@@ -107,6 +113,8 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 				ob.Levels = lvls
 			}
 		}
+
+		w.Header().Set("Content-Type", responseType)
 
 		err = rutils.StreamDepthResponse(w, ob, limit)
 		if err != nil {

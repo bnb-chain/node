@@ -27,6 +27,7 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.M
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
