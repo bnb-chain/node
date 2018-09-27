@@ -21,15 +21,20 @@ func BalancesReqHandler(
 	type params struct {
 		address sdk.AccAddress
 	}
+
 	type response struct {
 		Address  string         `json:"address"`
 		Balances []tokenBalance `json:"balances"`
 	}
+	responseType := "application/json"
+
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
@@ -103,6 +108,7 @@ func BalancesReqHandler(
 			return
 		}
 
+		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}
 }
