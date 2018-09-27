@@ -27,11 +27,16 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 	type params struct {
 		symbol string
 	}
+
+	responseType := "application/json"
+
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// validate and use symbol param
 		vars := mux.Vars(r)
@@ -64,6 +69,7 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 			return
 		}
 
+		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}
 }
