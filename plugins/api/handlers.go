@@ -33,7 +33,7 @@ func (s *server) withUrlEncForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
-			http.Error(w, "application/x-www-form-urlencoded content expected", http.StatusExpectationFailed)
+			http.Error(w, "application/x-www-form-urlencoded content-type expected", http.StatusExpectationFailed)
 			return
 		}
 		err := r.ParseForm()
@@ -50,7 +50,7 @@ func (s *server) withMultipartForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "multipart/form-data") {
-			http.Error(w, "multipart/form-data content expected", http.StatusExpectationFailed)
+			http.Error(w, "multipart/form-data content-type expected", http.StatusExpectationFailed)
 			return
 		}
 		err := r.ParseMultipartForm(1024)
@@ -67,7 +67,7 @@ func (s *server) withTextPlainForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "text/plain") {
-			http.Error(w, "text/plain content expected", http.StatusExpectationFailed)
+			http.Error(w, "text/plain content-type expected", http.StatusExpectationFailed)
 			return
 		}
 		next(w, r)
@@ -85,7 +85,7 @@ func (s *server) handleNodeVersionReq() http.HandlerFunc {
 }
 
 func (s *server) handleSimulateReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
-	h := dexapi.PutOrderReqHandler(cdc, ctx)
+	h := hnd.SimulateReqHandler(cdc, ctx)
 	return s.withTextPlainForm(s.limitReqSize(h))
 }
 

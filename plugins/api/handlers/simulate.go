@@ -43,14 +43,16 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 		var resp response
 		err = cdc.UnmarshalJSON(res, &resp)
 		if err != nil {
-			throw(w, http.StatusInternalServerError, err.Error())
+			errMsg := fmt.Sprintf("Couldn't unmarshal. Error: %s", err.Error())
+			throw(w, http.StatusInternalServerError, errMsg)
 			return
 		}
 
 		// re-marshal to json
 		output, err := cdc.MarshalJSON(resp)
 		if err != nil {
-			throw(w, http.StatusInternalServerError, err.Error())
+			errMsg := fmt.Sprintf("Couldn't marshal. Error: %s", err.Error())
+			throw(w, http.StatusInternalServerError, errMsg)
 			return
 		}
 
