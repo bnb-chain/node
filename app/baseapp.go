@@ -645,7 +645,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		msCache.Write()
 	}
 
-	return
+	return result
 }
 
 // EndBlock implements the ABCI application interface.
