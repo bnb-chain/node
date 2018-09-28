@@ -353,6 +353,7 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) (res abc
 			txBytes := req.Data
 			tx, err := app.txDecoder(txBytes)
 			if err != nil {
+				fmt.Println("A transaction simulation error occurred.")
 				result = err.Result()
 			} else {
 				result = app.Simulate(tx)

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,13 +27,22 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
+
 		if err != nil {
 			errMsg := fmt.Sprintf("Malformed request body. Error: %s", err.Error())
 			throw(w, http.StatusExpectationFailed, errMsg)
 			return
 		}
 
-		res, err := cctx.QueryWithData(ctx, "/app/simulate", body)
+		bz := make([]byte, len(body)/2)
+		_, err = hex.Decode(bz, body)
+		if err != nil {
+			errMsg := fmt.Sprintf("Couldn't decode hex body. Error: %s", err.Error())
+			throw(w, http.StatusExpectationFailed, errMsg)
+			return
+		}
+
+		res, err := cctx.QueryWithData(ctx, "/app/simulate", bz)
 		if err != nil {
 			errMsg := fmt.Sprintf("Couldn't simulate transaction. Error: %s", err.Error())
 			throw(w, http.StatusExpectationFailed, errMsg)
@@ -41,9 +51,9 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 
 		// expect abci query result to be `sdk.Result`
 		var resp response
-		err = cdc.UnmarshalJSON(res, &resp)
+		err = cdc.UnmarshalBinary(res, &resp)
 		if err != nil {
-			errMsg := fmt.Sprintf("Couldn't unmarshal. Error: %s", err.Error())
+			errMsg := fmt.Sprintf("Couldn't unmarshal. Error: %s. Response: %s", err.Error(), res)
 			throw(w, http.StatusInternalServerError, errMsg)
 			return
 		}
