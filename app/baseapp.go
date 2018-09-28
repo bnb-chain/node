@@ -592,6 +592,11 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	var gasWanted int64
 	ctx := app.getContextForAnte(mode, txBytes)
 
+	if mode == runTxModeSimulate {
+		// TODO: TEMPORARY! prevents matching engine persistence issues when simulating
+		ctx.WithIsCheckTx(true)
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			switch rType := r.(type) {
