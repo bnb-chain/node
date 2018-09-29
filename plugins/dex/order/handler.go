@@ -86,7 +86,7 @@ func handleNewOrder(
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	// this is done in memory! we must not run this block if run in checktx or simulate!
+	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsCheckTx() || simulate {
 		log.With("module", "dex").Info("Incoming New Order", "order", msg)
 		//only check whether there exists order to cancel
@@ -122,7 +122,7 @@ func handleNewOrder(
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
-	// this is done in memory! we must not run this block if run in checktx or simulate!
+	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate { // only subtract coins & insert into OB during DeliverTx
 		err := keeper.AddOrder(msg, ctx.BlockHeight())
 		if err != nil {
@@ -164,7 +164,7 @@ func handleCancelOrder(
 	var ord me.OrderPart
 	var err error
 
-	// this is done in memory! we must not run this block if run in checktx or simulate!
+	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate {
 		//remove order from cache and order book
 		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)

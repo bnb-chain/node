@@ -18,7 +18,7 @@ func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) common.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case Msg:
-			return handleList(ctx, keeper, tokenMapper, msg)
+			return handleList(ctx, keeper, tokenMapper, msg, simulate)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -26,7 +26,9 @@ func NewHandler(keeper order.Keeper, tokenMapper tokens.Mapper) common.Handler {
 	}
 }
 
-func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg) sdk.Result {
+func handleList(
+	ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper, msg Msg, simulate bool,
+) sdk.Result {
 	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
@@ -50,7 +52,8 @@ func handleList(ctx sdk.Context, keeper order.Keeper, tokenMapper tokens.Mapper,
 		return sdk.ErrInternal(err.Error()).Result()
 	}
 
-	if !ctx.IsCheckTx() { // only add engine during DeliverTx
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if !ctx.IsCheckTx() && !simulate { // only add engine during DeliverTx
 		keeper.AddEngine(pair)
 		log.With("module", "dex").Info("List new Pair and created new match engine", "pair", pair)
 	}
