@@ -264,38 +264,6 @@ func (app *BinanceChain) GetContextForCheckState() sdk.Context {
 	return app.checkState.ctx
 }
 
-func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQuery) (res abci.ResponseQuery) {
-	switch path[1] {
-	case "orderbook":
-		//TODO: sync lock, validate pair, level number
-		if len(path) < 3 {
-			return abci.ResponseQuery{
-				Code: uint32(sdk.CodeUnknownRequest),
-				Log:  "OrderBook Query Requires Pair Name",
-			}
-		}
-		pair := path[2]
-		orderbook := app.DexKeeper.GetOrderBook(pair, 20)
-		resValue, err := app.Codec.MarshalBinary(orderbook)
-		if err != nil {
-			return abci.ResponseQuery{
-				Code: uint32(sdk.CodeInternal),
-				Log:  err.Error(),
-			}
-		}
-
-		return abci.ResponseQuery{
-			Code:  uint32(sdk.ABCICodeOK),
-			Value: resValue,
-		}
-	default:
-		return abci.ResponseQuery{
-			Code: uint32(sdk.ABCICodeOK),
-			Info: "Unknown 'dex' Query Path",
-		}
-	}
-}
-
 // default custom logic for transaction decoding
 func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
 	return func(txBytes []byte) (sdk.Tx, sdk.Error) {
