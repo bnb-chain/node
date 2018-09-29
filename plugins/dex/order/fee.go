@@ -32,7 +32,6 @@ var (
 
 type FeeConfig struct {
 	cdc           *wire.Codec
-	mtx           sync.Mutex
 	storeKey      sdk.StoreKey
 	expireFee     int64
 	iocExpireFee  int64
