@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -25,7 +26,7 @@ type OrderBookSnapshot struct {
 }
 
 type ActiveOrders struct {
-	Orders []NewOrderMsg `json:"orders"`
+	Orders []OrderMsg `json:"orders"`
 }
 
 func genOrderBookSnapshotKey(height int64, pair string) string {
@@ -83,7 +84,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 		}
 	}
 	sort.Strings(msgKeys)
-	msgs := make([]NewOrderMsg, len(msgKeys), len(msgKeys))
+	msgs := make([]OrderMsg, len(msgKeys), len(msgKeys))
 	for i, key := range msgKeys {
 		msgs[i] = kp.allOrders[idSymbolMap[key]][key]
 	}
@@ -174,7 +175,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 }
 
 func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
-	height int64) {
+	height int64, timestamp time.Time) {
 	logger := bnclog.With("module", "dex")
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
@@ -189,7 +190,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
-				kp.AddOrder(msg, height)
+				kp.AddOrder(msg, height, timestamp.UnixNano())
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
 				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
@@ -205,7 +206,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	kp.MatchAll() //no need to check result
+	kp.MatchAll(height, timestamp.UnixNano()) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
@@ -214,7 +215,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHe
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		logger.Info("Relaying block for order book", "height", i)
-		kp.replayOneBlocks(block, txDecoder, i)
+		kp.replayOneBlocks(block, txDecoder, i, block.Time)
 	}
 	return nil
 }

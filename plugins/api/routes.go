@@ -31,6 +31,9 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx, s.accStoreName)).
 		Methods("PUT", "POST")
+	r.HandleFunc(prefix+"/openOrders", s.handleDexOpenOrdersReq(s.cdc, s.ctx)).
+		Queries("address", "{address}", "symbol", "{symbol}").
+		Methods("GET")
 
 	// tokens routes
 	r.HandleFunc(prefix+"/tokens", s.handleTokensReq(s.cdc, s.ctx)).

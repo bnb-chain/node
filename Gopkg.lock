@@ -543,6 +543,14 @@
   version = "v0.22.8"
 
 [[projects]]
+  digest = "1:bf6d9a827ea3cad964c2f863302e4f6823170d0b5ed16f72cf1184a7c615067e"
+  name = "github.com/tendermint/tmlibs"
+  packages = ["cli"]
+  pruneopts = "UT"
+  revision = "49596e0a1f48866603813df843c9409fc19805c6"
+  version = "v0.9.0"
+
+[[projects]]
   digest = "1:5bd938386bd1f61a581bf8cd6ff2b7b2f79c542929176db4ceb44965440dae07"
   name = "github.com/zondax/ledger-goclient"
   packages = ["."]
@@ -702,18 +710,26 @@
     "github.com/tendermint/tendermint/abci/client",
     "github.com/tendermint/tendermint/abci/server",
     "github.com/tendermint/tendermint/abci/types",
+    "github.com/tendermint/tendermint/blockchain",
+    "github.com/tendermint/tendermint/cmd/tendermint/commands",
+    "github.com/tendermint/tendermint/config",
+    "github.com/tendermint/tendermint/consensus",
     "github.com/tendermint/tendermint/crypto",
     "github.com/tendermint/tendermint/crypto/ed25519",
     "github.com/tendermint/tendermint/crypto/encoding/amino",
+    "github.com/tendermint/tendermint/crypto/secp256k1",
     "github.com/tendermint/tendermint/crypto/tmhash",
     "github.com/tendermint/tendermint/libs/bech32",
     "github.com/tendermint/tendermint/libs/cli",
+    "github.com/tendermint/tendermint/libs/cli/flags",
     "github.com/tendermint/tendermint/libs/common",
     "github.com/tendermint/tendermint/libs/db",
     "github.com/tendermint/tendermint/libs/log",
+    "github.com/tendermint/tendermint/rpc/client",
     "github.com/tendermint/tendermint/rpc/core/types",
     "github.com/tendermint/tendermint/rpc/lib/server",
     "github.com/tendermint/tendermint/types",
+    "github.com/tendermint/tmlibs/cli",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

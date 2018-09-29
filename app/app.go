@@ -288,6 +288,28 @@ func handleBinanceChainQuery(app *BinanceChain, path []string, req abci.RequestQ
 			Code:  uint32(sdk.ABCICodeOK),
 			Value: resValue,
 		}
+	case "openorders":
+		//TODO(#151): sync lock, validate pair, addr
+		if len(path) < 4 {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeUnknownRequest),
+				Log:  "OpenOrders query requires the pair symbol and address",
+			}
+		}
+		pair := path[2]
+		addr := path[3]
+		openOrders := app.DexKeeper.GetOpenOrders(pair, addr)
+		bz, err := app.Codec.MarshalBinary(openOrders)
+		if err != nil {
+			return abci.ResponseQuery{
+				Code: uint32(sdk.CodeInternal),
+				Log:  err.Error(),
+			}
+		}
+		return abci.ResponseQuery{
+			Code:  uint32(sdk.ABCICodeOK),
+			Value: bz,
+		}
 	default:
 		return abci.ResponseQuery{
 			Code: uint32(sdk.ABCICodeOK),
