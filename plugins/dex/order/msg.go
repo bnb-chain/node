@@ -32,9 +32,12 @@ var sideNames = map[string]int8{
 
 func IToSide(side int8) string {
 	switch side {
-	case Side.BUY: return "BUY"
-	case Side.SELL: return "SELL"
-	default: return "UNKNOWN"
+	case Side.BUY:
+		return "BUY"
+	case Side.SELL:
+		return "SELL"
+	default:
+		return "UNKNOWN"
 	}
 }
 
@@ -74,6 +77,17 @@ var OrderType = struct {
 	LIMIT  int8
 	MARKET int8
 }{orderLimit, orderMarket}
+
+func IToOrderType(tpe int8) string {
+	switch tpe {
+	case OrderType.LIMIT:
+		return "LIMIT"
+	case OrderType.MARKET:
+		return "MARKET"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 // IsValidOrderType validates that an order type is valid and supported by the matching engine
 func IsValidOrderType(ot int8) bool {
@@ -115,9 +129,12 @@ func IsValidTimeInForce(tif int8) bool {
 
 func IToTimeInForce(tif int8) string {
 	switch tif {
-	case TimeInForce.GTC: return "GTC"
-	case TimeInForce.IOC: return "IOC"
-	default: return "UNKNOWN"
+	case TimeInForce.GTC:
+		return "GTC"
+	case TimeInForce.IOC:
+		return "IOC"
+	default:
+		return "UNKNOWN"
 	}
 }
 

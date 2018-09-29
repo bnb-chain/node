@@ -30,12 +30,12 @@ sed -i -e "s/6060/9060/g" ${witnesshome}/config/config.toml
 # get validator id
 validator_pid=$(ps aux | grep "bnbchaind start$" | awk '{print $2}')
 validatorStatus=$(${cli} status)
-validatorId=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
+validator_id=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
 
 # set witness peer to validator and start witness
-sed -i -e "s/persistent_peers = \"\"/persistent_peers = \"${validatorId}@127.0.0.1:26656\"/g" ${witnesshome}/config/config.toml
+sed -i -e "s/persistent_peers = \"\"/persistent_peers = \"${validator_id}@127.0.0.1:26656\"/g" ${witnesshome}/config/config.toml
 sed -i -e "s/prometheus = false/prometheus = true/g" ${witnesshome}/config/config.toml
-sed -i -e "s/publishMarketData = false/publishMarketData = true/g" ${witnesshome}/config/app.toml
+sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${witnesshome}/config/app.toml
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${witnesshome}/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${witnesshome}/config/app.toml
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" ${witnesshome}/config/app.toml

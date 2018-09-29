@@ -35,9 +35,9 @@ const appConfigTemplate = `# This is a TOML config file.
 [publication]
 
 # Whether we want publish market data (this includes trades and order)
-publishMarketData = {{ .PublicationConfig.PublishMarketData }}
-marketDataTopic = "{{ .PublicationConfig.MarketDataTopic }}"
-marketDataKafka = "{{ .PublicationConfig.MarketDataKafka }}"
+publishOrderUpdates = {{ .PublicationConfig.PublishOrderUpdates }}
+orderUpdatesTopic = "{{ .PublicationConfig.OrderUpdatesTopic }}"
+orderUpdatesKafka = "{{ .PublicationConfig.OrderUpdatesKafka }}"
 
 # Whether we want publish account balance to notify browser db indexer persist latest account balance change
 publishAccountBalance = {{ .PublicationConfig.PublishAccountBalance }}
@@ -57,7 +57,10 @@ type BinanceChainContext struct {
 }
 
 func NewDefaultContext() *BinanceChainContext {
-	return &BinanceChainContext{server.NewDefaultContext(), viper.New(), DefaultBinanceChainConfig()}
+	return &BinanceChainContext{
+		server.NewDefaultContext(),
+		viper.New(),
+		DefaultBinanceChainConfig()}
 }
 
 func (context *BinanceChainContext) ToCosmosServerCtx() *server.Context {
@@ -75,9 +78,9 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 }
 
 type PublicationConfig struct {
-	PublishMarketData bool   `mapstructure:"publishMarketData"`
-	MarketDataTopic   string `mapstructure:"marketDataTopic"`
-	MarketDataKafka   string `mapstructure:"marketDataKafka"`
+	PublishOrderUpdates bool   `mapstructure:"publishOrderUpdates"`
+	OrderUpdatesTopic   string `mapstructure:"orderUpdatesTopic"`
+	OrderUpdatesKafka   string `mapstructure:"orderUpdatesKafka"`
 
 	PublishAccountBalance bool   `mapstructure:"publishAccountBalance"`
 	AccountBalanceTopic   string `mapstructure:"accountBalanceTopic"`
@@ -90,9 +93,9 @@ type PublicationConfig struct {
 
 func defaultPublicationConfig() *PublicationConfig {
 	return &PublicationConfig{
-		PublishMarketData: false,
-		MarketDataTopic:   "test",
-		MarketDataKafka:   "127.0.0.1:9092",
+		PublishOrderUpdates: false,
+		OrderUpdatesTopic:   "test",
+		OrderUpdatesKafka:   "127.0.0.1:9092",
 
 		PublishAccountBalance: false,
 		AccountBalanceTopic:   "accounts",
@@ -104,8 +107,13 @@ func defaultPublicationConfig() *PublicationConfig {
 	}
 }
 
+func (pubCfg PublicationConfig) ShouldPublishAny() bool {
+	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook
+}
+
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {
-	// this piece of code should be consistent with bindFlagsLoadViper vendor/github.com/tendermint/tendermint/libs/cli/setup.go:125
+	// this piece of code should be consistent with bindFlagsLoadViper
+	// vendor/github.com/tendermint/tendermint/libs/cli/setup.go:125
 	homeDir := viper.GetString(cli.HomeFlag)
 	context.Viper.SetConfigName(AppConfigFileName)
 	context.Viper.AddConfigPath(homeDir)

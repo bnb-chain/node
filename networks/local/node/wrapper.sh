@@ -26,11 +26,7 @@ fi
 export BCHOME="/bnbchaind/node${ID}/gaiad"
 
 if [ -d "`dirname ${BCHOME}/${LOG}`" ]; then
-  if [ ${ID} == 2 ]; then
-    "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
-  else
-    "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
-  fi
+  "$BINARY" --home "$BCHOME" "$@" | tee "${BCHOME}/${LOG}"
 else
   "$BINARY" --home "$BCHOME" "$@"
 fi

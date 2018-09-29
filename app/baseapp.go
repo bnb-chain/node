@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/spf13/viper"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -720,33 +720,23 @@ func (app *BaseApp) Commit() (res abci.ResponseCommit) {
 }
 
 func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context) {
-	switch msg.Type() {
-	case list.Route:
-		listMsg := msg.(list.Msg)
-		newCtx = addInvolvedAddressesToCtx(ctx, listMsg.From)
-	case order.NewOrder:
-		newOrderMsg := msg.(order.NewOrderMsg)
-		newCtx = addInvolvedAddressesToCtx(ctx, newOrderMsg.Sender)
-	case order.CancelOrder:
-		cancelOrderMsg := msg.(order.CancelOrderMsg)
-		newCtx = addInvolvedAddressesToCtx(ctx, cancelOrderMsg.Sender)
-	case issue.Route:
-		issueMsg := msg.(issue.Msg)
-		newCtx = addInvolvedAddressesToCtx(ctx, issueMsg.From)
-	case burn.Route:
-		burnMsg := msg.(burn.Msg)
-		newCtx = addInvolvedAddressesToCtx(ctx, burnMsg.From)
-	case freeze.RouteFreeze:
-		freezeMsg, ok := msg.(freeze.FreezeMsg)
-		if ok {
-			newCtx = addInvolvedAddressesToCtx(ctx, freezeMsg.From)
-		} else {
-			unfreezeMsg := msg.(freeze.UnfreezeMsg)
-			newCtx = addInvolvedAddressesToCtx(ctx, unfreezeMsg.From)
-		}
-	case bank.MsgSend{}.Type():
-		sendMsg := msg.(bank.MsgSend)
-		newCtx = addInvolvedAddressesToCtx(ctx, sendMsg.Inputs[0].Address, sendMsg.Outputs[0].Address)
+	switch ct := msg.(type) {
+	case list.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case order.NewOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case order.CancelOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case issue.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case burn.Msg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.FreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.UnfreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case bank.MsgSend:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Inputs[0].Address, ct.Outputs[0].Address)
 	default:
 		// TODO(#66): correct error handling
 	}
@@ -754,17 +744,15 @@ func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context)
 }
 
 func addInvolvedAddressesToCtx(ctx sdk.Context, addresses ...sdk.AccAddress) (newCtx sdk.Context) {
-	existing := ctx.Value(InvolvedAddressKey)
-	var existingAddress map[string]bool
-	if existing == nil {
-		existingAddress = make(map[string]bool)
+	var newAddress []string
+	if addresses, ok := ctx.Value(InvolvedAddressKey).([]string); ok {
+		newAddress = addresses
 	} else {
-		existingAddress = existing.(map[string]bool)
+		newAddress = make([]string, 0)
 	}
-
 	for _, address := range addresses {
-		existingAddress[address.String()] = true
+		newAddress = append(newAddress, string(address.Bytes()))
 	}
-	newCtx = ctx.WithValue(InvolvedAddressKey, existingAddress)
+	newCtx = ctx.WithValue(InvolvedAddressKey, newAddress)
 	return
 }

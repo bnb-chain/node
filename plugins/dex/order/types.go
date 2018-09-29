@@ -1,8 +1,10 @@
 package order
 
+import "fmt"
+
 // The types here are shared between order and pub package
 
-type ChangeType int
+type ChangeType uint8
 
 const (
 	Ack ChangeType = iota
@@ -27,6 +29,21 @@ func (this ChangeType) String() string {
 		return "PartialFill"
 	case FullyFill:
 		return "FullyFill"
+	default:
+		return "Unknown"
+	}
+}
+
+type ExecutionType uint8
+
+const (
+	NEW ExecutionType = iota
+)
+
+func (this ExecutionType) String() string {
+	switch this {
+	case NEW:
+		return "NEW"
 	default:
 		return "Unknown"
 	}
@@ -58,7 +75,6 @@ type OrderChange struct {
 	Tpe              ChangeType
 	Fee              int64
 	FeeAsset         string
-	LeavesQty        int64
 	CumQty           int64
 	CumQuoteAssetQty int64 // TODO(#66): cannot recover from restart for buy order:(
 	creationTime     int64 // TODO(#66): cannot recover from restart:(
@@ -81,4 +97,33 @@ type ChangedPriceLevels map[string]ChangedPriceLevelsPerSymbol
 type ChangedPriceLevelsPerSymbol struct {
 	Buys  map[int64]int64
 	Sells map[int64]int64
+}
+
+type TradeFeeHolder struct {
+	SId  string
+	BId  string // still need two ids here to link with correct trade
+	Side int8
+	Fee
+}
+
+func (fh TradeFeeHolder) String() string {
+	return fmt.Sprintf("sid: %s, bid: %s, side: %s, fee: %s", fh.SId, fh.BId, IToSide(fh.Side), fh.Fee)
+}
+
+type ExpireFeeHolder struct {
+	OrderId string
+	Fee
+}
+
+func (fh ExpireFeeHolder) String() string {
+	return fmt.Sprintf("order: %s, fee: %s", fh.OrderId, fh.Fee)
+}
+
+type Fee struct {
+	Amount int64
+	Asset  string
+}
+
+func (fee Fee) String() string {
+	return fmt.Sprintf("%d%s", fee.Amount, fee.Asset)
 }

@@ -5,11 +5,10 @@ import (
 
 	"github.com/linkedin/goavro"
 
-	"github.com/tendermint/tendermint/libs/log"
+	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 var (
-	logger                log.Logger
 	booksCodec            *goavro.Codec
 	accountCodec          *goavro.Codec
 	tradeseAndOrdersCodec *goavro.Codec
@@ -56,7 +55,7 @@ func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 	}
 	bb, err := codec.BinaryFromNative(nil, native)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to serialize message: %s", msg), "err", err)
+		Logger.Error("failed to serialize message", "msg", msg, "err", err)
 	}
 	return bb, err
 }
@@ -118,9 +117,6 @@ type Trade struct {
 	Bfee      int64
 	SfeeAsset string
 	BfeeAsset string
-
-	// for internal usage, don't need to be serialized
-	BuyCumQty int64
 }
 
 func (msg *Trade) String() string {
@@ -164,12 +160,12 @@ func (msg *orders) ToNativeMap() map[string]interface{} {
 
 type order struct {
 	symbol               string
-	status               string
+	status               orderPkg.ChangeType
 	orderId              string
 	tradeId              string
 	owner                string
-	side                 string
-	orderType            string
+	side                 int8
+	orderType            int8
 	price                int64
 	qty                  int64
 	lastExecutedPrice    int64
@@ -180,8 +176,8 @@ type order struct {
 	feeAsset             string
 	orderCreationTime    int64
 	transactionTime      int64
-	timeInForce          string
-	currentExecutionType string
+	timeInForce          int8
+	currentExecutionType orderPkg.ExecutionType
 	txHash               string
 }
 
@@ -192,12 +188,12 @@ func (msg *order) String() string {
 func (msg *order) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["symbol"] = msg.symbol
-	native["status"] = msg.status
+	native["status"] = msg.status.String() //TODO(#66): confirm with all teams to make this uint8 enum
 	native["orderId"] = msg.orderId
 	native["tradeId"] = msg.tradeId
 	native["owner"] = msg.owner
-	native["side"] = msg.side
-	native["orderType"] = msg.orderType
+	native["side"] = orderPkg.IToSide(msg.side)                //TODO(#66): confirm with all teams to make this uint8 enum
+	native["orderType"] = orderPkg.IToOrderType(msg.orderType) //TODO(#66): confirm with all teams to make this uint8 enum
 	native["price"] = msg.price
 	native["qty"] = msg.qty
 	native["lastExecutedPrice"] = msg.lastExecutedPrice
@@ -208,8 +204,8 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	native["feeAsset"] = msg.feeAsset
 	native["orderCreationTime"] = msg.orderCreationTime
 	native["transactionTime"] = msg.transactionTime
-	native["timeInForce"] = msg.timeInForce
-	native["currentExecutionType"] = msg.currentExecutionType
+	native["timeInForce"] = orderPkg.IToTimeInForce(msg.timeInForce)   //TODO(#66): confirm with all teams to make this uint8 enum
+	native["currentExecutionType"] = msg.currentExecutionType.String() //TODO(#66): confirm with all teams to make this uint8 enum
 	native["txHash"] = msg.txHash
 	return native
 }
@@ -346,32 +342,7 @@ func (msg *accounts) ToNativeMap() map[string]interface{} {
 	return native
 }
 
-type transaction struct {
-	id    string
-	from  string
-	to    string
-	asset string
-	qty   int64
-	tpe   string
-}
-
-func (msg *transaction) String() string {
-	return fmt.Sprintf("Transaction: %s", msg.ToNativeMap())
-}
-
-func (msg *transaction) ToNativeMap() map[string]interface{} {
-	var native = make(map[string]interface{})
-	native["id"] = msg.id
-	native["from"] = msg.from
-	native["to"] = msg.to
-	native["asset"] = msg.asset
-	native["qty"] = msg.qty
-	native["tpe"] = msg.tpe
-	return native
-}
-
-func initAvroCodecs(logg log.Logger) (res error) {
-	logger = logg
+func initAvroCodecs() (res error) {
 	if tradeseAndOrdersCodec, res = goavro.NewCodec(tradesAndOrdersSchema); res != nil {
 		return res
 	} else if booksCodec, res = goavro.NewCodec(booksSchema); res != nil {

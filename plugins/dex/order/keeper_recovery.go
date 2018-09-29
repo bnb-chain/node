@@ -147,7 +147,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			if kp.CollectOrderInfoForPublish {
 				for _, orderPart := range pl.Orders {
 					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
-					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, LeavesQty: orderPart.LeavesQty()}
+					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty}
 				}
 			}
 		}
@@ -156,7 +156,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			if kp.CollectOrderInfoForPublish {
 				for _, orderPart := range pl.Orders {
 					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
-					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, LeavesQty: orderPart.LeavesQty(), CumQuoteAssetQty: orderPart.CumQty}
+					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, CumQuoteAssetQty: orderPart.CumQty}
 				}
 			}
 		}
@@ -188,7 +188,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			} else {
 				// This order hasn't been executed before
 				bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from active orders", m.Id))
-				kp.OrderChangesMap[m.Id] = &OrderChange{OrderMsg: m, Tpe: Ack, LeavesQty: m.Quantity}
+				kp.OrderChangesMap[m.Id] = &OrderChange{OrderMsg: m, Tpe: Ack}
 			}
 		}
 	}

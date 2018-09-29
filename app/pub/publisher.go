@@ -2,7 +2,6 @@ package pub
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"os"
 	"strconv"
 	"time"
@@ -14,18 +13,24 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
+	"github.com/BiJie/BinanceChain/common/utils"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 const (
-	// TODO(#66): revisit the setting / whole thread model here, do we need better way to make main thread less possibility to block
+	// TODO(#66): revisit the setting / whole thread model here,
+	// do we need better way to make main thread less possibility to block
 	PublicationChannelSize     = 10000
 	FeeCollectionChannelSize   = 4000
 	ToRemoveOrderIdChannelSize = 1000
+	MaxOrderBookLevel          = 20
+)
+
+var (
+	Logger log.Logger
 )
 
 type MarketDataPublisher struct {
-	Logger            log.Logger
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string   // order ids to remove from keeper.OrderChangesMap
 	RemoveDoneCh      chan struct{} // order ids to remove for this block is done
@@ -35,13 +40,14 @@ type MarketDataPublisher struct {
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
 
-func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig) (err error) {
+func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig, logger log.Logger) (err error) {
 	sarama.Logger = saramaLogger{}
+	Logger = logger
 	publisher.config = config
 	publisher.producers = make(map[string]sarama.SyncProducer)
 
 	if config, err := publisher.newProducers(); err != nil {
-		publisher.Logger.Error("failed to create new kafka producer", "err", err)
+		Logger.Error("failed to create new kafka producer", "err", err)
 		return err
 	} else {
 		// we have to use the same prometheus registerer with tendermint so that we can share same host:port for prometheus daemon
@@ -51,8 +57,8 @@ func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig) (er
 		go pClient.UpdatePrometheusMetrics()
 	}
 
-	if err = initAvroCodecs(publisher.Logger); err != nil {
-		publisher.Logger.Error("failed to initialize avro codec", "err", err)
+	if err = initAvroCodecs(); err != nil {
+		Logger.Error("failed to initialize avro codec", "err", err)
 		return err
 	}
 
@@ -63,7 +69,7 @@ func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig) (er
 }
 
 func (publisher *MarketDataPublisher) Stop() {
-	publisher.Logger.Info("start to stop MarketDataPublisher")
+	Logger.Info("start to stop MarketDataPublisher")
 	publisher.IsLive = false
 
 	close(publisher.ToPublishCh)
@@ -74,47 +80,62 @@ func (publisher *MarketDataPublisher) Stop() {
 		// nil check because this method would be called when we failed to create producer
 		if producer != nil {
 			if err := producer.Close(); err != nil {
-				publisher.Logger.Error(fmt.Sprintf("faid to stop producer for topic: %s", topic), "err", err)
+				Logger.Error("faid to stop producer for topic", "topic", topic, "err", err)
 			}
 		}
 	}
-	publisher.Logger.Info("finished stop MarketDataPublisher")
+	Logger.Info("finished stop MarketDataPublisher")
 }
 
 func (publisher *MarketDataPublisher) ShouldPublish() bool {
-	return publisher.IsLive && (publisher.config.PublishMarketData || publisher.config.PublishOrderBook || publisher.config.PublishAccountBalance)
+	return publisher.IsLive && publisher.config.ShouldPublishAny()
 }
 
 func (publisher *MarketDataPublisher) publish() {
 	for marketData := range publisher.ToPublishCh {
-		// Implementation note: publication order are important here, DEX query service team relies on the fact that we publish orders before trades so that they can assign buyer/seller address into trade before persist into DB
-
+		// Implementation note: publication order are important here,
+		// DEX query service team relies on the fact that we publish orders before trades so that
+		// they can assign buyer/seller address into trade before persist into DB
 		var ordersToPublish []order
-		if publisher.config.PublishMarketData || publisher.config.PublishOrderBook {
-			ordersToPublish = publisher.collectFilledOrdersFromTrade(&marketData.tradesToPublish, marketData.orderChanges, marketData.orderChangesMap, marketData.timestamp)
+		if publisher.config.PublishOrderUpdates || publisher.config.PublishOrderBook {
+			ordersToPublish = publisher.collectFilledOrdersFromTrade(
+				&marketData.tradesToPublish,
+				marketData.orderChanges,
+				marketData.orderChangesMap,
+				marketData.timestamp)
 		}
 		publisher.RemoveDoneCh <- struct{}{}
 
-		if publisher.config.PublishMarketData {
-			publisher.Logger.Info("start to publish all orders")
-			publisher.publishMarketData(marketData.height, marketData.timestamp, ordersToPublish, marketData.tradesToPublish)
+		if publisher.config.PublishOrderUpdates {
+			Logger.Info("start to publish all orders")
+			publisher.publishOrderUpdates(
+				marketData.height,
+				marketData.timestamp,
+				ordersToPublish,
+				marketData.tradesToPublish)
 		}
 
 		if publisher.config.PublishAccountBalance {
-			publisher.Logger.Info("start to publish all changed accounts")
+			Logger.Info("start to publish all changed accounts")
 			publisher.publishAccount(marketData.height, marketData.timestamp, marketData.accounts)
 		}
 
 		if publisher.config.PublishOrderBook {
-			publisher.Logger.Info("start to publish changed order books")
-			changedPrices := publisher.collectChangedOrderBooksFromOrders(&ordersToPublish, marketData.latestPricesLevels)
+			Logger.Info("start to publish changed order books")
+			changedPrices := publisher.collectChangedOrderBooksFromOrders(
+				&ordersToPublish,
+				marketData.latestPricesLevels)
 			publisher.publishOrderBookData(marketData.height, marketData.timestamp, changedPrices)
 		}
 	}
 }
 
 // we collect OrderPart here to make matcheng module independent
-func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *[]Trade, orderChanges orderPkg.OrderChanges, orderChangesMap orderPkg.OrderChangesMap, timestamp int64) (ordersToPublish []order) {
+func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(
+	trades *[]Trade,
+	orderChanges orderPkg.OrderChanges,
+	orderChangesMap orderPkg.OrderChangesMap,
+	timestamp int64) (ordersToPublish []order) {
 	ordersToPublish = make([]order, 0)
 	canceledToPublish := make([]order, 0)
 
@@ -122,12 +143,12 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *[]Tra
 	for idx, o := range orderChanges {
 		orderToPublish := order{
 			o.OrderMsg.Symbol,
-			o.Tpe.String(),
+			o.Tpe,
 			o.OrderMsg.Id,
 			"",
 			o.OrderMsg.Sender.String(),
-			orderPkg.IToSide(o.OrderMsg.Side),
-			"LIMIT",
+			o.OrderMsg.Side,
+			orderPkg.OrderType.LIMIT,
 			o.OrderMsg.Price,
 			o.OrderMsg.Quantity,
 			0,
@@ -138,8 +159,8 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *[]Tra
 			orderChangesMap[o.OrderMsg.Id].FeeAsset,
 			o.CreationTime(),
 			timestamp,
-			orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce),
-			"NEW",
+			o.OrderMsg.TimeInForce,
+			orderPkg.NEW,
 			o.TxHash,
 		}
 		if o.Tpe == orderPkg.Ack {
@@ -149,7 +170,9 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *[]Tra
 			ordersToPublish = append(ordersToPublish, orderToPublish)
 		} else {
 			canceledToPublish = append(canceledToPublish, orderToPublish)
-			publisher.Logger.Debug(fmt.Sprintf("going to delete order %s from order changes map because of %s", o.OrderMsg.Id, orderToPublish.status))
+			Logger.Debug(
+				"going to delete order from order changes map",
+				"orderId", o.OrderMsg.Id, "reason", orderToPublish.status)
 			publisher.ToRemoveOrderIdCh <- o.OrderMsg.Id
 		}
 	}
@@ -159,13 +182,13 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(trades *[]Tra
 		if o, exists := orderChangesMap[t.Bid]; exists {
 			ordersToPublish = append(ordersToPublish, publisher.collectFilledOrderFromTrade(t, o, timestamp))
 		} else {
-			publisher.Logger.Error(fmt.Sprintf("failed to resolve order information for id: %s from orderChangesMap", t.Bid))
+			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
 		}
 
 		if o, exists := orderChangesMap[t.Sid]; exists {
 			ordersToPublish = append(ordersToPublish, publisher.collectFilledOrderFromTrade(t, o, timestamp))
 		} else {
-			publisher.Logger.Error(fmt.Sprintf("failed to resolve order information for id: %s from orderChangesMap", t.Sid))
+			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
 		}
 	}
 
@@ -179,16 +202,11 @@ func (publisher *MarketDataPublisher) collectFilledOrderFromTrade(
 
 	// accumulate numbers because we need know the leaves and cum quantities
 	// for expired order
-	o.LeavesQty -= t.Qty
 	o.CumQty += t.Qty
 	o.CumQuoteAssetQty += utils.CalBigNotional(t.Qty, t.Price) //TODO(#66): confirm with danjun this value is right
 
 	var status orderPkg.ChangeType
-	if o.LeavesQty <= 0 {
-		if o.LeavesQty < 0 {
-			publisher.Logger.Error(fmt.Sprintf("order %s leaves quantity is negative: %d", o.OrderMsg.Id, o.LeavesQty))
-		}
-		// for buy order, this should hold: t.BuyCumQty == o.OrderMsg.Quantity
+	if o.CumQty == o.OrderMsg.Quantity {
 		status = orderPkg.FullyFill
 	} else {
 		status = orderPkg.PartialFill
@@ -204,12 +222,12 @@ func (publisher *MarketDataPublisher) collectFilledOrderFromTrade(
 	}
 	res := order{
 		o.OrderMsg.Symbol,
-		status.String(),
+		status,
 		o.OrderMsg.Id,
 		t.Id,
 		o.OrderMsg.Sender.String(),
-		orderPkg.IToSide(o.OrderMsg.Side),
-		"LIMIT",
+		o.OrderMsg.Side,
+		orderPkg.OrderType.LIMIT,
 		o.OrderMsg.Price,
 		o.OrderMsg.Quantity,
 		t.Price,
@@ -220,18 +238,18 @@ func (publisher *MarketDataPublisher) collectFilledOrderFromTrade(
 		feeAsset,
 		o.CreationTime(),
 		timestamp,
-		orderPkg.IToTimeInForce(o.OrderMsg.TimeInForce),
-		"NEW",
+		o.OrderMsg.TimeInForce,
+		orderPkg.NEW,
 		o.TxHash,
 	}
 	if status == orderPkg.FullyFill {
-		publisher.Logger.Debug(fmt.Sprintf("going to delete order %s from order changes map because of fully fill", o.OrderMsg.Id))
+		Logger.Debug("going to delete order from order changes map because of fully fill", "orderId", o.OrderMsg.Id)
 		publisher.ToRemoveOrderIdCh <- o.OrderMsg.Id
 	}
 	return res
 }
 
-func (publisher *MarketDataPublisher) publishMarketData(height int64, timestamp int64, os []order, tradesToPublish []Trade) {
+func (publisher *MarketDataPublisher) publishOrderUpdates(height int64, timestamp int64, os []order, tradesToPublish []Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, numOfMsgs: numOfTrades + numOfOrders}
@@ -243,14 +261,14 @@ func (publisher *MarketDataPublisher) publishMarketData(height int64, timestamp 
 	}
 
 	if msg, err := marshal(&tradesAndOrdersMsg, tradesAndOrdersTpe); err == nil {
-		kafkaMsg := publisher.prepareMessage(publisher.config.MarketDataTopic, strconv.FormatInt(height, 10), timestamp, tradesAndOrdersTpe, msg)
-		if partition, offset, err := publisher.producers[publisher.config.MarketDataTopic].SendMessage(kafkaMsg); err == nil {
-			publisher.Logger.Info(fmt.Sprintf("published tradesAndOrders: %s, at offset: %d (of partition: %d)", tradesAndOrdersMsg.String(), offset, partition))
+		kafkaMsg := publisher.prepareMessage(publisher.config.OrderUpdatesTopic, strconv.FormatInt(height, 10), timestamp, tradesAndOrdersTpe, msg)
+		if partition, offset, err := publisher.producers[publisher.config.OrderUpdatesTopic].SendMessage(kafkaMsg); err == nil {
+			Logger.Info("published tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "offset", offset, "partition", partition)
 		} else {
-			publisher.Logger.Error(fmt.Sprintf("failed to publish tradesAndOrders: %s", tradesAndOrdersMsg.String()), "err", err)
+			Logger.Error("failed to publish tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "err", err)
 		}
 	} else {
-		publisher.Logger.Error(fmt.Sprintf("failed to publish tradesAndOrders: %s", tradesAndOrdersMsg.String()), "err", err)
+		Logger.Error("failed to publish tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "err", err)
 	}
 }
 
@@ -267,20 +285,18 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 	if msg, err := marshal(&accountsMsg, accountsTpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(publisher.config.AccountBalanceTopic, strconv.FormatInt(height, 10), timestamp, accountsTpe, msg)
 		if partition, offset, err := publisher.producers[publisher.config.AccountBalanceTopic].SendMessage(kafkaMsg); err == nil {
-			publisher.Logger.Info(fmt.Sprintf("published accounts: %s, at offset: %d (of partition: %d)", accountsMsg.String(), offset, partition))
+			Logger.Info("published accounts", "accounts", accountsMsg.String(), "offset", offset, "partition", partition)
 		} else {
-			publisher.Logger.Error(fmt.Sprintf("failed to publish accounts: %s", accountsMsg.String()), "err", err)
+			Logger.Error("failed to publish accounts", "accounts", accountsMsg.String(), "err", err)
 		}
 	} else {
-		publisher.Logger.Error(fmt.Sprintf("failed to publish accounts: %s", accountsMsg.String()), "err", err)
+		Logger.Error("failed to publish accounts", "accounts", accountsMsg.String(), "err", err)
 	}
 }
 
 // collect all changed books according to published order status
 func (publisher *MarketDataPublisher) collectChangedOrderBooksFromOrders(ordersToPublish *[]order, latestPriceLevels orderPkg.ChangedPriceLevels) orderPkg.ChangedPriceLevels {
 	var res = make(orderPkg.ChangedPriceLevels)
-	var buySideStr = orderPkg.IToSide(orderPkg.Side.BUY)
-	var sellSideStr = orderPkg.IToSide(orderPkg.Side.SELL)
 	for _, o := range *ordersToPublish {
 		if _, ok := latestPriceLevels[o.symbol]; !ok {
 			continue
@@ -290,14 +306,14 @@ func (publisher *MarketDataPublisher) collectChangedOrderBooksFromOrders(ordersT
 		}
 
 		switch o.side {
-		case buySideStr:
+		case orderPkg.Side.BUY:
 			// TODO(#66): code clean up - here we rely on special implementation that for orders that not generated from trade (like New, Cancel) the lastExecutedPrice is original price (rather than 0)
 			if qty, ok := latestPriceLevels[o.symbol].Buys[o.lastExecutedPrice]; ok {
 				res[o.symbol].Buys[o.lastExecutedPrice] = qty
 			} else {
 				res[o.symbol].Buys[o.lastExecutedPrice] = 0
 			}
-		case sellSideStr:
+		case orderPkg.Side.SELL:
 			if qty, ok := latestPriceLevels[o.symbol].Sells[o.lastExecutedPrice]; ok {
 				res[o.symbol].Sells[o.lastExecutedPrice] = qty
 			} else {
@@ -330,12 +346,12 @@ func (publisher *MarketDataPublisher) publishOrderBookData(height int64, timesta
 	if msg, err := marshal(&books, booksTpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(publisher.config.OrderBookTopic, strconv.FormatInt(height, 10), timestamp, booksTpe, msg)
 		if partition, offset, err := publisher.producers[publisher.config.OrderBookTopic].SendMessage(kafkaMsg); err == nil {
-			publisher.Logger.Info(fmt.Sprintf("published books: %s, at offset: %d (of partition: %d)", books.String(), offset, partition))
+			Logger.Info("published books", "books", books.String(), "offset", offset, "partition", partition)
 		} else {
-			publisher.Logger.Error(fmt.Sprintf("failed to publish books: %s", books.String()), "err", err)
+			Logger.Error("failed to publish books", "books", books.String(), "err", err)
 		}
 	} else {
-		publisher.Logger.Error(fmt.Sprintf("failed to publish books: %s", books.String()), "err", err)
+		Logger.Error("failed to publish books", "books", books.String(), "err", err)
 	}
 }
 
@@ -352,39 +368,50 @@ func (publisher *MarketDataPublisher) newProducers() (config *sarama.Config, err
 	config.Producer.Retry.Max = 20
 	config.Producer.Compression = sarama.CompressionNone
 
-	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection to make sure messages won't out-of-order
+	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection
+	// to make sure messages won't out-of-order
 	// Refer: https://github.com/Shopify/sarama/issues/718
 	config.Net.MaxOpenRequests = 1
 
-	if publisher.config.PublishMarketData {
-		publisher.producers[publisher.config.MarketDataTopic], err = sarama.NewSyncProducer([]string{publisher.config.MarketDataKafka}, config)
+	if publisher.config.PublishOrderUpdates {
+		if _, ok := publisher.producers[publisher.config.OrderUpdatesTopic]; !ok {
+			publisher.producers[publisher.config.OrderUpdatesTopic], err =
+				sarama.NewSyncProducer([]string{publisher.config.OrderUpdatesKafka}, config)
+		}
 		if err != nil {
-			publisher.Logger.Error("failed to create market data producer", "err", err)
+			Logger.Error("failed to create order updates producer", "err", err)
 			return
 		}
 	}
 	if publisher.config.PublishOrderBook {
 		if _, ok := publisher.producers[publisher.config.OrderBookTopic]; !ok {
-			publisher.producers[publisher.config.OrderBookTopic], err = sarama.NewSyncProducer([]string{publisher.config.OrderBookKafka}, config)
+			publisher.producers[publisher.config.OrderBookTopic], err =
+				sarama.NewSyncProducer([]string{publisher.config.OrderBookKafka}, config)
 		}
 		if err != nil {
-			publisher.Logger.Error("failed to create order book producer", "err", err)
+			Logger.Error("failed to create order book producer", "err", err)
 			return
 		}
 	}
 	if publisher.config.PublishAccountBalance {
 		if _, ok := publisher.producers[publisher.config.AccountBalanceTopic]; !ok {
-			publisher.producers[publisher.config.AccountBalanceTopic], err = sarama.NewSyncProducer([]string{publisher.config.AccountBalanceKafka}, config)
+			publisher.producers[publisher.config.AccountBalanceTopic], err =
+				sarama.NewSyncProducer([]string{publisher.config.AccountBalanceKafka}, config)
 		}
 		if err != nil {
-			publisher.Logger.Error("failed to create account balance producer", "err", err)
+			Logger.Error("failed to create account balance producer", "err", err)
 			return
 		}
 	}
 	return
 }
 
-func (publisher *MarketDataPublisher) prepareMessage(topic string, msgId string, timeStamp int64, msgTpe msgType, message []byte) *sarama.ProducerMessage {
+func (publisher *MarketDataPublisher) prepareMessage(
+	topic string,
+	msgId string,
+	timeStamp int64,
+	msgTpe msgType,
+	message []byte) *sarama.ProducerMessage {
 	msg := &sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: -1,

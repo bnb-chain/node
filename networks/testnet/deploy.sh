@@ -262,7 +262,7 @@ sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" node_publisher/gaia
 sed -i -e "s/marketDataKafka = \"127.0.0.1:9092\"/marketDataKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
-sed -i -e "s/publishMarketData = false/publishMarketData = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" node_publisher/gaiad/config/app.toml

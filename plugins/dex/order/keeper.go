@@ -71,12 +71,20 @@ func (tran Transfer) IsBuyer() bool {
 	return strings.HasPrefix(tran.Bid, tran.accAddress.String())
 }
 
+func (tran Transfer) GetPairSymbol() string {
+	if tran.IsBuyer() {
+		return fmt.Sprintf("%s_%s", tran.inAsset, tran.outAsset)
+	} else {
+		return fmt.Sprintf("%s_%s", tran.outAsset, tran.inAsset)
+	}
+}
+
 func (tran Transfer) FeeFree() bool {
 	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
 }
 
-func (tran Transfer) IsExpired() bool {
-	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire || tran.FeeFree()
+func (tran Transfer) IsExpiredWithFee() bool {
+	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
 }
 
 func (tran *Transfer) String() string {
@@ -141,12 +149,12 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64, txHash string, isRepla
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{OrderMsg: msg, TxHash: txHash, Tpe: Ack, Fee: 0, LeavesQty: msg.Quantity}
+		change := OrderChange{OrderMsg: msg, TxHash: txHash, Tpe: Ack, Fee: 0}
 		// deliberately not add this message to orderChanges
 		if !isReplay {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug(fmt.Sprintf("add order %s to order changes map, isReplay: %t", msg.Id, isReplay))
+		bnclog.Debug(fmt.Sprintf("add order to order changes map", "orderId", msg.Id, "isReplay", isReplay))
 		kp.OrderChangesMap[msg.Id] = &change
 	}
 
@@ -177,7 +185,7 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64, 
 	ord, err = eng.Book.RemoveOrder(id, side, price)
 	if kp.CollectOrderInfoForPublish && !isReplay {
 		// fee will be updated during doTransfer
-		change := OrderChange{OrderMsg: msg, Tpe: reason, Fee: 0, LeavesQty: ord.LeavesQty(), CumQty: ord.CumQty, TxHash: txHash}
+		change := OrderChange{OrderMsg: msg, Tpe: reason, Fee: 0, CumQty: ord.CumQty, TxHash: txHash}
 		kp.OrderChanges = append(kp.OrderChanges, change)
 	}
 	return ord, err
@@ -211,7 +219,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Tra
 	buyer := kp.allOrders[symbol][trade.BId].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty) // TODO: can this be optimised into utils.CalBigNotional(trade.OrigBuyPx, trade.LastQty)???
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
 	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}},
 		Transfer{trade.BId, trade.SId, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}}
 }
@@ -398,19 +406,19 @@ func (kp *Keeper) GetLastTrades() *map[string][]me.Trade {
 	return &resT
 }
 
-func (kp *Keeper) GetTradeRelatedAccounts(orders []OrderChange) *map[string]bool {
-	resA := make(map[string]bool)
+func (kp *Keeper) GetTradeRelatedAccounts(orders []OrderChange) *[]string {
+	res := make([]string, 0)
 
 	for pair := range kp.engines {
 		trades, _ := kp.GetLastTradesForPair(pair)
 		for _, t := range trades {
 			if orderChange, exists := kp.OrderChangesMap[t.BId]; exists {
-				resA[orderChange.OrderMsg.Sender.String()] = true
+				res = append(res, string(orderChange.OrderMsg.Sender.Bytes()))
 			} else {
 				bnclog.Error(fmt.Sprintf("fail to know locate order %s in order changes map", t.BId))
 			}
 			if orderChange, exists := kp.OrderChangesMap[t.SId]; exists {
-				resA[orderChange.OrderMsg.Sender.String()] = true
+				res = append(res, string(orderChange.OrderMsg.Sender.Bytes()))
 			} else {
 				bnclog.Error(fmt.Sprintf("fail to know locate order %s in order changes map", t.SId))
 			}
@@ -418,10 +426,10 @@ func (kp *Keeper) GetTradeRelatedAccounts(orders []OrderChange) *map[string]bool
 	}
 
 	for _, orderChange := range orders {
-		resA[orderChange.OrderMsg.Sender.String()] = true
+		res = append(res, string(orderChange.OrderMsg.Sender.Bytes()))
 	}
 
-	return &resA
+	return &res
 }
 
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {

@@ -24,7 +24,6 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -102,30 +101,23 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishMarketData)
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
 	app.registerHandlers(cdc)
 
-	if app.publicationConfig.PublishMarketData ||
-		app.publicationConfig.PublishAccountBalance ||
-		app.publicationConfig.PublishOrderBook {
+	if app.publicationConfig.ShouldPublishAny() {
 		app.publisher = pub.MarketDataPublisher{
-			Logger:            app.Logger.With("module", "pub"),
 			ToPublishCh:       make(chan pub.BlockInfoToPublish, pub.PublicationChannelSize),
 			ToRemoveOrderIdCh: make(chan string, pub.ToRemoveOrderIdChannelSize),
 			RemoveDoneCh:      make(chan struct{}),
 		}
-		if err := app.publisher.Init(app.publicationConfig); err != nil {
+		if err := app.publisher.Init(app.publicationConfig, app.Logger.With("module", "pub")); err != nil {
 			app.publisher.Stop()
 			app.Logger.Error("Cannot start up market data kafka publisher", "err", err)
-			/**
-			  TODO(#66): we should return nil here, but cosmos start-up logic doesn't process nil newapp vendor/github.com/cosmos/cosmos-sdk/server/constructors.go:34
-			  app := appFn(logger, db, traceStoreWriter)
-			  return app, nil
-			*/
+			panic(err)
 		}
 	}
 
@@ -248,90 +240,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
-		app.Logger.Debug(fmt.Sprintf("normal block: %d", height))
-		if app.publicationConfig.PublishMarketData && app.publisher.IsLive {
-			// group trades by Bid and Sid to make fee update easier
-			groupedTrades := make(map[string]map[string]*pub.Trade)
-
-			transCh := make(chan order.Transfer, pub.FeeCollectionChannelSize)
-
-			var feeCollectorForTrades = func(trans order.Transfer) {
-				transCh <- trans
-			}
-
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, feeCollectorForTrades)
-			close(transCh)
-
-			for tran := range transCh {
-				app.Logger.Debug(fmt.Sprintf("fee Collector for trans: %s", tran.String()))
-				if tran.IsExpired() {
-					if !tran.FeeFree() {
-						// we must only have ioc expire here
-						if tran.IsBuyer() {
-							app.DexKeeper.OrderChangesMap[tran.Bid].FeeAsset = tran.Fee.Tokens[0].Denom
-							app.DexKeeper.OrderChangesMap[tran.Bid].Fee = tran.Fee.Tokens[0].Amount.Int64()
-						} else {
-							app.DexKeeper.OrderChangesMap[tran.Sid].FeeAsset = tran.Fee.Tokens[0].Denom
-							app.DexKeeper.OrderChangesMap[tran.Sid].Fee = tran.Fee.Tokens[0].Amount.Int64()
-						}
-					}
-				} else {
-					// for partial and fully filled order fee
-					var t *pub.Trade
-					if groupedByBid, exists := groupedTrades[tran.Bid]; exists {
-						if tradeToPublish, exists := groupedByBid[tran.Sid]; exists {
-							t = tradeToPublish
-						} else {
-							t = new(pub.Trade)
-							t.Sid = tran.Sid
-							t.Bid = tran.Bid
-							groupedByBid[tran.Sid] = t
-						}
-					} else {
-						groupedByBid := make(map[string]*pub.Trade)
-						groupedTrades[tran.Bid] = groupedByBid
-						t = new(pub.Trade)
-						t.Sid = tran.Sid
-						t.Bid = tran.Bid
-						groupedByBid[tran.Sid] = t
-					}
-
-					// TODO(#66): Fix potential fee precision loss
-					if !tran.FeeFree() {
-						if tran.IsBuyer() {
-							t.Bfee = tran.Fee.Tokens[0].Amount.Int64()
-							t.BfeeAsset = tran.Fee.Tokens[0].Denom
-						} else {
-							t.Sfee = tran.Fee.Tokens[0].Amount.Int64()
-							t.SfeeAsset = tran.Fee.Tokens[0].Denom
-						}
-					}
-				}
-			}
-
-			tradeIdx := 0
-			var allTrades *map[string][]matcheng.Trade
-			allTrades = app.DexKeeper.GetLastTrades()
-			for symbol, trades := range *allTrades {
-				for _, trade := range trades {
-					app.Logger.Debug(fmt.Sprintf("processing trade: %s-%s", trade.BId, trade.SId))
-					if groupedByBid, exists := groupedTrades[trade.BId]; exists {
-						if t, exists := groupedByBid[trade.SId]; exists {
-							t.Id = fmt.Sprintf("%d-%d", ctx.BlockHeader().Height, tradeIdx)
-							t.Symbol = symbol
-							t.Price = trade.LastPx
-							t.Qty = trade.LastQty
-							t.BuyCumQty = trade.BuyCumQty
-							tradesToPublish = append(tradesToPublish, *t)
-							tradeIdx += 1
-						} else {
-							app.Logger.Error(fmt.Sprintf("failed to look up sid from trade: %s-%s from groupedTrades", trade.BId, trade.SId))
-						}
-					} else {
-						app.Logger.Error(fmt.Sprintf("failed to look up bid from trade: %s-%s from groupedTrades", trade.BId, trade.SId))
-					}
-				}
-			}
+		app.Logger.Debug("normal block", "height", height)
+		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
 		} else {
 			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 		}
@@ -351,46 +262,55 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// TODO: update validators
 
 	if app.publisher.ShouldPublish() {
-		app.Logger.Info(fmt.Sprintf("start to collect publish information at height: %d", height))
+		pub.Logger.Info("start to collect publish information", "height", height)
 
-		txRelatedAccounts, hasTxRelatedAccountsChanges := ctx.Value(InvolvedAddressKey).(map[string]bool)
 		// TODO(#66): confirm the performance is acceptable when there are a lot of orders and books here (orders might get accumulated for 3 days - the time limit of GTC order to expire)
 		orders, ordersMap := app.DexKeeper.GetLastOrdersCopy()
-		var tradeRelatedAccounts *map[string]bool
+
 		var accountsToPublish map[string]pub.Account
 		if app.publicationConfig.PublishAccountBalance {
-			tradeRelatedAccounts = app.DexKeeper.GetTradeRelatedAccounts(orders)
+			txRelatedAccounts, hasTxRelatedAccountsChanges := ctx.Value(InvolvedAddressKey).([]string)
+			tradeRelatedAccounts := app.DexKeeper.GetTradeRelatedAccounts(orders)
 			if hasTxRelatedAccountsChanges {
-				accountsToPublish = app.getAllChangedAccountBalances(txRelatedAccounts, *tradeRelatedAccounts)
+				accountsToPublish = app.getAccountBalances(txRelatedAccounts, *tradeRelatedAccounts)
 			} else {
-				accountsToPublish = app.getAllChangedAccountBalances(map[string]bool{}, *tradeRelatedAccounts)
+				accountsToPublish = app.getAccountBalances(*tradeRelatedAccounts)
 			}
+			defer func() {
+				app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
+			}() // clean up
 		}
+
 		var latestPriceLevels order.ChangedPriceLevels
 		if app.publicationConfig.PublishOrderBook {
-			latestPriceLevels = app.DexKeeper.GetOrderBookForPublish(20)
+			latestPriceLevels = app.DexKeeper.GetOrderBookForPublish(pub.MaxOrderBookLevel)
 		}
-		app.Logger.Info(fmt.Sprintf(
-			"start to publish at block: %d, blockTime: %d, numOfTrades: %d, partial order changes: %d",
+
+		pub.Logger.Info("start to publish", "height", ctx.BlockHeader().Height,
+			"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
+			"numOfOrders", // the order num we collected here doesn't include trade related orders
+			len(orders))
+		app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
 			ctx.BlockHeader().Height,
 			blockTime,
-			len(tradesToPublish),
-			len(orders)))
-		app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(ctx.BlockHeader().Height, blockTime, tradesToPublish, orders, ordersMap, accountsToPublish, latestPriceLevels)
+			tradesToPublish,
+			orders,
+			ordersMap,
+			accountsToPublish,
+			latestPriceLevels)
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
-		app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, map[string]bool{})
 
 		// remove item from OrderChangesMap when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	cont:
 		for {
 			select {
 			case id := <-app.publisher.ToRemoveOrderIdCh:
-				app.Logger.Debug(fmt.Sprintf("delete order %s from order changes map", id))
+				pub.Logger.Debug("delete order from order changes map", "orderId", id)
 				delete(app.DexKeeper.OrderChangesMap, id)
 			case <-app.publisher.RemoveDoneCh:
-				app.Logger.Info(fmt.Sprintf("done remove orders from order changes map"))
+				pub.Logger.Debug(fmt.Sprintf("done remove orders from order changes map"))
 				break cont
 			}
 		}
@@ -468,54 +388,54 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) getAllChangedAccountBalances(txRelatedAccounts map[string]bool, tradeRelatedAccounts map[string]bool) map[string]pub.Account {
-	res := make(map[string]pub.Account)
+func (app *BinanceChain) getAccountBalances(accMaps ...[]string) (res map[string]pub.Account) {
+	res = make(map[string]pub.Account)
 
-	app.getAccountBalances(res, txRelatedAccounts)
-	app.getAccountBalances(res, tradeRelatedAccounts)
+	for _, accs := range accMaps {
+		for _, addrBytesStr := range accs {
+			if _, ok := res[addrBytesStr]; !ok {
+				addr := sdk.AccAddress([]byte(addrBytesStr))
+				if acc, ok := app.AccountMapper.GetAccount(app.deliverState.ctx, addr).(types.NamedAccount); ok {
+					assetsMap := make(map[string]*pub.AssetBalance)
+					// TODO(#66): set the length to be the total coins this account owned
+					assets := make([]pub.AssetBalance, 0, 10)
 
-	return res
-}
-
-func (app *BinanceChain) getAccountBalances(res map[string]pub.Account, accs map[string]bool) {
-	for bech32Str, _ := range accs {
-		if _, ok := res[bech32Str]; !ok {
-			addr, _ := sdk.AccAddressFromBech32(bech32Str)
-			if acc, ok := app.AccountMapper.GetAccount(app.deliverState.ctx, addr).(types.NamedAccount); ok {
-				assetsMap := make(map[string]*pub.AssetBalance)
-				// TODO(#66): set the length to be the total coins this account owned
-				assets := make([]pub.AssetBalance, 0, 10)
-
-				for _, freeCoin := range acc.GetCoins() {
-					if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
-						assetBalance.Free = freeCoin.Amount.Int64()
-					} else {
-						newAB := pub.AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
-						assets = append(assets, newAB)
-						assetsMap[freeCoin.Denom] = &newAB
+					for _, freeCoin := range acc.GetCoins() {
+						if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
+							assetBalance.Free = freeCoin.Amount.Int64()
+						} else {
+							newAB := pub.AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
+							assets = append(assets, newAB)
+							assetsMap[freeCoin.Denom] = &newAB
+						}
 					}
-				}
 
-				for _, frozenCoin := range acc.GetFrozenCoins() {
-					if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
-						assetBalance.Frozen = frozenCoin.Amount.Int64()
-					} else {
-						assetsMap[frozenCoin.Denom] = &pub.AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
+					for _, frozenCoin := range acc.GetFrozenCoins() {
+						if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
+							assetBalance.Frozen = frozenCoin.Amount.Int64()
+						} else {
+							assetsMap[frozenCoin.Denom] =
+								&pub.AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
+						}
 					}
-				}
 
-				for _, lockedCoin := range acc.GetLockedCoins() {
-					if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
-						assetBalance.Locked = lockedCoin.Amount.Int64()
-					} else {
-						assetsMap[lockedCoin.Denom] = &pub.AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
+					for _, lockedCoin := range acc.GetLockedCoins() {
+						if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
+							assetBalance.Locked = lockedCoin.Amount.Int64()
+						} else {
+							assetsMap[lockedCoin.Denom] =
+								&pub.AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
+						}
 					}
-				}
 
-				res[bech32Str] = pub.Account{bech32Str, assets}
-			} else {
-				app.Logger.Error(fmt.Sprintf("failed to get account %s from AccountMapper", bech32Str))
+					bech32Str := addr.String()
+					res[bech32Str] = pub.Account{bech32Str, assets}
+				} else {
+					app.Logger.Error(fmt.Sprintf("failed to get account %s from AccountMapper", addr.String()))
+				}
 			}
 		}
 	}
+
+	return
 }
