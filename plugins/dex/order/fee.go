@@ -3,7 +3,6 @@ package order
 import (
 	"math"
 	"math/big"
-	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
