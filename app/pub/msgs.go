@@ -171,7 +171,6 @@ type order struct {
 	lastExecutedPrice    int64
 	lastExecutedQty      int64
 	cumQty               int64
-	cumQuoteAssetQty     int64
 	fee                  int64
 	feeAsset             string
 	orderCreationTime    int64
@@ -199,7 +198,6 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	native["lastExecutedPrice"] = msg.lastExecutedPrice
 	native["lastExecutedQty"] = msg.lastExecutedQty
 	native["cumQty"] = msg.cumQty
-	native["cumQuoteAssetQty"] = msg.cumQuoteAssetQty
 	native["fee"] = msg.fee
 	native["feeAsset"] = msg.feeAsset
 	native["orderCreationTime"] = msg.orderCreationTime

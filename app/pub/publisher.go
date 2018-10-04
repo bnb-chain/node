@@ -13,7 +13,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/utils"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -32,7 +31,7 @@ var (
 
 type MarketDataPublisher struct {
 	ToPublishCh       chan BlockInfoToPublish
-	ToRemoveOrderIdCh chan string   // order ids to remove from keeper.OrderChangesMap
+	ToRemoveOrderIdCh chan string   // order ids to remove from keeper.OrderInfoForPublish
 	RemoveDoneCh      chan struct{} // order ids to remove for this block is done
 	IsLive            bool          // TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
 
@@ -50,10 +49,16 @@ func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig, log
 		Logger.Error("failed to create new kafka producer", "err", err)
 		return err
 	} else {
-		// we have to use the same prometheus registerer with tendermint so that we can share same host:port for prometheus daemon
+		// we have to use the same prometheus registerer with tendermint
+		// so that we can share same host:port for prometheus daemon
 		prometheusRegistry := prometheus.DefaultRegisterer
 		metricsRegistry := config.MetricRegistry
-		pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "", "publication", prometheusRegistry, 1*time.Second)
+		pClient := prometheusmetrics.NewPrometheusProvider(
+			metricsRegistry,
+			"",
+			"publication",
+			prometheusRegistry,
+			1*time.Second)
 		go pClient.UpdatePrometheusMetrics()
 	}
 
@@ -98,7 +103,7 @@ func (publisher *MarketDataPublisher) publish() {
 		// they can assign buyer/seller address into trade before persist into DB
 		var ordersToPublish []order
 		if publisher.config.PublishOrderUpdates || publisher.config.PublishOrderBook {
-			ordersToPublish = publisher.collectFilledOrdersFromTrade(
+			ordersToPublish = publisher.collectExecutedOrdersToPublish(
 				&marketData.tradesToPublish,
 				marketData.orderChanges,
 				marketData.orderChangesMap,
@@ -122,7 +127,7 @@ func (publisher *MarketDataPublisher) publish() {
 
 		if publisher.config.PublishOrderBook {
 			Logger.Info("start to publish changed order books")
-			changedPrices := publisher.collectChangedOrderBooksFromOrders(
+			changedPrices := publisher.filterChangedOrderBooksbyOrders(
 				&ordersToPublish,
 				marketData.latestPricesLevels)
 			publisher.publishOrderBookData(marketData.height, marketData.timestamp, changedPrices)
@@ -131,62 +136,59 @@ func (publisher *MarketDataPublisher) publish() {
 }
 
 // we collect OrderPart here to make matcheng module independent
-func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(
+func (publisher *MarketDataPublisher) collectExecutedOrdersToPublish(
 	trades *[]Trade,
 	orderChanges orderPkg.OrderChanges,
-	orderChangesMap orderPkg.OrderChangesMap,
+	orderChangesMap orderPkg.OrderInfoForPublish,
 	timestamp int64) (ordersToPublish []order) {
 	ordersToPublish = make([]order, 0)
 	canceledToPublish := make([]order, 0)
 
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
-	for idx, o := range orderChanges {
+	for _, o := range orderChanges {
+		orderInfo := orderChangesMap[o.Id]
 		orderToPublish := order{
-			o.OrderMsg.Symbol,
+			orderInfo.Symbol,
 			o.Tpe,
-			o.OrderMsg.Id,
+			o.Id,
 			"",
-			o.OrderMsg.Sender.String(),
-			o.OrderMsg.Side,
+			orderInfo.Sender.String(),
+			orderInfo.Side,
 			orderPkg.OrderType.LIMIT,
-			o.OrderMsg.Price,
-			o.OrderMsg.Quantity,
+			orderInfo.Price,
+			orderInfo.Quantity,
 			0,
 			0,
-			o.CumQty,
-			o.CumQuoteAssetQty,
-			orderChangesMap[o.OrderMsg.Id].Fee,
-			orderChangesMap[o.OrderMsg.Id].FeeAsset,
-			o.CreationTime(),
+			orderInfo.CumQty,
+			o.Fee,
+			o.FeeAsset,
+			orderInfo.CreatedTimestamp,
 			timestamp,
-			o.OrderMsg.TimeInForce,
+			orderInfo.TimeInForce,
 			orderPkg.NEW,
-			o.TxHash,
+			orderInfo.TxHash,
 		}
 		if o.Tpe == orderPkg.Ack {
-			o.SetCreationTime(timestamp)
-			orderChanges[idx].SetCreationTime(timestamp)
-			orderChangesMap[o.OrderMsg.Id].SetCreationTime(timestamp)
 			ordersToPublish = append(ordersToPublish, orderToPublish)
 		} else {
 			canceledToPublish = append(canceledToPublish, orderToPublish)
 			Logger.Debug(
 				"going to delete order from order changes map",
-				"orderId", o.OrderMsg.Id, "reason", orderToPublish.status)
-			publisher.ToRemoveOrderIdCh <- o.OrderMsg.Id
+				"orderId", o.Id, "reason", orderToPublish.status)
+			publisher.ToRemoveOrderIdCh <- o.Id
 		}
 	}
 
 	// collect orders from trades
 	for _, t := range *trades {
 		if o, exists := orderChangesMap[t.Bid]; exists {
-			ordersToPublish = append(ordersToPublish, publisher.collectFilledOrderFromTrade(t, o, timestamp))
+			ordersToPublish = append(ordersToPublish, publisher.tradeToOrder(t, o, timestamp))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
 		}
 
 		if o, exists := orderChangesMap[t.Sid]; exists {
-			ordersToPublish = append(ordersToPublish, publisher.collectFilledOrderFromTrade(t, o, timestamp))
+			ordersToPublish = append(ordersToPublish, publisher.tradeToOrder(t, o, timestamp))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
 		}
@@ -195,25 +197,20 @@ func (publisher *MarketDataPublisher) collectFilledOrdersFromTrade(
 	return append(ordersToPublish, canceledToPublish...)
 }
 
-func (publisher *MarketDataPublisher) collectFilledOrderFromTrade(
+func (publisher *MarketDataPublisher) tradeToOrder(
 	t Trade,
-	o *orderPkg.OrderChange,
+	o *orderPkg.OrderInfo,
 	timestamp int64) order {
 
-	// accumulate numbers because we need know the leaves and cum quantities
-	// for expired order
-	o.CumQty += t.Qty
-	o.CumQuoteAssetQty += utils.CalBigNotional(t.Qty, t.Price) //TODO(#66): confirm with danjun this value is right
-
 	var status orderPkg.ChangeType
-	if o.CumQty == o.OrderMsg.Quantity {
+	if o.CumQty == o.Quantity {
 		status = orderPkg.FullyFill
 	} else {
 		status = orderPkg.PartialFill
 	}
 	var fee int64
 	var feeAsset string
-	if o.OrderMsg.Side == orderPkg.Side.BUY {
+	if o.Side == orderPkg.Side.BUY {
 		fee = t.Bfee
 		feeAsset = t.BfeeAsset
 	} else {
@@ -221,30 +218,29 @@ func (publisher *MarketDataPublisher) collectFilledOrderFromTrade(
 		feeAsset = t.SfeeAsset
 	}
 	res := order{
-		o.OrderMsg.Symbol,
+		o.Symbol,
 		status,
-		o.OrderMsg.Id,
+		o.Id,
 		t.Id,
-		o.OrderMsg.Sender.String(),
-		o.OrderMsg.Side,
+		o.Sender.String(),
+		o.Side,
 		orderPkg.OrderType.LIMIT,
-		o.OrderMsg.Price,
-		o.OrderMsg.Quantity,
+		o.Price,
+		o.Quantity,
 		t.Price,
 		t.Qty,
 		o.CumQty,
-		o.CumQuoteAssetQty,
 		fee,
 		feeAsset,
-		o.CreationTime(),
+		o.CreatedTimestamp,
 		timestamp,
-		o.OrderMsg.TimeInForce,
+		o.TimeInForce,
 		orderPkg.NEW,
 		o.TxHash,
 	}
 	if status == orderPkg.FullyFill {
-		Logger.Debug("going to delete order from order changes map because of fully fill", "orderId", o.OrderMsg.Id)
-		publisher.ToRemoveOrderIdCh <- o.OrderMsg.Id
+		Logger.Debug("going to delete order from order changes map because of fully fill", "orderId", o.Id)
+		publisher.ToRemoveOrderIdCh <- o.Id
 	}
 	return res
 }
@@ -283,7 +279,12 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 	}
 	accountsMsg := accounts{height, numOfMsgs, accs}
 	if msg, err := marshal(&accountsMsg, accountsTpe); err == nil {
-		kafkaMsg := publisher.prepareMessage(publisher.config.AccountBalanceTopic, strconv.FormatInt(height, 10), timestamp, accountsTpe, msg)
+		kafkaMsg := publisher.prepareMessage(
+			publisher.config.AccountBalanceTopic,
+			strconv.FormatInt(height, 10),
+			timestamp,
+			accountsTpe,
+			msg)
 		if partition, offset, err := publisher.producers[publisher.config.AccountBalanceTopic].SendMessage(kafkaMsg); err == nil {
 			Logger.Info("published accounts", "accounts", accountsMsg.String(), "offset", offset, "partition", partition)
 		} else {
@@ -295,7 +296,9 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 }
 
 // collect all changed books according to published order status
-func (publisher *MarketDataPublisher) collectChangedOrderBooksFromOrders(ordersToPublish *[]order, latestPriceLevels orderPkg.ChangedPriceLevels) orderPkg.ChangedPriceLevels {
+func (publisher *MarketDataPublisher) filterChangedOrderBooksbyOrders(
+	ordersToPublish *[]order,
+	latestPriceLevels orderPkg.ChangedPriceLevels) orderPkg.ChangedPriceLevels {
 	var res = make(orderPkg.ChangedPriceLevels)
 	for _, o := range *ordersToPublish {
 		if _, ok := latestPriceLevels[o.symbol]; !ok {
@@ -307,7 +310,8 @@ func (publisher *MarketDataPublisher) collectChangedOrderBooksFromOrders(ordersT
 
 		switch o.side {
 		case orderPkg.Side.BUY:
-			// TODO(#66): code clean up - here we rely on special implementation that for orders that not generated from trade (like New, Cancel) the lastExecutedPrice is original price (rather than 0)
+			// TODO(#66): code clean up - here we rely on special implementation that for orders
+			// that not generated from trade (like New, Cancel) the lastExecutedPrice is original price (rather than 0)
 			if qty, ok := latestPriceLevels[o.symbol].Buys[o.lastExecutedPrice]; ok {
 				res[o.symbol].Buys[o.lastExecutedPrice] = qty
 			} else {

@@ -259,7 +259,7 @@ sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' node_publisher/gai
 sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" node_publisher/gaiad/config/config.toml
 
 # set publish config - ip
-sed -i -e "s/marketDataKafka = \"127.0.0.1:9092\"/marketDataKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publisher/gaiad/config/app.toml

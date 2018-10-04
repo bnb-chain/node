@@ -27,7 +27,7 @@ type OrderBookSnapshot struct {
 }
 
 type ActiveOrders struct {
-	Orders []NewOrderMsg `json:"orders"`
+	Orders []OrderInfo `json:"orders"`
 }
 
 func genOrderBookSnapshotKey(height int64, pair string) string {
@@ -85,9 +85,9 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 		}
 	}
 	sort.Strings(msgKeys)
-	msgs := make([]NewOrderMsg, len(msgKeys), len(msgKeys))
+	msgs := make([]OrderInfo, len(msgKeys), len(msgKeys))
 	for i, key := range msgKeys {
-		msgs[i] = kp.allOrders[idSymbolMap[key]][key]
+		msgs[i] = *kp.allOrders[idSymbolMap[key]][key]
 	}
 
 	snapshot := ActiveOrders{Orders: msgs}
@@ -144,21 +144,9 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		}
 		for _, pl := range ob.Buys {
 			eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
-			if kp.CollectOrderInfoForPublish {
-				for _, orderPart := range pl.Orders {
-					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
-					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty}
-				}
-			}
 		}
 		for _, pl := range ob.Sells {
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
-			if kp.CollectOrderInfoForPublish {
-				for _, orderPart := range pl.Orders {
-					bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from orderbook", orderPart.Id))
-					kp.OrderChangesMap[orderPart.Id] = &OrderChange{CumQty: orderPart.CumQty, CumQuoteAssetQty: orderPart.CumQty}
-				}
-			}
 		}
 		logger.Info("Successfully Loaded order snapshot", "pair", pair)
 	}
@@ -181,14 +169,12 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
 	}
 	for _, m := range ao.Orders {
-		kp.allOrders[m.Symbol][m.Id] = m
+		orderHolder := m
+		kp.allOrders[m.Symbol][m.Id] = &orderHolder
 		if kp.CollectOrderInfoForPublish {
-			if pOrderChange, exists := kp.OrderChangesMap[m.Id]; exists {
-				pOrderChange.OrderMsg = m
-			} else {
-				// This order hasn't been executed before
-				bnclog.Debug(fmt.Sprintf("add order %s to order changes map, during load snapshot, from active orders", m.Id))
-				kp.OrderChangesMap[m.Id] = &OrderChange{OrderMsg: m, Tpe: Ack}
+			if _, exists := kp.OrderChangesMap[m.Id]; !exists {
+				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
+				kp.OrderChangesMap[m.Id] = &m
 			}
 		}
 	}
@@ -213,7 +199,8 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 			switch msg := m.(type) {
 			case NewOrderMsg:
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
-				kp.AddOrder(msg, height, txHash, true)
+				orderInfo := OrderInfo{msg, block.Time.UnixNano(), 0, txHash}
+				kp.AddOrder(orderInfo, height, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()

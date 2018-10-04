@@ -204,6 +204,13 @@ func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
 }
 
+type OrderInfo struct {
+	NewOrderMsg
+	CreatedTimestamp int64
+	CumQty           int64
+	TxHash           string
+}
+
 // NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{

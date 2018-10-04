@@ -10,7 +10,7 @@ type BlockInfoToPublish struct {
 	timestamp          int64
 	tradesToPublish    []Trade
 	orderChanges       orderPkg.OrderChanges
-	orderChangesMap    orderPkg.OrderChangesMap
+	orderChangesMap    orderPkg.OrderInfoForPublish
 	accounts           map[string]Account
 	latestPricesLevels orderPkg.ChangedPriceLevels
 }
@@ -20,7 +20,7 @@ func NewBlockInfoToPublish(
 	timestamp int64,
 	tradesToPublish []Trade,
 	orderChanges orderPkg.OrderChanges,
-	orderChangesMap orderPkg.OrderChangesMap,
+	orderChangesMap orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
 	latestPriceLevels orderPkg.ChangedPriceLevels) BlockInfoToPublish {
 	return BlockInfoToPublish{

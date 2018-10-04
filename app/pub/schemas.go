@@ -66,7 +66,6 @@ const (
 									{ "name": "lastExecutedPrice", "type": "long" },
 									{ "name": "lastExecutedQty", "type": "long" },
 									{ "name": "cumQty", "type": "long" },
-									{ "name": "cumQuoteAssetQty", "type": "long" },
 									{ "name": "fee", "type": "long" }, 
 									{ "name": "feeAsset", "type": "string" },
 									{ "name": "orderCreationTime", "type": "long" },

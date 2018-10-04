@@ -302,7 +302,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 
-		// remove item from OrderChangesMap when we published removed order (cancel, iocnofill, fullyfilled, expired)
+		// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	cont:
 		for {
 			select {

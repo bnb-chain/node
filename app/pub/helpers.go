@@ -18,7 +18,10 @@ func MatchAndAllocateAllForPublish(
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
-	tradesToPublish := collectTradeForPublish(dexKeeper, ctx.BlockHeader().Height, &wg, tradeFeeHolderCh)
+
+	// group trades by Bid and Sid to make fee update easier
+	groupedTrades := make(map[string]map[string]Trade)
+	collectTradeForPublish(groupedTrades, &wg, tradeFeeHolderCh)
 	updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
 		if !tran.FeeFree() {
@@ -41,6 +44,32 @@ func MatchAndAllocateAllForPublish(
 	close(tradeFeeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
+
+	tradeIdx := 0
+	allTrades := dexKeeper.GetLastTrades()
+	tradesToPublish := make([]Trade, 0)
+	for symbol, trades := range *allTrades {
+		for _, matchTrade := range trades {
+			Logger.Debug("processing trade", "bid", matchTrade.BId, "sid", matchTrade.SId)
+			if groupedByBid, exists := groupedTrades[matchTrade.BId]; exists {
+				if t, exists := groupedByBid[matchTrade.SId]; exists {
+					t.Id = fmt.Sprintf("%d-%d", ctx.BlockHeader().Height, tradeIdx)
+					t.Symbol = symbol
+					t.Price = matchTrade.LastPx
+					t.Qty = matchTrade.LastQty
+					tradesToPublish = append(tradesToPublish, t)
+					tradeIdx += 1
+				} else {
+					Logger.Error("failed to look up sid from trade from groupedTrades",
+						"bid", matchTrade.BId, "sid", matchTrade.SId)
+				}
+			} else {
+				Logger.Error("failed to look up bid from trade from groupedTrades",
+					"bid", matchTrade.BId, "sid", matchTrade.SId)
+			}
+		}
+	}
+
 	return tradesToPublish
 }
 
@@ -66,12 +95,9 @@ func ExpireOrdersForPublish(
 }
 
 func collectTradeForPublish(
-	dexKeeper *orderPkg.Keeper,
-	height int64,
+	groupedTrades map[string]map[string]Trade,
 	wg *sync.WaitGroup,
-	feeHolderCh <-chan orderPkg.TradeFeeHolder) (tradesToPublish []Trade) {
-	// group trades by Bid and Sid to make fee update easier
-	groupedTrades := make(map[string]map[string]Trade)
+	feeHolderCh <-chan orderPkg.TradeFeeHolder) {
 
 	go func() {
 		defer wg.Done()
@@ -105,32 +131,6 @@ func collectTradeForPublish(
 			}
 		}
 	}()
-
-	tradeIdx := 0
-	allTrades := dexKeeper.GetLastTrades()
-	for symbol, trades := range *allTrades {
-		for _, matchTrade := range trades {
-			Logger.Debug("processing trade", "bid", matchTrade.BId, "sid", matchTrade.SId)
-			if groupedByBid, exists := groupedTrades[matchTrade.BId]; exists {
-				if t, exists := groupedByBid[matchTrade.SId]; exists {
-					t.Id = fmt.Sprintf("%d-%d", height, tradeIdx)
-					t.Symbol = symbol
-					t.Price = matchTrade.LastPx
-					t.Qty = matchTrade.LastQty
-					tradesToPublish = append(tradesToPublish, t)
-					tradeIdx += 1
-				} else {
-					Logger.Error("failed to look up sid from trade from groupedHolders",
-						"bid", matchTrade.BId, "sid", matchTrade.SId)
-				}
-			} else {
-				Logger.Error("failed to look up bid from trade from groupedHolders",
-					"bid", matchTrade.BId, "sid", matchTrade.SId)
-			}
-		}
-	}
-
-	return tradesToPublish
 }
 
 func updateExpireFeeForPublish(
@@ -148,12 +148,7 @@ func updateExpireFeeForPublish(
 			var feeAsset string
 			fee = feeHolder.Amount
 			feeAsset = feeHolder.Asset
-			change := orderPkg.OrderChange{
-				OrderMsg: originOrd.OrderMsg,
-				Tpe:      orderPkg.Expired,
-				Fee:      fee,
-				FeeAsset: feeAsset,
-				CumQty:   originOrd.CumQty}
+			change := orderPkg.OrderChange{originOrd.Id, orderPkg.Expired, fee, feeAsset}
 			dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 		}
 	}()
