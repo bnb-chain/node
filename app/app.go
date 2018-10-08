@@ -269,19 +269,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 		var accountsToPublish map[string]pub.Account
 		if app.publicationConfig.PublishAccountBalance {
-			txRelatedAccounts, hasTxRelatedAccountsChanges := ctx.Value(InvolvedAddressKey).([]string)
-			tradeRelatedAccounts := app.DexKeeper.GetTradeRelatedAccounts(orders)
-			if hasTxRelatedAccountsChanges {
-				accountsToPublish = app.getAccountBalances(txRelatedAccounts, *tradeRelatedAccounts)
-			} else {
-				accountsToPublish = app.getAccountBalances(*tradeRelatedAccounts)
-			}
+			txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
+			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(orders)
+			accountsToPublish = app.getAccountBalances(txRelatedAccounts, tradeRelatedAccounts)
 			defer func() {
 				app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
 			}() // clean up
 		}
 
-		var latestPriceLevels order.ChangedPriceLevels
+		var latestPriceLevels order.ChangedPriceLevelsMap
 		if app.publicationConfig.PublishOrderBook {
 			latestPriceLevels = app.DexKeeper.GetOrderBookForPublish(pub.MaxOrderBookLevel)
 		}

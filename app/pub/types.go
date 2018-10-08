@@ -12,7 +12,7 @@ type BlockInfoToPublish struct {
 	orderChanges       orderPkg.OrderChanges
 	orderChangesMap    orderPkg.OrderInfoForPublish
 	accounts           map[string]Account
-	latestPricesLevels orderPkg.ChangedPriceLevels
+	latestPricesLevels orderPkg.ChangedPriceLevelsMap
 }
 
 func NewBlockInfoToPublish(
@@ -22,7 +22,7 @@ func NewBlockInfoToPublish(
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
-	latestPriceLevels orderPkg.ChangedPriceLevels) BlockInfoToPublish {
+	latestPriceLevels orderPkg.ChangedPriceLevelsMap) BlockInfoToPublish {
 	return BlockInfoToPublish{
 		height,
 		timestamp,

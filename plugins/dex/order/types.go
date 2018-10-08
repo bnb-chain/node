@@ -60,7 +60,7 @@ type OrderChange struct {
 type OrderInfoForPublish map[string]*OrderInfo
 type OrderChanges []OrderChange // clean after publish each block's EndBlock and before next block's BeginBlock
 
-type ChangedPriceLevels map[string]ChangedPriceLevelsPerSymbol
+type ChangedPriceLevelsMap map[string]ChangedPriceLevelsPerSymbol
 
 type ChangedPriceLevelsPerSymbol struct {
 	Buys  map[int64]int64

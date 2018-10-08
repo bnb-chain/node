@@ -21,10 +21,10 @@ func MatchAndAllocateAllForPublish(
 
 	// group trades by Bid and Sid to make fee update easier
 	groupedTrades := make(map[string]map[string]Trade)
-	collectTradeForPublish(groupedTrades, &wg, tradeFeeHolderCh)
-	updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go collectTradeForPublish(groupedTrades, &wg, tradeFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		if !tran.FeeFree() {
+		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
 			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
 			if tran.IsExpiredWithFee() {
@@ -81,7 +81,7 @@ func ExpireOrdersForPublish(
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
 		// TODO(#160): Fix potential fee precision loss
 		fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
@@ -99,57 +99,53 @@ func collectTradeForPublish(
 	wg *sync.WaitGroup,
 	feeHolderCh <-chan orderPkg.TradeFeeHolder) {
 
-	go func() {
-		defer wg.Done()
-		for feeHolder := range feeHolderCh {
-			Logger.Debug("processing TradeFeeHolder", "feeHolder", feeHolder.String())
-			// for partial and fully filled order fee
-			var t Trade
-			if groupedByBid, exists := groupedTrades[feeHolder.BId]; exists {
-				if tradeToPublish, exists := groupedByBid[feeHolder.SId]; exists {
-					t = tradeToPublish
-				} else {
-					t = Trade{}
-					t.Sid = feeHolder.SId
-					t.Bid = feeHolder.BId
-					groupedByBid[feeHolder.SId] = t
-				}
+	defer wg.Done()
+	for feeHolder := range feeHolderCh {
+		Logger.Debug("processing TradeFeeHolder", "feeHolder", feeHolder.String())
+		// for partial and fully filled order fee
+		var t Trade
+		if groupedByBid, exists := groupedTrades[feeHolder.BId]; exists {
+			if tradeToPublish, exists := groupedByBid[feeHolder.SId]; exists {
+				t = tradeToPublish
 			} else {
-				groupedByBid := make(map[string]Trade)
-				groupedTrades[feeHolder.BId] = groupedByBid
 				t = Trade{}
 				t.Sid = feeHolder.SId
 				t.Bid = feeHolder.BId
 				groupedByBid[feeHolder.SId] = t
 			}
-			if feeHolder.Side == orderPkg.Side.BUY {
-				t.Bfee = feeHolder.Amount
-				t.BfeeAsset = feeHolder.Asset
-			} else {
-				t.Sfee = feeHolder.Amount
-				t.SfeeAsset = feeHolder.Asset
-			}
+		} else {
+			groupedByBid := make(map[string]Trade)
+			groupedTrades[feeHolder.BId] = groupedByBid
+			t = Trade{}
+			t.Sid = feeHolder.SId
+			t.Bid = feeHolder.BId
+			groupedByBid[feeHolder.SId] = t
 		}
-	}()
+		if feeHolder.Side == orderPkg.Side.BUY {
+			t.Bfee = feeHolder.Amount
+			t.BfeeAsset = feeHolder.Asset
+		} else {
+			t.Sfee = feeHolder.Amount
+			t.SfeeAsset = feeHolder.Asset
+		}
+	}
 }
 
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
 	feeHolderCh <-chan orderPkg.ExpireFeeHolder) {
-	go func() {
-		defer wg.Done()
-		for feeHolder := range feeHolderCh {
-			Logger.Debug("fee Collector for expire transfer", "transfer", feeHolder.String())
+	defer wg.Done()
+	for feeHolder := range feeHolderCh {
+		Logger.Debug("fee Collector for expire transfer", "transfer", feeHolder.String())
 
-			id := feeHolder.OrderId
-			originOrd := dexKeeper.OrderChangesMap[id]
-			var fee int64
-			var feeAsset string
-			fee = feeHolder.Amount
-			feeAsset = feeHolder.Asset
-			change := orderPkg.OrderChange{originOrd.Id, orderPkg.Expired, fee, feeAsset}
-			dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
-		}
-	}()
+		id := feeHolder.OrderId
+		originOrd := dexKeeper.OrderChangesMap[id]
+		var fee int64
+		var feeAsset string
+		fee = feeHolder.Amount
+		feeAsset = feeHolder.Asset
+		change := orderPkg.OrderChange{originOrd.Id, orderPkg.Expired, fee, feeAsset}
+		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
+	}
 }

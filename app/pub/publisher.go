@@ -74,7 +74,7 @@ func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig, log
 }
 
 func (publisher *MarketDataPublisher) Stop() {
-	Logger.Info("start to stop MarketDataPublisher")
+	Logger.Debug("start to stop MarketDataPublisher")
 	publisher.IsLive = false
 
 	close(publisher.ToPublishCh)
@@ -85,11 +85,11 @@ func (publisher *MarketDataPublisher) Stop() {
 		// nil check because this method would be called when we failed to create producer
 		if producer != nil {
 			if err := producer.Close(); err != nil {
-				Logger.Error("faid to stop producer for topic", "topic", topic, "err", err)
+				Logger.Error("failed to stop producer for topic", "topic", topic, "err", err)
 			}
 		}
 	}
-	Logger.Info("finished stop MarketDataPublisher")
+	Logger.Debug("finished stop MarketDataPublisher")
 }
 
 func (publisher *MarketDataPublisher) ShouldPublish() bool {
@@ -112,7 +112,7 @@ func (publisher *MarketDataPublisher) publish() {
 		publisher.RemoveDoneCh <- struct{}{}
 
 		if publisher.config.PublishOrderUpdates {
-			Logger.Info("start to publish all orders")
+			Logger.Debug("start to publish all orders")
 			publisher.publishOrderUpdates(
 				marketData.height,
 				marketData.timestamp,
@@ -121,12 +121,12 @@ func (publisher *MarketDataPublisher) publish() {
 		}
 
 		if publisher.config.PublishAccountBalance {
-			Logger.Info("start to publish all changed accounts")
+			Logger.Debug("start to publish all changed accounts")
 			publisher.publishAccount(marketData.height, marketData.timestamp, marketData.accounts)
 		}
 
 		if publisher.config.PublishOrderBook {
-			Logger.Info("start to publish changed order books")
+			Logger.Debug("start to publish changed order books")
 			changedPrices := publisher.filterChangedOrderBooksbyOrders(
 				&ordersToPublish,
 				marketData.latestPricesLevels)
@@ -259,7 +259,7 @@ func (publisher *MarketDataPublisher) publishOrderUpdates(height int64, timestam
 	if msg, err := marshal(&tradesAndOrdersMsg, tradesAndOrdersTpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(publisher.config.OrderUpdatesTopic, strconv.FormatInt(height, 10), timestamp, tradesAndOrdersTpe, msg)
 		if partition, offset, err := publisher.producers[publisher.config.OrderUpdatesTopic].SendMessage(kafkaMsg); err == nil {
-			Logger.Info("published tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "offset", offset, "partition", partition)
+			Logger.Debug("published tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish tradesAndOrders", "tradesAndOrders", tradesAndOrdersMsg.String(), "err", err)
 		}
@@ -286,7 +286,7 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 			accountsTpe,
 			msg)
 		if partition, offset, err := publisher.producers[publisher.config.AccountBalanceTopic].SendMessage(kafkaMsg); err == nil {
-			Logger.Info("published accounts", "accounts", accountsMsg.String(), "offset", offset, "partition", partition)
+			Logger.Debug("published accounts", "accounts", accountsMsg.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish accounts", "accounts", accountsMsg.String(), "err", err)
 		}
@@ -298,8 +298,8 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 // collect all changed books according to published order status
 func (publisher *MarketDataPublisher) filterChangedOrderBooksbyOrders(
 	ordersToPublish *[]order,
-	latestPriceLevels orderPkg.ChangedPriceLevels) orderPkg.ChangedPriceLevels {
-	var res = make(orderPkg.ChangedPriceLevels)
+	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
+	var res = make(orderPkg.ChangedPriceLevelsMap)
 	for _, o := range *ordersToPublish {
 		if _, ok := latestPriceLevels[o.symbol]; !ok {
 			continue
@@ -328,7 +328,7 @@ func (publisher *MarketDataPublisher) filterChangedOrderBooksbyOrders(
 	return res
 }
 
-func (publisher *MarketDataPublisher) publishOrderBookData(height int64, timestamp int64, changedPriceLevels orderPkg.ChangedPriceLevels) {
+func (publisher *MarketDataPublisher) publishOrderBookData(height int64, timestamp int64, changedPriceLevels orderPkg.ChangedPriceLevelsMap) {
 	var deltas []orderBookDelta
 	for pair, pls := range changedPriceLevels {
 		buys := make([]priceLevel, len(pls.Buys), len(pls.Buys))
@@ -350,7 +350,7 @@ func (publisher *MarketDataPublisher) publishOrderBookData(height int64, timesta
 	if msg, err := marshal(&books, booksTpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(publisher.config.OrderBookTopic, strconv.FormatInt(height, 10), timestamp, booksTpe, msg)
 		if partition, offset, err := publisher.producers[publisher.config.OrderBookTopic].SendMessage(kafkaMsg); err == nil {
-			Logger.Info("published books", "books", books.String(), "offset", offset, "partition", partition)
+			Logger.Debug("published books", "books", books.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish books", "books", books.String(), "err", err)
 		}

@@ -71,14 +71,6 @@ func (tran Transfer) IsBuyer() bool {
 	return strings.HasPrefix(tran.Bid, tran.accAddress.String())
 }
 
-func (tran Transfer) GetPairSymbol() string {
-	if tran.IsBuyer() {
-		return fmt.Sprintf("%s_%s", tran.inAsset, tran.outAsset)
-	} else {
-		return fmt.Sprintf("%s_%s", tran.outAsset, tran.inAsset)
-	}
-}
-
 func (tran Transfer) FeeFree() bool {
 	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
 }
@@ -385,8 +377,8 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 	return orderbook
 }
 
-func (kp *Keeper) GetOrderBookForPublish(maxLevels int) ChangedPriceLevels {
-	var res = make(ChangedPriceLevels)
+func (kp *Keeper) GetOrderBookForPublish(maxLevels int) ChangedPriceLevelsMap {
+	var res = make(ChangedPriceLevelsMap)
 	for pair, eng := range kp.engines {
 		buys := make(map[int64]int64)
 		sells := make(map[int64]int64)
@@ -416,21 +408,20 @@ func (kp *Keeper) GetLastTrades() *map[string][]me.Trade {
 	return &resT
 }
 
-func (kp *Keeper) GetTradeRelatedAccounts(orders []OrderChange) *[]string {
+func (kp *Keeper) GetTradeAndOrdersRelatedAccounts(orders []OrderChange) []string {
 	res := make([]string, 0)
 
-	for pair := range kp.engines {
-		trades, _ := kp.GetLastTradesForPair(pair)
-		for _, t := range trades {
+	for _, eng := range kp.engines {
+		for _, t := range eng.Trades {
 			if orderChange, exists := kp.OrderChangesMap[t.BId]; exists {
 				res = append(res, string(orderChange.Sender.Bytes()))
 			} else {
-				bnclog.Error(fmt.Sprintf("fail to know locate order %s in order changes map", t.BId))
+				bnclog.Error("fail to locate order in order changes map", "orderId", t.BId)
 			}
 			if orderChange, exists := kp.OrderChangesMap[t.SId]; exists {
 				res = append(res, string(orderChange.Sender.Bytes()))
 			} else {
-				bnclog.Error(fmt.Sprintf("fail to know locate order %s in order changes map", t.SId))
+				bnclog.Error("fail to locate order in order changes map", "orderId", t.SId)
 			}
 		}
 	}
@@ -439,7 +430,7 @@ func (kp *Keeper) GetTradeRelatedAccounts(orders []OrderChange) *[]string {
 		res = append(res, string(kp.OrderChangesMap[orderChange.Id].Sender.Bytes()))
 	}
 
-	return &res
+	return res
 }
 
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
