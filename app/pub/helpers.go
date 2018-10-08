@@ -20,23 +20,17 @@ func MatchAndAllocateAllForPublish(
 	wg.Add(2)
 
 	// group trades by Bid and Sid to make fee update easier
-	groupedTrades := make(map[string]map[string]Trade)
-	go collectTradeForPublish(groupedTrades, &wg, tradeFeeHolderCh)
+	tradesToPublish := make([]Trade, 0)
+	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
 		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
 			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
 			if tran.IsExpiredWithFee() {
-				iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Bid, fee}
+				iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 			} else {
-				var side int8
-				if tran.IsBuyer() {
-					side = orderPkg.Side.BUY
-				} else {
-					side = orderPkg.Side.SELL
-				}
-				tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Sid, tran.Bid, side, fee}
+				tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
 			}
 		}
 	}
@@ -44,31 +38,6 @@ func MatchAndAllocateAllForPublish(
 	close(tradeFeeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
-
-	tradeIdx := 0
-	allTrades := dexKeeper.GetLastTrades()
-	tradesToPublish := make([]Trade, 0)
-	for symbol, trades := range *allTrades {
-		for _, matchTrade := range trades {
-			Logger.Debug("processing trade", "bid", matchTrade.BId, "sid", matchTrade.SId)
-			if groupedByBid, exists := groupedTrades[matchTrade.BId]; exists {
-				if t, exists := groupedByBid[matchTrade.SId]; exists {
-					t.Id = fmt.Sprintf("%d-%d", ctx.BlockHeader().Height, tradeIdx)
-					t.Symbol = symbol
-					t.Price = matchTrade.LastPx
-					t.Qty = matchTrade.LastQty
-					tradesToPublish = append(tradesToPublish, t)
-					tradeIdx += 1
-				} else {
-					Logger.Error("failed to look up sid from trade from groupedTrades",
-						"bid", matchTrade.BId, "sid", matchTrade.SId)
-				}
-			} else {
-				Logger.Error("failed to look up bid from trade from groupedTrades",
-					"bid", matchTrade.BId, "sid", matchTrade.SId)
-			}
-		}
-	}
 
 	return tradesToPublish
 }
@@ -86,7 +55,7 @@ func ExpireOrdersForPublish(
 		// TODO(#160): Fix potential fee precision loss
 		fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
 		if tran.IsExpiredWithFee() {
-			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Bid, fee}
+			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, feeCollectorForTrades)
@@ -94,39 +63,51 @@ func ExpireOrdersForPublish(
 	wg.Wait()
 }
 
+// for partial and fully filled order fee
 func collectTradeForPublish(
-	groupedTrades map[string]map[string]Trade,
+	tradesToPublish *[]Trade,
 	wg *sync.WaitGroup,
+	height int64,
 	feeHolderCh <-chan orderPkg.TradeFeeHolder) {
 
 	defer wg.Done()
+	tradeIdx := 0
+	groupedTrades := make(map[string]map[string]*Trade)
 	for feeHolder := range feeHolderCh {
 		Logger.Debug("processing TradeFeeHolder", "feeHolder", feeHolder.String())
-		// for partial and fully filled order fee
-		var t Trade
-		if groupedByBid, exists := groupedTrades[feeHolder.BId]; exists {
-			if tradeToPublish, exists := groupedByBid[feeHolder.SId]; exists {
+		var t *Trade
+		// one trade has two transfer, the second fee update should applied to first updated trade
+		if groupedByBid, exists := groupedTrades[feeHolder.Trade.Bid]; exists {
+			if tradeToPublish, exists := groupedByBid[feeHolder.Trade.Sid]; exists {
 				t = tradeToPublish
 			} else {
-				t = Trade{}
-				t.Sid = feeHolder.SId
-				t.Bid = feeHolder.BId
-				groupedByBid[feeHolder.SId] = t
+				t = &Trade{Bfee: -1, Sfee: -1} // in case for some orders the fee can be 0
+				groupedByBid[feeHolder.Trade.Sid] = t
 			}
 		} else {
-			groupedByBid := make(map[string]Trade)
-			groupedTrades[feeHolder.BId] = groupedByBid
-			t = Trade{}
-			t.Sid = feeHolder.SId
-			t.Bid = feeHolder.BId
-			groupedByBid[feeHolder.SId] = t
+			groupedByBid := make(map[string]*Trade)
+			groupedTrades[feeHolder.Trade.Bid] = groupedByBid
+			t = &Trade{Bfee: -1, Sfee: -1} // in case for some orders the fee can be 0
+			groupedByBid[feeHolder.Trade.Sid] = t
 		}
-		if feeHolder.Side == orderPkg.Side.BUY {
+
+		if feeHolder.OId == feeHolder.Trade.Bid {
 			t.Bfee = feeHolder.Amount
 			t.BfeeAsset = feeHolder.Asset
 		} else {
 			t.Sfee = feeHolder.Amount
 			t.SfeeAsset = feeHolder.Asset
+		}
+
+		if t.Bfee != -1 && t.Sfee != -1 {
+			t.Id = fmt.Sprintf("%d-%d", height, tradeIdx)
+			t.Symbol = feeHolder.Symbol
+			t.Sid = feeHolder.Trade.Sid
+			t.Bid = feeHolder.Trade.Bid
+			t.Price = feeHolder.Trade.LastPx
+			t.Qty = feeHolder.Trade.LastQty
+			*tradesToPublish = append(*tradesToPublish, *t)
+			tradeIdx += 1
 		}
 	}
 }

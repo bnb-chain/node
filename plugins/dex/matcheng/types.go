@@ -21,13 +21,13 @@ const PRECISION = 1
 // - one trade would be implemented via TWO transfer transactions on each currency of the pair;
 // - the trade would be uniquely identifiable via the two order id. UUID generation cannot be used here.
 type Trade struct {
-	SId        string // sell order id
+	Sid        string // sell order id
 	LastPx     int64  // execution price
 	LastQty    int64  // execution quantity
 	OrigBuyPx  int64  // original intended price for the trade
 	BuyCumQty  int64  // cumulative executed quantity for the buy order
 	SellCumQty int64  // cumulative executed quantity for the sell order
-	BId        string // buy order Id
+	Bid        string // buy order Id
 }
 
 type OrderPart struct {

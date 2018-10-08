@@ -237,7 +237,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	height := ctx.BlockHeight()
 
 	var tradesToPublish []pub.Trade
-
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
@@ -264,13 +263,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if app.publisher.ShouldPublish() {
 		pub.Logger.Info("start to collect publish information", "height", height)
 
-		// TODO(#66): confirm the performance is acceptable when there are a lot of orders and books here (orders might get accumulated for 3 days - the time limit of GTC order to expire)
-		orders, ordersMap := app.DexKeeper.GetLastOrdersCopy()
-
 		var accountsToPublish map[string]pub.Account
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
-			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(orders)
+			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
 			accountsToPublish = app.getAccountBalances(txRelatedAccounts, tradeRelatedAccounts)
 			defer func() {
 				app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
@@ -285,18 +281,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		pub.Logger.Info("start to publish", "height", ctx.BlockHeader().Height,
 			"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 			"numOfOrders", // the order num we collected here doesn't include trade related orders
-			len(orders))
+			len(app.DexKeeper.OrderChanges))
 		app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
 			ctx.BlockHeader().Height,
 			blockTime,
 			tradesToPublish,
-			orders,
-			ordersMap,
+			app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
+			app.DexKeeper.OrderChangesMap, // ditto
 			accountsToPublish,
 			latestPriceLevels)
-
-		// clean up intermediate cached data
-		app.DexKeeper.ClearOrderChanges()
 
 		// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	cont:
@@ -310,6 +303,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 				break cont
 			}
 		}
+
+		// clean up intermediate cached data
+		app.DexKeeper.ClearOrderChanges()
 	}
 
 	return abci.ResponseEndBlock{}

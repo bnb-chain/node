@@ -1,6 +1,9 @@
 package order
 
-import "fmt"
+import (
+	"fmt"
+	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+)
 
 // The types here are shared between order and pub package
 
@@ -68,14 +71,14 @@ type ChangedPriceLevelsPerSymbol struct {
 }
 
 type TradeFeeHolder struct {
-	SId  string
-	BId  string // still need two ids here to link with correct trade
-	Side int8
+	OId    string
+	Trade  *me.Trade
+	Symbol string
 	Fee
 }
 
 func (fh TradeFeeHolder) String() string {
-	return fmt.Sprintf("sid: %s, bid: %s, side: %s, fee: %s", fh.SId, fh.BId, IToSide(fh.Side), fh.Fee)
+	return fmt.Sprintf("oid: %s, bid: %s, sid: %s, fee: %s", fh.OId, fh.Trade.Bid, fh.Trade.Sid, fh.Fee)
 }
 
 type ExpireFeeHolder struct {
