@@ -48,22 +48,22 @@ func queryOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr
 	}
 }
 
-func decodeOpenOrders(cdc *wire.Codec, bz *[]byte) (*[]OpenOrder, error) {
+func DecodeOpenOrders(cdc *wire.Codec, bz *[]byte) ([]OpenOrder, error) {
 	openOrders := make([]OpenOrder, 0)
 	if err := cdc.UnmarshalBinary(*bz, &openOrders); err != nil {
 		return nil, err
 	} else {
-		return &openOrders, nil
+		return openOrders, nil
 	}
 }
 
-func GetOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) (*[]OpenOrder, error) {
+func GetOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) ([]OpenOrder, error) {
 	if bz, err := queryOpenOrders(cdc, ctx, pair, addr); err != nil {
 		return nil, err
 	} else if bz == nil {
-		return new([]OpenOrder), nil
+		return []OpenOrder{}, nil
 	} else {
-		openOrders, err := decodeOpenOrders(cdc, bz)
+		openOrders, err := DecodeOpenOrders(cdc, bz)
 		return openOrders, err
 	}
 }

@@ -134,7 +134,7 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err error) {
+func (kp *Keeper) AddOrder(msg OrderInfo, isRecovery bool) (err error) {
 	//try update order book first
 	symbol := strings.ToUpper(msg.Symbol)
 	eng, ok := kp.engines[symbol]
@@ -143,7 +143,7 @@ func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err er
 		return
 	}
 
-	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, height, msg.Price, msg.Quantity)
+	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, msg.CreatedHeight, msg.Price, msg.Quantity)
 	if err != nil {
 		return err
 	}
@@ -289,10 +289,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	if engine.Match() {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for _, t := range engine.Trades {
-			orders[t.Bid].CumQty = t.BuyCumQty
-			orders[t.Sid].CumQty = t.SellCumQty
-			updateOrderMsg(orders, t.BId, t.LastQty, height, timestamp)
-			updateOrderMsg(orders, t.SId, t.LastQty, height, timestamp)
+			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
+			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 
 			if distributeTrade {
 				t1, t2 := kp.tradeToTransfers(t, symbol)
@@ -355,14 +353,10 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 }
 
 // Run as postConsume procedure of async, no concurrent updates of orders map
-// TODO(#151): should refactor according to change in #66, we don't need accumulate qty,
-// but set cumqty to buyQumQty or sellQumQty
-func updateOrderMsg(orders map[string]OrderInfo, orderId string, qty, height, timestamp int64) {
-	newOrder := orders[orderId]
-	newOrder.CumQty += qty
-	newOrder.LastUpdatedHeight = height
-	newOrder.LastUpdatedTimestamp = timestamp
-	orders[orderId] = newOrder
+func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
+	order.CumQty = cumQty
+	order.LastUpdatedHeight = height
+	order.LastUpdatedTimestamp = timestamp
 }
 
 func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {

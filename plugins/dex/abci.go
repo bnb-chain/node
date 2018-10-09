@@ -17,7 +17,7 @@ const OB_LEVELS = 20
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
-		if path[0] != abciQueryPrefix || len(path) < 2 {
+		if path[0] != AbciQueryPrefix || len(path) < 2 {
 			return nil
 		}
 		switch path[1] {
@@ -27,7 +27,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires offset and limit in the path",
-						abciQueryPrefix, path[1]),
+						AbciQueryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
@@ -122,7 +122,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code: uint32(sdk.ABCICodeOK),
 				Info: fmt.Sprintf(
 					"Unknown `%s` query path: %v",
-					abciQueryPrefix, path),
+					AbciQueryPrefix, path),
 			}
 		}
 	}
