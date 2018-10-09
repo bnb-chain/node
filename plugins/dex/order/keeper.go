@@ -123,7 +123,7 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isReplay bool) (err error) {
+func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err error) {
 	//try update order book first
 	symbol := strings.ToUpper(msg.Symbol)
 	eng, ok := kp.engines[symbol]
@@ -140,10 +140,10 @@ func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isReplay bool) (err erro
 	if kp.CollectOrderInfoForPublish {
 		change := OrderChange{msg.Id, Ack, 0, ""}
 		// deliberately not add this message to orderChanges
-		if !isReplay {
+		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", msg.Id, "isReplay", isReplay)
+		bnclog.Debug("add order to order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
 		kp.OrderChangesMap[msg.Id] = &msg
 	}
 
@@ -159,15 +159,13 @@ func orderNotFound(symbol, id string) error {
 	return errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 }
 
-// txHash is empty string for reason except for Cancel
 func (kp *Keeper) RemoveOrder(
 	id string,
 	symbol string,
 	side int8,
 	price int64,
-	txHash string,
 	reason ChangeType,
-	isReplay bool) (ord me.OrderPart, err error) {
+	isRecovery bool) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
 	msg, ok := kp.OrderExists(symbol, id)
 	if !ok {
@@ -179,10 +177,15 @@ func (kp *Keeper) RemoveOrder(
 	}
 	delete(kp.allOrders[symbol], id)
 	ord, err = eng.Book.RemoveOrder(id, side, price)
-	if kp.CollectOrderInfoForPublish && !isReplay {
-		// fee will be updated during doTransfer
-		change := OrderChange{msg.Id, reason, 0, ""}
-		kp.OrderChanges = append(kp.OrderChanges, change)
+	if kp.CollectOrderInfoForPublish {
+		if !isRecovery {
+			// fee will be updated during doTransfer
+			change := OrderChange{msg.Id, reason, 0, ""}
+			kp.OrderChanges = append(kp.OrderChanges, change)
+		} else {
+			bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
+			delete(kp.OrderChangesMap, msg.Id)
+		}
 	}
 	return ord, err
 }
@@ -294,7 +297,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 	iocIDs := kp.roundIOCOrders[symbol]
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
-			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, "", IocNoFill, false); err == nil {
+			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, IocNoFill, false); err == nil {
 				logger.Debug("Removed unclosed IOC order", "ordID", msg.Id)
 				if !distributeTrade {
 					continue
@@ -369,7 +372,7 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 	return orderbook
 }
 
-func (kp *Keeper) GetOrderBookForPublish(maxLevels int) ChangedPriceLevelsMap {
+func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 	var res = make(ChangedPriceLevelsMap)
 	for pair, eng := range kp.engines {
 		buys := make(map[int64]int64)

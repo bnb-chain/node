@@ -10,9 +10,10 @@ import (
 	"github.com/deathowl/go-metrics-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/tendermint/tendermint/libs/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
+	"github.com/BiJie/BinanceChain/common/log"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -26,24 +27,35 @@ const (
 )
 
 var (
-	Logger log.Logger
+	Logger tmlog.Logger
 )
 
 type MarketDataPublisher struct {
 	ToPublishCh       chan BlockInfoToPublish
-	ToRemoveOrderIdCh chan string   // order ids to remove from keeper.OrderInfoForPublish
-	RemoveDoneCh      chan struct{} // order ids to remove for this block is done
-	IsLive            bool          // TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
+	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
+	IsLive            bool        // TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
 
 	config    *config.PublicationConfig
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
 
-func (publisher *MarketDataPublisher) Init(config *config.PublicationConfig, logger log.Logger) (err error) {
+func NewMarketDataPublisher(config *config.PublicationConfig) (publisher *MarketDataPublisher) {
+	publisher = &MarketDataPublisher{
+		ToPublishCh: make(chan BlockInfoToPublish, PublicationChannelSize),
+		config:      config,
+		producers:   make(map[string]sarama.SyncProducer),
+	}
+	if err := publisher.init(log.With("module", "pub")); err != nil {
+		publisher.Stop()
+		log.Error("Cannot start up market data kafka publisher", "err", err)
+		panic(err)
+	}
+	return publisher
+}
+
+func (publisher *MarketDataPublisher) init(logger tmlog.Logger) (err error) {
 	sarama.Logger = saramaLogger{}
 	Logger = logger
-	publisher.config = config
-	publisher.producers = make(map[string]sarama.SyncProducer)
 
 	if config, err := publisher.newProducers(); err != nil {
 		Logger.Error("failed to create new kafka producer", "err", err)
@@ -79,7 +91,6 @@ func (publisher *MarketDataPublisher) Stop() {
 
 	close(publisher.ToPublishCh)
 	close(publisher.ToRemoveOrderIdCh)
-	close(publisher.RemoveDoneCh)
 
 	for topic, producer := range publisher.producers {
 		// nil check because this method would be called when we failed to create producer
@@ -92,25 +103,37 @@ func (publisher *MarketDataPublisher) Stop() {
 	Logger.Debug("finished stop MarketDataPublisher")
 }
 
-func (publisher *MarketDataPublisher) ShouldPublish() bool {
-	return publisher.IsLive && publisher.config.ShouldPublishAny()
-}
-
 func (publisher *MarketDataPublisher) publish() {
 	for marketData := range publisher.ToPublishCh {
 		// Implementation note: publication order are important here,
 		// DEX query service team relies on the fact that we publish orders before trades so that
 		// they can assign buyer/seller address into trade before persist into DB
-		var ordersToPublish []order
+		var opensToPublish []order
+		var canceledToPublish []order
 		if publisher.config.PublishOrderUpdates || publisher.config.PublishOrderBook {
-			ordersToPublish = publisher.collectExecutedOrdersToPublish(
+			opensToPublish, canceledToPublish = publisher.collectExecutedOrdersToPublish(
 				&marketData.tradesToPublish,
 				marketData.orderChanges,
 				marketData.orderChangesMap,
 				marketData.timestamp)
+			for _, o := range opensToPublish {
+				if o.status == orderPkg.FullyFill {
+					Logger.Debug(
+						"going to delete fully filled order from order changes map",
+						"orderId", o.orderId)
+					publisher.ToRemoveOrderIdCh <- o.orderId
+				}
+			}
+			for _, o := range canceledToPublish {
+				Logger.Debug(
+					"going to delete order from order changes map",
+					"orderId", o.orderId, "status", o.status)
+				publisher.ToRemoveOrderIdCh <- o.orderId
+			}
 		}
-		publisher.RemoveDoneCh <- struct{}{}
+		close(publisher.ToRemoveOrderIdCh)
 
+		ordersToPublish := append(opensToPublish, canceledToPublish...)
 		if publisher.config.PublishOrderUpdates {
 			Logger.Debug("start to publish all orders")
 			publisher.publishOrderUpdates(
@@ -127,9 +150,7 @@ func (publisher *MarketDataPublisher) publish() {
 
 		if publisher.config.PublishOrderBook {
 			Logger.Debug("start to publish changed order books")
-			changedPrices := publisher.filterChangedOrderBooksbyOrders(
-				&ordersToPublish,
-				marketData.latestPricesLevels)
+			changedPrices := publisher.filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 			publisher.publishOrderBookData(marketData.height, marketData.timestamp, changedPrices)
 		}
 	}
@@ -140,9 +161,9 @@ func (publisher *MarketDataPublisher) collectExecutedOrdersToPublish(
 	trades *[]Trade,
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
-	timestamp int64) (ordersToPublish []order) {
-	ordersToPublish = make([]order, 0)
-	canceledToPublish := make([]order, 0)
+	timestamp int64) (opensToPublish []order, canceledToPublish []order) {
+	opensToPublish = make([]order, 0)
+	canceledToPublish = make([]order, 0)
 
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
@@ -169,32 +190,28 @@ func (publisher *MarketDataPublisher) collectExecutedOrdersToPublish(
 			orderInfo.TxHash,
 		}
 		if o.Tpe == orderPkg.Ack {
-			ordersToPublish = append(ordersToPublish, orderToPublish)
+			opensToPublish = append(opensToPublish, orderToPublish)
 		} else {
 			canceledToPublish = append(canceledToPublish, orderToPublish)
-			Logger.Debug(
-				"going to delete order from order changes map",
-				"orderId", o.Id, "reason", orderToPublish.status)
-			publisher.ToRemoveOrderIdCh <- o.Id
 		}
 	}
 
 	// collect orders from trades
 	for _, t := range *trades {
 		if o, exists := orderChangesMap[t.Bid]; exists {
-			ordersToPublish = append(ordersToPublish, publisher.tradeToOrder(t, o, timestamp))
+			opensToPublish = append(opensToPublish, publisher.tradeToOrder(t, o, timestamp))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
 		}
 
 		if o, exists := orderChangesMap[t.Sid]; exists {
-			ordersToPublish = append(ordersToPublish, publisher.tradeToOrder(t, o, timestamp))
+			opensToPublish = append(opensToPublish, publisher.tradeToOrder(t, o, timestamp))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
 		}
 	}
 
-	return append(ordersToPublish, canceledToPublish...)
+	return opensToPublish, canceledToPublish
 }
 
 func (publisher *MarketDataPublisher) tradeToOrder(
@@ -237,10 +254,6 @@ func (publisher *MarketDataPublisher) tradeToOrder(
 		o.TimeInForce,
 		orderPkg.NEW,
 		o.TxHash,
-	}
-	if status == orderPkg.FullyFill {
-		Logger.Debug("going to delete order from order changes map because of fully fill", "orderId", o.Id)
-		publisher.ToRemoveOrderIdCh <- o.Id
 	}
 	return res
 }
@@ -296,11 +309,11 @@ func (publisher *MarketDataPublisher) publishAccount(height int64, timestamp int
 }
 
 // collect all changed books according to published order status
-func (publisher *MarketDataPublisher) filterChangedOrderBooksbyOrders(
-	ordersToPublish *[]order,
+func (publisher *MarketDataPublisher) filterChangedOrderBooksByOrders(
+	ordersToPublish []order,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
 	var res = make(orderPkg.ChangedPriceLevelsMap)
-	for _, o := range *ordersToPublish {
+	for _, o := range ordersToPublish {
 		if _, ok := latestPriceLevels[o.symbol]; !ok {
 			continue
 		}

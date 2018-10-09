@@ -7,8 +7,64 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/types"
+	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
+
+func GetAccountBalances(mapper auth.AccountMapper, ctx sdk.Context, accSlices ...[]string) (res map[string]Account) {
+	res = make(map[string]Account)
+
+	for _, accs := range accSlices {
+		for _, addrBytesStr := range accs {
+			if _, ok := res[addrBytesStr]; !ok {
+				addr := sdk.AccAddress([]byte(addrBytesStr))
+				if acc, ok := mapper.GetAccount(ctx, addr).(types.NamedAccount); ok {
+					assetsMap := make(map[string]*AssetBalance)
+					// TODO(#66): set the length to be the total coins this account owned
+					assets := make([]AssetBalance, 0, 10)
+
+					for _, freeCoin := range acc.GetCoins() {
+						if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
+							assetBalance.Free = freeCoin.Amount.Int64()
+						} else {
+							newAB := AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
+							assets = append(assets, newAB)
+							assetsMap[freeCoin.Denom] = &newAB
+						}
+					}
+
+					for _, frozenCoin := range acc.GetFrozenCoins() {
+						if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
+							assetBalance.Frozen = frozenCoin.Amount.Int64()
+						} else {
+							newAB := AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
+							assets = append(assets, newAB)
+							assetsMap[frozenCoin.Denom] = &newAB
+						}
+					}
+
+					for _, lockedCoin := range acc.GetLockedCoins() {
+						if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
+							assetBalance.Locked = lockedCoin.Amount.Int64()
+						} else {
+							newAB := AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
+							assets = append(assets, newAB)
+							assetsMap[lockedCoin.Denom] = &newAB
+						}
+					}
+
+					bech32Str := addr.String()
+					res[bech32Str] = Account{bech32Str, assets}
+				} else {
+					Logger.Error(fmt.Sprintf("failed to get account %s from AccountMapper", addr.String()))
+				}
+			}
+		}
+	}
+
+	return
+}
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
@@ -52,9 +108,9 @@ func ExpireOrdersForPublish(
 	wg.Add(1)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		// TODO(#160): Fix potential fee precision loss
-		fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
 		if tran.IsExpiredWithFee() {
+			// TODO(#160): Fix potential fee precision loss
+			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
 			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
@@ -72,23 +128,24 @@ func collectTradeForPublish(
 
 	defer wg.Done()
 	tradeIdx := 0
-	groupedTrades := make(map[string]map[string]*Trade)
+	trades := make(map[*me.Trade]*Trade)
 	for feeHolder := range feeHolderCh {
 		Logger.Debug("processing TradeFeeHolder", "feeHolder", feeHolder.String())
 		var t *Trade
 		// one trade has two transfer, the second fee update should applied to first updated trade
-		if groupedByBid, exists := groupedTrades[feeHolder.Trade.Bid]; exists {
-			if tradeToPublish, exists := groupedByBid[feeHolder.Trade.Sid]; exists {
-				t = tradeToPublish
-			} else {
-				t = &Trade{Bfee: -1, Sfee: -1} // in case for some orders the fee can be 0
-				groupedByBid[feeHolder.Trade.Sid] = t
-			}
+		if trade, ok := trades[feeHolder.Trade]; !ok {
+			t = &Trade{
+				Id:     fmt.Sprintf("%d-%d", height, tradeIdx),
+				Symbol: feeHolder.Symbol,
+				Sid:    feeHolder.Trade.Sid,
+				Bid:    feeHolder.Trade.Bid,
+				Price:  feeHolder.Trade.LastPx,
+				Qty:    feeHolder.Trade.LastQty,
+				Bfee:   -1,
+				Sfee:   -1}
+			trades[feeHolder.Trade] = t
 		} else {
-			groupedByBid := make(map[string]*Trade)
-			groupedTrades[feeHolder.Trade.Bid] = groupedByBid
-			t = &Trade{Bfee: -1, Sfee: -1} // in case for some orders the fee can be 0
-			groupedByBid[feeHolder.Trade.Sid] = t
+			t = trade
 		}
 
 		if feeHolder.OId == feeHolder.Trade.Bid {
@@ -100,12 +157,6 @@ func collectTradeForPublish(
 		}
 
 		if t.Bfee != -1 && t.Sfee != -1 {
-			t.Id = fmt.Sprintf("%d-%d", height, tradeIdx)
-			t.Symbol = feeHolder.Symbol
-			t.Sid = feeHolder.Trade.Sid
-			t.Bid = feeHolder.Trade.Bid
-			t.Price = feeHolder.Trade.LastPx
-			t.Qty = feeHolder.Trade.LastQty
 			*tradesToPublish = append(*tradesToPublish, *t)
 			tradeIdx += 1
 		}

@@ -203,12 +203,11 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				kp.AddOrder(orderInfo, height, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, txHash, Canceled, true)
+				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, Canceled, true)
 				if err != nil {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}

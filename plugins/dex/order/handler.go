@@ -131,7 +131,10 @@ func handleNewOrder(
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 			}
 		} else {
-			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+			return sdk.NewError(
+				types.DefaultCodespace,
+				types.CodeFailInsertOrder,
+				"cannot get txHash from ctx").Result()
 		}
 	}
 
@@ -171,13 +174,9 @@ func handleCancelOrder(
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate {
-		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
-			//remove order from cache and order book
-			ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, txHash, Canceled, false)
-			if err != nil {
-				return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
-			}
-		} else {
+		//remove order from cache and order book
+		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled, false)
+		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
 		}
 	} else {

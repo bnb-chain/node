@@ -53,7 +53,7 @@ echo ${validator_pid}
 sleep 10 # sleep in case cli status call failed to get node id
 validatorStatus=$(${cli} status)
 validator_id=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
-#echo ${validatorId}
+#echo ${validator_id}
 
 # set witness peer to validator and start witness
 sed -i -e "s/persistent_peers = \"\"/persistent_peers = \"${validator_id}@127.0.0.1:26656\"/g" ${witnesshome}/config/config.toml

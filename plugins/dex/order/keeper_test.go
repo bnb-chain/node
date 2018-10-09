@@ -211,7 +211,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 300000)
 	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
-	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, "", Canceled, false)
+	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, Canceled, false)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))

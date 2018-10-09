@@ -70,7 +70,7 @@ type BinanceChain struct {
 	TokenMapper         tokenStore.Mapper
 
 	publicationConfig *config.PublicationConfig
-	publisher         pub.MarketDataPublisher
+	publisher         *pub.MarketDataPublisher
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -109,16 +109,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.registerHandlers(cdc)
 
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.MarketDataPublisher{
-			ToPublishCh:       make(chan pub.BlockInfoToPublish, pub.PublicationChannelSize),
-			ToRemoveOrderIdCh: make(chan string, pub.ToRemoveOrderIdChannelSize),
-			RemoveDoneCh:      make(chan struct{}),
-		}
-		if err := app.publisher.Init(app.publicationConfig, app.Logger.With("module", "pub")); err != nil {
-			app.publisher.Stop()
-			app.Logger.Error("Cannot start up market data kafka publisher", "err", err)
-			panic(err)
-		}
+		app.publisher = pub.NewMarketDataPublisher(app.publicationConfig)
 	}
 
 	// Initialize BaseApp.
@@ -234,7 +225,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
-	height := ctx.BlockHeight()
+	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []pub.Trade
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
@@ -260,52 +251,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// distributeFee(ctx, app.AccountMapper)
 	// TODO: update validators
 
-	if app.publisher.ShouldPublish() {
-		pub.Logger.Info("start to collect publish information", "height", height)
-
-		var accountsToPublish map[string]pub.Account
-		if app.publicationConfig.PublishAccountBalance {
-			txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
-			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
-			accountsToPublish = app.getAccountBalances(txRelatedAccounts, tradeRelatedAccounts)
-			defer func() {
-				app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
-			}() // clean up
-		}
-
-		var latestPriceLevels order.ChangedPriceLevelsMap
-		if app.publicationConfig.PublishOrderBook {
-			latestPriceLevels = app.DexKeeper.GetOrderBookForPublish(pub.MaxOrderBookLevel)
-		}
-
-		pub.Logger.Info("start to publish", "height", ctx.BlockHeader().Height,
-			"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
-			"numOfOrders", // the order num we collected here doesn't include trade related orders
-			len(app.DexKeeper.OrderChanges))
-		app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
-			ctx.BlockHeader().Height,
-			blockTime,
-			tradesToPublish,
-			app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
-			app.DexKeeper.OrderChangesMap, // ditto
-			accountsToPublish,
-			latestPriceLevels)
-
-		// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
-	cont:
-		for {
-			select {
-			case id := <-app.publisher.ToRemoveOrderIdCh:
-				pub.Logger.Debug("delete order from order changes map", "orderId", id)
-				delete(app.DexKeeper.OrderChangesMap, id)
-			case <-app.publisher.RemoveDoneCh:
-				pub.Logger.Debug(fmt.Sprintf("done remove orders from order changes map"))
-				break cont
-			}
-		}
-
-		// clean up intermediate cached data
-		app.DexKeeper.ClearOrderChanges()
+	if app.publicationConfig.ShouldPublishAny() && app.publisher.IsLive {
+		app.publish(tradesToPublish, ctx, height, blockTime)
 	}
 
 	return abci.ResponseEndBlock{}
@@ -380,54 +327,47 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) getAccountBalances(accMaps ...[]string) (res map[string]pub.Account) {
-	res = make(map[string]pub.Account)
+func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, height, blockTime int64) {
+	pub.Logger.Info("start to collect publish information", "height", height)
 
-	for _, accs := range accMaps {
-		for _, addrBytesStr := range accs {
-			if _, ok := res[addrBytesStr]; !ok {
-				addr := sdk.AccAddress([]byte(addrBytesStr))
-				if acc, ok := app.AccountMapper.GetAccount(app.deliverState.ctx, addr).(types.NamedAccount); ok {
-					assetsMap := make(map[string]*pub.AssetBalance)
-					// TODO(#66): set the length to be the total coins this account owned
-					assets := make([]pub.AssetBalance, 0, 10)
-
-					for _, freeCoin := range acc.GetCoins() {
-						if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
-							assetBalance.Free = freeCoin.Amount.Int64()
-						} else {
-							newAB := pub.AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
-							assets = append(assets, newAB)
-							assetsMap[freeCoin.Denom] = &newAB
-						}
-					}
-
-					for _, frozenCoin := range acc.GetFrozenCoins() {
-						if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
-							assetBalance.Frozen = frozenCoin.Amount.Int64()
-						} else {
-							assetsMap[frozenCoin.Denom] =
-								&pub.AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
-						}
-					}
-
-					for _, lockedCoin := range acc.GetLockedCoins() {
-						if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
-							assetBalance.Locked = lockedCoin.Amount.Int64()
-						} else {
-							assetsMap[lockedCoin.Denom] =
-								&pub.AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
-						}
-					}
-
-					bech32Str := addr.String()
-					res[bech32Str] = pub.Account{bech32Str, assets}
-				} else {
-					app.Logger.Error(fmt.Sprintf("failed to get account %s from AccountMapper", addr.String()))
-				}
-			}
-		}
+	var accountsToPublish map[string]pub.Account
+	if app.publicationConfig.PublishAccountBalance {
+		txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
+		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
+		accountsToPublish = pub.GetAccountBalances(app.AccountMapper, ctx, txRelatedAccounts, tradeRelatedAccounts)
+		defer func() {
+			app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
+		}() // clean up
 	}
 
-	return
+	var latestPriceLevels order.ChangedPriceLevelsMap
+	if app.publicationConfig.PublishOrderBook {
+		latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+	}
+
+	pub.Logger.Info("start to publish", "height", height,
+		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
+		"numOfOrders", // the order num we collected here doesn't include trade related orders
+		len(app.DexKeeper.OrderChanges),
+		"numOfAccounts",
+		len(accountsToPublish))
+	app.publisher.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
+		height,
+		blockTime,
+		tradesToPublish,
+		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChangesMap, // ditto
+		accountsToPublish,
+		latestPriceLevels)
+
+	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
+	for id := range app.publisher.ToRemoveOrderIdCh {
+		pub.Logger.Debug("delete order from order changes map", "orderId", id)
+		delete(app.DexKeeper.OrderChangesMap, id)
+	}
+
+	// clean up intermediate cached data
+	app.DexKeeper.ClearOrderChanges()
+	pub.Logger.Debug("finish publish", "height", height)
 }
