@@ -99,13 +99,13 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			orderbook, err := store.GetOrderBook(cdc, ctx, symbol)
+			levels, err := store.GetOrderBookLevels(cdc, ctx, symbol)
 			if err != nil {
 				return err
 			}
 
 			fmt.Printf("%16v|%16v|%16v|%16v\n", "SellQty", "SellPrice", "BuyPrice", "BuyQty")
-			for _, l := range *orderbook {
+			for _, l := range levels {
 				fmt.Printf("%16v|%16v|%16v|%16v\n", l.SellQty, l.SellPrice, l.BuyPrice, l.BuyQty)
 			}
 
