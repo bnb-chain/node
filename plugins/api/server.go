@@ -12,6 +12,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+// config consts
 const maxPostSize int64 = 1024 * 1024 * 0.5 // ~500KB
 
 type server struct {
