@@ -15,7 +15,7 @@ func write(w io.Writer, data string) error {
 }
 
 // StreamDepthResponse streams out the order book in the http response.
-func StreamDepthResponse(w io.Writer, ob store.OrderBook, limit int) error {
+func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 	levels := ob.Levels
 	preamble := fmt.Sprintf("{\"height\":%d,\"asks\":[", ob.Height)
 	if err := write(w, preamble); err != nil {
