@@ -18,6 +18,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
+	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -27,7 +28,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
-	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -67,7 +68,7 @@ type BinanceChain struct {
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
-	TokenMapper         tokenStore.Mapper
+	TokenMapper         tkstore.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         *pub.MarketDataPublisher
@@ -93,7 +94,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetCommitMultiStoreTracer(traceStore)
 	// mappers
 	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 
 	// Add handlers.
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
@@ -106,13 +107,19 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
-	app.registerHandlers(cdc)
+	// legacy bank route (others moved to plugin init funcs)
+	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
+	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+		return sdkBankHandler(ctx, msg)
+	}
+	app.Router().AddRoute("bank", bankHandler)
 
 	if app.publicationConfig.ShouldPublishAny() {
 		app.publisher = pub.NewMarketDataPublisher(app.publicationConfig)
 	}
 
-	// Initialize BaseApp.
+	// complete app initialization
+	app.initPlugins()
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
@@ -122,17 +129,17 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
-	app.initPlugins()
 	return app
 }
 
 func (app *BinanceChain) initPlugins() {
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
+
+	// TODO: could cause problems?
 	if app.checkState == nil {
 		return
 	}
-
-	tokens.InitPlugin(app, app.TokenMapper)
-	dex.InitPlugin(app, app.DexKeeper)
 
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
 	// count back to 7 days.
@@ -293,6 +300,11 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 // GetCodec returns the app's Codec.
 func (app *BinanceChain) GetCodec() *wire.Codec {
 	return app.Codec
+}
+
+// GetRouter returns the app's Router.
+func (app *BinanceChain) GetRouter() router.Router {
+	return app.Router()
 }
 
 // GetContextForCheckState gets the context for the check state.

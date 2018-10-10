@@ -7,12 +7,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common/log"
-	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) common.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) router.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		if msg, ok := msg.(Msg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)

@@ -23,6 +23,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
@@ -60,7 +61,7 @@ type BaseApp struct {
 	cdc                     *wire.Codec          // Amino codec
 	db                      dbm.DB               // common DB backend
 	cms                     sdk.CommitMultiStore // Main (uncached) state
-	router                  Router               // handle any kind of message
+	router                  router.Router        // handle any kind of message
 	codespacer              *sdk.Codespacer      // handle module codespacing
 	isPublishAccountBalance bool
 
@@ -103,7 +104,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDe
 		cdc:                     cdc,
 		db:                      db,
 		cms:                     store.NewCommitMultiStore(db),
-		router:                  NewRouter(),
+		router:                  router.NewRouter(),
 		codespacer:              sdk.NewCodespacer(),
 		txDecoder:               txDecoder,
 		isPublishAccountBalance: isPublish,
@@ -175,7 +176,7 @@ func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
 func (app *BaseApp) SetPubKeyPeerFilter(pf sdk.PeerFilter) {
 	app.pubkeyPeerFilter = pf
 }
-func (app *BaseApp) Router() Router { return app.router }
+func (app *BaseApp) Router() router.Router { return app.router }
 
 // load latest application version
 func (app *BaseApp) LoadLatestVersion(mainKey sdk.StoreKey) error {
