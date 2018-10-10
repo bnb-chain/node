@@ -142,7 +142,11 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 }
 
 func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
-	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
+	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
+	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+		return sdkBankHandler(ctx, msg)
+	}
+	app.Router().AddRoute("bank", bankHandler)
 	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}

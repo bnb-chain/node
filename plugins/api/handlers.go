@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
@@ -27,8 +28,14 @@ func (s *server) limitReqSize(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// withUrlEncForm parses application/x-www-form-urlencoded forms
 func (s *server) withUrlEncForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		contentType := r.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+			http.Error(w, "application/x-www-form-urlencoded content-type expected", http.StatusExpectationFailed)
+			return
+		}
 		err := r.ParseForm()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -38,11 +45,29 @@ func (s *server) withUrlEncForm(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// withMultipartForm parses multipart/form-data forms
 func (s *server) withMultipartForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		contentType := r.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "multipart/form-data") {
+			http.Error(w, "multipart/form-data content-type expected", http.StatusExpectationFailed)
+			return
+		}
 		err := r.ParseMultipartForm(1024)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// withTextPlain parses text/plain forms
+func (s *server) withTextPlainForm(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		contentType := r.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "text/plain") {
+			http.Error(w, "text/plain content-type expected", http.StatusExpectationFailed)
 			return
 		}
 		next(w, r)
@@ -57,6 +82,11 @@ func (s *server) handleVersionReq() http.HandlerFunc {
 
 func (s *server) handleNodeVersionReq() http.HandlerFunc {
 	return hnd.NodeVersionReqHandler(s.ctx)
+}
+
+func (s *server) handleSimulateReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	h := hnd.SimulateReqHandler(cdc, ctx)
+	return s.withTextPlainForm(s.limitReqSize(h))
 }
 
 func (s *server) handlePairsReq(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
