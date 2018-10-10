@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -24,7 +26,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
-	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -59,7 +61,7 @@ type BinanceChain struct {
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
-	TokenMapper         tokenStore.Mapper
+	TokenMapper         tkstore.Mapper
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -81,7 +83,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetCommitMultiStoreTracer(traceStore)
 	// mappers
 	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 
 	// Add handlers.
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
@@ -90,13 +92,16 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
+
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
-	app.registerHandlers(cdc)
+	// legacy bank route (others moved to plugin init funcs)
+	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
 
-	// Initialize BaseApp.
+	// complete app initialization
+	app.initPlugins()
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
@@ -106,17 +111,17 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
-	app.initPlugins()
 	return app
 }
 
 func (app *BinanceChain) initPlugins() {
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
+
+	// TODO: could cause problems?
 	if app.checkState == nil {
 		return
 	}
-
-	tokens.InitPlugin(app, app.TokenMapper)
-	dex.InitPlugin(app, app.DexKeeper)
 
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
 	// count back to 7 days.
@@ -139,16 +144,6 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 		return *res
 	}
 	return app.BaseApp.Query(req)
-}
-
-func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
-	app.Router().AddRoute("bank", bank.NewHandler(app.CoinKeeper))
-	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-		app.Router().AddRoute(route, handler)
-	}
-	for route, handler := range dex.Routes(cdc, *app.DexKeeper, app.TokenMapper, app.AccountMapper) {
-		app.Router().AddRoute(route, handler)
-	}
 }
 
 // RegisterQueryHandler registers an abci query handler.
@@ -257,6 +252,11 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 // GetCodec returns the app's Codec.
 func (app *BinanceChain) GetCodec() *wire.Codec {
 	return app.Codec
+}
+
+// GetRouter returns the app's Router.
+func (app *BinanceChain) GetRouter() baseapp.Router {
+	return app.Router()
 }
 
 // GetContextForCheckState gets the context for the check state.

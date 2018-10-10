@@ -6,12 +6,23 @@ import (
 
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	app "github.com/BiJie/BinanceChain/common/types"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
 const abciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
-func InitPlugin(appp app.ChainApp, keeper *DexKeeper) {
+func InitPlugin(
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountMapper,
+) {
+	cdc := appp.GetCodec()
+
+	// add msg handlers
+	for route, handler := range Routes(cdc, *keeper, tokenMapper, accMapper) {
+		appp.GetRouter().AddRoute(route, handler)
+	}
+
+	// add abci handlers
 	handler := createQueryHandler(keeper)
 	appp.RegisterQueryHandler(abciQueryPrefix, handler)
 }
