@@ -18,17 +18,17 @@ func queryOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]b
 }
 
 // decodeOrderBook decodes the order book to a set of OrderBookLevel structs
-func decodeOrderBook(cdc *wire.Codec, bz *[]byte) (*[]OrderBookLevel, error) {
-	levels := make([]OrderBookLevel, 0)
-	err := cdc.UnmarshalBinary(*bz, &levels)
+func decodeOrderBook(cdc *wire.Codec, bz *[]byte) (*OrderBook, error) {
+	var ob OrderBook
+	err := cdc.UnmarshalBinary(*bz, &ob)
 	if err != nil {
 		return nil, err
 	}
-	return &levels, nil
+	return &ob, nil
 }
 
 // GetOrderBook decodes the order book from the serialized store
-func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]OrderBookLevel, error) {
+func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*OrderBook, error) {
 	bz, err := queryOrderBook(cdc, ctx, pair)
 	if err != nil {
 		return nil, err

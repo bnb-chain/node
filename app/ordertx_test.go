@@ -23,7 +23,7 @@ type level struct {
 func getOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	orderbooks := testApp.DexKeeper.GetOrderBook(pair, 5)
+	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 5)
 	for _, l := range orderbooks {
 		if l.BuyPrice != 0 {
 			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})

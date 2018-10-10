@@ -69,15 +69,16 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			return
 		}
 
-		table, err := store.GetOrderBook(cdc, ctx, params.symbol)
+		// query order book (includes block height)
+		ob, err := store.GetOrderBook(cdc, ctx, params.symbol)
 		if err != nil {
-			throw(w, http.StatusNotFound, err)
+			throw(w, http.StatusInternalServerError, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", responseType)
 
-		err = rutils.StreamDepthResponse(w, table, limit)
+		err = rutils.StreamDepthResponse(w, ob, limit)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
