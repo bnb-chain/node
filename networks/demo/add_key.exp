@@ -2,9 +2,10 @@
 
 set secret [lindex $argv 0]
 set name [lindex $argv 1]
+set home [lindex $argv 2]
 
 set timeout 30
-	spawn ./bnbcli keys add --home ./testnodecli $name
+	spawn ./bnbcli keys add --home ./${home} $name
 	expect "Enter*"
 	send "12345678\r"
 	expect "Repeat*"

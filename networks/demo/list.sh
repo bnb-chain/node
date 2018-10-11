@@ -28,6 +28,6 @@ while true ; do
     esac
 done;
 
-expect ./list.exp $base_asset $quote_asset $init_price $from $chain_id > /dev/null
+expect ./list.exp $base_asset $quote_asset $init_price $from $chain_id "tcp://localhost:26657"> /dev/null
 
 echo "Pair $(symbol)_$(quote_symbol) listed success."

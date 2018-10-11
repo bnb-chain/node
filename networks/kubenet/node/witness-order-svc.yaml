@@ -1,0 +1,20 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    tendermint-identity: witness-order
+  name: witness-order
+spec:
+  ports:
+  - name: api-server
+    port: 8080
+    targetPort: 8080
+  - name: p2p
+    port: 26656
+    targetPort: 26656
+  - name: rpc
+    port: 26657
+    targetPort: 26657
+  selector:
+    tendermint-identity: witness-order
+  type: ClusterIP

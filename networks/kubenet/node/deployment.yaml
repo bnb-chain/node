@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validator-{{INSTANCE}}
+  labels:
+    tendermint-identity: validator-{{INSTANCE}}
+    app: tendermint
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      tendermint-identity: validator-{{INSTANCE}}
+      app: tendermint
+  template:
+    metadata:
+      labels:
+        tendermint-identity: validator-{{INSTANCE}}
+        app: tendermint
+    spec:
+      ## Use nodeSelector to hold same data volumes in host machine and to avoid host port conflict.
+      nodeSelector:
+        tendermint-identity: validator-{{INSTANCE}}
+#      affinity:
+#        podAntiAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: In
+#                values:
+#                - tendermint
+#            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bnbchaind
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain:{{IMAGE_TAG}}
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        - name: REBUILD
+          value: "{{REBUILD}}"
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        command:
+        - /bin/sh
+        - -c
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;cp /bnbchaind/secret/*.json /bnbchaind/bnbchain/config/;sed -i -e "s/external_address = \"\"/external_address = \"${MY_POD_IP}:26656\"/g" /bnbchaind/bnbchain/config/config.toml;/bnbchaind/bnbchaind start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657" > /bnbchaind/bnbchain/node.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/bnbchain
+          name: bnbchain-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+        - name: secret-volume
+          readOnly: true
+          mountPath: /bnbchaind/secret
+      - name: api-server
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain:{{IMAGE_TAG}}
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        command:
+        - /bin/sh
+        - -c
+        - /bnbchaind/bnbcli --home /bnbchaind/cli_home --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server> /bnbchaind/bnbchain/api-server.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/bnbchain
+          name: bnbchain-volume
+        - name: cli-volume
+          mountPath: /bnbchaind/cli_home/keys/keys.db/
+      volumes:
+      - name: bnbchain-volume
+        hostPath:
+          path: /server/bnbchaind/validator
+      - name: config-volume
+        configMap:
+          name: validator-{{INSTANCE}}-config
+      - name: cli-volume
+        configMap:
+          name: cli-config
+      - name: secret-volume
+        secret:
+          secretName: validator-{{INSTANCE}}-secret

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bridge
+  labels:
+    tendermint-identity: bridge
+    app: tendermint-bridge
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      tendermint-identity: bridge
+      app: tendermint-bridge
+  template:
+    metadata:
+      labels:
+        tendermint-identity: bridge
+        app: tendermint-bridge
+    spec:
+      ## Use nodeSelector to hold same data volumes in host machine and to avoid host port conflict.
+      nodeSelector:
+        tendermint-bridge: bridge
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - tendermint-bridge
+            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bnbchaind
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        - name: REBUILD
+          value: "{{REBUILD}}"
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain:{{IMAGE_TAG}}
+        imagePullPolicy: Always
+        command:
+        - /bin/sh
+        - -c
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;sed -i -e "s/external_address = \"\"/external_address = \"${MY_POD_IP}:26656\"/g" /bnbchaind/bnbchain/config/config.toml;/bnbchaind/bnbsentry start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/bnbchain/node.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/bnbchain
+          name: bnbchain-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+      volumes:
+      - name: bnbchain-volume
+        hostPath:
+          path: /server/bnbchaind/bridge
+      - name: config-volume
+        configMap:
+          name: bridge-config

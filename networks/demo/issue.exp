@@ -3,6 +3,7 @@
 set symbol [lindex $argv 0]
 set token_name [lindex $argv 1]
 set supply [lindex $argv 2]
+<<<<<<< HEAD
 set mintable [lindex $argv 3]
 set from [lindex $argv 4]
 set chain_id [lindex $argv 5]
