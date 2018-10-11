@@ -9,7 +9,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
+
+const OB_LEVELS = 20
 
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
@@ -75,8 +78,13 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			pair := path[2]
-			orderbook := keeper.GetOrderBook(pair, 20)
-			bz, err := app.GetCodec().MarshalBinary(orderbook)
+			height := app.GetContextForCheckState().BlockHeight()
+			levels := keeper.GetOrderBookLevels(pair, OB_LEVELS)
+			book := store.OrderBook{
+				Height: height,
+				Levels: levels,
+			}
+			bz, err := app.GetCodec().MarshalBinary(book)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),

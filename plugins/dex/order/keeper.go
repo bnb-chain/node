@@ -309,7 +309,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLevel {
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
 	orderbook := make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0

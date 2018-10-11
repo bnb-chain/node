@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/api/helpers"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
@@ -24,6 +26,7 @@ const (
 	flagQty         = "qty"
 	flagSide        = "side"
 	flagTimeInForce = "tif"
+	flagDryRun      = "dry"
 )
 
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
@@ -70,10 +73,25 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg.TimeInForce = tif
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			msgs := []sdk.Msg{msg}
+
+			if viper.GetBool(flagDryRun) {
+				fmt.Println("Performing dry run; will not broadcast the transaction.")
+				txBytes, err := helpers.EnsureSignBuild(ctx, ctx.FromAddressName, msgs, cdc)
+				if err != nil {
+					panic(err)
+				}
+				hexBytes := make([]byte, len(txBytes)*2)
+				hex.Encode(hexBytes, txBytes)
+				fmt.Printf("TX Bytes (hex): %s\n", hexBytes)
+				return nil
+			}
+
+			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msgs, cdc)
 			if err != nil {
 				return err
 			}
+
 			fmt.Printf("Msg [%v] was sent.\n", msg)
 			return nil
 		},
@@ -83,6 +101,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
 	cmd.Flags().StringP(flagTimeInForce, "t", "gtc", "TimeInForce for the order (gtc or ioc)")
+	cmd.Flags().BoolP(flagDryRun, "d", false, "Generate and return the tx bytes (do not broadcast)")
 	return cmd
 }
 
@@ -99,13 +118,14 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			orderbook, err := store.GetOrderBook(cdc, ctx, symbol)
+			ob, err := store.GetOrderBook(cdc, ctx, symbol)
 			if err != nil {
 				return err
 			}
+			levels := ob.Levels
 
 			fmt.Printf("%16v|%16v|%16v|%16v\n", "SellQty", "SellPrice", "BuyPrice", "BuyQty")
-			for _, l := range *orderbook {
+			for _, l := range levels {
 				fmt.Printf("%16v|%16v|%16v|%16v\n", l.SellQty, l.SellPrice, l.BuyPrice, l.BuyQty)
 			}
 

@@ -28,12 +28,15 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 		qty     string
 		tif     string
 	}
+
 	type response struct {
 		OK       bool   `json:"ok"`
 		OrderID  string `json:"order_id"`
 		HexBytes string `json:"tx_to_sign"`
 		Sequence int64  `json:"sequence"`
 	}
+	responseType := "application/json"
+
 	validateFormParams := func(params formParams) bool {
 		// TODO: there might be a better way to do this
 		if strings.TrimSpace(params.address) == "" {
@@ -55,6 +58,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -162,6 +166,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 			return
 		}
 
+		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}
 }

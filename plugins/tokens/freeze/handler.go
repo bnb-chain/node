@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	common "github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -13,8 +14,9 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+// NewHandler creates a new token freeze message handler
+func NewHandler(tokenMapper store.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) common.Handler {
+	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
 			return handleFreezeToken(ctx, tokenMapper, accountMapper, keeper, msg)

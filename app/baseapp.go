@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -51,7 +50,7 @@ type BaseApp struct {
 	cdc        *wire.Codec          // Amino codec
 	db         dbm.DB               // common DB backend
 	cms        sdk.CommitMultiStore // Main (uncached) state
-	router     baseapp.Router       // handle any kind of message
+	router     Router               // handle any kind of message
 	codespacer *sdk.Codespacer      // handle module codespacing
 
 	// must be set
@@ -93,7 +92,7 @@ func NewBaseApp(name string, cdc *wire.Codec, logger log.Logger, db dbm.DB, txDe
 		cdc:        cdc,
 		db:         db,
 		cms:        store.NewCommitMultiStore(db),
-		router:     baseapp.NewRouter(),
+		router:     NewRouter(),
 		codespacer: sdk.NewCodespacer(),
 		txDecoder:  txDecoder,
 	}
@@ -164,7 +163,7 @@ func (app *BaseApp) SetAddrPeerFilter(pf sdk.PeerFilter) {
 func (app *BaseApp) SetPubKeyPeerFilter(pf sdk.PeerFilter) {
 	app.pubkeyPeerFilter = pf
 }
-func (app *BaseApp) Router() baseapp.Router { return app.router }
+func (app *BaseApp) Router() Router { return app.router }
 
 // load latest application version
 func (app *BaseApp) LoadLatestVersion(mainKey sdk.StoreKey) error {
@@ -353,6 +352,7 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) (res abc
 			txBytes := req.Data
 			tx, err := app.txDecoder(txBytes)
 			if err != nil {
+				fmt.Println("A transaction simulation error occurred.")
 				result = err.Result()
 			} else {
 				result = app.Simulate(tx)
@@ -524,7 +524,7 @@ func (app *BaseApp) getContextForAnte(mode runTxMode, txBytes []byte) (ctx sdk.C
 }
 
 // Iterates through msgs and executes them
-func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg) (result sdk.Result) {
+func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, simulate bool) (result sdk.Result) {
 	// accumulate results
 	logs := make([]string, 0, len(msgs))
 	var data []byte   // NOTE: we just append them all (?!)
@@ -538,7 +538,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg) (result sdk.Result)
 			return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
 		}
 
-		msgResult := handler(ctx, msg)
+		msgResult := handler(ctx, msg, simulate)
 
 		// NOTE: GasWanted is determined by ante handler and
 		// GasUsed by the GasMeter
@@ -577,8 +577,14 @@ func getState(app *BaseApp, mode runTxMode) *state {
 	if mode == runTxModeCheck || mode == runTxModeSimulate {
 		return app.checkState
 	}
-
 	return app.deliverState
+}
+
+func (app *BaseApp) initializeContext(ctx sdk.Context, mode runTxMode) sdk.Context {
+	if mode == runTxModeSimulate {
+		ctx = ctx.WithMultiStore(getState(app, runTxModeSimulate).CacheMultiStore())
+	}
+	return ctx
 }
 
 // runTx processes a transaction. The transactions is proccessed via an
@@ -589,7 +595,10 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
 	var gasWanted int64
+
 	ctx := app.getContextForAnte(mode, txBytes)
+	ctx = app.initializeContext(ctx, mode)
+	simulate := runTxModeSimulate == mode
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -637,7 +646,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	}
 
 	ctx = ctx.WithMultiStore(msCache)
-	result = app.runMsgs(ctx, msgs)
+	result = app.runMsgs(ctx, msgs, simulate)
 	result.GasWanted = gasWanted
 
 	// only update state if all messages pass and we're not in a simulation
@@ -645,7 +654,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		msCache.Write()
 	}
 
-	return
+	return result
 }
 
 // EndBlock implements the ABCI application interface.
