@@ -211,7 +211,5 @@ func handleCancelOrder(
 	}
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToUnlock, -unlockAmount)
-
-	//TODO: here fee should be calculated and deducted
 	return sdk.Result{}
 }
