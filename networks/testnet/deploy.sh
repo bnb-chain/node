@@ -38,6 +38,7 @@ src_ips=("172.20.0.2" "172.20.0.3" "172.20.0.4" "172.20.0.5")
 machines=("172.31.47.173" "172.31.47.252" "172.31.35.68")
 bridge_ip="172.31.35.68"
 witness_ip="172.31.35.68"
+kafka_ip="172.31.47.173"
 home_path="/server/bnc"
 
 if [ "${is_build}" = true ]
@@ -55,6 +56,8 @@ then
 		echo "Copying repo to host ${machines[$i]}..."
 		ssh bijieprd@${machines[$i]} "sudo rm -rf ~/gowork/src/github.com/BiJie/BinanceChain"
 		scp BinanceChain.tar.gz bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
+		# TODO: remove this work around until we have an appropriate
+		scp helpers.go bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
 		ssh bijieprd@${machines[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
 	done
 fi
@@ -123,6 +126,15 @@ for i in {0..3}
 do
 	echo "Starting validator ${paths[$i]} in host ${des_ips[$i]}..."
 	ssh bijieprd@${des_ips[$i]} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/${paths[$i]}/gaiad start > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
+done
+
+
+# post deploy
+for i in {0..3}
+do
+	echo "Adding account at validator ${paths[$i]} in host ${des_ips[$i]}..."
+	ssh bijieprd@${des_ips[$i]} "expect ~/gowork/src/github.com/BiJie/BinanceChain/networks/testnet/add_key.exp \"zc\" \"~/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli\" \"${home_path}/${paths[$i]}/gaiacli 2>&1 &"
+	ssh bijieprd@${des_ips[$i]} "expect ~/gowork/src/github.com/BiJie/BinanceChain/networks/testnet/add_key.exp \"zz\" \"~/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli\" \"${home_path}/${paths[$i]}/gaiacli 2>&1 &"
 done
 
 ## prepare bridge node
@@ -214,4 +226,62 @@ echo "Copying config to witness node ${witness_ip}..."
 scp -r node_witness bijieprd@${witness_ip}:${home_path} > /dev/null
 
 echo "Starting witness node..."
-ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_witness/gaiad start > ${home_path}/node_witness/node_witness.log 2>&1 &"
+ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_witness/gaiad start >> ${home_path}/node_witness/gaiad/bnc.log 2>&1 &"
+
+## prepare publisher
+rm -rf node_publisher
+cp -r node0 node_publisher
+rm -rf node_publisher/gaiad/config/gentx node_publisher/gaiad/config/node_key.json node_publisher/gaiad/config/priv_validator.json
+
+# turn on pex
+sed -i -e "s/pex = false/pex = true/g" node_publisher/gaiad/config/config.toml
+
+# turn on debug level log
+sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" node_publisher/gaiad/config/config.toml
+
+# turn on prometheus
+sed -i -e "s/prometheus = false/prometheus = true/g" node_publisher/gaiad/config/config.toml
+
+# change port
+sed -i -e "s/26658/27658/g" "node_publisher/gaiad/config/config.toml"
+sed -i -e "s/26656/27656/g" "node_publisher/gaiad/config/config.toml"
+sed -i -e "s/6060/7060/g" "node_publisher/gaiad/config/config.toml"
+sed -i -e "s/26657/27657/g" "node_publisher/gaiad/config/config.toml"
+sed -i -e "s/26660/27660/g" "node_publisher/gaiad/config/config.toml"
+
+# set seeds
+sed -i -e "s/seeds = \"\"/seeds = \"${bridge_id}@${bridge_ip}:26656\"/g" node_publisher/gaiad/config/config.toml
+
+# clear persistent peers
+sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' node_publisher/gaiad/config/config.toml
+
+# set tx index config
+sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" node_publisher/gaiad/config/config.toml
+
+# set publish config - ip
+sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/orderBookTopic = \"books\"/orderBookTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
+
+# distribute config
+echo "Stopping publisher node in host  ${witness_ip}..."
+ssh bijieprd@${witness_ip} "ps -ef | grep bnbchain | grep node_publisher | awk '{print \$2}' | xargs kill -9"
+ssh bijieprd@${witness_ip} "rm -rf ${home_path}/node_publisher"
+
+echo "Copying config to publisher node ${witness_ip}..."
+scp -r node_publisher bijieprd@${witness_ip}:${home_path} > /dev/null
+
+# apply tx indexing patch - TODO(#118) these two lines can be deleted after we finish https://github.com/BiJie/BinanceChain/issues/118
+scp /server/bnc/cong/kv.go bijieprd@${witness_ip}:/home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/vendor/github.com/tendermint/tendermint/state/txindex/kv > /dev/null
+ssh bijieprd@${witness_ip} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie/BinanceChain && make build"
+
+# start an api-server to query tx
+nohup build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
+
+echo "Starting publisher node..."
+ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_publisher/gaiad start > ${home_path}/node_publisher/node_publisher.log 2>&1 &"

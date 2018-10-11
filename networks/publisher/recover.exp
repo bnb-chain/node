@@ -1,0 +1,16 @@
+#!/usr/bin/expect
+
+set secret [lindex $argv 0]
+set name [lindex $argv 1]
+set clipath [lindex $argv 2]
+set clihome [lindex $argv 3]
+
+set timeout 30
+	spawn $clipath --home $clihome keys add $name --recover
+	expect "Enter*"
+	send "1234qwerasdf\r"
+	expect "Repeat*"
+	send "1234qwerasdf\r"
+	expect "Enter*"
+	send "${secret}\r"
+interact

@@ -16,12 +16,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/app/config"
+	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/common"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
@@ -46,6 +49,11 @@ var (
 // BinanceChain implements ChainApp
 var _ types.ChainApp = (*BinanceChain)(nil)
 
+var (
+	Codec         = MakeCodec()
+	ServerContext = config.NewDefaultContext()
+)
+
 // BinanceChain is the BNBChain ABCI application
 type BinanceChain struct {
 	*BaseApp
@@ -60,22 +68,26 @@ type BinanceChain struct {
 	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
 	TokenMapper         tokenStore.Mapper
+
+	publicationConfig *config.PublicationConfig
+	publisher         *pub.MarketDataPublisher
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*BaseApp)) *BinanceChain {
 
 	// create app-level codec for txs and accounts
-	var cdc = MakeCodec()
+	var cdc = Codec
 
 	// create composed tx decoder
 	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
 
 	// create your application object
 	var app = &BinanceChain{
-		BaseApp:       NewBaseApp(appName, cdc, logger, db, decoders, baseAppOptions...),
-		Codec:         cdc,
-		queryHandlers: make(map[string]types.AbciQueryHandler),
+		BaseApp:           NewBaseApp(appName, cdc, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
+		Codec:             cdc,
+		queryHandlers:     make(map[string]types.AbciQueryHandler),
+		publicationConfig: ServerContext.PublicationConfig,
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
@@ -89,12 +101,16 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc)
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
 	app.registerHandlers(cdc)
+
+	if app.publicationConfig.ShouldPublishAny() {
+		app.publisher = pub.NewMarketDataPublisher(app.publicationConfig)
+	}
 
 	// Initialize BaseApp.
 	app.SetInitChainer(app.initChainerFn())
@@ -150,7 +166,7 @@ func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
 	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
 		app.Router().AddRoute(route, handler)
 	}
-	for route, handler := range dex.Routes(cdc, *app.DexKeeper, app.TokenMapper, app.AccountMapper) {
+	for route, handler := range dex.Routes(cdc, app.DexKeeper, app.TokenMapper, app.AccountMapper) {
 		app.Router().AddRoute(route, handler)
 	}
 }
@@ -209,19 +225,23 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
-	height := ctx.BlockHeight()
+	height := ctx.BlockHeader().Height
 
+	var tradesToPublish []pub.Trade
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
-		// TODO: add postAllocateHandler
-		ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+		app.Logger.Debug("normal block", "height", height)
+		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
+		} else {
+			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+		}
 	} else {
 		// breathe block
-		app.Logger.Debug(fmt.Sprintf("breathe block: %d", height))
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.AccountMapper, *app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.AccountMapper, app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
@@ -230,6 +250,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// distribute fees TODO: enable it after upgraded to tm 0.24.0
 	// distributeFee(ctx, app.AccountMapper)
 	// TODO: update validators
+
+	if app.publicationConfig.ShouldPublishAny() && app.publisher.IsLive {
+		app.publish(tradesToPublish, ctx, height, blockTime)
+	}
+
 	return abci.ResponseEndBlock{}
 }
 
@@ -300,4 +325,49 @@ func MakeCodec() *wire.Codec {
 	tx.RegisterWire(cdc)
 
 	return cdc
+}
+
+func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, height, blockTime int64) {
+	pub.Logger.Info("start to collect publish information", "height", height)
+
+	var accountsToPublish map[string]pub.Account
+	if app.publicationConfig.PublishAccountBalance {
+		txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
+		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
+		accountsToPublish = pub.GetAccountBalances(app.AccountMapper, ctx, txRelatedAccounts, tradeRelatedAccounts)
+		defer func() {
+			app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
+		}() // clean up
+	}
+
+	var latestPriceLevels order.ChangedPriceLevelsMap
+	if app.publicationConfig.PublishOrderBook {
+		latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+	}
+
+	pub.Logger.Info("start to publish", "height", height,
+		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
+		"numOfOrders", // the order num we collected here doesn't include trade related orders
+		len(app.DexKeeper.OrderChanges),
+		"numOfAccounts",
+		len(accountsToPublish))
+	app.publisher.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
+		height,
+		blockTime,
+		tradesToPublish,
+		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChangesMap, // ditto
+		accountsToPublish,
+		latestPriceLevels)
+
+	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
+	for id := range app.publisher.ToRemoveOrderIdCh {
+		pub.Logger.Debug("delete order from order changes map", "orderId", id)
+		delete(app.DexKeeper.OrderChangesMap, id)
+	}
+
+	// clean up intermediate cached data
+	app.DexKeeper.ClearOrderChanges()
+	pub.Logger.Debug("finish publish", "height", height)
 }

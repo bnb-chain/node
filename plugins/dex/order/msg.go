@@ -30,6 +30,17 @@ var sideNames = map[string]int8{
 	"SELL": matcheng.SELLSIDE,
 }
 
+func IToSide(side int8) string {
+	switch side {
+	case Side.BUY:
+		return "BUY"
+	case Side.SELL:
+		return "SELL"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 // GenerateOrderID generates an order ID
 func GenerateOrderID(sequence int64, from sdk.AccAddress) string {
 	id := fmt.Sprintf("%s-%d", from.String(), sequence)
@@ -67,6 +78,17 @@ var OrderType = struct {
 	MARKET int8
 }{orderLimit, orderMarket}
 
+func IToOrderType(tpe int8) string {
+	switch tpe {
+	case OrderType.LIMIT:
+		return "LIMIT"
+	case OrderType.MARKET:
+		return "MARKET"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 // IsValidOrderType validates that an order type is valid and supported by the matching engine
 func IsValidOrderType(ot int8) bool {
 	switch ot {
@@ -102,6 +124,17 @@ func IsValidTimeInForce(tif int8) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func IToTimeInForce(tif int8) string {
+	switch tif {
+	case TimeInForce.GTC:
+		return "GTC"
+	case TimeInForce.IOC:
+		return "IOC"
+	default:
+		return "UNKNOWN"
 	}
 }
 
@@ -169,6 +202,13 @@ func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
+}
+
+type OrderInfo struct {
+	NewOrderMsg
+	CreatedTimestamp int64
+	CumQty           int64
+	TxHash           string
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
