@@ -53,11 +53,11 @@ function check_operation() {
 
 secret=$(prepare_node)
 
-result=$(expect ./recover.exp "${secret}" "alice" true)
+result=$(expect ./recover.exp "${secret}" "alice" true testnodecli)
 check_operation "Recover Key" "${result}" "${keys_operation_words}"
 
 bob_secret="bottom quick strong ranch section decide pepper broken oven demand coin run jacket curious business achieve mule bamboo remain vote kid rigid bench rubber"
-result=$(expect ./add_key.exp "${bob_secret}" "bob")
+result=$(expect ./add_key.exp "${bob_secret}" "bob" testnodecli)
 check_operation "Add Key" "${result}" "${keys_operation_words}"
 
 alice_addr=$(./bnbcli keys list --home ${cli_home} | grep alice | grep -o "cosmosaccaddr[0-9a-zA-Z]*")

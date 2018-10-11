@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bridge
+  labels:
+    tendermint-identity: bridge
+    app: tendermint-bridge
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      tendermint-identity: bridge
+      app: tendermint-bridge
+  template:
+    metadata:
+      labels:
+        tendermint-identity: bridge
+        app: tendermint-bridge
+    spec:
+      ## Use nodeSelector to hold same data volumes in host machine and to avoid host port conflict.
+      nodeSelector:
+        tendermint-bridge: bridge
+#      affinity:
+#        podAntiAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: In
+#                values:
+#                - tendermint-bridge
+#            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bnbchaind
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        image: 172.22.41.103:5000/kube-bnbchain
+        imagePullPolicy: Always
+        command:
+        - /bin/sh
+        - -c
+        - mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/gaiad/node.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/gaiad
+          name: gaiad-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+      volumes:
+      - name: gaiad-volume
+        hostPath:
+          path: /opt/bnbchaind/bridge
+      - name: config-volume
+        configMap:
+          name: bridge-config

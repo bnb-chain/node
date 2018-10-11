@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validator-{{INSTANCE}}
+  labels:
+    tendermint-identity: validator-{{INSTANCE}}
+    app: tendermint
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      tendermint-identity: validator-{{INSTANCE}}
+      app: tendermint
+  template:
+    metadata:
+      labels:
+        tendermint-identity: validator-{{INSTANCE}}
+        app: tendermint
+    spec:
+      ## Use nodeSelector to hold same data volumes in host machine and to avoid host port conflict.
+      nodeSelector:
+        tendermint-identity: validator-{{INSTANCE}}
+#      affinity:
+#        podAntiAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: In
+#                values:
+#                - tendermint
+#            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bnbchaind
+        image: 172.22.41.103:5000/kube-bnbchain
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        command:
+        - /bin/sh
+        - -c
+        - mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;cp /bnbchaind/secret/*.json /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657" > /bnbchaind/gaiad/node.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/gaiad
+          name: gaiad-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+        - name: secret-volume
+          readOnly: true
+          mountPath: /bnbchaind/secret
+      - name: api-server
+        image: 172.22.41.103:5000/kube-bnbchain
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        command:
+        - /bin/sh
+        - -c
+        - /bnbchaind/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server> /bnbchaind/gaiad/api-server.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/gaiad
+          name: gaiad-volume
+      volumes:
+      - name: gaiad-volume
+        hostPath:
+          path: /opt/bnbchaind/bnbchaind-validator
+      - name: config-volume
+        configMap:
+          name: validator-{{INSTANCE}}-config
+      - name: secret-volume
+        secret:
+          secretName: validator-{{INSTANCE}}-secret

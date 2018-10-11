@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: tendermint-seed
+  name: seed
+spec:
+  ports:
+  - port: 26656
+    targetPort: 26656
+  selector:
+    app: tendermint-seed
+  type: LoadBalancer

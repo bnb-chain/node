@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: witness-order
+  labels:
+    tendermint-identity: witness-order
+    app: tendermint-witness-order
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      tendermint-identity: witness-order
+      app: tendermint-witness-order
+  template:
+    metadata:
+      labels:
+        tendermint-identity: witness-order
+        app: tendermint-witness-order
+    spec:
+      ## Use nodeSelector to hold same data volumes in host machine and to avoid host port conflict.
+      nodeSelector:
+        tendermint-witness-order: witness-order
+#      affinity:
+#        podAntiAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: In
+#                values:
+#                - tendermint-witness-order
+#            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bnbchaind
+        image: 172.22.41.103:5000/kube-bnbchain
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        command:
+        - /bin/sh
+        - -c
+        - mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/gaiad/node.log 2>&1
+        volumeMounts:
+        - mountPath: /bnbchaind/gaiad
+          name: gaiad-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+      volumes:
+      - name: gaiad-volume
+        hostPath:
+          path: /opt/bnbchaind/witness-order
+      - name: config-volume
+        configMap:
+          name: witness-order-config

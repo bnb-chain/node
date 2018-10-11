@@ -3,6 +3,7 @@
 set secret [lindex $argv 0]
 set name [lindex $argv 1]
 set recover [lindex $argv 2]
+set home [lindex $argv 3]
 
 if { "${recover}" == "true" } {
 	set recover "--recover"
@@ -11,7 +12,7 @@ if { "${recover}" == "true" } {
 }
 
 set timeout 30
-	spawn ./bnbcli keys add --home ./testnodecli $recover $name
+	spawn ./bnbcli keys add --home ./${home} $recover $name
 	expect "Enter*"
 	send "12345678\r"
 	expect "Repeat*"
