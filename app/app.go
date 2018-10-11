@@ -225,6 +225,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
+	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []pub.Trade

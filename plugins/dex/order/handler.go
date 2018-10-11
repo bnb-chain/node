@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/tx"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -175,9 +176,16 @@ func handleCancelOrder(
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate {
 		//remove order from cache and order book
-		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled, false)
+		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, false)
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
+		}
+		if keeper.CollectOrderInfoForPublish {
+			fee := tx.GetCalculator(msg.Type())(msg)
+			if !fee.IsEmpty() {
+				change := OrderChange{msg.Id, Canceled, fee.Tokens[0].Amount.Int64(), fee.Tokens[0].Denom}
+				keeper.OrderChanges = append(keeper.OrderChanges, change)
+			}
 		}
 	} else {
 		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)

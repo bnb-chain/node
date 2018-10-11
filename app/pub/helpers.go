@@ -77,17 +77,19 @@ func MatchAndAllocateAllForPublish(
 
 	// group trades by Bid and Sid to make fee update easier
 	tradesToPublish := make([]Trade, 0)
-	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
-	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go collectTradeFeeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh, orderPkg.IocNoFill)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
+		var fee orderPkg.Fee
 		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
-			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-			if tran.IsExpiredWithFee() {
-				iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
-			} else {
-				tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
-			}
+			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
+		}
+
+		if tran.IsExpire() {
+			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+		} else {
+			tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
 		}
 	}
 	ctx, _, _ = dexKeeper.MatchAndAllocateAll(ctx, accountMapper, feeCollectorForTrades)
@@ -103,24 +105,27 @@ func ExpireOrdersForPublish(
 	accountMapper auth.AccountMapper,
 	ctx sdk.Context,
 	blockTime int64) {
-	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
+	expireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireFeeHolderCh, orderPkg.Expired)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		if tran.IsExpiredWithFee() {
+		var fee orderPkg.Fee
+		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
-			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
+		}
+		if tran.IsExpire() {
+			expireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, feeCollectorForTrades)
-	close(iocExpireFeeHolderCh)
+	close(expireFeeHolderCh)
 	wg.Wait()
 }
 
 // for partial and fully filled order fee
-func collectTradeForPublish(
+func collectTradeFeeForPublish(
 	tradesToPublish *[]Trade,
 	wg *sync.WaitGroup,
 	height int64,
@@ -144,6 +149,7 @@ func collectTradeForPublish(
 				Bfee:   -1,
 				Sfee:   -1}
 			trades[feeHolder.Trade] = t
+			tradeIdx += 1
 		} else {
 			t = trade
 		}
@@ -158,7 +164,6 @@ func collectTradeForPublish(
 
 		if t.Bfee != -1 && t.Sfee != -1 {
 			*tradesToPublish = append(*tradesToPublish, *t)
-			tradeIdx += 1
 		}
 	}
 }
@@ -166,7 +171,8 @@ func collectTradeForPublish(
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
-	feeHolderCh <-chan orderPkg.ExpireFeeHolder) {
+	feeHolderCh <-chan orderPkg.ExpireFeeHolder,
+	reason orderPkg.ChangeType) {
 	defer wg.Done()
 	for feeHolder := range feeHolderCh {
 		Logger.Debug("fee Collector for expire transfer", "transfer", feeHolder.String())
@@ -177,7 +183,7 @@ func updateExpireFeeForPublish(
 		var feeAsset string
 		fee = feeHolder.Amount
 		feeAsset = feeHolder.Asset
-		change := orderPkg.OrderChange{originOrd.Id, orderPkg.Expired, fee, feeAsset}
+		change := orderPkg.OrderChange{originOrd.Id, reason, fee, feeAsset}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
 }

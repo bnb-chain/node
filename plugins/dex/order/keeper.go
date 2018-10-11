@@ -77,6 +77,10 @@ func (tran Transfer) FeeFree() bool {
 		tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventExpireForMatchFailure
 }
 
+func (tran Transfer) IsExpire() bool {
+	return tran.eventType == eventIOCFullyExpire || tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventPartiallyExpire || tran.eventType == eventFullyExpire
+}
+
 func (tran Transfer) IsExpiredWithFee() bool {
 	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
 }
@@ -176,7 +180,6 @@ func (kp *Keeper) RemoveOrder(
 	symbol string,
 	side int8,
 	price int64,
-	reason ChangeType,
 	isRecovery bool) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
 	msg, ok := kp.OrderExists(symbol, id)
@@ -189,15 +192,9 @@ func (kp *Keeper) RemoveOrder(
 	}
 	delete(kp.allOrders[symbol], id)
 	ord, err = eng.Book.RemoveOrder(id, side, price)
-	if kp.CollectOrderInfoForPublish {
-		if !isRecovery {
-			// fee will be updated during doTransfer
-			change := OrderChange{msg.Id, reason, 0, ""}
-			kp.OrderChanges = append(kp.OrderChanges, change)
-		} else {
-			bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
-			delete(kp.OrderChangesMap, msg.Id)
-		}
+	if kp.CollectOrderInfoForPublish && isRecovery {
+		bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
+		delete(kp.OrderChangesMap, msg.Id) // for nonRecovery, will remove during endblock
 	}
 	return ord, err
 }

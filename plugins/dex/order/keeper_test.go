@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
 
 	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -16,6 +15,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -300,7 +300,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 300000)
 	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
-	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, Canceled, false)
+	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, false)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
