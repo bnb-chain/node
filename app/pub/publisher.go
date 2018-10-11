@@ -33,7 +33,7 @@ var (
 type MarketDataPublisher struct {
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
-	IsLive            bool        // TODO(#66): thread safty: is EndBlocker and Init are call in same thread?
+	IsLive            bool        // TODO(#66): thread safety: is EndBlocker and Init are call in same thread?
 
 	config    *config.PublicationConfig
 	producers map[string]sarama.SyncProducer // topic -> producer
@@ -90,7 +90,9 @@ func (publisher *MarketDataPublisher) Stop() {
 	publisher.IsLive = false
 
 	close(publisher.ToPublishCh)
-	close(publisher.ToRemoveOrderIdCh)
+	if publisher.ToRemoveOrderIdCh != nil {
+		close(publisher.ToRemoveOrderIdCh)
+	}
 
 	for topic, producer := range publisher.producers {
 		// nil check because this method would be called when we failed to create producer
@@ -321,20 +323,23 @@ func (publisher *MarketDataPublisher) filterChangedOrderBooksByOrders(
 			res[o.symbol] = orderPkg.ChangedPriceLevelsPerSymbol{make(map[int64]int64), make(map[int64]int64)}
 		}
 
+		price := o.price
+		// TODO: confirm whether cancelled/expire order should update the last executed price
+		if o.status == orderPkg.PartialFill || o.status == orderPkg.FullyFill {
+			price = o.lastExecutedPrice
+		}
 		switch o.side {
 		case orderPkg.Side.BUY:
-			// TODO(#66): code clean up - here we rely on special implementation that for orders
-			// that not generated from trade (like New, Cancel) the lastExecutedPrice is original price (rather than 0)
-			if qty, ok := latestPriceLevels[o.symbol].Buys[o.lastExecutedPrice]; ok {
-				res[o.symbol].Buys[o.lastExecutedPrice] = qty
+			if qty, ok := latestPriceLevels[o.symbol].Buys[price]; ok {
+				res[o.symbol].Buys[price] = qty
 			} else {
-				res[o.symbol].Buys[o.lastExecutedPrice] = 0
+				res[o.symbol].Buys[price] = 0
 			}
 		case orderPkg.Side.SELL:
-			if qty, ok := latestPriceLevels[o.symbol].Sells[o.lastExecutedPrice]; ok {
-				res[o.symbol].Sells[o.lastExecutedPrice] = qty
+			if qty, ok := latestPriceLevels[o.symbol].Sells[price]; ok {
+				res[o.symbol].Sells[price] = qty
 			} else {
-				res[o.symbol].Sells[o.lastExecutedPrice] = 0
+				res[o.symbol].Sells[price] = 0
 			}
 		}
 	}

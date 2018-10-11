@@ -200,7 +200,9 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 			switch msg := m.(type) {
 			case NewOrderMsg:
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
-				orderInfo := OrderInfo{msg, block.Time.UnixNano(), 0, txHash}
+				// the time we replay should be consistent with ctx.BlockHeader().Time
+				// TODO(#118): after upgrade to tendermint 0.24 we should have better and more consistent time representation
+				orderInfo := OrderInfo{msg, block.Time.Unix(), 0, txHash}
 				kp.AddOrder(orderInfo, height, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
@@ -208,7 +210,7 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				if !ok {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, Canceled, true)
+				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, true)
 				if err != nil {
 					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
 				}
