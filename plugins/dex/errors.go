@@ -9,7 +9,7 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 6
 
-	// CodeIncorrectDexOperation module reserves error 400-499 lawl
+	// CodeIncorrectDexOperation module reserves error 400-499
 	CodeIncorrectDexOperation   sdk.CodeType = 400
 	CodeInvalidOrderParam       sdk.CodeType = 401
 	CodeInvalidTradeSymbol      sdk.CodeType = 402

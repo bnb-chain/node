@@ -216,14 +216,18 @@ func (me *MatchEng) Match() bool {
 }
 
 //DropFilledOrder() would clear the order to remove
-func (me *MatchEng) DropFilledOrder() int {
-	i := 0
+func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
+	droppedIds = make([]string, 0, len(me.overLappedLevel)<<1)
 	for _, p := range me.overLappedLevel {
 		if len(p.BuyOrders) > 0 {
 			p.BuyTotal = sumOrdersTotalLeft(p.BuyOrders, true)
+			for _, o := range p.BuyOrders {
+				if o.nxtTrade == 0 {
+					droppedIds = append(droppedIds, o.Id)
+				}
+			}
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
-				i++
 			} else {
 				for _, o := range p.BuyOrders {
 					if o.nxtTrade == 0 {
@@ -234,9 +238,13 @@ func (me *MatchEng) DropFilledOrder() int {
 		}
 		if len(p.SellOrders) > 0 {
 			p.SellTotal = sumOrdersTotalLeft(p.SellOrders, true)
+			for _, o := range p.SellOrders {
+				if o.nxtTrade == 0 {
+					droppedIds = append(droppedIds, o.Id)
+				}
+			}
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
-				i++
 			} else {
 				for _, o := range p.SellOrders {
 					if o.nxtTrade == 0 {
@@ -246,6 +254,5 @@ func (me *MatchEng) DropFilledOrder() int {
 			}
 		}
 	}
-
-	return i
+	return droppedIds
 }

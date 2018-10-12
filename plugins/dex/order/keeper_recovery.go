@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
-	"github.com/tendermint/tendermint/crypto/tmhash"
 	"io"
 	"sort"
 	"time"
+
+	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bc "github.com/tendermint/tendermint/blockchain"
