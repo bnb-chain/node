@@ -34,7 +34,7 @@ type Keeper struct {
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
 	OrderChangesMap            OrderInfoForPublish
-	roundOrders                map[string]int // limit to the total tx number in a block
+	roundOrders                map[string][]string // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
 	roundFees                  map[string]sdk.Coins
 	poolSize                   uint // number of concurrent channels, counted in the pow of 2
@@ -98,7 +98,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChanges:               make(OrderChanges, 0),
 		OrderChangesMap:            make(OrderInfoForPublish),
-		roundOrders:                make(map[string]int, 256),
+		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
@@ -148,10 +148,16 @@ func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err er
 	}
 
 	kp.allOrders[symbol][msg.Id] = &msg
-	kp.roundOrders[symbol] += 1
+	if ids, ok := kp.roundOrders[symbol]; ok {
+		kp.roundOrders[symbol] = append(ids, msg.Id)
+	} else {
+		newIds := make([]string, 0, 16)
+		kp.roundOrders[symbol] = append(newIds, msg.Id)
+	}
 	if msg.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
 	}
+	bnclog.Debug("Add orders", "symbol", symbol, "id", msg.Id, "num", len(kp.roundOrders))
 	return nil
 }
 
@@ -263,13 +269,20 @@ func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo) Transfe
 	}
 }
 
-//TODO: should get an even hash
+// channelHash() will choose a channel for processing by moding
+// the sum of the checksum of bech32 address by bucketNumber.
+// It may not be fully even.
 func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
-	return int(accAddress[0]+accAddress[1]) % bucketNumber
+	l := len(accAddress)
+	sum := 0
+	for i := l - 7; i < l; i++ {
+		sum += int(accAddress[i])
+	}
+	return sum % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]*OrderInfo, distributeTrade bool,
-	tradeOuts []chan Transfer) {
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]*OrderInfo,
+	distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
 	logger := bnclog.With("module", "dex")
@@ -289,21 +302,52 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 				tradeOuts[c] <- t2
 			}
 		}
-		n := engine.DropFilledOrder()
-		logger.Debug("Drop filled orders", "total", n)
-	} // TODO: when Match() failed, have to unsolicited cancel all the orders
-	// when multiple unsolicited cancel happened, the validator would stop running
-	// and ask for help
+		droppedIds := engine.DropFilledOrder() //delete from order books
+		for _, id := range droppedIds {
+			delete(orders, id) //delete from order cache
+		}
+		logger.Debug("Drop filled orders", "total", droppedIds)
+	} else {
+		// FUTURE-TODO:
+		// when Match() failed, have to unsolicited cancel all the new orders
+		// in this block. Ideally the order IDs would be stored in the EndBlock response,
+		// but this is not implemented yet, pending Tendermint to better handle EndBlock
+		// for index service.
+		//
+		// the order status publisher should publish these abnormal
+		// order status change out too.
+		logger.Error("Fatal error occurred in matching, cancell all incoming new orders",
+			"symbol", symbol)
+		thisRoundIds := kp.roundOrders[symbol]
+		for _, id := range thisRoundIds {
+			msg := orders[id]
+			delete(orders, id)
+			if ord, err := engine.Book.RemoveOrder(id, msg.Side, msg.Price); err == nil {
+				logger.Info("Removed due to match failure", "ordID", msg.Id)
+				if !distributeTrade {
+					continue
+				}
+				c := channelHash(msg.Sender, concurrency)
+				tradeOuts[c] <- kp.expiredToTransfer(ord, msg)
+			} else {
+				logger.Error("Failed to remove order, may be fatal!", "orderID", id)
+			}
+		}
+		return // no need to handle IOC
+	}
 	iocIDs := kp.roundIOCOrders[symbol]
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
-			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, IocNoFill, false); err == nil {
+			delete(orders, id)
+			if ord, err := engine.Book.RemoveOrder(id, msg.Side, msg.Price); err == nil {
 				logger.Debug("Removed unclosed IOC order", "ordID", msg.Id)
 				if !distributeTrade {
 					continue
 				}
 				c := channelHash(msg.Sender, concurrency)
 				tradeOuts[c] <- kp.expiredToTransfer(ord, msg)
+			} else {
+				logger.Error("Failed to remove IOC order, may be fatal!", "orderID", id)
 			}
 		}
 	}
@@ -311,8 +355,17 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 
 func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer {
 	size := len(kp.roundOrders)
+	ordNum := 0
+	for _, perSymbol := range kp.roundOrders {
+		n := len(perSymbol)
+		if ordNum < n {
+			ordNum = n
+		}
+	}
+	logger := bnclog.With("module", "dex")
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
+		logger.Info("No new orders for any pair, give up matching")
 		return nil
 	}
 	channelSize := size >> kp.poolSize
@@ -327,7 +380,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 		if distributeTrade {
 			channelSize = 0
 		}
-		tradeOuts[i] = make(chan Transfer, channelSize*2)
+		tradeOuts[i] = make(chan Transfer, ordNum*2)
 	}
 
 	symbolCh := make(chan string, concurrency)
@@ -339,6 +392,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 	matchWorker := func() {
 		for symbol := range symbolCh {
+			logger.Debug("start matching", "symbol", symbol)
 			kp.matchAndDistributeTradesForSymbol(symbol, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
@@ -530,10 +584,9 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
 }
 
-func (kp *Keeper) clearAfterMatch() (err error) {
-	kp.roundOrders = make(map[string]int, 256)
+func (kp *Keeper) clearAfterMatch() {
+	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
-	return nil
 }
 
 func concurrentSettle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandler func(int, Transfer)) {
@@ -581,13 +634,16 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	wg.Add(len(tradeOuts))
 	concurrentSettle(&wg, tradeOuts, func(int, Transfer) {})
 	wg.Wait()
+	kp.clearAfterMatch()
 	return sdk.CodeOK, nil
 }
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
+// TODO: the return value: code & err may not be required.
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
 		bnclog.With("module", "dex").Info("No order comes in for the block")
@@ -596,6 +652,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, am, postAllocateHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
+	kp.clearAfterMatch()
 	return newCtx, sdk.CodeOK, nil
 }
 

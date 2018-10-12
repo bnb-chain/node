@@ -143,7 +143,7 @@ func handleNewOrder(
 	}
 	serialized, err := cdc.MarshalJSON(&response)
 	if err != nil {
-		return sdk.ErrInternal(err.Error()).Result()
+		return sdk.NewError(types.DefaultCodespace, types.CodeMarshalFailure, err.Error()).Result()
 	}
 
 	return sdk.Result{
@@ -207,7 +207,7 @@ func handleCancelOrder(
 	_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
 
 	if sdkError != nil {
-		return sdkError.Result()
+		return sdk.NewError(types.DefaultCodespace, types.CodeMarshalFailure, err.Error()).Result()
 	}
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToUnlock, -unlockAmount)

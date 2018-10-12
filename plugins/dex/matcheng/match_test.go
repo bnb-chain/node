@@ -845,7 +845,7 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	assert.Equal(int64(100), me.LastTradePrice)
 
 	t.Log(me.Trades)
-	assert.Equal(6, me.DropFilledOrder())
+	assert.Equal(9, len(me.DropFilledOrder()))
 	assert.Nil(book.buyQueue.GetPriceLevel(102))
 	assert.Nil(book.buyQueue.GetPriceLevel(101))
 	assert.Nil(book.sellQueue.GetPriceLevel(100))

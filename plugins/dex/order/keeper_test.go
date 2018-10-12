@@ -69,6 +69,46 @@ func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
 	cms := ms.CacheMultiStore()
 	return cms
 }
+
+func TestKeeper_MatchFailure(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	tradingPair.LotSize = -10000000 // negative LotSize should never happen
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 99000, 3000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 99000, 1000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ_BNB", 99000, 5000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ_BNB", 98000, 1000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ_BNB", 97000, 5000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ_BNB", 95000, 5000000)
+	keeper.AddOrder(msg, 42)
+	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ_BNB", 99000, 15000000)
+	keeper.AddOrder(msg, 42)
+	tradeOuts := keeper.matchAndDistributeTrades(true)
+	c := channelHash(accAdd, 4)
+	i := 0
+	for tr := range tradeOuts[c] {
+		assert.Equal(tr.bid, tr.sid)
+		assert.Equal(tr.in, tr.out)
+		assert.Equal(tr.in, tr.unlock)
+		i++
+	}
+	assert.Equal(7, i)
+}
+
 func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()

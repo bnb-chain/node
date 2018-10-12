@@ -9,7 +9,7 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 6
 
-	// CodeIncorrectDexOperation module reserves error 400-499 lawl
+	// CodeIncorrectDexOperation module reserves error 400-499
 	CodeIncorrectDexOperation   sdk.CodeType = 400
 	CodeInvalidOrderParam       sdk.CodeType = 401
 	CodeInvalidTradeSymbol      sdk.CodeType = 402
@@ -17,6 +17,7 @@ const (
 	CodeFailCancelOrder         sdk.CodeType = 404
 	CodeFailLocateOrderToCancel sdk.CodeType = 405
 	CodeDuplicatedOrder         sdk.CodeType = 406
+	CodeMarshalFailure          sdk.CodeType = 407
 )
 
 // ErrIncorrectDexOperation - Error returned upon an incorrect guess
