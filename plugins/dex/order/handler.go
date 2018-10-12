@@ -23,7 +23,7 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) common.Handler {
+func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) common.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
@@ -78,7 +78,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg, simulate bool,
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg, simulate bool,
 ) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
@@ -123,10 +123,18 @@ func handleNewOrder(
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate { // only subtract coins & insert into OB during DeliverTx
-		err := keeper.AddOrder(msg, ctx.BlockHeight())
-		if err != nil {
-			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
+		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
+			msg := OrderInfo{msg, ctx.BlockHeader().Time, 0, txHash}
+			err := keeper.AddOrder(msg, ctx.BlockHeight(), false)
+			if err != nil {
+				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+			}
+		} else {
+			return sdk.NewError(
+				types.DefaultCodespace,
+				types.CodeFailInsertOrder,
+				"cannot get txHash from ctx").Result()
 		}
 	}
 
@@ -145,7 +153,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg, simulate bool,
+	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg, simulate bool,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -167,7 +175,10 @@ func handleCancelOrder(
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate {
 		//remove order from cache and order book
-		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
+		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled, false)
+		if err != nil {
+			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
+		}
 	} else {
 		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
