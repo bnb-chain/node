@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/server"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
@@ -13,11 +15,11 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/wire"
-
+	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 type GenesisState struct {
@@ -76,6 +78,14 @@ type GenTx struct {
 
 func BinanceAppGenTx(cdc *wire.Codec, pk crypto.PubKey, genTxConfig serverconfig.GenTx) (
 	appGenTx, cliPrint json.RawMessage, validator tmtypes.GenesisValidator, err error) {
+
+	// write app.toml when we run testnet command, we only know the `current` rootDir for each validator here
+	// otherwise, we can only generate at ~/.bnbchaind/config/app.toml
+	appConfigFilePath := filepath.Join(ServerContext.Context.Config.RootDir, "config/", config.AppConfigFileName+".toml")
+	if _, err := os.Stat(appConfigFilePath); os.IsNotExist(err) {
+		config.WriteConfigFile(appConfigFilePath, ServerContext.BinanceChainConfig)
+	}
+
 	if genTxConfig.Name == "" {
 		return nil, nil, tmtypes.GenesisValidator{}, errors.New("Must specify --name (validator moniker)")
 	}
