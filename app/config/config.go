@@ -94,7 +94,7 @@ type PublicationConfig struct {
 func defaultPublicationConfig() *PublicationConfig {
 	return &PublicationConfig{
 		PublishOrderUpdates: false,
-		OrderUpdatesTopic:   "test",
+		OrderUpdatesTopic:   "orders",
 		OrderUpdatesKafka:   "127.0.0.1:9092",
 
 		PublishAccountBalance: false,
@@ -102,7 +102,7 @@ func defaultPublicationConfig() *PublicationConfig {
 		AccountBalanceKafka:   "127.0.0.1:9092",
 
 		PublishOrderBook: false,
-		OrderBookTopic:   "books",
+		OrderBookTopic:   "orders",
 		OrderBookKafka:   "127.0.0.1:9092",
 	}
 }
