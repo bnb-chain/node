@@ -3,7 +3,6 @@ package order
 import (
 	"math"
 	"math/big"
-	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -32,7 +31,6 @@ var (
 
 type FeeConfig struct {
 	cdc           *wire.Codec
-	mtx           sync.Mutex
 	storeKey      sdk.StoreKey
 	expireFee     int64
 	iocExpireFee  int64
