@@ -17,7 +17,6 @@ const (
 	CodeFailCancelOrder         sdk.CodeType = 404
 	CodeFailLocateOrderToCancel sdk.CodeType = 405
 	CodeDuplicatedOrder         sdk.CodeType = 406
-	CodeMarshalFailure          sdk.CodeType = 407
 )
 
 // ErrIncorrectDexOperation - Error returned upon an incorrect guess

@@ -162,7 +162,7 @@ func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err er
 	if msg.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
 	}
-	bnclog.Debug("Add orders", "symbol", symbol, "id", msg.Id, "num", len(kp.roundOrders))
+	bnclog.Debug("Added orders", "symbol", symbol, "id", msg.Id)
 	return nil
 }
 
@@ -269,8 +269,9 @@ func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo, tranEve
 }
 
 // channelHash() will choose a channel for processing by moding
-// the sum of the checksum of bech32 address by bucketNumber.
+// the sum of the last 7 bytes of address by bucketNumber.
 // It may not be fully even.
+// TODO: there is still concern on peroformance and evenness.
 func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	l := len(accAddress)
 	sum := 0
@@ -364,18 +365,13 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	for _, perSymbol := range kp.roundOrders {
 		ordNum += len(perSymbol)
 	}
-	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
-	if size%concurrency != 0 {
-		channelSize += 1
-	}
 
 	tradeOuts := make([]chan Transfer, concurrency)
+	if !distributeTrade {
+		ordNum = 0
+	}
 	for i := range tradeOuts {
-		// TODO: channelSize is enough for buffer to facilitate ?
-		if distributeTrade {
-			channelSize = 0
-		}
 		//assume every new order would have 2 trades and generate 4 transfer
 		tradeOuts[i] = make(chan Transfer, ordNum*4/concurrency)
 	}
