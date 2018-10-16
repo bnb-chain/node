@@ -228,6 +228,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []pub.Trade
+
+	//match may end with transaction faliure, which is better to save into
+	//the EndBlock response. However, current cosmos doesn't support this.
+	//future TODO: add failure info.
+	response := abci.ResponseEndBlock{}
+
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
@@ -236,6 +242,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		} else {
 			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
 		}
+
 	} else {
 		// breathe block
 		bnclog.Info("Start Breathe Block Handling",
@@ -255,7 +262,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.publish(tradesToPublish, ctx, height, blockTime)
 	}
 
-	return abci.ResponseEndBlock{}
+	return response
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.
