@@ -33,24 +33,19 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMapper 
 	freezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
-	logger.Info("start freezing token")
 	coins := keeper.GetCoins(ctx, msg.From)
 	if coins.AmountOf(symbol).Int64() < freezeAmount {
 		logger.Info("freeze token failed", "reason", "no enough free tokens to freeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	logger.Info("subtract token from free balance")
-	_, _, sdkError := keeper.SubtractCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}))
-	if sdkError != nil {
-		// should not happen because we have checked balance >= freezeAmount
-		logger.Error("freeze token failed", "reason", "subtract token failed:" + sdkError.Error())
-		return sdkError.Result()
-	}
-
-	logger.Info("update frozen balance")
-	updateFrozenOfAccount(ctx, accountMapper, msg.From, symbol, freezeAmount)
-	logger.Info("finish freezing token")
+	account := accountMapper.GetAccount(ctx, msg.From).(types.NamedAccount)
+	newFrozenTokens := account.GetFrozenCoins().Plus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}})
+	newFreeTokens := account.GetCoins().Minus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}})
+	account.SetFrozenCoins(newFrozenTokens)
+	account.SetCoins(newFreeTokens)
+	accountMapper.SetAccount(ctx, account)
+	logger.Info("finish freezing token", "NewFrozenToken", newFrozenTokens, "NewFreeTokens", newFreeTokens)
 	return sdk.Result{}
 }
 
@@ -58,7 +53,6 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 	unfreezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
-	logger.Info("start unfreezing token")
 	account := accountMapper.GetAccount(ctx, msg.From).(types.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol).Int64()
 	if frozenAmount < unfreezeAmount {
@@ -66,26 +60,11 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accountMappe
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 	}
 
-	logger.Info("update frozen balance")
-	newFrozenTokens := account.GetFrozenCoins().Minus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}))
+	newFrozenTokens := account.GetFrozenCoins().Minus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}})
+	newFreeTokens := account.GetCoins().Plus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}})
 	account.SetFrozenCoins(newFrozenTokens)
+	account.SetCoins(newFreeTokens)
 	accountMapper.SetAccount(ctx, account)
-	logger.Debug("updated frozen balance", "newVal", newFrozenTokens)
-
-	logger.Info("add tokens to free balance")
-	_, _, sdkError := keeper.AddCoins(ctx, msg.From, append((sdk.Coins)(nil), sdk.Coin{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}))
-	if sdkError != nil {
-		// should not happen because we have checked the unfreezeAmount > 0
-		logger.Error("unfreeze token failed", "reason", "add token failed: " + sdkError.Error())
-		return sdkError.Result()
-	}
-
-	logger.Info("finish unfreezing token")
+	logger.Debug("finish unfreezing token", "NewFrozenToken", newFrozenTokens, "NewFreeTokens", newFreeTokens)
 	return sdk.Result{}
-}
-
-func updateFrozenOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, frozenAmount int64) {
-	account := accountMapper.GetAccount(ctx, address).(types.NamedAccount)
-	account.SetFrozenCoins(account.GetFrozenCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(frozenAmount)})))
-	accountMapper.SetAccount(ctx, account)
 }
