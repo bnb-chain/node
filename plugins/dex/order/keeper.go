@@ -73,7 +73,8 @@ type Transfer struct {
 }
 
 func (tran Transfer) FeeFree() bool {
-	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
+	return tran.eventType == eventPartiallyExpire ||
+		tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventExpireForMatchFailure
 }
 
 func (tran Transfer) IsExpiredWithFee() bool {
