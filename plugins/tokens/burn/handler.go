@@ -1,15 +1,14 @@
 package burn
 
 import (
-	"github.com/BiJie/BinanceChain/common/log"
 	"reflect"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
-
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
@@ -35,7 +34,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	if !token.IsOwner(msg.From) {
-		logger.Info("burn token failed",  "reason", "not token's owner", "from", msg.From, "owner", token.Owner)
+		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.Owner)
 		return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
 	}
 
@@ -47,18 +46,18 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, sdk.Coins{{
-			Denom:  symbol,
-			Amount: sdk.NewInt(burnAmount),
-		}})
+		Denom:  symbol,
+		Amount: sdk.NewInt(burnAmount),
+	}})
 	if sdkError != nil {
-		logger.Error("burn token failed", "reason", "subtract tokens failed: " + sdkError.Error())
+		logger.Error("burn token failed", "reason", "subtract tokens failed: "+sdkError.Error())
 		return sdkError.Result()
 	}
 
-	newTotalSupply := token.TotalSupply.ToInt64()-burnAmount
+	newTotalSupply := token.TotalSupply.ToInt64() - burnAmount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
-		logger.Error("burn token failed", "reason", "update total supply failed: " + err.Error())
+		logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())
 		return sdk.ErrInternal(err.Error()).Result()
 	}
 

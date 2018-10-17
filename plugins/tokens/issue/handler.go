@@ -8,9 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
-	"github.com/BiJie/BinanceChain/common/log"
 )
 
 // NewHandler creates a new token issue message handler
@@ -37,7 +37,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 	token := common.NewToken(msg.Name, symbol, msg.TotalSupply, msg.From)
 	err := tokenMapper.NewToken(ctx, token)
 	if err != nil {
-		logger.Error("issue token failed", "reason", "add token failed: " + err.Error())
+		logger.Error("issue token failed", "reason", "add token failed: "+err.Error())
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
@@ -47,7 +47,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 			Amount: sdk.NewInt(token.TotalSupply.ToInt64()),
 		}})
 	if sdkError != nil {
-		logger.Error("issue token failed", "reason", "update balance failed: " + sdkError.Error())
+		logger.Error("issue token failed", "reason", "update balance failed: "+sdkError.Error())
 		return sdkError.Result()
 	}
 
