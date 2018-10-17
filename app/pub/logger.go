@@ -2,6 +2,7 @@ package pub
 
 import (
 	"fmt"
+
 	"github.com/BiJie/BinanceChain/common/log"
 )
 

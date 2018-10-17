@@ -60,7 +60,7 @@ type BaseApp struct {
 	cdc                     *wire.Codec          // Amino codec
 	db                      dbm.DB               // common DB backend
 	cms                     sdk.CommitMultiStore // Main (uncached) state
-	router                  Router       // handle any kind of message
+	router                  Router               // handle any kind of message
 	codespacer              *sdk.Codespacer      // handle module codespacing
 	isPublishAccountBalance bool
 
