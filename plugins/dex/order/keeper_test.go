@@ -243,6 +243,48 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(int64(98000), sells[2].Price)
 }
 
+func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 10000, 1000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ_BNB", 100000, 2000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(3, len(keeper.allOrders["XYZ_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.MatchAll()
+	_, err := keeper.SnapShotOrderBook(ctx, 43)
+	assert.Nil(err)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper2 := MakeKeeper(cdc)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
+	assert.Equal(2, len(keeper2.allOrders["XYZ_BNB"]))
+	assert.Equal(int64(102000), keeper2.allOrders["XYZ_BNB"]["123456"].Price)
+	assert.Equal(int64(2000000), keeper2.allOrders["XYZ_BNB"]["123456"].CumQty)
+	assert.Equal(int64(10000), keeper2.allOrders["XYZ_BNB"]["123457"].Price)
+	assert.Equal(int64(0), keeper2.allOrders["XYZ_BNB"]["123457"].CumQty)
+	assert.Equal(1, len(keeper2.engines))
+	assert.Equal(int64(102000), keeper2.engines["XYZ_BNB"].LastTradePrice)
+	assert.Equal(int64(43), h)
+	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
+	assert.Equal(2, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(102000), buys[0].Price)
+}
+
 func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
