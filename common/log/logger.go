@@ -12,12 +12,16 @@ var (
 )
 
 func init() {
-	logger = tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
+	logger = NewConsoleLogger()
 }
 
 func InitLogger(l tmlog.Logger) {
 	// TODO: close log file when node stopped
 	logger = l
+}
+
+func NewConsoleLogger() tmlog.Logger {
+	return tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
 }
 
 func NewAsyncFileLogger(filePath string, buffSize int64) tmlog.Logger {

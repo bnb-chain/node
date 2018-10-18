@@ -48,6 +48,17 @@ accountBalanceKafka = "{{ .PublicationConfig.AccountBalanceKafka }}"
 publishOrderBook = {{ .PublicationConfig.PublishOrderBook }}
 orderBookTopic = "{{ .PublicationConfig.OrderBookTopic }}"
 orderBookKafka = "{{ .PublicationConfig.OrderBookKafka }}"
+
+[log]
+
+# Write logs to console instead of file
+logToConsole = {{ .LogConfig.LogToConsole }}
+
+## The below parameters take effect only when logToConsole is false
+# Log file path relative to home path
+logFilePath = "{{ .LogConfig.LogFilePath }}"
+# Number of logs keep in memory before writing to file
+logBuffSize = {{ .LogConfig.LogBuffSize }}
 `
 
 type BinanceChainContext struct {
@@ -69,11 +80,13 @@ func (context *BinanceChainContext) ToCosmosServerCtx() *server.Context {
 
 type BinanceChainConfig struct {
 	*PublicationConfig `mapstructure:"publication"`
+	*LogConfig         `mapstructure:"log"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
 	return &BinanceChainConfig{
 		PublicationConfig: defaultPublicationConfig(),
+		LogConfig:         defaultLogConfig(),
 	}
 }
 
@@ -109,6 +122,20 @@ func defaultPublicationConfig() *PublicationConfig {
 
 func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook
+}
+
+type LogConfig struct {
+	LogToConsole bool   `mapstructure:"logToConsole"`
+	LogFilePath  string `mapstructure:"logFilePath"`
+	LogBuffSize  int64  `mapstructure:"logBuffSize"`
+}
+
+func defaultLogConfig() *LogConfig {
+	return &LogConfig{
+		LogToConsole: false,
+		LogFilePath:  "bnc.log",
+		LogBuffSize:  10000,
+	}
 }
 
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {
