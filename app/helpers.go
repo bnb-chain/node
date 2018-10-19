@@ -75,22 +75,17 @@ func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error)
 	configFilePath := filepath.Join(rootDir, "config/config.toml")
 	// Intercept only if the file doesn't already exist
 
+	context.Config, err = tmcmd.ParseConfig()
+	if err != nil {
+		return err
+	}
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
 		// the following parse config is needed to create directories
-		context.Config, err = tmcmd.ParseConfig()
-		if err != nil {
-			return err
-		}
 		context.Config.ProfListenAddress = "localhost:6060"
 		context.Config.P2P.RecvRate = 5120000
 		context.Config.P2P.SendRate = 5120000
 		context.Config.Consensus.TimeoutCommit = 5000
 		tmcfg.WriteConfigFile(configFilePath, context.Config)
-	} else {
-		context.Config, err = tmcmd.ParseConfig()
-		if err != nil {
-			return err
-		}
 	}
 
 	appConfigFilePath := filepath.Join(rootDir, "config/", config.AppConfigFileName+".toml")
