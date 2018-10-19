@@ -149,6 +149,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		for _, pl := range ob.Sells {
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
+		eng.LastTradePrice = ob.LastTradePrice
 		logger.Info("Successfully Loaded order snapshot", "pair", pair)
 	}
 	key := genActiveOrdersSnapshotKey(height)
