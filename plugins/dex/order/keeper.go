@@ -114,7 +114,7 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		cdc:                        cdc,
 		FeeConfig:                  NewFeeConfig(cdc, key),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		logger: bnclog.With("module", "dexkeeper"),
+		logger:                     bnclog.With("module", "dexkeeper"),
 	}
 }
 
@@ -424,14 +424,11 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 	return orderbook
 }
 
-func (kp *Keeper) GetOpenOrders(pair string, bech32Str string) []store.OpenOrder {
+func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
 	openOrders := make([]store.OpenOrder, 0)
 
-	addr, _ := sdk.AccAddressFromBech32(bech32Str) // bech32 has been verified legal
 	for _, order := range kp.allOrders[pair] {
-		// TODO: delete second condition after we fully remove filled order from kp.allOrders
-		if string(order.Sender.Bytes()) == string(addr.Bytes()) &&
-			order.CumQty != order.Quantity {
+		if string(order.Sender.Bytes()) == string(addr.Bytes()) {
 			openOrders = append(
 				openOrders,
 				store.OpenOrder{

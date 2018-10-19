@@ -17,6 +17,11 @@ const (
 	ZcAddr = "cosmosaccaddr194epkcnk0aganvjnwpj47nfztjl2ur9wujpj6h"
 )
 
+var (
+	zz, _ = sdk.AccAddressFromBech32(ZzAddr)
+	zc, _ = sdk.AccAddressFromBech32(ZcAddr)
+)
+
 func initKeeper() *Keeper {
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -26,7 +31,7 @@ func initKeeper() *Keeper {
 func TestOpenOrders_NoSymbol(t *testing.T) {
 	keeper := initKeeper()
 
-	res := keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res := keeper.GetOpenOrders("NNB_BNB", zz)
 	if len(res) == 0 {
 		t.Log("Get expected empty result for a non-existing pair")
 	}
@@ -36,15 +41,13 @@ func TestOpenOrders_NoAddr(t *testing.T) {
 	keeper := initKeeper()
 
 	keeper.AddEngine(types.NewTradingPair("NNB", "BNB", 100000000))
-	res := keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res := keeper.GetOpenOrders("NNB_BNB", zz)
 	if len(res) == 0 {
 		t.Log("Get expected empty result for a non-existing addr")
 	}
 }
 
 func TestOpenOrders_AfterMatch(t *testing.T) {
-	zc, _ := sdk.AccAddressFromBech32(ZcAddr)
-	zz, _ := sdk.AccAddressFromBech32(ZzAddr)
 	assert := assert.New(t)
 	keeper := initKeeper()
 	keeper.AddEngine(types.NewTradingPair("NNB", "BNB", 100000000))
@@ -53,7 +56,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	msg := NewNewOrderMsg(zc, ZcAddr+"-0", Side.BUY, "NNB_BNB", 1000000000, 1000000000)
 	orderInfo := OrderInfo{msg, 42, 84, 42, 84, 0, ""}
 	keeper.AddOrder(orderInfo, false)
-	res := keeper.GetOpenOrders("NNB_BNB", ZcAddr)
+	res := keeper.GetOpenOrders("NNB_BNB", zc)
 	assert.Equal(1, len(res))
 	assert.Equal("NNB_BNB", res[0].Symbol)
 	assert.Equal(ZcAddr+"-0", res[0].Id)
@@ -69,7 +72,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	msg = NewNewOrderMsg(zz, ZzAddr+"-0", Side.SELL, "NNB_BNB", 900000000, 300000000)
 	orderInfo = OrderInfo{msg, 43, 86, 43, 86, 0, ""}
 	keeper.AddOrder(orderInfo, false)
-	res = keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(1, len(res))
 
 	// match existing two orders
@@ -77,7 +80,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(sdk.CodeOK, matchRes)
 
 	// after match, the original buy order's cumQty and latest updated fields should be updated
-	res = keeper.GetOpenOrders("NNB_BNB", ZcAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zc)
 	assert.Equal(1, len(res))
 	assert.Equal(utils.Fixed8(300000000), res[0].CumQty)
 	assert.Equal(utils.Fixed8(1000000000), res[0].Price)    // price shouldn't change
@@ -88,14 +91,14 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(int64(86), res[0].LastUpdatedTimestamp)
 
 	// after match, the sell order should be closed
-	res = keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(0, len(res))
 
 	// add another sell order to fully fill original buy order
 	msg = NewNewOrderMsg(zz, ZzAddr+"-1", Side.SELL, "NNB_BNB", 1000000000, 700000000)
 	orderInfo = OrderInfo{msg, 44, 88, 44, 88, 0, ""}
 	keeper.AddOrder(orderInfo, false)
-	res = keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(1, len(res))
 	assert.Equal("NNB_BNB", res[0].Symbol)
 	assert.Equal(ZzAddr+"-1", res[0].Id)
@@ -112,8 +115,8 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(sdk.CodeOK, matchRes)
 
 	// after match, all orders should be closed
-	res = keeper.GetOpenOrders("NNB_BNB", ZcAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zc)
 	assert.Equal(0, len(res))
-	res = keeper.GetOpenOrders("NNB_BNB", ZzAddr)
+	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(0, len(res))
 }

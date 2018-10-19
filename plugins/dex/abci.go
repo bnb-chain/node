@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
@@ -95,16 +96,34 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
-		case "openorders": // args: ["dex", "openorders", <pair>, <addr>]
-			//TODO(#151): sync lock
+		case "openorders": // args: ["dex", "openorders", <pair>, <bech32Str>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log:  "OpenOrders query requires the pair symbol and address",
 				}
 			}
+
+			// verify pair is legal
 			pair := path[2]
-			addr := path[3]
+			baseAsset, quoteAsset, err := utils.TradingPair2Assets(pair)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "pair is not valid",
+				}
+			}
+			ctx := app.GetContextForCheckState()
+			existingPair, err := keeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
+			if pair != existingPair.GetSymbol() || err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "pair is not listed",
+				}
+			}
+
+			bech32Str := path[3]
+			addr, _ := sdk.AccAddressFromBech32(bech32Str) // bech32Str has been verified legal
 			openOrders := keeper.GetOpenOrders(pair, addr)
 			bz, err := app.GetCodec().MarshalBinary(openOrders)
 			if err != nil {
