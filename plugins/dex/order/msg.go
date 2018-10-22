@@ -42,8 +42,8 @@ func IToSide(side int8) string {
 }
 
 // GenerateOrderID generates an order ID
-func GenerateOrderID(sequence int64, from sdk.AccAddress) string {
-	id := fmt.Sprintf("%s-%d", from.String(), sequence)
+func GenerateOrderID(sequence int64, addr sdk.AccAddress) string {
+	id := fmt.Sprintf("%X-%d", addr, sequence)
 	return id
 }
 

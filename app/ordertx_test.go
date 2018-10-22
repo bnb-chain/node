@@ -44,7 +44,7 @@ func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountM
 		}
 		am.SetAccount(ctx, acc)
 	}
-	oid := fmt.Sprintf("%s-%d", add.String(), seq)
+	oid := fmt.Sprintf("%X-%d", add, seq)
 	return oid
 }
 
@@ -111,7 +111,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testApp.DexKeeper.AddEngine(tradingPair)
 
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -283,7 +283,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 
 	// setup accounts
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	add2 := Account(1).GetAddress()
 
 	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")
