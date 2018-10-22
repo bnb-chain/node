@@ -45,8 +45,8 @@ func TestTradesAndOrdersMarshaling(t *testing.T) {
 }
 
 func TestBooksMarshaling(t *testing.T) {
-	book := orderBookDelta{"NNB_BNB", []priceLevel{priceLevel{100, 100}}, []priceLevel{priceLevel{100, 100}}}
-	msg := books{42, 100, 1, []orderBookDelta{book}}
+	book := OrderBookDelta{"NNB_BNB", []PriceLevel{PriceLevel{100, 100}}, []PriceLevel{PriceLevel{100, 100}}}
+	msg := Books{42, 100, 1, []OrderBookDelta{book}}
 	_, err := marshal(&msg, booksTpe)
 	if err != nil {
 		t.Fatal(err)

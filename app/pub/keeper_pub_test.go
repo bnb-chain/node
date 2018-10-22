@@ -40,7 +40,7 @@ var seller sdk.AccAddress
 var am auth.AccountMapper
 var ctx sdk.Context
 
-func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
+func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	cdc := pubtest.MakeCodec()
 	logger := log.NewTMLogger(os.Stdout)
 
@@ -67,13 +67,13 @@ func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	seller = sellerAcc.GetAddress()
 
 	// to get pub Logger initialized
-	NewMarketDataPublisher(&config.PublicationConfig{})
+	NewKafkaMarketDataPublisher(&config.PublicationConfig{})
 
 	return assert.New(t), require.New(t)
 }
 
 func TestKeeper_AddOrder(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, 42, false)
@@ -105,7 +105,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 }
 
 func TestKeeper_IOCExpireWithFee(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, 42, false)
@@ -134,7 +134,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 }
 
 func TestKeeper_ExpireWithFee(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, 42, false)
@@ -163,7 +163,7 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 }
 
 func Test_IOCPartialExpire(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, ""}, 42, false)
@@ -210,7 +210,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 }
 
 func Test_GTCPartialExpire(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 100000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, ""}, 42, false)
@@ -262,7 +262,7 @@ func Test_GTCPartialExpire(t *testing.T) {
 }
 
 func Test_OneBuyVsTwoSell(t *testing.T) {
-	assert, require := setup(t)
+	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, ""}, 42, false)
