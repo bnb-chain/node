@@ -23,13 +23,13 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k Keeper, accountMapper auth.AccountMapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) common.Handler {
+	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, accountMapper, msg)
+			return handleNewOrder(ctx, cdc, k, accountMapper, msg, simulate)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, accountMapper, msg)
+			return handleCancelOrder(ctx, k, accountMapper, msg, simulate)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -77,14 +77,17 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	return nil
 }
 
-func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg) sdk.Result {
+func handleNewOrder(
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg, simulate bool,
+) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	if ctx.IsCheckTx() {
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if ctx.IsCheckTx() || simulate {
 		log.With("module", "dex").Info("Incoming New Order", "order", msg)
 		//only check whether there exists order to cancel
 		if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
@@ -92,6 +95,8 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 			return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 		}
 	}
+
+	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	var amountToLock int64
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(msg.Symbol)
 	var symbolToLock string
@@ -108,18 +113,28 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
 	}
 
+	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	// TODO: perform reduce avail + increase locked + insert orderbook atomically
-	_, _, sdkError := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
-	if sdkError != nil {
-		return sdkError.Result()
+	_, _, sdkErr := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
+	if sdkErr != nil {
+		return sdkErr.Result()
 	}
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
-	if !ctx.IsCheckTx() { // only insert into order book during DeliverTx
-		err := keeper.AddOrder(msg, ctx.BlockHeight())
-		if err != nil {
-			return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
+		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
+			msg := OrderInfo{msg, ctx.BlockHeader().Time, 0, txHash}
+			err := keeper.AddOrder(msg, ctx.BlockHeight(), false)
+			if err != nil {
+				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+			}
+		} else {
+			return sdk.NewError(
+				types.DefaultCodespace,
+				types.CodeFailInsertOrder,
+				"cannot get txHash from ctx").Result()
 		}
 	}
 
@@ -128,7 +143,7 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 	}
 	serialized, err := cdc.MarshalJSON(&response)
 	if err != nil {
-		return sdkError.Result()
+		return sdk.ErrInternal(err.Error()).Result()
 	}
 
 	return sdk.Result{
@@ -137,7 +152,9 @@ func handleNewOrder(ctx sdk.Context, cdc *wire.Codec, keeper Keeper, accountMapp
 }
 
 // Handle CancelOffer -
-func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg) sdk.Result {
+func handleCancelOrder(
+	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg, simulate bool,
+) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
 	//only check whether there exists order to cancel
@@ -154,9 +171,14 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 
 	var ord me.OrderPart
 	var err error
-	if !ctx.IsCheckTx() {
+
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if !ctx.IsCheckTx() && !simulate {
 		//remove order from cache and order book
-		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
+		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled, false)
+		if err != nil {
+			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
+		}
 	} else {
 		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
@@ -164,6 +186,7 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
+
 	//unlocked the locked qty for the unfilled qty
 	unlockAmount := ord.LeavesQty()
 
@@ -188,7 +211,5 @@ func handleCancelOrder(ctx sdk.Context, keeper Keeper, accountMapper auth.Accoun
 	}
 
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToUnlock, -unlockAmount)
-
-	//TODO: here fee should be calculated and deducted
 	return sdk.Result{}
 }

@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	tmlog "github.com/tendermint/tendermint/libs/log"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -28,16 +30,20 @@ type Keeper struct {
 
 	ck bank.Keeper
 
-	storeKey       sdk.StoreKey // The key used to access the store from the Context.
-	codespace      sdk.CodespaceType
-	engines        map[string]*me.MatchEng
-	allOrders      map[string]map[string]NewOrderMsg // symbol -> order ID -> order
-	roundOrders    map[string]int                    // limit to the total tx number in a block
-	roundIOCOrders map[string][]string
-	roundFees      map[string]sdk.Coins
-	poolSize       uint // number of concurrent channels, counted in the pow of 2
-	cdc            *wire.Codec
-	FeeConfig      FeeConfig
+	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
+	codespace                  sdk.CodespaceType
+	engines                    map[string]*me.MatchEng
+	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
+	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
+	OrderChangesMap            OrderInfoForPublish
+	roundOrders                map[string][]string // limit to the total tx number in a block
+	roundIOCOrders             map[string][]string
+	roundFees                  map[string]sdk.Coins
+	poolSize                   uint // number of concurrent channels, counted in the pow of 2
+	cdc                        *wire.Codec
+	FeeConfig                  FeeConfig
+	CollectOrderInfoForPublish bool
+	logger                     tmlog.Logger
 }
 
 type transferEventType uint8
@@ -48,12 +54,12 @@ const (
 	eventPartiallyExpire
 	eventIOCFullyExpire
 	eventIOCPartiallyExpire
+	eventExpireForMatchFailure
 )
 
 // Transfer represents a transfer between trade currencies
 type Transfer struct {
-	bid        string
-	sid        string
+	Oid        string
 	eventType  transferEventType
 	accAddress sdk.AccAddress
 	inAsset    string
@@ -61,16 +67,23 @@ type Transfer struct {
 	outAsset   string
 	out        int64
 	unlock     int64
-	fee        types.Fee
+	Fee        types.Fee
+	Trade      *me.Trade
+	Symbol     string
 }
 
-func (tran Transfer) feeFree() bool {
-	return tran.eventType == eventPartiallyExpire || tran.eventType == eventIOCPartiallyExpire
+func (tran Transfer) FeeFree() bool {
+	return tran.eventType == eventPartiallyExpire ||
+		tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventExpireForMatchFailure
+}
+
+func (tran Transfer) IsExpiredWithFee() bool {
+	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
 }
 
 func (tran *Transfer) String() string {
-	return fmt.Sprintf("[eventType:%v, bid:%v, sid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
-		tran.eventType, tran.bid, tran.sid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.fee)
+	return fmt.Sprintf("Transfer[eventType:%v, oid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
+		tran.eventType, tran.Oid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.Fee)
 }
 
 func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
@@ -79,20 +92,24 @@ func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec) *Keeper {
+	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	engines := make(map[string]*me.MatchEng)
 	return &Keeper{
-		PairMapper:     tradingPairMapper,
-		ck:             bankKeeper,
-		storeKey:       key,
-		codespace:      codespace,
-		engines:        engines,
-		allOrders:      make(map[string]map[string]NewOrderMsg, 256), // need to init the nested map when a new symbol added.
-		roundOrders:    make(map[string]int, 256),
-		roundIOCOrders: make(map[string][]string, 256),
-		poolSize:       concurrency,
-		cdc:            cdc,
-		FeeConfig:      NewFeeConfig(cdc, key),
+		PairMapper:                 tradingPairMapper,
+		ck:                         bankKeeper,
+		storeKey:                   key,
+		codespace:                  codespace,
+		engines:                    engines,
+		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
+		OrderChanges:               make(OrderChanges, 0),
+		OrderChangesMap:            make(OrderInfoForPublish),
+		roundOrders:                make(map[string][]string, 256),
+		roundIOCOrders:             make(map[string][]string, 256),
+		poolSize:                   concurrency,
+		cdc:                        cdc,
+		FeeConfig:                  NewFeeConfig(cdc, key),
+		CollectOrderInfoForPublish: collectOrderInfoForPublish,
+		logger: bnclog.With("module", "dexkeeper"),
 	}
 }
 
@@ -100,7 +117,7 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
-	kp.allOrders[symbol] = map[string]NewOrderMsg{}
+	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
 }
 
@@ -112,7 +129,7 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
+func (kp *Keeper) AddOrder(msg OrderInfo, height int64, isRecovery bool) (err error) {
 	//try update order book first
 	symbol := strings.ToUpper(msg.Symbol)
 	eng, ok := kp.engines[symbol]
@@ -126,11 +143,27 @@ func (kp *Keeper) AddOrder(msg NewOrderMsg, height int64) (err error) {
 		return err
 	}
 
-	kp.allOrders[symbol][msg.Id] = msg
-	kp.roundOrders[symbol] += 1
+	if kp.CollectOrderInfoForPublish {
+		change := OrderChange{msg.Id, Ack, 0, ""}
+		// deliberately not add this message to orderChanges
+		if !isRecovery {
+			kp.OrderChanges = append(kp.OrderChanges, change)
+		}
+		bnclog.Debug("add order to order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
+		kp.OrderChangesMap[msg.Id] = &msg
+	}
+
+	kp.allOrders[symbol][msg.Id] = &msg
+	if ids, ok := kp.roundOrders[symbol]; ok {
+		kp.roundOrders[symbol] = append(ids, msg.Id)
+	} else {
+		newIds := make([]string, 0, 16)
+		kp.roundOrders[symbol] = append(newIds, msg.Id)
+	}
 	if msg.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
 	}
+	bnclog.Debug("Added orders", "symbol", symbol, "id", msg.Id)
 	return nil
 }
 
@@ -138,9 +171,15 @@ func orderNotFound(symbol, id string) error {
 	return errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 }
 
-func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
+func (kp *Keeper) RemoveOrder(
+	id string,
+	symbol string,
+	side int8,
+	price int64,
+	reason ChangeType,
+	isRecovery bool) (ord me.OrderPart, err error) {
 	symbol = strings.ToUpper(symbol)
-	_, ok := kp.OrderExists(symbol, id)
+	msg, ok := kp.OrderExists(symbol, id)
 	if !ok {
 		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
@@ -149,7 +188,18 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, side int8, price int64) 
 		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	delete(kp.allOrders[symbol], id)
-	return eng.Book.RemoveOrder(id, side, price)
+	ord, err = eng.Book.RemoveOrder(id, side, price)
+	if kp.CollectOrderInfoForPublish {
+		if !isRecovery {
+			// fee will be updated during doTransfer
+			change := OrderChange{msg.Id, reason, 0, ""}
+			kp.OrderChanges = append(kp.OrderChanges, change)
+		} else {
+			bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
+			delete(kp.OrderChangesMap, msg.Id)
+		}
+	}
+	return ord, err
 }
 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
@@ -165,27 +215,27 @@ func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (or
 	return eng.Book.GetOrder(id, side, price)
 }
 
-func (kp *Keeper) OrderExists(symbol, id string) (NewOrderMsg, bool) {
+func (kp *Keeper) OrderExists(symbol, id string) (OrderInfo, bool) {
 	if orders, ok := kp.allOrders[symbol]; ok {
 		if msg, ok := orders[id]; ok {
-			return msg, ok
+			return *msg, ok
 		}
 	}
-	return NewOrderMsg{}, false
+	return OrderInfo{}, false
 }
 
 func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Transfer) {
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
-	seller := kp.allOrders[symbol][trade.SId].Sender
-	buyer := kp.allOrders[symbol][trade.BId].Sender
+	seller := kp.allOrders[symbol][trade.Sid].Sender
+	buyer := kp.allOrders[symbol][trade.Bid].Sender
 	// TODO: where is 10^8 stored?
 	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
 	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
-	return Transfer{trade.BId, trade.SId, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}},
-		Transfer{trade.BId, trade.SId, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}}
+	return Transfer{trade.Sid, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}, &trade, symbol},
+		Transfer{trade.Bid, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}, &trade, symbol}
 }
 
-func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg NewOrderMsg) Transfer {
+func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo, tranEventType transferEventType) Transfer {
 	//here is a trick to use the same currency as in and out ccy to simulate cancel
 	qty := ord.LeavesQty()
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(ordMsg.Symbol)
@@ -199,21 +249,16 @@ func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg NewOrderMsg) Transf
 		unlock = qty
 	}
 
-	var tranEventType transferEventType
-	if ord.CumQty == 0 {
-		if ordMsg.TimeInForce == TimeInForce.IOC {
-			tranEventType = eventIOCFullyExpire // IOC no fill
-		} else {
-			tranEventType = eventFullyExpire
-		}
-	} else {
+	if ord.CumQty != 0 && tranEventType != eventExpireForMatchFailure {
 		if ordMsg.TimeInForce == TimeInForce.IOC {
 			tranEventType = eventIOCPartiallyExpire // IOC partially filled
 		} else {
 			tranEventType = eventPartiallyExpire
 		}
 	}
+
 	return Transfer{
+		Oid:        ordMsg.Id,
 		eventType:  tranEventType,
 		accAddress: ordMsg.Sender,
 		inAsset:    unlockAsset,
@@ -224,22 +269,32 @@ func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg NewOrderMsg) Transf
 	}
 }
 
-//TODO: should get an even hash
+// channelHash() will choose a channel for processing by moding
+// the sum of the last 7 bytes of address by bucketNumber.
+// It may not be fully even.
+// TODO: there is still concern on peroformance and evenness.
 func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
-	return int(accAddress[0]+accAddress[1]) % bucketNumber
+	l := len(accAddress)
+	sum := 0
+	for i := l - 7; i < l; i++ {
+		sum += int(accAddress[i])
+	}
+	return sum % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]NewOrderMsg, distributeTrade bool,
-	tradeOuts []chan Transfer) {
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[string]*OrderInfo,
+	distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
-	logger := bnclog.With("module", "dex")
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
 	if engine.Match() {
-		logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
-		if distributeTrade {
-			for _, t := range engine.Trades {
+		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
+		for _, t := range engine.Trades {
+			orders[t.Bid].CumQty = t.BuyCumQty
+			orders[t.Sid].CumQty = t.SellCumQty
+
+			if distributeTrade {
 				t1, t2 := kp.tradeToTransfers(t, symbol)
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
@@ -247,21 +302,53 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 				tradeOuts[c] <- t2
 			}
 		}
-		n := engine.DropFilledOrder()
-		logger.Debug("Drop filled orders", "total", n)
-	} // TODO: when Match() failed, have to unsolicited cancel all the orders
-	// when multiple unsolicited cancel happened, the validator would stop running
-	// and ask for help
-	iocIDs := kp.roundIOCOrders[symbol]
-	for _, id := range iocIDs {
-		if msg, ok := orders[id]; ok {
-			if ord, err := kp.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price); err == nil {
-				logger.Debug("Removed unclosed IOC order", "ordID", msg.Id)
+		droppedIds := engine.DropFilledOrder() //delete from order books
+		for _, id := range droppedIds {
+			delete(orders, id) //delete from order cache
+		}
+		kp.logger.Debug("Drop filled orders", "total", droppedIds)
+	} else {
+		// FUTURE-TODO:
+		// when Match() failed, have to unsolicited cancel all the new orders
+		// in this block. Ideally the order IDs would be stored in the EndBlock response,
+		// but this is not implemented yet, pending Tendermint to better handle EndBlock
+		// for index service.
+		//
+		// the order status publisher should publish these abnormal
+		// order status change out too.
+		kp.logger.Error("Fatal error occurred in matching, cancell all incoming new orders",
+			"symbol", symbol)
+		thisRoundIds := kp.roundOrders[symbol]
+		for _, id := range thisRoundIds {
+			msg := orders[id]
+			delete(orders, id)
+			if ord, err := engine.Book.RemoveOrder(id, msg.Side, msg.Price); err == nil {
+				kp.logger.Info("Removed due to match failure", "ordID", msg.Id)
 				if !distributeTrade {
 					continue
 				}
 				c := channelHash(msg.Sender, concurrency)
-				tradeOuts[c] <- kp.expiredToTransfer(ord, msg)
+				tradeOuts[c] <- kp.expiredToTransfer(ord, msg, eventExpireForMatchFailure)
+			} else {
+				kp.logger.Error("Failed to remove order, may be fatal!", "orderID", id)
+			}
+		}
+		return // no need to handle IOC
+	}
+	iocIDs := kp.roundIOCOrders[symbol]
+	for _, id := range iocIDs {
+		if msg, ok := orders[id]; ok {
+			delete(orders, id)
+			if ord, err := engine.Book.RemoveOrder(id, msg.Side, msg.Price); err == nil {
+				kp.logger.Debug("Removed unclosed IOC order", "ordID", msg.Id)
+				if !distributeTrade {
+					continue
+				}
+				c := channelHash(msg.Sender, concurrency)
+				//cumQty would be tested inside expiredToTransfer
+				tradeOuts[c] <- kp.expiredToTransfer(ord, msg, eventIOCFullyExpire)
+			} else {
+				kp.logger.Error("Failed to remove IOC order, may be fatal!", "orderID", id)
 			}
 		}
 	}
@@ -271,21 +358,23 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
+		kp.logger.Info("No new orders for any pair, give up matching")
 		return nil
 	}
-	channelSize := size >> kp.poolSize
-	concurrency := 1 << kp.poolSize
-	if size%concurrency != 0 {
-		channelSize += 1
+
+	ordNum := 0
+	for _, perSymbol := range kp.roundOrders {
+		ordNum += len(perSymbol)
 	}
+	concurrency := 1 << kp.poolSize
 
 	tradeOuts := make([]chan Transfer, concurrency)
+	if !distributeTrade {
+		ordNum = 0
+	}
 	for i := range tradeOuts {
-		// TODO: channelSize is enough for buffer to facilitate ?
-		if distributeTrade {
-			channelSize = 0
-		}
-		tradeOuts[i] = make(chan Transfer, channelSize*2)
+		//assume every new order would have 2 trades and generate 4 transfer
+		tradeOuts[i] = make(chan Transfer, ordNum*4/concurrency)
 	}
 
 	symbolCh := make(chan string, concurrency)
@@ -297,6 +386,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	}
 	matchWorker := func() {
 		for symbol := range symbolCh {
+			kp.logger.Debug("start matching", "symbol", symbol)
 			kp.matchAndDistributeTradesForSymbol(symbol, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
@@ -309,12 +399,13 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool) []chan Transfer
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLevel {
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
 	orderbook := make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
+		// TODO: check considered bucket splitting?
 		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
 			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
@@ -329,7 +420,49 @@ func (kp *Keeper) GetOrderBook(pair string, maxLevels int) []store.OrderBookLeve
 	return orderbook
 }
 
-func (kp *Keeper) GetLastTrades(pair string) ([]me.Trade, int64) {
+func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
+	var res = make(ChangedPriceLevelsMap)
+	for pair, eng := range kp.engines {
+		buys := make(map[int64]int64)
+		sells := make(map[int64]int64)
+		res[pair] = ChangedPriceLevelsPerSymbol{buys, sells}
+
+		// TODO: check considered bucket splitting?
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+			buys[p.Price] = p.TotalLeavesQty()
+		}, func(p *me.PriceLevel) {
+			sells[p.Price] = p.TotalLeavesQty()
+		})
+	}
+	return res
+}
+
+func (kp *Keeper) GetTradeAndOrdersRelatedAccounts(orders []OrderChange) []string {
+	res := make([]string, 0)
+
+	for _, eng := range kp.engines {
+		for _, t := range eng.Trades {
+			if orderChange, exists := kp.OrderChangesMap[t.Bid]; exists {
+				res = append(res, string(orderChange.Sender.Bytes()))
+			} else {
+				bnclog.Error("fail to locate order in order changes map", "orderId", t.Bid)
+			}
+			if orderChange, exists := kp.OrderChangesMap[t.Sid]; exists {
+				res = append(res, string(orderChange.Sender.Bytes()))
+			} else {
+				bnclog.Error("fail to locate order in order changes map", "orderId", t.Sid)
+			}
+		}
+	}
+
+	for _, orderChange := range orders {
+		res = append(res, string(kp.OrderChangesMap[orderChange.Id].Sender.Bytes()))
+	}
+
+	return res
+}
+
+func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
 	if eng, ok := kp.engines[pair]; ok {
 		return eng.Trades, eng.LastTradePrice
 	}
@@ -342,8 +475,11 @@ func (kp *Keeper) ClearOrderBook(pair string) {
 	}
 }
 
+func (kp *Keeper) ClearOrderChanges() {
+	kp.OrderChanges = kp.OrderChanges[:0]
+}
+
 func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Transfer) sdk.Error {
-	logger := bnclog.With("module", "dex")
 	account := am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
 	if !newLocked.IsNotNegative() {
@@ -354,15 +490,15 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Trans
 		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
 		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
 
-	if !tran.feeFree() {
+	if !tran.FeeFree() {
 		fee := kp.calcFeeFromTransfer(ctx, account, *tran)
 		if !fee.IsEmpty() {
 			account.SetCoins(account.GetCoins().Minus(fee.Tokens.Sort()))
 		}
-		tran.fee = fee
+		tran.Fee = fee
 	}
 	am.SetAccount(ctx, account)
-	logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
+	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
 	return nil
 }
 
@@ -399,8 +535,7 @@ func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Trans
 		} else {
 			// no enough NativeToken, use the received tokens as fee
 			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
-			logger := bnclog.With("module", "dex")
-			logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
+			kp.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
 
@@ -415,7 +550,7 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 		feeAmount = kp.FeeConfig.IOCExpireFee()
 	} else {
 		// should not be here
-		bnclog.With("module", "dex").Error("Invalid expire eventType", "eventType", tran.eventType)
+		kp.logger.Error("Invalid expire eventType", "eventType", tran.eventType)
 		return types.Fee{}
 	}
 
@@ -441,10 +576,9 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
 }
 
-func (kp *Keeper) clearAfterMatch() (err error) {
-	kp.roundOrders = make(map[string]int, 256)
+func (kp *Keeper) clearAfterMatch() {
+	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
-	return nil
 }
 
 func concurrentSettle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandler func(int, Transfer)) {
@@ -465,7 +599,7 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 	feesPerCh := make([]types.Fee, concurrency)
 	allocate := func(index int, tran Transfer) {
 		kp.doTransfer(ctx, am, &tran)
-		feesPerCh[index].AddFee(tran.fee)
+		feesPerCh[index].AddFee(tran.Fee)
 		if postAllocateHandler != nil {
 			postAllocateHandler(tran)
 		}
@@ -483,7 +617,7 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	tradeOuts := kp.matchAndDistributeTrades(false) //only match
 	if tradeOuts == nil {
-		bnclog.With("module", "dex").Info("No order comes in for the block")
+		kp.logger.Info("No order comes in for the block")
 		return sdk.CodeOK, nil
 	}
 
@@ -492,29 +626,32 @@ func (kp *Keeper) MatchAll() (code sdk.CodeType, err error) {
 	wg.Add(len(tradeOuts))
 	concurrentSettle(&wg, tradeOuts, func(int, Transfer) {})
 	wg.Wait()
+	kp.clearAfterMatch()
 	return sdk.CodeOK, nil
 }
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
+// TODO: the return value: code & err may not be required.
 func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	tradeOuts := kp.matchAndDistributeTrades(true)
 	if tradeOuts == nil {
-		bnclog.With("module", "dex").Info("No order comes in for the block")
+		kp.logger.Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, am, postAllocateHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
+	kp.clearAfterMatch()
 	return newCtx, sdk.CodeOK, nil
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper) []chan Transfer {
-	logger := bnclog.With("module", "dex")
 	size := len(kp.allOrders)
 	if size == 0 {
-		logger.Info("No orders to expire")
+		kp.logger.Info("No orders to expire")
 		return nil
 	}
 
@@ -523,7 +660,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	expireHeight, err := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
 	if err != nil {
 		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
-		logger.Info(err.Error())
+		kp.logger.Info(err.Error())
 		return nil
 	}
 
@@ -539,12 +676,13 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 		transferChs[i] = make(chan Transfer, channelSize*2)
 	}
 
-	expire := func(orders map[string]NewOrderMsg, engine *me.MatchEng, side int8) {
+	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
 		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
 			// gen transfer
 			ordMsg := orders[ord.Id]
 			h := channelHash(ordMsg.Sender, concurrency)
-			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg)
+			//cumQty would be tested inside expiredToTransfer
+			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg, eventFullyExpire)
 			// delete from allOrders
 			delete(orders, ord.Id)
 		})
@@ -615,18 +753,17 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
 	store := ctx.KVStore(kp.storeKey)
 	bz := []byte(nil)
-	logger := bnclog.With("module", "dex")
 	for i := 0; i <= daysBack; i++ {
 		t := timeNow.AddDate(0, 0, -i).Unix()
 		key := utils.Int642Bytes(t / utils.SecondsPerDay)
 		bz = store.Get([]byte(key))
 		if bz != nil {
-			logger.Info("Located day to load breathe block height", "epochDay", key)
+			kp.logger.Info("Located day to load breathe block height", "epochDay", key)
 			break
 		}
 	}
 	if bz == nil {
-		logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
+		kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
 		return 0
 	}
 	var height int64
@@ -634,11 +771,11 @@ func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, 
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("Loaded breathe block height", "height", height)
+	kp.logger.Info("Loaded breathe block height", "height", height)
 	return height
 }
 
 func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
-	bnclog.With("module", "dex").Info("Initializing Fees from Genesis")
+	kp.logger.Info("Initializing Fees from Genesis")
 	kp.FeeConfig.InitGenesis(ctx, genesis)
 }

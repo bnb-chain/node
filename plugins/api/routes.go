@@ -20,6 +20,10 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc("/node_version", s.handleNodeVersionReq()).
 		Methods("GET")
 
+	// tx routes
+	r.HandleFunc(prefix+"/simulate", s.handleSimulateReq(s.cdc, s.ctx)).
+		Methods("POST")
+
 	// dex routes
 	r.HandleFunc(prefix+"/pairs", s.handlePairsReq(s.cdc, s.ctx)).
 		Methods("GET")

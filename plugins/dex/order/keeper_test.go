@@ -54,7 +54,7 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper := NewKeeper(common.DexStoreKey, coinKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc)
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return keeper
 }
 
@@ -69,6 +69,53 @@ func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
 	cms := ms.CacheMultiStore()
 	return cms
 }
+
+func TestKeeper_MatchFailure(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	tradingPair.LotSize = -10000000 // negative LotSize should never happen
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 99000, 3000000)
+	ord := OrderInfo{msg, 100000, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 99000, 1000000)
+	ord = OrderInfo{msg, 100001, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ_BNB", 99000, 5000000)
+	ord = OrderInfo{msg, 100002, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ_BNB", 98000, 1000000)
+	ord = OrderInfo{msg, 100003, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ_BNB", 97000, 5000000)
+	ord = OrderInfo{msg, 100004, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ_BNB", 95000, 5000000)
+	ord = OrderInfo{msg, 100005, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ_BNB", 99000, 15000000)
+	ord = OrderInfo{msg, 100006, 0, msg.Id}
+	keeper.AddOrder(ord, 42, false)
+	tradeOuts := keeper.matchAndDistributeTrades(true)
+	c := channelHash(accAdd, 4)
+	i := 0
+	for tr := range tradeOuts[c] {
+		assert.Equal(tr.eventType, eventExpireForMatchFailure)
+		assert.Equal(tr.in, tr.out)
+		assert.Equal(tr.in, tr.unlock)
+		i++
+	}
+	assert.Equal(7, i)
+}
+
 func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
@@ -156,19 +203,19 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 101000, 1000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ_BNB", 99000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ_BNB", 98000, 1000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ_BNB", 97000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ_BNB", 95000, 5000000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ_BNB", 96000, 1500000)
-	keeper.AddOrder(msg, 42)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(7, len(keeper.allOrders["XYZ_BNB"]))
 	assert.Equal(1, len(keeper.engines))
@@ -196,6 +243,48 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(int64(98000), sells[2].Price)
 }
 
+func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 10000, 1000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	msg = NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ_BNB", 100000, 2000000)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(3, len(keeper.allOrders["XYZ_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.MatchAll()
+	_, err := keeper.SnapShotOrderBook(ctx, 43)
+	assert.Nil(err)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper2 := MakeKeeper(cdc)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
+	assert.Equal(2, len(keeper2.allOrders["XYZ_BNB"]))
+	assert.Equal(int64(102000), keeper2.allOrders["XYZ_BNB"]["123456"].Price)
+	assert.Equal(int64(2000000), keeper2.allOrders["XYZ_BNB"]["123456"].CumQty)
+	assert.Equal(int64(10000), keeper2.allOrders["XYZ_BNB"]["123457"].Price)
+	assert.Equal(int64(0), keeper2.allOrders["XYZ_BNB"]["123457"].CumQty)
+	assert.Equal(1, len(keeper2.engines))
+	assert.Equal(int64(102000), keeper2.engines["XYZ_BNB"].LastTradePrice)
+	assert.Equal(int64(43), h)
+	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
+	assert.Equal(2, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(102000), buys[0].Price)
+}
+
 func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
@@ -210,8 +299,8 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 300000)
-	keeper.AddOrder(msg, 42)
-	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price)
+	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
+	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, Canceled, false)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
@@ -380,7 +469,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	coinKeeper := bank.NewKeeper(mapper)
-	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc)
+	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
@@ -498,12 +587,12 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC", "BNB", 1e6))
 	keeper.AddEngine(dextypes.NewTradingPair("XYZ", "BNB", 1e6))
-	keeper.AddOrder(NewNewOrderMsg(addr, "1", Side.BUY, "ABC_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "2", Side.BUY, "ABC_BNB", 2e6, 2e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "3", Side.BUY, "XYZ_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 10000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000)
-	keeper.AddOrder(NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC_BNB", 1e6, 1e8), 0, 0, ""}, 10000, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC_BNB", 2e6, 2e8), 0, 0, ""}, 10000, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "3", Side.BUY, "XYZ_BNB", 1e6, 1e8), 0, 0, ""}, 10000, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.SELL, "ABC_BNB", 1e6, 1e8), 0, 0, ""}, 10000, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 0, 0, ""}, 15000, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 0, 0, ""}, 20000, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
 		sdk.NewCoin("ABC", 3e8),
 		sdk.NewCoin("BNB", 10e6),

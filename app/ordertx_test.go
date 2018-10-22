@@ -23,7 +23,7 @@ type level struct {
 func getOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	orderbooks := testApp.DexKeeper.GetOrderBook(pair, 5)
+	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 5)
 	for _, l := range orderbooks {
 		if l.BuyPrice != 0 {
 			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})
@@ -44,7 +44,7 @@ func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountM
 		}
 		am.SetAccount(ctx, acc)
 	}
-	oid := fmt.Sprintf("%s-%d", add.String(), seq)
+	oid := fmt.Sprintf("%X-%d", add, seq)
 	return oid
 }
 
@@ -111,7 +111,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testApp.DexKeeper.AddEngine(tradingPair)
 
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -184,7 +184,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 
-	trades, lastPx := testApp.DexKeeper.GetLastTrades("BTC_BNB")
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC_BNB")
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 43.2e8 BNB
@@ -226,21 +226,25 @@ func Test_Match(t *testing.T) {
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 6, ctx, am), 1, "ETH_BNB", 99e8, 50e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
+
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 	buys, sells = getOrderBook("ETH_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
+
 	ctx, code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
 	t.Logf("res is %v and error is %v", code, e)
 	buys, sells = getOrderBook("ETH_BNB")
+	t.Logf("buys: %v", buys)
+	t.Logf("sells: %v", sells)
 	assert.Equal(1, len(buys))
 	assert.Equal(2, len(sells))
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
-	trades, lastPx = testApp.DexKeeper.GetLastTrades("ETH_BNB")
+	trades, lastPx = testApp.DexKeeper.GetLastTradesForPair("ETH_BNB")
 	assert.Equal(int64(97e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8
@@ -279,7 +283,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 
 	// setup accounts
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	add2 := Account(1).GetAddress()
 
 	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")

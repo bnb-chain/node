@@ -12,6 +12,10 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+const (
+	TxHashKey = "txHash" // we pass txHash of current handling message via context so that we can publish it as metadata of Msg
+)
+
 // ChainApp represents the main ABCI application
 type ChainApp interface {
 	GetCodec() *wire.Codec

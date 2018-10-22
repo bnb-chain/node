@@ -469,23 +469,24 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	assert.Equal(int64(0), me.overLappedLevel[0].SellTotal)
 	t.Log(me.Trades)
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, 1000, 70, "1"},
-		Trade{"6", 999, 30, 1000, 30, "2"},
-		Trade{"7", 999, 50, 1000, 80, "2"},
-		Trade{"8", 999, 70, 1000, 70, "3"},
-		Trade{"9", 999, 30, 1000, 100, "3"},
-		Trade{"9", 999, 30, 1000, 30, "4"},
+		Trade{"6", 999, 70, 1000, 70, 70, "1"},
+		Trade{"6", 999, 30, 1000, 30, 100, "2"},
+		Trade{"7", 999, 50, 1000, 80, 50, "2"},
+		Trade{"8", 999, 70, 1000, 70, 70, "3"},
+		Trade{"9", 999, 30, 1000, 100, 30, "3"},
+		Trade{"9", 999, 30, 1000, 30, 60, "4"},
 	}, me.Trades)
 
 	me.Trades = me.Trades[:0]
-	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 1000,
-		BuyOrders: []OrderPart{
-			OrderPart{"2", 100, 80, 0, 0},
-			OrderPart{"1", 100, 70, 0, 0},
-			OrderPart{"4", 100, 50, 0, 0},
-			OrderPart{"3", 100, 100, 0, 0},
-		},
-		SellOrders: []OrderPart{}},
+	me.overLappedLevel = []OverLappedLevel{
+		OverLappedLevel{Price: 1000,
+			BuyOrders: []OrderPart{
+				OrderPart{"2", 100, 80, 0, 0},
+				OrderPart{"1", 100, 70, 0, 0},
+				OrderPart{"4", 100, 50, 0, 0},
+				OrderPart{"3", 100, 100, 0, 0},
+			},
+			SellOrders: []OrderPart{}},
 		OverLappedLevel{Price: 1000,
 			BuyOrders: []OrderPart{},
 			SellOrders: []OrderPart{
@@ -501,14 +502,14 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.fillOrders(0, 1)
 	assert.Equal(int64(20), me.overLappedLevel[0].BuyTotal)
 	assert.Equal(int64(0), me.overLappedLevel[1].SellTotal)
-	t.Log(me.Trades)
+	t.Log(me.Trades) //
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, 1000, 70, "1"},
-		Trade{"6", 999, 30, 1000, 30, "2"},
-		Trade{"7", 999, 50, 1000, 80, "2"},
-		Trade{"8", 999, 70, 1000, 70, "3"},
-		Trade{"9", 999, 30, 1000, 100, "3"},
-		Trade{"9", 999, 30, 1000, 30, "4"},
+		Trade{"6", 999, 70, 1000, 70, 70, "1"},
+		Trade{"6", 999, 30, 1000, 30, 100, "2"},
+		Trade{"7", 999, 50, 1000, 80, 50, "2"},
+		Trade{"8", 999, 70, 1000, 70, 70, "3"},
+		Trade{"9", 999, 30, 1000, 100, 30, "3"},
+		Trade{"9", 999, 30, 1000, 30, 60, "4"},
 	}, me.Trades)
 }
 
@@ -735,7 +736,7 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal(int64(98), me.LastTradePrice)
-	assert.Equal("[{92 98 50 100 50 1} {3 98 80 100 80 2} {3 98 20 100 20 4} {5 98 50 100 50 6} {5 98 50 100 50 91} {9 98 50 98 50 8}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 100 50 50 1} {3 98 80 100 80 80 2} {3 98 20 100 20 100 4} {5 98 50 100 50 50 6} {5 98 50 100 50 100 91} {9 98 50 98 50 50 8}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 101, 100)
@@ -760,7 +761,7 @@ func TestMatchEng_Match(t *testing.T) {
 
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{3 99 100 100 100 1} {5 99 100 99 100 8}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{3 99 100 100 100 100 1} {5 99 100 99 100 100 8}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 98, 100)
@@ -776,7 +777,7 @@ func TestMatchEng_Match(t *testing.T) {
 
 	assert.True(me.Match())
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{92 98 50 100 50 1} {3 98 80 100 80 2} {3 98 20 100 20 4} {5 98 50 100 50 6} {5 98 50 100 50 91}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 100 50 50 1} {3 98 80 100 80 80 2} {3 98 20 100 20 100 4} {5 98 50 100 50 50 6} {5 98 50 100 50 100 91}]", fmt.Sprint(me.Trades))
 
 	/* 	3. the least abs surplus imbalance (Step 2)
 	--------------------------------------------------------------
@@ -844,7 +845,7 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	assert.Equal(int64(100), me.LastTradePrice)
 
 	t.Log(me.Trades)
-	assert.Equal(6, me.DropFilledOrder())
+	assert.Equal(9, len(me.DropFilledOrder()))
 	assert.Nil(book.buyQueue.GetPriceLevel(102))
 	assert.Nil(book.buyQueue.GetPriceLevel(101))
 	assert.Nil(book.sellQueue.GetPriceLevel(100))

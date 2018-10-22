@@ -32,11 +32,16 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerF
 		limit  int
 		offset int
 	}
+
+	responseType := "application/json"
+
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(err.Error()))
 		return
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		limitStr := r.FormValue("limit")
 		offsetStr := r.FormValue("offset")
@@ -86,6 +91,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerF
 			return
 		}
 
+		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}
 }
