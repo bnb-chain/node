@@ -132,7 +132,7 @@ type LogConfig struct {
 
 func defaultLogConfig() *LogConfig {
 	return &LogConfig{
-		LogToConsole: false,
+		LogToConsole: true,
 		LogFilePath:  "bnc.log",
 		LogBuffSize:  10000,
 	}
