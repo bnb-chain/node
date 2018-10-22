@@ -32,6 +32,11 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			listTokensCmd,
 			getTokenInfoCmd(cmdr))...)
 
+	tokenCmd.AddCommand(
+		client.PostCommands(MultiSendTxCmd(cdc))...,
+	)
+
 	tokenCmd.AddCommand(client.LineBreak)
+
 	cmd.AddCommand(tokenCmd)
 }
