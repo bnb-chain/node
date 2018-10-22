@@ -20,8 +20,8 @@ const (
 	flagTo = "to"
 )
 
-// SendTxCmd will create a send tx and sign it with the given key
-func MultiSendTxCmd(cdc *wire.Codec) *cobra.Command {
+// MultiSendCmd will create a send tx and sign it with the given key
+func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "multi-send",
 		Short: "Create and sign a send tx",
@@ -59,32 +59,32 @@ func MultiSendTxCmd(cdc *wire.Codec) *cobra.Command {
 				toAddrs = append(toAddrs, to)
 			}
 
-			// parse coins trying to be sent
+			// parse toCoins trying to be sent
 			amount := viper.GetString(flagAmount)
-			coins, err := sdk.ParseCoins(amount)
-			if err != nil {
-				return err
-			}
-
-			// ensure account has enough coins
-			account, err := ctx.Decoder(fromAcc)
+			toCoins, err := sdk.ParseCoins(amount)
 			if err != nil {
 				return err
 			}
 
 			fromCoins := sdk.Coins{}
-			for _, toCoin := range coins {
+			for _, toCoin := range toCoins {
 				fromCoin := toCoin
 				fromCoin.Amount = fromCoin.Amount.Mul(sdk.NewInt(int64(len(toAddrs))))
 				fromCoins = append(fromCoins, fromCoin)
 			}
 
+			// ensure account has enough toCoins
+			account, err := ctx.Decoder(fromAcc)
+			if err != nil {
+				return err
+			}
+
 			if !account.GetCoins().IsGTE(fromCoins) {
-				return errors.Errorf("Address %s doesn't have enough coins to pay for this transaction.", from)
+				return errors.Errorf("Address %s doesn't have enough toCoins to pay for this transaction.", from)
 			}
 
 			// build and sign the transaction, then broadcast to Tendermint
-			msg := BuildMsg(from, fromCoins, toAddrs, coins)
+			msg := BuildMsg(from, fromCoins, toAddrs, toCoins)
 
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
@@ -109,5 +109,6 @@ func BuildMsg(from sdk.AccAddress, fromCoins sdk.Coins, toAddrs []sdk.AccAddress
 		output = append(output, bank.NewOutput(toAddr, toCoins))
 	}
 	msg := bank.NewMsgSend([]bank.Input{input}, output)
+
 	return msg
 }
