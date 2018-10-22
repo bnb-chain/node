@@ -8,4 +8,5 @@ CMD ["start"]
 STOPSIGNAL SIGTERM
 COPY bnbchaind /bnbchaind
 COPY bnbcli /bnbchaind/bnbcli
+COPY rainmaker /bnbchaind/rainmaker
 

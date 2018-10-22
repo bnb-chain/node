@@ -15,25 +15,32 @@ src_ips=("172.18.10.204" "172.18.10.205" "172.18.10.206"
 
 chain_operation_words="Committed"
 bridge_addr=""
+data_seed_addr=""
 
 command=$1
 des_ips=($2)
+
 cluster_num=$3
 bridge_ips=($4)
 kafka_ip=$5
-deploy_mode=qa
+docker_registry=$6
+deploy_mode=$7
+rebuild=$8
+data_seed_ip=$9
 
-namespace=k8s-ecoysystem-apps
+namespace=bnbchain
 
 function build-image(){
     if [ ! -f "${workspace}/build/bnbchaind" ]; then
+        wget https://raw.githubusercontent.com/tendermint/tendermint/master/state/txindex/kv/kv.go  -P  ${workspace}/vendor/github.com/tendermint/tendermint/state/txindex/kv/
         make build-linux
         make build-docker-node
     fi
     cp ${workspace}/build/bnbchaind $basedir/node
     cp ${workspace}/build/bnbcli $basedir/node
-    docker build --tag 172.22.41.103:5000/kube-bnbchain $basedir/node
-    docker push 172.22.41.103:5000/kube-bnbchain
+    cp ${workspace}/build/rainmaker $basedir/node
+    docker build --tag ${docker_registry}/kube-bnbchain ${basedir}/node
+    docker push ${docker_registry}/kube-bnbchain
     rm $basedir/node/bnbchaind
 }
 
@@ -50,6 +57,8 @@ function prepare(){
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/timeout_commit = 5000/timeout_commit = 0/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+        $(cd "${ihome}/gaiad/config" && sed -i -e "s/recheck = true/recheck = false/g" config.toml)
+        $(cd "${ihome}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
     done
     for j in {0..8}
     do
@@ -85,7 +94,6 @@ function build-bridge-config(){
     cp -r ${workspace}/build/kubenode0 ${bridge_home}
     rm -rf ${bridge_home}/gaiad/config/gentx ${bridge_home}/gaiad/config/node_key.json ${bridge_home}/gaiad/config/priv_validator.json
     
-    sed -i -e "s/pex = false/pex = true/g" ${bridge_home}/gaiad/config/config.toml
     start=$(echo "$cluster_num*3" |bc)
     end=$((start + 3))
     while [ ${start} -lt ${end} ]; do
@@ -98,8 +106,10 @@ function build-bridge-config(){
         start=$((start + 1))
     done
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_seeds}\"/g" ${bridge_home}/gaiad/config/config.toml
-    sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' ${bridge_home}/gaiad/config/config.toml
-    
+    sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_seeds}\"/g" ${bridge_home}/gaiad/config/config.toml
+    sed -i -e "s/logToConsole = true/logToConsole = false/g" ${bridge_home}/gaiad/config/app.toml
+    # turn on pex
+    sed -i -e "s/pex = false/pex = true/g" ${bridge_home}/gaiad/config/config.toml
     private_ids=$(echo ${bridge_seeds} | sed 's/@[0-9]*.[0-9]*.[0-9]*.[0-9]*:[0-9]*//g')
     sed -i -e "s/private_peer_ids = \"\"/private_peer_ids = \"${private_ids}\"/g" ${bridge_home}/gaiad/config/config.toml
     
@@ -117,9 +127,26 @@ function build-seed-config(){
     # turn on pex
     sed -i -e "s/pex = false/pex = true/g" ${seed_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${seed_home}/gaiad/config/config.toml
-    sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' ${seed_home}/gaiad/config/config.toml
+    sed -i -e "s/seed_mode = false/seed_mode = true/g" ${seed_home}/gaiad/config/config.toml
+    sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr},${data_seed_addr}\"/g" ${seed_home}/gaiad/config/config.toml
+    sed -i -e "s/logToConsole = true/logToConsole = false/g" ${seed_home}/gaiad/config/app.toml
 
     ${kubectl} create configmap  seed-config --from-file ${seed_home}/gaiad/config/app.toml --from-file ${seed_home}/gaiad/config/config.toml --from-file ${seed_home}/gaiad/config/genesis.json -n ${namespace}
+}
+
+function build-data-seed-config(){
+    data_seed_home=${workspace}/build/data-seed
+    rm -rf ${data_seed_home}
+    cp -r ${workspace}/build/kubenode0 ${data_seed_home}
+    rm -rf ${seed_home}/gaiad/config/gentx ${data_seed_home}/gaiad/config/node_key.json ${data_seed_home}/gaiad/config/priv_validator.json
+
+    # turn on pex
+    sed -i -e "s/pex = false/pex = true/g" ${data_seed_home}/gaiad/config/config.toml
+    sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${data_seed_home}/gaiad/config/config.toml
+    sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${data_seed_home}/gaiad/config/config.toml
+    sed -i -e "s/logToConsole = true/logToConsole = false/g" ${data_seed_home}/gaiad/config/app.toml
+
+    ${kubectl} create configmap  data-seed-config --from-file ${data_seed_home}/gaiad/config/app.toml --from-file ${data_seed_home}/gaiad/config/config.toml --from-file ${data_seed_home}/gaiad/config/genesis.json -n ${namespace}
 }
 
 function build-witness-order-config(){
@@ -131,20 +158,22 @@ function build-witness-order-config(){
 
     sed -i -e "s/pex = false/pex = true/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
-    sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' ${witness_order_home}/gaiad/config/config.toml
+    sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
+    sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"orders\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/orderUpdatesTopic = \"test\"/orderUpdatesTopic = \"orders\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/prometheus = false/prometheus = true/g" ${witness_order_home}/gaiad/config/config.toml
+    sed -i -e "s/logToConsole = true/logToConsole = false/g" ${witness_order_home}/gaiad/config/app.toml
     if [ ${cluster_num} -eq 1 ];then
-        sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"orders_backup\"/g" ${witness_order_home}/gaiad/config/config.toml
-        sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"accounts\"/g" ${witness_order_home}/gaiad/config/config.toml
-        sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"orders\"/g" ${witness_order_home}/gaiad/config/config.toml
+        sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"orders_backup\"/g" ${witness_order_home}/gaiad/config/app.toml
+        sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"orders_backup\"/g" ${witness_order_home}/gaiad/config/app.toml
+        sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"orders_backup\"/g" ${witness_order_home}/gaiad/config/app.toml
     fi
     ${kubectl} create configmap  witness-order-config --from-file ${witness_order_home}/gaiad/config/config.toml --from-file ${witness_order_home}/gaiad/config/genesis.json --from-file ${witness_order_home}/gaiad/config/app.toml -n ${namespace}
 }
@@ -156,19 +185,19 @@ function build-witness-explorer-config(){
     cp -r ${workspace}/build/kubenode0 ${witness_explorer_home}
     rm -rf ${witness_explorer_home}/gaiad/config/gentx ${witness_explorer_home}/gaiad/config/node_key.json ${witness_explorer_home}/gaiad/config/priv_validator.json
 
-    # turn on pex
     sed -i -e "s/pex = false/pex = true/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${witness_explorer_home}/gaiad/config/config.toml
-    sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' ${witness_explorer_home}/gaiad/config/config.toml
+    sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" ${witness_explorer_home}/gaiad/config/app.toml
     sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${witness_explorer_home}/gaiad/config/app.toml
     sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/prometheus = false/prometheus = true/g" ${witness_explorer_home}/gaiad/config/config.toml
+    sed -i -e "s/logToConsole = true/logToConsole = false/g" ${witness_explorer_home}/gaiad/config/app.toml
     if [ ${cluster_num} -eq 1 ];then
         sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"orders_backup\"/g" ${witness_explorer_home}/gaiad/config/config.toml
-        sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"accounts\"/g" ${witness_explorer_home}/gaiad/config/config.toml
-        sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"orders\"/g" ${witness_explorer_home}/gaiad/config/config.toml
+        sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"accounts_back\"/g" ${witness_explorer_home}/gaiad/config/config.toml
+        sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"orders_back \"/g" ${witness_explorer_home}/gaiad/config/config.toml
     fi
     ${kubectl} create configmap  witness-explorer-config --from-file ${witness_explorer_home}/gaiad/config/app.toml --from-file ${witness_explorer_home}/gaiad/config/config.toml --from-file ${witness_explorer_home}/gaiad/config/genesis.json -n ${namespace}
 }
@@ -187,9 +216,11 @@ function build-deployment(){
     for i in {0..2}; do
         j=$(echo "$cluster_num*3" |bc)
         j=$((j + i))
+        sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g"  ${home[$j]}/gaiad/node/deployment.yaml
+        sed -i "s/{{REBUILD}}/$rebuild/g"  ${home[$j]}/gaiad/node/deployment.yaml
         sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/gaiad/node/deployment.yaml
         sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/gaiad/node/validator-svc.yaml
-        sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${home[$j]}/gaiad/node/validator-svc.yaml
+        sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${home[$j]}/gaiad/node/deployment.yaml
         ${kubectl} create -f  ${home[$j]}/gaiad/node/deployment.yaml -n ${namespace}
         ${kubectl} create -f  ${home[$j]}/gaiad/node/validator-svc.yaml -n ${namespace}
     done
@@ -199,18 +230,18 @@ function clean(){
     for i in {0..2}; do
         ${kubectl} delete deploy validator-${i} --ignore-not-found=true -n ${namespace}
     done
-    ${kubectl} delete deploy seed bridge witness-explorer witness-order -n ${namespace} --ignore-not-found=true
+    ${kubectl} delete deploy seed data-seed bridge witness-explorer witness-order -n ${namespace} --ignore-not-found=true
 }
 
 function clean-config(){
     ## Notice: notice is not able to clean data that in remote vm, should delete manually.
-    ${kubectl} delete cm bridge-config seed-config witness-explorer-config witness-order-config -n ${namespace} --ignore-not-found=true
+    ${kubectl} delete cm bridge-config data-seed-config seed-config witness-explorer-config witness-order-config -n ${namespace} --ignore-not-found=true
     for i in {0..2}; do
         ${kubectl} delete cm validator-${i}-config --ignore-not-found=true -n ${namespace}
         ${kubectl} delete secret validator-${i}-secret --ignore-not-found=true -n ${namespace}
         ${kubectl} delete svc validator-${i} --ignore-not-found=true -n ${namespace}
     done
-    ${kubectl} delete svc seed witness-explorer -n ${namespace} --ignore-not-found=true
+    ${kubectl} delete svc data-seed seed witness-explorer witness-order -n ${namespace} --ignore-not-found=true
 
 }
 function check_operation() {
@@ -221,48 +252,11 @@ function check_operation() {
     fi
 }
 
-function test-chain(){
-    address=$(cat ${home[0]}/gaiad/config/genesis.json|jq .app_state.tokens[0].owner)
-    ## find who own the finance
-    owner=kubenode0
-    for i in {0..2}; do
-        caddress=$(cat ${home[0]}/gaiad/config/genesis.json|jq .app_state.accounts[$i].address)
-        name=$(cat ${home[0]}/gaiad/config/genesis.json|jq .app_state.accounts[$i].name)
-        if [ ${caddress} == ${address} ] ;then
-            owner=$(echo ${name}|sed 's/\"//g')
-            break
-        fi
-    done
-    secret=$(cat ${workspace}/build/${owner}/gaiacli/key_seed.json|jq .secret|sed 's/\"//g')
-    chain_id=$(cat ${workspace}/build/${owner}/gaiad/config/genesis.json|jq .chain_id|sed 's/\"//g')
-    cd ${workspace}/build/
-    cp -f ${workspace}/networks/demo/*.exp ./
-
-    result=$(expect ./recover.exp "${secret}" "alice" true ${owner}/gaiacli)
-
-    wihte_secret="bottom quick strong ranch section decide pepper broken oven demand coin run jacket curious business achieve mule bamboo remain vote kid rigid bench rubber"
-    result=$(expect ./add_key.exp "${wihte_secret}" "white" ${owner}/gaiacli)
-
-    white_addr=$(./bnbcli keys list --home ./${owner}/gaiacli | grep white | grep -o "cosmosaccaddr[0-9a-zA-Z]*")
-    # wait for the chain
-    timeout=0
-    while [ $(${kubectl}  get deploy -n ${namespace}|grep validator-0|awk '{print $5}') -ne 1 ]; do
-        sleep 1
-        timeout=$((timeout + 1))
-        if [ ${timeout} -gt 60 ]; then
-            echo "Error: Wait timeout for node0 to be ready."
-            exit 1
-        fi
-    done
-    sleep 20
-    # send
-    result=$(expect ./send.exp ./${owner}/gaiacli alice ${chain_id} 1000BNB ${white_addr})
-    check_operation "Send Token" "${result}" "${chain_operation_words}"
-}
-
 function deploy-bridge(){
     bridge_home=${workspace}/build/bridge
     sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${basedir}/node/bridge-deployment.yaml
+    sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g"  ${basedir}/node/bridge-deployment.yaml
+    sed -i "s/{{REBUILD}}/${rebuild}/g"  ${basedir}/node/bridge-deployment.yaml
     ${kubectl} create -f  ${basedir}/node/bridge-deployment.yaml -n ${namespace}
     while [ $(${kubectl}  get deploy -n ${namespace}|grep bridge|awk '{print $5}') -ne 2 ]; do
         sleep 1
@@ -275,7 +269,7 @@ function deploy-bridge(){
     sleep 5
     ## prepare seed node
     for i in {0..1}; do
-        bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiad  --node "tcp://${bridge_ips[$i]}:26657" status)
+        bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiacli  --node "tcp://${bridge_ips[$i]}:26657" status)
         bridge_id=$(echo ${bridge_id} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
         if [ "$bridge_addr"x == ""x ];then
             bridge_addr=${bridge_id}@${bridge_ips[${i}]}:26656
@@ -285,36 +279,68 @@ function deploy-bridge(){
     done
 }
 
+function deploy-data-seed(){
+    data_seed_home=${workspace}/build/data-seed
+    if [ ${cluster_num} -eq 0 ];then
+        ${kubectl} create -f  ${basedir}/node/data-seed-svc.yaml -n ${namespace}
+    fi
+    sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${basedir}/node/data-seed-deployment.yaml
+    sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g" ${basedir}/node/data-seed-deployment.yaml
+    sed -i "s/{{REBUILD}}/${rebuild}/g" ${basedir}/node/data-seed-deployment.yaml
+    ${kubectl} create -f  ${basedir}/node/data-seed-deployment.yaml -n ${namespace}
+    while [ $(${kubectl}  get deploy -n ${namespace}|grep data-seed|awk '{print $5}') -ne 1 ]; do
+        sleep 1
+        timeout=$((timeout + 1))
+        if [ ${timeout} -gt 120 ]; then
+            echo "Error: Wait timeout for data-seed to be ready."
+            exit 1
+        fi
+    done
+    data_seed_domain=$(kubectl get svc data-seed  -n bnbchain -ojson|jq .status.loadBalancer.ingress[0].hostname|sed 's/\"//g')
+    while [ "${data_seed_domain}"x == ""x -o "${data_seed_domain}"x == "null"x ];do
+        sleep 10
+        data_seed_domain=$(kubectl get svc data-seed  -n bnbchain -ojson|jq .status.loadBalancer.ingress[0].hostname|sed 's/\"//g')
+    done
+    data_seed_addr=$(${workspace}/build/bnbcli --home ${data_seed_home}/gaiad  --node "tcp://${data_seed_ip}:26657" status|grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")@${data_seed_domain}:26656
+}
+
+
 function deploy-seed(){
     if [ ${cluster_num} -eq 0 ];then
         ${kubectl} create -f  ${basedir}/node/seed-svc.yaml -n ${namespace}
     fi
     sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${basedir}/node/seed-deployment.yaml
+    sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g" ${basedir}/node/seed-deployment.yaml
+    sed -i "s/{{REBUILD}}/${rebuild}/g" ${basedir}/node/seed-deployment.yaml
     ${kubectl} create -f  ${basedir}/node/seed-deployment.yaml -n ${namespace}
 }
 
 function deploy-witness-explorer(){
     sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${basedir}/node/witness-explorer-deployment.yaml
+    sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g" ${basedir}/node/witness-explorer-deployment.yaml
+    sed -i "s/{{REBUILD}}/${rebuild}/g" ${basedir}/node/witness-explorer-deployment.yaml
     ${kubectl} create -f  ${basedir}/node/witness-explorer-deployment.yaml -n ${namespace}
     ${kubectl} create -f  ${basedir}/node/witness-explorer-svc.yaml -n ${namespace}
 }
 
 function deploy-witness-order(){
     sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${basedir}/node/witness-order-deployment.yaml
+    sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g" ${basedir}/node/witness-order-deployment.yaml
+    sed -i "s/{{REBUILD}}/${rebuild}/g" ${basedir}/node/witness-order-deployment.yaml
     ${kubectl} create -f  ${basedir}/node/witness-order-deployment.yaml -n ${namespace}
+    ${kubectl} create -f  ${basedir}/node/witness-order-svc.yaml -n ${namespace}
 }
 
 set -e
 
 if [ "$command"x == "prepare"x ];then
+    export docker_registry=$3
     echo "--> Start build-image..."
     build-image
     echo "--> Start Prepare..."
     prepare
 elif [ "$command"x == "install"x ];then
     export kubectl="kubectl --kubeconfig=/home/cluster${cluster_num}-config"
-    echo "--> Start build-image..."
-    build-image
     echo "--> Start build-config..."
     build-config
     echo "--> Start build-deployment..."
@@ -323,20 +349,22 @@ elif [ "$command"x == "install"x ];then
     build-bridge-config
     echo "--> Start deploy bridge"
     deploy-bridge
+    echo "--> Start build data seed config"
+    build-data-seed-config
+    echo "--> Start deploy data seed"
+    deploy-data-seed
     echo "--> Start build seed config"
     build-seed-config
     echo "--> Start deploy seed"
     deploy-seed
-    if [ ${cluster_num} -lt 2 ];then
-        echo "--> Start build explorer witness config"
-        build-witness-explorer-config
-        echo "--> Start deploy explorer witness"
-        deploy-witness-explorer
-        echo "--> Start build order witness config"
-        build-witness-order-config
-        echo "--> Start deploy order witness"
-        deploy-witness-order
-    fi
+    echo "--> Start build explorer witness config"
+    build-witness-explorer-config
+    echo "--> Start deploy explorer witness"
+    deploy-witness-explorer
+    echo "--> Start build order witness config"
+    build-witness-order-config
+    echo "--> Start deploy order witness"
+    deploy-witness-order
 elif [ "$command"x == "clean"x ];then
     cluster_num=$2
     export kubectl="kubectl --kubeconfig=/home/cluster${cluster_num}-config"

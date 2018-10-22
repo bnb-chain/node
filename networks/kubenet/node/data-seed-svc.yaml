@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: tendermint-data-seed
+  name: data-seed
+spec:
+  ports:
+  - port: 26656
+    targetPort: 26656
+    name: p2p
+  - port: 26657
+    targetPort: 26657
+    name: rpc
+  selector:
+    app: tendermint-data-seed
+  type: LoadBalancer

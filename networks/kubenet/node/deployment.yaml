@@ -37,15 +37,17 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
       - name: bnbchaind
-        image: 172.22.41.103:5000/kube-bnbchain
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain
         imagePullPolicy: Always
         env:
         - name: DEPLOY_MODE
           value: "{{DEPLOY_MODE}}"
+        - name: REBUILD
+          value: "{{REBUILD}}"
         command:
         - /bin/sh
         - -c
-        - mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;cp /bnbchaind/secret/*.json /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657" > /bnbchaind/gaiad/node.log 2>&1
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/gaiad/*; fi;mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;cp /bnbchaind/secret/*.json /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657" > /bnbchaind/gaiad/node.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/gaiad
           name: gaiad-volume
@@ -55,7 +57,7 @@ spec:
           readOnly: true
           mountPath: /bnbchaind/secret
       - name: api-server
-        image: 172.22.41.103:5000/kube-bnbchain
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain
         imagePullPolicy: Always
         env:
         - name: DEPLOY_MODE
@@ -70,7 +72,7 @@ spec:
       volumes:
       - name: gaiad-volume
         hostPath:
-          path: /opt/bnbchaind/bnbchaind-validator
+          path: /opt/bnbchaind/validator
       - name: config-volume
         configMap:
           name: validator-{{INSTANCE}}-config

@@ -17,9 +17,11 @@ build:
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
+	go build $(BUILD_FLAGS) -o build/rainmaker.exe ./cmd/rainmaker
 else
 	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
+	go build $(BUILD_FLAGS) -o build/rainmaker ./cmd/rainmaker
 endif
 
 build-linux:

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rainmaker
+  labels:
+    tendermint-identity: rainmaker
+    app: rainmaker
+spec:
+  selector:
+    matchLabels:
+      tendermint-identity: rainmaker
+      app: rainmaker
+  serviceName: "rainmaker"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: rainmaker
+        tendermint-identity: rainmaker
+    spec:
+      nodeSelector:
+        tendermint-rainmaker: rainmaker
+      containers:
+      - name: rainmaker
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain
+        imagePullPolicy: Always
+        env:
+        - name: DEPLOY_MODE
+          value: "{{DEPLOY_MODE}}"
+        command:
+        - /bin/sh
+        - -c
+        - "mkdir -p /bnbchaind/home/keys/keys.db; cp /bnbchaind/config/rainmaker.toml /bnbchaind/home/;cp /bnbchaind/secret/*.ldb /bnbchaind/home/keys/keys.db/;
+        cp /bnbchaind/secret/CURRENT  /bnbchaind/home/keys/keys.db/; cp /bnbchaind/secret/MANIFEST*  /bnbchaind/home/keys/keys.db/;
+        /bnbchaind/rainmaker  --home  /bnbchaind/home --cluster_mode=true > /bnbchaind/home/rainmaker.log 2>&1"
+        volumeMounts:
+        - mountPath: /bnbchaind/home
+          name: host-volume
+        - name: config-volume
+          mountPath: /bnbchaind/config
+        - name: secret-volume
+          readOnly: true
+          mountPath: /bnbchaind/secret
+      volumes:
+      - name: host-volume
+        hostPath:
+          path: /opt/rainmaker
+      - name: config-volume
+        configMap:
+          name: rainmaker
+      - name: secret-volume
+        secret:
+          secretName: rainmaker

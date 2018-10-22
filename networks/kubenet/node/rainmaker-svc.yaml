@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: rainmaker
+  name: rainmaker
+spec:
+  ports:
+  - port: 28830
+    targetPort: 28830
+  clusterIP: None
+  selector:
+    app: rainmaker

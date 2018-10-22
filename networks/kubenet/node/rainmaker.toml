@@ -1,0 +1,23 @@
+## The bnbchain id.
+chain_id = "chain-ocRqzw"
+
+## The amount that should transfer.
+amounts = "50BNB,100GAL,100KNT,100SIK"
+
+## The alternative rainmakers.
+rainmakers = ["rainmaker0", "rainmaker1", "rainmaker2"]
+
+## Password phrase
+rainmaker_password = "12345678"
+
+## The address that this web server listen on.
+listen_addr = "0.0.0.0:28830"
+
+## The remote validator address.
+node_addr = "tcp://{{NODE_DOMAIN}}:26657"
+
+## The limit of undisposed message.
+max_message = 1000
+
+## The time gap between transaction.
+trans_gap = "2s"

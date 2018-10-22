@@ -40,22 +40,24 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
       - name: bnbchaind
-        image: 172.22.41.103:5000/kube-bnbchain
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain
         imagePullPolicy: Always
         env:
         - name: DEPLOY_MODE
           value: "{{DEPLOY_MODE}}"
+        - name: REBUILD
+          value: "{{REBUILD}}"
         command:
         - /bin/sh
         - -c
-        - mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/gaiad/node.log 2>&1
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/gaiad/*; fi;mkdir -p /bnbchaind/gaiad/config; cp /bnbchaind/config/* /bnbchaind/gaiad/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/gaiad" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/gaiad/node.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/gaiad
           name: gaiad-volume
         - name: config-volume
           mountPath: /bnbchaind/config
       - name: api-server
-        image: 172.22.41.103:5000/kube-bnbchain
+        image: {{DOCKER_REGISTRY}}/kube-bnbchain
         imagePullPolicy: Always
         env:
         - name: DEPLOY_MODE

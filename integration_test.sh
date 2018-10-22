@@ -13,6 +13,7 @@ chain_id="bnbchain-1000"
 keys_operation_words="cosmosaccaddr"
 chain_operation_words="Committed"
 order_book_words="10.00000000"
+node="tcp://localhost:26657"
 
 function prepare_node() {
 	cp -f ../networks/demo/*.exp .
@@ -77,7 +78,7 @@ check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # list trading pair
-result=$(expect ./list.exp BTC BNB 100000000 bob ${chain_id} ${cli_home})
+result=$(expect ./list.exp BTC BNB 100000000 bob ${chain_id} ${node} ${cli_home})
 check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
 
 sleep 1s
