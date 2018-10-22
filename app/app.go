@@ -112,23 +112,26 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	// finish app initialization
-	app.initDex()
-	app.initPlugins()
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
 
+	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
 
+	// remaining plugin init
+	app.initDex()
+	app.initPlugins()
+
 	return app
 }
 
 func (app *BinanceChain) initDex() {
-	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+	tradingPairMapper := dex.NewTradingPairMapper(app.cdc, common.PairStoreKey)
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// do not proceed if we are in a unit test and `checkState` is unset.
@@ -144,47 +147,6 @@ func (app *BinanceChain) initDex() {
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
-}
-
-// Query performs an abci query.
-func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	path := splitPath(req.Path)
-	if len(path) == 0 {
-		msg := "no query path provided"
-		return sdk.ErrUnknownRequest(msg).QueryResult()
-	}
-	prefix := path[0]
-	if handler, ok := app.queryHandlers[prefix]; ok {
-		res := handler(app, req, path)
-		if res == nil {
-			return app.BaseApp.Query(req)
-		}
-		return *res
-	}
-	return app.BaseApp.Query(req)
-}
-
-func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
-	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
-	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		return sdkBankHandler(ctx, msg)
-	}
-	app.Router().AddRoute("bank", bankHandler)
-	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-		app.Router().AddRoute(route, handler)
-	}
-	for route, handler := range dex.Routes(cdc, app.DexKeeper, app.TokenMapper, app.AccountMapper) {
-		app.Router().AddRoute(route, handler)
-	}
-}
-
-// RegisterQueryHandler registers an abci query handler.
-func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
-	if _, ok := app.queryHandlers[prefix]; ok {
-		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
-	} else {
-		app.queryHandlers[prefix] = handler
-	}
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -296,6 +258,33 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 		return nil, nil, err
 	}
 	return appState, validators, nil
+}
+
+// Query performs an abci query.
+func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	path := splitPath(req.Path)
+	if len(path) == 0 {
+		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	prefix := path[0]
+	if handler, ok := app.queryHandlers[prefix]; ok {
+		res := handler(app, req, path)
+		if res == nil {
+			return app.BaseApp.Query(req)
+		}
+		return *res
+	}
+	return app.BaseApp.Query(req)
+}
+
+// RegisterQueryHandler registers an abci query handler, implements ChainApp.RegisterQueryHandler.
+func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
+	if _, ok := app.queryHandlers[prefix]; ok {
+		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
+	} else {
+		app.queryHandlers[prefix] = handler
+	}
 }
 
 // GetCodec returns the app's Codec.
