@@ -14,7 +14,7 @@ import (
 func Routes(tokenMapper store.Mapper, accountMapper auth.AccountMapper, keeper bank.Keeper) map[string]common.Handler {
 	routes := make(map[string]common.Handler)
 	routes[issue.Route] = issue.NewHandler(tokenMapper, keeper)
-	routes[burn.Route] = burn.NewHandler(tokenMapper, keeper)
-	routes[freeze.RouteFreeze] = freeze.NewHandler(tokenMapper, accountMapper, keeper)
+	routes[burn.BurnRoute] = burn.NewHandler(tokenMapper, keeper)
+	routes[freeze.FreezeRoute] = freeze.NewHandler(tokenMapper, accountMapper, keeper)
 	return routes
 }

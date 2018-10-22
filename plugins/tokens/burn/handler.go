@@ -14,7 +14,7 @@ import (
 
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) common.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		if msg, ok := msg.(Msg); ok {
+		if msg, ok := msg.(BurnMsg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
 		}
 
@@ -23,7 +23,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) common.Handler {
 	}
 }
 
-func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg BurnMsg) sdk.Result {
 	logger := log.With("module", "token", "symbol", msg.Symbol, "amount", msg.Amount)
 	burnAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
