@@ -17,7 +17,7 @@ import (
 func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) common.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
-		case Msg:
+		case ListMsg:
 			return handleList(ctx, keeper, tokenMapper, msg, simulate)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
@@ -27,7 +27,7 @@ func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) common.Handler 
 }
 
 func handleList(
-	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, msg Msg, simulate bool,
+	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, msg ListMsg, simulate bool,
 ) sdk.Result {
 	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()

@@ -1,4 +1,4 @@
-package base
+package msg
 
 import (
 	"encoding/json"
@@ -10,28 +10,31 @@ import (
 )
 
 type MsgBase struct {
-	From   sdk.AccAddress `json:"from"`
-	Symbol string         `json:"symbol"`
-	Amount int64          `json:"amount"`
+	Version byte           `json:"version"`
+	From    sdk.AccAddress `json:"from"`
+	Symbol  string         `json:"symbol"`
+	Amount  int64          `json:"amount"`
 }
 
 func (msg MsgBase) Type() string {
-	return ""
+	// TODO: panic here? - should not be accessed.
+	return "BASE"
 }
 
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg MsgBase) ValidateBasic() sdk.Error {
+	if msg.Version != 0x01 {
+		return sdk.ErrInternal("Invalid version. Expected 0x01")
+	}
 	err := types.ValidateSymbol(msg.Symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
-
 	if msg.Amount <= 0 {
 		// TODO: maybe we need to define our own errors
 		return sdk.ErrInsufficientFunds("amount should be more than 0")
 	}
-
 	return nil
 }
 
