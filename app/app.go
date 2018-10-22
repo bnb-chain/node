@@ -151,47 +151,6 @@ func (app *BinanceChain) initPlugins() {
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
 }
 
-// Query performs an abci query.
-func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	path := splitPath(req.Path)
-	if len(path) == 0 {
-		msg := "no query path provided"
-		return sdk.ErrUnknownRequest(msg).QueryResult()
-	}
-	prefix := path[0]
-	if handler, ok := app.queryHandlers[prefix]; ok {
-		res := handler(app, req, path)
-		if res == nil {
-			return app.BaseApp.Query(req)
-		}
-		return *res
-	}
-	return app.BaseApp.Query(req)
-}
-
-func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
-	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
-	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		return sdkBankHandler(ctx, msg)
-	}
-	app.Router().AddRoute("bank", bankHandler)
-	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-		app.Router().AddRoute(route, handler)
-	}
-	for route, handler := range dex.Routes(cdc, app.DexKeeper, app.TokenMapper, app.AccountMapper) {
-		app.Router().AddRoute(route, handler)
-	}
-}
-
-// RegisterQueryHandler registers an abci query handler.
-func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
-	if _, ok := app.queryHandlers[prefix]; ok {
-		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
-	} else {
-		app.queryHandlers[prefix] = handler
-	}
-}
-
 // initChainerFn performs custom logic for chain initialization.
 func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	return func(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
@@ -300,6 +259,33 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 		return nil, nil, err
 	}
 	return appState, validators, nil
+}
+
+// Query performs an abci query.
+func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	path := splitPath(req.Path)
+	if len(path) == 0 {
+		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	prefix := path[0]
+	if handler, ok := app.queryHandlers[prefix]; ok {
+		res := handler(app, req, path)
+		if res == nil {
+			return app.BaseApp.Query(req)
+		}
+		return *res
+	}
+	return app.BaseApp.Query(req)
+}
+
+// RegisterQueryHandler registers an abci query handler, implements ChainApp.RegisterQueryHandler.
+func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
+	if _, ok := app.queryHandlers[prefix]; ok {
+		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
+	} else {
+		app.queryHandlers[prefix] = handler
+	}
 }
 
 // GetCodec returns the app's Codec.
