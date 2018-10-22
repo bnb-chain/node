@@ -185,6 +185,9 @@ func handleCancelOrder(
 			if !fee.IsEmpty() {
 				change := OrderChange{msg.Id, Canceled, fee.Tokens[0].Amount.Int64(), fee.Tokens[0].Denom}
 				keeper.OrderChanges = append(keeper.OrderChanges, change)
+			} else {
+				change := OrderChange{msg.Id, Canceled, 0, ""}
+				keeper.OrderChanges = append(keeper.OrderChanges, change)
 			}
 		}
 	} else {
