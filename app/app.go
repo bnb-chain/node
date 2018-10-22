@@ -134,7 +134,7 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper)
 	dex.InitPlugin(app, app.DexKeeper)
 
-	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
+	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
 }

@@ -108,7 +108,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	c := channelHash(accAdd, 4)
 	i := 0
 	for tr := range tradeOuts[c] {
-		assert.Equal(tr.eventType, eventExpireForMatchFailure)
+		assert.Equal(tr.eventType, eventCancelForMatchFailure)
 		assert.Equal(tr.in, tr.out)
 		assert.Equal(tr.in, tr.unlock)
 		i++
@@ -258,7 +258,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 300000)
 	keeper.AddOrder(OrderInfo{msg, 0, 0, ""}, 42, false)
-	keeper.RemoveOrder(msg.Id, msg.Symbol, msg.Side, msg.Price, Canceled, false)
+	keeper.CancelOrder(msg.Id, msg.Symbol, nil)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
@@ -433,8 +433,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
 
 func TestKeeper_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeConfig.SetFeeRate(ctx, 1000)
-	keeper.FeeConfig.SetFeeRateNative(ctx, 500)
+	keeper.FeeManager.UpdateConfig(ctx, TestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 
 	// InCcy == BNB
@@ -475,8 +474,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 
 func TestKeeper_CalcExpireFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeConfig.SetExpireFee(ctx, 10000)
-	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
+	keeper.FeeManager.UpdateConfig(ctx, TestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	// in BNB
 	tran := Transfer{
@@ -488,13 +486,13 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		out:        100e8,
 		unlock:     100e8,
 	}
-	fee := keeper.calcExpireFee(ctx, tran)
+	fee := keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10000)}, fee.Tokens)
 	tran.eventType = eventIOCFullyExpire
-	fee = keeper.calcExpireFee(ctx, tran)
+	fee = keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5000)}, fee.Tokens)
 	tran.out, tran.in, tran.out = 4000, 4000, 4000
-	fee = keeper.calcExpireFee(ctx, tran)
+	fee = keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 4000)}, fee.Tokens)
 
 	// sell ABC, and BNB as quote asset
@@ -508,7 +506,7 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		unlock:     1000e8,
 	}
 	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
-	fee = keeper.calcExpireFee(ctx, tran)
+	fee = keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 100000)}, fee.Tokens)
 	tran = Transfer{
 		eventType:  eventFullyExpire,
@@ -519,7 +517,7 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		out:        900,
 		unlock:     900,
 	}
-	fee = keeper.calcExpireFee(ctx, tran)
+	fee = keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 900)}, fee.Tokens)
 
 	// sell BTC, BNB as base asset
@@ -533,14 +531,13 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		unlock:     1e5,
 	}
 	keeper.engines[types.NativeToken+"_BTC"] = me.NewMatchEng(1e5, 1, 1)
-	fee = keeper.calcExpireFee(ctx, tran)
+	fee = keeper.calcFixedFee(ctx, acc, tran)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC", 10)}, fee.Tokens)
 }
 
 func TestKeeper_ExpireOrders(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeConfig.SetExpireFee(ctx, 10000)
-	keeper.FeeConfig.SetIOCExpireFee(ctx, 5000)
+	keeper.FeeManager.UpdateConfig(ctx, TestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC", "BNB", 1e6))

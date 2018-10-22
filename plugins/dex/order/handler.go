@@ -169,47 +169,32 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
 	}
 
-	var ord me.OrderPart
-	var err error
-
-	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate {
-		//remove order from cache and order book
-		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, Canceled, false)
-		if err != nil {
-			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
-		}
-	} else {
-		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
-		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
-	}
+	log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
+	ord, err := keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
-
-	//unlocked the locked qty for the unfilled qty
-	unlockAmount := ord.LeavesQty()
-
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(origOrd.Symbol)
-	var symbolToUnlock string
-	if origOrd.Side == Side.BUY {
-		symbolToUnlock = strings.ToUpper(quoteAsset)
-		unlockAmount = utils.CalBigNotional(origOrd.Price, unlockAmount)
-	} else {
-		symbolToUnlock = strings.ToUpper(baseAsset)
-	}
-	account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
-	lockedAmount := account.GetLockedCoins().AmountOf(symbolToUnlock).Int64()
-	if lockedAmount < unlockAmount {
-		return sdk.ErrInsufficientCoins("do not have enough token to unlock").Result()
-	}
-
-	_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
-
+	transfer := TransferFromCanceled(ord, origOrd, false)
+	sdkError := keeper.doTransfer(ctx, accountMapper, &transfer)
 	if sdkError != nil {
 		return sdkError.Result()
 	}
 
-	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToUnlock, -unlockAmount)
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if !ctx.IsCheckTx() && !simulate {
+		//remove order from cache and order book
+		err := keeper.CancelOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
+			if keeper.CollectOrderInfoForPublish {
+				// TODO: will refactor transfer.Fee in other PR
+				fee := transfer.Fee.Tokens[0]
+				change := OrderChange{origOrd.Id, Canceled, fee.Amount.Int64(), fee.Denom}
+				keeper.OrderChanges = append(keeper.OrderChanges, change)
+			}
+		})
+		if err != nil {
+			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
+		}
+	}
+
 	return sdk.Result{}
 }

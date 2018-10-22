@@ -41,49 +41,9 @@ type Keeper struct {
 	roundFees                  map[string]sdk.Coins
 	poolSize                   uint // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
-	FeeConfig                  FeeConfig
+	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
 	logger                     tmlog.Logger
-}
-
-type transferEventType uint8
-
-const (
-	eventFilled transferEventType = iota
-	eventFullyExpire
-	eventPartiallyExpire
-	eventIOCFullyExpire
-	eventIOCPartiallyExpire
-	eventExpireForMatchFailure
-)
-
-// Transfer represents a transfer between trade currencies
-type Transfer struct {
-	Oid        string
-	eventType  transferEventType
-	accAddress sdk.AccAddress
-	inAsset    string
-	in         int64
-	outAsset   string
-	out        int64
-	unlock     int64
-	Fee        types.Fee
-	Trade      *me.Trade
-	Symbol     string
-}
-
-func (tran Transfer) FeeFree() bool {
-	return tran.eventType == eventPartiallyExpire ||
-		tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventExpireForMatchFailure
-}
-
-func (tran Transfer) IsExpiredWithFee() bool {
-	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
-}
-
-func (tran *Transfer) String() string {
-	return fmt.Sprintf("Transfer[eventType:%v, oid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
-		tran.eventType, tran.Oid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.Fee)
 }
 
 func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
@@ -107,9 +67,9 @@ func NewKeeper(key sdk.StoreKey, bankKeeper bank.Keeper, tradingPairMapper store
 		roundIOCOrders:             make(map[string][]string, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
-		FeeConfig:                  NewFeeConfig(cdc, key),
+		FeeManager:                 NewFeeManager(cdc, key),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		logger: bnclog.With("module", "dexkeeper"),
+		logger:                     bnclog.With("module", "dexkeeper"),
 	}
 }
 
@@ -171,35 +131,26 @@ func orderNotFound(symbol, id string) error {
 	return errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
 }
 
-func (kp *Keeper) RemoveOrder(
-	id string,
-	symbol string,
-	side int8,
-	price int64,
-	reason ChangeType,
-	isRecovery bool) (ord me.OrderPart, err error) {
+func (kp *Keeper) CancelOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
 	symbol = strings.ToUpper(symbol)
-	msg, ok := kp.OrderExists(symbol, id)
+	ordMsg, ok := kp.OrderExists(symbol, id)
 	if !ok {
-		return me.OrderPart{}, orderNotFound(symbol, id)
+		return orderNotFound(symbol, id)
 	}
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		return me.OrderPart{}, orderNotFound(symbol, id)
+		return orderNotFound(symbol, id)
 	}
 	delete(kp.allOrders[symbol], id)
-	ord, err = eng.Book.RemoveOrder(id, side, price)
-	if kp.CollectOrderInfoForPublish {
-		if !isRecovery {
-			// fee will be updated during doTransfer
-			change := OrderChange{msg.Id, reason, 0, ""}
-			kp.OrderChanges = append(kp.OrderChanges, change)
-		} else {
-			bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
-			delete(kp.OrderChangesMap, msg.Id)
-		}
+	ord, err := eng.Book.RemoveOrder(id, ordMsg.Side, ordMsg.Price)
+	if err != nil {
+		return err
 	}
-	return ord, err
+
+	if postCancelHandler != nil {
+		postCancelHandler(ord)
+	}
+	return nil
 }
 
 func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
@@ -222,51 +173,6 @@ func (kp *Keeper) OrderExists(symbol, id string) (OrderInfo, bool) {
 		}
 	}
 	return OrderInfo{}, false
-}
-
-func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Transfer) {
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
-	seller := kp.allOrders[symbol][trade.Sid].Sender
-	buyer := kp.allOrders[symbol][trade.Bid].Sender
-	// TODO: where is 10^8 stored?
-	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
-	return Transfer{trade.Sid, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}, &trade, symbol},
-		Transfer{trade.Bid, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}, &trade, symbol}
-}
-
-func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo, tranEventType transferEventType) Transfer {
-	//here is a trick to use the same currency as in and out ccy to simulate cancel
-	qty := ord.LeavesQty()
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(ordMsg.Symbol)
-	var unlock int64
-	var unlockAsset string
-	if ordMsg.Side == Side.BUY {
-		unlockAsset = quoteAsset
-		unlock = utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity) - utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity-qty)
-	} else {
-		unlockAsset = baseAsset
-		unlock = qty
-	}
-
-	if ord.CumQty != 0 && tranEventType != eventExpireForMatchFailure {
-		if ordMsg.TimeInForce == TimeInForce.IOC {
-			tranEventType = eventIOCPartiallyExpire // IOC partially filled
-		} else {
-			tranEventType = eventPartiallyExpire
-		}
-	}
-
-	return Transfer{
-		Oid:        ordMsg.Id,
-		eventType:  tranEventType,
-		accAddress: ordMsg.Sender,
-		inAsset:    unlockAsset,
-		in:         unlock,
-		outAsset:   unlockAsset,
-		out:        unlock,
-		unlock:     unlock,
-	}
 }
 
 // channelHash() will choose a channel for processing by moding
@@ -295,7 +201,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 			orders[t.Sid].CumQty = t.SellCumQty
 
 			if distributeTrade {
-				t1, t2 := kp.tradeToTransfers(t, symbol)
+				t1, t2 := TransferFromTrade(t, symbol, kp.allOrders[symbol])
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
 				c = channelHash(t2.accAddress, concurrency)
@@ -328,7 +234,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 					continue
 				}
 				c := channelHash(msg.Sender, concurrency)
-				tradeOuts[c] <- kp.expiredToTransfer(ord, msg, eventExpireForMatchFailure)
+				tradeOuts[c] <- TransferFromCanceled(ord, *msg, true)
 			} else {
 				kp.logger.Error("Failed to remove order, may be fatal!", "orderID", id)
 			}
@@ -346,7 +252,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orders map[st
 				}
 				c := channelHash(msg.Sender, concurrency)
 				//cumQty would be tested inside expiredToTransfer
-				tradeOuts[c] <- kp.expiredToTransfer(ord, msg, eventIOCFullyExpire)
+				tradeOuts[c] <- TransferFromExpired(ord, *msg)
 			} else {
 				kp.logger.Error("Failed to remove IOC order, may be fatal!", "orderID", id)
 			}
@@ -485,37 +391,40 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Trans
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
+	if tran.unlock < tran.out {
+		return sdk.ErrInternal("Unlocked tokens cannot cover the expense")
+	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
 		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
 		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
 
-	if !tran.FeeFree() {
-		fee := kp.calcFeeFromTransfer(ctx, account, *tran)
-		if !fee.IsEmpty() {
-			account.SetCoins(account.GetCoins().Minus(fee.Tokens.Sort()))
-		}
-		tran.Fee = fee
+	fee := kp.calcFeeFromTransfer(ctx, account, *tran)
+	if !fee.IsEmpty() {
+		account.SetCoins(account.GetCoins().Minus(fee.Tokens.Sort()))
 	}
+	tran.Fee = fee
 	am.SetAccount(ctx, account)
 	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
 	return nil
 }
 
 func (kp *Keeper) calcFeeFromTransfer(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
-	if tran.eventType == eventFilled {
-		return kp.calcOrderFee(ctx, account, tran)
-	} else if tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire {
-		return kp.calcExpireFee(ctx, tran)
+	if tran.FeeFree() {
+		return types.Fee{}
 	}
 
-	return types.Fee{}
+	if tran.eventType == eventFilled {
+		return kp.calcOrderFee(ctx, account, tran)
+	} else {
+		return kp.calcFixedFee(ctx, account, tran)
+	}
 }
 
 func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inAsset == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
+		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeManager.CalcTradeFee(tran.in, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
@@ -526,15 +435,19 @@ func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Trans
 			// BNB_XYZ
 			price := kp.engines[utils.Assets2TradingPair(types.NativeToken, tran.inAsset)].LastTradePrice
 			var amount big.Int
-			amountOfNativeToken = amount.Div(amount.Mul(big.NewInt(tran.in), big.NewInt(utils.Fixed8One.ToInt64())), big.NewInt(price)).Int64()
+			amountOfNativeToken = amount.Div(
+				amount.Mul(
+					big.NewInt(tran.in),
+					big.NewInt(utils.Fixed8One.ToInt64())),
+				big.NewInt(price)).Int64()
 		}
-		feeByNativeToken := kp.FeeConfig.CalcFee(amountOfNativeToken, FeeByNativeToken)
+		feeByNativeToken := kp.FeeManager.CalcTradeFee(amountOfNativeToken, FeeByNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
+			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeManager.CalcTradeFee(tran.in, FeeByTradeToken))
 			kp.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
@@ -542,38 +455,51 @@ func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Trans
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
+func (kp *Keeper) calcFixedFee(ctx sdk.Context, acc auth.Account, tran Transfer) types.Fee {
+	var feeAmountNative int64
 	var feeAmount int64
 	if tran.eventType == eventFullyExpire {
-		feeAmount = kp.FeeConfig.ExpireFee()
+		feeAmountNative, feeAmount = kp.FeeManager.ExpireFees()
 	} else if tran.eventType == eventIOCFullyExpire {
-		feeAmount = kp.FeeConfig.IOCExpireFee()
+		feeAmountNative, feeAmount = kp.FeeManager.IOCExpireFees()
+	} else if tran.eventType == eventFullyCancel {
+		feeAmountNative, feeAmount = kp.FeeManager.CancelFees()
 	} else {
 		// should not be here
 		kp.logger.Error("Invalid expire eventType", "eventType", tran.eventType)
 		return types.Fee{}
 	}
 
-	// in a Transfer of expire event type, inAsset == outAsset, in == out == unlock
-	// to make the calc logic consistent with calcOrderFee, we always use in/inAsset to calc the fee.
-	if tran.inAsset != types.NativeToken {
+	var feeToken sdk.Coin
+	// here freeBalance already contains the unlocked part.
+	freeBalance := acc.GetCoins()
+	nativeTokenBalance := freeBalance.AmountOf(types.NativeToken).Int64()
+	if nativeTokenBalance >= feeAmountNative {
+		feeToken = sdk.NewCoin(types.NativeToken, feeAmountNative)
+	} else if tran.inAsset == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, nativeTokenBalance)
+	} else {
+		// in a Transfer of expire event type, inAsset == outAsset, in == out == unlock
+		// to make the calc logic consistent with calcOrderFee, we always use in/inAsset to calc the fee.
 		if engine, ok := kp.engines[utils.Assets2TradingPair(tran.inAsset, types.NativeToken)]; ok {
 			// XYZ_BNB
 			var amount big.Int
 			feeAmount = amount.Div(
-				amount.Mul(big.NewInt(feeAmount), big.NewInt(utils.Fixed8One.ToInt64())),
+				amount.Mul(
+					big.NewInt(feeAmount),
+					big.NewInt(utils.Fixed8One.ToInt64())),
 				big.NewInt(engine.LastTradePrice)).Int64()
 		} else {
 			// BNB_XYZ
 			engine = kp.engines[utils.Assets2TradingPair(types.NativeToken, tran.inAsset)]
 			feeAmount = utils.CalBigNotional(engine.LastTradePrice, feeAmount)
 		}
+
+		feeAmount = utils.MinInt(feeAmount, acc.GetCoins().AmountOf(tran.inAsset).Int64())
+		feeToken = sdk.NewCoin(tran.inAsset, feeAmount)
 	}
 
-	if tran.in < feeAmount {
-		feeAmount = tran.in
-	}
-	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
 func (kp *Keeper) clearAfterMatch() {
@@ -681,8 +607,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 			// gen transfer
 			ordMsg := orders[ord.Id]
 			h := channelHash(ordMsg.Sender, concurrency)
-			//cumQty would be tested inside expiredToTransfer
-			transferChs[h] <- kp.expiredToTransfer(ord, ordMsg, eventFullyExpire)
+			transferChs[h] <- TransferFromExpired(ord, *ordMsg)
 			// delete from allOrders
 			delete(orders, ord.Id)
 		})
@@ -777,5 +702,5 @@ func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, 
 
 func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
 	kp.logger.Info("Initializing Fees from Genesis")
-	kp.FeeConfig.InitGenesis(ctx, genesis)
+	kp.FeeManager.InitGenesis(ctx, genesis)
 }

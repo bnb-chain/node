@@ -204,13 +204,14 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				kp.AddOrder(orderInfo, height, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
-				if !ok {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
-				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, Canceled, true)
+				err := kp.CancelOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
+					if kp.CollectOrderInfoForPublish {
+						bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", true)
+						delete(kp.OrderChangesMap, msg.Id)
+					}
+				})
 				if err != nil {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
+					panic(fmt.Sprintf("Failed to replay cancel msg for: [%s]", err.Error()))
 				}
 				logger.Info("Canceled Order", "order", msg)
 			}

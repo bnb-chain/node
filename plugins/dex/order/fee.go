@@ -1,6 +1,8 @@
 package order
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	"math"
 	"math/big"
 
@@ -21,81 +23,199 @@ const (
 )
 
 var (
-	expireFeeKey     = []byte("ExpireFee")
-	iocExpireFeeKey  = []byte("IOCExpireFee")
-	feeRateNativeKey = []byte("FeeRateNative")
-	feeRateKey       = []byte("FeeRate")
+	feeConfigKey = []byte("FeeConfig")
 
 	FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
 )
 
-type FeeConfig struct {
-	cdc           *wire.Codec
-	storeKey      sdk.StoreKey
-	expireFee     int64
-	iocExpireFee  int64
-	feeRateNative int64
-	feeRate       int64
+type FeeManager struct {
+	cdc      *wire.Codec
+	storeKey sdk.StoreKey
+	feeConfig FeeConfig
 }
 
-func NewFeeConfig(cdc *wire.Codec, storeKey sdk.StoreKey) FeeConfig {
-	return FeeConfig{
-		cdc:           cdc,
-		storeKey:      storeKey,
-		expireFee:     nilFeeValue,
-		iocExpireFee:  nilFeeValue,
-		feeRateNative: nilFeeValue,
-		feeRate:       nilFeeValue,
+func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey) *FeeManager {
+	return &FeeManager{
+		cdc:      cdc,
+		storeKey: storeKey,
+		feeConfig: NewFeeConfig(),
 	}
 }
 
-func (config *FeeConfig) itob(num int64) []byte {
-	bz, err := config.cdc.MarshalBinaryBare(num)
+func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
+	feeConfig, err := m.getConfigFromCtx(ctx)
+	if err != nil {
+		// this will only happen when the chain first starts up, and InitGenesis would be called.
+	}
+
+	m.feeConfig = feeConfig
+}
+
+func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
+	feeConfig := NewFeeConfig()
+	feeConfig.expireFee = data.ExpireFee
+	feeConfig.expireFeeNative = data.ExpireFeeNative
+	feeConfig.iocExpireFee = data.IOCExpireFee
+	feeConfig.iocExpireFeeNative = data.IOCExpireFeeNative
+	feeConfig.cancelFee = data.CancelFee
+	feeConfig.cancelFeeNative = data.CancelFeeNative
+	feeConfig.feeRate = data.FeeRate
+	feeConfig.feeRateNative = data.FeeRateNative
+	log.With("module", "dex").Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
+	err := m.UpdateConfig(ctx, feeConfig)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// UpdateConfig should only happen when Init or in BreatheBlock
+func (m *FeeManager) UpdateConfig(ctx sdk.Context, feeConfig FeeConfig) error {
+	if feeConfig.anyEmpty() {
+		return errors.New("invalid feeConfig")
+	}
+
+	store := ctx.KVStore(m.storeKey)
+	store.Set(feeConfigKey, m.encodeConfig(feeConfig))
+	m.feeConfig = feeConfig
+	return nil
+}
+
+func (m *FeeManager) GetConfig() FeeConfig {
+	return m.feeConfig
+}
+
+func (m *FeeManager) getConfigFromCtx(ctx sdk.Context) (FeeConfig, error) {
+	store := ctx.KVStore(m.storeKey)
+	bz := store.Get(feeConfigKey)
+	if bz == nil {
+		return NewFeeConfig(), errors.New("feeConfig does not exist")
+	}
+
+	return m.decodeConfig(bz), nil
+}
+
+func (m *FeeManager) encodeConfig(config FeeConfig) []byte {
+	bz, err := m.cdc.MarshalBinaryBare(config)
+	if err != nil {
+		panic(err)
+	}
+
 	return bz
 }
 
-func (config *FeeConfig) btoi(bz []byte) (i int64) {
-	err := config.cdc.UnmarshalBinaryBare(bz, &i)
+func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
+	err := m.cdc.UnmarshalBinaryBare(bz, &config)
 	if err != nil {
 		panic(err)
 	}
+
 	return
 }
 
-// warning: all set methods are not thread safe. They would only be called in DeliverTx
-func (config *FeeConfig) SetExpireFee(ctx sdk.Context, expireFee int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(expireFee)
-	store.Set(expireFeeKey, b)
-	log.With("module", "dex").Info("Set Expire Fee", "fee", expireFee)
-	config.expireFee = expireFee
+func (m *FeeManager) CalcTradeFee(amount int64, feeType FeeType) int64 {
+	var feeRate int64
+	if feeType == FeeByNativeToken {
+		feeRate = m.feeConfig.feeRateNative
+	} else if feeType == FeeByTradeToken {
+		feeRate = m.feeConfig.feeRate
+	}
+
+	var fee big.Int
+	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
 }
 
-func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(iocExpireFee)
-	store.Set(iocExpireFeeKey, b)
-	log.With("module", "dex").Info("Set IOCExpire Fee", "fee", iocExpireFee)
-	config.iocExpireFee = iocExpireFee
+func (m *FeeManager) ExpireFees() (int64, int64) {
+	return m.feeConfig.expireFeeNative, m.feeConfig.expireFee
 }
 
-func (config *FeeConfig) SetFeeRateNative(ctx sdk.Context, feeRateNative int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRateNative)
-	store.Set(feeRateNativeKey, b)
-	log.With("module", "dex").Info("Set Fee Rate with native token", "rate", feeRateNative)
-	config.feeRateNative = feeRateNative
+func (m *FeeManager) IOCExpireFees() (int64, int64) {
+	return m.feeConfig.iocExpireFeeNative, m.feeConfig.iocExpireFee
 }
 
-func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRate)
-	store.Set(feeRateKey, b)
-	log.With("module", "dex").Info("Set Fee Rate for tokens", "rate", feeRate)
-	config.feeRate = feeRate
+func (m *FeeManager) CancelFees() (int64, int64) {
+	return m.feeConfig.cancelFeeNative, m.feeConfig.cancelFee
+}
+
+func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.expireFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.expireFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.iocExpireFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.iocExpireFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+func (m *FeeManager) CancelFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.cancelFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.cancelFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+type FeeConfig struct {
+	expireFee          int64
+	expireFeeNative    int64
+	iocExpireFee       int64
+	iocExpireFeeNative int64
+	cancelFee          int64
+	cancelFeeNative    int64
+	feeRate            int64
+	feeRateNative      int64
+}
+
+func NewFeeConfig() FeeConfig {
+	return FeeConfig{
+		expireFee: nilFeeValue,
+		expireFeeNative: nilFeeValue,
+		iocExpireFee: nilFeeValue,
+		iocExpireFeeNative:nilFeeValue,
+		cancelFee:nilFeeValue,
+		cancelFeeNative:nilFeeValue,
+		feeRate:nilFeeValue,
+		feeRateNative:nilFeeValue,
+	}
+}
+
+func TestFeeConfig() FeeConfig {
+	feeConfig := NewFeeConfig()
+	feeConfig.feeRateNative = 500
+	feeConfig.feeRate = 1000
+	feeConfig.expireFeeNative = 2e4
+	feeConfig.expireFee = 1e5
+	feeConfig.iocExpireFeeNative = 1e4
+	feeConfig.iocExpireFee = 5e4
+	feeConfig.cancelFeeNative = 2e4
+	feeConfig.cancelFee = 1e5
+	return feeConfig
+}
+
+func (config FeeConfig) anyEmpty() bool {
+	if config.expireFee == nilFeeValue ||
+		config.expireFeeNative == nilFeeValue ||
+		config.iocExpireFee == nilFeeValue ||
+		config.iocExpireFeeNative == nilFeeValue ||
+		config.cancelFee == nilFeeValue ||
+		config.cancelFeeNative == nilFeeValue ||
+		config.feeRate == nilFeeValue ||
+		config.feeRateNative == nilFeeValue {
+		return true
+	}
+
+	return false
 }
 
 func (config FeeConfig) ExpireFee() int64 {
@@ -112,40 +232,4 @@ func (config FeeConfig) FeeRateWithNativeToken() int64 {
 
 func (config FeeConfig) FeeRate() int64 {
 	return config.feeRate
-}
-
-// either init fee by Init, or by InitGenesis.
-func (config *FeeConfig) Init(ctx sdk.Context) {
-	store := ctx.KVStore(config.storeKey)
-	if bz := store.Get(expireFeeKey); bz != nil {
-		config.expireFee = config.btoi(bz)
-		config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
-		config.feeRateNative = config.btoi(store.Get(feeRateNativeKey))
-		config.feeRate = config.btoi(store.Get(feeRateKey))
-		log.With("module", "dex").Info("Initialized fees from storage", "ExpireFee", config.expireFee,
-			"IOCExpireFee", config.iocExpireFee, "FeeRateWithNativeToken", config.feeRateNative,
-			"FeeRate", config.feeRate)
-	}
-	// otherwise, the chain first starts up and InitGenesis would be called.
-}
-
-// InitGenesis - store the genesis trend
-func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
-	log.With("module", "dex").Info("Setting Genesis Fee/Rate")
-	config.SetExpireFee(ctx, data.ExpireFee)
-	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
-	config.SetFeeRateNative(ctx, data.FeeRateNative)
-	config.SetFeeRate(ctx, data.FeeRate)
-}
-
-func (config *FeeConfig) CalcFee(amount int64, feeType FeeType) int64 {
-	var feeRate int64
-	if feeType == FeeByNativeToken {
-		feeRate = config.feeRateNative
-	} else if feeType == FeeByTradeToken {
-		feeRate = config.feeRate
-	}
-
-	var fee big.Int
-	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
 }

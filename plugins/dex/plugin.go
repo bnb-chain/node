@@ -24,9 +24,11 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper *DexKeeper, height, blockTime int64) {
 	logger := bnclog.With("module", "dex")
-	logger.Info("Start updating tick size / lot size")
+	logger.Info("Update tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
-	logger.Info("Staring Expiring stale orders")
+	logger.Info("Update fee/rate")
+	// TODO: update fee/rate
+	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
 		pub.ExpireOrdersForPublish(dexKeeper, accountMapper, ctx, blockTime)
 	} else {

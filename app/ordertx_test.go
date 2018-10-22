@@ -137,8 +137,7 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeConfig.SetFeeRateNative(ctx, 500)
-	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, o.TestFeeConfig())
 
 	// setup accounts
 	am := testApp.AccountMapper
@@ -286,6 +285,8 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	oid := fmt.Sprintf("%s-0", add.String())
 	add2 := Account(1).GetAddress()
 
+
+	fmt.Println(testApp.DexKeeper.FeeManager.GetConfig())
 	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*Failed to find order \\[doesnotexist\\].*", res.GetLog())
