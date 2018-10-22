@@ -20,6 +20,10 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc("/node_version", s.handleNodeVersionReq()).
 		Methods("GET")
 
+	// auth routes
+	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.accStoreName)).
+		Methods("GET")
+
 	// tx routes
 	r.HandleFunc(prefix+"/simulate", s.handleSimulateReq(s.cdc, s.ctx)).
 		Methods("POST")
