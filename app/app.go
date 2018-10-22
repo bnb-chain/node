@@ -78,7 +78,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// create composed tx decoder
 	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
 
-	// create your application object
+	// create the application object
 	var app = &BinanceChain{
 		BaseApp:           NewBaseApp(appName, cdc, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
 		Codec:             cdc,
@@ -87,17 +87,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
+
 	// mappers
 	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 
-	// Add handlers.
+	// handlers
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
 	// TODO: make the concurrency configurable
 
-	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -113,12 +111,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
 	}
 
-	// complete app initialization
+	// finish app initialization
+	app.initDex()
 	app.initPlugins()
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
+
 	err := app.LoadLatestVersion(common.MainStoreKey)
 	if err != nil {
 		cmn.Exit(err.Error())
@@ -127,18 +127,23 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	return app
 }
 
-func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
-
-	// TODO: could cause problems?
+func (app *BinanceChain) initDex() {
+	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
+	// do not proceed if we are in a unit test and `checkState` is unset.
 	if app.checkState == nil {
 		return
 	}
-
+	// configure dex keeper
 	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
+}
+
+func (app *BinanceChain) initPlugins() {
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
 }
 
 // Query performs an abci query.
