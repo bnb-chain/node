@@ -9,11 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	cfg "github.com/tendermint/tendermint/config"
@@ -22,6 +17,11 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
@@ -499,7 +499,7 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 	}
 }
 
-// Basic validator for msgs
+// Basic validator for []sdk.Msg
 func validateBasicTxMsgs(msgs []sdk.Msg) sdk.Error {
 	if msgs == nil || len(msgs) != 1 {
 		// TODO: probably shouldn't be ErrInternal. Maybe new ErrInvalidMessage, or ?
@@ -507,7 +507,6 @@ func validateBasicTxMsgs(msgs []sdk.Msg) sdk.Error {
 	}
 
 	for _, msg := range msgs {
-		// Validate the Msg.
 		err := msg.ValidateBasic()
 		if err != nil {
 			err = err.WithDefaultCodespace(sdk.CodespaceRoot)
@@ -547,7 +546,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, txHash string, simu
 		msgType := msg.Type()
 		handler := app.router.Route(msgType)
 		if handler == nil {
-			return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
+			return sdk.ErrUnknownRequest("Unrecognized ListMsg type: " + msgType).Result()
 		}
 
 		msgResult := handler(ctx.WithValue(types.TxHashKey, txHash), msg, simulate)
@@ -561,13 +560,13 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, txHash string, simu
 
 		// Stop execution and return on first failed message.
 		if !msgResult.IsOK() {
-			logs = append(logs, fmt.Sprintf("Msg %d failed: %s", msgIdx, msgResult.Log))
+			logs = append(logs, fmt.Sprintf("ListMsg %d failed: %s", msgIdx, msgResult.Log))
 			code = msgResult.Code
 			break
 		}
 
 		// Construct usable logs in multi-message transactions.
-		logs = append(logs, fmt.Sprintf("Msg %d: %s", msgIdx, msgResult.Log))
+		logs = append(logs, fmt.Sprintf("ListMsg %d: %s", msgIdx, msgResult.Log))
 	}
 
 	// Set the final gas values.
@@ -721,15 +720,15 @@ func (app *BaseApp) Commit() (res abci.ResponseCommit) {
 
 func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context) {
 	switch ct := msg.(type) {
-	case list.Msg:
+	case list.ListMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
 	case order.NewOrderMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
 	case order.CancelOrderMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
-	case issue.Msg:
+	case issue.IssueMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
-	case burn.Msg:
+	case burn.BurnMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
 	case freeze.FreezeMsg:
 		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)

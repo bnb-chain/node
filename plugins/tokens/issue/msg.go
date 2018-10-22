@@ -14,17 +14,19 @@ import (
 // const Route  = "tokens/issue"
 const Route = "tokensIssue"
 
-var _ sdk.Msg = Msg{}
+var _ sdk.Msg = IssueMsg{}
 
-type Msg struct {
+type IssueMsg struct {
+	Version     byte           `json:"version"`
 	From        sdk.AccAddress `json:"from"`
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
 	TotalSupply int64          `json:"total_supply"`
 }
 
-func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) Msg {
-	return Msg{
+func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) IssueMsg {
+	return IssueMsg{
+		Version:     0x01,
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
@@ -34,7 +36,10 @@ func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) Msg {
 
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
-func (msg Msg) ValidateBasic() sdk.Error {
+func (msg IssueMsg) ValidateBasic() sdk.Error {
+	if msg.Version != 0x01 {
+		return sdk.ErrInternal("Invalid version. Expected 0x01")
+	}
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
@@ -54,13 +59,12 @@ func (msg Msg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-// Implements Msg.
-func (msg Msg) Type() string                            { return Route }
-func (msg Msg) String() string                          { return fmt.Sprintf("IssueMsg{%#v}", msg) }
-func (msg Msg) Get(key interface{}) (value interface{}) { return nil }
-func (msg Msg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.From} }
+// Implements IssueMsg.
+func (msg IssueMsg) Type() string                 { return Route }
+func (msg IssueMsg) String() string               { return fmt.Sprintf("IssueMsg{%#v}", msg) }
+func (msg IssueMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
-func (msg Msg) GetSignBytes() []byte {
+func (msg IssueMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
 		panic(err)

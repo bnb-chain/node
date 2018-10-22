@@ -7,12 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/pkg/errors"
 
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"

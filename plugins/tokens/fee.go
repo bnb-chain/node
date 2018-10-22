@@ -19,8 +19,8 @@ const (
 
 func init() {
 	tx.RegisterCalculator(issue.Route, tx.FixedFeeCalculator(IssueFee, types.FeeForAll))
-	tx.RegisterCalculator(burn.Route, tx.FixedFeeCalculator(BurnFee, types.FeeForProposer))
-	tx.RegisterCalculator(freeze.RouteFreeze, tx.FixedFeeCalculator(FreezeFee, types.FeeForProposer))
+	tx.RegisterCalculator(burn.BurnRoute, tx.FixedFeeCalculator(BurnFee, types.FeeForProposer))
+	tx.RegisterCalculator(freeze.FreezeRoute, tx.FixedFeeCalculator(FreezeFee, types.FeeForProposer))
 	// TODO: we will rewrite Transfer tx, so put it here temporarily
 	tx.RegisterCalculator(bank.MsgSend{}.Type(), tx.FixedFeeCalculator(TransferFee, types.FeeForProposer))
 }

@@ -148,6 +148,7 @@ func TifStringToTifCode(tif string) (int8, error) {
 }
 
 type NewOrderMsg struct {
+	Version     byte           `json:"version"`
 	Sender      sdk.AccAddress `json:"sender"`
 	Id          string         `json:"id"`
 	Symbol      string         `json:"symbol"`
@@ -158,10 +159,13 @@ type NewOrderMsg struct {
 	TimeInForce int8           `json:"timeinforce"`
 }
 
+var _ sdk.Msg = NewOrderMsg{}
+
 // NewNewOrderMsg constructs a new NewOrderMsg
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	symbol string, price int64, qty int64) NewOrderMsg {
 	return NewOrderMsg{
+		Version:     0x01,
 		Sender:      sender,
 		Id:          id,
 		Symbol:      symbol,
@@ -183,6 +187,7 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 	}
 	id = GenerateOrderID(ctx.Sequence+1, sender)
 	return NewOrderMsg{
+		Version:     0x01,
 		Sender:      sender,
 		Id:          id,
 		Symbol:      symbol,
@@ -194,12 +199,9 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 	}, nil
 }
 
-var _ sdk.Msg = NewOrderMsg{}
-
 // nolint
-func (msg NewOrderMsg) Type() string                            { return NewOrder }
-func (msg NewOrderMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg NewOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
+func (msg NewOrderMsg) Type() string                 { return NewOrder }
+func (msg NewOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
 }
@@ -211,30 +213,31 @@ type OrderInfo struct {
 	TxHash           string
 }
 
-// NewCancelOrderMsg constructs a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
-	return CancelOrderMsg{
-		Sender: sender,
-		Symbol: symbol,
-		Id:     id,
-		RefId:  refId,
-	}
-}
-
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
-	Sender sdk.AccAddress
-	Symbol string `json:"symbol"`
-	Id     string `json:"id"`
-	RefId  string `json:"refid"`
+	Version byte `json:"version"`
+	Sender  sdk.AccAddress
+	Symbol  string `json:"symbol"`
+	Id      string `json:"id"`
+	RefId   string `json:"refid"`
 }
 
 var _ sdk.Msg = CancelOrderMsg{}
 
+// NewCancelOrderMsg constructs a new CancelOrderMsg
+func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
+	return CancelOrderMsg{
+		Version: 0x01,
+		Sender:  sender,
+		Symbol:  symbol,
+		Id:      id,
+		RefId:   refId,
+	}
+}
+
 // nolint
-func (msg CancelOrderMsg) Type() string                            { return CancelOrder }
-func (msg CancelOrderMsg) Get(key interface{}) (value interface{}) { return nil }
-func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress            { return []sdk.AccAddress{msg.Sender} }
+func (msg CancelOrderMsg) Type() string                 { return CancelOrder }
+func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
 	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)
 }
@@ -259,6 +262,10 @@ func (msg CancelOrderMsg) GetSignBytes() []byte {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg NewOrderMsg) ValidateBasic() sdk.Error {
+	if msg.Version != 0x01 {
+		// TODO: use a dedicated error type
+		return sdk.ErrInternal("Invalid version. Expected 0x01")
+	}
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
@@ -287,6 +294,10 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
+	if msg.Version != 0x01 {
+		// TODO: use a dedicated error type
+		return sdk.ErrInternal("Invalid version. Expected 0x01")
+	}
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}

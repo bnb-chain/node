@@ -17,7 +17,7 @@ import (
 // NewHandler creates a new token issue message handler
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) common.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		if msg, ok := msg.(Msg); ok {
+		if msg, ok := msg.(IssueMsg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		}
 
@@ -26,7 +26,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) common.Handler {
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg Msg) sdk.Result {
+func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg IssueMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	exists := tokenMapper.Exists(ctx, symbol)
 	logger := log.With("module", "token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
