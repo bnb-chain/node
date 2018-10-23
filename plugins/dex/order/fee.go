@@ -29,15 +29,15 @@ var (
 )
 
 type FeeManager struct {
-	cdc      *wire.Codec
-	storeKey sdk.StoreKey
+	cdc       *wire.Codec
+	storeKey  sdk.StoreKey
 	feeConfig FeeConfig
 }
 
 func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey) *FeeManager {
 	return &FeeManager{
-		cdc:      cdc,
-		storeKey: storeKey,
+		cdc:       cdc,
+		storeKey:  storeKey,
 		feeConfig: NewFeeConfig(),
 	}
 }
@@ -53,14 +53,14 @@ func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
 
 func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	feeConfig := NewFeeConfig()
-	feeConfig.expireFee = data.ExpireFee
-	feeConfig.expireFeeNative = data.ExpireFeeNative
-	feeConfig.iocExpireFee = data.IOCExpireFee
-	feeConfig.iocExpireFeeNative = data.IOCExpireFeeNative
-	feeConfig.cancelFee = data.CancelFee
-	feeConfig.cancelFeeNative = data.CancelFeeNative
-	feeConfig.feeRate = data.FeeRate
-	feeConfig.feeRateNative = data.FeeRateNative
+	feeConfig.ExpireFee = data.ExpireFee
+	feeConfig.ExpireFeeNative = data.ExpireFeeNative
+	feeConfig.IOCExpireFee = data.IOCExpireFee
+	feeConfig.IOCExpireFeeNative = data.IOCExpireFeeNative
+	feeConfig.CancelFee = data.CancelFee
+	feeConfig.CancelFeeNative = data.CancelFeeNative
+	feeConfig.FeeRate = data.FeeRate
+	feeConfig.FeeRateNative = data.FeeRateNative
 	log.With("module", "dex").Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
 	err := m.UpdateConfig(ctx, feeConfig)
 	if err != nil {
@@ -115,9 +115,9 @@ func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
 func (m *FeeManager) CalcTradeFee(amount int64, feeType FeeType) int64 {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
-		feeRate = m.feeConfig.feeRateNative
+		feeRate = m.feeConfig.FeeRateNative
 	} else if feeType == FeeByTradeToken {
-		feeRate = m.feeConfig.feeRate
+		feeRate = m.feeConfig.FeeRate
 	}
 
 	var fee big.Int
@@ -125,22 +125,22 @@ func (m *FeeManager) CalcTradeFee(amount int64, feeType FeeType) int64 {
 }
 
 func (m *FeeManager) ExpireFees() (int64, int64) {
-	return m.feeConfig.expireFeeNative, m.feeConfig.expireFee
+	return m.feeConfig.ExpireFeeNative, m.feeConfig.ExpireFee
 }
 
 func (m *FeeManager) IOCExpireFees() (int64, int64) {
-	return m.feeConfig.iocExpireFeeNative, m.feeConfig.iocExpireFee
+	return m.feeConfig.IOCExpireFeeNative, m.feeConfig.IOCExpireFee
 }
 
 func (m *FeeManager) CancelFees() (int64, int64) {
-	return m.feeConfig.cancelFeeNative, m.feeConfig.cancelFee
+	return m.feeConfig.CancelFeeNative, m.feeConfig.CancelFee
 }
 
 func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.expireFeeNative
+		return m.feeConfig.ExpireFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.expireFee
+		return m.feeConfig.ExpireFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
@@ -148,9 +148,9 @@ func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
 
 func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.iocExpireFeeNative
+		return m.feeConfig.IOCExpireFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.iocExpireFee
+		return m.feeConfig.IOCExpireFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
@@ -158,78 +158,62 @@ func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
 
 func (m *FeeManager) CancelFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.cancelFeeNative
+		return m.feeConfig.CancelFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.cancelFee
+		return m.feeConfig.CancelFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
 }
 
 type FeeConfig struct {
-	expireFee          int64
-	expireFeeNative    int64
-	iocExpireFee       int64
-	iocExpireFeeNative int64
-	cancelFee          int64
-	cancelFeeNative    int64
-	feeRate            int64
-	feeRateNative      int64
+	ExpireFee          int64 `json:"expire_fee"`
+	ExpireFeeNative    int64 `json:"expire_fee_native"`
+	IOCExpireFee       int64 `json:"ioc_expire_fee"`
+	IOCExpireFeeNative int64 `json:"ioc_expire_fee_native"`
+	CancelFee          int64 `json:"cancel_fee"`
+	CancelFeeNative    int64 `json:"cancel_fee_native"`
+	FeeRate            int64 `json:"fee_rate"`
+	FeeRateNative      int64 `json:"fee_rate_native"`
 }
 
 func NewFeeConfig() FeeConfig {
 	return FeeConfig{
-		expireFee: nilFeeValue,
-		expireFeeNative: nilFeeValue,
-		iocExpireFee: nilFeeValue,
-		iocExpireFeeNative:nilFeeValue,
-		cancelFee:nilFeeValue,
-		cancelFeeNative:nilFeeValue,
-		feeRate:nilFeeValue,
-		feeRateNative:nilFeeValue,
+		ExpireFee:          nilFeeValue,
+		ExpireFeeNative:    nilFeeValue,
+		IOCExpireFee:       nilFeeValue,
+		IOCExpireFeeNative: nilFeeValue,
+		CancelFee:          nilFeeValue,
+		CancelFeeNative:    nilFeeValue,
+		FeeRate:            nilFeeValue,
+		FeeRateNative:      nilFeeValue,
 	}
 }
 
 func TestFeeConfig() FeeConfig {
 	feeConfig := NewFeeConfig()
-	feeConfig.feeRateNative = 500
-	feeConfig.feeRate = 1000
-	feeConfig.expireFeeNative = 2e4
-	feeConfig.expireFee = 1e5
-	feeConfig.iocExpireFeeNative = 1e4
-	feeConfig.iocExpireFee = 5e4
-	feeConfig.cancelFeeNative = 2e4
-	feeConfig.cancelFee = 1e5
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
 	return feeConfig
 }
 
 func (config FeeConfig) anyEmpty() bool {
-	if config.expireFee == nilFeeValue ||
-		config.expireFeeNative == nilFeeValue ||
-		config.iocExpireFee == nilFeeValue ||
-		config.iocExpireFeeNative == nilFeeValue ||
-		config.cancelFee == nilFeeValue ||
-		config.cancelFeeNative == nilFeeValue ||
-		config.feeRate == nilFeeValue ||
-		config.feeRateNative == nilFeeValue {
+	if config.ExpireFee == nilFeeValue ||
+		config.ExpireFeeNative == nilFeeValue ||
+		config.IOCExpireFee == nilFeeValue ||
+		config.IOCExpireFeeNative == nilFeeValue ||
+		config.CancelFee == nilFeeValue ||
+		config.CancelFeeNative == nilFeeValue ||
+		config.FeeRate == nilFeeValue ||
+		config.FeeRateNative == nilFeeValue {
 		return true
 	}
 
 	return false
-}
-
-func (config FeeConfig) ExpireFee() int64 {
-	return config.expireFee
-}
-
-func (config FeeConfig) IOCExpireFee() int64 {
-	return config.iocExpireFee
-}
-
-func (config FeeConfig) FeeRateWithNativeToken() int64 {
-	return config.feeRateNative
-}
-
-func (config FeeConfig) FeeRate() int64 {
-	return config.feeRate
 }

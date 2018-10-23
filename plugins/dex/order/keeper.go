@@ -3,6 +3,7 @@ package order
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -616,7 +617,14 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	symbolCh := make(chan string, concurrency)
 	utils.ConcurrentExecuteAsync(concurrency,
 		func() {
+			symbols := make([]string, len(kp.allOrders))
+			i := 0
 			for symbol, _ := range kp.allOrders {
+				symbols[i] = symbol
+				i++
+			}
+			sort.Strings(symbols)
+			for _, symbol := range symbols {
 				symbolCh <- symbol
 			}
 			close(symbolCh)

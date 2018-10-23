@@ -279,6 +279,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, o.TestFeeConfig())
 
 	// setup accounts
 	add := Account(0).GetAddress()
@@ -306,7 +307,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
-	assert.Equal(int64(500e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(500e8-2e4), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
