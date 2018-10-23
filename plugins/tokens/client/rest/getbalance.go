@@ -25,7 +25,7 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.M
 	}
 	type response struct {
 		Address string       `json:"address"`
-		Balance tokenBalance `json:"balance"`
+		Balance TokenBalance `json:"balance"`
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
@@ -78,7 +78,7 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.M
 
 		resp := response{
 			Address: vars["address"],
-			Balance: tokenBalance{
+			Balance: TokenBalance{
 				Symbol: params.symbol,
 				Free:   utils.Fixed8(coins.AmountOf(params.symbol).Int64()),
 				Locked: utils.Fixed8(locked.Int64()),

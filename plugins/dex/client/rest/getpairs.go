@@ -91,6 +91,7 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFu
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}
