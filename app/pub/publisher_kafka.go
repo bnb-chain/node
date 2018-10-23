@@ -2,16 +2,22 @@ package pub
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/deathowl/go-metrics-prometheus"
+	"github.com/eapache/go-resiliency/breaker"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/BiJie/BinanceChain/app/config"
+	"github.com/BiJie/BinanceChain/common/log"
+)
+
+const (
+	KafkaBrokerSep = ";"
 )
 
 type KafkaMarketDataPublisher struct {
@@ -40,7 +46,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if cfg.PublishOrderUpdates {
 		if _, ok := publisher.producers[cfg.OrderUpdatesTopic]; !ok {
 			publisher.producers[cfg.OrderUpdatesTopic], err =
-				sarama.NewSyncProducer([]string{cfg.OrderUpdatesKafka}, config)
+				publisher.connectWithRetry(strings.Split(cfg.OrderUpdatesKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create order updates producer", "err", err)
@@ -50,7 +56,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if cfg.PublishOrderBook {
 		if _, ok := publisher.producers[cfg.OrderBookTopic]; !ok {
 			publisher.producers[cfg.OrderBookTopic], err =
-				sarama.NewSyncProducer([]string{cfg.OrderBookKafka}, config)
+				publisher.connectWithRetry(strings.Split(cfg.OrderBookKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create order book producer", "err", err)
@@ -60,7 +66,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if cfg.PublishAccountBalance {
 		if _, ok := publisher.producers[cfg.AccountBalanceTopic]; !ok {
 			publisher.producers[cfg.AccountBalanceTopic], err =
-				sarama.NewSyncProducer([]string{cfg.AccountBalanceKafka}, config)
+				publisher.connectWithRetry(strings.Split(cfg.AccountBalanceKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create account balance producer", "err", err)
@@ -99,7 +105,7 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 
 	if msg, err := marshal(avroMessage, tpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
-		if partition, offset, err := publisher.producers[topic].SendMessage(kafkaMsg); err == nil {
+		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
 			Logger.Debug("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish", "topic", topic, "msg", avroMessage.String(), "err", err)
@@ -127,6 +133,40 @@ func (publisher *KafkaMarketDataPublisher) Stop() {
 		}
 	}
 	Logger.Debug("finished stop KafkaMarketDataPublisher")
+}
+
+// endlessly retry on retriable errors, the abnormal situation should be reported by prometheus alarm
+func (publisher *KafkaMarketDataPublisher) connectWithRetry(
+	hostports []string,
+	config *sarama.Config) (producer sarama.SyncProducer, err error) {
+	backOffInSeconds := time.Duration(1)
+
+	for {
+		if producer, err = sarama.NewSyncProducer(hostports, config); err == sarama.ErrOutOfBrokers || err == breaker.ErrBreakerOpen {
+			backOffInSeconds <<= 1
+			Logger.Error("encountered retriable error, retrying...", "after", backOffInSeconds, "err", err)
+			time.Sleep(backOffInSeconds * time.Second)
+		} else {
+			return
+		}
+	}
+}
+
+// endlessly retry on retriable errors, the abnormal situation should be reported by prometheus alarm
+func (publisher *KafkaMarketDataPublisher) publishWithRetry(
+	message *sarama.ProducerMessage,
+	topic string) (partition int32, offset int64, err error) {
+	backOffInSeconds := time.Duration(1)
+
+	for {
+		if partition, offset, err = publisher.producers[topic].SendMessage(message); err == sarama.ErrOutOfBrokers || err == breaker.ErrBreakerOpen {
+			backOffInSeconds <<= 1
+			Logger.Error("encountered retriable error, retrying...", "after", backOffInSeconds, "err", err)
+			time.Sleep(backOffInSeconds * time.Second)
+		} else {
+			return
+		}
+	}
 }
 
 func NewKafkaMarketDataPublisher(config *config.PublicationConfig) (publisher *KafkaMarketDataPublisher) {
