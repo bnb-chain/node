@@ -1,64 +1,23 @@
-package app
+package app_test
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	abci "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/plugins/dex"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
 )
-
-var (
-	keeper *orderPkg.Keeper
-	buyer  sdk.AccAddress
-	seller sdk.AccAddress
-	am     auth.AccountMapper
-	ctx    sdk.Context
-	app    *BinanceChain
-	cdc    *wire.Codec
-)
-
-func setupOrdersopen(t *testing.T) (*assert.Assertions, *require.Assertions) {
-	logger := log.NewTMLogger(os.Stdout)
-
-	db := dbm.NewMemDB()
-	app = NewBinanceChain(logger, db, os.Stdout)
-	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
-	ctx = app.checkState.ctx
-	cdc = app.GetCodec()
-
-	keeper = app.DexKeeper
-	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
-	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper.AddEngine(tradingPair)
-
-	am = app.AccountMapper
-	_, buyerAcc := testutils.NewAccount(ctx, am, 100000000000) // give user enough coins to pay the fee
-	buyer = buyerAcc.GetAddress()
-
-	_, sellerAcc := testutils.NewAccount(ctx, am, 100000000000)
-	seller = sellerAcc.GetAddress()
-
-	return assert.New(t), require.New(t)
-}
 
 func Test_Success(t *testing.T) {
-	assert, require := setupOrdersopen(t)
+	assert, require := setup(t)
 
 	msg := orderPkg.NewNewOrderMsg(buyer, "b-1", orderPkg.Side.BUY, "XYZ_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
@@ -99,23 +58,31 @@ func Test_Success(t *testing.T) {
 }
 
 func Test_InvalidPair(t *testing.T) {
-	assert, _ := setupOrdersopen(t)
+	assert, _ := setup(t)
 
-	res := issueQuery("%afuiewf%@^&2blf", buyer)
+	res := issueQuery("%afuiewf%@^&2blf", buyer.String())
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
 	assert.Equal("pair is not valid", res.Log)
 }
 
 func Test_NonListedPair(t *testing.T) {
-	assert, _ := setupOrdersopen(t)
+	assert, _ := setup(t)
 
-	res := issueQuery("NNB_BNB", buyer)
+	res := issueQuery("NNB_BNB", buyer.String())
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
 	assert.Equal("pair is not listed", res.Log)
 }
 
+func Test_InvalidAddr(t *testing.T) {
+	assert, _ := setup(t)
+
+	res := issueQuery("XYZ_BNB", "%afuiewf%@^&2blf")
+	assert.Equal(uint32(sdk.CodeInternal), res.Code)
+	assert.Equal("address is not valid", res.Log)
+}
+
 func Test_NonExistAddr(t *testing.T) {
-	assert, _ := setupOrdersopen(t)
+	assert, _ := setup(t)
 
 	msg := orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, "XYZ_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
@@ -125,15 +92,15 @@ func Test_NonExistAddr(t *testing.T) {
 }
 
 func issueMustSuccessQuery(address sdk.AccAddress, assert *assert.Assertions) []store.OpenOrder {
-	res := issueQuery("XYZ_BNB", address)
+	res := issueQuery("XYZ_BNB", address.String())
 	assert.True(sdk.ABCICodeType(res.Code).IsOK())
 	openOrders, err := store.DecodeOpenOrders(cdc, &res.Value)
 	assert.Nil(err)
 	return openOrders
 }
 
-func issueQuery(pair string, address sdk.AccAddress) abci.ResponseQuery {
-	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.AbciQueryPrefix, pair, address.String())
+func issueQuery(pair string, address string) abci.ResponseQuery {
+	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.AbciQueryPrefix, pair, address)
 	query := abci.RequestQuery{
 		Path: path,
 		Data: []byte(""),

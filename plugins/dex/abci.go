@@ -123,7 +123,13 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 
 			bech32Str := path[3]
-			addr, _ := sdk.AccAddressFromBech32(bech32Str) // bech32Str has been verified legal
+			addr, err := sdk.AccAddressFromBech32(bech32Str)
+			if err != nil {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.CodeInternal),
+					Log:  "address is not valid",
+				}
+			}
 			openOrders := keeper.GetOpenOrders(pair, addr)
 			bz, err := app.GetCodec().MarshalBinary(openOrders)
 			if err != nil {

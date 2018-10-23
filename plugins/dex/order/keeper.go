@@ -134,41 +134,41 @@ func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
 	eng.LotSize = lotSize
 }
 
-func (kp *Keeper) AddOrder(msg OrderInfo, isRecovery bool) (err error) {
+func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	//try update order book first
-	symbol := strings.ToUpper(msg.Symbol)
+	symbol := strings.ToUpper(info.Symbol)
 	eng, ok := kp.engines[symbol]
 	if !ok {
 		err = errors.New(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
 		return
 	}
 
-	_, err = eng.Book.InsertOrder(msg.Id, msg.Side, msg.CreatedHeight, msg.Price, msg.Quantity)
+	_, err = eng.Book.InsertOrder(info.Id, info.Side, info.CreatedHeight, info.Price, info.Quantity)
 	if err != nil {
 		return err
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{msg.Id, Ack, 0, ""}
+		change := OrderChange{info.Id, Ack, 0, ""}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", msg.Id, "isRecovery", isRecovery)
-		kp.OrderChangesMap[msg.Id] = &msg
+		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
+		kp.OrderChangesMap[info.Id] = &info
 	}
 
-	kp.allOrders[symbol][msg.Id] = &msg
+	kp.allOrders[symbol][info.Id] = &info
 	if ids, ok := kp.roundOrders[symbol]; ok {
-		kp.roundOrders[symbol] = append(ids, msg.Id)
+		kp.roundOrders[symbol] = append(ids, info.Id)
 	} else {
 		newIds := make([]string, 0, 16)
-		kp.roundOrders[symbol] = append(newIds, msg.Id)
+		kp.roundOrders[symbol] = append(newIds, info.Id)
 	}
-	if msg.TimeInForce == TimeInForce.IOC {
-		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], msg.Id)
+	if info.TimeInForce == TimeInForce.IOC {
+		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	bnclog.Debug("Added orders", "symbol", symbol, "id", msg.Id)
+	bnclog.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
 
