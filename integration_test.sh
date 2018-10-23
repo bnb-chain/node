@@ -8,7 +8,7 @@ fi
 
 cli_home="./testnodecli"
 home="./testnoded"
-chain_id="test-chain-5dvMS7"
+chain_id="bnbchain-1000"
 
 keys_operation_words="cosmosaccaddr"
 chain_operation_words="Committed"
@@ -40,7 +40,7 @@ function exit_test() {
 }
 
 function check_operation() {
-	echo "=================== Checking $1 ==================="
+	printf "\n=================== Checking $1 ===================\n"
 	echo "$2"
 
 	echo "$2" | grep -q $3
@@ -85,7 +85,8 @@ sleep 1s
 result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-order_id=$(echo "${result}" | grep -o "cosmosaccaddr[0-9a-zA-Z]*-[0-9]*")
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]*-[0-9]*")
+printf "Order ID: $order_id\n"
 
 sleep 1s
 # cancel order
