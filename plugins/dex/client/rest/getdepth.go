@@ -76,6 +76,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc 
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
 
 		err = rutils.StreamDepthResponse(w, ob, limit)

@@ -166,6 +166,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}

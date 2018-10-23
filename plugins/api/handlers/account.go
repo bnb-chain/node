@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -12,11 +13,21 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	tkclient "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
 // AccountReqHandler queries for an account and returns its information.
-func AccountReqHandler(cdc *wire.Codec, ctx context.CoreContext, storeName string) http.HandlerFunc {
+func AccountReqHandler(
+	cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper, accStoreName string,
+) http.HandlerFunc {
+	type response struct {
+		auth.BaseAccount
+		Balances []tkclient.TokenBalance `json:"balances"`
+		Coins    *struct{}               `json:"coins,omitempty"` // omit `coins`
+	}
+
 	responseType := "application/json"
 
 	accDecoder := authcmd.GetAccountDecoder(cdc)
@@ -38,7 +49,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CoreContext, storeName strin
 			return
 		}
 
-		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), storeName)
+		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
 		if err != nil {
 			errMsg := fmt.Sprintf("couldn't query account. Error: %s", err.Error())
 			throw(w, http.StatusInternalServerError, errMsg)
@@ -54,20 +65,19 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CoreContext, storeName strin
 		// decode the value
 		account, err := accDecoder(res)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("couldn't parse query result. Result: %s. Error: %s", res, err.Error())))
+			errMsg := fmt.Sprintf("couldn't parse query result. Result: %s. Error: %s", res, err.Error())
+			throw(w, http.StatusInternalServerError, errMsg)
 			return
 		}
 
-		// print out BaseAccount (just the essentials)
-		output, err := cdc.MarshalJSON(account.(*types.AppAccount).BaseAccount)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("couldn't marshall query result. Error: %s", err.Error())))
-			return
+		bals, err := tkclient.GetBalances(cdc, ctx, tokens, account.GetAddress())
+		resp := response{
+			BaseAccount: account.(*types.AppAccount).BaseAccount,
+			Balances:    bals,
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
-		w.Write(output)
+		json.NewEncoder(w).Encode(resp)
 	}
 }

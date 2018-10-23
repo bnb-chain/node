@@ -21,7 +21,7 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	// auth routes
-	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.accStoreName)).
+	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.tokens, s.accStoreName)).
 		Methods("GET")
 
 	// tx routes
