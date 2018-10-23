@@ -1,10 +1,10 @@
 package pub
 
 import (
-	"github.com/BiJie/BinanceChain/common/log"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
+	"github.com/BiJie/BinanceChain/common/log"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -15,7 +15,6 @@ const (
 	FeeCollectionChannelSize   = 4000
 	ToRemoveOrderIdChannelSize = 1000
 	MaxOrderBookLevel          = 20
-	KafkaBrokerSep             = ";"
 )
 
 var (
