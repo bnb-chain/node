@@ -2,10 +2,11 @@ package pub
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/BiJie/BinanceChain/common/log"
 
 	"github.com/Shopify/sarama"
 	"github.com/deathowl/go-metrics-prometheus"
