@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/golang/go/src/path"
 	"github.com/tendermint/go-amino"
+	"github.com/tendermint/iavl"
 	"github.com/tendermint/tendermint/blockchain"
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/encoding/amino"
@@ -41,11 +42,11 @@ func newLevelDb(id string, rootDir string) (db.DB, error) {
 }
 
 func calcValidatorsKey(height int64) []byte {
-	return []byte(cmn.Fmt("validatorsKey:%v", height))
+	return []byte(fmt.Sprintf("validatorsKey:%v", height))
 }
 
 func calcConsensusParamsKey(height int64) []byte {
-	return []byte(cmn.Fmt("consensusParamsKey:%v", height))
+	return []byte(fmt.Sprintf("consensusParamsKey:%v", height))
 }
 
 func loadValidatorsInfo(db db.DB, height int64) *state.ValidatorsInfo {
@@ -58,7 +59,7 @@ func loadValidatorsInfo(db db.DB, height int64) *state.ValidatorsInfo {
 	err := cdc.UnmarshalBinaryBare(buf, v)
 	if err != nil {
 		// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-		cmn.Exit(cmn.Fmt(`LoadValidators: Data has been corrupted or its spec has changed:
+		cmn.Exit(fmt.Sprintf(`LoadValidators: Data has been corrupted or its spec has changed:
                 %v\n`, err))
 	}
 	// TODO: ensure that buf is completely read.
@@ -76,7 +77,7 @@ func loadConsensusParamsInfo(db db.DB, height int64) *state.ConsensusParamsInfo 
 	err := cdc.UnmarshalBinaryBare(buf, paramsInfo)
 	if err != nil {
 		// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-		cmn.Exit(cmn.Fmt(`LoadConsensusParams: Data has been corrupted or its spec has changed:
+		cmn.Exit(fmt.Sprintf(`LoadConsensusParams: Data has been corrupted or its spec has changed:
                 %v\n`, err))
 	}
 	// TODO: ensure that buf is completely read.
@@ -101,6 +102,7 @@ func resetBlockChainState(height int64, rootDir string) {
 
 	bs := blockchain.NewBlockStore(blockDb)
 	block := bs.LoadBlock(height + 1)
+	previousBlock := bs.LoadBlock(height)
 
 	lastValidators, _ := state.LoadValidators(stateDb, height)
 	validators, _ := state.LoadValidators(stateDb, height+1)
@@ -114,8 +116,9 @@ func resetBlockChainState(height int64, rootDir string) {
 		LastBlockHeight:  height,
 		LastBlockTotalTx: block.TotalTxs - block.NumTxs,
 		LastBlockID:      block.LastBlockID,
-		LastBlockTime:    block.Time,
+		LastBlockTime:    previousBlock.Time,
 
+		NextValidators:              validators,
 		Validators:                  validators,
 		LastValidators:              lastValidators,
 		LastHeightValidatorsChanged: validatorInfo.LastHeightChanged,
@@ -156,21 +159,25 @@ func MountStoresIAVL(cms store.CommitMultiStore, keys ...*sdk.KVStoreKey) {
 }
 
 func resetAppState(height int64, rootDir string) {
-	dbIns, err := db.NewGoLevelDB("bnbchain", path.Join(rootDir, "data"))
+	dbIns, err := db.NewGoLevelDB("application", path.Join(rootDir, "data"))
 	if err != nil {
 		fmt.Printf("new levelDb err in path %s\n", path.Join(rootDir, "data"))
 		return
 	}
 	defer dbIns.Close()
 
-	cms := store.NewCommitMultiStore(dbIns)
-	MountStoresIAVL(cms, common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	cms.LoadLatestVersion()
+	//cms := store.NewCommitMultiStore(dbIns)
+	//MountStoresIAVL(cms, common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	//cms.LoadLatestVersion()
+	//haha := dbIns.Get([]byte("s/latest"))
+	//var ha int64
+	//cdc.UnmarshalBinary(haha, &ha)
+	//fmt.Printf("%x", haha)
 	setLatestVersion(dbIns, height)
 }
 
 func resetAppVersionedTree(height int64, rootDir string) {
-	dbIns, err := db.NewGoLevelDB("bnbchain", path.Join(rootDir, "data"))
+	dbIns, err := db.NewGoLevelDB("application", path.Join(rootDir, "data"))
 	if err != nil {
 		fmt.Printf("new levelDb err in path %s\n", path.Join(rootDir, "data"))
 		return
@@ -181,17 +188,25 @@ func resetAppVersionedTree(height int64, rootDir string) {
 
 	for _, key := range keys {
 		dbAccount := db.NewPrefixDB(dbIns, []byte("s/k:"+key.Name()+"/"))
-
-		rootPrefixFmt := "r/%010d"
-		for i := 1; i <= 100; i++ {
-			rootKey := []byte(fmt.Sprintf(rootPrefixFmt, height+int64(i)))
-			dbAccount.Delete(rootKey)
+		//rootPrefixFmt := "r/%010d"
+		rootPrefixFmt := iavl.NewKeyFormat('r', 8)
+		for i := 1; i <= 50000; i++ {
+			dbAccount.Delete(rootPrefixFmt.Key(height + int64(i)))
 		}
+
+		//dbAccount.Close()
 	}
 }
 
 func resetPrivValidator(height int64, rootDir string) {
-	privValidator := privval.LoadOrGenFilePV(path.Join(rootDir, "config/priv_validator.json"))
+	var privValidator *privval.FilePV
+	filePath := path.Join(rootDir, "config/priv_validator.json")
+	if cmn.FileExists(filePath) {
+		privValidator = privval.LoadFilePV(filePath)
+	} else {
+		fmt.Printf("This is not a validator node, no need to reset priv_validator file")
+	}
+	// TODO(#121): Should we also need reset LastRound, LastStep?
 	privValidator.LastHeight = height
 	privValidator.Save()
 }
@@ -207,7 +222,7 @@ func getBlockChainHeight(rootDir string) int64 {
 	return blockState.Height
 }
 
-func recoverBlockChain(height int64, rootDir string) {
+func restartNodeAtHeight(height int64, rootDir string) {
 	resetBlockChainState(height, rootDir)
 	resetBlockStoreState(height, rootDir)
 	resetAppState(height, rootDir)
@@ -216,7 +231,7 @@ func recoverBlockChain(height int64, rootDir string) {
 }
 
 // Purpose:
-// 	Reset blockchain to a specific height and continue block from this height
+// 	Reset node to a specific height and continue block from this height
 //
 // Usage:
 // 	1. go build reset.go
@@ -238,6 +253,6 @@ func main() {
 	rootDirs := os.Args[2:]
 	for _, dir := range rootDirs {
 		fmt.Printf("rest home_path[%s] to height[%d]\n", dir, height)
-		recoverBlockChain(height, dir)
+		restartNodeAtHeight(height, dir)
 	}
 }
