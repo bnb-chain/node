@@ -70,7 +70,7 @@ type BinanceChain struct {
 	TokenMapper         tokenStore.Mapper
 
 	publicationConfig *config.PublicationConfig
-	publisher         *pub.MarketDataPublisher
+	publisher         pub.MarketDataPublisher
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -109,7 +109,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.registerHandlers(cdc)
 
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewMarketDataPublisher(app.publicationConfig)
+		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
 	}
 
 	// Initialize BaseApp.
@@ -225,6 +225,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.checkState.ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
+	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []pub.Trade
@@ -237,7 +238,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
-		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
+		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
 		} else {
 			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
@@ -258,7 +259,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// distributeFee(ctx, app.AccountMapper)
 	// TODO: update validators
 
-	if app.publicationConfig.ShouldPublishAny() && app.publisher.IsLive {
+	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 		app.publish(tradesToPublish, ctx, height, blockTime)
 	}
 
@@ -358,8 +359,8 @@ func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, h
 		len(app.DexKeeper.OrderChanges),
 		"numOfAccounts",
 		len(accountsToPublish))
-	app.publisher.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
-	app.publisher.ToPublishCh <- pub.NewBlockInfoToPublish(
+	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	pub.ToPublishCh <- pub.NewBlockInfoToPublish(
 		height,
 		blockTime,
 		tradesToPublish,
@@ -369,7 +370,7 @@ func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, h
 		latestPriceLevels)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
-	for id := range app.publisher.ToRemoveOrderIdCh {
+	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
 		delete(app.DexKeeper.OrderChangesMap, id)
 	}

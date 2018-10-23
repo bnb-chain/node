@@ -38,6 +38,7 @@ func (this msgType) String() string {
 
 type AvroMsg interface {
 	ToNativeMap() map[string]interface{}
+	String() string
 }
 
 func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
@@ -184,6 +185,20 @@ func (msg *order) String() string {
 	return fmt.Sprintf("Order: %v", msg.toNativeMap())
 }
 
+func (msg *order) effectQtyToOrderBook() int64 {
+	switch msg.status {
+	case orderPkg.Ack:
+		return msg.qty
+	case orderPkg.FullyFill, orderPkg.PartialFill:
+		return -msg.lastExecutedQty
+	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled:
+		return msg.cumQty - msg.qty // deliberated be negative value
+	default:
+		Logger.Error("does not supported order status", "order", msg.String())
+		return 0
+	}
+}
+
 func (msg *order) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["symbol"] = msg.symbol
@@ -208,67 +223,67 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	return native
 }
 
-type priceLevel struct {
-	price   int64
-	lastQty int64
+type PriceLevel struct {
+	Price   int64
+	LastQty int64
 }
 
-func (msg *priceLevel) String() string {
+func (msg *PriceLevel) String() string {
 	return fmt.Sprintf("priceLevel: %s", msg.ToNativeMap())
 }
 
-func (msg *priceLevel) ToNativeMap() map[string]interface{} {
+func (msg *PriceLevel) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["price"] = msg.price
-	native["lastQty"] = msg.lastQty
+	native["price"] = msg.Price
+	native["lastQty"] = msg.LastQty
 	return native
 }
 
-type orderBookDelta struct {
-	symbol string
-	buys   []priceLevel
-	sells  []priceLevel
+type OrderBookDelta struct {
+	Symbol string
+	Buys   []PriceLevel
+	Sells  []PriceLevel
 }
 
-func (msg *orderBookDelta) String() string {
-	return fmt.Sprintf("orderBookDelta for: %s, num of buys prices: %d, num of sell prices: %d", msg.symbol, len(msg.buys), len(msg.sells))
+func (msg *OrderBookDelta) String() string {
+	return fmt.Sprintf("orderBookDelta for: %s, num of buys prices: %d, num of sell prices: %d", msg.Symbol, len(msg.Buys), len(msg.Sells))
 }
 
-func (msg *orderBookDelta) ToNativeMap() map[string]interface{} {
+func (msg *OrderBookDelta) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["symbol"] = msg.symbol
-	bs := make([]map[string]interface{}, len(msg.buys), len(msg.buys))
-	for idx, buy := range msg.buys {
+	native["symbol"] = msg.Symbol
+	bs := make([]map[string]interface{}, len(msg.Buys), len(msg.Buys))
+	for idx, buy := range msg.Buys {
 		bs[idx] = buy.ToNativeMap()
 	}
 	native["buys"] = bs
-	ss := make([]map[string]interface{}, len(msg.sells), len(msg.sells))
-	for idx, sell := range msg.sells {
+	ss := make([]map[string]interface{}, len(msg.Sells), len(msg.Sells))
+	for idx, sell := range msg.Sells {
 		ss[idx] = sell.ToNativeMap()
 	}
 	native["sells"] = ss
 	return native
 }
 
-type books struct {
-	height    int64
-	timestamp int64
-	numOfMsgs int
-	books     []orderBookDelta
+type Books struct {
+	Height    int64
+	Timestamp int64
+	NumOfMsgs int
+	Books     []OrderBookDelta
 }
 
-func (msg *books) String() string {
-	return fmt.Sprintf("Books at height: %d, numOfMsgs: %d", msg.height, msg.numOfMsgs)
+func (msg *Books) String() string {
+	return fmt.Sprintf("Books at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
 }
 
-func (msg *books) ToNativeMap() map[string]interface{} {
+func (msg *Books) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["height"] = msg.height
-	native["timestamp"] = msg.timestamp
-	native["numOfMsgs"] = msg.numOfMsgs
-	if msg.numOfMsgs > 0 {
-		bs := make([]map[string]interface{}, len(msg.books), len(msg.books))
-		for idx, book := range msg.books {
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+	native["numOfMsgs"] = msg.NumOfMsgs
+	if msg.NumOfMsgs > 0 {
+		bs := make([]map[string]interface{}, len(msg.Books), len(msg.Books))
+		for idx, book := range msg.Books {
 			bs[idx] = book.ToNativeMap()
 		}
 		native["books"] = bs
