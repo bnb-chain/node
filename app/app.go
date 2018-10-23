@@ -35,11 +35,6 @@ const (
 	appName = "BNBChain"
 )
 
-const (
-	DefaultLogFile     = "bnc.log"
-	DefaultLogBuffSize = 10000
-)
-
 // default home directories for expected binaries
 var (
 	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
