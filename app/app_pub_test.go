@@ -1,6 +1,10 @@
 package app
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/common/testutils"
@@ -14,9 +18,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-	"os"
-	"testing"
-	"time"
 )
 
 var (

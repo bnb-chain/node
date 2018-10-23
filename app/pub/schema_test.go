@@ -1,10 +1,10 @@
 package pub
 
 import (
-	"github.com/BiJie/BinanceChain/common/log"
 	"os"
 	"testing"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
