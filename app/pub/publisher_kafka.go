@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BiJie/BinanceChain/common/log"
-
 	"github.com/Shopify/sarama"
 	"github.com/deathowl/go-metrics-prometheus"
 	"github.com/eapache/go-resiliency/breaker"
