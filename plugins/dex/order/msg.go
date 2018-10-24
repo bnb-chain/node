@@ -208,9 +208,12 @@ func (msg NewOrderMsg) String() string {
 
 type OrderInfo struct {
 	NewOrderMsg
-	CreatedTimestamp int64
-	CumQty           int64
-	TxHash           string
+	CreatedHeight        int64
+	CreatedTimestamp     int64
+	LastUpdatedHeight    int64
+	LastUpdatedTimestamp int64
+	CumQty               int64
+	TxHash               string
 }
 
 // CancelOrderMsg represents a message to cancel an open order
