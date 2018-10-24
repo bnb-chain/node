@@ -116,8 +116,14 @@ func handleNewOrder(
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
-			msg := OrderInfo{msg, ctx.BlockHeader().Time, 0, txHash}
-			err := keeper.AddOrder(msg, ctx.BlockHeight(), false)
+			height := ctx.BlockHeader().Height
+			timestamp := ctx.BlockHeader().Time
+			msg := OrderInfo{
+				msg,
+				height, timestamp,
+				height, timestamp,
+				0, txHash}
+			err := keeper.AddOrder(msg, false)
 			if err != nil {
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 			}
@@ -180,10 +186,13 @@ func handleCancelOrder(
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
-				// TODO: will refactor transfer.Fee in other PR
-				fee := transfer.Fee.Tokens[0]
-				change := OrderChange{origOrd.Id, Canceled, fee.Amount.Int64(), fee.Denom}
-				keeper.OrderChanges = append(keeper.OrderChanges, change)
+				if !fee.IsEmpty() {
+					change := OrderChange{msg.Id, Canceled, fee.Tokens[0].Amount.Int64(), fee.Tokens[0].Denom}
+					keeper.OrderChanges = append(keeper.OrderChanges, change)
+				} else {
+					change := OrderChange{msg.Id, Canceled, 0, ""}
+					keeper.OrderChanges = append(keeper.OrderChanges, change)
+				}
 			}
 		})
 		if err != nil {

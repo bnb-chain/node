@@ -44,7 +44,7 @@ func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountM
 		}
 		am.SetAccount(ctx, acc)
 	}
-	oid := fmt.Sprintf("%s-%d", add.String(), seq)
+	oid := fmt.Sprintf("%X-%d", add, seq)
 	return oid
 }
 
@@ -111,7 +111,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testApp.DexKeeper.AddEngine(tradingPair)
 
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	msg := o.NewNewOrderMsg(add, oid, 1, "BTC_BNB", 355e8, 1e8)
 
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -131,10 +131,10 @@ func Test_Match(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-	ethPair := types.NewTradingPair("ETH", "BNB", 1e8)
+	ethPair := types.NewTradingPair("ETH", "BNB", 97e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
 	testApp.DexKeeper.AddEngine(ethPair)
-	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	btcPair := types.NewTradingPair("BTC", "BNB", 96e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
 	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, o.TestFeeConfig())
@@ -159,10 +159,17 @@ func Test_Match(t *testing.T) {
 		1250   250     97              900    900          -350
 		1000   1000    96              900    900          -100*
 	*/
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
 	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC_BNB", 102e8, 300e8)
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
 	msg = o.NewNewOrderMsg(add, genOrderID(add, 1, ctx, am), 1, "BTC_BNB", 100e8, 100e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
+
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC_BNB", 96e8, 1000e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 1, ctx, am), 2, "BTC_BNB", 97e8, 250e8)
@@ -281,7 +288,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 
 	// setup accounts
 	add := Account(0).GetAddress()
-	oid := fmt.Sprintf("%s-0", add.String())
+	oid := fmt.Sprintf("%X-0", add)
 	add2 := Account(1).GetAddress()
 
 	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")

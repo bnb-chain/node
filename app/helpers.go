@@ -101,8 +101,12 @@ func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error)
 	return nil
 }
 
-func newAsyncLogger(conf *tmcfg.Config) log.Logger {
-	return bnclog.NewAsyncFileLogger(path.Join(conf.RootDir, DefaultLogFile), DefaultLogBuffSize)
+func newLogger(ctx *config.BinanceChainContext) log.Logger {
+	if ctx.LogConfig.LogToConsole {
+		return bnclog.NewConsoleLogger()
+	} else {
+		return bnclog.NewAsyncFileLogger(path.Join(ctx.Config.RootDir, ctx.LogConfig.LogFilePath), ctx.LogConfig.LogBuffSize)
+	}
 }
 
 // PersistentPreRunEFn returns a PersistentPreRunE function for cobra
@@ -119,7 +123,7 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 		}
 
 		// TODO: add config for logging to stdout for debug sake
-		logger := newAsyncLogger(context.Config)
+		logger := newLogger(context)
 		logger, err = tmflags.ParseLogLevel(context.Config.LogLevel, logger, tmcfg.DefaultLogLevel())
 		if err != nil {
 			return err

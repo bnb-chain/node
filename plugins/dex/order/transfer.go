@@ -44,6 +44,10 @@ func (tran Transfer) FeeFree() bool {
 		tran.eventType == eventCancelForMatchFailure
 }
 
+func (tran Transfer) IsExpire() bool {
+	return tran.eventType == eventIOCFullyExpire || tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventPartiallyExpire || tran.eventType == eventFullyExpire
+}
+
 func (tran Transfer) IsExpiredWithFee() bool {
 	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
 }

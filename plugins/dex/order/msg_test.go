@@ -1,6 +1,7 @@
 package order
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -82,8 +83,11 @@ func TestGenerateOrderId(t *testing.T) {
 	cctx := newCoreContext(5)
 	viper.SetDefault(client.FlagSequence, "5")
 
-	saddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj"
-	addr, err := sdk.AccAddressFromBech32(saddr)
+	sourceAddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj"
+	expectedHexAddr := "EAF1245F1057A3F4168155B039D1E54348655D48"
+
+	addr, err := sdk.AccAddressFromBech32(sourceAddr)
+	hexAddr := fmt.Sprintf("%X", addr)
 	if err != nil {
 		panic(err)
 	}
@@ -97,5 +101,10 @@ func TestGenerateOrderId(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Equal(t, "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj-5", orderID)
+
+	// to ensure use of sprintf("%X", ...) is working.
+	assert.Equal(t, expectedHexAddr, hexAddr)
+
+	expectedID := fmt.Sprintf("%s-5", hexAddr)
+	assert.Equal(t, expectedID, orderID)
 }

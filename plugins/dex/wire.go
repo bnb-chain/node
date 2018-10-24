@@ -1,11 +1,10 @@
 package dex
 
 import (
-	"github.com/BiJie/BinanceChain/wire"
-
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 // Register concrete types on wire codec
@@ -17,7 +16,7 @@ func RegisterWire(cdc *wire.Codec) {
 
 	cdc.RegisterConcrete(order.NewOrderResponse{}, "dex/NewOrderResponse", nil)
 
-	cdc.RegisterConcrete(list.Msg{}, "dex/ListMsg", nil)
+	cdc.RegisterConcrete(list.ListMsg{}, "dex/ListMsg", nil)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 
 	cdc.RegisterConcrete(order.FeeConfig{}, "dex/OrderFeeConfig", nil)

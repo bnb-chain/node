@@ -76,17 +76,20 @@ func MatchAndAllocateAllForPublish(
 
 	// group trades by Bid and Sid to make fee update easier
 	tradesToPublish := make([]Trade, 0)
-	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
-	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go collectTradeFeeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh, orderPkg.IocNoFill)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
+		var fee orderPkg.Fee
 		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
-			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-			if tran.IsExpiredWithFee() {
-				iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
-			} else {
-				tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
-			}
+			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
+		}
+		// we should include partial filled expiring order although the fee is empty
+		// because we still need publish its expired status
+		if tran.IsExpire() {
+			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+		} else {
+			tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
 		}
 	}
 	ctx = dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades)
@@ -101,24 +104,29 @@ func ExpireOrdersForPublish(
 	dexKeeper *orderPkg.Keeper,
 	ctx sdk.Context,
 	blockTime int64) {
-	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
+	expireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireFeeHolderCh, orderPkg.Expired)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		if tran.IsExpiredWithFee() {
+		var fee orderPkg.Fee
+		if !tran.Fee.IsEmpty() {
 			// TODO(#160): Fix potential fee precision loss
-			fee := orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
+		}
+		// we should include partial filled expiring order although the fee is empty
+		// because we still need publish its expired status
+		if tran.IsExpire() {
+			expireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, feeCollectorForTrades)
-	close(iocExpireFeeHolderCh)
+	close(expireFeeHolderCh)
 	wg.Wait()
 }
 
 // for partial and fully filled order fee
-func collectTradeForPublish(
+func collectTradeFeeForPublish(
 	tradesToPublish *[]Trade,
 	wg *sync.WaitGroup,
 	height int64,
@@ -142,6 +150,7 @@ func collectTradeForPublish(
 				Bfee:   -1,
 				Sfee:   -1}
 			trades[feeHolder.Trade] = t
+			tradeIdx += 1
 		} else {
 			t = trade
 		}
@@ -156,7 +165,6 @@ func collectTradeForPublish(
 
 		if t.Bfee != -1 && t.Sfee != -1 {
 			*tradesToPublish = append(*tradesToPublish, *t)
-			tradeIdx += 1
 		}
 	}
 }
@@ -164,7 +172,8 @@ func collectTradeForPublish(
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
-	feeHolderCh <-chan orderPkg.ExpireFeeHolder) {
+	feeHolderCh <-chan orderPkg.ExpireFeeHolder,
+	reason orderPkg.ChangeType) {
 	defer wg.Done()
 	for feeHolder := range feeHolderCh {
 		Logger.Debug("fee Collector for expire transfer", "transfer", feeHolder.String())
@@ -175,7 +184,170 @@ func updateExpireFeeForPublish(
 		var feeAsset string
 		fee = feeHolder.Amount
 		feeAsset = feeHolder.Asset
-		change := orderPkg.OrderChange{originOrd.Id, orderPkg.Expired, fee, feeAsset}
+		change := orderPkg.OrderChange{originOrd.Id, reason, fee, feeAsset}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
+}
+
+// collect all changed books according to published order status
+func filterChangedOrderBooksByOrders(
+	ordersToPublish []order,
+	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
+	var res = make(orderPkg.ChangedPriceLevelsMap)
+	// map from symbol -> price -> qty diff in this block
+	var buyQtyDiff = make(map[string]map[int64]int64)
+	var sellQtyDiff = make(map[string]map[int64]int64)
+	var allSymbols = make(map[string]struct{})
+	for _, o := range ordersToPublish {
+		price := o.price
+		symbol := o.symbol
+
+		if _, ok := latestPriceLevels[symbol]; !ok {
+			continue
+		}
+		allSymbols[symbol] = struct{}{}
+		if _, ok := res[symbol]; !ok {
+			res[symbol] = orderPkg.ChangedPriceLevelsPerSymbol{make(map[int64]int64), make(map[int64]int64)}
+			buyQtyDiff[symbol] = make(map[int64]int64)
+			sellQtyDiff[symbol] = make(map[int64]int64)
+		}
+
+		switch o.side {
+		case orderPkg.Side.BUY:
+			if qty, ok := latestPriceLevels[symbol].Buys[price]; ok {
+				res[symbol].Buys[price] = qty
+			} else {
+				res[symbol].Buys[price] = 0
+			}
+			buyQtyDiff[symbol][price] += o.effectQtyToOrderBook()
+		case orderPkg.Side.SELL:
+			if qty, ok := latestPriceLevels[symbol].Sells[price]; ok {
+				res[symbol].Sells[price] = qty
+			} else {
+				res[symbol].Sells[price] = 0
+			}
+			sellQtyDiff[symbol][price] += o.effectQtyToOrderBook()
+		}
+	}
+
+	// filter touched but qty actually not changed price levels
+	for symbol, priceToQty := range buyQtyDiff {
+		for price, qty := range priceToQty {
+			if qty == 0 {
+				delete(res[symbol].Buys, price)
+			}
+		}
+	}
+	for symbol, priceToQty := range sellQtyDiff {
+		for price, qty := range priceToQty {
+			if qty == 0 {
+				delete(res[symbol].Sells, price)
+			}
+		}
+	}
+	for symbol, _ := range allSymbols {
+		if len(res[symbol].Sells) == 0 && len(res[symbol].Buys) == 0 {
+			delete(res, symbol)
+		}
+	}
+
+	return res
+}
+
+func tradeToOrder(t Trade, o *orderPkg.OrderInfo, timestamp int64) order {
+	var status orderPkg.ChangeType
+	if o.CumQty == o.Quantity {
+		status = orderPkg.FullyFill
+	} else {
+		status = orderPkg.PartialFill
+	}
+	var fee int64
+	var feeAsset string
+	if o.Side == orderPkg.Side.BUY {
+		fee = t.Bfee
+		feeAsset = t.BfeeAsset
+	} else {
+		fee = t.Sfee
+		feeAsset = t.SfeeAsset
+	}
+	res := order{
+		o.Symbol,
+		status,
+		o.Id,
+		t.Id,
+		o.Sender.String(),
+		o.Side,
+		orderPkg.OrderType.LIMIT,
+		o.Price,
+		o.Quantity,
+		t.Price,
+		t.Qty,
+		o.CumQty,
+		fee,
+		feeAsset,
+		o.CreatedTimestamp,
+		timestamp,
+		o.TimeInForce,
+		orderPkg.NEW,
+		o.TxHash,
+	}
+	return res
+}
+
+// we collect OrderPart here to make matcheng module independent
+func collectExecutedOrdersToPublish(
+	trades *[]Trade,
+	orderChanges orderPkg.OrderChanges,
+	orderChangesMap orderPkg.OrderInfoForPublish,
+	timestamp int64) (opensToPublish []order, canceledToPublish []order) {
+	opensToPublish = make([]order, 0)
+	canceledToPublish = make([]order, 0)
+
+	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
+	for _, o := range orderChanges {
+		orderInfo := orderChangesMap[o.Id]
+		orderToPublish := order{
+			orderInfo.Symbol,
+			o.Tpe,
+			o.Id,
+			"",
+			orderInfo.Sender.String(),
+			orderInfo.Side,
+			orderPkg.OrderType.LIMIT,
+			orderInfo.Price,
+			orderInfo.Quantity,
+			0,
+			0,
+			orderInfo.CumQty,
+			o.Fee,
+			o.FeeAsset,
+			orderInfo.CreatedTimestamp,
+			timestamp,
+			orderInfo.TimeInForce,
+			orderPkg.NEW,
+			orderInfo.TxHash,
+		}
+		if o.Tpe == orderPkg.Ack {
+			opensToPublish = append(opensToPublish, orderToPublish)
+		} else {
+			canceledToPublish = append(canceledToPublish, orderToPublish)
+		}
+	}
+
+	// collect orders from trades
+	for _, t := range *trades {
+		if o, exists := orderChangesMap[t.Bid]; exists {
+			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp))
+		} else {
+			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
+		}
+
+		if o, exists := orderChangesMap[t.Sid]; exists {
+			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp))
+		} else {
+			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
+		}
+	}
+
+	return opensToPublish, canceledToPublish
 }

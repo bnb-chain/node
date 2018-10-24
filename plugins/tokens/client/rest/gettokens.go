@@ -91,6 +91,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerF
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
 		w.Write(output)
 	}

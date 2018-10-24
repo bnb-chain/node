@@ -5,27 +5,27 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/plugins/tokens/base"
+	shared "github.com/BiJie/BinanceChain/plugins/shared/msg"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
-// const Route = "tokens/burn"
-const Route = "tokensBurn"
+// const BurnRoute = "tokens/burn"
+const BurnRoute = "tokensBurn"
 
-var _ sdk.Msg = (*Msg)(nil)
+var _ sdk.Msg = (*BurnMsg)(nil)
 
-type Msg struct {
-	base.MsgBase
+type BurnMsg struct {
+	shared.MsgBase
 }
 
-func NewMsg(from sdk.AccAddress, symbol string, amount int64) Msg {
-	return Msg{base.MsgBase{From: from, Symbol: symbol, Amount: amount}}
+func NewMsg(from sdk.AccAddress, symbol string, amount int64) BurnMsg {
+	return BurnMsg{shared.MsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
-func (msg Msg) Type() string {
-	return Route
+func (msg BurnMsg) Type() string {
+	return BurnRoute
 }
 
-func (msg Msg) String() string {
+func (msg BurnMsg) String() string {
 	return fmt.Sprintf("BurnMsg{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
 }

@@ -74,7 +74,7 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 		Sender:   acc.GetAddress(),
 		Price:    1e8,
 		Quantity: 1e8,
-		Id:       fmt.Sprintf("%s-0", acc.GetAddress()),
+		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
@@ -124,7 +124,7 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 		Sender:   acc.GetAddress(),
 		Price:    1e3 + 1e2,
 		Quantity: 1e6,
-		Id:       fmt.Sprintf("%s-0", acc.GetAddress()),
+		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
@@ -145,7 +145,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 		Sender:   acc.GetAddress(),
 		Price:    1e3,
 		Quantity: 1e5 + 1e4,
-		Id:       fmt.Sprintf("%s-0", acc.GetAddress()),
+		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
@@ -165,7 +165,7 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 		Sender:   acc.GetAddress(),
 		Price:    1e3,
 		Quantity: 1e5,
-		Id:       fmt.Sprintf("%s-0", acc.GetAddress()),
+		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
@@ -184,7 +184,7 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 		Sender:   acc.GetAddress(),
 		Price:    (math.MaxInt64 - 4) - ((int64)(math.MaxInt64-4) % 1e3),
 		Quantity: (math.MaxInt64 - 4) - ((int64)(math.MaxInt64-4) % 1e5),
-		Id:       fmt.Sprintf("%s-0", acc.GetAddress()),
+		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
 	err = validateOrder(ctx, pairMapper, acc, msg)

@@ -4,10 +4,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	dbm "github.com/tendermint/tendermint/libs/db"
 
+	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -23,6 +25,7 @@ func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(capKey, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(capKey2, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, db)
 	ms.LoadLatestVersion()
 	return db, ms, capKey, capKey2
 }
@@ -45,6 +48,24 @@ func NewAccount(ctx sdk.Context, am auth.AccountMapper, free int64) (crypto.Priv
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	acc.SetCoins(NewNativeTokens(free))
+	am.SetAccount(ctx, acc)
+	return privKey, acc
+}
+
+func NewAccountForPub(ctx sdk.Context, am auth.AccountMapper, free, locked, freeze int64) (crypto.PrivKey, auth.Account) {
+	privKey, addr := PrivAndAddr()
+	acc := am.NewAccountWithAddress(ctx, addr)
+	coins := NewNativeTokens(free)
+	coins = append(coins, sdk.NewCoin("XYZ", free))
+	acc.SetCoins(coins)
+
+	appAcc := acc.(*types.AppAccount)
+	lockedCoins := NewNativeTokens(locked)
+	lockedCoins = append(lockedCoins, sdk.NewCoin("XYZ", locked))
+	appAcc.SetLockedCoins(lockedCoins)
+	freezeCoins := NewNativeTokens(freeze)
+	freezeCoins = append(freezeCoins, sdk.NewCoin("XYZ", freeze))
+	appAcc.SetFrozenCoins(freezeCoins)
 	am.SetAccount(ctx, acc)
 	return privKey, acc
 }

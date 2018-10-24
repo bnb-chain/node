@@ -20,6 +20,10 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc("/node_version", s.handleNodeVersionReq()).
 		Methods("GET")
 
+	// auth routes
+	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.tokens, s.accStoreName)).
+		Methods("GET")
+
 	// tx routes
 	r.HandleFunc(prefix+"/simulate", s.handleSimulateReq(s.cdc, s.ctx)).
 		Methods("POST")
@@ -35,6 +39,9 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx, s.accStoreName)).
 		Methods("PUT", "POST")
+	r.HandleFunc(prefix+"/orders/open", s.handleDexOpenOrdersReq(s.cdc, s.ctx)).
+		Queries("address", "{address}", "symbol", "{symbol}").
+		Methods("GET")
 
 	// tokens routes
 	r.HandleFunc(prefix+"/tokens", s.handleTokensReq(s.cdc, s.ctx)).

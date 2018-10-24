@@ -60,6 +60,10 @@ type OrderChange struct {
 	FeeAsset string
 }
 
+func (oc OrderChange) String() string {
+	return fmt.Sprintf("id: %s, tpe: %s, fee: %d%s", oc.Id, oc.Tpe.String(), oc.Fee, oc.FeeAsset)
+}
+
 // provide an easy way to retrieve order related static fields during generate executed order status
 type OrderInfoForPublish map[string]*OrderInfo
 type OrderChanges []OrderChange // clean after publish each block's EndBlock and before next block's BeginBlock
