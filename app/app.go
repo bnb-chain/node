@@ -100,7 +100,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// TODO: make the concurrency configurable
 
 	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountMapper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
@@ -238,9 +238,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
 
 	} else {

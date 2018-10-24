@@ -30,9 +30,9 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	// TODO: update fee/rate
 	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
-		pub.ExpireOrdersForPublish(dexKeeper, accountMapper, ctx, blockTime)
+		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
-		dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+		dexKeeper.ExpireOrders(ctx, blockTime, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

@@ -142,3 +142,21 @@ func transferFromOrderRemoved(ord me.OrderPart, ordMsg OrderInfo, tranEventType 
 		unlock:     unlock,
 	}
 }
+
+type sortedAsset struct {
+	native int64
+	// coins are sorted.
+	tokens sdk.Coins
+}
+
+// not thread safe
+func(s *sortedAsset) addAsset(asset string, amt int64) {
+	if asset == types.NativeToken {
+		s.native += amt
+	} else {
+		if s.tokens == nil {
+			s.tokens = sdk.Coins{}
+		}
+		s.tokens = s.tokens.Plus(sdk.Coins{{Denom:asset, Amount:sdk.NewInt(amt)}})
+	}
+}

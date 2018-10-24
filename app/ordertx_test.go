@@ -177,8 +177,7 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	ctx, code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
-	t.Logf("res is %v and error is %v", code, e)
+	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
@@ -233,8 +232,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
-	ctx, code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
-	t.Logf("res is %v and error is %v", code, e)
+	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("ETH_BNB")
 	t.Logf("buys: %v", buys)
 	t.Logf("sells: %v", sells)
@@ -286,8 +284,6 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	oid := fmt.Sprintf("%s-0", add.String())
 	add2 := Account(1).GetAddress()
 
-
-	fmt.Println(testApp.DexKeeper.FeeManager.GetConfig())
 	msg := o.NewCancelOrderMsg(add, "BTC_BNB", oid, "doesnotexist")
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*Failed to find order \\[doesnotexist\\].*", res.GetLog())

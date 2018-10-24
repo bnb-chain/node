@@ -2,9 +2,13 @@ package order
 
 import (
 	"fmt"
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/pkg/errors"
 	"math"
 	"math/big"
+
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -31,13 +35,15 @@ var (
 type FeeManager struct {
 	cdc       *wire.Codec
 	storeKey  sdk.StoreKey
+	logger    tmlog.Logger
 	feeConfig FeeConfig
 }
 
-func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey) *FeeManager {
+func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
 		cdc:       cdc,
 		storeKey:  storeKey,
+		logger:    logger,
 		feeConfig: NewFeeConfig(),
 	}
 }
@@ -112,7 +118,86 @@ func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
 	return
 }
 
-func (m *FeeManager) CalcTradeFee(amount int64, feeType FeeType) int64 {
+func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
+	var feeToken sdk.Coin
+	inSymbol := tradeIn.Denom
+	inAmt := tradeIn.Amount.Int64()
+	if inSymbol == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
+	} else {
+		// price against native token
+		var amountOfNativeToken int64
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeToken)]; ok {
+			// XYZ_BNB
+			amountOfNativeToken = utils.CalBigNotional(lastTradePrice, inAmt)
+		} else {
+			// BNB_XYZ
+			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeToken, inSymbol)]
+			var amount big.Int
+			amountOfNativeToken = amount.Div(
+				amount.Mul(
+					big.NewInt(inAmt),
+					big.NewInt(utils.Fixed8One.ToInt64())),
+				big.NewInt(lastTradePrice)).Int64()
+		}
+		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
+		if balances.AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
+			// have sufficient native token to pay the fees
+			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+		} else {
+			// no enough NativeToken, use the received tokens as fee
+			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
+			m.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
+		}
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+}
+
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, lastPrices map[string]int64) types.Fee {
+	var feeAmountNative int64
+	var feeAmount int64
+	if eventType == eventFullyExpire {
+		feeAmountNative, feeAmount = m.ExpireFees()
+	} else if eventType == eventIOCFullyExpire {
+		feeAmountNative, feeAmount = m.IOCExpireFees()
+	} else if eventType == eventFullyCancel {
+		feeAmountNative, feeAmount = m.CancelFees()
+	} else {
+		// should not be here
+		m.logger.Error("Invalid expire eventType", "eventType", eventType)
+		return types.Fee{}
+	}
+
+	var feeToken sdk.Coin
+	nativeTokenBalance := balances.AmountOf(types.NativeToken).Int64()
+	if nativeTokenBalance >= feeAmountNative {
+		feeToken = sdk.NewCoin(types.NativeToken, feeAmountNative)
+	} else if inAsset == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, nativeTokenBalance)
+	} else {
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeToken)]; ok {
+			// XYZ_BNB
+			var amount big.Int
+			feeAmount = amount.Div(
+				amount.Mul(
+					big.NewInt(feeAmount),
+					big.NewInt(utils.Fixed8One.ToInt64())),
+				big.NewInt(lastTradePrice)).Int64()
+		} else {
+			// BNB_XYZ
+			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeToken, inAsset)]
+			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
+		}
+
+		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset).Int64())
+		feeToken = sdk.NewCoin(inAsset, feeAmount)
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+}
+
+func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
 		feeRate = m.feeConfig.FeeRateNative

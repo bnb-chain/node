@@ -27,9 +27,9 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) co
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, accountMapper, msg, simulate)
+			return handleNewOrder(ctx, cdc, k, msg, simulate)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, accountMapper, msg, simulate)
+			return handleCancelOrder(ctx, k, msg, simulate)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -37,20 +37,12 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) co
 	}
 }
 
-// TODO: duplicated with plugins/tokens/freeze/handler.go
-func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, lockedAmount int64) {
-	account := accountMapper.GetAccount(ctx, address).(common.NamedAccount)
-	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(lockedAmount)})))
-	accountMapper.SetAccount(ctx, account)
-}
-
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc auth.Account, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
 	}
 
-	acc := accountMapper.GetAccount(ctx, msg.Sender)
 	seq := acc.GetSequence()
 	expectedID := GenerateOrderID(seq, msg.Sender)
 	if expectedID != msg.Id {
@@ -78,9 +70,10 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg, simulate bool,
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg, simulate bool,
 ) sdk.Result {
-	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
+	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
+	err := validateOrder(ctx, keeper.PairMapper, acc, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
@@ -108,19 +101,17 @@ func handleNewOrder(
 		amountToLock = msg.Quantity
 		symbolToLock = strings.ToUpper(baseAsset)
 	}
-	coins := keeper.ck.GetCoins(ctx, msg.Sender)
-	if coins.AmountOf(symbolToLock).Int64() < amountToLock {
+	freeBalance := acc.GetCoins()
+	if freeBalance.AmountOf(symbolToLock).Int64() < amountToLock {
 		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
 	}
 
+	toLockCoins := sdk.Coins{{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}}
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	// TODO: perform reduce avail + increase locked + insert orderbook atomically
-	_, _, sdkErr := keeper.ck.SubtractCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}))
-	if sdkErr != nil {
-		return sdkErr.Result()
-	}
-
-	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
+	acc.SetCoins(freeBalance.Minus(toLockCoins))
+	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
+	keeper.am.SetAccount(ctx, acc)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
@@ -153,7 +144,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg, simulate bool,
+	ctx sdk.Context, keeper *Keeper, msg CancelOrderMsg, simulate bool,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -175,15 +166,19 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
 	transfer := TransferFromCanceled(ord, origOrd, false)
-	sdkError := keeper.doTransfer(ctx, accountMapper, &transfer)
+	sdkError := keeper.doTransfer(ctx, &transfer)
 	if sdkError != nil {
 		return sdkError.Result()
 	}
+	acc := keeper.am.GetAccount(ctx, msg.Sender)
+	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.lastTradePrices)
+	acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
+	keeper.am.SetAccount(ctx, acc)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if !ctx.IsCheckTx() && !simulate {
 		//remove order from cache and order book
-		err := keeper.CancelOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
+		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
 				// TODO: will refactor transfer.Fee in other PR
 				fee := transfer.Fee.Tokens[0]
