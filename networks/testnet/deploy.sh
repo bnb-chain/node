@@ -69,6 +69,7 @@ cd ${work_path}/build
 for p in "${paths[@]}"
 do
   	$(cd "${p}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
+    $(cd "${p}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
 
 	if [ "${skip_timeout}" = true ]
 	then
@@ -266,7 +267,8 @@ sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publ
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
-sed -i -e "s/orderBookTopic = \"books\"/orderBookTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 
 # distribute config
 echo "Stopping publisher node in host  ${witness_ip}..."
@@ -281,6 +283,7 @@ scp /server/bnc/cong/kv.go bijieprd@${witness_ip}:/home/bijieprd/gowork/src/gith
 ssh bijieprd@${witness_ip} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie/BinanceChain && make build"
 
 # start an api-server to query tx
+ps -ef | grep "bnbcli" | grep "api-server" | awk '{print $2}' | xargs kill -9
 nohup build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
 
 echo "Starting publisher node..."
