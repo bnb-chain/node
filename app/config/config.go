@@ -33,7 +33,7 @@ const appConfigTemplate = `# This is a TOML config file.
 
 ##### publication related configurations #####
 [publication]
-
+# configurations ends with Kafka can be a semi-colon separated host-port list
 # Whether we want publish market data (this includes trades and order)
 publishOrderUpdates = {{ .PublicationConfig.PublishOrderUpdates }}
 orderUpdatesTopic = "{{ .PublicationConfig.OrderUpdatesTopic }}"

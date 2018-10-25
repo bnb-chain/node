@@ -18,6 +18,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
+	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -27,7 +28,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/ico"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
-	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -62,7 +63,7 @@ type BinanceChain struct {
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
 	AccountMapper       auth.AccountMapper
-	TokenMapper         tokenStore.Mapper
+	TokenMapper         tkstore.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
@@ -77,7 +78,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// create composed tx decoder
 	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
 
-	// create your application object
+	// create the application object
 	var app = &BinanceChain{
 		BaseApp:           NewBaseApp(appName, cdc, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
 		Codec:             cdc,
@@ -86,93 +87,66 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	app.SetCommitMultiStoreTracer(traceStore)
+
 	// mappers
 	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.TokenMapper = tokenStore.NewMapper(cdc, common.TokenStoreKey)
+	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 
-	// Add handlers.
+	// handlers
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
-	// TODO: make the concurrency configurable
 
-	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountMapper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
 
-	app.registerHandlers(cdc)
-
-	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
-	}
-
-	// Initialize BaseApp.
-	app.SetInitChainer(app.initChainerFn())
-	app.SetEndBlocker(app.EndBlocker)
-	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
-	err := app.LoadLatestVersion(common.MainStoreKey)
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
-
-	app.initPlugins()
-	return app
-}
-
-func (app *BinanceChain) initPlugins() {
-	if app.checkState == nil {
-		return
-	}
-
-	tokens.InitPlugin(app, app.TokenMapper)
-	dex.InitPlugin(app, app.DexKeeper)
-
-	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
-	// count back to 7 days.
-	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
-}
-
-// Query performs an abci query.
-func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	path := splitPath(req.Path)
-	if len(path) == 0 {
-		msg := "no query path provided"
-		return sdk.ErrUnknownRequest(msg).QueryResult()
-	}
-	prefix := path[0]
-	if handler, ok := app.queryHandlers[prefix]; ok {
-		res := handler(app, req, path)
-		if res == nil {
-			return app.BaseApp.Query(req)
-		}
-		return *res
-	}
-	return app.BaseApp.Query(req)
-}
-
-func (app *BinanceChain) registerHandlers(cdc *wire.Codec) {
+	// legacy bank route (others moved to plugin init funcs)
 	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
 	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		return sdkBankHandler(ctx, msg)
 	}
 	app.Router().AddRoute("bank", bankHandler)
-	for route, handler := range tokens.Routes(app.TokenMapper, app.AccountMapper, app.CoinKeeper) {
-		app.Router().AddRoute(route, handler)
+
+	if app.publicationConfig.ShouldPublishAny() {
+		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
 	}
-	for route, handler := range dex.Routes(cdc, app.DexKeeper, app.TokenMapper, app.AccountMapper) {
-		app.Router().AddRoute(route, handler)
+
+	// finish app initialization
+	app.SetInitChainer(app.initChainerFn())
+	app.SetEndBlocker(app.EndBlocker)
+	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
+
+	// block store required to hydrate dex OB
+	err := app.LoadLatestVersion(common.MainStoreKey)
+	if err != nil {
+		cmn.Exit(err.Error())
 	}
+
+	// remaining plugin init
+	app.initDex()
+	app.initPlugins()
+
+	return app
 }
 
-// RegisterQueryHandler registers an abci query handler.
-func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
-	if _, ok := app.queryHandlers[prefix]; ok {
-		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
-	} else {
-		app.queryHandlers[prefix] = handler
+func (app *BinanceChain) initDex() {
+	tradingPairMapper := dex.NewTradingPairMapper(app.cdc, common.PairStoreKey)
+	// TODO: make the concurrency configurable
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountMapper, tradingPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
+	// do not proceed if we are in a unit test and `checkState` is unset.
+	if app.checkState == nil {
+		return
 	}
+	// configure dex keeper
+	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
+	// count back to 7 days.
+	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
+}
+
+func (app *BinanceChain) initPlugins() {
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -286,9 +260,41 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	return appState, validators, nil
 }
 
+// Query performs an abci query.
+func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	path := splitPath(req.Path)
+	if len(path) == 0 {
+		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	prefix := path[0]
+	if handler, ok := app.queryHandlers[prefix]; ok {
+		res := handler(app, req, path)
+		if res == nil {
+			return app.BaseApp.Query(req)
+		}
+		return *res
+	}
+	return app.BaseApp.Query(req)
+}
+
+// RegisterQueryHandler registers an abci query handler, implements ChainApp.RegisterQueryHandler.
+func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQueryHandler) {
+	if _, ok := app.queryHandlers[prefix]; ok {
+		panic(fmt.Errorf("registerQueryHandler: prefix `%s` is already registered", prefix))
+	} else {
+		app.queryHandlers[prefix] = handler
+	}
+}
+
 // GetCodec returns the app's Codec.
 func (app *BinanceChain) GetCodec() *wire.Codec {
 	return app.Codec
+}
+
+// GetRouter returns the app's Router.
+func (app *BinanceChain) GetRouter() router.Router {
+	return app.Router()
 }
 
 // GetContextForCheckState gets the context for the check state.

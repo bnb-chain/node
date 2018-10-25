@@ -91,8 +91,8 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 	if tickSize != pair.TickSize.ToInt64() ||
 		lotSize != pair.LotSize.ToInt64() {
 		ctx.Logger().Info("Updating tick/lotsize",
-			"pair", pair.GetSymbol(), "old ticksize", pair.TickSize, "new ticksize", tickSize,
-			"old lotsize", pair.LotSize, "new lotsize", lotSize)
+			"pair", pair.GetSymbol(), "old_ticksize", pair.TickSize, "new_ticksize", tickSize,
+			"old_lotsize", pair.LotSize, "new_lotsize", lotSize)
 		pair.TickSize = utils.Fixed8(tickSize)
 		pair.LotSize = utils.Fixed8(lotSize)
 

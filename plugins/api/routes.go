@@ -29,7 +29,7 @@ func (s *server) bindRoutes() *server {
 		Methods("POST")
 
 	// dex routes
-	r.HandleFunc(prefix+"/pairs", s.handlePairsReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/markets", s.handlePairsReq(s.cdc, s.ctx)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/depth", s.handleDexDepthReq(s.cdc, s.ctx)).
 		Queries("symbol", "{symbol}", "limit", "{limit:[0-9]+}").

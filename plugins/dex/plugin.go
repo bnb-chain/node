@@ -1,18 +1,29 @@
 package dex
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	"github.com/BiJie/BinanceChain/app/pub"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	app "github.com/BiJie/BinanceChain/common/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
 const AbciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
-func InitPlugin(appp app.ChainApp, keeper *DexKeeper) {
+func InitPlugin(
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountMapper,
+) {
+	cdc := appp.GetCodec()
+
+	// add msg handlers
+	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper) {
+		appp.GetRouter().AddRoute(route, handler)
+	}
+
+	// add abci handlers
 	handler := createQueryHandler(keeper)
 	appp.RegisterQueryHandler(AbciQueryPrefix, handler)
 }
