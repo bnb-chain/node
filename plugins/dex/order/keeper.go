@@ -24,6 +24,9 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+type FeeHandler func(map[string]*types.Fee)
+type TransferHandler func(Transfer)
+
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	PairMapper                 store.TradingPairMapper
@@ -83,7 +86,7 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 
 func (kp *Keeper) updateLastTradePrices() {
 	// only update the pairs that matched in this round
-	for symbol, _:= range kp.roundOrders {
+	for symbol, _ := range kp.roundOrders {
 		kp.lastTradePrices[symbol] = kp.engines[symbol].LastTradePrice
 	}
 }
@@ -446,7 +449,8 @@ func (kp *Keeper) clearAfterMatch() {
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
-func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) types.Fee {
+func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+	types.Fee, map[string]*types.Fee) {
 	// use hex string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
@@ -472,22 +476,27 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 				tradeInAsset[hexAddr].addAsset(tran.inAsset, tran.in)
 			}
 		}
-		// TODO: need confirm
-		//if postAllocateHandler != nil {
-		//	postAllocateHandler(tran)
-		//}
+		if postAllocateHandler != nil {
+			postAllocateHandler(tran)
+		}
 	}
 
+	feesPerAcc := make(map[string]*types.Fee)
 	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc auth.Account, in sdk.Coin) types.Fee) {
 		for hexAddr, assets := range assetsMap {
 			addr, _ := sdk.AccAddressFromHex(hexAddr)
 			acc := kp.am.GetAccount(ctx, addr)
+			if _, ok := feesPerAcc[hexAddr]; !ok {
+				feesPerAcc[hexAddr] = &types.Fee{}
+			}
 			if assets.native != 0 {
 				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
+				feesPerAcc[hexAddr].AddFee(fee)
 				totalFee.AddFee(fee)
 			}
 			for _, asset := range assets.tokens {
 				fee := calcFeeAndDeduct(acc, asset)
+				feesPerAcc[hexAddr].AddFee(fee)
 				totalFee.AddFee(fee)
 			}
 			kp.am.SetAccount(ctx, acc)
@@ -509,18 +518,25 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		}
 		return fees
 	})
-	return totalFee
+	return totalFee, feesPerAcc
 }
 
-func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer, postAllocateHandler func(tran Transfer)) types.Fee {
+func (kp *Keeper) allocateAndCalcFee(
+	ctx sdk.Context,
+	tradeOuts []chan Transfer,
+	postAlloTransHandler TransferHandler,
+	postAlloFeeHandler FeeHandler,
+) types.Fee {
 	concurrency := len(tradeOuts)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
 	feesPerCh := make([]types.Fee, concurrency)
+	feesPerAcc := make([]map[string]*types.Fee, concurrency)
 	allocatePerCh := func(index int, tranCh <-chan Transfer) {
 		defer wg.Done()
-		fee := kp.allocate(ctx, tranCh, postAllocateHandler)
+		fee, feeByAcc := kp.allocate(ctx, tranCh, postAlloTransHandler)
 		feesPerCh[index].AddFee(fee)
+		feesPerAcc[index] = feeByAcc
 	}
 
 	for i, tradeTranCh := range tradeOuts {
@@ -530,6 +546,15 @@ func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer,
 	totalFee := tx.Fee(ctx)
 	for i := 0; i < concurrency; i++ {
 		totalFee.AddFee(feesPerCh[i])
+	}
+	if postAlloFeeHandler != nil {
+		totalFeePerAcc := make(map[string]*types.Fee)
+		for _, m := range feesPerAcc {
+			for k, v := range m {
+				totalFeePerAcc[k] = v
+			}
+		}
+		postAlloFeeHandler(totalFeePerAcc)
 	}
 	return totalFee
 }
@@ -545,7 +570,11 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, postAllocateHandler func(tran Transfer)) (newCtx sdk.Context) {
+func (kp *Keeper) MatchAndAllocateAll(
+	ctx sdk.Context,
+	postAlloTransHandler TransferHandler,
+	postAlloFeeHandler FeeHandler,
+) (newCtx sdk.Context) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time)
 	if tradeOuts == nil {
@@ -553,7 +582,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, postAllocateHandler func(
 		return ctx
 	}
 
-	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAllocateHandler)
+	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler, postAlloFeeHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
 	kp.clearAfterMatch()
 	return newCtx
@@ -628,15 +657,20 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 	return transferChs
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(
+	ctx sdk.Context,
+	blockTime int64,
+	postAlloTransHandler TransferHandler,
+	postAlloFeeHandler FeeHandler,
+) (newCtx sdk.Context) {
 	transferChs := kp.expireOrders(ctx, blockTime)
 	if transferChs == nil {
-		return ctx, sdk.CodeOK, nil
+		return ctx
 	}
 
-	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postExpireHandler)
+	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler, postAlloFeeHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
-	return newCtx, sdk.CodeOK, nil
+	return newCtx
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {

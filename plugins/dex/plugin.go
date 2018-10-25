@@ -32,7 +32,7 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	if dexKeeper.CollectOrderInfoForPublish {
 		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
-		dexKeeper.ExpireOrders(ctx, blockTime, nil)
+		dexKeeper.ExpireOrders(ctx, blockTime, nil, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

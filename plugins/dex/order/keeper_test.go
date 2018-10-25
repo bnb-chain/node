@@ -501,8 +501,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
 
-	ctx, _, err := keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), nil)
-	require.NoError(t, err)
+	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), nil, nil)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)

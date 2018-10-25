@@ -236,7 +236,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
 
 	} else {

@@ -171,10 +171,8 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 
 	var feeToken sdk.Coin
 	nativeTokenBalance := balances.AmountOf(types.NativeToken).Int64()
-	if nativeTokenBalance >= feeAmountNative {
-		feeToken = sdk.NewCoin(types.NativeToken, feeAmountNative)
-	} else if inAsset == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, nativeTokenBalance)
+	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
 		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeToken)]; ok {
 			// XYZ_BNB
