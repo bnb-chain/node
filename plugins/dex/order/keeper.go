@@ -37,7 +37,6 @@ type Keeper struct {
 	OrderChangesMap            OrderInfoForPublish
 	roundOrders                map[string][]string // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
-	roundFees                  map[string]sdk.Coins
 	poolSize                   uint // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
@@ -80,6 +79,13 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	kp.lastTradePrices[symbol] = eng.LastTradePrice
 	return eng
+}
+
+func (kp *Keeper) updateLastTradePrices() {
+	// only update the pairs that matched in this round
+	for symbol, _:= range kp.roundOrders {
+		kp.lastTradePrices[symbol] = kp.engines[symbol].LastTradePrice
+	}
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
@@ -435,6 +441,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 }
 
 func (kp *Keeper) clearAfterMatch() {
+	kp.updateLastTradePrices()
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
@@ -475,8 +482,6 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		for hexAddr, assets := range assetsMap {
 			addr, _ := sdk.AccAddressFromHex(hexAddr)
 			acc := kp.am.GetAccount(ctx, addr)
-			fmt.Println(assets.native)
-			fmt.Println(assets.tokens)
 			if assets.native != 0 {
 				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
 				totalFee.AddFee(fee)
