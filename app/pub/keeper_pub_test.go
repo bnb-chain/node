@@ -35,7 +35,7 @@ const (
 var keeper *orderPkg.Keeper
 var buyer sdk.AccAddress
 var seller sdk.AccAddress
-var am auth.AccountMapper
+var am auth.AccountKeeper
 var ctx sdk.Context
 
 func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
@@ -44,8 +44,8 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, logger)
-	am = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
-	coinKeeper := bank.NewKeeper(am)
+	am = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
+	coinKeeper := bank.NewBaseKeeper(am)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper = orderPkg.NewKeeper(capKey2, coinKeeper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
@@ -316,8 +316,8 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("BNB", trade1.BfeeAsset)
 }
 
-func prepareExpire(height int64) int64 {
+func prepareExpire(height int64) time.Time {
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
-	keeper.MarkBreatheBlock(ctx, height, breathTime.Unix())
-	return breathTime.AddDate(0, 0, 3).Unix()
+	keeper.MarkBreatheBlock(ctx, height, breathTime)
+	return breathTime.AddDate(0, 0, 3)
 }

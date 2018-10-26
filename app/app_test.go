@@ -74,19 +74,19 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 				Address: acc.GetAddress(),
 				Coins:   acc.GetCoins(),
 			}}
-		if app.AccountMapper.GetAccount(ctx, acc.GetAddress()) == nil {
-			aacc.BaseAccount.AccountNumber = app.AccountMapper.GetNextAccountNumber(ctx)
+		if app.AccountKeeper.GetAccount(ctx, acc.GetAddress()) == nil {
+			aacc.BaseAccount.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 		}
-		app.AccountMapper.SetAccount(ctx, aacc)
+		app.AccountKeeper.SetAccount(ctx, aacc)
 	}
 	return &genAccs
 }
 
 func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
-		a := app.AccountMapper.GetAccount(ctx, acc.GetAddress())
+		a := app.AccountKeeper.GetAccount(ctx, acc.GetAddress())
 		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
-		app.AccountMapper.SetAccount(ctx, a)
+		app.AccountKeeper.SetAccount(ctx, a)
 	}
 }
 
@@ -109,7 +109,7 @@ func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 }
 
 func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return testApp.AccountMapper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
 }
 
 func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
@@ -156,13 +156,13 @@ func TestGenesis(t *testing.T) {
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
 	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", sdk.NewInt(100000)}})
-	res1 := bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
+	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 
 	// reload app and ensure the account is still there
 	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
 	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
-	res1 = bapp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
+	res1 = bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 	TearDown()
 }

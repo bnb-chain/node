@@ -35,7 +35,7 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountMapper) string {
+func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountKeeper) string {
 	acc := am.GetAccount(ctx, add)
 	if acc.GetSequence() != seq {
 		err := acc.SetSequence(seq)
@@ -54,7 +54,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
-	am := testApp.AccountMapper
+	am := testApp.AccountKeeper
 	acc := Account(0)
 	acc2 := Account(1)
 	add := acc.GetAddress()
@@ -141,7 +141,7 @@ func Test_Match(t *testing.T) {
 	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
 
 	// setup accounts
-	am := testApp.AccountMapper
+	am := testApp.AccountKeeper
 	acc := Account(0)
 	acc2 := Account(1)
 	acc3 := Account(2)
@@ -178,7 +178,7 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	ctx, code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
+	ctx, code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountKeeper, nil)
 	t.Logf("res is %v and error is %v", code, e)
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
@@ -234,7 +234,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
-	ctx, code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
+	ctx, code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountKeeper, nil)
 	t.Logf("res is %v and error is %v", code, e)
 	buys, sells = getOrderBook("ETH_BNB")
 	t.Logf("buys: %v", buys)

@@ -41,7 +41,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
-	am = app.AccountMapper
+	am = app.AccountKeeper
 	_, buyerAcc := testutils.NewAccount(ctx, am, 100000000000) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 	_, sellerAcc := testutils.NewAccount(ctx, am, 100000000000)

@@ -11,10 +11,10 @@ const abciQueryPrefix = "tokens"
 
 // InitPlugin initializes the plugin.
 func InitPlugin(
-	appp app.ChainApp, mapper Mapper, accMapper auth.AccountMapper, coinKeeper bank.Keeper,
+	appp app.ChainApp, mapper Mapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
 ) {
 	// add msg handlers
-	for route, handler := range Routes(mapper, accMapper, coinKeeper) {
+	for route, handler := range Routes(mapper, accKeeper, coinKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

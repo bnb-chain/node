@@ -62,7 +62,7 @@ type BinanceChain struct {
 	FeeCollectionKeeper tx.FeeCollectionKeeper
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
-	AccountMapper       auth.AccountMapper
+	AccountKeeper       auth.AccountKeeper
 	TokenMapper         tkstore.Mapper
 
 	publicationConfig *config.PublicationConfig
@@ -89,11 +89,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetCommitMultiStoreTracer(traceStore)
 
 	// mappers
-	app.AccountMapper = auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 
 	// handlers
-	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
+	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	// TODO: make the concurrency configurable
 
 	// Currently we do not need the ibc and staking part
@@ -115,7 +115,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, app.FeeCollectionKeeper))
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper, app.FeeCollectionKeeper))
 
 	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)
@@ -145,8 +145,8 @@ func (app *BinanceChain) initDex() {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountMapper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountMapper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -163,8 +163,8 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 
 		for _, gacc := range genesisState.Accounts {
 			acc := gacc.ToAppAccount()
-			acc.AccountNumber = app.accountMapper.GetNextAccountNumber(ctx)
-			app.accountMapper.SetAccount(ctx, acc)
+			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
+			app.AccountKeeper.SetAccount(ctx, acc)
 		}
 
 		for _, token := range genesisState.Tokens {
@@ -208,9 +208,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountKeeper, ctx)
 		} else {
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountKeeper, nil)
 		}
 
 	} else {
@@ -218,18 +218,18 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.AccountMapper, app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.AccountKeeper, app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
 	}
 
 	// distribute fees TODO: enable it after upgraded to tm 0.24.0
-	// distributeFee(ctx, app.AccountMapper)
+	// distributeFee(ctx, app.AccountKeeper)
 	// TODO: update validators
 
 	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-		app.publish(tradesToPublish, ctx, height, blockTime)
+		app.publish(tradesToPublish, ctx, height, blockTime.Unix())
 	}
 
 	return response
@@ -248,7 +248,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 		accounts = append(accounts, account)
 		return false
 	}
-	app.AccountMapper.IterateAccounts(ctx, appendAccount)
+	app.AccountKeeper.IterateAccounts(ctx, appendAccount)
 
 	genState := GenesisState{
 		Accounts: accounts,
@@ -326,8 +326,8 @@ func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
 
 	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
+	bank.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
@@ -343,7 +343,7 @@ func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, h
 	if app.publicationConfig.PublishAccountBalance {
 		txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
 		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
-		accountsToPublish = pub.GetAccountBalances(app.AccountMapper, ctx, txRelatedAccounts, tradeRelatedAccounts)
+		accountsToPublish = pub.GetAccountBalances(app.AccountKeeper, ctx, txRelatedAccounts, tradeRelatedAccounts)
 		defer func() {
 			app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
 		}() // clean up

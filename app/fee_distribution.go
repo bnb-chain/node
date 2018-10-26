@@ -11,7 +11,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func distributeFee(ctx sdk.Context, am auth.AccountMapper) {
+func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 	proposerAddr := ctx.BlockHeader().Proposer.Address
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
