@@ -8,14 +8,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
 // NewHandler creates a new token issue message handler
-func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) router.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		if msg, ok := msg.(IssueMsg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
