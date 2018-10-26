@@ -24,7 +24,7 @@ const (
 // and deducts fees from the first signer.
 // nolint: gocyclo
 // TODO: remove gas
-func NewAnteHandler(am auth.AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {

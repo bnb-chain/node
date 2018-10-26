@@ -20,7 +20,7 @@ import (
 
 // AccountReqHandler queries for an account and returns its information.
 func AccountReqHandler(
-	cdc *wire.Codec, ctx context.CoreContext, tokens tkstore.Mapper, accStoreName string,
+	cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper, accStoreName string,
 ) http.HandlerFunc {
 	type response struct {
 		auth.BaseAccount

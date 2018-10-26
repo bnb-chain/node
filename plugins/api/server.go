@@ -22,7 +22,7 @@ type server struct {
 	maxPostSize int64
 
 	// handler dependencies
-	ctx context.CoreContext
+	ctx context.CLIContext
 	cdc *wire.Codec
 
 	// stores for handlers
@@ -33,7 +33,7 @@ type server struct {
 }
 
 // NewServer provides a new server structure.
-func newServer(ctx context.CoreContext, cdc *wire.Codec) *server {
+func newServer(ctx context.CLIContext, cdc *wire.Codec) *server {
 	kb, err := keyscli.GetKeyBase()
 	if err != nil {
 		panic(err)

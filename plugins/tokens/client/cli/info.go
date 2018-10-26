@@ -28,7 +28,7 @@ func getTokenInfoCmd(cmdr Commander) *cobra.Command {
 }
 
 func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
-	ctx := context.NewCoreContextFromViper()
+	ctx := context.NewCLIContext().WithCodec(c.Cdc)
 
 	symbol := viper.GetString(flagSymbol)
 	if len(symbol) == 0 {
@@ -61,6 +61,5 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println(string(output))
-
 	return nil
 }

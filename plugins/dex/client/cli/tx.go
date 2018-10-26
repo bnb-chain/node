@@ -3,17 +3,21 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/BiJie/BinanceChain/common/client"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/api/helpers"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -33,9 +37,8 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
 		Short: "Submit a new order",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
-
-			from, err := ctx.GetFromAddress()
+			cliCtx, txBldr := client.PrepareCtx(cdc)
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -66,7 +69,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			msg, err := order.NewNewOrderMsgAuto(ctx, from, side, symbol, price, qty)
+			msg, err := order.NewNewOrderMsgAuto(cliCtx, from, side, symbol, price, qty)
 			if err != nil {
 				panic(err)
 			}
@@ -76,7 +79,9 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 
 			if viper.GetBool(flagDryRun) {
 				fmt.Println("Performing dry run; will not broadcast the transaction.")
-				txBytes, err := helpers.EnsureSignBuild(ctx, ctx.FromAddressName, msgs, cdc)
+				name, _ := cliCtx.GetFromName()
+				passphrase, err := keys.GetPassphrase(name)
+				txBytes, err := txBldr.BuildAndSign(name, passphrase, msgs)
 				if err != nil {
 					panic(err)
 				}
@@ -86,7 +91,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 				return nil
 			}
 
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msgs, cdc)
+			err = client.SendOrPrintTx(cliCtx, txBldr, msg)
 			if err != nil {
 				return err
 			}
@@ -109,7 +114,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "show -l <listed pair>",
 		Short: "Show order book of the listed currency pair",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			ctx := context.NewCLIContext().WithAccountDecoder(types.GetAccountDecoder(cdc))
 
 			symbol := viper.GetString(flagSymbol)
 			err := validatePairSymbol(symbol)
@@ -141,9 +146,9 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "cancel -i <order id> -f <ref order id>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
-
-			from, err := ctx.GetFromAddress()
+			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(types.GetAccountDecoder(cdc))
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -161,7 +166,11 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 				return errors.New("please input reference order id")
 			}
 			msg := order.NewCancelOrderMsg(from, symbol, id, refId)
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			if cliCtx.GenerateOnly {
+				return txutils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg}, false)
+			}
+
+			err = txutils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}

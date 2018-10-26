@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 )
 
-func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.WriteHeader(status)
 		w.Header().Set("Content-Type", "text/plain")

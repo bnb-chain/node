@@ -12,8 +12,8 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func getTokenInfo(ctx context.CoreContext, cdc *wire.Codec, symbol string) (*types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/info/%s", symbol))
+func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*types.Token, error) {
+	bz, err := ctx.Query(fmt.Sprintf("tokens/info/%s", symbol), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func getTokenInfo(ctx context.CoreContext, cdc *wire.Codec, symbol string) (*typ
 }
 
 // GetTokenReqHandler creates an http request handler to get info for an individual token
-func GetTokenReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
 		symbol string
 	}

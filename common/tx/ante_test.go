@@ -118,8 +118,7 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -171,8 +170,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -230,8 +228,7 @@ func TestAnteHandlerSequences(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -308,8 +305,7 @@ func TestAnteHandlerMemoGas(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -351,8 +347,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -402,8 +397,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -483,8 +477,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -536,8 +529,7 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHa
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler = tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler = tx.NewAnteHandler(mapper)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	return
 }

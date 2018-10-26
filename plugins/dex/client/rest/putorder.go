@@ -19,7 +19,7 @@ import (
 )
 
 // PutOrderReqHandler creates an http request handler to create a new order transaction and return its binary tx
-func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
+func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName string) http.HandlerFunc {
 	type formParams struct {
 		address string
 		pair    string

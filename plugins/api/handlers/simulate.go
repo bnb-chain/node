@@ -14,7 +14,7 @@ import (
 )
 
 // SimulateReqHandler simulates the execution of a single transaction, given its binary form
-func SimulateReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type response sdk.Result
 	responseType := "application/json"
 
