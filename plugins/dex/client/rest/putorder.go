@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/BiJie/BinanceChain/common/client"
 	"net/http"
 	"strings"
 
@@ -10,9 +11,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/api/helpers"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
@@ -64,9 +65,6 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 	}
 	accDecoder := authcmd.GetAccountDecoder(cdc)
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: collect chainID too
-		ctx.ChainID = "bnbchain-1000"
-
 		// parse application/x-www-form-urlencoded or multipart/form-data form params
 		params := formParams{
 			address: r.FormValue("address"),
@@ -147,7 +145,8 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 		msgs := []sdk.Msg{msg}
 
 		// build the tx
-		txBytes, err := helpers.BuildUnsignedTx(ctx, account, msgs, cdc)
+		txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
+		txBytes, err := client.BuildUnsignedTx(txBldr, account, msgs)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
