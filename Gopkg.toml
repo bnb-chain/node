@@ -60,7 +60,3 @@
 [prune]
   go-tests = true
   unused-packages = true
-
-[prune]
-  go-tests = true
-  unused-packages = true
