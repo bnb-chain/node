@@ -127,7 +127,7 @@ func handleNewOrder(
 	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
-			timestamp := ctx.BlockHeader().Time
+			timestamp := ctx.BlockHeader().Time.Unix()
 			msg := OrderInfo{
 				msg,
 				height, timestamp,
