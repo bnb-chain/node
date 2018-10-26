@@ -3,6 +3,7 @@ package pub
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -12,7 +13,7 @@ import (
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
-func GetAccountBalances(mapper auth.AccountMapper, ctx sdk.Context, accSlices ...[]string) (res map[string]Account) {
+func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ...[]string) (res map[string]Account) {
 	res = make(map[string]Account)
 
 	for _, accs := range accSlices {
@@ -57,7 +58,7 @@ func GetAccountBalances(mapper auth.AccountMapper, ctx sdk.Context, accSlices ..
 					bech32Str := addr.String()
 					res[bech32Str] = Account{bech32Str, assets}
 				} else {
-					Logger.Error(fmt.Sprintf("failed to get account %s from AccountMapper", addr.String()))
+					Logger.Error(fmt.Sprintf("failed to get account %s from AccountKeeper", addr.String()))
 				}
 			}
 		}
@@ -68,7 +69,7 @@ func GetAccountBalances(mapper auth.AccountMapper, ctx sdk.Context, accSlices ..
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
-	accountMapper auth.AccountMapper,
+	accKeeper auth.AccountKeeper,
 	ctx sdk.Context) []Trade {
 	tradeFeeHolderCh := make(chan orderPkg.TradeFeeHolder, FeeCollectionChannelSize)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
@@ -93,7 +94,7 @@ func MatchAndAllocateAllForPublish(
 			tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
 		}
 	}
-	ctx, _, _ = dexKeeper.MatchAndAllocateAll(ctx, accountMapper, feeCollectorForTrades)
+	ctx, _, _ = dexKeeper.MatchAndAllocateAll(ctx, accKeeper, feeCollectorForTrades)
 	close(tradeFeeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
@@ -103,9 +104,9 @@ func MatchAndAllocateAllForPublish(
 
 func ExpireOrdersForPublish(
 	dexKeeper *orderPkg.Keeper,
-	accountMapper auth.AccountMapper,
+	accKeeper auth.AccountKeeper,
 	ctx sdk.Context,
-	blockTime int64) {
+	blockTime time.Time) {
 	expireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -122,7 +123,7 @@ func ExpireOrdersForPublish(
 			expireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
-	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, feeCollectorForTrades)
+	dexKeeper.ExpireOrders(ctx, blockTime, accKeeper, feeCollectorForTrades)
 	close(expireFeeHolderCh)
 	wg.Wait()
 }

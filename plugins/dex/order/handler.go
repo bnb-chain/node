@@ -25,13 +25,13 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) router.Handler {
+func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) router.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, accountMapper, msg, simulate)
+			return handleNewOrder(ctx, cdc, k, accKeeper, msg, simulate)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, accountMapper, msg, simulate)
+			return handleCancelOrder(ctx, k, accKeeper, msg, simulate)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -40,13 +40,13 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) ro
 }
 
 // TODO: duplicated with plugins/tokens/freeze/handler.go
-func updateLockedOfAccount(ctx sdk.Context, accountMapper auth.AccountMapper, address sdk.AccAddress, symbol string, lockedAmount int64) {
-	account := accountMapper.GetAccount(ctx, address).(common.NamedAccount)
+func updateLockedOfAccount(ctx sdk.Context, accKeeper auth.AccountKeeper, address sdk.AccAddress, symbol string, lockedAmount int64) {
+	account := accKeeper.GetAccount(ctx, address).(common.NamedAccount)
 	account.SetLockedCoins(account.GetLockedCoins().Plus(append(sdk.Coins{}, sdk.Coin{Denom: symbol, Amount: sdk.NewInt(lockedAmount)})))
-	accountMapper.SetAccount(ctx, account)
+	accKeeper.SetAccount(ctx, account)
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountMapper, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountKeeper, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountMapper, msg NewOrderMsg, simulate bool,
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountKeeper, msg NewOrderMsg, simulate bool,
 ) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
@@ -161,7 +161,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountMapper, msg CancelOrderMsg, simulate bool,
+	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountKeeper, msg CancelOrderMsg, simulate bool,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 

@@ -3,6 +3,7 @@ package dex
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"time"
 
 	"github.com/BiJie/BinanceChain/app/pub"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
@@ -14,7 +15,7 @@ const AbciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountMapper,
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper,
 ) {
 	cdc := appp.GetCodec()
 
@@ -33,15 +34,15 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper *DexKeeper, height, blockTime int64) {
+func EndBreatheBlock(ctx sdk.Context, accKeeper auth.AccountKeeper, dexKeeper *DexKeeper, height int64, blockTime time.Time) {
 	logger := bnclog.With("module", "dex")
 	logger.Info("Start updating tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	logger.Info("Staring Expiring stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
-		pub.ExpireOrdersForPublish(dexKeeper, accountMapper, ctx, blockTime)
+		pub.ExpireOrdersForPublish(dexKeeper, accKeeper, ctx, blockTime)
 	} else {
-		dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+		dexKeeper.ExpireOrders(ctx, blockTime, accKeeper, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

@@ -36,8 +36,8 @@ func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
 
 	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
+	bank.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc) // Register Msgs
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	cdc.RegisterConcrete(NewOrderMsg{}, "dex/NewOrder", nil)
@@ -50,8 +50,8 @@ func MakeCodec() *wire.Codec {
 }
 
 func MakeKeeper(cdc *wire.Codec) *Keeper {
-	accountMapper := auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	coinKeeper := bank.NewKeeper(accountMapper)
+	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	coinKeeper := bank.NewBaseKeeper(accKeeper)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper := NewKeeper(common.DexStoreKey, coinKeeper, pairMapper,
@@ -125,16 +125,14 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
-	ts := tt.Unix()
-	keeper.MarkBreatheBlock(ctx, 42, ts)
+	keeper.MarkBreatheBlock(ctx, 42, tt)
 	h := keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt.AddDate(0, 0, 9)
 	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt, _ = time.Parse(time.RFC3339, "2018-01-03T15:04:05Z")
-	ts = tt.Unix()
-	keeper.MarkBreatheBlock(ctx, 43, ts)
+	keeper.MarkBreatheBlock(ctx, 43, tt)
 	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(43), h)
 	tt.AddDate(0, 0, 9)
@@ -228,7 +226,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(storedKVPairs1, storedKVPairs2)
 
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(7, len(keeper2.allOrders["XYZ_BNB"]))
@@ -276,7 +274,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	keeper.MatchAll(42, 0)
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(2, len(keeper2.allOrders["XYZ_BNB"]))
@@ -314,7 +312,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert.Equal(0, len(sells))
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
@@ -469,14 +467,14 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
+func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	types.RegisterWire(cdc)
 	wire.RegisterCrypto(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
+	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
-	coinKeeper := bank.NewKeeper(mapper)
+	coinKeeper := bank.NewBaseKeeper(mapper)
 	keeper = NewKeeper(capKey2, coinKeeper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
@@ -608,9 +606,9 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	am.SetAccount(ctx, acc)
 
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
-	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
+	keeper.MarkBreatheBlock(ctx, 15000, breathTime)
 
-	ctx, _, err := keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), am, nil)
+	ctx, _, err := keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), am, nil)
 	require.NoError(t, err)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)

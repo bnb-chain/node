@@ -24,7 +24,7 @@ const (
 // and deducts fees from the first signer.
 // nolint: gocyclo
 // TODO: remove gas
-func NewAnteHandler(am auth.AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
@@ -133,7 +133,7 @@ func validateBasic(tx StdTx) (err sdk.Error) {
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
 func processSig(
-	ctx sdk.Context, am auth.AccountMapper,
+	ctx sdk.Context, am auth.AccountKeeper,
 	addr sdk.AccAddress, sig StdSignature, signBytes []byte) (
 	acc auth.Account, res sdk.Result) {
 
@@ -188,7 +188,7 @@ func processSig(
 	return
 }
 
-func calcAndCollectFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -239,7 +239,7 @@ func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountMapper) sdk.Result {
+func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}

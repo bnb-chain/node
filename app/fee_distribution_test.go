@@ -15,11 +15,11 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func setup() (mapper auth.AccountMapper, ctx sdk.Context) {
+func setup() (mapper auth.AccountKeeper, ctx sdk.Context) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	ctx = sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	// setup proposer and other validators
 	_, proposerAcc := testutils.NewAccount(ctx, mapper, 100)
@@ -38,7 +38,7 @@ func setup() (mapper auth.AccountMapper, ctx sdk.Context) {
 	return
 }
 
-func checkBalance(t *testing.T, ctx sdk.Context, am auth.AccountMapper, vals []int64) {
+func checkBalance(t *testing.T, ctx sdk.Context, am auth.AccountKeeper, vals []int64) {
 	for i, val := range ctx.SigningValidators() {
 		valAcc := am.GetAccount(ctx, val.Validator.Address)
 		require.Equal(t, vals[i], valAcc.GetCoins().AmountOf(types.NativeToken).Int64())

@@ -117,7 +117,7 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -170,7 +170,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -229,7 +229,7 @@ func TestAnteHandlerSequences(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -307,7 +307,7 @@ func TestAnteHandlerMemoGas(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -350,7 +350,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -401,7 +401,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -482,7 +482,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -531,11 +531,11 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	require.Nil(t, acc2.GetPubKey())
 }
 
-func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
+func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
 	anteHandler = tx.NewAnteHandler(mapper, feeCollector)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
@@ -552,7 +552,7 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 	return ctx
 }
 
-func checkBalance(t *testing.T, am auth.AccountMapper, ctx sdk.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
+func checkBalance(t *testing.T, am auth.AccountKeeper, ctx sdk.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
 	newBalance := am.GetAccount(ctx, addr).GetCoins()
 	require.Equal(t, accNewBalance, newBalance)
 }

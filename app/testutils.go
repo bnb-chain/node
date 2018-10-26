@@ -12,7 +12,7 @@ var (
 	keeper *orderPkg.Keeper
 	buyer  sdk.AccAddress
 	seller sdk.AccAddress
-	am     auth.AccountMapper
+	am     auth.AccountKeeper
 	ctx    sdk.Context
 	app    *BinanceChain
 	cdc    *wire.Codec

@@ -12,9 +12,9 @@ import (
 
 // Routes exports dex message routes
 func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
-	accountMapper auth.AccountMapper) map[string]router.Handler {
+	accKeeper auth.AccountKeeper) map[string]router.Handler {
 	routes := make(map[string]router.Handler)
-	orderHandler := order.NewHandler(cdc, dexKeeper, accountMapper)
+	orderHandler := order.NewHandler(cdc, dexKeeper, accKeeper)
 	routes[order.NewOrder] = orderHandler
 	routes[order.CancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper)

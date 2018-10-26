@@ -507,16 +507,16 @@ func (kp *Keeper) ClearOrderChanges() {
 	kp.OrderChanges = kp.OrderChanges[:0]
 }
 
-func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountMapper, tran *Transfer) sdk.Error {
+func (kp *Keeper) doTransfer(ctx sdk.Context, am auth.AccountKeeper, tran *Transfer) sdk.Error {
 	account := am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock)})
 	if !newLocked.IsNotNegative() {
 		return sdk.ErrInternal("No enough locked tokens to unlock")
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
-		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
-		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
+		Plus(sdk.Coins{sdk.NewInt64Coin(tran.inAsset, tran.in)}).
+		Plus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock-tran.out)}))
 
 	if !tran.FeeFree() {
 		fee := kp.calcFeeFromTransfer(ctx, account, *tran)
@@ -543,7 +543,7 @@ func (kp *Keeper) calcFeeFromTransfer(ctx sdk.Context, account auth.Account, tra
 func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Transfer) types.Fee {
 	var feeToken sdk.Coin
 	if tran.inAsset == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
+		feeToken = sdk.NewInt64Coin(types.NativeToken, kp.FeeConfig.CalcFee(tran.in, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
@@ -559,10 +559,10 @@ func (kp *Keeper) calcOrderFee(ctx sdk.Context, account auth.Account, tran Trans
 		feeByNativeToken := kp.FeeConfig.CalcFee(amountOfNativeToken, FeeByNativeToken)
 		if account.GetCoins().AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
-			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+			feeToken = sdk.NewInt64Coin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
+			feeToken = sdk.NewInt64Coin(tran.inAsset, kp.FeeConfig.CalcFee(tran.in, FeeByTradeToken))
 			kp.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
@@ -601,7 +601,7 @@ func (kp *Keeper) calcExpireFee(ctx sdk.Context, tran Transfer) types.Fee {
 	if tran.in < feeAmount {
 		feeAmount = tran.in
 	}
-	return types.NewFee(sdk.Coins{sdk.NewCoin(tran.inAsset, feeAmount)}, types.FeeForProposer)
+	return types.NewFee(sdk.Coins{sdk.NewInt64Coin(tran.inAsset, feeAmount)}, types.FeeForProposer)
 }
 
 func (kp *Keeper) clearAfterMatch() {
@@ -620,7 +620,7 @@ func concurrentSettle(wg *sync.WaitGroup, tradeOuts []chan Transfer, settleHandl
 	}
 }
 
-func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer, am auth.AccountMapper, postAllocateHandler func(tran Transfer)) types.Fee {
+func (kp *Keeper) allocateAndCalcFee(ctx sdk.Context, tradeOuts []chan Transfer, am auth.AccountKeeper, postAllocateHandler func(tran Transfer)) types.Fee {
 	concurrency := len(tradeOuts)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
@@ -661,10 +661,10 @@ func (kp *Keeper) MatchAll(height, timestamp int64) (code sdk.CodeType, err erro
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
 // TODO: the return value: code & err may not be required.
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
+func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountKeeper,
 	postAllocateHandler func(tran Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time.Unix())
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return ctx, sdk.CodeOK, nil
@@ -676,7 +676,7 @@ func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, am auth.AccountMapper,
 	return newCtx, sdk.CodeOK, nil
 }
 
-func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper) []chan Transfer {
+func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time, am auth.AccountKeeper) []chan Transfer {
 	size := len(kp.allOrders)
 	if size == 0 {
 		kp.logger.Info("No orders to expire")
@@ -685,7 +685,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 
 	// TODO: make effectiveDays configurable
 	const effectiveDays = 3
-	expireHeight, err := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
+	expireHeight, err := kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
 	if err != nil {
 		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
 		kp.logger.Info(err.Error())
@@ -739,7 +739,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	return transferChs
 }
 
-func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, am auth.AccountMapper, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
+func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime time.Time, am auth.AccountKeeper, postExpireHandler func(Transfer)) (newCtx sdk.Context, code sdk.CodeType, err error) {
 	transferChs := kp.expireOrders(ctx, blockTime, am)
 	if transferChs == nil {
 		return ctx, sdk.CodeOK, nil
@@ -750,8 +750,8 @@ func (kp *Keeper) ExpireOrders(ctx sdk.Context, blockTime int64, am auth.Account
 	return newCtx, sdk.CodeOK, nil
 }
 
-func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
-	key := utils.Int642Bytes(blockTime / utils.SecondsPerDay)
+func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time) {
+	key := utils.Int642Bytes(blockTime.Unix() / utils.SecondsPerDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {
