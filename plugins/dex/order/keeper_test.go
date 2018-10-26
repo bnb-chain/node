@@ -430,7 +430,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), tx.DefaultTxDecoder(cdc))
+	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
@@ -457,7 +457,7 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	ctx = sdk.NewContext(cms, abci.Header{}, true, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper2.InitOrderBook(ctx, 7, memDB, 3, tx.DefaultTxDecoder(cdc))
+	keeper2.InitOrderBook(ctx, 7, memDB, 3, auth.DefaultTxDecoder(cdc))
 	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
 	assert.Equal(1, len(sells))

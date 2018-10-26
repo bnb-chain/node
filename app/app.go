@@ -59,7 +59,6 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	FeeCollectionKeeper tx.FeeCollectionKeeper
 	CoinKeeper          bank.Keeper
 	DexKeeper           *dex.DexKeeper
 	AccountKeeper       auth.AccountKeeper
@@ -115,7 +114,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper, app.FeeCollectionKeeper))
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 
 	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)
