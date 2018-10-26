@@ -137,7 +137,7 @@ func (wal *orderbookWAL) Write(msg WALMessage) {
 
 	// Write the wal message
 	if err := wal.enc.Encode(&TimedWALMessage{Time: time.Now(), Msg: msg}); err != nil {
-		panic(cmn.Fmt("Error writing msg to consensus wal: %v \n\nMessage: %v", err, msg))
+		panic(fmt.Sprintf("Error writing msg to consensus wal: %v \n\nMessage: %v", err, msg))
 	}
 }
 
@@ -151,7 +151,7 @@ func (wal *orderbookWAL) WriteSync(msg WALMessage) {
 
 	wal.Write(msg)
 	if err := wal.file.Sync(); err != nil {
-		panic(cmn.Fmt("Error flushing consensus wal buf to file. Error: %v \n", err))
+		panic(fmt.Sprintf("Error flushing consensus wal buf to file. Error: %v \n", err))
 	}
 }
 

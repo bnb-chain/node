@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
@@ -178,14 +178,11 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 }
 
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
-func NewNewOrderMsgAuto(ctx context.CLIContext, sender sdk.AccAddress, side int8,
+func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
 	var id string
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		return NewOrderMsg{}, err
-	}
-	id = GenerateOrderID(ctx.Sequence+1, sender)
+	// TODO: ensure sequence
+	id = GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
 		Version:     0x01,
 		Sender:      sender,
