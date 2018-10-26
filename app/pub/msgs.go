@@ -89,7 +89,7 @@ func (msg *tradesAndOrders) ToNativeMap() map[string]interface{} {
 
 type trades struct {
 	numOfMsgs int
-	trades    []Trade
+	trades    []*Trade
 }
 
 func (msg *trades) String() string {
@@ -108,16 +108,14 @@ func (msg *trades) ToNativeMap() map[string]interface{} {
 }
 
 type Trade struct {
-	Id        string
-	Symbol    string
-	Price     int64
-	Qty       int64
-	Sid       string
-	Bid       string
-	Sfee      int64
-	Bfee      int64
-	SfeeAsset string
-	BfeeAsset string
+	Id     string
+	Symbol string
+	Price  int64
+	Qty    int64
+	Sid    string
+	Bid    string
+	Sfee   string
+	Bfee   string
 }
 
 func (msg *Trade) String() string {
@@ -134,8 +132,6 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
-	native["sfeeAsset"] = msg.SfeeAsset
-	native["bfeeAsset"] = msg.BfeeAsset
 	return native
 }
 
@@ -172,8 +168,7 @@ type order struct {
 	lastExecutedPrice    int64
 	lastExecutedQty      int64
 	cumQty               int64
-	fee                  int64
-	feeAsset             string
+	fee                  string
 	orderCreationTime    int64
 	transactionTime      int64
 	timeInForce          int8
@@ -214,7 +209,6 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	native["lastExecutedQty"] = msg.lastExecutedQty
 	native["cumQty"] = msg.cumQty
 	native["fee"] = msg.fee
-	native["feeAsset"] = msg.feeAsset
 	native["orderCreationTime"] = msg.orderCreationTime
 	native["transactionTime"] = msg.transactionTime
 	native["timeInForce"] = orderPkg.IToTimeInForce(msg.timeInForce)   //TODO(#66): confirm with all teams to make this uint8 enum
@@ -313,7 +307,7 @@ func (msg *AssetBalance) ToNativeMap() map[string]interface{} {
 
 type Account struct {
 	Owner    string
-	Balances []AssetBalance
+	Balances []*AssetBalance
 }
 
 func (msg *Account) String() string {
@@ -334,7 +328,7 @@ func (msg *Account) ToNativeMap() map[string]interface{} {
 type accounts struct {
 	height    int64
 	numOfMsgs int
-	accounts  []Account
+	Accounts  []Account
 }
 
 func (msg *accounts) String() string {
@@ -346,8 +340,8 @@ func (msg *accounts) ToNativeMap() map[string]interface{} {
 	native["height"] = msg.height
 	native["numOfMsgs"] = msg.numOfMsgs
 	if msg.numOfMsgs > 0 {
-		as := make([]map[string]interface{}, len(msg.accounts), len(msg.accounts))
-		for idx, a := range msg.accounts {
+		as := make([]map[string]interface{}, len(msg.Accounts), len(msg.Accounts))
+		for idx, a := range msg.Accounts {
 			as[idx] = a.ToNativeMap()
 		}
 		native["accounts"] = as

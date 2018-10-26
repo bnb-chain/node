@@ -23,15 +23,15 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 				if acc, ok := mapper.GetAccount(ctx, addr).(types.NamedAccount); ok {
 					assetsMap := make(map[string]*AssetBalance)
 					// TODO(#66): set the length to be the total coins this account owned
-					assets := make([]AssetBalance, 0, 10)
+					assets := make([]*AssetBalance, 0, 10)
 
 					for _, freeCoin := range acc.GetCoins() {
 						if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
 							assetBalance.Free = freeCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[freeCoin.Denom] = &newAB
+							assetsMap[freeCoin.Denom] = newAB
 						}
 					}
 
@@ -39,9 +39,9 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
 							assetBalance.Frozen = frozenCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[frozenCoin.Denom] = &newAB
+							assetsMap[frozenCoin.Denom] = newAB
 						}
 					}
 
@@ -49,9 +49,9 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
 							assetBalance.Locked = lockedCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[lockedCoin.Denom] = &newAB
+							assetsMap[lockedCoin.Denom] = newAB
 						}
 					}
 
@@ -69,33 +69,28 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
-	ctx sdk.Context) []Trade {
-	tradeFeeHolderCh := make(chan orderPkg.TradeFeeHolder, FeeCollectionChannelSize)
-	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
+	ctx sdk.Context) []*Trade {
+	// These two channels are used for protect not update `tradesToPublish` and `dexKeeper.OrderChanges` concurrently
+	// matcher would send item to feeCollectorForTrades in several goroutine (well-designed)
+	// while tradesToPublish and dexKeeper.OrderChanges are not separated by concurrent factor (users here), so we have
+	// to organized transfer holders into 2 channels
+	tradeHolderCh := make(chan orderPkg.TradeHolder, TransferCollectionChannelSize)
+	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	// group trades by Bid and Sid to make fee update easier
-	tradesToPublish := make([]Trade, 0)
-	go collectTradeFeeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeFeeHolderCh)
+	tradesToPublish := make([]*Trade, 0)
+	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh, orderPkg.IocNoFill)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		var fee orderPkg.Fee
-		if !tran.Fee.IsEmpty() {
-			// TODO(#160): Fix potential fee precision loss
-			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-		}
-		// we should include partial filled expiring order although the fee is empty
-		// because we still need publish its expired status
 		if tran.IsExpire() {
-			iocExpireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+			iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid}
 		} else {
-			tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
+			tradeHolderCh <- orderPkg.TradeHolder{tran.Oid, tran.Trade, tran.Symbol}
 		}
 	}
-	// TODO: cong
-	ctx = dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, nil)
-	close(tradeFeeHolderCh)
+	ctx = dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, setFeeHolder)
+	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
 
@@ -106,68 +101,44 @@ func ExpireOrdersForPublish(
 	dexKeeper *orderPkg.Keeper,
 	ctx sdk.Context,
 	blockTime time.Time) {
-	expireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
+	expireHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go updateExpireFeeForPublish(dexKeeper, &wg, expireFeeHolderCh, orderPkg.Expired)
-	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
-		var fee orderPkg.Fee
-		if !tran.Fee.IsEmpty() {
-			// TODO(#160): Fix potential fee precision loss
-			fee = orderPkg.Fee{tran.Fee.Tokens[0].Amount.Int64(), tran.Fee.Tokens[0].Denom}
-		}
-		// we should include partial filled expiring order although the fee is empty
-		// because we still need publish its expired status
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh, orderPkg.Expired)
+	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
+			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid}
 		}
 	}
-	// TODO: cong
-	dexKeeper.ExpireOrders(ctx, blockTime, feeCollectorForTrades, nil)
-	close(expireFeeHolderCh)
+	dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires, setFeeHolder)
+	close(expireHolderCh)
 	wg.Wait()
 }
 
 // for partial and fully filled order fee
-func collectTradeFeeForPublish(
-	tradesToPublish *[]Trade,
+func collectTradeForPublish(
+	tradesToPublish *[]*Trade,
 	wg *sync.WaitGroup,
 	height int64,
-	feeHolderCh <-chan orderPkg.TradeFeeHolder) {
+	tradeHolderCh <-chan orderPkg.TradeHolder) {
 
 	defer wg.Done()
 	tradeIdx := 0
 	trades := make(map[*me.Trade]*Trade)
-	for feeHolder := range feeHolderCh {
-		Logger.Debug("processing TradeFeeHolder", "feeHolder", feeHolder.String())
-		var t *Trade
-		// one trade has two transfer, the second fee update should applied to first updated trade
-		if trade, ok := trades[feeHolder.Trade]; !ok {
-			t = &Trade{
+	for feeHolder := range tradeHolderCh {
+		Logger.Debug("processing TradeHolder", "holder", feeHolder.String())
+		// one trade has two transfer, we can skip the second
+		if _, ok := trades[feeHolder.Trade]; !ok {
+			t := &Trade{
 				Id:     fmt.Sprintf("%d-%d", height, tradeIdx),
 				Symbol: feeHolder.Symbol,
 				Sid:    feeHolder.Trade.Sid,
 				Bid:    feeHolder.Trade.Bid,
 				Price:  feeHolder.Trade.LastPx,
-				Qty:    feeHolder.Trade.LastQty,
-				Bfee:   -1,
-				Sfee:   -1}
+				Qty:    feeHolder.Trade.LastQty}
 			trades[feeHolder.Trade] = t
 			tradeIdx += 1
-		} else {
-			t = trade
-		}
-
-		if feeHolder.OId == feeHolder.Trade.Bid {
-			t.Bfee = feeHolder.Amount
-			t.BfeeAsset = feeHolder.Asset
-		} else {
-			t.Sfee = feeHolder.Amount
-			t.SfeeAsset = feeHolder.Asset
-		}
-
-		if t.Bfee != -1 && t.Sfee != -1 {
-			*tradesToPublish = append(*tradesToPublish, *t)
+			*tradesToPublish = append(*tradesToPublish, t)
 		}
 	}
 }
@@ -175,19 +146,12 @@ func collectTradeFeeForPublish(
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
-	feeHolderCh <-chan orderPkg.ExpireFeeHolder,
+	tranHolderCh <-chan orderPkg.ExpireHolder,
 	reason orderPkg.ChangeType) {
 	defer wg.Done()
-	for feeHolder := range feeHolderCh {
-		Logger.Debug("fee Collector for expire transfer", "transfer", feeHolder.String())
-
-		id := feeHolder.OrderId
-		originOrd := dexKeeper.OrderChangesMap[id]
-		var fee int64
-		var feeAsset string
-		fee = feeHolder.Amount
-		feeAsset = feeHolder.Asset
-		change := orderPkg.OrderChange{originOrd.Id, reason, fee, feeAsset}
+	for tranHolder := range tranHolderCh {
+		Logger.Debug("transfer collector for order", "orderId", tranHolder.OrderId)
+		change := orderPkg.OrderChange{tranHolder.OrderId, reason}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
 }
@@ -257,22 +221,14 @@ func filterChangedOrderBooksByOrders(
 	return res
 }
 
-func tradeToOrder(t Trade, o *orderPkg.OrderInfo, timestamp int64) order {
+func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder orderPkg.FeeHolder) order {
 	var status orderPkg.ChangeType
 	if o.CumQty == o.Quantity {
 		status = orderPkg.FullyFill
 	} else {
 		status = orderPkg.PartialFill
 	}
-	var fee int64
-	var feeAsset string
-	if o.Side == orderPkg.Side.BUY {
-		fee = t.Bfee
-		feeAsset = t.BfeeAsset
-	} else {
-		fee = t.Sfee
-		feeAsset = t.SfeeAsset
-	}
+	fee := getSerializedFeeForOrder(o, status, feeHolder)
 	res := order{
 		o.Symbol,
 		status,
@@ -287,7 +243,6 @@ func tradeToOrder(t Trade, o *orderPkg.OrderInfo, timestamp int64) order {
 		t.Qty,
 		o.CumQty,
 		fee,
-		feeAsset,
 		o.CreatedTimestamp,
 		timestamp,
 		o.TimeInForce,
@@ -299,9 +254,10 @@ func tradeToOrder(t Trade, o *orderPkg.OrderInfo, timestamp int64) order {
 
 // we collect OrderPart here to make matcheng module independent
 func collectExecutedOrdersToPublish(
-	trades *[]Trade,
+	trades []*Trade,
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
+	feeHolder orderPkg.FeeHolder,
 	timestamp int64) (opensToPublish []order, canceledToPublish []order) {
 	opensToPublish = make([]order, 0)
 	canceledToPublish = make([]order, 0)
@@ -309,6 +265,7 @@ func collectExecutedOrdersToPublish(
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
 		orderInfo := orderChangesMap[o.Id]
+
 		orderToPublish := order{
 			orderInfo.Symbol,
 			o.Tpe,
@@ -322,8 +279,7 @@ func collectExecutedOrdersToPublish(
 			0,
 			0,
 			orderInfo.CumQty,
-			o.Fee,
-			o.FeeAsset,
+			getSerializedFeeForOrder(orderInfo, o.Tpe, feeHolder),
 			orderInfo.CreatedTimestamp,
 			timestamp,
 			orderInfo.TimeInForce,
@@ -337,20 +293,32 @@ func collectExecutedOrdersToPublish(
 		}
 	}
 
-	// collect orders from trades
-	for _, t := range *trades {
+	// update fee and collect orders from trades
+	for _, t := range trades {
 		if o, exists := orderChangesMap[t.Bid]; exists {
-			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp))
+			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp, feeHolder))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
 		}
 
 		if o, exists := orderChangesMap[t.Sid]; exists {
-			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp))
+			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp, feeHolder))
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
 		}
 	}
 
 	return opensToPublish, canceledToPublish
+}
+
+func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder) string {
+	feeStr := ""
+	if fee, ok := feeHolder[string(orderInfo.Sender)]; ok {
+		feeStr = fee.String()
+	} else {
+		if orderInfo.CumQty == 0 && status != orderPkg.Ack {
+			Logger.Error("cannot find fee from fee holder", "orderId", orderInfo.Id)
+		}
+	}
+	return feeStr
 }

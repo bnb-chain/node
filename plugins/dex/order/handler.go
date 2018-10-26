@@ -188,9 +188,7 @@ func handleCancelOrder(
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
-				// TODO: will refactor transfer.Fee in other PR
-				fee := transfer.Fee.Tokens[0]
-				change := OrderChange{origOrd.Id, Canceled, fee.Amount.Int64(), fee.Denom}
+				change := OrderChange{msg.Id, Canceled}
 				keeper.OrderChanges = append(keeper.OrderChanges, change)
 			}
 		})

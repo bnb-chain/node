@@ -9,11 +9,13 @@ import (
 )
 
 var (
-	keeper *orderPkg.Keeper
-	buyer  sdk.AccAddress
-	seller sdk.AccAddress
-	am     auth.AccountKeeper
-	ctx    sdk.Context
-	app    *BinanceChain
-	cdc    *wire.Codec
+	keeper    *orderPkg.Keeper
+	buyer     sdk.AccAddress
+	buyerAcc  auth.Account
+	seller    sdk.AccAddress
+	sellerAcc auth.Account
+	am        auth.AccountKeeper
+	ctx       sdk.Context
+	app       *BinanceChain
+	cdc       *wire.Codec
 )

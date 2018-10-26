@@ -223,7 +223,8 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	kp.MatchAll(height, timestamp.UnixNano()) //no need to check result
+	// TODO(#118): after upgrade to tendermint 0.24 we should have better and more consistent time representation
+	kp.MatchAll(height, timestamp.Unix()) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,

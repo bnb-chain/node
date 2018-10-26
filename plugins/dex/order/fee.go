@@ -36,7 +36,7 @@ type FeeManager struct {
 	cdc       *wire.Codec
 	storeKey  sdk.StoreKey
 	logger    tmlog.Logger
-	feeConfig FeeConfig
+	FeeConfig FeeConfig
 }
 
 func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
@@ -44,7 +44,7 @@ func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) 
 		cdc:       cdc,
 		storeKey:  storeKey,
 		logger:    logger,
-		feeConfig: NewFeeConfig(),
+		FeeConfig: NewFeeConfig(),
 	}
 }
 
@@ -57,7 +57,7 @@ func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
 		}
 	}
 
-	m.feeConfig = feeConfig
+	m.FeeConfig = feeConfig
 }
 
 func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
@@ -70,7 +70,7 @@ func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	feeConfig.CancelFeeNative = data.CancelFeeNative
 	feeConfig.FeeRate = data.FeeRate
 	feeConfig.FeeRateNative = data.FeeRateNative
-	log.With("module", "dex").Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
+	m.logger.Info("Setting Genesis Fee/Rate", "FeeConfig", feeConfig)
 	err := m.UpdateConfig(ctx, feeConfig)
 	if err != nil {
 		panic(err)
@@ -80,24 +80,24 @@ func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 // UpdateConfig should only happen when Init or in BreatheBlock
 func (m *FeeManager) UpdateConfig(ctx sdk.Context, feeConfig FeeConfig) error {
 	if feeConfig.anyEmpty() {
-		return errors.New("invalid feeConfig")
+		return errors.New("invalid FeeConfig")
 	}
 
 	store := ctx.KVStore(m.storeKey)
 	store.Set(feeConfigKey, m.encodeConfig(feeConfig))
-	m.feeConfig = feeConfig
+	m.FeeConfig = feeConfig
 	return nil
 }
 
 func (m *FeeManager) GetConfig() FeeConfig {
-	return m.feeConfig
+	return m.FeeConfig
 }
 
 func (m *FeeManager) getConfigFromStore(ctx sdk.Context) (FeeConfig, error) {
 	store := ctx.KVStore(m.storeKey)
 	bz := store.Get(feeConfigKey)
 	if bz == nil {
-		return NewFeeConfig(), errors.New("feeConfig does not exist")
+		return NewFeeConfig(), errors.New("FeeConfig does not exist")
 	}
 
 	return m.decodeConfig(bz), nil
@@ -211,9 +211,9 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
-		feeRate = m.feeConfig.FeeRateNative
+		feeRate = m.FeeConfig.FeeRateNative
 	} else if feeType == FeeByTradeToken {
-		feeRate = m.feeConfig.FeeRate
+		feeRate = m.FeeConfig.FeeRate
 	}
 
 	var fee big.Int
@@ -221,22 +221,22 @@ func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
 }
 
 func (m *FeeManager) ExpireFees() (int64, int64) {
-	return m.feeConfig.ExpireFeeNative, m.feeConfig.ExpireFee
+	return m.FeeConfig.ExpireFeeNative, m.FeeConfig.ExpireFee
 }
 
 func (m *FeeManager) IOCExpireFees() (int64, int64) {
-	return m.feeConfig.IOCExpireFeeNative, m.feeConfig.IOCExpireFee
+	return m.FeeConfig.IOCExpireFeeNative, m.FeeConfig.IOCExpireFee
 }
 
 func (m *FeeManager) CancelFees() (int64, int64) {
-	return m.feeConfig.CancelFeeNative, m.feeConfig.CancelFee
+	return m.FeeConfig.CancelFeeNative, m.FeeConfig.CancelFee
 }
 
 func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.ExpireFeeNative
+		return m.FeeConfig.ExpireFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.ExpireFee
+		return m.FeeConfig.ExpireFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
@@ -244,9 +244,9 @@ func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
 
 func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.IOCExpireFeeNative
+		return m.FeeConfig.IOCExpireFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.IOCExpireFee
+		return m.FeeConfig.IOCExpireFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
@@ -254,9 +254,9 @@ func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
 
 func (m *FeeManager) CancelFee(feeType FeeType) int64 {
 	if feeType == FeeByNativeToken {
-		return m.feeConfig.CancelFeeNative
+		return m.FeeConfig.CancelFeeNative
 	} else if feeType == FeeByTradeToken {
-		return m.feeConfig.CancelFee
+		return m.FeeConfig.CancelFee
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))

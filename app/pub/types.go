@@ -8,17 +8,18 @@ import (
 type BlockInfoToPublish struct {
 	height             int64
 	timestamp          int64
-	tradesToPublish    []Trade
+	tradesToPublish    []*Trade
 	orderChanges       orderPkg.OrderChanges
 	orderChangesMap    orderPkg.OrderInfoForPublish
 	accounts           map[string]Account
 	latestPricesLevels orderPkg.ChangedPriceLevelsMap
+	feeHolder          orderPkg.FeeHolder
 }
 
 func NewBlockInfoToPublish(
 	height int64,
 	timestamp int64,
-	tradesToPublish []Trade,
+	tradesToPublish []*Trade,
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
@@ -30,5 +31,6 @@ func NewBlockInfoToPublish(
 		orderChanges,
 		orderChangesMap,
 		accounts,
-		latestPriceLevels}
+		latestPriceLevels,
+		feeHolderCache}
 }

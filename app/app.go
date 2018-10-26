@@ -144,8 +144,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 func (app *BinanceChain) initDex() {
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.PublishOrderUpdates)
+	// TODO: make the concurrency configurable
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.ShouldPublishAny())
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
@@ -214,8 +215,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
 
-	var tradesToPublish []pub.Trade
-
+	var tradesToPublish []*pub.Trade
 	//match may end with transaction faliure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
@@ -354,7 +354,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account

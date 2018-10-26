@@ -115,7 +115,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack, 0, ""}
+		change := OrderChange{info.Id, Ack}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
