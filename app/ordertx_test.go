@@ -188,7 +188,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 43.2e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -249,7 +249,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(trades))
 	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8
 	// fee for this round is 8.73e8 BNB, totalFee is 95.13e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))

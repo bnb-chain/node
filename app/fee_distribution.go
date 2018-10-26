@@ -39,11 +39,11 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 			avgAmount := amount / valSize
 			roundingAmount := amount - avgAmount*valSize
 			if avgAmount != 0 {
-				avgTokens = append(avgTokens, sdk.NewCoin(token.Denom, avgAmount))
+				avgTokens = append(avgTokens, sdk.NewInt64Coin(token.Denom, avgAmount))
 			}
 
 			if roundingAmount != 0 {
-				roundingTokens = append(roundingTokens, sdk.NewCoin(token.Denom, roundingAmount))
+				roundingTokens = append(roundingTokens, sdk.NewInt64Coin(token.Denom, roundingAmount))
 			}
 		}
 
