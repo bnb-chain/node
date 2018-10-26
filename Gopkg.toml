@@ -39,7 +39,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/BiJie/bnc-cosmos-sdk"
-  revision = "00a98d9090fb1ed2ad82145e1e5a4f0e978d4529"
+  revision = "dc0f16fb18ce611b8cde5237d3f6f4550dcb4b6b"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -56,6 +56,10 @@
 [[constraint]]
   branch = "master"
   name = "github.com/deathowl/go-metrics-prometheus"
+
+[prune]
+  go-tests = true
+  unused-packages = true
 
 [prune]
   go-tests = true

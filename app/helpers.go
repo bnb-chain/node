@@ -20,9 +20,15 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/plugins/dex/list"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
+	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
+	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 )
 
 // nolint - Mostly for testing
@@ -136,4 +142,42 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 		context.Logger = logger
 		return nil
 	}
+}
+
+func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context) {
+	switch ct := msg.(type) {
+	case list.ListMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case order.NewOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case order.CancelOrderMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Sender)
+	case issue.IssueMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case burn.BurnMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.FreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case freeze.UnfreezeMsg:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.From)
+	case bank.MsgSend:
+		newCtx = addInvolvedAddressesToCtx(ctx, ct.Inputs[0].Address, ct.Outputs[0].Address)
+	default:
+		// TODO(#66): correct error handling
+	}
+	return
+}
+
+func addInvolvedAddressesToCtx(ctx sdk.Context, addresses ...sdk.AccAddress) (newCtx sdk.Context) {
+	var newAddress []string
+	if addresses, ok := ctx.Value(InvolvedAddressKey).([]string); ok {
+		newAddress = addresses
+	} else {
+		newAddress = make([]string, 0)
+	}
+	for _, address := range addresses {
+		newAddress = append(newAddress, string(address.Bytes()))
+	}
+	newCtx = ctx.WithValue(InvolvedAddressKey, newAddress)
+	return
 }

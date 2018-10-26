@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"io"
 	"os"
 
@@ -18,7 +19,6 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
-	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -52,7 +52,7 @@ var (
 
 // BinanceChain is the BNBChain ABCI application
 type BinanceChain struct {
-	*BaseApp
+	*baseapp.BaseApp
 	Codec *wire.Codec
 
 	// the abci query handler mapping is `prefix -> handler`
@@ -80,7 +80,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the application object
 	var app = &BinanceChain{
-		BaseApp:           NewBaseApp(appName, cdc, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
+		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders /*, ServerContext.PublishAccountBalance*/, baseAppOptions...),
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		publicationConfig: ServerContext.PublicationConfig,
