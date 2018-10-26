@@ -24,13 +24,13 @@ const (
 // and deducts fees from the first signer.
 // nolint: gocyclo
 // TODO: remove gas
-func NewAnteHandler(am auth.AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
 
 		// This AnteHandler requires Txs to be StdTxs
-		stdTx, ok := tx.(StdTx)
+		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
 			return ctx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
@@ -83,7 +83,7 @@ func NewAnteHandler(am auth.AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHand
 			signerAddr, sig := signerAddrs[i], sigs[i]
 
 			// check signature, return account with incremented nonce
-			signBytes := StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], stdTx.Fee, msgs, stdTx.GetMemo())
+			signBytes := auth.StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
 			signerAcc, res := processSig(newCtx, am, signerAddr, sig, signBytes)
 			if !res.IsOK() {
 				return newCtx, res, true
@@ -108,7 +108,7 @@ func NewAnteHandler(am auth.AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHand
 }
 
 // Validate the transaction based on things that don't depend on the context
-func validateBasic(tx StdTx) (err sdk.Error) {
+func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	// Assert that there are signatures.
 	sigs := tx.GetSignatures()
 	if len(sigs) == 0 {
@@ -134,7 +134,7 @@ func validateBasic(tx StdTx) (err sdk.Error) {
 // if the account doesn't have a pubkey, set it.
 func processSig(
 	ctx sdk.Context, am auth.AccountKeeper,
-	addr sdk.AccAddress, sig StdSignature, signBytes []byte) (
+	addr sdk.AccAddress, sig auth.StdSignature, signBytes []byte) (
 	acc auth.Account, res sdk.Result) {
 
 	// Get the account.
