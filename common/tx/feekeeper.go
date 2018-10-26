@@ -1,8 +1,8 @@
 package tx
 
 import (
+	"github.com/BiJie/BinanceChain/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	wire "github.com/cosmos/cosmos-sdk/wire"
 )
 
 var (

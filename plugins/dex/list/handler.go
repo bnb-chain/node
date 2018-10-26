@@ -6,7 +6,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
@@ -14,7 +13,7 @@ import (
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) router.Handler {
+func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMsg:
