@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	NewOrder    = "orderNew"
-	CancelOrder = "orderCancel"
+	RouteNewOrder    = "orderNew"
+	RouteCancelOrder = "orderCancel"
 )
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
@@ -147,6 +147,8 @@ func TifStringToTifCode(tif string) (int8, error) {
 	return -1, errors.New("tif `" + upperTif + "` not found or supported")
 }
 
+var _ sdk.Msg = NewOrderMsg{}
+
 type NewOrderMsg struct {
 	Version     byte           `json:"version"`
 	Sender      sdk.AccAddress `json:"sender"`
@@ -158,8 +160,6 @@ type NewOrderMsg struct {
 	Quantity    int64          `json:"quantity"`
 	TimeInForce int8           `json:"timeinforce"`
 }
-
-var _ sdk.Msg = NewOrderMsg{}
 
 // NewNewOrderMsg constructs a new NewOrderMsg
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
@@ -200,7 +200,8 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 }
 
 // nolint
-func (msg NewOrderMsg) Type() string                 { return NewOrder }
+func (msg NewOrderMsg) Route() string { return RouteNewOrder }
+func (msg NewOrderMsg) Type() string                 { return RouteNewOrder }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
@@ -216,6 +217,9 @@ type OrderInfo struct {
 	TxHash               string
 }
 
+
+var _ sdk.Msg = CancelOrderMsg{}
+
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
 	Version byte `json:"version"`
@@ -224,8 +228,6 @@ type CancelOrderMsg struct {
 	Id      string `json:"id"`
 	RefId   string `json:"refid"`
 }
-
-var _ sdk.Msg = CancelOrderMsg{}
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
@@ -239,7 +241,8 @@ func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOr
 }
 
 // nolint
-func (msg CancelOrderMsg) Type() string                 { return CancelOrder }
+func (msg CancelOrderMsg) Route() string { return RouteCancelOrder }
+func (msg CancelOrderMsg) Type() string                 { return RouteCancelOrder }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
 	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)

@@ -12,7 +12,7 @@ import (
 // const BurnRoute = "tokens/burn"
 const BurnRoute = "tokensBurn"
 
-var _ sdk.Msg = (*BurnMsg)(nil)
+var _ sdk.Msg = BurnMsg{}
 
 type BurnMsg struct {
 	shared.MsgBase
@@ -20,6 +20,10 @@ type BurnMsg struct {
 
 func NewMsg(from sdk.AccAddress, symbol string, amount int64) BurnMsg {
 	return BurnMsg{shared.MsgBase{From: from, Symbol: symbol, Amount: amount}}
+}
+
+func (msg BurnMsg) Route() string {
+	return BurnRoute
 }
 
 func (msg BurnMsg) Type() string {

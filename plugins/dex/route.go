@@ -15,8 +15,8 @@ func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
 	accKeeper auth.AccountKeeper) map[string]router.Handler {
 	routes := make(map[string]router.Handler)
 	orderHandler := order.NewHandler(cdc, dexKeeper, accKeeper)
-	routes[order.NewOrder] = orderHandler
-	routes[order.CancelOrder] = orderHandler
+	routes[order.RouteNewOrder] = orderHandler
+	routes[order.RouteCancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper)
 	return routes
 }

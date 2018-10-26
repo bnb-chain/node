@@ -16,11 +16,6 @@ type MsgBase struct {
 	Amount  int64          `json:"amount"`
 }
 
-func (msg MsgBase) Type() string {
-	// TODO: panic here? - should not be accessed.
-	return "BASE"
-}
-
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg MsgBase) ValidateBasic() sdk.Error {
