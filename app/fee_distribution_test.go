@@ -58,7 +58,7 @@ func TestNoFeeDistribution(t *testing.T) {
 func TestFeeDistribution2Proposer(t *testing.T) {
 	// setup
 	am, ctx := setup()
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{110, 100, 100, 100})
 }
@@ -67,12 +67,12 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// setup
 	am, ctx := setup()
 	// fee amount can be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 40)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 40)}, types.FeeForAll))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 50)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 50)}, types.FeeForAll))
 	distributeFee(ctx, am)
 	checkBalance(t, ctx, am, []int64{124, 122, 122, 122})
 }

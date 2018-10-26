@@ -486,7 +486,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, am, 0)
 
 	// InCcy == BNB
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 0)})
+	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 0)})
 	tran := Transfer{
 		eventType:  eventFilled,
 		accAddress: acc.GetAddress(),
@@ -497,7 +497,7 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		unlock:     1000e8,
 	}
 	fee := keeper.calcOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 5e6)}, fee.Tokens)
 
 	// InCcy != BNB
 	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
@@ -512,13 +512,13 @@ func TestKeeper_CalcOrderFees(t *testing.T) {
 		unlock:     110e8,
 	}
 	// has enough bnb
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e8)})
+	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 1e8)})
 	fee = keeper.calcOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5e6)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 5e6)}, fee.Tokens)
 	// no enough bnb
-	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeToken, 1e6)})
+	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 1e6)})
 	fee = keeper.calcOrderFee(ctx, acc, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e8)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin("ABC", 1e8)}, fee.Tokens)
 }
 
 func TestKeeper_CalcExpireFee(t *testing.T) {
@@ -537,13 +537,13 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		unlock:     100e8,
 	}
 	fee := keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10000)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10000)}, fee.Tokens)
 	tran.eventType = eventIOCFullyExpire
 	fee = keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 5000)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 5000)}, fee.Tokens)
 	tran.out, tran.in, tran.out = 4000, 4000, 4000
 	fee = keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 4000)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 4000)}, fee.Tokens)
 
 	// sell ABC, and BNB as quote asset
 	tran = Transfer{
@@ -557,7 +557,7 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 	}
 	keeper.engines["ABC_"+types.NativeToken] = me.NewMatchEng(1e7, 1, 1)
 	fee = keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 100000)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin("ABC", 100000)}, fee.Tokens)
 	tran = Transfer{
 		eventType:  eventFullyExpire,
 		accAddress: acc.GetAddress(),
@@ -568,7 +568,7 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 		unlock:     900,
 	}
 	fee = keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 900)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin("ABC", 900)}, fee.Tokens)
 
 	// sell BTC, BNB as base asset
 	tran = Transfer{
@@ -582,7 +582,7 @@ func TestKeeper_CalcExpireFee(t *testing.T) {
 	}
 	keeper.engines[types.NativeToken+"_BTC"] = me.NewMatchEng(1e5, 1, 1)
 	fee = keeper.calcExpireFee(ctx, tran)
-	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC", 10)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin("BTC", 10)}, fee.Tokens)
 }
 
 func TestKeeper_ExpireOrders(t *testing.T) {
@@ -600,8 +600,8 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, ""}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e8), 20000, 0, 20000, 0, 0, ""}, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
-		sdk.NewCoin("ABC", 3e8),
-		sdk.NewCoin("BNB", 10e6),
+		sdk.NewInt64Coin("ABC", 3e8),
+		sdk.NewInt64Coin("BNB", 10e6),
 	}.Sort())
 	am.SetAccount(ctx, acc)
 
@@ -623,18 +623,18 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Equal(t, int64(2e8), buys[0].TotalLeavesQty())
 	require.Len(t, keeper.allOrders["XYZ_BNB"], 1)
 	expectFees := types.NewFee(sdk.Coins{
-		sdk.NewCoin("BNB", 30000),
-		sdk.NewCoin("ABC", 1000000),
+		sdk.NewInt64Coin("BNB", 30000),
+		sdk.NewInt64Coin("ABC", 1000000),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, tx.Fee(ctx))
 	acc = am.GetAccount(ctx, acc.GetAddress())
 	require.Equal(t, sdk.Coins{
-		sdk.NewCoin("ABC", 2e8),
-		sdk.NewCoin("BNB", 4e6),
+		sdk.NewInt64Coin("ABC", 2e8),
+		sdk.NewInt64Coin("BNB", 4e6),
 	}.Sort(), acc.(types.NamedAccount).GetLockedCoins())
 	require.Equal(t, sdk.Coins{
-		sdk.NewCoin("ABC", 99e6),
-		sdk.NewCoin("BNB", 597e4),
+		sdk.NewInt64Coin("ABC", 99e6),
+		sdk.NewInt64Coin("BNB", 597e4),
 	}.Sort(), acc.GetCoins())
 }
 
