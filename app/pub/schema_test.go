@@ -19,17 +19,17 @@ func TestMain(m *testing.M) {
 func TestTradesAndOrdersMarshaling(t *testing.T) {
 	trades := trades{
 		numOfMsgs: 1,
-		trades: []Trade{Trade{
+		trades: []*Trade{{
 			Id: "42-0", Symbol: "NNB_BNB", Price: 100, Qty: 100,
 			Sid: "s-1", Bid: "b-1",
-			Sfee: 10, SfeeAsset: "NNB", Bfee: 10, BfeeAsset: "BNB"}},
+			Sfee: "8BNB1ETH", Bfee: "10BNB1BTC"}},
 	}
 	orders := orders{
 		numOfMsgs: 3,
 		orders: []order{
-			order{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, 0, "", 100, 100, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
-			order{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, 10, "BNB", 100, 100, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
-			order{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, 10, "NNB", 99, 99, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
+			{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, "", 100, 100, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
+			{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "10BNB1BTC", 100, 100, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
+			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "8BNB1ETH", 99, 99, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
 		},
 	}
 	msg := tradesAndOrders{

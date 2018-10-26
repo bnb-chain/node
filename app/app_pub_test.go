@@ -42,9 +42,9 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 	am = app.AccountKeeper
-	_, buyerAcc := testutils.NewAccount(ctx, am, 100000000000) // give user enough coins to pay the fee
+	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
-	_, sellerAcc := testutils.NewAccount(ctx, am, 100000000000)
+	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000)
 	seller = sellerAcc.GetAddress()
 	return assert.New(t), require.New(t)
 }

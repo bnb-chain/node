@@ -183,13 +183,8 @@ func handleCancelOrder(
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
-				if !fee.IsEmpty() {
-					change := OrderChange{msg.Id, Canceled, fee.Tokens[0].Amount.Int64(), fee.Tokens[0].Denom}
-					keeper.OrderChanges = append(keeper.OrderChanges, change)
-				} else {
-					change := OrderChange{msg.Id, Canceled, 0, ""}
-					keeper.OrderChanges = append(keeper.OrderChanges, change)
-				}
+				change := OrderChange{msg.Id, Canceled}
+				keeper.OrderChanges = append(keeper.OrderChanges, change)
 			}
 		})
 		if err != nil {
