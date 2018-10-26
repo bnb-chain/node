@@ -14,7 +14,7 @@ import (
 
 // BalanceReqHandler creates an http request handler to get the token balances of a given address
 func BalancesReqHandler(
-	cdc *wire.Codec, ctx context.CoreContext, tokens tokens.Mapper,
+	cdc *wire.Codec, ctx context.CLIContext, tokens tokens.Mapper,
 ) http.HandlerFunc {
 	type response struct {
 		Address  string         `json:"address"`

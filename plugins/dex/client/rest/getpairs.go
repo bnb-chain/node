@@ -16,8 +16,8 @@ const maxPairsLimit = 1000
 const defaultPairsLimit = 100
 const defaultPairsOffset = 0
 
-func listAllTradingPairs(ctx context.CoreContext, cdc *wire.Codec, offset int, limit int) ([]types.TradingPair, error) {
-	bz, err := ctx.Query(fmt.Sprintf("dex/pairs/%d/%d", offset, limit))
+func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.TradingPair, error) {
+	bz, err := ctx.Query(fmt.Sprintf("dex/pairs/%d/%d", offset, limit), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func listAllTradingPairs(ctx context.CoreContext, cdc *wire.Codec, offset int, l
 }
 
 // GetPairsReqHandler creates an http request handler to list
-func GetPairsReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
 		limit  int
 		offset int

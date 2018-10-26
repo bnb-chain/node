@@ -1,10 +1,9 @@
 package commands
 
 import (
+	"github.com/BiJie/BinanceChain/common/client"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -23,9 +22,9 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "list",
 		Short: "",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(types.GetAccountDecoder(cdc))
+			cliCtx, txbldr := client.PrepareCtx(cdc)
 
-			from, err := ctx.GetFromAddress()
+			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -52,7 +51,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg := list.NewMsg(from, baseAsset, quoteAsset, initPrice)
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
+			client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err
 			}

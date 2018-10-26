@@ -10,12 +10,12 @@ import (
 )
 
 // QueryWithData queries information about the connected node
-func QueryWithData(ctx context.CoreContext, path string, data common.HexBytes) (res []byte, err error) {
+func QueryWithData(ctx context.CLIContext, path string, data common.HexBytes) (res []byte, err error) {
 	return query(ctx, path, data)
 }
 
 // Query from Tendermint with the provided storename and path
-func query(ctx context.CoreContext, path string, key common.HexBytes) (res []byte, err error) {
+func query(ctx context.CLIContext, path string, key common.HexBytes) (res []byte, err error) {
 	node, err := ctx.GetNode()
 	if err != nil {
 		return res, err

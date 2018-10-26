@@ -18,11 +18,11 @@ import (
 	cmn "github.com/BiJie/BinanceChain/common"
 )
 
-func newCoreContext(seq int64) context.CoreContext {
-	// TODO: necessary to make a CoreContext, maybe revisit
+func newCLIContext(seq int64) context.CLIContext {
+	// TODO: necessary to make a CLIContext, maybe revisit
 	nodeURI := "tcp://localhost:26657"
 	rpc := rpcclient.NewHTTP(nodeURI, "/")
-	return context.CoreContext{
+	return context.CLIContext{
 		Client:          rpc,
 		NodeURI:         nodeURI,
 		AccountStore:    cmn.AccountStoreName,
@@ -80,7 +80,7 @@ func TestCancelOrderMsg_ValidateBasic(t *testing.T) {
 }
 
 func TestGenerateOrderId(t *testing.T) {
-	cctx := newCoreContext(5)
+	cctx := newCLIContext(5)
 	viper.SetDefault(client.FlagSequence, "5")
 
 	sourceAddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj"
@@ -92,12 +92,12 @@ func TestGenerateOrderId(t *testing.T) {
 		panic(err)
 	}
 
-	cctx, err = context.EnsureSequence(cctx)
+	seq, err := cctx.GetAccountSequence([]byte(sourceAddr))
 	if err != nil {
 		panic(err)
 	}
 
-	orderID := GenerateOrderID(cctx.Sequence, addr)
+	orderID := GenerateOrderID(seq, addr)
 	if err != nil {
 		panic(err)
 	}

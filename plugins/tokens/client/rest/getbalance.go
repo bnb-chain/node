@@ -16,7 +16,7 @@ import (
 )
 
 // BalanceReqHandler creates an http request handler to get an individual token balance of a given address
-func BalanceReqHandler(cdc *wire.Codec, ctx context.CoreContext, tokens tokens.Mapper) http.HandlerFunc {
+func BalanceReqHandler(cdc *wire.Codec, ctx context.CLIContext, tokens tokens.Mapper) http.HandlerFunc {
 	type params struct {
 		address sdk.AccAddress
 		symbol  string

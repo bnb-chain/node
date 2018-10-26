@@ -25,7 +25,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 		Use:   "api-server",
 		Short: "Start the API server daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper()
+			ctx := context.NewCLIContext()
 			listenAddr := viper.GetString(flagListenAddr)
 			server := newServer(ctx, cdc).bindRoutes()
 			handler := server.router

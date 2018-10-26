@@ -27,7 +27,7 @@ func (t Tokens) GetSymbols() *[]string {
 type Mapper interface {
 	NewToken(ctx sdk.Context, token types.Token) error
 	Exists(ctx sdk.Context, symbol string) bool
-	ExistsCC(ctx context.CoreContext, symbol string) bool
+	ExistsCC(ctx context.CLIContext, symbol string) bool
 	GetTokenList(ctx sdk.Context) Tokens
 	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
 	// we do not provide the updateToken method
@@ -60,7 +60,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
 }
 
-func (m mapper) GetTokenCC(ctx context.CoreContext, symbol string) (types.Token, error) {
+func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
 	key := []byte(strings.ToUpper(symbol))
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
@@ -90,7 +90,7 @@ func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
 	return store.Has(key)
 }
 
-func (m mapper) ExistsCC(ctx context.CoreContext, symbol string) bool {
+func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 	key := []byte(strings.ToUpper(symbol))
 	bz, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
