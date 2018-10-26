@@ -6,7 +6,9 @@ import (
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
+	"github.com/pkg/errors"
 )
 
 func PrepareCtx(cdc *codec.Codec) (context.CLIContext, txbuilder.TxBuilder) {
@@ -15,6 +17,27 @@ func PrepareCtx(cdc *codec.Codec) (context.CLIContext, txbuilder.TxBuilder) {
 		WithCodec(cdc).
 		WithAccountDecoder(types.GetAccountDecoder(cdc))
 	return cliCtx, txBldr
+}
+
+func BuildUnsignedTx(builder txbuilder.TxBuilder, acc auth.Account, msgs []sdk.Msg) (*[]byte, error) {
+	chainID := builder.ChainID
+	if chainID == "" {
+		return nil, errors.Errorf("chain ID required but not specified")
+	}
+	accnum := acc.GetAccountNumber()
+	sequence := acc.GetSequence()
+	memo := builder.Memo
+
+	signMsg := 	txbuilder.StdSignMsg {
+		ChainID:       chainID,
+		AccountNumber: accnum,
+		Sequence:      sequence,
+		Msgs:          msgs,
+		Memo:          memo,
+	}
+	// sign and build
+	bz := signMsg.Bytes()
+	return &bz, nil
 }
 
 func SendOrPrintTx(ctx context.CLIContext, builder txbuilder.TxBuilder, msg sdk.Msg) error {
