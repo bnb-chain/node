@@ -2,17 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"io"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	gaiaInit "github.com/cosmos/cosmos-sdk/cmd/gaia/init"
+	"github.com/cosmos/cosmos-sdk/server"
 
 	"github.com/BiJie/BinanceChain/app"
 )
@@ -36,9 +39,9 @@ func main() {
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
-	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
-		server.ConstructAppCreator(newApp, "bnbchain"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))
+	appInit := app.BinanceAppInit()
+	rootCmd.AddCommand(gaiaInit.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, appInit, newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)

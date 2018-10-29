@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,21 +30,6 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 )
-
-// nolint - Mostly for testing
-func (app *BaseApp) Check(tx sdk.Tx) (result sdk.Result) {
-	return app.runTx(runTxModeCheck, nil, tx)
-}
-
-// nolint - full tx execution
-func (app *BaseApp) Simulate(tx sdk.Tx) (result sdk.Result) {
-	return app.runTx(runTxModeSimulate, nil, tx)
-}
-
-// nolint
-func (app *BaseApp) Deliver(tx sdk.Tx) (result sdk.Result) {
-	return app.runTx(runTxModeDeliver, nil, tx)
-}
 
 // RunForever - BasecoinApp execution and cleanup
 func RunForever(app abci.Application) {
@@ -171,7 +157,7 @@ func collectInvolvedAddresses(ctx sdk.Context, msg sdk.Msg) (newCtx sdk.Context)
 
 func addInvolvedAddressesToCtx(ctx sdk.Context, addresses ...sdk.AccAddress) (newCtx sdk.Context) {
 	var newAddress []string
-	if addresses, ok := ctx.Value(InvolvedAddressKey).([]string); ok {
+	if addresses, ok := ctx.Value(baseapp.InvolvedAddressKey).([]string); ok {
 		newAddress = addresses
 	} else {
 		newAddress = make([]string, 0)
@@ -179,6 +165,6 @@ func addInvolvedAddressesToCtx(ctx sdk.Context, addresses ...sdk.AccAddress) (ne
 	for _, address := range addresses {
 		newAddress = append(newAddress, string(address.Bytes()))
 	}
-	newCtx = ctx.WithValue(InvolvedAddressKey, newAddress)
+	newCtx = ctx.WithValue(baseapp.InvolvedAddressKey, newAddress)
 	return
 }
