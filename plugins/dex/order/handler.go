@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/app/router"
-	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -88,9 +87,9 @@ func handleNewOrder(
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	// this is done in memory! we must not run this block in checktx or simulate!
+	// this is done in memory! we will run this block in checktx/simulate
 	if ctx.IsCheckTx() || simulate {
-		log.With("module", "dex").Info("Incoming New Order", "order", msg)
+		logger.Info("Incoming New Order", "order", msg)
 		//only check whether there exists order to cancel
 		if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
 			errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
@@ -125,7 +124,7 @@ func handleNewOrder(
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
+	if !ctx.IsCheckTx() && !simulate { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
 			timestamp := ctx.BlockHeader().Time
@@ -198,7 +197,7 @@ func handleCancelOrder(
 			}
 		}
 	} else {
-		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
+		logger.Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	}
 	if err != nil {
