@@ -36,9 +36,7 @@ func main() {
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
-	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
-		server.ConstructAppCreator(newApp, "bnbchain"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(), newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)

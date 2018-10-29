@@ -77,7 +77,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// create composed tx decoder
 	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
 
-	// create the application object
+	// create the applicationsimulate object
 	var app = &BinanceChain{
 		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders /*, ServerContext.PublishAccountBalance*/, baseAppOptions...),
 		Codec:             cdc,
