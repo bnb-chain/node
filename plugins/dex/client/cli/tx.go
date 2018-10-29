@@ -69,7 +69,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			msg, err := order.NewNewOrderMsgAuto(cliCtx, from, side, symbol, price, qty)
+			msg, err := order.NewNewOrderMsgAuto(txBldr, from, side, symbol, price, qty)
 			if err != nil {
 				panic(err)
 			}

@@ -39,7 +39,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/BiJie/bnc-cosmos-sdk"
-  revision = "dc0f16fb18ce611b8cde5237d3f6f4550dcb4b6b"
+  revision = "fe8f05266a0c7edb77b03ab72790f9f8dda43df1"
 
 [[constraint]]
   name = "github.com/pkg/errors"

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
@@ -120,8 +121,8 @@ func handleNewOrder(
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
-		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
+	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
+		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
 			timestamp := ctx.BlockHeader().Time.Unix()
 			msg := OrderInfo{
