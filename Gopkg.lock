@@ -56,7 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:e19062fa4871f6cb8c4c10b87e32b1fec668fca9ac51afc2cdc52aa80c55d136"
+  digest = "1:d1a8fd3642589dafe8372dba43ae4771f46f42c0363980b4820b70138d0c86f9"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -66,6 +66,8 @@
     "client/rpc",
     "client/tx",
     "client/utils",
+    "cmd/gaia/app",
+    "cmd/gaia/init",
     "codec",
     "crypto",
     "crypto/keys",
@@ -85,9 +87,25 @@
     "x/bank/client",
     "x/bank/client/cli",
     "x/bank/client/rest",
+    "x/distribution",
+    "x/distribution/keeper",
+    "x/distribution/tags",
+    "x/distribution/types",
+    "x/gov",
+    "x/gov/tags",
     "x/ibc",
     "x/ibc/client/cli",
+    "x/mint",
     "x/mock",
+    "x/params",
+    "x/params/subspace",
+    "x/slashing",
+    "x/stake",
+    "x/stake/client/cli",
+    "x/stake/keeper",
+    "x/stake/querier",
+    "x/stake/tags",
+    "x/stake/types",
   ]
   pruneopts = "UT"
   revision = "a90c5e4b65e751addfd807ea49641bf2a9e46a8d"
@@ -770,10 +788,10 @@
     "github.com/cosmos/cosmos-sdk/client/rpc",
     "github.com/cosmos/cosmos-sdk/client/tx",
     "github.com/cosmos/cosmos-sdk/client/utils",
+    "github.com/cosmos/cosmos-sdk/cmd/gaia/init",
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
-    "github.com/cosmos/cosmos-sdk/server/config",
     "github.com/cosmos/cosmos-sdk/store",
     "github.com/cosmos/cosmos-sdk/types",
     "github.com/cosmos/cosmos-sdk/version",
@@ -794,7 +812,6 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/spf13/cobra",
-    "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
