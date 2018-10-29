@@ -12,7 +12,7 @@ import (
 )
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
-	proposerAddr := ctx.BlockHeader().Proposer.Address
+	proposerAddr := ctx.BlockHeader().ProposerAddress
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
 	if fee.IsEmpty() {

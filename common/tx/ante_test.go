@@ -462,7 +462,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 }
 
 func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
