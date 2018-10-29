@@ -229,6 +229,3 @@ func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.Accoun
 	am.SetAccount(ctx, acc)
 	return sdk.Result{}
 }
-
-// BurnFeeHandler burns all fees (decreasing total supply)
-func BurnFeeHandler(_ sdk.Context, _ sdk.Tx, _ sdk.Coins) {}

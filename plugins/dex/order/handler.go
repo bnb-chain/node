@@ -25,12 +25,12 @@ type NewOrderResponse struct {
 
 // NewHandler - returns a handler for dex type messages.
 func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, accKeeper, msg, simulate)
+			return handleNewOrder(ctx, cdc, k, accKeeper, msg)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, accKeeper, msg, simulate)
+			return handleCancelOrder(ctx, k, accKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -79,7 +79,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountKeeper, msg NewOrderMsg, simulate bool,
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountKeeper, msg NewOrderMsg,
 ) sdk.Result {
 	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
 	if err != nil {
@@ -87,14 +87,10 @@ func handleNewOrder(
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	// this is done in memory! we must not run this block in checktx or simulate!
-	if ctx.IsCheckTx() || simulate {
-		log.With("module", "dex").Info("Incoming New Order", "order", msg)
-		//only check whether there exists order to cancel
-		if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
-			errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
-			return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
-		}
+	log.With("module", "dex").Info("Incoming New Order", "order", msg)
+	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
+		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
+		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 	}
 
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
@@ -124,7 +120,7 @@ func handleNewOrder(
 	updateLockedOfAccount(ctx, accountMapper, msg.Sender, symbolToLock, amountToLock)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() { // only subtract coins & insert into OB during DeliverTx
+	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
 			timestamp := ctx.BlockHeader().Time.Unix()
@@ -160,7 +156,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountKeeper, msg CancelOrderMsg, simulate bool,
+	ctx sdk.Context, keeper *Keeper, accountMapper auth.AccountKeeper, msg CancelOrderMsg,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -180,7 +176,7 @@ func handleCancelOrder(
 	var err error
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate {
+	if ctx.IsDeliverTx() {
 		//remove order from cache and order book
 		ord, err = keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price, false)
 		if err != nil {

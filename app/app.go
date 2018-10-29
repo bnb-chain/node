@@ -102,7 +102,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// legacy bank route (others moved to plugin init funcs)
 	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
 	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		return sdkBankHandler(ctx, msg)
+		return sdkBankHandler(ctx, msg, simulate)
 	}
 	app.Router().AddRoute("bank", bankHandler)
 

@@ -15,7 +15,7 @@ import (
 
 // NewHandler creates a new token freeze message handler
 func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
 			return handleFreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)

@@ -16,7 +16,7 @@ import (
 
 // NewHandler creates a new token issue message handler
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(IssueMsg); ok {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		}

@@ -12,7 +12,7 @@ import (
 )
 
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(BurnMsg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
 		}

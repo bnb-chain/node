@@ -14,10 +14,10 @@ import (
 
 // NewHandler initialises dex message handlers
 func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMsg:
-			return handleList(ctx, keeper, tokenMapper, msg, simulate)
+			return handleList(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -26,9 +26,10 @@ func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
 }
 
 func handleList(
-	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, msg ListMsg, simulate bool,
+	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, msg ListMsg,
 ) sdk.Result {
-	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) || keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
+	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) ||
+		keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
@@ -52,7 +53,7 @@ func handleList(
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate { // only add engine during DeliverTx
+	if ctx.IsDeliverTx() { // only add engine during DeliverTx
 		keeper.AddEngine(pair)
 		log.With("module", "dex").Info("List new Pair and created new match engine", "pair", pair)
 	}
