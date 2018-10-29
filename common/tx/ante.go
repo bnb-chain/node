@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	deductFeesCost    sdk.Gas = 10
-	memoCostPerByte   sdk.Gas = 1
-	verifyCost                = 100
 	maxMemoCharacters         = 100
 )
 
@@ -23,7 +20,6 @@ const (
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
 // nolint: gocyclo
-// TODO: remove gas
 func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx, simulate bool,
@@ -155,7 +151,6 @@ func processSig(
 	}
 
 	// Check sig.
-	ctx.GasMeter().ConsumeGas(verifyCost, "ante verify")
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return nil, sdk.ErrUnauthorized("signature verification failed").Result()
 	}
