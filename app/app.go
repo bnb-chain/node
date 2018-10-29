@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 	"io"
 	"os"
 
@@ -11,11 +12,6 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
-
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
@@ -30,6 +26,10 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 )
 
 const (
@@ -332,6 +332,7 @@ func MakeCodec() *wire.Codec {
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
+	stake.RegisterCodec(cdc)
 
 	return cdc
 }
