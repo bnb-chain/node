@@ -355,7 +355,6 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 		Sequence:      seqNum,
 		Msgs:          msgs,
 		Memo:          "Memo1",
-		Fee:           auth.NewStdFee(int64(100), fee), // TODO run simulate to estimate gas?
 	}
 	sig, _ := privKey.Sign(signMsg.Bytes())
 	sigs := []auth.StdSignature{{
@@ -364,7 +363,7 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 		AccountNumber: accountNumber,
 		Sequence:      seqNum,
 	}}
-	tx := auth.NewStdTx(signMsg.Msgs, signMsg.Fee, sigs, signMsg.Memo)
+	tx := auth.NewStdTx(signMsg.Msgs, sigs, signMsg.Memo)
 	return tx
 }
 
