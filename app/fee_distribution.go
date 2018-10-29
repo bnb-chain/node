@@ -12,7 +12,7 @@ import (
 )
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
-	proposerAddr := ctx.BlockHeader().Proposer.Address
+	proposerAddr := ctx.BlockHeader().ProposerAddress
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
 	if fee.IsEmpty() {
@@ -26,8 +26,8 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 		am.SetAccount(ctx, proposerAcc)
 	} else if fee.Type == types.FeeForAll {
-		signingValidators := ctx.SigningValidators()
-		valSize := int64(len(signingValidators))
+		voteInfos := ctx.VoteInfos()
+		valSize := int64(len(voteInfos))
 		log.Info("Distributing the fees to all the validators",
 			"totalFees", fee.Tokens, "validatorSize", valSize)
 		avgTokens := sdk.Coins{}
@@ -52,8 +52,8 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 			proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 			am.SetAccount(ctx, proposerAcc)
 		} else {
-			for _, signingValidator := range signingValidators {
-				validator := signingValidator.Validator
+			for _, voteInfo := range voteInfos {
+				validator := voteInfo.Validator
 				validatorAcc := am.GetAccount(ctx, validator.Address)
 				if bytes.Equal(proposerAddr, validator.Address) && !roundingTokens.IsZero() {
 					validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))

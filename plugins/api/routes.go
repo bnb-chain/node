@@ -55,7 +55,7 @@ func (s *server) bindRoutes() *server {
 
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
-	keys.RegisterRoutes(r)
+	keys.RegisterRoutes(r, true)
 	rpc.RegisterRoutes(s.ctx, r)
 	tx.RegisterRoutes(s.ctx, r, s.cdc)
 	auth.RegisterRoutes(s.ctx, r, s.cdc, s.accStoreName)

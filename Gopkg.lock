@@ -56,7 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:14df9590ca8f966af520211bb7be3463301002208e2041b0022fb4fd50c35757"
+  digest = "1:9eafb62fe942a08df68359b2934a62e3fc725899d685cf03e20424664c2f78c7"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -90,7 +90,7 @@
     "x/mock",
   ]
   pruneopts = "UT"
-  revision = "dc0f16fb18ce611b8cde5237d3f6f4550dcb4b6b"
+  revision = "fe8f05266a0c7edb77b03ab72790f9f8dda43df1"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -636,8 +636,7 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d57b2eca05cbaa81d36952af1ccabe8d1f17a6ae8945b94505858299cbd24b22"
+  digest = "1:aaff04fa01d9b824fde6799759cc597b3ac3671b9ad31924c28b6557d0ee5284"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -657,7 +656,8 @@
     "salsa20/salsa",
   ]
   pruneopts = "UT"
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+  source = "https://github.com/tendermint/crypto"
 
 [[projects]]
   digest = "1:d36f55a999540d29b6ea3c2ea29d71c76b1d9853fdcd3e5c5cb4836f2ba118f1"
@@ -769,6 +769,8 @@
     "github.com/cosmos/cosmos-sdk/client/keys",
     "github.com/cosmos/cosmos-sdk/client/rpc",
     "github.com/cosmos/cosmos-sdk/client/tx",
+    "github.com/cosmos/cosmos-sdk/client/utils",
+    "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
     "github.com/cosmos/cosmos-sdk/server/config",
@@ -778,6 +780,7 @@
     "github.com/cosmos/cosmos-sdk/x/auth",
     "github.com/cosmos/cosmos-sdk/x/auth/client/cli",
     "github.com/cosmos/cosmos-sdk/x/auth/client/rest",
+    "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder",
     "github.com/cosmos/cosmos-sdk/x/bank",
     "github.com/cosmos/cosmos-sdk/x/bank/client/cli",
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",

@@ -28,19 +28,19 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context) {
 	_, valAcc3 := testutils.NewAccount(ctx, mapper, 100)
 
 	proposer := abci.Validator{Address: proposerAcc.GetAddress(), Power: 10}
-	ctx = ctx.WithBlockHeader(abci.Header{Proposer: proposer}).WithSigningValidators([]abci.SigningValidator{
-		{proposer, true},
-		{abci.Validator{Address: valAcc1.GetAddress(), Power: 10}, true},
-		{abci.Validator{Address: valAcc2.GetAddress(), Power: 10}, true},
-		{abci.Validator{Address: valAcc3.GetAddress(), Power: 10}, true},
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerAcc.GetAddress()}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: proposer, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc1.GetAddress(), Power: 10}, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc2.GetAddress(), Power: 10}, SignedLastBlock: true},
+		{Validator: abci.Validator{Address: valAcc3.GetAddress(), Power: 10}, SignedLastBlock: true},
 	})
 
 	return
 }
 
 func checkBalance(t *testing.T, ctx sdk.Context, am auth.AccountKeeper, vals []int64) {
-	for i, val := range ctx.SigningValidators() {
-		valAcc := am.GetAccount(ctx, val.Validator.Address)
+	for i, voteInfo := range ctx.VoteInfos() {
+		valAcc := am.GetAccount(ctx, voteInfo.Validator.Address)
 		require.Equal(t, vals[i], valAcc.GetCoins().AmountOf(types.NativeToken).Int64())
 	}
 }

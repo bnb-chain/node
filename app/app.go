@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"io"
 	"os"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -59,17 +59,17 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper          bank.Keeper
-	DexKeeper           *dex.DexKeeper
-	AccountKeeper       auth.AccountKeeper
-	TokenMapper         tkstore.Mapper
+	CoinKeeper    bank.Keeper
+	DexKeeper     *dex.DexKeeper
+	AccountKeeper auth.AccountKeeper
+	TokenMapper   tkstore.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
-func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*BaseApp)) *BinanceChain {
+func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BinanceChain {
 
 	// create app-level codec for txs and accounts
 	var cdc = Codec
@@ -102,7 +102,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// legacy bank route (others moved to plugin init funcs)
 	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
 	bankHandler := func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
-		return sdkBankHandler(ctx, msg)
+		return sdkBankHandler(ctx, msg, false)
 	}
 	app.Router().AddRoute("bank", bankHandler)
 
@@ -130,17 +130,18 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 }
 
 func (app *BinanceChain) initDex() {
-	tradingPairMapper := dex.NewTradingPairMapper(app.cdc, common.PairStoreKey)
+	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
-	// do not proceed if we are in a unit test and `checkState` is unset.
-	if app.checkState == nil {
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.PublishOrderUpdates)
+	// do not proceed if we are in a unit test and `CheckState` is unset.
+	if app.CheckState == nil {
 		return
 	}
 	// configure dex keeper
-	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
+	app.DexKeeper.FeeConfig.Init(app.CheckState.Ctx)
 	// count back to 7 days.
-	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
+	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, 7,
+		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
@@ -191,7 +192,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	// lastBlockTime would be 0 if this is the first block.
-	lastBlockTime := app.checkState.ctx.BlockHeader().Time
+	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
 	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
@@ -252,7 +253,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 	genState := GenesisState{
 		Accounts: accounts,
 	}
-	appState, err = wire.MarshalJSONIndent(app.cdc, genState)
+	appState, err = wire.MarshalJSONIndent(app.Codec, genState)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -261,7 +262,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 
 // Query performs an abci query.
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	path := splitPath(req.Path)
+	path := baseapp.SplitPath(req.Path)
 	if len(path) == 0 {
 		msg := "no query path provided"
 		return sdk.ErrUnknownRequest(msg).QueryResult()
@@ -292,13 +293,13 @@ func (app *BinanceChain) GetCodec() *wire.Codec {
 }
 
 // GetRouter returns the app's Router.
-func (app *BinanceChain) GetRouter() router.Router {
+func (app *BinanceChain) GetRouter() baseapp.Router {
 	return app.Router()
 }
 
 // GetContextForCheckState gets the context for the check state.
 func (app *BinanceChain) GetContextForCheckState() sdk.Context {
-	return app.checkState.ctx
+	return app.CheckState.Ctx
 }
 
 // default custom logic for transaction decoding
@@ -340,11 +341,11 @@ func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, h
 
 	var accountsToPublish map[string]pub.Account
 	if app.publicationConfig.PublishAccountBalance {
-		txRelatedAccounts, _ := ctx.Value(InvolvedAddressKey).([]string)
+		txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
 		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
 		accountsToPublish = pub.GetAccountBalances(app.AccountKeeper, ctx, txRelatedAccounts, tradeRelatedAccounts)
 		defer func() {
-			app.deliverState.ctx = ctx.WithValue(InvolvedAddressKey, make([]string, 0))
+			app.DeliverState.Ctx = ctx.WithValue(baseapp.InvolvedAddressKey, make([]string, 0))
 		}() // clean up
 	}
 
