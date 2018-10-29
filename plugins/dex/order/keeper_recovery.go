@@ -63,7 +63,6 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 
 func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
-	logger := bnclog.With("module", "dex")
 	effectedStoreKeys = make([]string, 0)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
@@ -98,10 +97,8 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 }
 
 func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
-	logger := bnclog.With("module", "dex")
-	kvStore := ctx.KVStore(kp.storeKey)
-	timeNow := time.Now()
-	height := kp.GetBreatheBlockHeight(timeNow, kvStore, daysBack)
+	timeNow := utils.Now()
+	height := kp.getLastBreatheBlockHeight(ctx, timeNow, daysBack)
 	logger.Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
@@ -186,7 +183,6 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 
 func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 	height int64, timestamp time.Time) {
-	logger := bnclog.With("module", "dex")
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
 		return
@@ -230,7 +226,6 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 
 func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
-	logger := bnclog.With("module", "dex")
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		logger.Info("Relaying block for order book", "height", i)
@@ -245,7 +240,6 @@ func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, l
 	if err != nil {
 		panic(err)
 	}
-	logger := bnclog.With("module", "dex")
 	blockStore := bc.NewBlockStore(blockDB)
 	logger.Info("Initialized Block Store for replay")
 	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
