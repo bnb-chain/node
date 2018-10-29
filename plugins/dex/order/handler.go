@@ -26,7 +26,7 @@ type NewOrderResponse struct {
 
 // NewHandler - returns a handler for dex type messages.
 func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
 			return handleNewOrder(ctx, cdc, k, accKeeper, msg, simulate)

@@ -14,7 +14,7 @@ import (
 
 // NewHandler initialises dex message handlers
 func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMsg:
 			return handleList(ctx, keeper, tokenMapper, msg, simulate)
