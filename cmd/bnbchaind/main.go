@@ -14,10 +14,10 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	gaiaInit "github.com/cosmos/cosmos-sdk/cmd/gaia/init"
 	"github.com/cosmos/cosmos-sdk/server"
 
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/cmd/bnbchaind/init"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -40,7 +40,8 @@ func main() {
 	}
 
 	appInit := app.BinanceAppInit()
-	rootCmd.AddCommand(gaiaInit.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(init.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(init.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, appInit, newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
