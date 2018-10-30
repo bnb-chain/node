@@ -28,8 +28,8 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	responseType := "application/json"
 
 	throw := func(w http.ResponseWriter, status int, err error) {
-		w.WriteHeader(status)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(status)
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -76,8 +76,8 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
+		w.WriteHeader(http.StatusOK)
 
 		err = rutils.StreamDepthResponse(w, ob, limit)
 		if err != nil {

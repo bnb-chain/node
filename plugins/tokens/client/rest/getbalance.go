@@ -28,8 +28,8 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CLIContext, tokens tokens.Ma
 		Balance TokenBalance `json:"balance"`
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
-		w.WriteHeader(status)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(status)
 		w.Write([]byte(err.Error()))
 		return
 	}
