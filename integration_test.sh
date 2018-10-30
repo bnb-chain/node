@@ -14,6 +14,9 @@ keys_operation_words="cosmosaccaddr"
 chain_operation_words="Committed"
 order_book_words="10.00000000"
 
+round="1"
+rounds="2"
+
 function prepare_node() {
 	cp -f ../networks/demo/*.exp .
 
@@ -40,7 +43,7 @@ function exit_test() {
 }
 
 function check_operation() {
-	printf "\n=================== Checking $1 ===================\n"
+	printf "\n=================== Checking $1 (${round}/${rounds}) ===================\n"
 	echo "$2"
 
 	echo "$2" | grep -q $3
@@ -66,6 +69,9 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "cosmosacc
 # wait for the chain
 sleep 10s
 
+
+## ROUND 1 ##
+
 # send
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} 100000000000000BNB ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
@@ -88,7 +94,7 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]*-[0-9]*")
 printf "Order ID: $order_id\n"
 
-sleep 1s
+sleep 2s
 # cancel order
 result=$(expect ./cancel.exp BTC_BNB ${order_id} alice ${chain_id} ${cli_home})
 check_operation "Cancel Order" "${result}" "${chain_operation_words}"
@@ -98,6 +104,7 @@ sleep 1s
 result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
+echo ""
 ./bnbcli dex show -l BTC_BNB
 
 sleep 1s
@@ -107,5 +114,40 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 result=$(./bnbcli dex show -l BTC_BNB)
 check_operation "Order Book" "${result}" "${order_book_words}"
+
+
+## ROUND 2 ##
+
+round="2"
+
+sleep 1s
+# place buy order
+result=$(expect ./order.exp BTC_BNB 1 100000000 2000000000 alice ${chain_id} gtc ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]*-[0-9]*")
+printf "Order ID: $order_id\n"
+
+sleep 2s
+# cancel order
+result=$(expect ./cancel.exp BTC_BNB ${order_id} alice ${chain_id} ${cli_home})
+check_operation "Cancel Order" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# place buy order
+result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+
+echo ""
+./bnbcli dex show -l BTC_BNB
+
+sleep 1s
+# place Sell order
+result=$(expect ./order.exp BTC_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+
+result=$(./bnbcli dex show -l BTC_BNB)
+check_operation "Order Book" "${result}" "${order_book_words}"
+
 
 exit_test 0
