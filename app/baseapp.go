@@ -593,7 +593,7 @@ func getState(app *BaseApp, mode runTxMode) *state {
 
 func (app *BaseApp) initializeContext(ctx sdk.Context, mode runTxMode) sdk.Context {
 	if mode == runTxModeSimulate {
-		ctx = ctx.WithMultiStore(getState(app, runTxModeSimulate).CacheMultiStore())
+		//ctx = ctx.WithMultiStore(getState(app, runTxModeSimulate).CacheMultiStore())
 	}
 	return ctx
 }
