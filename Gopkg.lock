@@ -56,7 +56,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:d1a8fd3642589dafe8372dba43ae4771f46f42c0363980b4820b70138d0c86f9"
+  branch = "upgrade25"
+  digest = "1:8ff6df1c40db45026bc33163c929f3bdb9f5a3b5a30cec912d5ca879b6b5efd1"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -67,7 +68,6 @@
     "client/tx",
     "client/utils",
     "cmd/gaia/app",
-    "cmd/gaia/init",
     "codec",
     "crypto",
     "crypto/keys",
@@ -76,6 +76,7 @@
     "crypto/keys/mintkey",
     "server",
     "server/config",
+    "server/mock",
     "store",
     "types",
     "version",
@@ -108,7 +109,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "a90c5e4b65e751addfd807ea49641bf2a9e46a8d"
+  revision = "f285f07748a47b33fe91285fa5228ba1f0d7bbfd"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -788,10 +789,11 @@
     "github.com/cosmos/cosmos-sdk/client/rpc",
     "github.com/cosmos/cosmos-sdk/client/tx",
     "github.com/cosmos/cosmos-sdk/client/utils",
-    "github.com/cosmos/cosmos-sdk/cmd/gaia/init",
+    "github.com/cosmos/cosmos-sdk/cmd/gaia/app",
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
+    "github.com/cosmos/cosmos-sdk/server/mock",
     "github.com/cosmos/cosmos-sdk/store",
     "github.com/cosmos/cosmos-sdk/types",
     "github.com/cosmos/cosmos-sdk/version",
@@ -804,6 +806,8 @@
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/ibc/client/cli",
     "github.com/cosmos/cosmos-sdk/x/mock",
+    "github.com/cosmos/cosmos-sdk/x/stake",
+    "github.com/cosmos/cosmos-sdk/x/stake/client/cli",
     "github.com/deathowl/go-metrics-prometheus",
     "github.com/eapache/go-resiliency/breaker",
     "github.com/google/btree",
@@ -834,6 +838,8 @@
     "github.com/tendermint/tendermint/libs/common",
     "github.com/tendermint/tendermint/libs/db",
     "github.com/tendermint/tendermint/libs/log",
+    "github.com/tendermint/tendermint/p2p",
+    "github.com/tendermint/tendermint/privval",
     "github.com/tendermint/tendermint/rpc/client",
     "github.com/tendermint/tendermint/rpc/core/types",
     "github.com/tendermint/tendermint/rpc/lib/server",
