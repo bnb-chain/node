@@ -23,8 +23,8 @@ func BalancesReqHandler(
 	responseType := "application/json"
 
 	throw := func(w http.ResponseWriter, status int, err error) {
-		w.WriteHeader(status)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(status)
 		w.Write([]byte(err.Error()))
 		return
 	}
@@ -57,8 +57,8 @@ func BalancesReqHandler(
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
+		w.WriteHeader(http.StatusOK)
 		w.Write(output)
 	}
 }
