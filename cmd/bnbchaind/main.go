@@ -17,7 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 
 	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/cmd/bnbchaind/init"
+	"github.com/BiJie/BinanceChain/cmd/bnbchaind/utils"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -40,8 +40,8 @@ func main() {
 	}
 
 	appInit := app.BinanceAppInit()
-	rootCmd.AddCommand(init.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
-	rootCmd.AddCommand(init.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(utils.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(utils.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, appInit, newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
