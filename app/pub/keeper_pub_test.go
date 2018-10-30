@@ -103,7 +103,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{0x01,buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
+	msg := orderPkg.NewOrderMsg{0x01, buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
 
 	require.Len(keeper.OrderChanges, 1)

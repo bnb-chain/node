@@ -547,7 +547,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, txHash string, simu
 		msgType := msg.Type()
 		handler := app.router.Route(msgType)
 		if handler == nil {
-			return sdk.ErrUnknownRequest("Unrecognized ListMsg type: " + msgType).Result()
+			return sdk.ErrUnknownRequest("Unrecognized Msg type: " + msgType).Result()
 		}
 
 		msgResult := handler(ctx.WithValue(types.TxHashKey, txHash), msg, simulate)
@@ -561,13 +561,13 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, txHash string, simu
 
 		// Stop execution and return on first failed message.
 		if !msgResult.IsOK() {
-			logs = append(logs, fmt.Sprintf("ListMsg %d failed: %s", msgIdx, msgResult.Log))
+			logs = append(logs, fmt.Sprintf("Msg %d failed: %s", msgIdx, msgResult.Log))
 			code = msgResult.Code
 			break
 		}
 
 		// Construct usable logs in multi-message transactions.
-		logs = append(logs, fmt.Sprintf("ListMsg %d: %s", msgIdx, msgResult.Log))
+		logs = append(logs, fmt.Sprintf("Msg %d: %s", msgIdx, msgResult.Log))
 	}
 
 	// Set the final gas values.

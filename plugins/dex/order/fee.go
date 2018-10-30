@@ -2,17 +2,17 @@ package order
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/pkg/errors"
 	"math"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -67,7 +67,7 @@ func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
 	feeConfig.CancelFeeNative = data.CancelFeeNative
 	feeConfig.FeeRate = data.FeeRate
 	feeConfig.FeeRateNative = data.FeeRateNative
-	log.With("module", "dex").Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
+	m.logger.Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
 	err := m.UpdateConfig(ctx, feeConfig)
 	if err != nil {
 		panic(err)
