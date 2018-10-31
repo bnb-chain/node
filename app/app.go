@@ -117,14 +117,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
-	app.MountStoresIAVL(
-		common.MainStoreKey,
-		common.AccountStoreKey,
-		common.ValStoreKey,
-		common.TokenStoreKey,
-		common.DexStoreKey,
-		common.PairStoreKey)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
+	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, order.NewOrder)) // passing in `NewOrder` here avoids an import cycle
 
 	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)

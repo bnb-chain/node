@@ -3,12 +3,14 @@ package tx
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
@@ -19,8 +21,10 @@ const (
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
+// NOTE: Receiving the `NewOrder` dependency here avoids an import cycle.
 // nolint: gocyclo
-func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
+// TODO: remove gas
+func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx, simulate bool,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
@@ -41,7 +45,10 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		signerAddrs := stdTx.GetSigners()
 		msgs := tx.GetMsgs()
 
-		// Get the sign bytes (requires all account & sequence numbers and the fee)
+		// charge gas for the memo
+		newCtx.GasMeter().ConsumeGas(memoCostPerByte*sdk.Gas(len(stdTx.GetMemo())), "memo")
+
+		// get the sign bytes (requires all account & sequence numbers and the fee)
 		sequences := make([]int64, len(sigs))
 		accNums := make([]int64, len(sigs))
 		for i := 0; i < len(sigs); i++ {
@@ -49,8 +56,30 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			accNums[i] = sigs[i].AccountNumber
 		}
 
-		// Check sig and nonce and collect signer accounts.
+		// collect signer accounts
+		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]auth.Account, len(signerAddrs))
+		for i := 0; i < len(sigs); i++ {
+			signerAddr := signerAddrs[i]
+			signerAcc := am.GetAccount(ctx, signerAddr)
+			signerAccs[i] = signerAcc
+		}
+
+		// TODO: order ID validation hoisted here temporarily for now - ensures sequence is always in sync with msg
+		// avoid importing NewOrderMsg, which causes an import cycle :(
+		if msgs[0].Type() == orderMsgType {
+			expectedOrderID := fmt.Sprintf("\"%X-%d\"", signerAccs[0].GetAddress(), sequences[0])
+			if !strings.Contains(string(msgs[0].GetSignBytes()), expectedOrderID) {
+				log.Info("Invalid order ID encountered", "signbytes", string(msgs[0].GetSignBytes()))
+				return newCtx, sdk.Result{
+					Code: sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownRequest),
+					Log:  fmt.Sprintf("Invalid order ID provided, expected `%s`.", expectedOrderID),
+					Data: []byte("Unexpected order ID encountered"),
+				}, true
+			}
+		}
+
+		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
 

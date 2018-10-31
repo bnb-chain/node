@@ -6,17 +6,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/wire"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
@@ -96,8 +97,8 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -146,8 +147,8 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -203,8 +204,8 @@ func TestAnteHandlerSequences(t *testing.T) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -273,14 +274,56 @@ func TestAnteHandlerSequences(t *testing.T) {
 	checkValidTx(t, anteHandler, ctx, tx)
 }
 
+// Test logic around memo gas consumption.
+func TestAnteHandlerMemoGas(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+
+	// set the accounts
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	mapper.SetAccount(ctx, acc1)
+
+	// msg and signatures
+	var txn sdk.Tx
+	msg := newTestMsg(addr1)
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
+	fee := tx.NewStdFee(0, sdk.NewCoin("atom", 0))
+
+	// tx does not have enough gas
+	txn = newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee)
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeOutOfGas)
+
+	// tx with memo doesn't have enough gas
+	fee = tx.NewStdFee(801, sdk.NewCoin("atom", 0))
+	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeOutOfGas)
+
+	// memo too large
+	fee = tx.NewStdFee(2001, sdk.NewCoin("atom", 0))
+	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsdabcininasidniandsinasindiansdiansdinaisndiasndiadninsdabcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeMemoTooLarge)
+
+	// tx with memo has enough gas
+	fee = tx.NewStdFee(1100, sdk.NewCoin("atom", 0))
+	txn = newTestTxWithMemo(ctx, []sdk.Msg{msg}, privs, accnums, seqs, fee, "abcininasidniandsinasindiansdiansdinaisndiasndiadninsd")
+	checkValidTx(t, anteHandler, ctx, txn)
+}
 
 func TestAnteHandlerMultiSigner(t *testing.T) {
 	// setup
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -328,8 +371,8 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -392,7 +435,39 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	privs, accnums, seqs = []crypto.PrivKey{priv1}, []int64{1}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
+}
 
+func TestAnteHandlerBadOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+
+	// set the accounts
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	mapper.SetAccount(ctx, acc1)
+
+	orderMsg := order.NewOrderMsg{
+		Id:     "xyz",
+		Symbol: "XXX_XXX",
+		Sender: acc1.GetAddress(),
+	}
+
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	fee := newStdFee()
+
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs, fee)
+
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnknownRequest)
 }
 
 func TestAnteHandlerSetPubKey(t *testing.T) {
@@ -400,8 +475,8 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -447,12 +522,12 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	require.Nil(t, acc2.GetPubKey())
 }
 
-func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
+func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler = tx.NewAnteHandler(mapper)
+	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler = tx.NewAnteHandler(mapper, "")
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	return
 }
