@@ -25,7 +25,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	db := dbm.NewMemDB()
 	app = NewBinanceChain(logger, db, os.Stdout)
 	app.SetEndBlocker(app.EndBlocker)
-	app.setDeliverState(abci.Header{Height: 42, Time: 100})
+	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(100, 0)})
 	app.publicationConfig = &config.PublicationConfig{
 		PublishOrderUpdates:   true,
 		PublishAccountBalance: true,
@@ -34,7 +34,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	app.publisher = pub.NewMockMarketDataPublisher(app.publicationConfig)
 
 	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
-	ctx = app.checkState.ctx
+	ctx = app.CheckState.Ctx
 	cdc = app.GetCodec()
 	keeper = app.DexKeeper
 	keeper.CollectOrderInfoForPublish = true
@@ -54,7 +54,7 @@ func TestAppPub_AddOrder(t *testing.T) {
 
 	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
-	app.EndBlocker(ctx, abci.RequestEndBlock{42})
+	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 	time.Sleep(5 * time.Second)
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
@@ -68,8 +68,8 @@ func TestAppPub_MatchOrder(t *testing.T) {
 
 	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 41, 100, 41, 100, 0, ""}, false)
-	app.setDeliverState(abci.Header{Height: 41, Time: 100})
-	app.EndBlocker(ctx, abci.RequestEndBlock{41})
+	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(100, 0)})
+	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 41})
 	time.Sleep(5 * time.Second)
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
@@ -78,8 +78,8 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	// we add a sell order to fully execute the buyer order
 	msg = orderPkg.NewNewOrderMsg(seller, "2", orderPkg.Side.SELL, "XYZ_BNB", 102000, 4000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 101, 42, 101, 0, ""}, false)
-	app.setDeliverState(abci.Header{Height: 42, Time: 101})
-	app.endBlocker(ctx, abci.RequestEndBlock{42})
+	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(101, 0)})
+	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 	time.Sleep(5 * time.Second)
 
 	require.Len(publisher.BooksPublished, 2)
@@ -91,8 +91,8 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 43, 102, 43, 102, 0, ""}, false)
 	msg = orderPkg.NewNewOrderMsg(seller, "4", orderPkg.Side.SELL, "XYZ_BNB", 102000, 1000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 43, 102, 43, 102, 0, ""}, false)
-	app.setDeliverState(abci.Header{Height: 43, Time: 102})
-	app.endBlocker(ctx, abci.RequestEndBlock{43})
+	app.SetDeliverState(abci.Header{Height: 43, Time: time.Unix(102, 0)})
+	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 43})
 	time.Sleep(5 * time.Second)
 
 	require.Len(publisher.BooksPublished, 3)

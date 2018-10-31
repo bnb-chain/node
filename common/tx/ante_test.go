@@ -2,18 +2,21 @@ package tx_test
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/wire"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
@@ -31,7 +34,7 @@ func newCoins() sdk.Coins {
 
 // run the tx through the anteHandler and ensure its valid
 func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx) {
-	_, result, abort := anteHandler(ctx, tx)
+	_, result, abort := anteHandler(ctx, tx, false)
 	require.False(t, abort)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 	require.True(t, result.IsOK())
@@ -39,7 +42,7 @@ func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx
 
 // run the tx through the anteHandler and ensure it fails with the given code
 func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx, code sdk.CodeType) {
-	_, result, abort := anteHandler(ctx, tx)
+	_, result, abort := anteHandler(ctx, tx, false)
 	require.True(t, abort)
 	require.Equal(t, sdk.ToABCICode(sdk.CodespaceRoot, code), result.Code,
 		fmt.Sprintf("Expected %v, got %v", sdk.ToABCICode(sdk.CodespaceRoot, code), result))
@@ -197,7 +200,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 // Test logic around sequence checking with one signer and many signers.
 func TestAnteHandlerSequences(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
@@ -322,7 +325,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 
 func TestAnteHandlerBadSignBytes(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
@@ -458,7 +461,7 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 	for i := 0; i < len(fees); i++ {
 		msg := newTestMsgWithFeeCalculator(fees[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
-		ctx, _, _ = anteHandler(ctx, txn)
+		ctx, _, _ = anteHandler(ctx, txn, false)
 	}
 
 	return ctx
