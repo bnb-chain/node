@@ -23,6 +23,7 @@ type GenesisState struct {
 type GenesisAccount struct {
 	Name    string         `json:"name"`
 	Address sdk.AccAddress `json:"address"`
+	ValAddr crypto.Address `json:"valaddr"`
 }
 
 // NewGenesisAccount -
@@ -54,6 +55,16 @@ type GenTx struct {
 	Name    string         `json:"name"`
 	Address sdk.AccAddress `json:"address"`
 	PubKey  crypto.PubKey  `json:"pub_key"`
+}
+
+func makePrintMessage(cdc *wire.Codec, secret string) (json.RawMessage, error) {
+	mm := map[string]string{"secret": secret}
+	bz, err := cdc.MarshalJSON(mm)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.RawMessage(bz), nil
 }
 
 // AppGenState sets up the app_state and appends the cool app state
