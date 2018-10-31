@@ -11,8 +11,8 @@ import (
 // mainly used to test keeper.GetOpenOrders API
 
 const (
-	ZzAddr = "cosmosaccaddr17pu78tfxdmd0wmkcl8papvt3zxrpmpkza5809m"
-	ZcAddr = "cosmosaccaddr194epkcnk0aganvjnwpj47nfztjl2ur9wujpj6h"
+	ZzAddr = "cosmos1a4y3tjwzgemg0g05fl8ucea0ftkj28l3cfes6q"
+	ZcAddr = "cosmos1al5dssf3g6xjmjykd2e36pxprq6jh6y24j9ers"
 )
 
 var (

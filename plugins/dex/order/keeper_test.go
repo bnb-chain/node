@@ -12,6 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -348,8 +349,7 @@ func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *w
 const BlockPartSize = 65536
 
 func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k1.PrivKeySecp256k1) auth.StdTx {
-	fee, _ := sdk.ParseCoin("100 BNB")
-	signMsg := auth.StdSignMsg{
+	signMsg := txbuilder.StdSignMsg{
 		ChainID:       "chainID1",
 		AccountNumber: accountNumber,
 		Sequence:      seqNum,

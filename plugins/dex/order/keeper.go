@@ -757,7 +757,7 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time
 	if err != nil {
 		panic(err)
 	}
-	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime, bz))
+	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
 	store.Set([]byte(key), bz)
 }
 

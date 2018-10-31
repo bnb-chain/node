@@ -14,8 +14,8 @@ func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
 
 	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
+	bank.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc) // Register Msgs
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	cdc.RegisterConcrete(order.NewOrderMsg{}, "dex/NewOrder", nil)

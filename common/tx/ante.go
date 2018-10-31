@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"fmt"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/pkg/errors"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
-	maxMemoCharacters         = 100
+	maxMemoCharacters = 100
 )
 
 // NewAnteHandler returns an AnteHandler that checks
@@ -33,7 +33,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 
 		err := validateBasic(stdTx)
 		if err != nil {
-			return newCtx, err.Result(), true
+			return ctx, err.Result(), true
 		}
 
 		sigs := stdTx.GetSignatures()
@@ -54,18 +54,18 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			signerAddr, sig := signerAddrs[i], sigs[i]
 
 			// check signature, return account with incremented nonce
-			signBytes := auth.StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-			signerAcc, res := processSig(newCtx, am, signerAddr, sig, signBytes)
+			signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
+			signerAcc, res := processSig(ctx, am, signerAddr, sig, signBytes)
 			if !res.IsOK() {
-				return newCtx, res, true
+				return ctx, res, true
 			}
 
 			// Save the account.
-			am.SetAccount(newCtx, signerAcc)
+			am.SetAccount(ctx, signerAcc)
 			signerAccs[i] = signerAcc
 		}
 
-		newCtx, res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0])
+		newCtx, res = calcAndCollectFees(ctx, am, signerAccs[0], msgs[0])
 		if !res.IsOK() {
 			return newCtx, res, true
 		}

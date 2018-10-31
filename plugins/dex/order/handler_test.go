@@ -44,7 +44,7 @@ func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context) {
 }
 
 func setupAccount(ctx sdk.Context, accMapper auth.AccountKeeper) (auth.Account, sdk.AccAddress) {
-	saddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj" // TODO: temporary
+	saddr := "cosmos1a4y3tjwzgemg0g05fl8ucea0ftkj28l3cfes6q" // TODO: temporary
 	addr, err := sdk.AccAddressFromBech32(saddr)
 	if err != nil {
 		panic(err)

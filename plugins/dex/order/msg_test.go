@@ -2,6 +2,7 @@ package order
 
 import (
 	"fmt"
+
 	"regexp"
 	"testing"
 
@@ -14,11 +15,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	cmn "github.com/BiJie/BinanceChain/common"
 )
 
-func newCLIContext(seq int64) context.CLIContext {
+func newCLIContext() context.CLIContext {
 	// TODO: necessary to make a CLIContext, maybe revisit
 	nodeURI := "tcp://localhost:26657"
 	rpc := rpcclient.NewHTTP(nodeURI, "/")
@@ -26,8 +28,6 @@ func newCLIContext(seq int64) context.CLIContext {
 		Client:          rpc,
 		NodeURI:         nodeURI,
 		AccountStore:    cmn.AccountStoreName,
-		Sequence:        seq,
-		FromAddressName: "me",
 	}
 }
 
@@ -80,11 +80,12 @@ func TestCancelOrderMsg_ValidateBasic(t *testing.T) {
 }
 
 func TestGenerateOrderId(t *testing.T) {
-	cctx := newCLIContext(5)
 	viper.SetDefault(client.FlagSequence, "5")
+	viper.SetDefault(client.FlagChainID, "mychaindid")
+	txBldr := txbuilder.NewTxBuilderFromCLI()
 
-	sourceAddr := "cosmosaccaddr1atcjghcs273lg95p2kcrn509gdyx2h2g83l0mj"
-	expectedHexAddr := "EAF1245F1057A3F4168155B039D1E54348655D48"
+	sourceAddr := "cosmos1al5dssf3g6xjmjykd2e36pxprq6jh6y24j9ers"
+	expectedHexAddr := "EFE8D84131468D2DC8966AB31D04C118352BE88A"
 
 	addr, err := sdk.AccAddressFromBech32(sourceAddr)
 	hexAddr := fmt.Sprintf("%X", addr)
@@ -92,12 +93,7 @@ func TestGenerateOrderId(t *testing.T) {
 		panic(err)
 	}
 
-	seq, err := cctx.GetAccountSequence([]byte(sourceAddr))
-	if err != nil {
-		panic(err)
-	}
-
-	orderID := GenerateOrderID(seq, addr)
+	orderID := GenerateOrderID(txBldr.Sequence, addr)
 	if err != nil {
 		panic(err)
 	}
