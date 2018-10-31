@@ -99,7 +99,7 @@ func handleNewOrder(
 
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	var amountToLock int64
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(msg.Symbol)
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(msg.Symbol)
 	var symbolToLock string
 	if msg.Side == Side.BUY {
 		// TODO: where is 10^8 stored?
@@ -207,7 +207,7 @@ func handleCancelOrder(
 	//unlocked the locked qty for the unfilled qty
 	unlockAmount := ord.LeavesQty()
 
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(origOrd.Symbol)
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(origOrd.Symbol)
 	var symbolToUnlock string
 	if origOrd.Side == Side.BUY {
 		symbolToUnlock = strings.ToUpper(quoteAsset)
