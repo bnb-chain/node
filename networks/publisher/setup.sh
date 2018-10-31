@@ -64,7 +64,7 @@ echo ${witness_pid}
 # init accounts
 result=$(expect ${scripthome}/recover.exp "${secret}" "zc" "${clipath}" "${clihome}")
 result=$(expect ${scripthome}/add_key.exp "zz" "${clipath}" "${clihome}")
-zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "cosmosaccaddr[0-9a-zA-Z]*")
+zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "cosmos[0-9a-zA-Z]*" | grep -v "cosmospub")
 
 # issue&list NNB and ZCB for ordergen
 ${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id}

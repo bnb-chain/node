@@ -31,6 +31,7 @@ func TestInitCmd(t *testing.T) {
 	ctx := server.NewContext(cfg, logger)
 	cdc := app.MakeCodec()
 	appInit := server.AppInit{
+		AppGenTx:    mock.AppGenTx,
 		AppGenState: mock.AppGenState,
 	}
 	cmd := InitCmd(ctx, cdc, appInit)
@@ -60,6 +61,7 @@ func TestEmptyState(t *testing.T) {
 	ctx := server.NewContext(cfg, logger)
 	cdc := app.MakeCodec()
 	appInit := server.AppInit{
+		AppGenTx:    mock.AppGenTx,
 		AppGenState: mock.AppGenStateEmpty,
 	}
 	cmd := InitCmd(ctx, cdc, appInit)
@@ -107,6 +109,7 @@ func TestStartStandAlone(t *testing.T) {
 	ctx := server.NewContext(cfg, logger)
 	cdc := app.MakeCodec()
 	appInit := server.AppInit{
+		AppGenTx:    mock.AppGenTx,
 		AppGenState: mock.AppGenState,
 	}
 	initCmd := InitCmd(ctx, cdc, appInit)
