@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/BiJie/BinanceChain/app/val"
 	"io"
 	"os"
 
@@ -64,6 +65,7 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
+	ValMapper     val.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
@@ -91,6 +93,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
+	app.ValMapper = val.NewMapper(common.ValStoreKey)
 
 	// handlers
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
@@ -114,7 +117,13 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
-	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
+	app.MountStoresIAVL(
+		common.MainStoreKey,
+		common.AccountStoreKey,
+		common.ValStoreKey,
+		common.TokenStoreKey,
+		common.DexStoreKey,
+		common.PairStoreKey)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 
 	// block store required to hydrate dex OB
@@ -166,6 +175,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
+			app.ValMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
 		}
 
 		for _, token := range genesisState.Tokens {
@@ -184,42 +194,6 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 				panic(sdkErr)
 			}
 		}
-
-		//if len(genesisState.GenTxs) > 0 {
-		//	for _, genTx := range genesisState.GenTxs {
-		//		var tx auth.StdTx
-		//		err = app.cdc.UnmarshalJSON(genTx, &tx)
-		//		if err != nil {
-		//			panic(err)
-		//		}
-		//		bz := app.cdc.MustMarshalBinary(tx)
-		//		res := app.BaseApp.DeliverTx(bz)
-		//		if !res.IsOK() {
-		//			panic(res.Log)
-		//		}
-		//	}
-		//
-		//	validators = app.stakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
-		//}
-		//app.slashingKeeper.AddValidators(ctx, validators)
-		//
-		//// sanity check
-		//if len(req.Validators) > 0 {
-		//	if len(req.Validators) != len(validators) {
-		//		panic(fmt.Errorf("len(RequestInitChain.Validators) != len(validators) (%d != %d) ", len(req.Validators), len(validators)))
-		//	}
-		//	sort.Sort(abci.ValidatorUpdates(req.Validators))
-		//	sort.Sort(abci.ValidatorUpdates(validators))
-		//	for i, val := range validators {
-		//		if !val.Equal(req.Validators[i]) {
-		//			panic(fmt.Errorf("validators[%d] != req.Validators[%d] ", i, i))
-		//		}
-		//	}
-		//}
-		//
-		//return abci.ResponseInitChain{
-		//	Validators: validators,
-		//}
 
 		// Application specific genesis handling
 		app.DexKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
