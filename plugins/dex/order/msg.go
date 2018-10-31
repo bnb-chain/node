@@ -197,11 +197,14 @@ func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, si
 }
 
 // nolint
-func (msg NewOrderMsg) Route() string { return RouteNewOrder }
+func (msg NewOrderMsg) Route() string                { return RouteNewOrder }
 func (msg NewOrderMsg) Type() string                 { return RouteNewOrder }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
+}
+func (msg NewOrderMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }
 
 type OrderInfo struct {
@@ -213,7 +216,6 @@ type OrderInfo struct {
 	CumQty               int64
 	TxHash               string
 }
-
 
 var _ sdk.Msg = CancelOrderMsg{}
 
@@ -238,7 +240,7 @@ func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOr
 }
 
 // nolint
-func (msg CancelOrderMsg) Route() string { return RouteCancelOrder }
+func (msg CancelOrderMsg) Route() string                { return RouteCancelOrder }
 func (msg CancelOrderMsg) Type() string                 { return RouteCancelOrder }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
@@ -261,6 +263,10 @@ func (msg CancelOrderMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg CancelOrderMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly

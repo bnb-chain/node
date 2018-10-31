@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:8ff6df1c40db45026bc33163c929f3bdb9f5a3b5a30cec912d5ca879b6b5efd1"
+  digest = "1:42731c85a1277ef714ca0b1ff65da3290489c3646a8c0a9eae7c43c93e2644f0"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -109,7 +109,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "f285f07748a47b33fe91285fa5228ba1f0d7bbfd"
+  revision = "49090a782617a5c56d7ffcaa1f2b0973f56f70de"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -793,6 +793,7 @@
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
+    "github.com/cosmos/cosmos-sdk/server/config",
     "github.com/cosmos/cosmos-sdk/server/mock",
     "github.com/cosmos/cosmos-sdk/store",
     "github.com/cosmos/cosmos-sdk/types",

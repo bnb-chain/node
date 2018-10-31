@@ -278,10 +278,6 @@ ssh bijieprd@${witness_ip} "rm -rf ${home_path}/node_publisher"
 echo "Copying config to publisher node ${witness_ip}..."
 scp -r node_publisher bijieprd@${witness_ip}:${home_path} > /dev/null
 
-# apply tx indexing patch - TODO(#118) these two lines can be deleted after we finish https://github.com/BiJie/BinanceChain/issues/118
-scp /server/bnc/cong/kv.go bijieprd@${witness_ip}:/home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/vendor/github.com/tendermint/tendermint/state/txindex/kv > /dev/null
-ssh bijieprd@${witness_ip} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie/BinanceChain && make build"
-
 # start an api-server to query tx
 ps -ef | grep "bnbcli" | grep "api-server" | awk '{print $2}' | xargs kill -9
 nohup build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
