@@ -186,6 +186,51 @@ func (kp *Keeper) OrderExists(symbol, id string) (OrderInfo, bool) {
 	return OrderInfo{}, false
 }
 
+func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Transfer) {
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(symbol)
+	seller := kp.allOrders[symbol][trade.Sid].Sender
+	buyer := kp.allOrders[symbol][trade.Bid].Sender
+	// TODO: where is 10^8 stored?
+	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
+	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
+	return Transfer{trade.Sid, eventFilled, seller, quoteAsset, quoteQty, baseAsset, trade.LastQty, trade.LastQty, types.Fee{}, &trade, symbol},
+		Transfer{trade.Bid, eventFilled, buyer, baseAsset, trade.LastQty, quoteAsset, quoteQty, unlock, types.Fee{}, &trade, symbol}
+}
+
+func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo, tranEventType transferEventType) Transfer {
+	//here is a trick to use the same currency as in and out ccy to simulate cancel
+	qty := ord.LeavesQty()
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(ordMsg.Symbol)
+	var unlock int64
+	var unlockAsset string
+	if ordMsg.Side == Side.BUY {
+		unlockAsset = quoteAsset
+		unlock = utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity) - utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity-qty)
+	} else {
+		unlockAsset = baseAsset
+		unlock = qty
+	}
+
+	if ord.CumQty != 0 && tranEventType != eventExpireForMatchFailure {
+		if ordMsg.TimeInForce == TimeInForce.IOC {
+			tranEventType = eventIOCPartiallyExpire // IOC partially filled
+		} else {
+			tranEventType = eventPartiallyExpire
+		}
+	}
+
+	return Transfer{
+		Oid:        ordMsg.Id,
+		eventType:  tranEventType,
+		accAddress: ordMsg.Sender,
+		inAsset:    unlockAsset,
+		in:         unlock,
+		outAsset:   unlockAsset,
+		out:        unlock,
+		unlock:     unlock,
+	}
+}
+
 // channelHash() will choose a channel for processing by moding
 // the sum of the last 7 bytes of address by bucketNumber.
 // It may not be fully even.

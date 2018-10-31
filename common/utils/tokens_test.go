@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,51 @@ func TestTradingPair2Asset(t *testing.T) {
 	assert.Equal("XRP.B", tr)
 	assert.Equal("BNB", q)
 	assert.Nil(e)
+}
+
+func TestAsset2TradingPairSafe(t *testing.T) {
+	// Test invalid
+	var invalidSymbols = []string{"hello world", "BNB_", "__BNB", "_BNB"}
+	wg := sync.WaitGroup{}
+	wg.Add(len(invalidSymbols))
+	for i := range invalidSymbols {
+		symbol := invalidSymbols[i]
+		go func() {
+			defer func(inerSymbol string) {
+				if r := recover(); r == nil {
+					t.Errorf("Parse trading pair symbol: %s do not panic in Asset2TradingPairSafe", inerSymbol)
+				}
+				wg.Done()
+			}(symbol)
+			TradingPair2AssetsSafe(symbol)
+		}()
+	}
+	wg.Wait()
+
+	// Test valid
+	var validSymbols = []string{"XRP_BNB", "XRP.B_BNB"}
+	var validBaseAsserts = []string{"XRP", "XRP.B"}
+	var validQuotaAsserts = []string{"BNB", "BNB"}
+	wg = sync.WaitGroup{}
+	wg.Add(len(validSymbols))
+	assert := assert.New(t)
+	for i := range validSymbols {
+		symbol := validSymbols[i]
+		expectedBa := validBaseAsserts[i]
+		expectedQa := validQuotaAsserts[i]
+		go func() {
+			defer func(inerSymbol string) {
+				if r := recover(); r != nil {
+					t.Errorf("Parse trading pair symbol: %s do panic in Asset2TradingPairSafe", inerSymbol)
+				}
+				wg.Done()
+			}(symbol)
+			ba, qa := TradingPair2AssetsSafe(symbol)
+			assert.Equal(ba, expectedBa)
+			assert.Equal(qa, expectedQa)
+		}()
+	}
+	wg.Wait()
 }
 
 func TestAsset2TradingPair(t *testing.T) {
