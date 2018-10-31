@@ -46,7 +46,7 @@ func updateLockedOfAccount(ctx sdk.Context, accKeeper auth.AccountKeeper, addres
 	accKeeper.SetAccount(ctx, account)
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountMapper auth.AccountKeeper, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, accountMapper auth.AccountKeeper, msg NewOrderMsg,
 ) sdk.Result {
-	err := validateOrder(ctx, keeper.PairMapper, accountMapper, msg)
+	err := validateOrder(ctx, keeper.PairMapper, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
