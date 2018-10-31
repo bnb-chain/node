@@ -24,6 +24,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx, simulate bool,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
+		newCtx = ctx
 
 		// This AnteHandler requires Txs to be StdTxs
 		stdTx, ok := tx.(auth.StdTx)

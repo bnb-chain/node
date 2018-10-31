@@ -33,3 +33,7 @@ func (msg BurnMsg) Type() string {
 func (msg BurnMsg) String() string {
 	return fmt.Sprintf("BurnMsg{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
 }
+
+func (msg BurnMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
+}

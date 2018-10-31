@@ -34,6 +34,10 @@ func (msg FreezeMsg) String() string {
 	return fmt.Sprintf("Freeze{%v#%v}", msg.From, msg.Symbol)
 }
 
+func (msg FreezeMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
+}
+
 var _ sdk.Msg = UnfreezeMsg{}
 
 type UnfreezeMsg struct {
@@ -52,4 +56,8 @@ func (msg UnfreezeMsg) Type() string { return FreezeRoute }
 
 func (msg UnfreezeMsg) String() string {
 	return fmt.Sprintf("Unfreeze{%v#%v%v}", msg.From, msg.Amount, msg.Symbol)
+}
+
+func (msg UnfreezeMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }

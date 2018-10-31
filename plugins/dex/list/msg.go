@@ -61,3 +61,7 @@ func (msg ListMsg) GetSignBytes() []byte {
 	}
 	return b
 }
+
+func (msg ListMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
+}
