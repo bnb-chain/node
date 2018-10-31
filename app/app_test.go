@@ -99,7 +99,7 @@ func Address(i int) sdk.AccAddress {
 }
 
 func NewTestClient(a *BinanceChain) *TestClient {
-	a.setCheckState(types.Header{})
+	a.SetCheckState(types.Header{})
 	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
 	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
