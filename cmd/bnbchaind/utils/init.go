@@ -231,8 +231,9 @@ func initWithConfig(cdc *codec.Codec, appInit server.AppInit, config *cfg.Config
 		cfg.WriteConfigFile(configFilePath, config)
 	} else {
 		genTxConfig := serverCfg.GenTx{
-			Name: viper.GetString(client.FlagName),
-			IP:   "127.0.0.1",
+			Name:    viper.GetString(client.FlagName),
+			CliRoot: viper.GetString(cli.HomeFlag),
+			IP:      "127.0.0.1",
 		}
 
 		// Write updated config with moniker
