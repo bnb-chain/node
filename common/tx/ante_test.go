@@ -473,6 +473,42 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
 }
 
+func TestAnteHandlerGoodOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+
+	// set the accounts
+	sequence := int64(50)
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	acc1.SetSequence(sequence)
+	mapper.SetAccount(ctx, acc1)
+
+	orderId := fmt.Sprintf("%X-%d", acc1.GetAddress(), sequence)
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 1, "XXX_XXX", 0, 0)
+
+	// bogus fees calculator
+	tx.UnsetAllCalculators()
+	tx.RegisterCalculator(orderMsg.Type(), tx.FreeFeeCalculator())
+
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	fee := newStdFee()
+
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{sequence}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs, fee)
+
+	checkValidTx(t, anteHandler, ctx, txn)
+}
+
 func TestAnteHandlerBadOrderID(t *testing.T) {
 	// setup
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
@@ -489,11 +525,8 @@ func TestAnteHandlerBadOrderID(t *testing.T) {
 	acc1.SetCoins(newCoins())
 	mapper.SetAccount(ctx, acc1)
 
-	orderMsg := order.NewOrderMsg{
-		Id:     "xyz",
-		Symbol: "XXX_XXX",
-		Sender: acc1.GetAddress(),
-	}
+	orderId := "INVALID"
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 2, "XXX_XXX", 0, 0)
 
 	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
 	msgs := []sdk.Msg{orderMsg}
