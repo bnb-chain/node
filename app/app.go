@@ -82,7 +82,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders /*, ServerContext.PublishAccountBalance*/, baseAppOptions...),
+		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		publicationConfig: ServerContext.PublicationConfig,
@@ -377,7 +377,7 @@ func (app *BinanceChain) publish(tradesToPublish []pub.Trade, ctx sdk.Context, h
 		height,
 		blockTime,
 		tradesToPublish,
-		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChanges,    // thread-safety runMsgsis guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderChangesMap, // ditto
 		accountsToPublish,
 		latestPriceLevels)

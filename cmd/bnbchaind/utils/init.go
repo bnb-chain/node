@@ -65,7 +65,7 @@ func displayInfo(cdc *codec.Codec, info printInfo) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "%s\n", string(out))
+	fmt.Fprintf(os.Stdout, "%s\n", string(out))
 	return nil
 }
 
@@ -162,7 +162,7 @@ enabled, and the genesis file will not be generated.
 				GenTxsDir: filepath.Join(config.RootDir, "config", "gentx"),
 				Overwrite: viper.GetBool(flagOverwrite),
 			}
-			initWithConfig(cdc, appInit, config, initCfg)
+			_, _, toPrint.AppMessage, err = initWithConfig(cdc, appInit, config, initCfg)
 			// print out some key information
 			if err != nil {
 				return err
