@@ -2,10 +2,11 @@ package order
 
 import (
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 )
 
@@ -45,7 +46,10 @@ func (tran Transfer) FeeFree() bool {
 }
 
 func (tran Transfer) IsExpire() bool {
-	return tran.eventType == eventIOCFullyExpire || tran.eventType == eventIOCPartiallyExpire || tran.eventType == eventPartiallyExpire || tran.eventType == eventFullyExpire
+	return tran.eventType == eventIOCFullyExpire ||
+		tran.eventType == eventIOCPartiallyExpire ||
+		tran.eventType == eventPartiallyExpire ||
+		tran.eventType == eventFullyExpire
 }
 
 func (tran Transfer) IsExpiredWithFee() bool {
@@ -110,15 +114,18 @@ func TransferFromExpired(ord me.OrderPart, ordMsg OrderInfo) Transfer {
 }
 
 func TransferFromCanceled(ord me.OrderPart, ordMsg OrderInfo, isMatchFailure bool) Transfer {
+	var tranEventType transferEventType
 	if isMatchFailure {
-		return transferFromOrderRemoved(ord, ordMsg, eventCancelForMatchFailure)
+		tranEventType = eventCancelForMatchFailure
 	} else {
 		if ord.CumQty != 0 {
-			return transferFromOrderRemoved(ord, ordMsg, eventPartiallyCancel)
+			tranEventType = eventPartiallyCancel
 		} else {
-			return transferFromOrderRemoved(ord, ordMsg, eventFullyCancel)
+			tranEventType = eventFullyCancel
 		}
 	}
+
+	return transferFromOrderRemoved(ord, ordMsg, tranEventType)
 }
 
 func transferFromOrderRemoved(ord me.OrderPart, ordMsg OrderInfo, tranEventType transferEventType) Transfer {
@@ -154,13 +161,13 @@ type sortedAsset struct {
 }
 
 // not thread safe
-func(s *sortedAsset) addAsset(asset string, amt int64) {
+func (s *sortedAsset) addAsset(asset string, amt int64) {
 	if asset == types.NativeToken {
 		s.native += amt
 	} else {
 		if s.tokens == nil {
 			s.tokens = sdk.Coins{}
 		}
-		s.tokens = s.tokens.Plus(sdk.Coins{{Denom:asset, Amount:sdk.NewInt(amt)}})
+		s.tokens = s.tokens.Plus(sdk.Coins{{Denom: asset, Amount: sdk.NewInt(amt)}})
 	}
 }

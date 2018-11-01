@@ -1,9 +1,8 @@
 package order
 
 import (
-	"encoding/hex"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 	"sync"
 	"time"
@@ -426,11 +425,13 @@ func (kp *Keeper) ClearOrderChanges() {
 func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	account := kp.am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
 	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
+	// these two non-negative check are to ensure the Transfer gen result is correct before we actually operate the acc.
+	// they should never happen, there would be a severe bug if happen and we have to cancel all orders when app restarts.
 	if !newLocked.IsNotNegative() {
-		return sdk.ErrInternal("No enough locked tokens to unlock")
+		panic(errors.New("No enough locked tokens to unlock"))
 	}
 	if tran.unlock < tran.out {
-		return sdk.ErrInternal("Unlocked tokens cannot cover the expense")
+		panic(errors.New("Unlocked tokens cannot cover the expense"))
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
@@ -450,7 +451,7 @@ func (kp *Keeper) clearAfterMatch() {
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
-	// use hex string of the addr as the key since map makes a fast path for string key.
+	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
 	// expire fee is fixed, so we count by numbers.
@@ -461,18 +462,22 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 	for tran := range tranCh {
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
-			hexAddr := hex.EncodeToString(tran.accAddress)
+			addrStr := string(tran.accAddress.Bytes())
 			if tran.IsExpiredWithFee() {
 				expireEventType = tran.eventType
-				if _, ok := expireInAsset[hexAddr]; !ok {
-					expireInAsset[hexAddr] = &sortedAsset{}
+				fees, ok := expireInAsset[addrStr]
+				if !ok {
+					fees = &sortedAsset{}
+					expireInAsset[addrStr] = fees
 				}
-				expireInAsset[hexAddr].addAsset(tran.inAsset, 1)
+				fees.addAsset(tran.inAsset, 1)
 			} else if tran.eventType == eventFilled {
-				if _, ok := tradeInAsset[hexAddr]; !ok {
-					tradeInAsset[hexAddr] = &sortedAsset{}
+				fees, ok := tradeInAsset[addrStr]
+				if !ok {
+					fees = &sortedAsset{}
+					tradeInAsset[addrStr] = fees
 				}
-				tradeInAsset[hexAddr].addAsset(tran.inAsset, tran.in)
+				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}
 		if postAllocateHandler != nil {
@@ -482,23 +487,24 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 
 	feesPerAcc := make(map[string]*types.Fee)
 	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc auth.Account, in sdk.Coin) types.Fee) {
-		for hexAddr, assets := range assetsMap {
-			addr, _ := sdk.AccAddressFromHex(hexAddr)
+		for addrStr, assets := range assetsMap {
+			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
-			if _, ok := feesPerAcc[hexAddr]; !ok {
-				feesPerAcc[hexAddr] = &types.Fee{}
-			}
+			fees := types.Fee{}
 			if assets.native != 0 {
 				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
-				feesPerAcc[hexAddr].AddFee(fee)
+				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}
 			for _, asset := range assets.tokens {
 				fee := calcFeeAndDeduct(acc, asset)
-				feesPerAcc[hexAddr].AddFee(fee)
+				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}
-			kp.am.SetAccount(ctx, acc)
+			if !fees.IsEmpty() {
+				feesPerAcc[addrStr] = &fees
+				kp.am.SetAccount(ctx, acc)
+			}
 		}
 	}
 

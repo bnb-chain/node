@@ -37,7 +37,6 @@ func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeepe
 	logger := bnclog.With("module", "dex")
 	logger.Info("Update tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
-	logger.Info("Update fee/rate")
 	// TODO: update fee/rate
 	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {

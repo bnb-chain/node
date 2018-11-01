@@ -9,9 +9,22 @@ import (
 	"testing"
 )
 
+func NewTestFeeConfig() FeeConfig {
+	feeConfig := NewFeeConfig()
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
+	return feeConfig
+}
+
 func TestFeeManager_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(ctx, TestFeeConfig())
+	keeper.FeeManager.UpdateConfig(ctx, NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	lastTradePrices := map[string]int64{
 		"ABC_BNB": 1e7,
@@ -36,7 +49,7 @@ func TestFeeManager_CalcOrderFees(t *testing.T) {
 
 func TestFeeManager_CalcFixedFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(ctx, TestFeeConfig())
+	keeper.FeeManager.UpdateConfig(ctx, NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 1e4)
 	lastTradePrices := map[string]int64{
 		"ABC_BNB": 1e7,

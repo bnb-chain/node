@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/assert"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -46,6 +48,19 @@ func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountM
 	}
 	oid := fmt.Sprintf("%X-%d", add, seq)
 	return oid
+}
+
+func newTestFeeConfig() o.FeeConfig {
+	feeConfig := o.NewFeeConfig()
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
+	return feeConfig
 }
 
 func Test_handleNewOrder_CheckTx(t *testing.T) {
@@ -137,7 +152,7 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC", "BNB", 96e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, o.TestFeeConfig())
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	// setup accounts
 	am := testApp.AccountMapper
@@ -284,7 +299,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
-	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, o.TestFeeConfig())
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	// setup accounts
 	add := Account(0).GetAddress()

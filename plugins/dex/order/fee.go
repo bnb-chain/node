@@ -1,11 +1,10 @@
 package order
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
-
-	"github.com/pkg/errors"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -29,7 +28,7 @@ const (
 var (
 	feeConfigKey = []byte("FeeConfig")
 
-	FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
+	FeeRateMultiplier = big.NewInt(int64(math.Pow10(int(feeRateDecimals))))
 )
 
 type FeeManager struct {
@@ -49,9 +48,12 @@ func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) 
 }
 
 func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
-	feeConfig, err := m.getConfigFromCtx(ctx)
+	feeConfig, err := m.getConfigFromStore(ctx)
 	if err != nil {
-		// this will only happen when the chain first starts up, and InitGenesis would be called.
+		// this will only happen when the chain first starts up, and then InitGenesis would be called.
+		if ctx.BlockHeight() > 0 {
+			panic(errors.New("cannot init fee config from store"))
+		}
 	}
 
 	m.feeConfig = feeConfig
@@ -90,7 +92,7 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.feeConfig
 }
 
-func (m *FeeManager) getConfigFromCtx(ctx sdk.Context) (FeeConfig, error) {
+func (m *FeeManager) getConfigFromStore(ctx sdk.Context) (FeeConfig, error) {
 	store := ctx.KVStore(m.storeKey)
 	bz := store.Get(feeConfigKey)
 	if bz == nil {
@@ -118,6 +120,11 @@ func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
 	return
 }
 
+// Note: the result of `CalcOrderFee` depends on the balances of the acc,
+// so the right way of allocation is:
+// 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
+// 2. call this method
+// 3. deduct the fee right away
 func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
@@ -154,6 +161,11 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
+// Note: the result of `CalcFixedFee` depends on the balances of the acc,
+// so the right way of allocation is:
+// 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
+// 2. call this method
+// 3. deduct the fee right away
 func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, lastPrices map[string]int64) types.Fee {
 	var feeAmountNative int64
 	var feeAmount int64
@@ -271,19 +283,6 @@ func NewFeeConfig() FeeConfig {
 		FeeRate:            nilFeeValue,
 		FeeRateNative:      nilFeeValue,
 	}
-}
-
-func TestFeeConfig() FeeConfig {
-	feeConfig := NewFeeConfig()
-	feeConfig.FeeRateNative = 500
-	feeConfig.FeeRate = 1000
-	feeConfig.ExpireFeeNative = 2e4
-	feeConfig.ExpireFee = 1e5
-	feeConfig.IOCExpireFeeNative = 1e4
-	feeConfig.IOCExpireFee = 5e4
-	feeConfig.CancelFeeNative = 2e4
-	feeConfig.CancelFee = 1e5
-	return feeConfig
 }
 
 func (config FeeConfig) anyEmpty() bool {
