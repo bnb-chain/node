@@ -142,7 +142,7 @@ func (app *BinanceChain) initDex() {
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
 	// TODO: make the concurrency configurable
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.PublishOrderUpdates)
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.ShouldPublishAny())
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return

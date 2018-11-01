@@ -307,7 +307,7 @@ func (msg *AssetBalance) ToNativeMap() map[string]interface{} {
 
 type Account struct {
 	Owner    string
-	Balances []AssetBalance
+	Balances []*AssetBalance
 }
 
 func (msg *Account) String() string {
