@@ -1,9 +1,9 @@
 BinanceChain
 ------------
 
-BinanceChain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. With fast block times, a native app layer and no smart contract VM it can conceivably support up to 10,000 tx/s.
+BinanceChain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. It targets fast block times, a native dApp layer and multi-token support with no smart contract VM.
 
-This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/examples/basecoin) and is already functional as a multi-asset cryptocurrency blockchain and DEX; see below for how to use it.
+This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/examples/basecoin) and is already functional as a multi-asset cryptocurrency blockchain and DEX; see below for instructions on how to use it.
 
 ## Overview
 
