@@ -181,7 +181,6 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
 	var id string
-	// TODO: ensure sequence
 	id = GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
 		Version:     0x01,

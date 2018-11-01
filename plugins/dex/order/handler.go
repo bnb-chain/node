@@ -56,7 +56,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, accountM
 	seq := acc.GetSequence()
 	expectedID := GenerateOrderID(seq, msg.Sender)
 	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID given did not match the expected one: `%s`", expectedID)
+		return fmt.Errorf("the order ID (%s) given did not match the expected one: `%s`", msg.Id, expectedID)
 	}
 
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
