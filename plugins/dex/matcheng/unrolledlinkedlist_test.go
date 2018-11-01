@@ -475,3 +475,74 @@ func TestULList_UpdateForEach(t *testing.T) {
 	require.Len(t, l.begin.elements, 0)
 	require.Equal(t, l.dend, l.begin.next)
 }
+
+func TestULList_Iterate(t *testing.T) {
+	type fields struct {
+		begin      *bucket
+		dend       *bucket
+		capacity   int
+		bucketSize int
+		compare    Comparator
+		allBuckets []bucket
+	}
+	type args struct {
+		maxLevel int
+	}
+	buys := []PriceLevel{
+		{Price: 1005},
+		{Price: 1002},
+		{Price: 1001},
+		{Price: 995},
+		{Price: 994},
+	}
+	makeFields := func(levels []PriceLevel) *fields {
+		allBuckets := make([]bucket, 4)
+		begin := &allBuckets[0]
+		for i := 0; i < 3; i++ {
+			allBuckets[i].elements = allBuckets[i].elements[:0]
+			allBuckets[i].next = &allBuckets[i+1]
+		}
+		allBuckets[3].next = nil
+		dend := &allBuckets[3]
+		allBuckets[0].elements = levels[:1]
+		allBuckets[1].elements = levels[1:3]
+		allBuckets[2].elements = levels[3:]
+		return &fields{begin, dend, 8, 2, compareBuy, allBuckets}
+	}
+	field := *makeFields(buys)
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []PriceLevel
+	}{
+		{"Iterate -100 of 5", field, args{-100}, []PriceLevel{}},
+		{"Iterate -1 of 5", field, args{-1}, []PriceLevel{}},
+		{"Iterate 0 of 5", field, args{0}, []PriceLevel{}},
+		{"Iterate 1 of 5", field, args{1}, []PriceLevel{{Price: 1005}}},
+		{"Iterate 2(bucket size) of 5", field, args{2}, []PriceLevel{{Price: 1005}, {Price: 1002}}},
+		{"Iterate 3 of 5", field, args{3}, []PriceLevel{{Price: 1005}, {Price: 1002}, {Price: 1001}}},
+		{"Iterate 5 of 5", field, args{5}, []PriceLevel{{Price: 1005}, {Price: 1002}, {Price: 1001}, {Price: 995}, {Price: 994}}},
+		{"Iterate 100 of 5", field, args{100}, []PriceLevel{{Price: 1005}, {Price: 1002}, {Price: 1001}, {Price: 995}, {Price: 994}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ull := &ULList{
+				begin:      tt.fields.begin,
+				dend:       tt.fields.dend,
+				capacity:   tt.fields.capacity,
+				bucketSize: tt.fields.bucketSize,
+				compare:    tt.fields.compare,
+				allBuckets: tt.fields.allBuckets,
+			}
+			result := make([]PriceLevel, 0)
+			fillRes := func(p *PriceLevel) {
+				result = append(result, *p)
+			}
+			if ull.Iterate(tt.args.maxLevel, fillRes); !reflect.DeepEqual(result, tt.want) {
+				t.Logf("after Iterate: %v", ull)
+				t.Errorf("ULList.Iterate() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}

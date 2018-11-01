@@ -7,9 +7,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
+
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/client/context"
 )
 
 func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {

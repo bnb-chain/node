@@ -325,12 +325,14 @@ func (ull *ULList) GetTop() *PriceLevel {
 }
 
 func (ull *ULList) Iterate(levelNum int, iter LevelIter) {
+	var curLevel int
 	for b := ull.begin; b != ull.dend; b = b.next {
-		for i, _ := range b.elements {
-			iter(&b.elements[i])
-			if i >= levelNum {
+		for i := range b.elements {
+			if curLevel >= levelNum {
 				return
 			}
+			iter(&b.elements[i])
+			curLevel += 1
 		}
 	}
 }
