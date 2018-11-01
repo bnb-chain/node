@@ -70,6 +70,10 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
+			err = client.EnsureSequence(cliCtx, &txBldr)
+			if err != nil {
+				panic(err)
+			}
 			msg, err := order.NewNewOrderMsgAuto(txBldr, from, side, symbol, price, qty)
 			if err != nil {
 				panic(err)

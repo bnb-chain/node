@@ -19,6 +19,22 @@ func PrepareCtx(cdc *codec.Codec) (context.CLIContext, txbuilder.TxBuilder) {
 	return cliCtx, txBldr
 }
 
+func EnsureSequence(cliCtx context.CLIContext, txBldr *txbuilder.TxBuilder) error {
+	from, err := cliCtx.GetFromAddress()
+	if err != nil {
+		return err
+	}
+
+	if txBldr.Sequence == 0 {
+		accSeq, err := cliCtx.GetAccountSequence(from)
+		if err != nil {
+			return err
+		}
+		*txBldr = txBldr.WithSequence(accSeq)
+	}
+	return nil
+}
+
 func BuildUnsignedTx(builder txbuilder.TxBuilder, acc auth.Account, msgs []sdk.Msg) (*[]byte, error) {
 	chainID := builder.ChainID
 	if chainID == "" {

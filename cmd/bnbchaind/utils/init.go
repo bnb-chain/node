@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client"
 	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
@@ -172,14 +173,14 @@ enabled, and the genesis file will not be generated.
 	}
 
 	// TODO(#118): need to figure out why cosmos add this flag: https://github.com/cosmos/cosmos-sdk/blob/v0.23.1/server/init.go
-	//cmd.Flags().String(cli.HomeFlag, app.DefaultNodeHome, "node's home directory")
+	cmd.Flags().String(cli.HomeFlag, app.DefaultNodeHome, "node's home directory")
 	cmd.Flags().BoolP(flagOverwrite, "o", false, "overwrite the genesis.json file")
 	cmd.Flags().String(client.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 	cmd.Flags().Bool(flagWithTxs, false, "apply existing genesis transactions from [--home]/config/gentx/")
 	cmd.Flags().String(client.FlagName, "", "name of private key with which to sign the gentx")
 	cmd.Flags().String(flagMoniker, "", "overrides --name flag and set the validator's moniker to a different value; ignored if it runs without the --with-txs flag")
 	// TODO(#118): need to figure out why cosmos add this flag: https://github.com/cosmos/cosmos-sdk/blob/v0.23.1/server/init.go
-	//cmd.Flags().String(flagClientHome, app.DefaultCLIHome, "client's home directory")
+	cmd.Flags().String(flagClientHome, app.DefaultCLIHome, "client's home directory")
 	cmd.Flags().Bool(flagOverwriteKey, false, "overwrite client's key")
 	cmd.Flags().Bool(flagSkipGenesis, false, "do not create genesis.json")
 	return cmd
