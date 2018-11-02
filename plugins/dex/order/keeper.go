@@ -688,7 +688,7 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 	day := t / utils.SecondsPerDay
 	bz := store.Get(utils.Int642Bytes(day))
 	if bz == nil {
-		return 0, errors.Errorf("breathe block not found for day %v", day)
+		return 0, errors.New(fmt.Sprintf("breathe block not found for day %v", day))
 	}
 
 	var height int64

@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/wire"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
@@ -114,12 +117,11 @@ func newTestTxWithSignBytes(msgs []sdk.Msg, privs []crypto.PrivKey, accNums []in
 // Test various error cases in the AnteHandler control flow.
 func TestAnteHandlerSigErrors(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -167,12 +169,11 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 // Test logic around account number checking with one signer and many signers.
 func TestAnteHandlerAccountNumbers(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -226,12 +227,11 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 // Test logic around sequence checking with one signer and many signers.
 func TestAnteHandlerSequences(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -304,12 +304,11 @@ func TestAnteHandlerSequences(t *testing.T) {
 // Test logic around memo gas consumption.
 func TestAnteHandlerMemoGas(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -347,12 +346,11 @@ func TestAnteHandlerMemoGas(t *testing.T) {
 
 func TestAnteHandlerMultiSigner(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -398,12 +396,11 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 
 func TestAnteHandlerBadSignBytes(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -474,17 +471,81 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	privs, accnums, seqs = []crypto.PrivKey{priv1}, []int64{1}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs, fee)
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
+}
 
+func TestAnteHandlerGoodOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+
+	// set the accounts
+	sequence := int64(50)
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	acc1.SetSequence(sequence)
+	mapper.SetAccount(ctx, acc1)
+
+	orderId := fmt.Sprintf("%X-%d", acc1.GetAddress(), sequence)
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 1, "XXX_XXX", 0, 0)
+
+	// bogus fees calculator
+	tx.UnsetAllCalculators()
+	tx.RegisterCalculator(orderMsg.Type(), tx.FreeFeeCalculator())
+
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	fee := newStdFee()
+
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{sequence}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs, fee)
+
+	checkValidTx(t, anteHandler, ctx, txn)
+}
+
+func TestAnteHandlerBadOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+
+	// set the accounts
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	mapper.SetAccount(ctx, acc1)
+
+	orderId := "INVALID"
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 2, "XXX_XXX", 0, 0)
+
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	fee := newStdFee()
+
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs, fee)
+
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnknownRequest)
 }
 
 func TestAnteHandlerSetPubKey(t *testing.T) {
 	// setup
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler := tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 
 	// keys and addresses
@@ -532,12 +593,11 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 }
 
 func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountMapper(cdc, capKey, auth.ProtoBaseAccount)
-	feeCollector := tx.NewFeeCollectionKeeper(cdc, capKey2)
-	anteHandler = tx.NewAnteHandler(mapper, feeCollector)
+	anteHandler = tx.NewAnteHandler(mapper, "")
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	return
 }
