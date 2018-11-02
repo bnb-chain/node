@@ -5,12 +5,11 @@ import (
 	"math"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/stretchr/testify/require"
 
 	cstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"

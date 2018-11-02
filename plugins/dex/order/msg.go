@@ -274,12 +274,13 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 		// TODO: use a dedicated error type
 		return sdk.ErrInternal("Invalid version. Expected 0x01")
 	}
-	if len(msg.Sender) == 0 {
-		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
-	}
 	// `-` is required in the compound order id: <address>-<sequence>
+	// NOTE: the actual validation of the ID happens in the AnteHandler for now.
 	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
 		return types.ErrInvalidOrderParam("Id", fmt.Sprintf("Invalid order ID:%s", msg.Id))
+	}
+	if len(msg.Sender) == 0 {
+		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
 	if msg.Quantity <= 0 {
 		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))

@@ -13,10 +13,10 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/wire"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/wire"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
@@ -397,7 +397,6 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	privs, accnums, seqs = []crypto.PrivKey{priv1}, []int64{1}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
-
 }
 
 func TestAnteHandlerSetPubKey(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common/log"
+
 	"github.com/BiJie/BinanceChain/common/tx"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -194,7 +195,7 @@ func handleCancelOrder(
 			}
 		}
 	} else {
-		log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
+		logger.Info("Incoming Cancel", "cancel", msg)
 		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	}
 	if err != nil {

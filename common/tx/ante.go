@@ -19,6 +19,7 @@ const (
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
+// NOTE: Receiving the `NewOrder` dependency here avoids an import cycle.
 // nolint: gocyclo
 func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
@@ -41,7 +42,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		signerAddrs := stdTx.GetSigners()
 		msgs := tx.GetMsgs()
 
-		// Get the sign bytes (requires all account & sequence numbers and the fee)
+		// get the sign bytes (requires all account & sequence numbers and the fee)
 		sequences := make([]int64, len(sigs))
 		accNums := make([]int64, len(sigs))
 		for i := 0; i < len(sigs); i++ {
@@ -49,11 +50,12 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			accNums[i] = sigs[i].AccountNumber
 		}
 
-		// Check sig and nonce and collect signer accounts.
+		// collect signer accounts
+		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]auth.Account, len(signerAddrs))
+		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
-
 			// check signature, return account with incremented nonce
 			signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
 			signerAcc, res := processSig(ctx, am, signerAddr, sig, signBytes)

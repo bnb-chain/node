@@ -33,8 +33,8 @@ func AccountReqHandler(
 	accDecoder := authcmd.GetAccountDecoder(cdc)
 
 	throw := func(w http.ResponseWriter, status int, message string) {
-		w.WriteHeader(status)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(status)
 		w.Write([]byte(message))
 		return
 	}
@@ -76,8 +76,8 @@ func AccountReqHandler(
 			Balances:    bals,
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", responseType)
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(resp)
 	}
 }
