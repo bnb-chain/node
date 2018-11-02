@@ -37,7 +37,7 @@ func Test_Success(t *testing.T) {
 
 	ctx = ctx.WithBlockHeader(abci.Header{Height: 101, Time: 1})
 	ctx = ctx.WithBlockHeight(101)
-	keeper.MatchAndAllocateAll(ctx, am, nil)
+	keeper.MatchAndAllocateAll(ctx, nil, nil)
 
 	openOrders = issueMustSuccessQuery(buyer, assert)
 	require.Len(openOrders, 1)

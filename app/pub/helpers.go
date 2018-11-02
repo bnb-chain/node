@@ -68,7 +68,6 @@ func GetAccountBalances(mapper auth.AccountMapper, ctx sdk.Context, accSlices ..
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
-	accountMapper auth.AccountMapper,
 	ctx sdk.Context) []Trade {
 	tradeFeeHolderCh := make(chan orderPkg.TradeFeeHolder, FeeCollectionChannelSize)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
@@ -93,7 +92,8 @@ func MatchAndAllocateAllForPublish(
 			tradeFeeHolderCh <- orderPkg.TradeFeeHolder{tran.Oid, tran.Trade, tran.Symbol, fee}
 		}
 	}
-	ctx, _, _ = dexKeeper.MatchAndAllocateAll(ctx, accountMapper, feeCollectorForTrades)
+	// TODO: cong
+	ctx = dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, nil)
 	close(tradeFeeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
@@ -103,7 +103,6 @@ func MatchAndAllocateAllForPublish(
 
 func ExpireOrdersForPublish(
 	dexKeeper *orderPkg.Keeper,
-	accountMapper auth.AccountMapper,
 	ctx sdk.Context,
 	blockTime int64) {
 	expireFeeHolderCh := make(chan orderPkg.ExpireFeeHolder, FeeCollectionChannelSize)
@@ -122,7 +121,8 @@ func ExpireOrdersForPublish(
 			expireFeeHolderCh <- orderPkg.ExpireFeeHolder{tran.Oid, fee}
 		}
 	}
-	dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, feeCollectorForTrades)
+	// TODO: cong
+	dexKeeper.ExpireOrders(ctx, blockTime, feeCollectorForTrades, nil)
 	close(expireFeeHolderCh)
 	wg.Wait()
 }

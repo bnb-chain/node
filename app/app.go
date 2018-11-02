@@ -94,7 +94,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// handlers
 	app.CoinKeeper = bank.NewKeeper(app.AccountMapper)
-	// TODO: make the concurrency configurable
 
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
@@ -132,14 +131,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 func (app *BinanceChain) initDex() {
 	tradingPairMapper := dex.NewTradingPairMapper(app.cdc, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+	// TODO: make the concurrency configurable
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountMapper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// do not proceed if we are in a unit test and `checkState` is unset.
 	if app.checkState == nil {
 		return
 	}
 	// configure dex keeper
-	app.DexKeeper.FeeConfig.Init(app.checkState.ctx)
+	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.checkState.ctx, 7, loadBlockDB(), app.LastBlockHeight(), app.txDecoder)
 }
@@ -208,9 +208,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountMapper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountMapper, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
 
 	} else {

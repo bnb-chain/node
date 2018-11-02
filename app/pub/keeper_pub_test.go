@@ -13,7 +13,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
@@ -32,6 +31,19 @@ const (
 	iocExpireFee = 500
 )
 
+func newTestFeeConfig() orderPkg.FeeConfig {
+	feeConfig := orderPkg.NewFeeConfig()
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
+	return feeConfig
+}
+
 var keeper *orderPkg.Keeper
 var buyer sdk.AccAddress
 var seller sdk.AccAddress
@@ -45,18 +57,18 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, logger)
 	am = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
-	coinKeeper := bank.NewKeeper(am)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper = orderPkg.NewKeeper(capKey2, coinKeeper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
 	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
+	keeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
-	keeper.FeeConfig.SetExpireFee(ctx, expireFee)
-	keeper.FeeConfig.SetIOCExpireFee(ctx, iocExpireFee)
-	keeper.FeeConfig.SetFeeRate(ctx, 1000)
-	keeper.FeeConfig.SetFeeRateNative(ctx, 500)
+	//keeper.FeeConfig.SetExpireFee(ctx, expireFee)
+	//keeper.FeeConfig.SetIOCExpireFee(ctx, iocExpireFee)
+	//keeper.FeeConfig.SetFeeRate(ctx, 1000)
+	//keeper.FeeConfig.SetFeeRateNative(ctx, 500)
 
 	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
@@ -111,7 +123,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	require.Len(keeper.OrderChanges, 1)
 	require.Len(keeper.OrderChangesMap, 1)
 
-	trades := MatchAndAllocateAllForPublish(keeper, am, ctx)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx)
 
 	require.Len(keeper.OrderChanges, 2)
 	require.Len(keeper.OrderChangesMap, 1)
@@ -141,7 +153,7 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 	require.Len(keeper.OrderChangesMap, 1)
 
 	breathTime := prepareExpire(int64(43))
-	ExpireOrdersForPublish(keeper, am, ctx, breathTime)
+	ExpireOrdersForPublish(keeper, ctx, breathTime)
 
 	require.Len(keeper.OrderChanges, 2)
 	require.Len(keeper.OrderChangesMap, 1)
@@ -183,7 +195,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("", orderChange1.FeeAsset)
 	assert.Equal(int64(0), orderChange1.Fee)
 
-	trades := MatchAndAllocateAllForPublish(keeper, am, ctx)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx)
 
 	require.Len(keeper.OrderChanges, 3)
 	require.Len(keeper.OrderChangesMap, 2)
@@ -230,7 +242,7 @@ func Test_GTCPartialExpire(t *testing.T) {
 	assert.Equal("", orderChange1.FeeAsset)
 	assert.Equal(int64(0), orderChange1.Fee)
 
-	trades := MatchAndAllocateAllForPublish(keeper, am, ctx)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -249,7 +261,7 @@ func Test_GTCPartialExpire(t *testing.T) {
 
 	// let the sell order expire
 	breathTime := prepareExpire(int64(43))
-	ExpireOrdersForPublish(keeper, am, ctx, breathTime)
+	ExpireOrdersForPublish(keeper, ctx, breathTime)
 
 	require.Len(keeper.OrderChanges, 3)
 	orderChange2 := keeper.OrderChanges[2]
@@ -290,7 +302,7 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("", orderChange2.FeeAsset)
 	assert.Equal(int64(0), orderChange2.Fee)
 
-	trades := MatchAndAllocateAllForPublish(keeper, am, ctx)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx)
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)

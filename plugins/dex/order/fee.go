@@ -1,11 +1,17 @@
 package order
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
+	tmlog "github.com/tendermint/tendermint/libs/log"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -20,131 +26,276 @@ const (
 )
 
 var (
-	expireFeeKey     = []byte("ExpireFee")
-	iocExpireFeeKey  = []byte("IOCExpireFee")
-	feeRateNativeKey = []byte("FeeRateNative")
-	feeRateKey       = []byte("FeeRate")
+	feeConfigKey = []byte("FeeConfig")
 
-	FeeRateMultiplier = big.NewInt(int64(math.Pow(10, float64(feeRateDecimals))))
+	FeeRateMultiplier = big.NewInt(int64(math.Pow10(int(feeRateDecimals))))
 )
 
-type FeeConfig struct {
-	cdc           *wire.Codec
-	storeKey      sdk.StoreKey
-	expireFee     int64
-	iocExpireFee  int64
-	feeRateNative int64
-	feeRate       int64
+type FeeManager struct {
+	cdc       *wire.Codec
+	storeKey  sdk.StoreKey
+	logger    tmlog.Logger
+	feeConfig FeeConfig
 }
 
-func NewFeeConfig(cdc *wire.Codec, storeKey sdk.StoreKey) FeeConfig {
-	return FeeConfig{
-		cdc:           cdc,
-		storeKey:      storeKey,
-		expireFee:     nilFeeValue,
-		iocExpireFee:  nilFeeValue,
-		feeRateNative: nilFeeValue,
-		feeRate:       nilFeeValue,
+func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
+	return &FeeManager{
+		cdc:       cdc,
+		storeKey:  storeKey,
+		logger:    logger,
+		feeConfig: NewFeeConfig(),
 	}
 }
 
-func (config *FeeConfig) itob(num int64) []byte {
-	bz, err := config.cdc.MarshalBinaryBare(num)
+func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
+	feeConfig, err := m.getConfigFromStore(ctx)
+	if err != nil {
+		// this will only happen when the chain first starts up, and then InitGenesis would be called.
+		if ctx.BlockHeight() > 0 {
+			panic(errors.New("cannot init fee config from store"))
+		}
+	}
+
+	m.feeConfig = feeConfig
+}
+
+func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
+	feeConfig := NewFeeConfig()
+	feeConfig.ExpireFee = data.ExpireFee
+	feeConfig.ExpireFeeNative = data.ExpireFeeNative
+	feeConfig.IOCExpireFee = data.IOCExpireFee
+	feeConfig.IOCExpireFeeNative = data.IOCExpireFeeNative
+	feeConfig.CancelFee = data.CancelFee
+	feeConfig.CancelFeeNative = data.CancelFeeNative
+	feeConfig.FeeRate = data.FeeRate
+	feeConfig.FeeRateNative = data.FeeRateNative
+	m.logger.Info("Setting Genesis Fee/Rate", "feeConfig", feeConfig)
+	err := m.UpdateConfig(ctx, feeConfig)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// UpdateConfig should only happen when Init or in BreatheBlock
+func (m *FeeManager) UpdateConfig(ctx sdk.Context, feeConfig FeeConfig) error {
+	if feeConfig.anyEmpty() {
+		return errors.New("invalid feeConfig")
+	}
+
+	store := ctx.KVStore(m.storeKey)
+	store.Set(feeConfigKey, m.encodeConfig(feeConfig))
+	m.feeConfig = feeConfig
+	return nil
+}
+
+func (m *FeeManager) GetConfig() FeeConfig {
+	return m.feeConfig
+}
+
+func (m *FeeManager) getConfigFromStore(ctx sdk.Context) (FeeConfig, error) {
+	store := ctx.KVStore(m.storeKey)
+	bz := store.Get(feeConfigKey)
+	if bz == nil {
+		return NewFeeConfig(), errors.New("feeConfig does not exist")
+	}
+
+	return m.decodeConfig(bz), nil
+}
+
+func (m *FeeManager) encodeConfig(config FeeConfig) []byte {
+	bz, err := m.cdc.MarshalBinaryBare(config)
+	if err != nil {
+		panic(err)
+	}
+
 	return bz
 }
 
-func (config *FeeConfig) btoi(bz []byte) (i int64) {
-	err := config.cdc.UnmarshalBinaryBare(bz, &i)
+func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
+	err := m.cdc.UnmarshalBinaryBare(bz, &config)
 	if err != nil {
 		panic(err)
 	}
+
 	return
 }
 
-// warning: all set methods are not thread safe. They would only be called in DeliverTx
-func (config *FeeConfig) SetExpireFee(ctx sdk.Context, expireFee int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(expireFee)
-	store.Set(expireFeeKey, b)
-	logger.Info("Set Expire Fee", "fee", expireFee)
-	config.expireFee = expireFee
-}
-
-func (config *FeeConfig) SetIOCExpireFee(ctx sdk.Context, iocExpireFee int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(iocExpireFee)
-	store.Set(iocExpireFeeKey, b)
-	logger.Info("Set IOCExpire Fee", "fee", iocExpireFee)
-	config.iocExpireFee = iocExpireFee
-}
-
-func (config *FeeConfig) SetFeeRateNative(ctx sdk.Context, feeRateNative int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRateNative)
-	store.Set(feeRateNativeKey, b)
-	logger.Info("Set Fee Rate with native token", "rate", feeRateNative)
-	config.feeRateNative = feeRateNative
-}
-
-func (config *FeeConfig) SetFeeRate(ctx sdk.Context, feeRate int64) {
-	store := ctx.KVStore(config.storeKey)
-	b := config.itob(feeRate)
-	store.Set(feeRateKey, b)
-	logger.Info("Set Fee Rate for tokens", "rate", feeRate)
-	config.feeRate = feeRate
-}
-
-func (config FeeConfig) ExpireFee() int64 {
-	return config.expireFee
-}
-
-func (config FeeConfig) IOCExpireFee() int64 {
-	return config.iocExpireFee
-}
-
-func (config FeeConfig) FeeRateWithNativeToken() int64 {
-	return config.feeRateNative
-}
-
-func (config FeeConfig) FeeRate() int64 {
-	return config.feeRate
-}
-
-// either init fee by Init, or by InitGenesis.
-func (config *FeeConfig) Init(ctx sdk.Context) {
-	store := ctx.KVStore(config.storeKey)
-	if bz := store.Get(expireFeeKey); bz != nil {
-		config.expireFee = config.btoi(bz)
-		config.iocExpireFee = config.btoi(store.Get(iocExpireFeeKey))
-		config.feeRateNative = config.btoi(store.Get(feeRateNativeKey))
-		config.feeRate = config.btoi(store.Get(feeRateKey))
-		logger.Info("Initialized fees from storage", "ExpireFee", config.expireFee,
-			"IOCExpireFee", config.iocExpireFee, "FeeRateWithNativeToken", config.feeRateNative,
-			"FeeRate", config.feeRate)
+// Note: the result of `CalcOrderFee` depends on the balances of the acc,
+// so the right way of allocation is:
+// 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
+// 2. call this method
+// 3. deduct the fee right away
+func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
+	var feeToken sdk.Coin
+	inSymbol := tradeIn.Denom
+	inAmt := tradeIn.Amount.Int64()
+	if inSymbol == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
+	} else {
+		// price against native token
+		var amountOfNativeToken int64
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeToken)]; ok {
+			// XYZ_BNB
+			amountOfNativeToken = utils.CalBigNotional(lastTradePrice, inAmt)
+		} else {
+			// BNB_XYZ
+			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeToken, inSymbol)]
+			var amount big.Int
+			amountOfNativeToken = amount.Div(
+				amount.Mul(
+					big.NewInt(inAmt),
+					big.NewInt(utils.Fixed8One.ToInt64())),
+				big.NewInt(lastTradePrice)).Int64()
+		}
+		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
+		if balances.AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
+			// have sufficient native token to pay the fees
+			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+		} else {
+			// no enough NativeToken, use the received tokens as fee
+			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
+			m.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
+		}
 	}
-	// otherwise, the chain first starts up and InitGenesis would be called.
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-// InitGenesis - store the genesis trend
-func (config *FeeConfig) InitGenesis(ctx sdk.Context, data TradingGenesis) {
-	logger.Info("Setting Genesis Fee/Rate")
-	config.SetExpireFee(ctx, data.ExpireFee)
-	config.SetIOCExpireFee(ctx, data.IOCExpireFee)
-	config.SetFeeRateNative(ctx, data.FeeRateNative)
-	config.SetFeeRate(ctx, data.FeeRate)
+// Note: the result of `CalcFixedFee` depends on the balances of the acc,
+// so the right way of allocation is:
+// 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
+// 2. call this method
+// 3. deduct the fee right away
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, lastPrices map[string]int64) types.Fee {
+	var feeAmountNative int64
+	var feeAmount int64
+	if eventType == eventFullyExpire {
+		feeAmountNative, feeAmount = m.ExpireFees()
+	} else if eventType == eventIOCFullyExpire {
+		feeAmountNative, feeAmount = m.IOCExpireFees()
+	} else if eventType == eventFullyCancel {
+		feeAmountNative, feeAmount = m.CancelFees()
+	} else {
+		// should not be here
+		m.logger.Error("Invalid expire eventType", "eventType", eventType)
+		return types.Fee{}
+	}
+
+	var feeToken sdk.Coin
+	nativeTokenBalance := balances.AmountOf(types.NativeToken).Int64()
+	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeToken {
+		feeToken = sdk.NewCoin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
+	} else {
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeToken)]; ok {
+			// XYZ_BNB
+			var amount big.Int
+			feeAmount = amount.Div(
+				amount.Mul(
+					big.NewInt(feeAmount),
+					big.NewInt(utils.Fixed8One.ToInt64())),
+				big.NewInt(lastTradePrice)).Int64()
+		} else {
+			// BNB_XYZ
+			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeToken, inAsset)]
+			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
+		}
+
+		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset).Int64())
+		feeToken = sdk.NewCoin(inAsset, feeAmount)
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-func (config *FeeConfig) CalcFee(amount int64, feeType FeeType) int64 {
+func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
-		feeRate = config.feeRateNative
+		feeRate = m.feeConfig.FeeRateNative
 	} else if feeType == FeeByTradeToken {
-		feeRate = config.feeRate
+		feeRate = m.feeConfig.FeeRate
 	}
 
 	var fee big.Int
 	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
+}
+
+func (m *FeeManager) ExpireFees() (int64, int64) {
+	return m.feeConfig.ExpireFeeNative, m.feeConfig.ExpireFee
+}
+
+func (m *FeeManager) IOCExpireFees() (int64, int64) {
+	return m.feeConfig.IOCExpireFeeNative, m.feeConfig.IOCExpireFee
+}
+
+func (m *FeeManager) CancelFees() (int64, int64) {
+	return m.feeConfig.CancelFeeNative, m.feeConfig.CancelFee
+}
+
+func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.ExpireFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.ExpireFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+func (m *FeeManager) IOCExpireFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.IOCExpireFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.IOCExpireFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+func (m *FeeManager) CancelFee(feeType FeeType) int64 {
+	if feeType == FeeByNativeToken {
+		return m.feeConfig.CancelFeeNative
+	} else if feeType == FeeByTradeToken {
+		return m.feeConfig.CancelFee
+	}
+
+	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+type FeeConfig struct {
+	ExpireFee          int64 `json:"expire_fee"`
+	ExpireFeeNative    int64 `json:"expire_fee_native"`
+	IOCExpireFee       int64 `json:"ioc_expire_fee"`
+	IOCExpireFeeNative int64 `json:"ioc_expire_fee_native"`
+	CancelFee          int64 `json:"cancel_fee"`
+	CancelFeeNative    int64 `json:"cancel_fee_native"`
+	FeeRate            int64 `json:"fee_rate"`
+	FeeRateNative      int64 `json:"fee_rate_native"`
+}
+
+func NewFeeConfig() FeeConfig {
+	return FeeConfig{
+		ExpireFee:          nilFeeValue,
+		ExpireFeeNative:    nilFeeValue,
+		IOCExpireFee:       nilFeeValue,
+		IOCExpireFeeNative: nilFeeValue,
+		CancelFee:          nilFeeValue,
+		CancelFeeNative:    nilFeeValue,
+		FeeRate:            nilFeeValue,
+		FeeRateNative:      nilFeeValue,
+	}
+}
+
+func (config FeeConfig) anyEmpty() bool {
+	if config.ExpireFee == nilFeeValue ||
+		config.ExpireFeeNative == nilFeeValue ||
+		config.IOCExpireFee == nilFeeValue ||
+		config.IOCExpireFeeNative == nilFeeValue ||
+		config.CancelFee == nilFeeValue ||
+		config.CancelFeeNative == nilFeeValue ||
+		config.FeeRate == nilFeeValue ||
+		config.FeeRateNative == nilFeeValue {
+		return true
+	}
+
+	return false
 }

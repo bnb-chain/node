@@ -5,6 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/app/pub"
+	bnclog "github.com/BiJie/BinanceChain/common/log"
 	app "github.com/BiJie/BinanceChain/common/types"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
@@ -33,13 +34,15 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, accountMapper auth.AccountMapper, dexKeeper *DexKeeper, height, blockTime int64) {
-	logger.Info("Start updating tick size / lot size")
+	logger := bnclog.With("module", "dex")
+	logger.Info("Update tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
-	logger.Info("Staring Expiring stale orders")
+	// TODO: update fee/rate
+	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
-		pub.ExpireOrdersForPublish(dexKeeper, accountMapper, ctx, blockTime)
+		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
-		dexKeeper.ExpireOrders(ctx, blockTime, accountMapper, nil)
+		dexKeeper.ExpireOrders(ctx, blockTime, nil, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

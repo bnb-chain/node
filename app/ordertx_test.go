@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/assert"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -46,6 +48,19 @@ func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountM
 	}
 	oid := fmt.Sprintf("%X-%d", add, seq)
 	return oid
+}
+
+func newTestFeeConfig() o.FeeConfig {
+	feeConfig := o.NewFeeConfig()
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
+	return feeConfig
 }
 
 func Test_handleNewOrder_CheckTx(t *testing.T) {
@@ -131,14 +146,13 @@ func Test_Match(t *testing.T) {
 	ctx := testApp.NewContext(false, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
-	ethPair := types.NewTradingPair("ETH", "BNB", 1e8)
+	ethPair := types.NewTradingPair("ETH", "BNB", 97e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
 	testApp.DexKeeper.AddEngine(ethPair)
-	btcPair := types.NewTradingPair("BTC", "BNB", 1e8)
+	btcPair := types.NewTradingPair("BTC", "BNB", 96e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeConfig.SetFeeRateNative(ctx, 500)
-	testApp.DexKeeper.FeeConfig.SetFeeRate(ctx, 1000)
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	// setup accounts
 	am := testApp.AccountMapper
@@ -160,10 +174,17 @@ func Test_Match(t *testing.T) {
 		1250   250     97              900    900          -350
 		1000   1000    96              900    900          -100*
 	*/
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
 	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC_BNB", 102e8, 300e8)
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
 	msg = o.NewNewOrderMsg(add, genOrderID(add, 1, ctx, am), 1, "BTC_BNB", 100e8, 100e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
+	t.Log(GetAvail(ctx, add, "BTC"))
+	t.Log(GetAvail(ctx, add, "BNB"))
+
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC_BNB", 96e8, 1000e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 1, ctx, am), 2, "BTC_BNB", 97e8, 250e8)
@@ -178,8 +199,7 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	ctx, code, e := testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
-	t.Logf("res is %v and error is %v", code, e)
+	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
@@ -234,8 +254,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
-	ctx, code, e = testApp.DexKeeper.MatchAndAllocateAll(ctx, testApp.AccountMapper, nil)
-	t.Logf("res is %v and error is %v", code, e)
+	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 	buys, sells = getOrderBook("ETH_BNB")
 	t.Logf("buys: %v", buys)
 	t.Logf("sells: %v", sells)
@@ -280,6 +299,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	// setup accounts
 	add := Account(0).GetAddress()
@@ -305,7 +325,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
-	assert.Equal(int64(500e8), GetAvail(ctx, add, "BNB"))
+	assert.Equal(int64(500e8-2e4), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))

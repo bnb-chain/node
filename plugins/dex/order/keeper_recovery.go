@@ -151,6 +151,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		eng.LastTradePrice = ob.LastTradePrice
 		logger.Info("Successfully Loaded order snapshot", "pair", pair)
 	}
+	kp.updateLastTradePrices()
 	key := genActiveOrdersSnapshotKey(height)
 	bz := kvStore.Get([]byte(key))
 	if bz == nil {
@@ -210,13 +211,14 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 				kp.AddOrder(orderInfo, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				ord, ok := kp.OrderExists(msg.Symbol, msg.RefId)
-				if !ok {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
-				}
-				_, err := kp.RemoveOrder(ord.Id, ord.Symbol, ord.Side, ord.Price, true)
+				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
+					if kp.CollectOrderInfoForPublish {
+						bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", true)
+						delete(kp.OrderChangesMap, msg.Id)
+					}
+				})
 				if err != nil {
-					panic(fmt.Sprintf("Failed to replay cancel msg on id[%s]", msg.RefId))
+					panic(fmt.Sprintf("Failed to replay cancel msg for: [%s]", err.Error()))
 				}
 				logger.Info("Canceled Order", "order", msg)
 			}
