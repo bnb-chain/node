@@ -223,7 +223,7 @@ func (kp *Keeper) OrderExists(symbol, id string) (OrderInfo, bool) {
 }
 
 func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Transfer) {
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(symbol)
 	seller := kp.allOrders[symbol][trade.Sid].Sender
 	buyer := kp.allOrders[symbol][trade.Bid].Sender
 	// TODO: where is 10^8 stored?
@@ -236,7 +236,7 @@ func (kp *Keeper) tradeToTransfers(trade me.Trade, symbol string) (Transfer, Tra
 func (kp *Keeper) expiredToTransfer(ord me.OrderPart, ordMsg *OrderInfo, tranEventType transferEventType) Transfer {
 	//here is a trick to use the same currency as in and out ccy to simulate cancel
 	qty := ord.LeavesQty()
-	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(ordMsg.Symbol)
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(ordMsg.Symbol)
 	var unlock int64
 	var unlockAsset string
 	if ordMsg.Side == Side.BUY {
