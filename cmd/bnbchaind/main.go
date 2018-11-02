@@ -14,6 +14,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/version"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -34,7 +35,7 @@ func main() {
 		Short:             "BNBChain Daemon (server)",
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
-
+	rootCmd.AddCommand(version.VersionCmd)
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
 		server.ConstructAppCreator(newApp, "bnbchain"),
 		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))

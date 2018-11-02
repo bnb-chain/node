@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
@@ -20,6 +19,7 @@ import (
 	apiserv "github.com/BiJie/BinanceChain/plugins/api"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
+	"github.com/BiJie/BinanceChain/version"
 )
 
 // rootCmd is the entry point for this binary
@@ -61,7 +61,6 @@ func main() {
 		client.PostCommands(
 			ibccmd.IBCTransferCmd(cdc),
 		)...)
-
 	// temp. disabled staking commands
 	// rootCmd.AddCommand(
 	// 	client.PostCommands(
