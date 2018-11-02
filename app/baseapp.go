@@ -647,9 +647,14 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes tmtypes.Tx, tx sdk.Tx) (result
 		gasWanted = result.GasWanted
 	}
 
-	// Keep the state in a transient CacheWrap in case processing the messages
-	// fails.
 	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+	if simulate {
+		result = app.runMsgs(ctx, msgs, txHash, simulate)
+		result.GasWanted = gasWanted
+		return result
+	}
+
+	// Keep the state in a transient CacheWrap in case processing the messages fails.
 	msCache := getState(app, mode).CacheMultiStore()
 	if msCache.TracingEnabled() {
 		msCache = msCache.WithTracingContext(sdk.TraceContext(
