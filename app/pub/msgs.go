@@ -328,7 +328,7 @@ func (msg *Account) ToNativeMap() map[string]interface{} {
 type accounts struct {
 	height    int64
 	numOfMsgs int
-	accounts  []Account
+	Accounts  []Account
 }
 
 func (msg *accounts) String() string {
@@ -340,8 +340,8 @@ func (msg *accounts) ToNativeMap() map[string]interface{} {
 	native["height"] = msg.height
 	native["numOfMsgs"] = msg.numOfMsgs
 	if msg.numOfMsgs > 0 {
-		as := make([]map[string]interface{}, len(msg.accounts), len(msg.accounts))
-		for idx, a := range msg.accounts {
+		as := make([]map[string]interface{}, len(msg.Accounts), len(msg.Accounts))
+		for idx, a := range msg.Accounts {
 			as[idx] = a.ToNativeMap()
 		}
 		native["accounts"] = as
