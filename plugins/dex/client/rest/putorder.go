@@ -3,7 +3,6 @@ package rest
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/BiJie/BinanceChain/common/client"
 	"net/http"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
+	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"

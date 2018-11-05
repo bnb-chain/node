@@ -65,7 +65,7 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
-	ValMapper     val.Mapper
+	ValAddrMapper val.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
@@ -93,7 +93,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
-	app.ValMapper = val.NewMapper(common.ValStoreKey)
+	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
 
 	// handlers
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
@@ -120,7 +120,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresIAVL(
 		common.MainStoreKey,
 		common.AccountStoreKey,
-		common.ValStoreKey,
+		common.ValAddrStoreKey,
 		common.TokenStoreKey,
 		common.DexStoreKey,
 		common.PairStoreKey)
@@ -175,7 +175,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
+			app.ValAddrMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
 		}
 
 		for _, token := range genesisState.Tokens {

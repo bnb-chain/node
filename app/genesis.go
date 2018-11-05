@@ -3,19 +3,22 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+
+	"github.com/cosmos/cosmos-sdk/server"
+	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	"github.com/tendermint/tendermint/crypto"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/server"
-	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/tendermint/tendermint/crypto"
-	tmtypes "github.com/tendermint/tendermint/types"
-	"os"
-	"path/filepath"
 )
 
 type GenesisState struct {
