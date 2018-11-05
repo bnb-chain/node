@@ -1,12 +1,11 @@
 package commands
 
 import (
+	"github.com/BiJie/BinanceChain/common/client"
 	"strconv"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,9 +34,8 @@ func issueTokenCmd(cmdr Commander) *cobra.Command {
 }
 
 func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
-	ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(c.Cdc))
-
-	from, err := ctx.GetFromAddress()
+	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
+	from, err := cliCtx.GetFromAddress()
 	if err != nil {
 		return err
 	}
@@ -63,7 +61,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 
 	// build message
 	msg := buildMsg(from, name, symbol, supply)
-	return c.sendTx(ctx, msg)
+	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
 func parseSupply(supply string) (int64, error) {

@@ -4,20 +4,24 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/server"
+
 	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/cmd/bnbchaind/utils"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	return app.NewBinanceChain(logger, db, storeTracer, app.SetPruning(viper.GetString("pruning")))
+	return app.NewBinanceChain(logger, db, storeTracer, baseapp.SetPruning(viper.GetString("pruning")))
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {
@@ -35,9 +39,10 @@ func main() {
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
-	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, app.BinanceAppInit(),
-		server.ConstructAppCreator(newApp, "bnbchain"),
-		server.ConstructAppExporter(exportAppStateAndTMValidators, "bnbchain"))
+	appInit := app.BinanceAppInit()
+	rootCmd.AddCommand(utils.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(utils.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, appInit, newApp, exportAppStateAndTMValidators)
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)

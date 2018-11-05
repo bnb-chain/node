@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
 )
 
 const (
-	NewOrder    = "orderNew"
-	CancelOrder = "orderCancel"
+	RouteNewOrder    = "orderNew"
+	RouteCancelOrder = "orderCancel"
 )
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
@@ -147,6 +147,8 @@ func TifStringToTifCode(tif string) (int8, error) {
 	return -1, errors.New("tif `" + upperTif + "` not found or supported")
 }
 
+var _ sdk.Msg = NewOrderMsg{}
+
 type NewOrderMsg struct {
 	Version     byte           `json:"version"`
 	Sender      sdk.AccAddress `json:"sender"`
@@ -158,8 +160,6 @@ type NewOrderMsg struct {
 	Quantity    int64          `json:"quantity"`
 	TimeInForce int8           `json:"timeinforce"`
 }
-
-var _ sdk.Msg = NewOrderMsg{}
 
 // NewNewOrderMsg constructs a new NewOrderMsg
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
@@ -178,14 +178,10 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 }
 
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
-func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int8,
+func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
 	var id string
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		return NewOrderMsg{}, err
-	}
-	id = GenerateOrderID(ctx.Sequence, sender)
+	id = GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
 		Version:     0x01,
 		Sender:      sender,
@@ -200,10 +196,14 @@ func NewNewOrderMsgAuto(ctx context.CoreContext, sender sdk.AccAddress, side int
 }
 
 // nolint
-func (msg NewOrderMsg) Type() string                 { return NewOrder }
+func (msg NewOrderMsg) Route() string                { return RouteNewOrder }
+func (msg NewOrderMsg) Type() string                 { return RouteNewOrder }
 func (msg NewOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg NewOrderMsg) String() string {
 	return fmt.Sprintf("NewOrderMsg{Sender: %v, Id: %v, Symbol: %v}", msg.Sender, msg.Id, msg.Symbol)
+}
+func (msg NewOrderMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }
 
 type OrderInfo struct {
@@ -216,6 +216,8 @@ type OrderInfo struct {
 	TxHash               string
 }
 
+var _ sdk.Msg = CancelOrderMsg{}
+
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
 	Version byte `json:"version"`
@@ -224,8 +226,6 @@ type CancelOrderMsg struct {
 	Id      string `json:"id"`
 	RefId   string `json:"refid"`
 }
-
-var _ sdk.Msg = CancelOrderMsg{}
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
@@ -239,7 +239,8 @@ func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOr
 }
 
 // nolint
-func (msg CancelOrderMsg) Type() string                 { return CancelOrder }
+func (msg CancelOrderMsg) Route() string                { return RouteCancelOrder }
+func (msg CancelOrderMsg) Type() string                 { return RouteCancelOrder }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
 	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)
@@ -261,6 +262,10 @@ func (msg CancelOrderMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg CancelOrderMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly

@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/app/router"
 	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -24,13 +24,13 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k *Keeper, accountMapper auth.AccountMapper) router.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg, simulate bool) sdk.Result {
+func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Handler {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, msg, simulate)
+			return handleNewOrder(ctx, cdc, k, msg)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, msg, simulate)
+			return handleCancelOrder(ctx, k, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -47,7 +47,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc auth
 	seq := acc.GetSequence()
 	expectedID := GenerateOrderID(seq, msg.Sender)
 	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID given did not match the expected one: `%s`", expectedID)
+		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
 	}
 
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
@@ -71,7 +71,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc auth
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg, simulate bool,
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
 ) sdk.Result {
 	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	err := validateOrder(ctx, keeper.PairMapper, acc, msg)
@@ -80,14 +80,10 @@ func handleNewOrder(
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	// this is done in memory! we will run this block in checktx/simulate
-	if ctx.IsCheckTx() || simulate {
-		logger.Info("Incoming New Order", "order", msg)
-		//only check whether there exists order to cancel
-		if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
-			errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
-			return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
-		}
+	log.With("module", "dex").Info("Incoming New Order", "order", msg)
+	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
+		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
+		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 	}
 
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
@@ -115,10 +111,10 @@ func handleNewOrder(
 	keeper.am.SetAccount(ctx, acc)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate { // only subtract coins & insert into OB during DeliverTx
-		if txHash, ok := ctx.Value(common.TxHashKey).(string); ok {
+	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
+		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
-			timestamp := ctx.BlockHeader().Time
+			timestamp := ctx.BlockHeader().Time.Unix()
 			msg := OrderInfo{
 				msg,
 				height, timestamp,
@@ -151,7 +147,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper *Keeper, msg CancelOrderMsg, simulate bool,
+	ctx sdk.Context, keeper *Keeper, msg CancelOrderMsg,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -183,7 +179,7 @@ func handleCancelOrder(
 	keeper.am.SetAccount(ctx, acc)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
-	if !ctx.IsCheckTx() && !simulate {
+	if ctx.IsDeliverTx() {
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {

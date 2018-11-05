@@ -13,7 +13,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)

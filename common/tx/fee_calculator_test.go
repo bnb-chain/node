@@ -22,12 +22,12 @@ func TestFixedFeeCalculator(t *testing.T) {
 	calculator = tx.FixedFeeCalculator(10, types.FeeForAll)
 	fee = calculator(msg)
 	require.Equal(t, types.FeeForAll, fee.Type)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, fee.Tokens)
 
 	calculator = tx.FixedFeeCalculator(10, types.FeeForProposer)
 	fee = calculator(msg)
 	require.Equal(t, types.FeeForProposer, fee.Type)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, fee.Tokens)
 }
 
 func TestFreeFeeCalculator(t *testing.T) {
@@ -49,7 +49,7 @@ func TestRegisterAndGetCalculators(t *testing.T) {
 	require.NotNil(t, calculator)
 	fee := calculator(msg)
 	require.Equal(t, types.FeeForProposer, fee.Type)
-	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, fee.Tokens)
+	require.Equal(t, sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, fee.Tokens)
 
 	tx.UnsetAllCalculators()
 	require.Nil(t, tx.GetCalculator(msg.Type()))

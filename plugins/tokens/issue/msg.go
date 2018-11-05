@@ -60,14 +60,17 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueMsg.
+func (msg IssueMsg) Route() string                { return Route }
 func (msg IssueMsg) Type() string                 { return Route }
 func (msg IssueMsg) String() string               { return fmt.Sprintf("IssueMsg{%#v}", msg) }
 func (msg IssueMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
-
 func (msg IssueMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
 		panic(err)
 	}
 	return b
+}
+func (msg IssueMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }

@@ -33,7 +33,7 @@ func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey
 // coins to more than cover the fee
 func NewNativeTokens(amount int64) sdk.Coins {
 	return sdk.Coins{
-		sdk.NewCoin(types.NativeToken, amount),
+		sdk.NewInt64Coin(types.NativeToken, amount),
 	}
 }
 
@@ -44,7 +44,7 @@ func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
 	return priv, addr
 }
 
-func NewAccount(ctx sdk.Context, am auth.AccountMapper, free int64) (crypto.PrivKey, auth.Account) {
+func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, auth.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	acc.SetCoins(NewNativeTokens(free))
@@ -52,19 +52,19 @@ func NewAccount(ctx sdk.Context, am auth.AccountMapper, free int64) (crypto.Priv
 	return privKey, acc
 }
 
-func NewAccountForPub(ctx sdk.Context, am auth.AccountMapper, free, locked, freeze int64) (crypto.PrivKey, auth.Account) {
+func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, auth.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	coins := NewNativeTokens(free)
-	coins = append(coins, sdk.NewCoin("XYZ", free))
+	coins = append(coins, sdk.NewInt64Coin("XYZ", free))
 	acc.SetCoins(coins)
 
 	appAcc := acc.(*types.AppAccount)
 	lockedCoins := NewNativeTokens(locked)
-	lockedCoins = append(lockedCoins, sdk.NewCoin("XYZ", locked))
+	lockedCoins = append(lockedCoins, sdk.NewInt64Coin("XYZ", locked))
 	appAcc.SetLockedCoins(lockedCoins)
 	freezeCoins := NewNativeTokens(freeze)
-	freezeCoins = append(freezeCoins, sdk.NewCoin("XYZ", freeze))
+	freezeCoins = append(freezeCoins, sdk.NewInt64Coin("XYZ", freeze))
 	appAcc.SetFrozenCoins(freezeCoins)
 	am.SetAccount(ctx, acc)
 	return privKey, acc

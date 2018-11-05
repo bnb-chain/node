@@ -37,7 +37,7 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountMapper) string {
+func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountKeeper) string {
 	acc := am.GetAccount(ctx, add)
 	if acc.GetSequence() != seq {
 		err := acc.SetSequence(seq)
@@ -69,7 +69,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
-	am := testApp.AccountMapper
+	am := testApp.AccountKeeper
 	acc := Account(0)
 	acc2 := Account(1)
 	add := acc.GetAddress()
@@ -155,7 +155,7 @@ func Test_Match(t *testing.T) {
 	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	// setup accounts
-	am := testApp.AccountMapper
+	am := testApp.AccountKeeper
 	acc := Account(0)
 	acc2 := Account(1)
 	acc3 := Account(2)
@@ -208,7 +208,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 43.2e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -268,7 +268,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(trades))
 	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8
 	// fee for this round is 8.73e8 BNB, totalFee is 95.13e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewInt64Coin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))

@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/server"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/spf13/pflag"
 
 	"github.com/tendermint/tendermint/crypto"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -32,6 +31,7 @@ type GenesisState struct {
 type GenesisAccount struct {
 	Name    string         `json:"name"`
 	Address sdk.AccAddress `json:"address"`
+	ValAddr crypto.Address `json:"valaddr"`
 }
 
 // NewGenesisAccount -
@@ -54,19 +54,9 @@ func (ga *GenesisAccount) ToAppAccount() (acc *types.AppAccount) {
 }
 
 func BinanceAppInit() server.AppInit {
-	fsAppGenState := pflag.NewFlagSet("", pflag.ContinueOnError)
-
-	fsAppGenTx := pflag.NewFlagSet("", pflag.ContinueOnError)
-	fsAppGenTx.String(server.FlagName, "", "validator moniker, required")
-	fsAppGenTx.String(server.FlagClientHome, DefaultCLIHome,
-		"home directory for the client, used for key generation")
-	fsAppGenTx.Bool(server.FlagOWK, false, "overwrite the accounts created")
-
 	return server.AppInit{
-		FlagsAppGenState: fsAppGenState,
-		FlagsAppGenTx:    fsAppGenTx,
-		AppGenTx:         BinanceAppGenTx,
-		AppGenState:      BinanceAppGenState,
+		AppGenTx:    BinanceAppGenTx,
+		AppGenState: BinanceAppGenState,
 	}
 }
 
@@ -76,7 +66,7 @@ type GenTx struct {
 	PubKey  crypto.PubKey  `json:"pub_key"`
 }
 
-func BinanceAppGenTx(cdc *wire.Codec, pk crypto.PubKey, genTxConfig serverconfig.GenTx) (
+func BinanceAppGenTx(cdc *wire.Codec, pk crypto.PubKey, genTxConfig serverCfg.GenTx) (
 	appGenTx, cliPrint json.RawMessage, validator tmtypes.GenesisValidator, err error) {
 
 	// write app.toml when we run testnet command, we only know the `current` rootDir for each validator here

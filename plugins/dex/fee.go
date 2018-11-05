@@ -13,8 +13,8 @@ const (
 
 func init() {
 	tx.RegisterCalculator(list.Route, tx.FixedFeeCalculator(ListingFee, types.FeeForAll))
-	tx.RegisterCalculator(order.NewOrder, tx.FreeFeeCalculator())
+	tx.RegisterCalculator(order.RouteNewOrder, tx.FreeFeeCalculator())
 	// the calculation of cancel fee is complicated and similar like expire orders.
 	// So set free here and put the real calc in the handler.
-	tx.RegisterCalculator(order.CancelOrder, tx.FreeFeeCalculator())
+	tx.RegisterCalculator(order.RouteCancelOrder, tx.FreeFeeCalculator())
 }

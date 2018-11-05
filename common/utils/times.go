@@ -9,6 +9,6 @@ func Now() time.Time {
 }
 
 // timestamp is from time.Unix()
-func SameDayInUTC(first, second int64) bool {
-	return first/SecondsPerDay == second/SecondsPerDay
+func SameDayInUTC(first, second time.Time) bool {
+	return first.Unix()/SecondsPerDay == second.Unix()/SecondsPerDay
 }

@@ -130,7 +130,7 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount.Int64()
 	if inSymbol == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
+		feeToken = sdk.NewInt64Coin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
@@ -150,10 +150,10 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
 		if balances.AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
 			// have sufficient native token to pay the fees
-			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+			feeToken = sdk.NewInt64Coin(types.NativeToken, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
+			feeToken = sdk.NewInt64Coin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
 			m.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
@@ -184,7 +184,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	var feeToken sdk.Coin
 	nativeTokenBalance := balances.AmountOf(types.NativeToken).Int64()
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
+		feeToken = sdk.NewInt64Coin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
 		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeToken)]; ok {
 			// XYZ_BNB
@@ -201,7 +201,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 		}
 
 		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset).Int64())
-		feeToken = sdk.NewCoin(inAsset, feeAmount)
+		feeToken = sdk.NewInt64Coin(inAsset, feeAmount)
 	}
 
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)

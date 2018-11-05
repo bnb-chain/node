@@ -9,8 +9,8 @@ import (
 )
 
 // queryOrderBook queries the store for the serialized order book for a given pair.
-func queryOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*[]byte, error) {
-	bz, err := ctx.Query(fmt.Sprintf("dex/orderbook/%s", pair))
+func queryOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string) (*[]byte, error) {
+	bz, err := ctx.Query(fmt.Sprintf("dex/orderbook/%s", pair), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func decodeOrderBook(cdc *wire.Codec, bz *[]byte) (*OrderBook, error) {
 }
 
 // GetOrderBook decodes the order book from the serialized store
-func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*OrderBook, error) {
+func GetOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string) (*OrderBook, error) {
 	bz, err := queryOrderBook(cdc, ctx, pair)
 	if err != nil {
 		return nil, err
@@ -40,8 +40,8 @@ func GetOrderBook(cdc *wire.Codec, ctx context.CoreContext, pair string) (*Order
 	return book, err
 }
 
-func queryOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) (*[]byte, error) {
-	if bz, err := ctx.Query(fmt.Sprintf("dex/openorders/%s/%s", pair, addr)); err != nil {
+func queryOpenOrders(cdc *wire.Codec, ctx context.CLIContext, pair string, addr string) (*[]byte, error) {
+	if bz, err := ctx.Query(fmt.Sprintf("dex/openorders/%s/%s", pair, addr), nil); err != nil {
 		return nil, err
 	} else {
 		return &bz, nil
@@ -57,7 +57,7 @@ func DecodeOpenOrders(cdc *wire.Codec, bz *[]byte) ([]OpenOrder, error) {
 	}
 }
 
-func GetOpenOrders(cdc *wire.Codec, ctx context.CoreContext, pair string, addr string) ([]OpenOrder, error) {
+func GetOpenOrders(cdc *wire.Codec, ctx context.CLIContext, pair string, addr string) ([]OpenOrder, error) {
 	if bz, err := queryOpenOrders(cdc, ctx, pair, addr); err != nil {
 		return nil, err
 	} else if bz == nil {

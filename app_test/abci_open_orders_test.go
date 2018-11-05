@@ -3,6 +3,7 @@ package app_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +36,7 @@ func Test_Success(t *testing.T) {
 	expected = store.OpenOrder{"s-1", "XYZ_BNB", 102000, 1000000, 0, 101, 1, 101, 1}
 	assert.Equal(expected, openOrders[0])
 
-	ctx = ctx.WithBlockHeader(abci.Header{Height: 101, Time: 1})
+	ctx = ctx.WithBlockHeader(abci.Header{Height: 101, Time: time.Unix(1, 0)})
 	ctx = ctx.WithBlockHeight(101)
 	keeper.MatchAndAllocateAll(ctx, nil, nil)
 

@@ -12,6 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -36,8 +37,8 @@ func MakeCodec() *wire.Codec {
 	var cdc = wire.NewCodec()
 
 	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterWire(cdc)
-	sdk.RegisterWire(cdc) // Register Msgs
+	bank.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc) // Register Msgs
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	cdc.RegisterConcrete(NewOrderMsg{}, "dex/NewOrder", nil)
@@ -50,10 +51,10 @@ func MakeCodec() *wire.Codec {
 }
 
 func MakeKeeper(cdc *wire.Codec) *Keeper {
-	accountMapper := auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewKeeper(common.DexStoreKey, accountMapper, pairMapper,
+	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
 		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return keeper
 }
@@ -124,16 +125,14 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, true, logger)
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
-	ts := tt.Unix()
-	keeper.MarkBreatheBlock(ctx, 42, ts)
+	keeper.MarkBreatheBlock(ctx, 42, tt)
 	h := keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt.AddDate(0, 0, 9)
 	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(42), h)
 	tt, _ = time.Parse(time.RFC3339, "2018-01-03T15:04:05Z")
-	ts = tt.Unix()
-	keeper.MarkBreatheBlock(ctx, 43, ts)
+	keeper.MarkBreatheBlock(ctx, 43, tt)
 	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
 	assert.Equal(int64(43), h)
 	tt.AddDate(0, 0, 9)
@@ -227,7 +226,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(storedKVPairs1, storedKVPairs2)
 
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(7, len(keeper2.allOrders["XYZ_BNB"]))
@@ -275,7 +274,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	keeper.MatchAll(42, 0)
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
 	assert.Equal(2, len(keeper2.allOrders["XYZ_BNB"]))
@@ -313,7 +312,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert.Equal(0, len(sells))
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
-	keeper.MarkBreatheBlock(ctx, 43, time.Now().Unix())
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 10)
@@ -349,14 +348,12 @@ func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *w
 const BlockPartSize = 65536
 
 func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k1.PrivKeySecp256k1) auth.StdTx {
-	fee, _ := sdk.ParseCoin("100 BNB")
-	signMsg := auth.StdSignMsg{
+	signMsg := txbuilder.StdSignMsg{
 		ChainID:       "chainID1",
 		AccountNumber: accountNumber,
 		Sequence:      seqNum,
 		Msgs:          msgs,
 		Memo:          "Memo1",
-		Fee:           auth.NewStdFee(int64(100), fee), // TODO run simulate to estimate gas?
 	}
 	sig, _ := privKey.Sign(signMsg.Bytes())
 	sigs := []auth.StdSignature{{
@@ -365,7 +362,7 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 		AccountNumber: accountNumber,
 		Sequence:      seqNum,
 	}}
-	tx := auth.NewStdTx(signMsg.Msgs, signMsg.Fee, sigs, signMsg.Memo)
+	tx := auth.NewStdTx(signMsg.Msgs, sigs, signMsg.Memo)
 	return tx
 }
 
@@ -431,7 +428,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), tx.DefaultTxDecoder(cdc))
+	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
@@ -458,7 +455,7 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	ctx = sdk.NewContext(cms, abci.Header{}, true, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper2.InitOrderBook(ctx, 7, memDB, 3, tx.DefaultTxDecoder(cdc))
+	keeper2.InitOrderBook(ctx, 7, memDB, 3, auth.DefaultTxDecoder(cdc))
 	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
 	assert.Equal(1, len(sells))
@@ -468,12 +465,12 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func setup() (ctx sdk.Context, mapper auth.AccountMapper, keeper *Keeper) {
+func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	types.RegisterWire(cdc)
 	wire.RegisterCrypto(cdc)
-	mapper = auth.NewAccountMapper(cdc, capKey, types.ProtoAppAccount)
+	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
 	keeper = NewKeeper(capKey2, mapper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
@@ -493,15 +490,15 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, ""}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, ""}, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
-		sdk.NewCoin("ABC", 3e8),
-		sdk.NewCoin("BNB", 11e4),
+		sdk.NewInt64Coin("ABC", 3e8),
+		sdk.NewInt64Coin("BNB", 11e4),
 	}.Sort())
 	am.SetAccount(ctx, acc)
 
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
-	keeper.MarkBreatheBlock(ctx, 15000, breathTime.Unix())
-
-	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), nil, nil)
+	keeper.MarkBreatheBlock(ctx, 15000, breathTime)
+	
+	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), nil, nil)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)
@@ -515,18 +512,18 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
 	require.Len(t, keeper.allOrders["XYZ_BNB"], 1)
 	expectFees := types.NewFee(sdk.Coins{
-		sdk.NewCoin("BNB", 6e4),
-		sdk.NewCoin("ABC", 1e7),
+		sdk.NewInt64Coin("BNB", 6e4),
+		sdk.NewInt64Coin("ABC", 1e7),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, tx.Fee(ctx))
 	acc = am.GetAccount(ctx, acc.GetAddress())
 	require.Equal(t, sdk.Coins{
-		sdk.NewCoin("ABC", 2e8),
-		sdk.NewCoin("BNB", 4e4),
+		sdk.NewInt64Coin("ABC", 2e8),
+		sdk.NewInt64Coin("BNB", 4e4),
 	}.Sort(), acc.(types.NamedAccount).GetLockedCoins())
 	require.Equal(t, sdk.Coins{
-		sdk.NewCoin("ABC", 9e7),
-		sdk.NewCoin("BNB", 1e4),
+		sdk.NewInt64Coin("ABC", 9e7),
+		sdk.NewInt64Coin("BNB", 1e4),
 	}.Sort(), acc.GetCoins())
 }
 

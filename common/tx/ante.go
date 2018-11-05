@@ -3,22 +3,17 @@ package tx
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
-	deductFeesCost    sdk.Gas = 10
-	memoCostPerByte   sdk.Gas = 1
-	verifyCost                = 100
-	maxMemoCharacters         = 100
+	maxMemoCharacters = 100
 )
 
 // NewAnteHandler returns an AnteHandler that checks
@@ -26,51 +21,26 @@ const (
 // and deducts fees from the first signer.
 // NOTE: Receiving the `NewOrder` dependency here avoids an import cycle.
 // nolint: gocyclo
-// TODO: remove gas
-func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
-		ctx sdk.Context, tx sdk.Tx,
+		ctx sdk.Context, tx sdk.Tx, simulate bool,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
+		newCtx = ctx
 
 		// This AnteHandler requires Txs to be StdTxs
-		stdTx, ok := tx.(StdTx)
+		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
 			return ctx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		// set the gas meter
-		newCtx = ctx.WithGasMeter(sdk.NewGasMeter(stdTx.Fee.Gas))
-
-		// AnteHandlers must have their own defer/recover in order
-		// for the BaseApp to know how much gas was used!
-		// This is because the GasMeter is created in the AnteHandler,
-		// but if it panics the context won't be set properly in runTx's recover ...
-		defer func() {
-			if r := recover(); r != nil {
-				switch rType := r.(type) {
-				case sdk.ErrorOutOfGas:
-					log := fmt.Sprintf("out of gas in location: %v", rType.Descriptor)
-					res = sdk.ErrOutOfGas(log).Result()
-					res.GasWanted = stdTx.Fee.Gas
-					res.GasUsed = newCtx.GasMeter().GasConsumed()
-					abort = true
-				default:
-					panic(r)
-				}
-			}
-		}()
-
 		err := validateBasic(stdTx)
 		if err != nil {
-			return newCtx, err.Result(), true
+			return ctx, err.Result(), true
 		}
 
 		sigs := stdTx.GetSignatures()
 		signerAddrs := stdTx.GetSigners()
 		msgs := tx.GetMsgs()
-
-		// charge gas for the memo
-		newCtx.GasMeter().ConsumeGas(memoCostPerByte*sdk.Gas(len(stdTx.GetMemo())), "memo")
 
 		// get the sign bytes (requires all account & sequence numbers and the fee)
 		sequences := make([]int64, len(sigs))
@@ -83,43 +53,22 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 		// collect signer accounts
 		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]auth.Account, len(signerAddrs))
-		for i := 0; i < len(sigs); i++ {
-			signerAddr := signerAddrs[i]
-			signerAcc := am.GetAccount(ctx, signerAddr)
-			signerAccs[i] = signerAcc
-		}
-
-		// TODO: order ID validation hoisted here temporarily for now - ensures sequence is always in sync with msg
-		// avoid importing NewOrderMsg, which causes an import cycle :(
-		if msgs[0].Type() == orderMsgType {
-			expectedOrderID := fmt.Sprintf("\"%X-%d\"", signerAccs[0].GetAddress(), sequences[0])
-			if !strings.Contains(string(msgs[0].GetSignBytes()), expectedOrderID) {
-				log.Info("Invalid order ID encountered", "signbytes", string(msgs[0].GetSignBytes()))
-				return newCtx, sdk.Result{
-					Code: sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownRequest),
-					Log:  fmt.Sprintf("Invalid order ID provided, expected `%s`.", expectedOrderID),
-					Data: []byte("Unexpected order ID encountered"),
-				}, true
-			}
-		}
-
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
-
 			// check signature, return account with incremented nonce
-			signBytes := StdSignBytes(newCtx.ChainID(), accNums[i], sequences[i], stdTx.Fee, msgs, stdTx.GetMemo())
-			signerAcc, res := processSig(newCtx, am, signerAddr, sig, signBytes)
+			signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
+			signerAcc, res := processSig(ctx, am, signerAddr, sig, signBytes)
 			if !res.IsOK() {
-				return newCtx, res, true
+				return ctx, res, true
 			}
 
 			// Save the account.
-			am.SetAccount(newCtx, signerAcc)
+			am.SetAccount(ctx, signerAcc)
 			signerAccs[i] = signerAcc
 		}
 
-		newCtx, res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0])
+		newCtx, res = calcAndCollectFees(ctx, am, signerAccs[0], msgs[0])
 		if !res.IsOK() {
 			return newCtx, res, true
 		}
@@ -128,12 +77,12 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 		newCtx = auth.WithSigners(newCtx, signerAccs)
 
 		// TODO: tx tags (?)
-		return newCtx, sdk.Result{GasWanted: stdTx.Fee.Gas}, false // continue...
+		return newCtx, sdk.Result{}, false // continue...
 	}
 }
 
 // Validate the transaction based on things that don't depend on the context
-func validateBasic(tx StdTx) (err sdk.Error) {
+func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	// Assert that there are signatures.
 	sigs := tx.GetSignatures()
 	if len(sigs) == 0 {
@@ -158,8 +107,8 @@ func validateBasic(tx StdTx) (err sdk.Error) {
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
 func processSig(
-	ctx sdk.Context, am auth.AccountMapper,
-	addr sdk.AccAddress, sig StdSignature, signBytes []byte) (
+	ctx sdk.Context, am auth.AccountKeeper,
+	addr sdk.AccAddress, sig auth.StdSignature, signBytes []byte) (
 	acc auth.Account, res sdk.Result) {
 
 	// Get the account.
@@ -205,7 +154,6 @@ func processSig(
 	}
 
 	// Check sig.
-	ctx.GasMeter().ConsumeGas(verifyCost, "ante verify")
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return nil, sdk.ErrUnauthorized("signature verification failed").Result()
 	}
@@ -213,7 +161,7 @@ func processSig(
 	return
 }
 
-func calcAndCollectFees(ctx sdk.Context, am auth.AccountMapper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -264,7 +212,7 @@ func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountMapper) sdk.Result {
+func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}
@@ -279,6 +227,3 @@ func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.Accoun
 	am.SetAccount(ctx, acc)
 	return sdk.Result{}
 }
-
-// BurnFeeHandler burns all fees (decreasing total supply)
-func BurnFeeHandler(_ sdk.Context, _ sdk.Tx, _ sdk.Coins) {}

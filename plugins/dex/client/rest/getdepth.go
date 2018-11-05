@@ -17,7 +17,7 @@ const allowedLimits = "5,10,20,50,100"
 const defaultLimit = "100"
 
 // DepthReqHandler creates an http request handler to show market depth data
-func DepthReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	allowedLimitsA := strings.Split(allowedLimits, ",")
 
 	type params struct {

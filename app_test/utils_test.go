@@ -26,7 +26,7 @@ var (
 	keeper *orderPkg.Keeper
 	buyer  sdk.AccAddress
 	seller sdk.AccAddress
-	am     auth.AccountMapper
+	am     auth.AccountKeeper
 	ctx    sdk.Context
 	app    types.ChainApp
 	cdc    *wire.Codec
@@ -46,7 +46,7 @@ func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	am = app.(*appPkg.BinanceChain).AccountMapper
+	am = app.(*appPkg.BinanceChain).AccountKeeper
 	_, buyerAcc := testutils.NewAccount(ctx, am, 100000000000) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 

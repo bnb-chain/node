@@ -28,7 +28,7 @@ type TransferHandler func(Transfer)
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	PairMapper                 store.TradingPairMapper
-	am                         auth.AccountMapper
+	am                         auth.AccountKeeper
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
@@ -50,7 +50,7 @@ func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, am auth.AccountMapper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
+func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
@@ -424,7 +424,7 @@ func (kp *Keeper) ClearOrderChanges() {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	account := kp.am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock)})
 	// these two non-negative check are to ensure the Transfer gen result is correct before we actually operate the acc.
 	// they should never happen, there would be a severe bug if happen and we have to cancel all orders when app restarts.
 	if !newLocked.IsNotNegative() {
@@ -435,8 +435,8 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
-		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
-		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
+		Plus(sdk.Coins{sdk.NewInt64Coin(tran.inAsset, tran.in)}).
+		Plus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock-tran.out)}))
 
 	kp.am.SetAccount(ctx, account)
 	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
@@ -492,7 +492,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			acc := kp.am.GetAccount(ctx, addr)
 			fees := types.Fee{}
 			if assets.native != 0 {
-				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
+				fee := calcFeeAndDeduct(acc, sdk.NewInt64Coin(types.NativeToken, assets.native))
 				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}
@@ -507,7 +507,6 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			}
 		}
 	}
-
 	collectFee(tradeInAsset, func(acc auth.Account, in sdk.Coin) types.Fee {
 		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.lastTradePrices)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
@@ -581,7 +580,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 	postAlloFeeHandler FeeHandler,
 ) (newCtx sdk.Context) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time.Unix())
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return ctx
@@ -593,7 +592,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 	return newCtx
 }
 
-func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer {
+func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {
 	size := len(kp.allOrders)
 	if size == 0 {
 		kp.logger.Info("No orders to expire")
@@ -602,7 +601,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 
 	// TODO: make effectiveDays configurable
 	const effectiveDays = 3
-	expireHeight, err := kp.GetBreatheBlockHeight(ctx, time.Unix(blockTime, 0), effectiveDays)
+	expireHeight, err := kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
 	if err != nil {
 		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
 		kp.logger.Info(err.Error())
@@ -657,7 +656,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 
 func (kp *Keeper) ExpireOrders(
 	ctx sdk.Context,
-	blockTime int64,
+	blockTime time.Time,
 	postAlloTransHandler TransferHandler,
 	postAlloFeeHandler FeeHandler,
 ) (newCtx sdk.Context) {
@@ -671,14 +670,14 @@ func (kp *Keeper) ExpireOrders(
 	return newCtx
 }
 
-func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height, blockTime int64) {
-	key := utils.Int642Bytes(blockTime / utils.SecondsPerDay)
+func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time) {
+	key := utils.Int642Bytes(blockTime.Unix() / utils.SecondsPerDay)
 	store := ctx.KVStore(kp.storeKey)
 	bz, err := kp.cdc.MarshalBinaryBare(height)
 	if err != nil {
 		panic(err)
 	}
-	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime, bz))
+	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
 	store.Set([]byte(key), bz)
 }
 

@@ -32,17 +32,17 @@ func BenchmarkGetAccount(b *testing.B) {
 			Address: baseAcc.GetAddress(),
 			Coins:   baseAcc.GetCoins(),
 		}}
-	if testApp.AccountMapper.GetAccount(ctx, acc.GetAddress()) == nil {
-		acc.BaseAccount.AccountNumber = testApp.AccountMapper.GetNextAccountNumber(ctx)
+	if testApp.AccountKeeper.GetAccount(ctx, acc.GetAddress()) == nil {
+		acc.BaseAccount.AccountNumber = testApp.AccountKeeper.GetNextAccountNumber(ctx)
 	}
 
-	acc.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
-	acc.SetLockedCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
-	acc.SetFrozenCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetLockedCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetFrozenCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
 
-	testApp.AccountMapper.SetAccount(ctx, acc)
+	testApp.AccountKeeper.SetAccount(ctx, acc)
 	for i := 0; i < b.N; i++ {
-		_ = testApp.AccountMapper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
+		_ = testApp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	}
 }
 
@@ -64,15 +64,15 @@ func BenchmarkSetAccount(b *testing.B) {
 			Address: baseAcc.GetAddress(),
 			Coins:   baseAcc.GetCoins(),
 		}}
-	if testApp.AccountMapper.GetAccount(ctx, acc.GetAddress()) == nil {
-		acc.BaseAccount.AccountNumber = testApp.AccountMapper.GetNextAccountNumber(ctx)
+	if testApp.AccountKeeper.GetAccount(ctx, acc.GetAddress()) == nil {
+		acc.BaseAccount.AccountNumber = testApp.AccountKeeper.GetNextAccountNumber(ctx)
 	}
 
-	acc.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
-	acc.SetLockedCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
-	acc.SetFrozenCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetLockedCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetFrozenCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
 
 	for i := 0; i < b.N; i++ {
-		testApp.AccountMapper.SetAccount(ctx, acc)
+		testApp.AccountKeeper.SetAccount(ctx, acc)
 	}
 }

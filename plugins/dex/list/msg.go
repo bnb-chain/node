@@ -11,6 +11,8 @@ import (
 
 const Route = "dexList"
 
+var _ sdk.Msg = ListMsg{}
+
 type ListMsg struct {
 	Version          byte           `json:"version"`
 	From             sdk.AccAddress `json:"from"`
@@ -29,6 +31,7 @@ func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string
 	}
 }
 
+func (msg ListMsg) Route() string                { return Route }
 func (msg ListMsg) Type() string                 { return Route }
 func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%#v}", msg) }
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
@@ -57,4 +60,8 @@ func (msg ListMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg ListMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
 }

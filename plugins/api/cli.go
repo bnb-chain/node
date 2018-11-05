@@ -3,14 +3,16 @@ package api
 import (
 	"os"
 
-	client "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	tmserver "github.com/tendermint/tendermint/rpc/lib/server"
 
+	sdk "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/context"
+
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -25,7 +27,9 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 		Use:   "api-server",
 		Short: "Start the API server daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper()
+			ctx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(types.GetAccountDecoder(cdc))
 			listenAddr := viper.GetString(flagListenAddr)
 			server := newServer(ctx, cdc).bindRoutes()
 			handler := server.router
@@ -54,8 +58,8 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 
 	cmd.Flags().String(flagListenAddr, "tcp://localhost:8080", "The address for the server to listen on")
 	cmd.Flags().String(flagCORS, "", "Set the domains that can make CORS requests (* for all)")
-	cmd.Flags().String(client.FlagChainID, "", "The chain ID to connect to")
-	cmd.Flags().String(client.FlagNode, "tcp://localhost:26657", "Address of the node to connect to")
+	cmd.Flags().String(sdk.FlagChainID, "", "The chain ID to connect to")
+	cmd.Flags().String(sdk.FlagNode, "tcp://localhost:26657", "Address of the node to connect to")
 	cmd.Flags().Int(flagMaxOpenConnections, 1000, "The number of maximum open connections")
 
 	return cmd

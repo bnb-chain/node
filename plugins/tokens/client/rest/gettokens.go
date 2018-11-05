@@ -16,8 +16,8 @@ const maxTokensLimit = 1000
 const defaultTokensLimit = 100
 const defaultTokensOffset = 0
 
-func listAllTokens(ctx context.CoreContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit))
+func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, error) {
+	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func listAllTokens(ctx context.CoreContext, cdc *wire.Codec, offset int, limit i
 }
 
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper
-func GetTokensReqHandler(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
 		limit  int
 		offset int

@@ -10,16 +10,17 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
+	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/api/helpers"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
 // PutOrderReqHandler creates an http request handler to create a new order transaction and return its binary tx
-func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName string) http.HandlerFunc {
+func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName string) http.HandlerFunc {
 	type formParams struct {
 		address string
 		pair    string
@@ -64,9 +65,6 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 	}
 	accDecoder := authcmd.GetAccountDecoder(cdc)
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: collect chainID too
-		ctx.ChainID = "bnbchain-1000"
-
 		// parse application/x-www-form-urlencoded or multipart/form-data form params
 		params := formParams{
 			address: r.FormValue("address"),
@@ -147,7 +145,8 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CoreContext, accStoreName s
 		msgs := []sdk.Msg{msg}
 
 		// build the tx
-		txBytes, err := helpers.BuildUnsignedTx(ctx, account, msgs, cdc)
+		txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
+		txBytes, err := client.BuildUnsignedTx(txBldr, account, msgs)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
