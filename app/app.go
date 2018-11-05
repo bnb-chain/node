@@ -65,7 +65,7 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
-	ValMapper     val.Mapper
+	ValAddrMapper val.Mapper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
@@ -93,12 +93,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
-	app.ValMapper = val.NewMapper(common.ValStoreKey)
+	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
 
 	// handlers
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	// TODO: make the concurrency configurable
 
+	tradingPairMapper := dex.NewTradingPairMapper(cdc, common.PairStoreKey)
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountMapper, tradingPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), 2, app.cdc, app.publicationConfig.PublishOrderUpdates)
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
 	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
@@ -117,8 +120,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
 	app.SetEndBlocker(app.EndBlocker)
-	app.MountStoresIAVL(common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountMapper, order.NewOrder)) // passing in `NewOrder` here avoids an import cycle
+	app.MountStoresIAVL(
+		common.MainStoreKey,
+		common.AccountStoreKey,
+		common.ValAddrStoreKey,
+		common.TokenStoreKey,
+		common.DexStoreKey,
+		common.PairStoreKey)
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 
 	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)
@@ -141,8 +150,11 @@ func (app *BinanceChain) initDex() {
 	if app.CheckState == nil {
 		return
 	}
-	// configure dex keeper
-	app.DexKeeper.FeeConfig.Init(app.CheckState.Ctx)
+
+	tokens.InitPlugin(app, app.TokenMapper)
+	dex.InitPlugin(app, app.DexKeeper)
+
+	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, 7,
 		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
@@ -169,7 +181,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
+			app.ValAddrMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
 		}
 
 		for _, token := range genesisState.Tokens {
@@ -212,10 +224,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
-		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountKeeper, ctx)
+		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountKeeper, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
 
 	} else {

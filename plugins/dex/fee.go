@@ -8,12 +8,13 @@ import (
 )
 
 const (
-	ListingFee     = 3e13
-	OrderCancelFee = 1e6
+	ListingFee     = 1e12
 )
 
 func init() {
 	tx.RegisterCalculator(list.Route, tx.FixedFeeCalculator(ListingFee, types.FeeForAll))
-	tx.RegisterCalculator(order.RouteNewOrder, tx.FreeFeeCalculator())
-	tx.RegisterCalculator(order.RouteCancelOrder, tx.FixedFeeCalculator(OrderCancelFee, types.FeeForProposer))
+	tx.RegisterCalculator(order.NewOrder, tx.FreeFeeCalculator())
+	// the calculation of cancel fee is complicated and similar like expire orders.
+	// So set free here and put the real calc in the handler.
+	tx.RegisterCalculator(order.CancelOrder, tx.FreeFeeCalculator())
 }

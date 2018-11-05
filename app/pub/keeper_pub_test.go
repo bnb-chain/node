@@ -13,7 +13,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
@@ -31,6 +30,19 @@ const (
 	expireFee    = 1000
 	iocExpireFee = 500
 )
+
+func newTestFeeConfig() orderPkg.FeeConfig {
+	feeConfig := orderPkg.NewFeeConfig()
+	feeConfig.FeeRateNative = 500
+	feeConfig.FeeRate = 1000
+	feeConfig.ExpireFeeNative = 2e4
+	feeConfig.ExpireFee = 1e5
+	feeConfig.IOCExpireFeeNative = 1e4
+	feeConfig.IOCExpireFee = 5e4
+	feeConfig.CancelFeeNative = 2e4
+	feeConfig.CancelFee = 1e5
+	return feeConfig
+}
 
 var keeper *orderPkg.Keeper
 var buyer sdk.AccAddress
@@ -52,6 +64,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
+	keeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
 
 	keeper.FeeConfig.SetExpireFee(ctx, expireFee)
 	keeper.FeeConfig.SetIOCExpireFee(ctx, iocExpireFee)
