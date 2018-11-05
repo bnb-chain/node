@@ -1,7 +1,6 @@
 package pub
 
 import (
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -71,7 +70,10 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
 	ctx sdk.Context) []*Trade {
-	// These two channels are used for protect not update Trade concurrently
+	// These two channels are used for protect not update `tradesToPublish` and `dexKeeper.OrderChanges` concurrently
+	// matcher would send item to feeCollectorForTrades in several goroutine (well-designed)
+	// while tradesToPublish and dexKeeper.OrderChanges are not separated by concurrent factor (users here), so we have
+	// to organized transfer holders into 2 channels
 	tradeHolderCh := make(chan orderPkg.TradeHolder, TransferCollectionChannelSize)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
@@ -311,7 +313,7 @@ func collectExecutedOrdersToPublish(
 
 func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder) string {
 	feeStr := ""
-	if fee, ok := feeHolder[hex.EncodeToString(orderInfo.Sender)]; ok {
+	if fee, ok := feeHolder[string(orderInfo.Sender)]; ok {
 		feeStr = fee.String()
 	} else {
 		if orderInfo.CumQty == 0 && status != orderPkg.Ack {

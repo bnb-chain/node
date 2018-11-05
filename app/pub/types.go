@@ -32,5 +32,5 @@ func NewBlockInfoToPublish(
 		orderChangesMap,
 		accounts,
 		latestPriceLevels,
-		getFeeHolder()}
+		feeHolderCache}
 }

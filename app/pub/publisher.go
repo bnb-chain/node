@@ -1,14 +1,11 @@
 package pub
 
 import (
-	"fmt"
-	"github.com/BiJie/BinanceChain/common/types"
-	tmlog "github.com/tendermint/tendermint/libs/log"
-	"sync"
-
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -29,8 +26,6 @@ var (
 )
 
 var (
-	feeHolderCacheLock sync.Mutex
-	// guarded by feeHolderCacheLock
 	feeHolderCache orderPkg.FeeHolder
 )
 
@@ -161,15 +156,6 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 }
 
 func setFeeHolder(fee map[string]*types.Fee) {
-	feeHolderCacheLock.Lock()
-	defer feeHolderCacheLock.Unlock()
-	fmt.Printf("set fee holder %v\n", fee)
+	Logger.Debug("set fee holder", "feeHolder", fee)
 	feeHolderCache = fee
-}
-
-func getFeeHolder() orderPkg.FeeHolder {
-	feeHolderCacheLock.Lock()
-	defer feeHolderCacheLock.Unlock()
-	fmt.Printf("get fee holder %v\n", feeHolderCache)
-	return feeHolderCache
 }
