@@ -222,6 +222,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:6eaa0d2db3a9b32c5e5f5f88f81f6605b1cc3535ce93ba7debe9e3bb96a25c67"
+  name = "github.com/golang/go"
+  packages = ["src/io/ioutil"]
+  pruneopts = "UT"
+  revision = "efd229238aceefdee6a00ea28b61c924c2b5f1a5"
+
+[[projects]]
   digest = "1:17fe264ee908afc795734e8c4e63db2accabaf57326dbf21763a7d6b86096260"
   name = "github.com/golang/protobuf"
   packages = [
@@ -811,6 +819,7 @@
     "github.com/cosmos/cosmos-sdk/x/stake/client/cli",
     "github.com/deathowl/go-metrics-prometheus",
     "github.com/eapache/go-resiliency/breaker",
+    "github.com/golang/go/src/io/ioutil",
     "github.com/google/btree",
     "github.com/gorilla/mux",
     "github.com/linkedin/goavro",

@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/BiJie/BinanceChain/app/val"
 	"io"
 	"os"
 
@@ -21,6 +20,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
+	"github.com/BiJie/BinanceChain/app/val"
 	"github.com/BiJie/BinanceChain/common"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -97,7 +97,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// handlers
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
-	// TODO: make the concurrency configurable
 
 	// Currently we do not need the ibc and staking part
 	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
@@ -141,14 +140,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 func (app *BinanceChain) initDex() {
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.CoinKeeper, tradingPairMapper,
+	// TODO: make the concurrency configurable
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.PublishOrderUpdates)
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
 	}
 	// configure dex keeper
-	app.DexKeeper.FeeConfig.Init(app.CheckState.Ctx)
+	app.DexKeeper.FeeManager.InitFeeConfig(app.CheckState.Ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, 7,
 		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
@@ -219,9 +219,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.AccountKeeper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx, _, _ = app.DexKeeper.MatchAndAllocateAll(ctx, app.AccountKeeper, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
 
 	} else {
@@ -229,7 +229,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.AccountKeeper, app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
