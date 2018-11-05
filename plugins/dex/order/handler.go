@@ -44,11 +44,7 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc auth
 		return err
 	}
 
-	seq := acc.GetSequence()
-	expectedID := GenerateOrderID(seq, msg.Sender)
-	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID given did not match the expected one: `%s`", expectedID)
-	}
+	// NOTE: order ID validation has been temporarily moved to AnteHandler until sequencing can be improved.
 
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	if err != nil {
