@@ -56,8 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "upgrade25"
-  digest = "1:20e83c3ddba7751c4a8da5909faf55ad7470d4a42a32be6e9ba5ebdc221fa229"
+  digest = "1:bea0b6efd20662a51f0a3b107d51fa79846ad94f89e9603d1cfb821e236e06d8"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",

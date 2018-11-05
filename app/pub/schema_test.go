@@ -54,7 +54,7 @@ func TestBooksMarshaling(t *testing.T) {
 }
 
 func TestAccountsMarshaling(t *testing.T) {
-	accs := []Account{Account{"b-1", []AssetBalance{{Asset: "BNB", Free: 100}}}}
+	accs := []Account{{"b-1", []*AssetBalance{{Asset: "BNB", Free: 100}}}}
 	msg := accounts{42, 2, accs}
 	_, err := marshal(&msg, accountsTpe)
 	if err != nil {
