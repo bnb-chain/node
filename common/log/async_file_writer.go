@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -210,5 +211,10 @@ func (w *AsyncFileWriter) flushAndClose() error {
 }
 
 func (w *AsyncFileWriter) timeFilePath(filePath string) string {
-	return filePath + "." + time.Now().Format("2006-01-02_15")
+	ext := filepath.Ext(filePath)
+	if ext == "" {
+		return filePath + "." + time.Now().Format("2006-01-02_15")
+	} else {
+		return strings.TrimSuffix(filePath, ext[1:]) + time.Now().Format("2006-01-02_15") + ext
+	}
 }
