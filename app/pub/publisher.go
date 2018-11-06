@@ -1,20 +1,20 @@
 package pub
 
 import (
-	tmlog "github.com/tendermint/tendermint/libs/log"
-
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 const (
 	// TODO(#66): revisit the setting / whole thread model here,
 	// do we need better way to make main thread less possibility to block
-	PublicationChannelSize     = 10000
-	FeeCollectionChannelSize   = 4000
-	ToRemoveOrderIdChannelSize = 1000
-	MaxOrderBookLevel          = 20
+	PublicationChannelSize        = 10000
+	TransferCollectionChannelSize = 4000
+	ToRemoveOrderIdChannelSize    = 1000
+	MaxOrderBookLevel             = 20
 )
 
 var (
@@ -23,6 +23,10 @@ var (
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
+)
+
+var (
+	feeHolderCache orderPkg.FeeHolder
 )
 
 type MarketDataPublisher interface {
@@ -54,9 +58,10 @@ func publish(publisher MarketDataPublisher) {
 		var canceledToPublish []order
 		if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
 			opensToPublish, canceledToPublish = collectExecutedOrdersToPublish(
-				&marketData.tradesToPublish,
+				marketData.tradesToPublish,
 				marketData.orderChanges,
 				marketData.orderChangesMap,
+				marketData.feeHolder,
 				marketData.timestamp)
 			for _, o := range opensToPublish {
 				if o.status == orderPkg.FullyFill {
@@ -99,7 +104,7 @@ func publish(publisher MarketDataPublisher) {
 	}
 }
 
-func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []order, tradesToPublish []Trade) {
+func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []order, tradesToPublish []*Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, numOfMsgs: numOfTrades + numOfOrders}
@@ -148,4 +153,9 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 	books := Books{height, timestamp, len(deltas), deltas}
 
 	publisher.publish(&books, booksTpe, height, timestamp)
+}
+
+func setFeeHolder(fee map[string]*types.Fee) {
+	Logger.Debug("set fee holder", "feeHolder", fee)
+	feeHolderCache = fee
 }

@@ -3,6 +3,7 @@ package order
 import (
 	"fmt"
 
+	"github.com/BiJie/BinanceChain/common/types"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 )
 
@@ -54,14 +55,12 @@ func (this ExecutionType) String() string {
 }
 
 type OrderChange struct {
-	Id       string
-	Tpe      ChangeType
-	Fee      int64
-	FeeAsset string
+	Id  string
+	Tpe ChangeType
 }
 
 func (oc OrderChange) String() string {
-	return fmt.Sprintf("id: %s, tpe: %s, fee: %d%s", oc.Id, oc.Tpe.String(), oc.Fee, oc.FeeAsset)
+	return fmt.Sprintf("id: %s, tpe: %s", oc.Id, oc.Tpe.String())
 }
 
 // provide an easy way to retrieve order related static fields during generate executed order status
@@ -75,31 +74,18 @@ type ChangedPriceLevelsPerSymbol struct {
 	Sells map[int64]int64
 }
 
-type TradeFeeHolder struct {
+type TradeHolder struct {
 	OId    string
 	Trade  *me.Trade
 	Symbol string
-	Fee
 }
 
-func (fh TradeFeeHolder) String() string {
-	return fmt.Sprintf("oid: %s, bid: %s, sid: %s, fee: %s", fh.OId, fh.Trade.Bid, fh.Trade.Sid, fh.Fee)
+func (fh TradeHolder) String() string {
+	return fmt.Sprintf("oid: %s, bid: %s, sid: %s", fh.OId, fh.Trade.Bid, fh.Trade.Sid)
 }
 
-type ExpireFeeHolder struct {
+type ExpireHolder struct {
 	OrderId string
-	Fee
 }
 
-func (fh ExpireFeeHolder) String() string {
-	return fmt.Sprintf("order: %s, fee: %s", fh.OrderId, fh.Fee)
-}
-
-type Fee struct {
-	Amount int64
-	Asset  string
-}
-
-func (fee Fee) String() string {
-	return fmt.Sprintf("%d%s", fee.Amount, fee.Asset)
-}
+type FeeHolder map[string]*types.Fee

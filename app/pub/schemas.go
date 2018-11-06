@@ -30,10 +30,8 @@ const (
 										{ "name": "qty", "type": "long"	},
 										{ "name": "sid", "type": "string" },
 										{ "name": "bid", "type": "string" },
-										{ "name": "sfee", "type": "long" },
-										{ "name": "bfee", "type": "long" },
-										{ "name": "sfeeAsset", "type": "string" },
-										{ "name": "bfeeAsset", "type": "string" }
+										{ "name": "sfee", "type": "string" },
+										{ "name": "bfee", "type": "string" }
 									]
 								}
 							}
@@ -66,8 +64,7 @@ const (
 									{ "name": "lastExecutedPrice", "type": "long" },
 									{ "name": "lastExecutedQty", "type": "long" },
 									{ "name": "cumQty", "type": "long" },
-									{ "name": "fee", "type": "long" }, 
-									{ "name": "feeAsset", "type": "string" },
+									{ "name": "fee", "type": "string" }, 
 									{ "name": "orderCreationTime", "type": "long" },
 									{ "name": "transactionTime", "type": "long" },
 									{ "name": "timeInForce", "type": "string" },
