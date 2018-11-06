@@ -50,14 +50,13 @@ then
 
 	cd ${work_path}/..
 
+	cp -rf utils.go /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/vendor/github.com/cosmos/cosmos-sdk/client/keys/ > /dev/null
 	tar -zcvf BinanceChain.tar.gz --exclude=BinanceChain/build BinanceChain > /dev/null
 	for i in {0..2}
 	do
 		echo "Copying repo to host ${machines[$i]}..."
 		ssh bijieprd@${machines[$i]} "sudo rm -rf ~/gowork/src/github.com/BiJie/BinanceChain"
 		scp BinanceChain.tar.gz bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
-		# TODO: remove this work around until we have an appropriate
-		scp helpers.go bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
 		ssh bijieprd@${machines[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
 	done
 fi
@@ -280,7 +279,7 @@ scp -r node_publisher bijieprd@${witness_ip}:${home_path} > /dev/null
 
 # start an api-server to query tx
 ps -ef | grep "bnbcli" | grep "api-server" | awk '{print $2}' | xargs kill -9
-nohup build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
+nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
 
 echo "Starting publisher node..."
 ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_publisher/gaiad start > ${home_path}/node_publisher/node_publisher.log 2>&1 &"
