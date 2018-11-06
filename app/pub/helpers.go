@@ -23,15 +23,15 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 				if acc, ok := mapper.GetAccount(ctx, addr).(types.NamedAccount); ok {
 					assetsMap := make(map[string]*AssetBalance)
 					// TODO(#66): set the length to be the total coins this account owned
-					assets := make([]AssetBalance, 0, 10)
+					assets := make([]*AssetBalance, 0, 10)
 
 					for _, freeCoin := range acc.GetCoins() {
 						if assetBalance, ok := assetsMap[freeCoin.Denom]; ok {
 							assetBalance.Free = freeCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: freeCoin.Denom, Free: freeCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[freeCoin.Denom] = &newAB
+							assetsMap[freeCoin.Denom] = newAB
 						}
 					}
 
@@ -39,9 +39,9 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						if assetBalance, ok := assetsMap[frozenCoin.Denom]; ok {
 							assetBalance.Frozen = frozenCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: frozenCoin.Denom, Frozen: frozenCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[frozenCoin.Denom] = &newAB
+							assetsMap[frozenCoin.Denom] = newAB
 						}
 					}
 
@@ -49,9 +49,9 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						if assetBalance, ok := assetsMap[lockedCoin.Denom]; ok {
 							assetBalance.Locked = lockedCoin.Amount.Int64()
 						} else {
-							newAB := AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
+							newAB := &AssetBalance{Asset: lockedCoin.Denom, Locked: lockedCoin.Amount.Int64()}
 							assets = append(assets, newAB)
-							assetsMap[lockedCoin.Denom] = &newAB
+							assetsMap[lockedCoin.Denom] = newAB
 						}
 					}
 
