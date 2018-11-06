@@ -109,7 +109,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "658b464b81a49da6010ea2f16c00f0e95bf3c888"
+  revision = "468f40005354724f0f044c99bd372a84f392daa9"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
