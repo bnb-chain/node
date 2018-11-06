@@ -14,7 +14,8 @@ const (
 	FeeForAll      = FeeDistributeType(0x02)
 	FeeFree        = FeeDistributeType(0x03)
 
-	SerializeSeparator = ";"
+	serializeSeparator   = ";"
+	amountDenomSeparator = ":"
 )
 
 type Fee struct {
@@ -56,7 +57,7 @@ func (fee Fee) Serialize() string {
 	} else {
 		var buffer bytes.Buffer
 		for _, coin := range fee.Tokens {
-			buffer.WriteString(fmt.Sprintf("%s%s%s", coin.Amount.String(), coin.Denom, SerializeSeparator))
+			buffer.WriteString(fmt.Sprintf("%s%s%s%s", coin.Denom, amountDenomSeparator, coin.Amount.String(), serializeSeparator))
 		}
 		res := buffer.String()
 		return res[:len(res)-1]
