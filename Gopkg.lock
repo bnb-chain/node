@@ -56,7 +56,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:bea0b6efd20662a51f0a3b107d51fa79846ad94f89e9603d1cfb821e236e06d8"
+  branch = "feature/cache"
+  digest = "1:9c344f61ff30f254a519345ed2bfce890beb3bb75490663730d075f8ec2771bf"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -108,7 +109,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "468f40005354724f0f044c99bd372a84f392daa9"
+  revision = "409b5c15d97ea4b591cd49567d209dd501e57af8"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -281,6 +282,17 @@
   pruneopts = "UT"
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "UT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
 
 [[projects]]
   branch = "master"

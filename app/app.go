@@ -6,17 +6,16 @@ import (
 	"io"
 	"os"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
@@ -131,6 +130,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
+	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
+	app.BaseApp.AccountStoreCache = auth.NewAccountSotreCache(cdc, accountStore, 10000)
+
 	// remaining plugin init
 	app.initDex()
 	app.initPlugins()
@@ -177,6 +179,8 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			app.AccountKeeper.SetAccount(ctx, acc)
 			app.ValAddrMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
 		}
+
+		app.BaseApp.DeliverAccountCache.Write()
 
 		for _, token := range genesisState.Tokens {
 			// TODO: replace by Issue and move to token.genesis
