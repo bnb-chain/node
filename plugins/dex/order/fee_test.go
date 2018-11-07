@@ -1,12 +1,14 @@
 package order
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func NewTestFeeConfig() FeeConfig {
@@ -75,17 +77,17 @@ func TestFeeManager_CalcFixedFee(t *testing.T) {
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeToken, 2e4)}, fee.Tokens)
 
 	// No enough native token, but enough ABC
-	acc.SetCoins(sdk.Coins{{Denom:types.NativeToken, Amount: sdk.NewInt(1e4)}, {Denom:"ABC", Amount:sdk.NewInt(1e8)}})
+	acc.SetCoins(sdk.Coins{{Denom: types.NativeToken, Amount: sdk.NewInt(1e4)}, {Denom: "ABC", Amount: sdk.NewInt(1e8)}})
 	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC", lastTradePrices)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e6)}, fee.Tokens)
 
 	// No enough native token and ABC
-	acc.SetCoins(sdk.Coins{{Denom:types.NativeToken, Amount: sdk.NewInt(1e4)}, {Denom:"ABC", Amount:sdk.NewInt(1e5)}})
+	acc.SetCoins(sdk.Coins{{Denom: types.NativeToken, Amount: sdk.NewInt(1e4)}, {Denom: "ABC", Amount: sdk.NewInt(1e5)}})
 	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC", lastTradePrices)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC", 1e5)}, fee.Tokens)
 
 	// BNB_BTC, sell BTC
-	acc.SetCoins(sdk.Coins{{Denom:"BTC", Amount: sdk.NewInt(1e4)}})
+	acc.SetCoins(sdk.Coins{{Denom: "BTC", Amount: sdk.NewInt(1e4)}})
 	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC", lastTradePrices)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC", 1e2)}, fee.Tokens)
 }

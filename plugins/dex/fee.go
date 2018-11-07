@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	ListingFee     = 1e12
+	ListingFee = 1e12
 )
 
 func init() {

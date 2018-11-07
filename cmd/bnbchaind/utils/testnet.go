@@ -3,20 +3,20 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/server"
 	"net"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-
-	gc "github.com/cosmos/cosmos-sdk/server/config"
-
-	"os"
-
 	"github.com/spf13/viper"
+
 	cfg "github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/server"
+	gc "github.com/cosmos/cosmos-sdk/server/config"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 var (

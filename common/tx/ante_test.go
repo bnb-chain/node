@@ -10,14 +10,10 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {

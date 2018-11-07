@@ -3,8 +3,11 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/client"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -12,10 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
+	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"

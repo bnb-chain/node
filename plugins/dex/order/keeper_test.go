@@ -8,18 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sdkstore "github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	sdkstore "github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/testutils"
@@ -498,7 +498,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime)
 
-	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3).Unix(), nil, nil)
+	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), nil, nil)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)
