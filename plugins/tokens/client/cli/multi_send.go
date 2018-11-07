@@ -4,16 +4,16 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-
-	"github.com/BiJie/BinanceChain/wire"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -26,22 +26,19 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 		Use:   "multi-send",
 		Short: "Create and sign a send tx",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
+			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
+			ctx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			if err := ctx.EnsureAccountExists(); err != nil {
+				return err
+			}
 
 			// get the from/to address
 			from, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
-			}
-
-			fromAcc, err := ctx.QueryStore(auth.AddressStoreKey(from), ctx.AccountStore)
-			if err != nil {
-				return err
-			}
-
-			// Check if account was found
-			if fromAcc == nil {
-				return errors.Errorf("No account with address %s was found in the state.\nAre you sure there has been a transaction involving it?", from)
 			}
 
 			toStr := viper.GetString(flagTo)
@@ -74,7 +71,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			// ensure account has enough toCoins
-			account, err := ctx.Decoder(fromAcc)
+			account, err := ctx.GetAccount(from)
 			if err != nil {
 				return err
 			}
@@ -85,12 +82,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := BuildMsg(from, fromCoins, toAddrs, toCoins)
-
-			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
-			if err != nil {
-				return err
-			}
-			return nil
+			return utils.CompleteAndBroadcastTxCli(txBldr, ctx, []sdk.Msg{msg})
 
 		},
 	}
