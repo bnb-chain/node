@@ -158,7 +158,7 @@ func updateExpireFeeForPublish(
 
 // collect all changed books according to published order status
 func filterChangedOrderBooksByOrders(
-	ordersToPublish []order,
+	ordersToPublish []*order,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
 	var res = make(orderPkg.ChangedPriceLevelsMap)
 	// map from symbol -> price -> qty diff in this block
@@ -221,14 +221,14 @@ func filterChangedOrderBooksByOrders(
 	return res
 }
 
-func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder orderPkg.FeeHolder) order {
+func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) order {
 	var status orderPkg.ChangeType
 	if o.CumQty == o.Quantity {
 		status = orderPkg.FullyFill
 	} else {
 		status = orderPkg.PartialFill
 	}
-	fee := getSerializedFeeForOrder(o, status, feeHolder)
+	fee := getSerializedFeeForOrder(o, status, feeHolder, feeToPublish)
 	res := order{
 		o.Symbol,
 		status,
@@ -249,18 +249,31 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		orderPkg.NEW,
 		o.TxHash,
 	}
+	if o.Side == orderPkg.Side.BUY {
+		t.Bfee = fee
+	} else {
+		t.Sfee = fee
+	}
 	return res
 }
 
 // we collect OrderPart here to make matcheng module independent
-func collectExecutedOrdersToPublish(
+func collectOrdersToPublish(
 	trades []*Trade,
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
-	timestamp int64) (opensToPublish []order, canceledToPublish []order) {
-	opensToPublish = make([]order, 0)
-	canceledToPublish = make([]order, 0)
+	timestamp int64) (opensToPublish []*order, canceledToPublish []*order) {
+	opensToPublish = make([]*order, 0)
+	canceledToPublish = make([]*order, 0)
+
+	// the following two maps are used to update fee field we published
+	// more detail can be found at:
+	// https://github.com/BiJie/BinanceChain-Doc/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+	chargedCancels := make(map[string]int)
+	chargedExpires := make(map[string]int)
+	// serve as a cache to avoid fee's serialization several times for one address
+	feeToPublish := make(map[string]string)
 
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
@@ -279,7 +292,7 @@ func collectExecutedOrdersToPublish(
 			0,
 			0,
 			orderInfo.CumQty,
-			getSerializedFeeForOrder(orderInfo, o.Tpe, feeHolder),
+			"",
 			orderInfo.CreatedTimestamp,
 			timestamp,
 			orderInfo.TimeInForce,
@@ -287,22 +300,51 @@ func collectExecutedOrdersToPublish(
 			orderInfo.TxHash,
 		}
 		if o.Tpe == orderPkg.Ack {
-			opensToPublish = append(opensToPublish, orderToPublish)
+			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
-			canceledToPublish = append(canceledToPublish, orderToPublish)
+			if orderInfo.CumQty == 0 {
+				if o.Tpe == orderPkg.Canceled {
+					if _, ok := chargedCancels[string(orderInfo.Sender)]; ok {
+						chargedCancels[string(orderInfo.Sender)] += 1
+					} else {
+						chargedCancels[string(orderInfo.Sender)] = 1
+					}
+				} else {
+					if _, ok := chargedExpires[string(orderInfo.Sender)]; ok {
+						chargedExpires[string(orderInfo.Sender)] += 1
+					} else {
+						chargedExpires[string(orderInfo.Sender)] = 1
+					}
+				}
+			}
+			canceledToPublish = append(canceledToPublish, &orderToPublish)
+		}
+	}
+
+	// update C and E fields in serialized fee string
+	for _, order := range canceledToPublish {
+		senderStr := string(orderChangesMap[order.orderId].Sender)
+		if _, ok := feeToPublish[senderStr]; !ok {
+			numOfChargedCanceled := chargedCancels[senderStr]
+			numOfExpiredCanceled := chargedExpires[senderStr]
+			fee := feeHolderCache[senderStr].SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
+			feeToPublish[senderStr] = fee
+			order.fee = fee
 		}
 	}
 
 	// update fee and collect orders from trades
 	for _, t := range trades {
 		if o, exists := orderChangesMap[t.Bid]; exists {
-			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp, feeHolder))
+			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
+			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
 		}
 
 		if o, exists := orderChangesMap[t.Sid]; exists {
-			opensToPublish = append(opensToPublish, tradeToOrder(t, o, timestamp, feeHolder))
+			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
+			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
 			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
 		}
@@ -311,14 +353,23 @@ func collectExecutedOrdersToPublish(
 	return opensToPublish, canceledToPublish
 }
 
-func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder) string {
-	feeStr := ""
-	if fee, ok := feeHolder[string(orderInfo.Sender)]; ok {
-		feeStr = fee.String()
+func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) string {
+	senderStr := string(orderInfo.Sender)
+
+	// if the serialized fee has been cached, return it directly
+	if cached, ok := feeToPublish[senderStr]; ok {
+		return cached
 	} else {
-		if orderInfo.CumQty == 0 && status != orderPkg.Ack {
-			Logger.Error("cannot find fee from fee holder", "orderId", orderInfo.Id)
+		feeStr := ""
+		if fee, ok := feeHolder[senderStr]; ok {
+			feeStr = fee.String()
+			feeToPublish[senderStr] = feeStr
+		} else {
+			if orderInfo.CumQty == 0 && status != orderPkg.Ack {
+				Logger.Error("cannot find fee from fee holder", "orderId", orderInfo.Id)
+			}
 		}
+		return feeStr
 	}
-	return feeStr
+
 }
