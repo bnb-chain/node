@@ -241,8 +241,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		<-icoDone
 	}
 
-	// distribute fees TODO: enable it after upgraded to tm 0.24.0
-	// distributeFee(ctx, app.AccountKeeper)
+	distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper)
 	// TODO: update validators
 
 	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {

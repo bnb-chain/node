@@ -4,15 +4,18 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/stretchr/testify/require"
+
 	"github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/libs/db"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -115,7 +118,9 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
 	genaccs := make([]GenesisAccount, len(accs))
 	for i, acc := range accs {
-		genaccs[i] = NewGenesisAccount(acc)
+		pk := ed25519.GenPrivKey().PubKey()
+		valAddr := pk.Address()
+		genaccs[i] = NewGenesisAccount(acc, valAddr)
 	}
 
 	genesisState := GenesisState{
@@ -143,8 +148,7 @@ func TestGenesis(t *testing.T) {
 	bapp := NewBinanceChain(logger, db, os.Stdout)
 
 	// Construct some genesis bytes to reflect democoin/types/AppAccount
-	pk := ed25519.GenPrivKey().PubKey()
-	addr := sdk.AccAddress(pk.Address())
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
 	baseAcc := auth.BaseAccount{
 		Address: addr,
 	}

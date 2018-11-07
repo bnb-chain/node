@@ -3,16 +3,21 @@ package app
 import (
 	"bytes"
 
+	"github.com/tendermint/tendermint/crypto"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/app/val"
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
-func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
-	proposerAddr := ctx.BlockHeader().ProposerAddress
+func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper) {
+	proposerValAddr := ctx.BlockHeader().ProposerAddress
+	proposerAccAddr := getAccAddr(ctx, valMapper, proposerValAddr)
+
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
 	if fee.IsEmpty() {
@@ -22,7 +27,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 
 	if fee.Type == types.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
-		proposerAcc := am.GetAccount(ctx, proposerAddr)
+		proposerAcc := am.GetAccount(ctx, proposerAccAddr)
 		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 		am.SetAccount(ctx, proposerAcc)
 	} else if fee.Type == types.FeeForAll {
@@ -48,14 +53,15 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 		}
 
 		if avgTokens.IsZero() {
-			proposerAcc := am.GetAccount(ctx, proposerAddr)
+			proposerAcc := am.GetAccount(ctx, proposerAccAddr)
 			proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 			am.SetAccount(ctx, proposerAcc)
 		} else {
 			for _, voteInfo := range voteInfos {
 				validator := voteInfo.Validator
-				validatorAcc := am.GetAccount(ctx, validator.Address)
-				if bytes.Equal(proposerAddr, validator.Address) && !roundingTokens.IsZero() {
+				accAddr := getAccAddr(ctx, valMapper, validator.Address)
+				validatorAcc := am.GetAccount(ctx, accAddr)
+				if bytes.Equal(proposerValAddr, validator.Address) && !roundingTokens.IsZero() {
 					validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))
 				}
 				validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(avgTokens))
@@ -63,4 +69,13 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper) {
 			}
 		}
 	}
+}
+
+func getAccAddr(ctx sdk.Context, mapper val.Mapper, valAddr crypto.Address) sdk.AccAddress {
+	accAddr, err := mapper.GetAccAddr(ctx, valAddr)
+	if err != nil {
+		panic(err)
+	}
+
+	return accAddr
 }

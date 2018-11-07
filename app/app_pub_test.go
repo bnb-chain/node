@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -33,8 +34,18 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	db := dbm.NewMemDB()
 	app = NewBinanceChain(logger, db, os.Stdout)
 	app.SetEndBlocker(app.EndBlocker)
-	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 100)})
-	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100)})
+	am = app.AccountKeeper
+	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, false, log.NewNopLogger())
+	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
+	proposerValAddr := ed25519.GenPrivKey().PubKey().Address()
+	app.ValAddrMapper.SetVal(ctx, proposerAcc.GetAddress(), proposerValAddr)
+	proposer := abci.Validator{Address: proposerValAddr, Power: 10}
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: proposer, SignedLastBlock: true},
+	})
+
+	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
+	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
 	app.publicationConfig = &config.PublicationConfig{
 		PublishOrderUpdates:   true,
 		PublishAccountBalance: true,
@@ -54,7 +65,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	keeper.FeeManager.FeeConfig.IOCExpireFee = iocExpireFee
 	keeper.FeeManager.FeeConfig.FeeRate = 1000
 	keeper.FeeManager.FeeConfig.FeeRateNative = 500
-	am = app.AccountKeeper
+
 	_, buyerAcc = testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 	_, sellerAcc = testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0)
