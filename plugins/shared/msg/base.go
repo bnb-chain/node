@@ -10,7 +10,6 @@ import (
 )
 
 type MsgBase struct {
-	Version byte           `json:"version"`
 	From    sdk.AccAddress `json:"from"`
 	Symbol  string         `json:"symbol"`
 	Amount  int64          `json:"amount"`
@@ -19,9 +18,6 @@ type MsgBase struct {
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg MsgBase) ValidateBasic() sdk.Error {
-	if msg.Version != 0x01 {
-		return sdk.ErrInternal("Invalid version. Expected 0x01")
-	}
 	err := types.ValidateSymbol(msg.Symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error())

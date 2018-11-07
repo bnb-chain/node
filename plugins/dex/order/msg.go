@@ -150,7 +150,6 @@ func TifStringToTifCode(tif string) (int8, error) {
 var _ sdk.Msg = NewOrderMsg{}
 
 type NewOrderMsg struct {
-	Version     byte           `json:"version"`
 	Sender      sdk.AccAddress `json:"sender"`
 	Id          string         `json:"id"`
 	Symbol      string         `json:"symbol"`
@@ -165,7 +164,6 @@ type NewOrderMsg struct {
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 	symbol string, price int64, qty int64) NewOrderMsg {
 	return NewOrderMsg{
-		Version:     0x01,
 		Sender:      sender,
 		Id:          id,
 		Symbol:      symbol,
@@ -183,7 +181,6 @@ func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, si
 	var id string
 	id = GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
-		Version:     0x01,
 		Sender:      sender,
 		Id:          id,
 		Symbol:      symbol,
@@ -220,7 +217,6 @@ var _ sdk.Msg = CancelOrderMsg{}
 
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
-	Version byte `json:"version"`
 	Sender  sdk.AccAddress
 	Symbol  string `json:"symbol"`
 	Id      string `json:"id"`
@@ -230,7 +226,6 @@ type CancelOrderMsg struct {
 // NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
-		Version: 0x01,
 		Sender:  sender,
 		Symbol:  symbol,
 		Id:      id,
@@ -270,10 +265,6 @@ func (msg CancelOrderMsg) GetInvolvedAddresses() []sdk.AccAddress {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg NewOrderMsg) ValidateBasic() sdk.Error {
-	if msg.Version != 0x01 {
-		// TODO: use a dedicated error type
-		return sdk.ErrInternal("Invalid version. Expected 0x01")
-	}
 	// `-` is required in the compound order id: <address>-<sequence>
 	// NOTE: the actual validation of the ID happens in the AnteHandler for now.
 	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
@@ -303,10 +294,6 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
-	if msg.Version != 0x01 {
-		// TODO: use a dedicated error type
-		return sdk.ErrInternal("Invalid version. Expected 0x01")
-	}
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}

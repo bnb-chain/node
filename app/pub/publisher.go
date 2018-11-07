@@ -1,11 +1,12 @@
 package pub
 
 import (
+	tmlog "github.com/tendermint/tendermint/libs/log"
+
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 const (

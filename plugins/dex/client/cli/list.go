@@ -1,12 +1,12 @@
 package commands
 
 import (
-	"github.com/BiJie/BinanceChain/common/client"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex/list"

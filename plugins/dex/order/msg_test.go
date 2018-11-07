@@ -2,7 +2,6 @@ package order
 
 import (
 	"fmt"
-
 	"regexp"
 	"testing"
 
@@ -25,9 +24,9 @@ func newCLIContext() context.CLIContext {
 	nodeURI := "tcp://localhost:26657"
 	rpc := rpcclient.NewHTTP(nodeURI, "/")
 	return context.CLIContext{
-		Client:          rpc,
-		NodeURI:         nodeURI,
-		AccountStore:    cmn.AccountStoreName,
+		Client:       rpc,
+		NodeURI:      nodeURI,
+		AccountStore: cmn.AccountStoreName,
 	}
 }
 
