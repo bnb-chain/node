@@ -17,7 +17,6 @@ const Route = "tokensIssue"
 var _ sdk.Msg = IssueMsg{}
 
 type IssueMsg struct {
-	Version     byte           `json:"version"`
 	From        sdk.AccAddress `json:"from"`
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
@@ -26,7 +25,6 @@ type IssueMsg struct {
 
 func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) IssueMsg {
 	return IssueMsg{
-		Version:     0x01,
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
@@ -37,9 +35,6 @@ func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) IssueMsg {
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg IssueMsg) ValidateBasic() sdk.Error {
-	if msg.Version != 0x01 {
-		return sdk.ErrInternal("Invalid version. Expected 0x01")
-	}
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}

@@ -1,15 +1,16 @@
 package commands
 
 import (
-	"github.com/BiJie/BinanceChain/common/client"
 	"strconv"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 )

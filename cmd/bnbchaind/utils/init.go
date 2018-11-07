@@ -3,29 +3,31 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/client"
-	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	pvm "github.com/tendermint/tendermint/privval"
-	tmtypes "github.com/tendermint/tendermint/types"
 	"io/ioutil"
+	"os"
 	"path"
+	"path/filepath"
 	"sort"
 
-	"os"
-	"path/filepath"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	cfg "github.com/tendermint/tendermint/config"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/p2p"
+	pvm "github.com/tendermint/tendermint/privval"
+	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/server"
+	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
+
+	"github.com/BiJie/BinanceChain/app"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (

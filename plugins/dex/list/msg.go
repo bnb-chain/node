@@ -14,7 +14,6 @@ const Route = "dexList"
 var _ sdk.Msg = ListMsg{}
 
 type ListMsg struct {
-	Version          byte           `json:"version"`
 	From             sdk.AccAddress `json:"from"`
 	BaseAssetSymbol  string         `json:"base_asset_symbol"`
 	QuoteAssetSymbol string         `json:"quote_asset_symbol"`
@@ -23,7 +22,6 @@ type ListMsg struct {
 
 func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
 	return ListMsg{
-		Version:          0x01,
 		From:             from,
 		BaseAssetSymbol:  baseAssetSymbol,
 		QuoteAssetSymbol: quoteAssetSymbol,
@@ -37,9 +35,6 @@ func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg ListMsg) ValidateBasic() sdk.Error {
-	if msg.Version != 0x01 {
-		return sdk.ErrInternal("Invalid version. Expected 0x01")
-	}
 	err := types.ValidateSymbol(msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())

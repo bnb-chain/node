@@ -1,14 +1,16 @@
 package client
 
 import (
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/pkg/errors"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/pkg/errors"
+
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 func PrepareCtx(cdc *codec.Codec) (context.CLIContext, txbuilder.TxBuilder) {
@@ -44,7 +46,7 @@ func BuildUnsignedTx(builder txbuilder.TxBuilder, acc auth.Account, msgs []sdk.M
 	sequence := acc.GetSequence()
 	memo := builder.Memo
 
-	signMsg := 	txbuilder.StdSignMsg {
+	signMsg := txbuilder.StdSignMsg{
 		ChainID:       chainID,
 		AccountNumber: accnum,
 		Sequence:      sequence,
