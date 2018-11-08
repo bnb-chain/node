@@ -1,13 +1,17 @@
 package val
 
 import (
+	"errors"
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/tendermint/tendermint/crypto"
 )
 
 type Mapper interface {
-	GetValAddr(sdk.Context, sdk.AccAddress) crypto.Address
-	SetVal(sdk.Context, sdk.AccAddress, crypto.Address)
+	GetAccAddr(sdk.Context, crypto.Address) (sdk.AccAddress, error)
+	SetVal(sdk.Context, crypto.Address, sdk.AccAddress)
 }
 
 var _ Mapper = (*mapper)(nil)
@@ -22,12 +26,16 @@ func NewMapper(key sdk.StoreKey) *mapper {
 	}
 }
 
-func (m mapper) GetValAddr(ctx sdk.Context, addr sdk.AccAddress) crypto.Address {
+func (m mapper) GetAccAddr(ctx sdk.Context, valAddr crypto.Address) (sdk.AccAddress, error) {
 	store := ctx.KVStore(m.key)
-	return crypto.Address(store.Get(addr))
+	addr := store.Get(valAddr)
+	if addr == nil {
+		return nil, errors.New(fmt.Sprintf("valAddr(%X) not found", valAddr))
+	}
+	return sdk.AccAddress(addr), nil
 }
 
-func (m *mapper) SetVal(ctx sdk.Context, addr sdk.AccAddress, valAddr crypto.Address) {
+func (m *mapper) SetVal(ctx sdk.Context, valAddr crypto.Address, addr sdk.AccAddress) {
 	store := ctx.KVStore(m.key)
-	store.Set(addr, valAddr)
+	store.Set(valAddr, addr)
 }
