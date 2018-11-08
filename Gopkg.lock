@@ -56,7 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "feature/cache"
+  branch = "feature/cache_early"
   digest = "1:9c344f61ff30f254a519345ed2bfce890beb3bb75490663730d075f8ec2771bf"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
@@ -833,6 +833,7 @@
     "github.com/golang/go/src/io/ioutil",
     "github.com/google/btree",
     "github.com/gorilla/mux",
+    "github.com/hashicorp/golang-lru",
     "github.com/linkedin/goavro",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",

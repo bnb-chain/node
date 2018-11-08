@@ -4,17 +4,48 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
 	maxMemoCharacters = 100
+	maxCacheNumber    = 10000
 )
+
+type sigLRUCache struct {
+	cap   int
+	cache *lru.Cache
+}
+
+func newAccountLRUCache(cap int) *sigLRUCache {
+	cache, err := lru.New(cap)
+	if err != nil {
+		panic(err)
+	}
+	return &sigLRUCache{
+		cap:   cap,
+		cache: cache,
+	}
+}
+func (cache *sigLRUCache) getSig(sigKey string) (msgBytes []byte, ok bool) {
+	if cachedValue, ok := cache.cache.Get(sigKey); ok {
+		msgBytes = cachedValue.([]byte)
+		return msgBytes, ok
+	}
+	return nil, false
+}
+func (cache *sigLRUCache) addSig(sigKey string, msgBytes []byte) {
+	cache.cache.Add(sigKey, msgBytes)
+}
+
+// validatorCache-key: validator amino bytes
+var sigCache = newAccountLRUCache(maxCacheNumber)
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
@@ -153,10 +184,21 @@ func processSig(
 		}
 	}
 
+	sigKey := pubKey.Address().String() + string(sig.Signature)
+	if msgBytes, ok := sigCache.getSig(sigKey); ok {
+		if !bytes.Equal(msgBytes, signBytes) {
+			log.Info("hit wrong sig cache", "sigKey", sigKey)
+			return nil, sdk.ErrUnauthorized("signature verification failed").Result()
+		}
+		log.Info("hit sig cache", "sigKey", sigKey)
+		return
+	}
+
 	// Check sig.
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return nil, sdk.ErrUnauthorized("signature verification failed").Result()
 	}
+	sigCache.addSig(sigKey, signBytes)
 
 	return
 }
