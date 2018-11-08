@@ -26,6 +26,8 @@ var (
 )
 
 var (
+	// Should only be set via setter method
+	// Should only be passed to NewBlockInfoToPublish
 	feeHolderCache orderPkg.FeeHolder
 )
 

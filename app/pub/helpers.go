@@ -327,9 +327,13 @@ func collectOrdersToPublish(
 		if _, ok := feeToPublish[senderStr]; !ok {
 			numOfChargedCanceled := chargedCancels[senderStr]
 			numOfExpiredCanceled := chargedExpires[senderStr]
-			fee := feeHolderCache[senderStr].SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
-			feeToPublish[senderStr] = fee
-			order.fee = fee
+			if raw, ok := feeHolder[senderStr]; ok {
+				fee := raw.SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
+				feeToPublish[senderStr] = fee
+				order.fee = fee
+			} else {
+				// TODO(#192): handle cancel fee is not included within feeHolder
+			}
 		}
 	}
 
