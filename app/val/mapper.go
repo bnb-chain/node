@@ -2,6 +2,7 @@ package val
 
 import (
 	"errors"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -10,7 +11,7 @@ import (
 
 type Mapper interface {
 	GetAccAddr(sdk.Context, crypto.Address) (sdk.AccAddress, error)
-	SetVal(sdk.Context, sdk.AccAddress, crypto.Address)
+	SetVal(sdk.Context, crypto.Address, sdk.AccAddress)
 }
 
 var _ Mapper = (*mapper)(nil)
@@ -29,12 +30,12 @@ func (m mapper) GetAccAddr(ctx sdk.Context, valAddr crypto.Address) (sdk.AccAddr
 	store := ctx.KVStore(m.key)
 	addr := store.Get(valAddr)
 	if addr == nil {
-		return nil, errors.New("valAddr not found")
+		return nil, errors.New(fmt.Sprintf("valAddr(%X) not found", valAddr))
 	}
 	return sdk.AccAddress(addr), nil
 }
 
-func (m *mapper) SetVal(ctx sdk.Context, addr sdk.AccAddress, valAddr crypto.Address) {
+func (m *mapper) SetVal(ctx sdk.Context, valAddr crypto.Address, addr sdk.AccAddress) {
 	store := ctx.KVStore(m.key)
 	store.Set(valAddr, addr)
 }

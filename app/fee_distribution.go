@@ -15,15 +15,15 @@ import (
 )
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper) {
-	proposerValAddr := ctx.BlockHeader().ProposerAddress
-	proposerAccAddr := getAccAddr(ctx, valMapper, proposerValAddr)
-
 	// extract fees from ctx
 	fee := tx.Fee(ctx)
 	if fee.IsEmpty() {
 		// no fees in this block
 		return
 	}
+
+	proposerValAddr := ctx.BlockHeader().ProposerAddress
+	proposerAccAddr := getAccAddr(ctx, valMapper, proposerValAddr)
 
 	if fee.Type == types.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
@@ -74,6 +74,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper)
 func getAccAddr(ctx sdk.Context, mapper val.Mapper, valAddr crypto.Address) sdk.AccAddress {
 	accAddr, err := mapper.GetAccAddr(ctx, valAddr)
 	if err != nil {
+		log.Error("get validator's AccAddress failed", "ValAddr", valAddr)
 		panic(err)
 	}
 
