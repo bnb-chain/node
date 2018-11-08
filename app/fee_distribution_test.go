@@ -36,10 +36,10 @@ func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context) {
 	val2ValAddr := ed25519.GenPrivKey().PubKey().Address()
 	val3ValAddr := ed25519.GenPrivKey().PubKey().Address()
 
-	valMapper.SetVal(ctx, proposerAcc.GetAddress(), proposerValAddr)
-	valMapper.SetVal(ctx, valAcc1.GetAddress(), val1ValAddr)
-	valMapper.SetVal(ctx, valAcc2.GetAddress(), val2ValAddr)
-	valMapper.SetVal(ctx, valAcc3.GetAddress(), val3ValAddr)
+	valMapper.SetVal(ctx, proposerValAddr, proposerAcc.GetAddress())
+	valMapper.SetVal(ctx, val1ValAddr, valAcc1.GetAddress())
+	valMapper.SetVal(ctx, val2ValAddr, valAcc2.GetAddress())
+	valMapper.SetVal(ctx, val3ValAddr, valAcc3.GetAddress())
 
 	proposer := abci.Validator{Address: proposerValAddr, Power: 10}
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{

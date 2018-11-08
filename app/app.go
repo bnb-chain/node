@@ -182,7 +182,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValAddrMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
+			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
 		}
 
 		for _, token := range genesisState.Tokens {

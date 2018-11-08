@@ -38,7 +38,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, false, log.NewNopLogger())
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	proposerValAddr := ed25519.GenPrivKey().PubKey().Address()
-	app.ValAddrMapper.SetVal(ctx, proposerAcc.GetAddress(), proposerValAddr)
+	app.ValAddrMapper.SetVal(ctx, proposerValAddr, proposerAcc.GetAddress())
 	proposer := abci.Validator{Address: proposerValAddr, Power: 10}
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: proposer, SignedLastBlock: true},
