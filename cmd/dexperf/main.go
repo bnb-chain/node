@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/BiJie/BinanceChain/common/client"
@@ -58,6 +60,7 @@ var runSubmit *bool
 var submitOnlyPath *string
 var submitOnlySize *int
 var submitThinkTime *int64
+var csvPath *string
 
 type DEXOrder struct {
 	ctx context.CLIContext
@@ -99,6 +102,7 @@ func init() {
 	submitOnlyPath = flag.String("submitOnlyPath", "/home/test/orders2", "disk cache path")
 	submitOnlySize = flag.Int("submitOnlySize", 1, "# of submits")
 	submitThinkTime = flag.Int64("submitThinkTime", 0, "submit think time in ms")
+	csvPath = flag.String("csvPath", "/home/test/trans.csv", "csv path")
 	flag.Parse()
 	ordersChn = make(chan DEXOrder, *ordersChnBuf)
 	transChn = make(chan []byte, *transChnBuf)
@@ -202,6 +206,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		name, err := item.ctx.GetFromName()
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		s.m.Lock()
 		seq, hasKey := s.seqMap[name]
@@ -211,6 +216,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			seq, err = item.ctx.GetAccountSequence(item.addr)
 			if err != nil {
 				fmt.Println(err)
+				continue
 			}
 		}
 		item.txBldr = item.txBldr.WithSequence(seq)
@@ -239,10 +245,12 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		keybase, err := keys.GetKeyBaseFromDir(*cHome)
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		sigBytes, pubkey, err := keybase.Sign(name, "1qaz2wsx", ssMsg.Bytes())
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		sig := auth.StdSignature {
 			AccountNumber: ssMsg.AccountNumber,
@@ -253,6 +261,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo))
 		if err != nil {
 			fmt.Println("failed to sign tran: %v", err)
+			continue
 		}
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
 		file := filepath.Join(*diskCachePath, ts + "_" + name)
@@ -260,6 +269,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		err = ioutil.WriteFile(file, txBytes, 0777)
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		s.m.Lock()
 		s.seqMap[name] = seq+1
@@ -282,8 +292,7 @@ func allocateTrans() {
 	for _, file := range files {
 		tran, err := ioutil.ReadFile(filepath.Join(*diskCachePath, file.Name()))
 		if err != nil {
-			fmt.Println(err)
-			continue
+			panic(err)
 		}
 		trans = append(trans, tran)
 	}
@@ -409,7 +418,7 @@ func generateTokens(sI int, eI int, flag bool) []string {
 				panic(fmt.Sprint(err) + " : " + stderr.String())
 			}
 			fmt.Println(token, stdout.String())
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 			stdout.Reset()
 			stderr.Reset()
 			cmd = exec.Command("bnbcli", "dex", "list", "--home="+*cHome, "--node="+*vNode, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId)
@@ -420,7 +429,7 @@ func generateTokens(sI int, eI int, flag bool) []string {
 				panic(fmt.Sprint(err) + " : " + stderr.String())
 			}
 			fmt.Println(token, stdout.String())
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 			stdout.Reset()
 			stderr.Reset()
 		}
@@ -446,7 +455,7 @@ func initializeAccounts(addresses []string, tokens []string, flag bool) {
 						l := buffer.String()
 						res := l[:len(l)-1]
 						buffer.Reset()
-						arg := []string{"token", "multi-send", "--home="+*cHome, "--node="+*vNode, "--chain-id="+*chainId, "--from="+*owner, "--amount=500000000000"+tokens[i], "--to="+res}
+						arg := []string{"token", "multi-send", "--home="+*cHome, "--node="+*vNode, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000"+tokens[i], "--to="+res}
 						cmd := exec.Command("bnbcli", arg...)
 						cmd.Stdout = &stdout
 						cmd.Stderr = &stderr
@@ -455,20 +464,22 @@ func initializeAccounts(addresses []string, tokens []string, flag bool) {
 							fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 							stdout.Reset()
 							stderr.Reset()
-							time.Sleep(5 * time.Second)
+							time.Sleep(2 * time.Second)
 							// multi-send, retry
+							fmt.Println("retry ...")
 							cmdR := exec.Command("bnbcli", arg...)
 							cmdR.Stdout = &stdout
 							cmdR.Stderr = &stderr
 							err = cmd.Run()
 							if err != nil {
-								fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+								panic(err)
 							}
+							fmt.Println("retry, OK")
 						}
 						fmt.Println(stdout.String())
 						stdout.Reset()
 						stderr.Reset()
-						time.Sleep(5 * time.Second)
+						time.Sleep(2 * time.Second)
 					}
 				}
 			}
@@ -513,6 +524,34 @@ func moveFiles(srcPath string, dstPath string, count int) {
 	}
 }
 
+func generateCSV() {
+	csvFile, err := os.OpenFile(*csvPath, os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		panic(err)
+	}
+	defer csvFile.Close()
+	writer := bufio.NewWriter(csvFile)
+	files, err := ioutil.ReadDir(*diskCachePath)
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range files {
+		txBytes, err := ioutil.ReadFile(filepath.Join(*diskCachePath, file.Name()))
+		if err != nil {
+			panic(err)
+		}
+		hexBytes := make([]byte, len(txBytes) * 2)
+		hex.Encode(hexBytes, txBytes)
+		line := fmt.Sprintf("%s\n", hexBytes)
+		_, err = writer.WriteString(line)
+		if err != nil {
+			fmt.Println(file.Name(), err)
+			continue
+		}
+	}
+	writer.Flush()
+}
+
 func main() {
 
 	fmt.Println("-cHome", *cHome)
@@ -534,6 +573,7 @@ func main() {
 	fmt.Println("-submitOnlyPath", *submitOnlyPath)
 	fmt.Println("-submitOnlySize", *submitOnlySize)
 	fmt.Println("-submitThinkTime", *submitThinkTime)
+	fmt.Println("-csvPath", *csvPath)
 
 	myAccounts := generateAccounts(*userPrefix)
 	myUsers := myAccounts[0]
@@ -588,5 +628,7 @@ func main() {
 		fmt.Println("elapsed:", elapsedS)
 		fmt.Println("total trans:", *submitOnlySize)
 	}
+
+	generateCSV()
 
 }
