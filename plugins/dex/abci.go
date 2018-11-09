@@ -13,7 +13,8 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
-const OB_LEVELS = 20
+// TODO: improve, should be configurable
+const MaxDepthLevels = 60 // matches UI requirement
 
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
@@ -80,7 +81,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 			pair := path[2]
 			height := app.GetContextForCheckState().BlockHeight()
-			levels := keeper.GetOrderBookLevels(pair, OB_LEVELS)
+			levels := keeper.GetOrderBookLevels(pair, MaxDepthLevels)
 			book := store.OrderBook{
 				Height: height,
 				Levels: levels,
