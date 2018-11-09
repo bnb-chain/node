@@ -70,10 +70,18 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			err = client.EnsureSequence(cliCtx, &txBldr)
-			if err != nil {
-				panic(err)
+			// avoids an ugly panic on sequence 0 with --dry
+			acc, err := cliCtx.GetAccount(from)
+			if acc == nil || err != nil {
+				fmt.Println("No transactions involving this address yet. Using sequence 0.")
+				txBldr = txBldr.WithSequence(0)
+			} else {
+				err = client.EnsureSequence(cliCtx, &txBldr)
+				if err != nil {
+					panic(err)
+				}
 			}
+
 			msg, err := order.NewNewOrderMsgAuto(txBldr, from, side, symbol, price, qty)
 			if err != nil {
 				panic(err)
