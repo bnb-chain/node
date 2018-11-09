@@ -224,8 +224,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
-		if app.publicationConfig.PublishOrderUpdates && app.publisher.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
+			tradesToPublish, ctx = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
@@ -235,7 +235,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.AccountKeeper, app.DexKeeper, height, blockTime)
+		ctx = dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
