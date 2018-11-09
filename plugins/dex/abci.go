@@ -13,7 +13,8 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
-const OB_LEVELS = 20
+// TODO: improve, should be configurable
+const OB_LEVELS = 60 // matches UI requirement
 
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
