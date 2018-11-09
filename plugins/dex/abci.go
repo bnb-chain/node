@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: improve, should be configurable
-const MaxDepthLevels = 60 // matches UI requirement
+const MaxDepthLevels = 100 // matches UI requirement
 
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
