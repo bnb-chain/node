@@ -69,7 +69,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
-	ctx sdk.Context) []*Trade {
+	ctx sdk.Context) ([]*Trade, sdk.Context) {
 	// These two channels are used for protect not update `tradesToPublish` and `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to feeCollectorForTrades in several goroutine (well-designed)
 	// while tradesToPublish and dexKeeper.OrderChanges are not separated by concurrent factor (users here), so we have
@@ -89,18 +89,18 @@ func MatchAndAllocateAllForPublish(
 			tradeHolderCh <- orderPkg.TradeHolder{tran.Oid, tran.Trade, tran.Symbol}
 		}
 	}
-	ctx = dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, setFeeHolder)
+	newCtx := dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, setFeeHolder)
 	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
 
-	return tradesToPublish
+	return tradesToPublish, newCtx
 }
 
 func ExpireOrdersForPublish(
 	dexKeeper *orderPkg.Keeper,
 	ctx sdk.Context,
-	blockTime time.Time) {
+	blockTime time.Time) (newCtx sdk.Context) {
 	expireHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -110,9 +110,10 @@ func ExpireOrdersForPublish(
 			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid}
 		}
 	}
-	dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires, setFeeHolder)
+	newCtx = dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires, setFeeHolder)
 	close(expireHolderCh)
 	wg.Wait()
+	return
 }
 
 // for partial and fully filled order fee
