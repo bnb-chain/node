@@ -79,9 +79,5 @@ func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 	}
 
 	// end streamed json with height
-	if err := write(w, fmt.Sprintf("],\"height\":%d}", ob.Height)); err != nil {
-		return err
-	}
-
-	return nil
+	return write(w, fmt.Sprintf("],\"height\":%d}", ob.Height))
 }
