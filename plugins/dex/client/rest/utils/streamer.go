@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
+	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 )
 
@@ -16,8 +18,15 @@ func write(w io.Writer, data string) error {
 
 // StreamDepthResponse streams out the order book in the http response.
 func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
+	// assuming MaxDepthLevels is used in caller, which it should be
+	if dex.MaxDepthLevels < limit {
+		return errors.New("StreamDepthResponse: MaxDepthLevels greater than limit. Unable to stream up to limit")
+	}
+
 	levels := ob.Levels
-	preamble := fmt.Sprintf("{\"height\":%d,\"asks\":[", ob.Height)
+
+	// output must be equivalent to SortJSON output (for tests)
+	preamble := "{\"asks\":["
 	if err := write(w, preamble); err != nil {
 		return err
 	}
@@ -27,6 +36,10 @@ func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 	for _, o := range levels {
 		if i > limit-1 {
 			break
+		}
+		// skip zero qty level
+		if o.SellQty == 0 {
+			continue
 		}
 		if i > 0 {
 			if err := write(w, ","); err != nil {
@@ -49,6 +62,10 @@ func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 		if i > limit-1 {
 			break
 		}
+		// skip zero qty level
+		if o.BuyQty == 0 {
+			continue
+		}
 		if i > 0 {
 			if err := write(w, ","); err != nil {
 				return err
@@ -61,10 +78,6 @@ func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 		i++
 	}
 
-	// end streamed json
-	if err := write(w, "]}"); err != nil {
-		return err
-	}
-
-	return nil
+	// end streamed json with height
+	return write(w, fmt.Sprintf("],\"height\":%d}", ob.Height))
 }
