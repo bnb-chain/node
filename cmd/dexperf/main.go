@@ -525,7 +525,7 @@ func moveFiles(srcPath string, dstPath string, count int) {
 }
 
 func generateCSV() {
-	csvFile, err := os.OpenFile(*csvPath, os.O_CREATE|os.O_WRONLY, 0777)
+	csvFile, err := os.OpenFile(*csvPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -617,6 +617,7 @@ func main() {
 		emptyFolder(*submitOnlyPath)
 		moveFiles(*diskCachePath, *submitOnlyPath, *submitOnlySize)
 
+		temp := *diskCachePath
 		*diskCachePath = *submitOnlyPath
 
 		sT := time.Now()
@@ -627,6 +628,8 @@ func main() {
 		fmt.Println("end:", eT)
 		fmt.Println("elapsed:", elapsedS)
 		fmt.Println("total trans:", *submitOnlySize)
+
+		*diskCachePath = temp
 	}
 
 	generateCSV()
