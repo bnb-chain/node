@@ -217,19 +217,19 @@ var _ sdk.Msg = CancelOrderMsg{}
 
 // CancelOrderMsg represents a message to cancel an open order
 type CancelOrderMsg struct {
-	Sender  sdk.AccAddress
-	Symbol  string `json:"symbol"`
-	Id      string `json:"id"`
-	RefId   string `json:"refid"`
+	Sender sdk.AccAddress `json:"sender"`
+	Symbol string         `json:"symbol"`
+	Id     string         `json:"id"`
+	RefId  string         `json:"refid"`
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
 func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
-		Sender:  sender,
-		Symbol:  symbol,
-		Id:      id,
-		RefId:   refId,
+		Sender: sender,
+		Symbol: symbol,
+		Id:     id,
+		RefId:  refId,
 	}
 }
 
