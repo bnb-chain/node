@@ -253,7 +253,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 // ExportAppStateAndValidators exports blockchain world state to json.
 func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 
 	// iterate to get the accounts
 	accounts := []GenesisAccount{}

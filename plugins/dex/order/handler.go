@@ -75,9 +75,17 @@ func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg, simulate bool,
 ) sdk.Result {
 	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
-	err := validateOrder(ctx, keeper.PairMapper, acc, msg)
-	if err != nil {
-		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
+	if !ctx.IsReCheckTx() {
+		//for recheck:
+		// 1. sequence is verified in anteHandler
+		// 2. since sequence is verified correct again, id should be ok too
+		// 3. trading pair is verified
+		// 4. price/qty may have odd tick size/lot size, but it can be handled as
+		//    other existing orders.
+		err := validateOrder(ctx, keeper.PairMapper, acc, msg)
+		if err != nil {
+			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
+		}
 	}
 
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
