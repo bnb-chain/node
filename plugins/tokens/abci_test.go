@@ -31,7 +31,7 @@ var (
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 	path := "/tokens/info/XXX" // XXX created below
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -57,7 +57,7 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 func Test_Tokens_ABCI_GetInfo_Error_NotFound(t *testing.T) {
 	path := "/tokens/info/XXY" // will not exist!
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -88,7 +88,7 @@ func Test_Tokens_ABCI_GetInfo_Error_EmptySymbol(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
 	path := "/tokens/list/0/5"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -120,7 +120,7 @@ func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
 	path := "/tokens/list/1/5"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -152,7 +152,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
 	path := "/tokens/list/0/1"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -184,7 +184,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Error_ZeroLimit(t *testing.T) {
 	path := "/tokens/list/0/0"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -206,7 +206,7 @@ func Test_Tokens_ABCI_GetTokens_Error_ZeroLimit(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Error_NegativeLimit(t *testing.T) {
 	path := "/tokens/list/0/-1"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -228,7 +228,7 @@ func Test_Tokens_ABCI_GetTokens_Error_NegativeLimit(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Error_NegativeOffset(t *testing.T) {
 	path := "/tokens/list/-1/0"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -250,7 +250,7 @@ func Test_Tokens_ABCI_GetTokens_Error_NegativeOffset(t *testing.T) {
 func Test_Tokens_ABCI_GetTokens_Error_InvalidLimit(t *testing.T) {
 	path := "/tokens/list/0/x"
 
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
 	if err != nil {
 		t.Fatal(err.Error())

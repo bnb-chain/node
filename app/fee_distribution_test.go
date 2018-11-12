@@ -25,7 +25,7 @@ func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context) {
 	auth.RegisterBaseAccount(cdc)
 	am = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	valMapper = val.NewMapper(cap2)
-	ctx = sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	// setup proposer and other validators
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	_, valAcc1 := testutils.NewAccount(ctx, am, 100)

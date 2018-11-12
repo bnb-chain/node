@@ -55,7 +55,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	logger := log.NewTMLogger(os.Stdout)
 
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, logger)
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger)
 	am = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
