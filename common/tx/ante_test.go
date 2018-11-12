@@ -40,7 +40,7 @@ func newCoins() sdk.Coins {
 
 // run the tx through the anteHandler and ensure its valid
 func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx) {
-	_, result, abort := anteHandler(ctx, tx, false)
+	_, result, abort := anteHandler(ctx, tx, sdk.RunTxModeCheck)
 	require.False(t, abort)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 	require.True(t, result.IsOK())
@@ -48,7 +48,7 @@ func checkValidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx
 
 // run the tx through the anteHandler and ensure it fails with the given code
 func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, tx sdk.Tx, code sdk.CodeType) {
-	_, result, abort := anteHandler(ctx, tx, false)
+	_, result, abort := anteHandler(ctx, tx, sdk.RunTxModeCheck)
 	require.True(t, abort)
 	require.Equal(t, sdk.ToABCICode(sdk.CodespaceRoot, code), result.Code,
 		fmt.Sprintf("Expected %v, got %v", sdk.ToABCICode(sdk.CodespaceRoot, code), result))
@@ -104,7 +104,7 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -154,7 +154,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -211,7 +211,7 @@ func TestAnteHandlerSequences(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -286,7 +286,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -335,7 +335,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -406,7 +406,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -457,7 +457,7 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHa
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler = tx.NewAnteHandler(mapper)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, false, log.NewNopLogger())
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	return
 }
 
@@ -465,7 +465,7 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 	for i := 0; i < len(fees); i++ {
 		msg := newTestMsgWithFeeCalculator(fees[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
-		ctx, _, _ = anteHandler(ctx, txn, false)
+		ctx, _, _ = anteHandler(ctx, txn, sdk.RunTxModeCheck)
 	}
 
 	return ctx
@@ -487,7 +487,7 @@ func TestAnteHandlerFeesInCheckTx(t *testing.T) {
 	// set the accounts
 	priv1, acc1 := testutils.NewAccount(ctx, am, 100)
 
-	ctx = ctx.WithIsCheckTx(true)
+	ctx = ctx.WithRunTxMode(sdk.RunTxModeCheck)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), tx.FixedFeeCalculator(10, types.FeeForProposer))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 90)})
 	checkFee(t, ctx, types.Fee{})

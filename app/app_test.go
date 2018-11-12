@@ -158,14 +158,14 @@ func TestGenesis(t *testing.T) {
 	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)
 	// A checkTx context
-	ctx := bapp.BaseApp.NewContext(true, abci.Header{})
+	ctx := bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", sdk.NewInt(100000)}})
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 
 	// reload app and ensure the account is still there
 	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
-	ctx = bapp.BaseApp.NewContext(true, abci.Header{})
+	ctx = bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	res1 = bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 	TearDown()

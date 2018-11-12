@@ -35,7 +35,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	app = NewBinanceChain(logger, db, os.Stdout)
 	app.SetEndBlocker(app.EndBlocker)
 	am = app.AccountKeeper
-	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, false, log.NewNopLogger())
+	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	proposerValAddr := ed25519.GenPrivKey().PubKey().Address()
 	app.ValAddrMapper.SetVal(ctx, proposerValAddr, proposerAcc.GetAddress())
