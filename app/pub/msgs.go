@@ -12,6 +12,7 @@ var (
 	booksCodec            *goavro.Codec
 	accountCodec          *goavro.Codec
 	tradeseAndOrdersCodec *goavro.Codec
+	blockFeeCodec         *goavro.Codec
 )
 
 type msgType int8
@@ -20,6 +21,7 @@ const (
 	accountsTpe = iota
 	booksTpe
 	tradesAndOrdersTpe
+	blockFeeTpe
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
@@ -31,6 +33,8 @@ func (this msgType) String() string {
 		return "Books"
 	case tradesAndOrdersTpe:
 		return "TradesAndOrders"
+	case blockFeeTpe:
+		return "BlockFee"
 	default:
 		return "Unknown"
 	}
@@ -51,6 +55,8 @@ func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 		codec = booksCodec
 	case tradesAndOrdersTpe:
 		codec = tradeseAndOrdersCodec
+	case blockFeeTpe:
+		codec = blockFeeCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -349,13 +355,33 @@ func (msg *accounts) ToNativeMap() map[string]interface{} {
 	return native
 }
 
-func initAvroCodecs() (res error) {
-	if tradeseAndOrdersCodec, res = goavro.NewCodec(tradesAndOrdersSchema); res != nil {
-		return res
-	} else if booksCodec, res = goavro.NewCodec(booksSchema); res != nil {
-		return res
-	} else if accountCodec, res = goavro.NewCodec(accountSchema); res != nil {
-		return res
+type BlockFee struct {
+	Height     int64
+	Fee        string
+	Validators []string
+}
+
+func (msg BlockFee) String() string {
+	return fmt.Sprintf("Blockfee at height: %d, fee: %s, validators: %v", msg.Height, msg.Fee, msg.Validators)
+}
+
+func (msg BlockFee) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["height"] = msg.Height
+	native["fee"] = msg.Fee
+	native["validators"] = msg.Validators
+	return native
+}
+
+func initAvroCodecs() (err error) {
+	if tradeseAndOrdersCodec, err = goavro.NewCodec(tradesAndOrdersSchema); err != nil {
+		return err
+	} else if booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
+		return err
+	} else if accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
+		return err
+	} else if blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
+		return err
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/BiJie/BinanceChain/app/pub"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context) {
+func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context, proposerAcc, valAcc1, valAcc2, valAcc3 auth.Account) {
 	ms, capKey, cap2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
@@ -27,10 +28,10 @@ func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context) {
 	valMapper = val.NewMapper(cap2)
 	ctx = sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
 	// setup proposer and other validators
-	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
-	_, valAcc1 := testutils.NewAccount(ctx, am, 100)
-	_, valAcc2 := testutils.NewAccount(ctx, am, 100)
-	_, valAcc3 := testutils.NewAccount(ctx, am, 100)
+	_, proposerAcc = testutils.NewAccount(ctx, am, 100)
+	_, valAcc1 = testutils.NewAccount(ctx, am, 100)
+	_, valAcc2 = testutils.NewAccount(ctx, am, 100)
+	_, valAcc3 = testutils.NewAccount(ctx, am, 100)
 	proposerValAddr := ed25519.GenPrivKey().PubKey().Address()
 	val1ValAddr := ed25519.GenPrivKey().PubKey().Address()
 	val2ValAddr := ed25519.GenPrivKey().PubKey().Address()
@@ -62,32 +63,36 @@ func checkBalance(t *testing.T, ctx sdk.Context, am auth.AccountKeeper, valMappe
 
 func TestNoFeeDistribution(t *testing.T) {
 	// setup
-	am, valMapper, ctx := setup()
+	am, valMapper, ctx, _, _, _, _ := setup()
 	fee := tx.Fee(ctx)
 	require.True(t, true, fee.IsEmpty())
 
-	distributeFee(ctx, am, valMapper)
+	blockFee := distributeFee(ctx, am, valMapper, true)
+	require.Equal(t, pub.BlockFee{0, "", nil}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{100, 100, 100, 100})
 }
 
 func TestFeeDistribution2Proposer(t *testing.T) {
 	// setup
-	am, valMapper, ctx := setup()
+	am, valMapper, ctx, proposerAcc, _, _, _ := setup()
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
-	distributeFee(ctx, am, valMapper)
+	blockFee := distributeFee(ctx, am, valMapper, true)
+	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{proposerAcc.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 100, 100, 100})
 }
 
 func TestFeeDistribution2AllValidators(t *testing.T) {
 	// setup
-	am, valMapper, ctx := setup()
+	am, valMapper, ctx, proposerAcc, valAcc1, valAcc2, valAcc3 := setup()
 	// fee amount can be divided evenly
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 40)}, types.FeeForAll))
-	distributeFee(ctx, am, valMapper)
+	blockFee := distributeFee(ctx, am, valMapper, true)
+	require.Equal(t, pub.BlockFee{0, "BNB:40", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 50)}, types.FeeForAll))
-	distributeFee(ctx, am, valMapper)
+	blockFee = distributeFee(ctx, am, valMapper, true)
+	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{124, 122, 122, 122})
 }
