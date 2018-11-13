@@ -18,7 +18,7 @@ ${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=
 sleep 10
 ${cli} dex list -s=ZCB --quote-asset-symbol=BNB --init-price=110000000 --from=zc --chain-id ${chainId}
 sleep 10
-${cli} send --from=zc --to=cosmosaccaddr1872gjuvfakc6nrrf8qdqsar7anp9ezjly8rrwh --amount=1000000000000000BNB --chain-id ${chainId}
+${cli} send --from=zc --to=cosmosaccaddr1872gjuvfakc6nrrf8qdqsar7anp9ezjly8rrwh --amount=1000000000000000:BNB --chain-id ${chainId}
 sleep 10
 
 function random()

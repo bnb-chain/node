@@ -12,4 +12,4 @@ while true ; do
     esac
 done;
 
-./bnbcli token info -s $symbol | sed 's/cosmosaccaddr//g'
+./bnbcli token info -s $symbol | sed 's/bnc//g'

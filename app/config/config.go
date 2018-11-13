@@ -31,6 +31,20 @@ const (
 const appConfigTemplate = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
+[addr]
+# Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
+bech32PrefixAccAddr = "{{ .AddressConfig.Bech32PrefixAccAddr }}"
+# Bech32PrefixAccPub defines the Bech32 prefix of an account's public key
+bech32PrefixAccPub = "{{ .AddressConfig.Bech32PrefixAccPub }}"
+# Bech32PrefixValAddr defines the Bech32 prefix of a validator's operator address
+bech32PrefixValAddr = "{{ .AddressConfig.Bech32PrefixValAddr }}"
+# Bech32PrefixValPub defines the Bech32 prefix of a validator's operator public key
+bech32PrefixValPub = "{{ .AddressConfig.Bech32PrefixValPub }}"
+# Bech32PrefixConsAddr defines the Bech32 prefix of a consensus node address
+bech32PrefixConsAddr = "{{ .AddressConfig.Bech32PrefixConsAddr }}"
+# Bech32PrefixConsPub defines the Bech32 prefix of a consensus node public key
+bech32PrefixConsPub = "{{ .AddressConfig.Bech32PrefixConsPub }}"
+
 ##### publication related configurations #####
 [publication]
 # configurations ends with Kafka can be a semi-colon separated host-port list
@@ -79,14 +93,36 @@ func (context *BinanceChainContext) ToCosmosServerCtx() *server.Context {
 }
 
 type BinanceChainConfig struct {
+	*AddressConfig     `mapstructure:"addr"`
 	*PublicationConfig `mapstructure:"publication"`
 	*LogConfig         `mapstructure:"log"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
 	return &BinanceChainConfig{
+		AddressConfig:     defaultAddressConfig(),
 		PublicationConfig: defaultPublicationConfig(),
 		LogConfig:         defaultLogConfig(),
+	}
+}
+
+type AddressConfig struct {
+	Bech32PrefixAccAddr  string `mapstructure:"bech32PrefixAccAddr"`
+	Bech32PrefixAccPub   string `mapstructure:"bech32PrefixAccPub"`
+	Bech32PrefixValAddr  string `mapstructure:"bech32PrefixValAddr"`
+	Bech32PrefixValPub   string `mapstructure:"bech32PrefixValPub"`
+	Bech32PrefixConsAddr string `mapstructure:"bech32PrefixConsAddr"`
+	Bech32PrefixConsPub  string `mapstructure:"bech32PrefixConsPub"`
+}
+
+func defaultAddressConfig() *AddressConfig {
+	return &AddressConfig {
+		Bech32PrefixAccAddr:  "bnc",
+		Bech32PrefixAccPub:   "bncp",
+		Bech32PrefixValAddr:  "bva",
+		Bech32PrefixValPub:   "bvap",
+		Bech32PrefixConsAddr: "bca",
+		Bech32PrefixConsPub:  "bcap",
 	}
 }
 
