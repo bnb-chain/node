@@ -104,6 +104,11 @@ func publish(publisher MarketDataPublisher) {
 			changedPrices := filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 			publishOrderBookDelta(publisher, marketData.height, marketData.timestamp, changedPrices)
 		}
+
+		if cfg.PublishBlockFee {
+			Logger.Debug("start to publish blockfee")
+			publishBlockFee(publisher, marketData.height, marketData.timestamp, marketData.blockFee)
+		}
 	}
 }
 
@@ -156,6 +161,10 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 	books := Books{height, timestamp, len(deltas), deltas}
 
 	publisher.publish(&books, booksTpe, height, timestamp)
+}
+
+func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blockFee BlockFee) {
+	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
 }
 
 func setFeeHolder(fee map[string]*types.Fee) {

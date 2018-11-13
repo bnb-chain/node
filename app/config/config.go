@@ -63,6 +63,11 @@ publishOrderBook = {{ .PublicationConfig.PublishOrderBook }}
 orderBookTopic = "{{ .PublicationConfig.OrderBookTopic }}"
 orderBookKafka = "{{ .PublicationConfig.OrderBookKafka }}"
 
+# Whether we want publish block fee changes
+publishBlockFee = {{ .PublicationConfig.PublishBlockFee }}
+blockFeeTopic = "{{ .PublicationConfig.BlockFeeTopic }}"
+blockFeeKafka = "{{ .PublicationConfig.BlockFeeKafka }}"
+
 [log]
 
 # Write logs to console instead of file
@@ -138,6 +143,10 @@ type PublicationConfig struct {
 	PublishOrderBook bool   `mapstructure:"publishOrderBook"`
 	OrderBookTopic   string `mapstructure:"orderBookTopic"`
 	OrderBookKafka   string `mapstructure:"orderBookKafka"`
+
+	PublishBlockFee bool   `mapstructure:"publishBlockFee"`
+	BlockFeeTopic   string `mapstructure:"blockFeeTopic"`
+	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -153,6 +162,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		PublishOrderBook: false,
 		OrderBookTopic:   "orders",
 		OrderBookKafka:   "127.0.0.1:9092",
+
+		PublishBlockFee: false,
+		BlockFeeTopic:   "accounts",
+		BlockFeeKafka:   "127.0.0.1:9092",
 	}
 }
 

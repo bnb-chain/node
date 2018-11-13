@@ -101,6 +101,8 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 		topic = cfg.AccountBalanceTopic
 	case tradesAndOrdersTpe:
 		topic = cfg.OrderUpdatesTopic
+	case blockFeeTpe:
+		topic = cfg.BlockFeeTopic
 	}
 
 	if msg, err := marshal(avroMessage, tpe); err == nil {

@@ -161,4 +161,17 @@ const (
 			]
 		}
 	`
+
+	blockfeeSchema = `
+		{
+			"type": "record",
+			"name": "BlockFee",
+			"namespace": "com.company",
+			"fields": [
+				{ "name": "height", "type": "long"},
+				{ "name": "fee", "type": "string"},
+				{ "name": "validators", "type": { "type": "array", "items": "string" }}
+			]
+		}
+	`
 )
