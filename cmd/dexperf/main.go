@@ -180,22 +180,23 @@ func allocateOrders(tokens []string, users []string) {
 	orderIndex := 0
 	userIndex := 0
 
-	for i := 0; i < len(tokens); i++ {
-		for j := 0; j < noOfPrices; j++ {
-			symbol := fmt.Sprintf("%s_BNB", tokens[i])
+	for i := 0; i < noOfPrices; i++ {
+		for j := 0; j < len(tokens); j++ {
+			symbol := fmt.Sprintf("%s_BNB", tokens[j])
 			fmt.Printf("allocating #%d\n", orderIndex)
-			ordersChn <- build(users[userIndex], buy, symbol, buyPrices[j], 100000000, "GTC")
+			ordersChn <- build(users[userIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
 			orderIndex+=1
 			userIndex+=1
 			if userIndex == len(users) {
 				userIndex = 0
 			}
-			ordersChn <- build(users[userIndex], sell, symbol, sellPrices[j], 100000000, "GTC")
+			ordersChn <- build(users[userIndex], sell, symbol, sellPrices[i], 100000000, "GTC")
 			orderIndex+=1
 			userIndex+=1
 			if userIndex == len(users) {
 				userIndex = 0
 			}
+			fmt.Println("b:", buyPrices[i], "s:", sellPrices[i])
 		}
 	}
 	close(ordersChn)
