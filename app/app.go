@@ -131,7 +131,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
-	app.BaseApp.AccountStoreCache = auth.NewAccountSotreCache(cdc, accountStore, 10000)
+	app.BaseApp.AccountStoreCache = auth.NewAccountStoreCache(cdc, accountStore, 10000)
 
 	// remaining plugin init
 	app.initDex()
@@ -177,7 +177,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValAddrMapper.SetVal(ctx, gacc.Address, gacc.ValAddr)
+			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
 		}
 
 		app.BaseApp.DeliverAccountCache.Write()
@@ -222,7 +222,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish, ctx = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
@@ -232,14 +232,13 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
+		ctx = dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
 
 		// other end blockers
 		<-icoDone
 	}
 
-	// distribute fees TODO: enable it after upgraded to tm 0.24.0
-	// distributeFee(ctx, app.AccountKeeper)
+	distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper)
 	// TODO: update validators
 
 	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
@@ -251,11 +250,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 // ExportAppStateAndValidators exports blockchain world state to json.
 func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
-	ctx := app.NewContext(true, abci.Header{})
+	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 
 	// iterate to get the accounts
 	accounts := []GenesisAccount{}
-	appendAccount := func(acc auth.Account) (stop bool) {
+	appendAccount := func(acc sdk.Account) (stop bool) {
 		account := GenesisAccount{
 			Address: acc.GetAddress(),
 		}

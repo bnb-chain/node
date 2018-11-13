@@ -19,7 +19,7 @@ import (
 
 func setup() (TradingPairMapper, sdk.Context) {
 	ms, key := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 	return NewTradingPairMapper(cdc, key), ctx

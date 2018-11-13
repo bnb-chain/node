@@ -7,11 +7,11 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-var _ auth.Account = (NamedAccount)(nil)
+var _ sdk.Account = (NamedAccount)(nil)
 
 // TODO: maybe need to move GetFrozenCoins to the base interface
 type NamedAccount interface {
-	auth.Account
+	sdk.Account
 	GetName() string
 	SetName(string)
 
@@ -45,7 +45,7 @@ func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins
 func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
 func (acc AppAccount) GetLockedCoins() sdk.Coins        { return acc.LockedCoins }
 func (acc *AppAccount) SetLockedCoins(frozen sdk.Coins) { acc.LockedCoins = frozen }
-func (acc *AppAccount) Clone() auth.Account {
+func (acc *AppAccount) Clone() sdk.Account {
 	baseAcc := acc.BaseAccount.Clone().(*auth.BaseAccount)
 
 	clonedAcc := &AppAccount{
@@ -77,7 +77,7 @@ func (acc *AppAccount) Clone() auth.Account {
 
 // Get the AccountDecoder function for the custom AppAccount
 func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
-	return func(accBytes []byte) (res auth.Account, err error) {
+	return func(accBytes []byte) (res sdk.Account, err error) {
 		if len(accBytes) == 0 {
 			return nil, sdk.ErrTxDecode("accBytes are empty")
 		}
@@ -91,7 +91,7 @@ func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
 }
 
 // Prototype function for AppAccount
-func ProtoAppAccount() auth.Account {
+func ProtoAppAccount() sdk.Account {
 	aa := AppAccount{}
 	return &aa
 }

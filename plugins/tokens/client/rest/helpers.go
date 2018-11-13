@@ -73,7 +73,7 @@ func GetBalances(
 	return bals, nil
 }
 
-func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc auth.Account, err error) {
+func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc sdk.Account, err error) {
 	err = cdc.UnmarshalBinaryBare(*bz, &acc)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc auth.Account, err error) {
 	return acc, err
 }
 
-func getAccount(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (auth.Account, error) {
+func getAccount(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (sdk.Account, error) {
 	key := auth.AddressStoreKey(addr)
 	bz, err := ctx.QueryStore(key, common.AccountStoreName)
 	if err != nil {

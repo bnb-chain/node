@@ -35,10 +35,11 @@ type GenesisAccount struct {
 }
 
 // NewGenesisAccount -
-func NewGenesisAccount(aa *types.AppAccount) GenesisAccount {
+func NewGenesisAccount(aa *types.AppAccount, valAddr crypto.Address) GenesisAccount {
 	return GenesisAccount{
 		Name:    aa.Name,
 		Address: aa.GetAddress(),
+		ValAddr: valAddr,
 	}
 }
 
@@ -142,7 +143,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		if len(genTx.Name) > 0 {
 			appAccount.SetName(genTx.Name)
 		}
-		acc := NewGenesisAccount(&appAccount)
+		acc := NewGenesisAccount(&appAccount, genTx.PubKey.Address())
 		genAccounts[i] = acc
 	}
 

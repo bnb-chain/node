@@ -65,7 +65,7 @@ func newTestFeeConfig() o.FeeConfig {
 
 func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert := assert.New(t)
-	ctx := testApp.NewContext(true, abci.Header{})
+	ctx := testApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, types.NewTradingPair("BTC", "BNB", 1e8))
 
@@ -118,7 +118,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	assert := assert.New(t)
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
-	ctx := testApp.NewContext(false, abci.Header{})
+	ctx := testApp.NewContext(sdk.RunTxModeDeliver, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)
@@ -143,7 +143,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 func Test_Match(t *testing.T) {
 	assert := assert.New(t)
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
-	ctx := testApp.NewContext(false, abci.Header{})
+	ctx := testApp.NewContext(sdk.RunTxModeDeliver, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	ethPair := types.NewTradingPair("ETH", "BNB", 97e8)
@@ -293,7 +293,7 @@ func Test_Match(t *testing.T) {
 func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert := assert.New(t)
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{})
-	ctx := testApp.NewContext(false, abci.Header{})
+	ctx := testApp.NewContext(sdk.RunTxModeDeliver, abci.Header{})
 	InitAccounts(ctx, testApp)
 	testApp.DexKeeper.ClearOrderBook("BTC_BNB")
 	tradingPair := types.NewTradingPair("BTC", "BNB", 1e8)

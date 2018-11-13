@@ -54,7 +54,7 @@ var sigCache = newAccountLRUCache(maxCacheNumber)
 // nolint: gocyclo
 func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
-		ctx sdk.Context, tx sdk.Tx, simulate bool,
+		ctx sdk.Context, tx sdk.Tx, mode sdk.RunTxMode,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
 		newCtx = ctx
 
@@ -64,9 +64,11 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			return ctx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		err := validateBasic(stdTx)
-		if err != nil {
-			return ctx, err.Result(), true
+		if mode != sdk.RunTxModeReCheck {
+			err := validateBasic(stdTx)
+			if err != nil {
+				return newCtx, err.Result(), true
+			}
 		}
 
 		sigs := stdTx.GetSignatures()
@@ -83,15 +85,22 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 
 		// collect signer accounts
 		// TODO: abort if there is more than one signer?
-		var signerAccs = make([]auth.Account, len(signerAddrs))
+		var signerAccs = make([]sdk.Account, len(signerAddrs))
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
-			// check signature, return account with incremented nonce
-			signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-			signerAcc, res := processSig(ctx, am, signerAddr, sig, signBytes)
-			if !res.IsOK() {
-				return ctx, res, true
+			signerAcc, err := processAccount(ctx, am, signerAddr, sig)
+			if err != nil {
+				return newCtx, err.Result(), true
+			}
+
+			if mode != sdk.RunTxModeReCheck {
+				// check signature, return account with incremented nonce
+				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
+				res := processSig(sig, signerAcc, signBytes)
+				if !res.IsOK() {
+					return ctx, res, true
+				}
 			}
 
 			// Save the account.
@@ -135,34 +144,29 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	return nil
 }
 
-// verify the signature and increment the sequence.
-// if the account doesn't have a pubkey, set it.
-func processSig(
-	ctx sdk.Context, am auth.AccountKeeper,
-	addr sdk.AccAddress, sig auth.StdSignature, signBytes []byte) (
-	acc auth.Account, res sdk.Result) {
-
+func processAccount(ctx sdk.Context, am auth.AccountKeeper,
+	addr sdk.AccAddress, sig auth.StdSignature) (acc sdk.Account, err sdk.Error) {
 	// Get the account.
 	acc = am.GetAccount(ctx, addr)
 	if acc == nil {
-		return nil, sdk.ErrUnknownAddress(addr.String()).Result()
+		return nil, sdk.ErrUnknownAddress(addr.String())
 	}
 
 	// Check account number.
 	accnum := acc.GetAccountNumber()
 	if accnum != sig.AccountNumber {
 		return nil, sdk.ErrInvalidSequence(
-			fmt.Sprintf("Invalid account number. Got %d, expected %d", sig.AccountNumber, accnum)).Result()
+			fmt.Sprintf("Invalid account number. Got %d, expected %d", sig.AccountNumber, accnum))
 	}
 
 	// Check and increment sequence number.
 	seq := acc.GetSequence()
 	if seq != sig.Sequence {
 		return nil, sdk.ErrInvalidSequence(
-			fmt.Sprintf("Invalid sequence. Got %d, expected %d", sig.Sequence, seq)).Result()
+			fmt.Sprintf("Invalid sequence. Got %d, expected %d", sig.Sequence, seq))
 	}
-	err := acc.SetSequence(seq + 1)
-	if err != nil {
+	errSeq := acc.SetSequence(seq + 1)
+	if errSeq != nil {
 		// Handle w/ #870
 		panic(err)
 	}
@@ -172,23 +176,33 @@ func processSig(
 	if pubKey == nil {
 		pubKey = sig.PubKey
 		if pubKey == nil {
-			return nil, sdk.ErrInvalidPubKey("PubKey not found").Result()
+			return nil, sdk.ErrInvalidPubKey("PubKey not found")
 		}
 		if !bytes.Equal(pubKey.Address(), addr) {
 			return nil, sdk.ErrInvalidPubKey(
-				fmt.Sprintf("PubKey does not match Signer address %v", addr)).Result()
+				fmt.Sprintf("PubKey does not match Signer address %v", addr))
 		}
-		err = acc.SetPubKey(pubKey)
-		if err != nil {
-			return nil, sdk.ErrInternal("setting PubKey on signer's account").Result()
+		errKey := acc.SetPubKey(pubKey)
+		if errKey != nil {
+			return nil, sdk.ErrInternal("setting PubKey on signer's account")
 		}
 	}
+	return acc, nil
+}
+
+// verify the signature and increment the sequence.
+// if the account doesn't have a pubkey, set it.
+func processSig(
+	sig auth.StdSignature, acc sdk.Account, signBytes []byte) (
+	res sdk.Result) {
+
+	pubKey := acc.GetPubKey()
 
 	sigKey := pubKey.Address().String() + string(sig.Signature)
 	if msgBytes, ok := sigCache.getSig(sigKey); ok {
 		if !bytes.Equal(msgBytes, signBytes) {
 			log.Info("hit wrong sig cache", "sigKey", sigKey)
-			return nil, sdk.ErrUnauthorized("signature verification failed").Result()
+			return sdk.ErrUnauthorized("signature verification failed").Result()
 		}
 		log.Info("hit sig cache", "sigKey", sigKey)
 		return
@@ -196,14 +210,14 @@ func processSig(
 
 	// Check sig.
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
-		return nil, sdk.ErrUnauthorized("signature verification failed").Result()
+		return sdk.ErrUnauthorized("signature verification failed").Result()
 	}
 	sigCache.addSig(sigKey, signBytes)
 
 	return
 }
 
-func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -242,7 +256,7 @@ func calculateFees(msg sdk.Msg) (types.Fee, error) {
 	return calculator(msg), nil
 }
 
-func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
+func checkSufficientFunds(acc sdk.Account, fee types.Fee) sdk.Result {
 	coins := acc.GetCoins()
 
 	newCoins := coins.Minus(fee.Tokens.Sort())
@@ -254,7 +268,7 @@ func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
+func deductFees(ctx sdk.Context, acc sdk.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}

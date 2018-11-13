@@ -137,7 +137,7 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 
 type orders struct {
 	numOfMsgs int
-	orders    []order
+	orders    []*order
 }
 
 func (msg *orders) String() string {

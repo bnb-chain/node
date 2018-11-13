@@ -35,16 +35,16 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockTime time.Time) {
+func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockTime time.Time) (newCtx sdk.Context) {
 	logger := bnclog.With("module", "dex")
 	logger.Info("Update tick size / lot size")
 	updateTickSizeAndLotSize(ctx, dexKeeper)
 	// TODO: update fee/rate
 	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
-		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
+		newCtx = pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
-		dexKeeper.ExpireOrders(ctx, blockTime, nil, nil)
+		newCtx = dexKeeper.ExpireOrders(ctx, blockTime, nil, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
@@ -52,6 +52,7 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockT
 	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
+	return
 }
 
 func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper *DexKeeper) {

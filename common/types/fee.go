@@ -14,6 +14,8 @@ const (
 	FeeForAll      = FeeDistributeType(0x02)
 	FeeFree        = FeeDistributeType(0x03)
 
+	canceledCharacter    = "#Cxl"
+	expiredCharacter     = "#Exp"
 	serializeSeparator   = ";"
 	amountDenomSeparator = ":"
 )
@@ -51,7 +53,28 @@ func (fee Fee) IsEmpty() bool {
 }
 
 // Any change of this method should communicate with services (query, explorer) developers
-func (fee Fee) Serialize() string {
+// More detail can be found:
+// https://github.com/BiJie/BinanceChain-Doc/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+func (fee Fee) SerializeForPub(canceled, expired int) string {
+	if fee.IsEmpty() {
+		return ""
+	} else {
+		res := fee.serialize()
+		if canceled > 0 {
+			res += fmt.Sprintf("%s%s%s%d", serializeSeparator, canceledCharacter, amountDenomSeparator, canceled)
+		}
+		if expired > 0 {
+			res += fmt.Sprintf("%s%s%s%d", serializeSeparator, expiredCharacter, amountDenomSeparator, expired)
+		}
+		return res
+	}
+}
+
+func (fee Fee) String() string {
+	return fee.serialize()
+}
+
+func (fee Fee) serialize() string {
 	if fee.IsEmpty() {
 		return ""
 	} else {
@@ -62,8 +85,4 @@ func (fee Fee) Serialize() string {
 		res := buffer.String()
 		return res[:len(res)-1]
 	}
-}
-
-func (fee Fee) String() string {
-	return fee.Serialize()
 }

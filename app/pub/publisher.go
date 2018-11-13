@@ -27,6 +27,8 @@ var (
 )
 
 var (
+	// Should only be set via setter method
+	// Should only be passed to NewBlockInfoToPublish
 	feeHolderCache orderPkg.FeeHolder
 )
 
@@ -55,10 +57,10 @@ func publish(publisher MarketDataPublisher) {
 		// Implementation note: publication order are important here,
 		// DEX query service team relies on the fact that we publish orders before trades so that
 		// they can assign buyer/seller address into trade before persist into DB
-		var opensToPublish []order
-		var canceledToPublish []order
+		var opensToPublish []*order
+		var canceledToPublish []*order
 		if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-			opensToPublish, canceledToPublish = collectExecutedOrdersToPublish(
+			opensToPublish, canceledToPublish = collectOrdersToPublish(
 				marketData.tradesToPublish,
 				marketData.orderChanges,
 				marketData.orderChangesMap,
@@ -105,7 +107,7 @@ func publish(publisher MarketDataPublisher) {
 	}
 }
 
-func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []order, tradesToPublish []*Trade) {
+func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, numOfMsgs: numOfTrades + numOfOrders}

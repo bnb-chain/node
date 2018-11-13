@@ -25,7 +25,7 @@ func BenchmarkGetAccount(b *testing.B) {
 		Address: addr,
 	}
 
-	ctx := testApp.BaseApp.NewContext(true, abci.Header{})
+	ctx := testApp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 
 	acc := &common.AppAccount{
 		BaseAccount: auth.BaseAccount{
@@ -57,7 +57,7 @@ func BenchmarkSetAccount(b *testing.B) {
 		Address: addr,
 	}
 
-	ctx := testApp.BaseApp.NewContext(true, abci.Header{})
+	ctx := testApp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 
 	acc := &common.AppAccount{
 		BaseAccount: auth.BaseAccount{
