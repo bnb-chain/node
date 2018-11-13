@@ -75,5 +75,5 @@ ${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=
 sleep 5
 ${cli} dex list -s=ZCB --quote-asset-symbol=BNB --init-price=100000000 --from=zc --chain-id ${chain_id}
 sleep 5
-${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000BNB --chain-id ${chain_id}
+${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000:BNB --chain-id ${chain_id}
 sleep 5
