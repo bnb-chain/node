@@ -116,13 +116,13 @@ type AddressConfig struct {
 }
 
 func defaultAddressConfig() *AddressConfig {
-	return &AddressConfig{
+	return &AddressConfig {
 		Bech32PrefixAccAddr:  "bnc",
-		Bech32PrefixAccPub:   "bncpub",
-		Bech32PrefixValAddr:  "bncvaloper",
-		Bech32PrefixValPub:   "bncvaloperpub",
-		Bech32PrefixConsAddr: "bncvalcons",
-		Bech32PrefixConsPub:  "bncvalconspub",
+		Bech32PrefixAccPub:   "bncp",
+		Bech32PrefixValAddr:  "bva",
+		Bech32PrefixValPub:   "bvap",
+		Bech32PrefixConsAddr: "bca",
+		Bech32PrefixConsPub:  "bcap",
 	}
 }
 
