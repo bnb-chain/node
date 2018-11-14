@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:973952f68c7701eabbdfc1ee3d953490f451d605af71a919b7b5ee1a4409e327"
+  digest = "1:b383cee5b88db397e396185cc533b65bee0f77647dbf6fe8b4573a87c566b327"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -109,7 +109,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "5725498922b2f73bbc86ad05e4664c506f9b0afa"
+  revision = "7c9eb6337b465b3f8a9af0fa8dc4853a565b9ca5"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
