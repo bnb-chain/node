@@ -22,7 +22,8 @@ func TestTradesAndOrdersMarshaling(t *testing.T) {
 		trades: []*Trade{{
 			Id: "42-0", Symbol: "NNB_BNB", Price: 100, Qty: 100,
 			Sid: "s-1", Bid: "b-1",
-			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1"}},
+			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1",
+			SAddr: "s", BAddr: "b"}},
 	}
 	orders := orders{
 		numOfMsgs: 3,
@@ -57,6 +58,14 @@ func TestAccountsMarshaling(t *testing.T) {
 	accs := []Account{{"b-1", []*AssetBalance{{Asset: "BNB", Free: 100}}}}
 	msg := accounts{42, 2, accs}
 	_, err := marshal(&msg, accountsTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBlockFeeMarshaling(t *testing.T) {
+	msg := BlockFee{1, "BNB:1000;BTC:10", []string{"bnc1", "bnc2", "bnc3"}}
+	_, err := marshal(&msg, blockFeeTpe)
 	if err != nil {
 		t.Fatal(err)
 	}
