@@ -234,11 +234,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		<-icoDone
 	}
 
-	distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper)
+	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
 	// TODO: update validators
 
 	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-		app.publish(tradesToPublish, ctx, height, blockTime.Unix())
+		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
 	}
 
 	return response
@@ -346,7 +346,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -378,7 +378,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, ctx sdk.Context, 
 		app.DexKeeper.OrderChanges,    // thread-safety runMsgsis guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderChangesMap, // ditto
 		accountsToPublish,
-		latestPriceLevels)
+		latestPriceLevels,
+		blockFee)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
