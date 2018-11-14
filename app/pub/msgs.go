@@ -122,6 +122,8 @@ type Trade struct {
 	Bid    string
 	Sfee   string
 	Bfee   string
+	SAddr  string
+	BAddr  string
 }
 
 func (msg *Trade) String() string {
@@ -138,6 +140,8 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
+	native["saddr"] = msg.SAddr
+	native["baddr"] = msg.BAddr
 	return native
 }
 
