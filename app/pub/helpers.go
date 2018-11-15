@@ -18,12 +18,12 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	res := make([]string, 0, len(tradesToPublish)*2+len(kp.OrderChanges))
 
 	for _, t := range tradesToPublish {
-		if bo, ok := kp.OrderChangesMap[t.Bid]; ok {
+		if bo, ok := kp.OrderInfosForPub[t.Bid]; ok {
 			res = append(res, string(bo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate buy order in OrderChangesMap for trade account resolving", "bid", t.Bid)
 		}
-		if so, ok := kp.OrderChangesMap[t.Sid]; ok {
+		if so, ok := kp.OrderInfosForPub[t.Sid]; ok {
 			res = append(res, string(so.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate sell order in OrderChangesMap for trade account resolving", "sid", t.Sid)
@@ -31,7 +31,7 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	}
 
 	for _, orderChange := range kp.OrderChanges {
-		if orderInfo := kp.OrderChangesMap[orderChange.Id]; orderInfo != nil {
+		if orderInfo := kp.OrderInfosForPub[orderChange.Id]; orderInfo != nil {
 			res = append(res, string(orderInfo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", orderChange.String())
@@ -331,7 +331,7 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 func collectOrdersToPublish(
 	trades []*Trade,
 	orderChanges orderPkg.OrderChanges,
-	orderChangesMap orderPkg.OrderInfoForPublish,
+	orderInfos orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
 	timestamp int64) (opensToPublish []*Order, canceledToPublish []*Order, feeToPublish map[string]string) {
 	opensToPublish = make([]*Order, 0)
@@ -345,9 +345,9 @@ func collectOrdersToPublish(
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
 
-	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
+	// collect orders (new, cancel, ioc-no-fill, expire, failed-blocking and failed-matching) from orderChanges
 	for _, o := range orderChanges {
-		if orderInfo := orderChangesMap[o.Id]; orderInfo != nil {
+		if orderInfo := orderInfos[o.Id]; orderInfo != nil {
 			orderToPublish := Order{
 				orderInfo.Symbol,
 				o.Tpe,
@@ -396,7 +396,7 @@ func collectOrdersToPublish(
 
 	// update C and E fields in serialized fee string
 	for _, order := range canceledToPublish {
-		senderStr := string(orderChangesMap[order.OrderId].Sender)
+		senderStr := string(orderInfos[order.OrderId].Sender)
 		if _, ok := feeToPublish[senderStr]; !ok {
 			numOfChargedCanceled := chargedCancels[senderStr]
 			numOfExpiredCanceled := chargedExpires[senderStr]
@@ -412,18 +412,18 @@ func collectOrdersToPublish(
 
 	// update fee and collect orders from trades
 	for _, t := range trades {
-		if o, exists := orderChangesMap[t.Bid]; exists {
+		if o, exists := orderInfos[t.Bid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
 			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
-			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
+			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Bid)
 		}
 
-		if o, exists := orderChangesMap[t.Sid]; exists {
+		if o, exists := orderInfos[t.Sid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
 			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
-			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
+			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Sid)
 		}
 	}
 

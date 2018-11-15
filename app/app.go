@@ -50,8 +50,8 @@ const (
 
 // default home directories for expected binaries
 var (
-	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
-	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
+	DefaultCLIHome      = os.ExpandEnv("$HOME/.bnbcli")
+	DefaultNodeHome     = os.ExpandEnv("$HOME/.bnbchaind")
 	Bech32PrefixAccAddr string
 )
 
@@ -362,10 +362,25 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 	res = app.BaseApp.DeliverTx(txBytes)
 	if res.IsOK() {
 		// commit or panic
-		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
-		fees.Pool.CommitFee(txHash)
+		fees.Pool.CommitFee(cmn.HexBytes(tmhash.Sum(txBytes)).String())
+	} else {
+		if app.publicationConfig.PublishOrderUpdates {
+			app.processErrAbciResponseForPub(txBytes)
+		}
 	}
 
+	return res
+}
+
+// PreDeliverTx implements extended ABCI for concurrency
+// PreCheckTx would perform decoding, signture and other basic verification
+func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.PreDeliverTx(txBytes)
+	if res.IsErr() {
+		if app.publicationConfig.PublishOrderUpdates {
+			app.processErrAbciResponseForPub(txBytes)
+		}
+	}
 	return res
 }
 
@@ -627,8 +642,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
-		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.OrderChangesMap, // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
@@ -638,7 +653,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.OrderChangesMap, id)
+		delete(app.DexKeeper.OrderInfosForPub, id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

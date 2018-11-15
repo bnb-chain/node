@@ -18,6 +18,8 @@ const (
 	IocNoFill
 	PartialFill
 	FullyFill
+	FailedBlocking
+	FailedMatching
 )
 
 func (this ChangeType) String() string {
@@ -34,6 +36,10 @@ func (this ChangeType) String() string {
 		return "PartialFill"
 	case FullyFill:
 		return "FullyFill"
+	case FailedBlocking:
+		return "FailedBlocking"
+	case FailedMatching:
+		return "FailedMatching"
 	default:
 		return "Unknown"
 	}

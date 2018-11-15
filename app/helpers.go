@@ -9,13 +9,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/cosmos/cosmos-sdk/version"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/tendermint/tendermint/abci/server"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmcfg "github.com/tendermint/tendermint/config"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/cli"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/binance-chain/node/app/config"
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/plugins/dex/order"
 )
 
 // RunForever - BasecoinApp execution and cleanup
@@ -137,5 +139,32 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 
 		context.Logger = logger
 		return nil
+	}
+}
+
+func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
+	tx, err := app.TxDecoder(txBytes)
+	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+	if err != nil {
+		app.Logger.Error("failed to process invalid tx", "tx", txHash)
+	} else {
+		if msgs := tx.GetMsgs(); len(msgs) != 1 {
+			// The error message here should be consistent with vendor/github.com/cosmos/cosmos-sdk/baseapp/baseapp.go:537
+			app.Logger.Error("Tx.GetMsgs() must return exactly one message")
+		} else {
+			switch msg := msgs[0].(type) {
+			case order.NewOrderMsg:
+				app.Logger.Error("failed to process NewOrderMsg", "oid", msg.Id)
+				keeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking})
+			case order.CancelOrderMsg:
+				app.Logger.Error("failed to process CancelOrderMsg", "oid", msg.RefId)
+				// OrderInfo must has been in keeper.OrderInfosForPub
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking})
+			default:
+				// deliberately do nothing for message other than NewOrderMsg
+				// in future, we may publish fail status of send msg
+			}
+		}
 	}
 }

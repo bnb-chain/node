@@ -55,7 +55,7 @@ func Publish(
 				opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
 					marketData.tradesToPublish,
 					marketData.orderChanges,
-					marketData.orderChangesMap,
+					marketData.orderInfos,
 					marketData.feeHolder,
 					marketData.timestamp)
 				for _, o := range opensToPublish {
