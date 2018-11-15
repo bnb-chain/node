@@ -331,7 +331,7 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 func collectOrdersToPublish(
 	trades []*Trade,
 	orderChanges orderPkg.OrderChanges,
-	orderChangesMap orderPkg.OrderInfoForPublish,
+	orderInfos orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
 	timestamp int64) (opensToPublish []*Order, canceledToPublish []*Order, feeToPublish map[string]string) {
 	opensToPublish = make([]*Order, 0)
@@ -345,9 +345,9 @@ func collectOrdersToPublish(
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
 
-	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
+	// collect orders (new, cancel, ioc-no-fill, expire, failed-blocking and failed-matching) from orderChanges
 	for _, o := range orderChanges {
-		if orderInfo := orderChangesMap[o.Id]; orderInfo != nil {
+		if orderInfo := orderInfos[o.Id]; orderInfo != nil {
 			orderToPublish := Order{
 				orderInfo.Symbol,
 				o.Tpe,
@@ -396,7 +396,7 @@ func collectOrdersToPublish(
 
 	// update C and E fields in serialized fee string
 	for _, order := range canceledToPublish {
-		senderStr := string(orderChangesMap[order.OrderId].Sender)
+		senderStr := string(orderInfos[order.OrderId].Sender)
 		if _, ok := feeToPublish[senderStr]; !ok {
 			numOfChargedCanceled := chargedCancels[senderStr]
 			numOfExpiredCanceled := chargedExpires[senderStr]
@@ -412,18 +412,18 @@ func collectOrdersToPublish(
 
 	// update fee and collect orders from trades
 	for _, t := range trades {
-		if o, exists := orderChangesMap[t.Bid]; exists {
+		if o, exists := orderInfos[t.Bid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
 			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
-			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Bid)
+			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Bid)
 		}
 
-		if o, exists := orderChangesMap[t.Sid]; exists {
+		if o, exists := orderInfos[t.Sid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
 			opensToPublish = append(opensToPublish, &orderToPublish)
 		} else {
-			Logger.Error("failed to resolve order information from orderChangesMap", "orderId", t.Sid)
+			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Sid)
 		}
 	}
 

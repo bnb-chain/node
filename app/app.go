@@ -376,6 +376,46 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 	}
 }
 
+func (app *BinanceChain) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
+	if app.publicationConfig.PublishOrderUpdates {
+		response := app.BaseApp.DeliverTx(txBytes)
+		if response.IsErr() {
+			tx, err := app.TxDecoder(txBytes)
+			if err != nil {
+				app.Logger.Error("failed to process failed order during deliver, this is not a valid order msg")
+			} else {
+				newOrderMsg := tx.GetMsgs()[0].(order.NewOrderMsg)
+				app.Logger.Error("failed to process oid during deliver", "oid", newOrderMsg.Id)
+				keeper.OrderInfos[newOrderMsg.Id] = &order.OrderInfo{NewOrderMsg: newOrderMsg}
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{newOrderMsg.Id, order.FailedBlocking})
+			}
+		}
+		return response
+	} else {
+		return app.BaseApp.DeliverTx(txBytes)
+	}
+}
+
+func (app *BinanceChain) ReCheckTx(txBytes []byte) abci.ResponseCheckTx {
+	if app.publicationConfig.PublishOrderUpdates {
+		response := app.BaseApp.ReCheckTx(txBytes)
+		if response.IsErr() {
+			tx, err := app.TxDecoder(txBytes)
+			if err != nil {
+				app.Logger.Error("failed to process failed order during deliver, this is not a valid order msg")
+			} else {
+				newOrderMsg := tx.GetMsgs()[0].(order.NewOrderMsg)
+				app.Logger.Error("failed to process oid during deliver", "oid", newOrderMsg.Id)
+				keeper.OrderInfos[newOrderMsg.Id] = &order.OrderInfo{NewOrderMsg: newOrderMsg}
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{newOrderMsg.Id, order.FailedBlocking})
+			}
+		}
+		return response
+	} else {
+		return app.BaseApp.ReCheckTx(txBytes)
+	}
+}
+
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
@@ -627,7 +667,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		tradesToPublish,
 		proposalsToPublish,
 		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.OrderChangesMap, // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderInfos, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
@@ -637,7 +677,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.OrderChangesMap, id)
+		delete(app.DexKeeper.OrderInfos, id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

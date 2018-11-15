@@ -18,6 +18,8 @@ const (
 	IocNoFill
 	PartialFill
 	FullyFill
+	FailedBlocking
+	FailedMatching
 )
 
 func (this ChangeType) String() string {
@@ -34,6 +36,10 @@ func (this ChangeType) String() string {
 		return "PartialFill"
 	case FullyFill:
 		return "FullyFill"
+	case FailedBlocking:
+		return "FailedBlocking"
+	case FailedMatching:
+		return "FailedMatching"
 	default:
 		return "Unknown"
 	}
@@ -61,6 +67,10 @@ type OrderChange struct {
 
 func (oc OrderChange) String() string {
 	return fmt.Sprintf("id: %s, tpe: %s", oc.Id, oc.Tpe.String())
+}
+
+func (oc OrderChange) IsFailed() bool {
+	return oc.Tpe == FailedBlocking || oc.Tpe == FailedMatching
 }
 
 // provide an easy way to retrieve order related static fields during generate executed order status
