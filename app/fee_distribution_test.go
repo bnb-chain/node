@@ -57,7 +57,7 @@ func checkBalance(t *testing.T, ctx sdk.Context, am auth.AccountKeeper, valMappe
 	for i, voteInfo := range ctx.VoteInfos() {
 		accAddr := getAccAddr(ctx, valMapper, voteInfo.Validator.Address)
 		valAcc := am.GetAccount(ctx, accAddr)
-		require.Equal(t, balances[i], valAcc.GetCoins().AmountOf(types.NativeToken).Int64())
+		require.Equal(t, balances[i], valAcc.GetCoins().AmountOf(types.NativeToken))
 	}
 }
 
@@ -75,7 +75,7 @@ func TestNoFeeDistribution(t *testing.T) {
 func TestFeeDistribution2Proposer(t *testing.T) {
 	// setup
 	am, valMapper, ctx, proposerAcc, _, _, _ := setup()
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 10)}, types.FeeForProposer))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
 	blockFee := distributeFee(ctx, am, valMapper, true)
 	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{proposerAcc.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 100, 100, 100})
@@ -85,13 +85,13 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// setup
 	am, valMapper, ctx, proposerAcc, valAcc1, valAcc2, valAcc3 := setup()
 	// fee amount can be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 40)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 40)}, types.FeeForAll))
 	blockFee := distributeFee(ctx, am, valMapper, true)
 	require.Equal(t, pub.BlockFee{0, "BNB:40", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
-	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewInt64Coin(types.NativeToken, 50)}, types.FeeForAll))
+	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 50)}, types.FeeForAll))
 	blockFee = distributeFee(ctx, am, valMapper, true)
 	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{124, 122, 122, 122})

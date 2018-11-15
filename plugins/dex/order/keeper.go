@@ -478,8 +478,8 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
-		Plus(sdk.Coins{sdk.NewInt64Coin(tran.inAsset, tran.in)}).
-		Plus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock-tran.out)}))
+		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
+		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
 
 	kp.am.SetAccount(ctx, account)
 	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
@@ -559,7 +559,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 	collectFee(expireInAsset, func(acc auth.Account, in sdk.Coin) types.Fee {
 		var i int64 = 0
 		var fees types.Fee
-		for ;i < in.Amount.Int64(); i++ {
+		for ; i < in.Amount; i++ {
 			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.lastTradePrices)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 			fees.AddFee(fee)

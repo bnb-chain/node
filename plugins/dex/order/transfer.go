@@ -168,6 +168,6 @@ func (s *sortedAsset) addAsset(asset string, amt int64) {
 		if s.tokens == nil {
 			s.tokens = sdk.Coins{}
 		}
-		s.tokens = s.tokens.Plus(sdk.Coins{{Denom: asset, Amount: sdk.NewInt(amt)}})
+		s.tokens = s.tokens.Plus(sdk.Coins{{Denom: asset, Amount: amt}})
 	}
 }

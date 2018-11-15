@@ -129,7 +129,7 @@ func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
 func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
-	inAmt := tradeIn.Amount.Int64()
+	inAmt := tradeIn.Amount
 	if inSymbol == types.NativeToken {
 		feeToken = sdk.NewCoin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
 	} else {
@@ -149,7 +149,7 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 				big.NewInt(lastTradePrice)).Int64()
 		}
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
-		if balances.AmountOf(types.NativeToken).Int64() >= feeByNativeToken {
+		if balances.AmountOf(types.NativeToken) >= feeByNativeToken {
 			// have sufficient native token to pay the fees
 			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
 		} else {
@@ -183,7 +183,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	}
 
 	var feeToken sdk.Coin
-	nativeTokenBalance := balances.AmountOf(types.NativeToken).Int64()
+	nativeTokenBalance := balances.AmountOf(types.NativeToken)
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeToken {
 		feeToken = sdk.NewCoin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
@@ -201,7 +201,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
 		}
 
-		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset).Int64())
+		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset))
 		feeToken = sdk.NewCoin(inAsset, feeAmount)
 	}
 

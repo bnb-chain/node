@@ -30,7 +30,7 @@ func FixedFeeCalculator(amount int64, feeType types.FeeDistributeType) FeeCalcul
 	}
 
 	return func(msg sdk.Msg) types.Fee {
-		return types.NewFee(append(sdk.Coins{}, sdk.NewInt64Coin(types.NativeToken, amount)), feeType)
+		return types.NewFee(append(sdk.Coins{}, sdk.NewCoin(types.NativeToken, amount)), feeType)
 	}
 }
 
