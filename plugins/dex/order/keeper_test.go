@@ -490,8 +490,8 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, ""}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, ""}, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
-		sdk.NewInt64Coin("ABC", 3e8),
-		sdk.NewInt64Coin("BNB", 11e4),
+		sdk.NewCoin("ABC", 3e8),
+		sdk.NewCoin("BNB", 11e4),
 	}.Sort())
 	am.SetAccount(ctx, acc)
 
@@ -512,18 +512,18 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
 	require.Len(t, keeper.allOrders["XYZ_BNB"], 1)
 	expectFees := types.NewFee(sdk.Coins{
-		sdk.NewInt64Coin("BNB", 6e4),
-		sdk.NewInt64Coin("ABC", 1e7),
+		sdk.NewCoin("BNB", 6e4),
+		sdk.NewCoin("ABC", 1e7),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, tx.Fee(ctx))
 	acc = am.GetAccount(ctx, acc.GetAddress())
 	require.Equal(t, sdk.Coins{
-		sdk.NewInt64Coin("ABC", 2e8),
-		sdk.NewInt64Coin("BNB", 4e4),
+		sdk.NewCoin("ABC", 2e8),
+		sdk.NewCoin("BNB", 4e4),
 	}.Sort(), acc.(types.NamedAccount).GetLockedCoins())
 	require.Equal(t, sdk.Coins{
-		sdk.NewInt64Coin("ABC", 9e7),
-		sdk.NewInt64Coin("BNB", 1e4),
+		sdk.NewCoin("ABC", 9e7),
+		sdk.NewCoin("BNB", 1e4),
 	}.Sort(), acc.GetCoins())
 }
 

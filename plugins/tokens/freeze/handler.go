@@ -33,14 +33,14 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	coins := keeper.GetCoins(ctx, msg.From)
-	if coins.AmountOf(symbol).Int64() < freezeAmount {
+	if coins.AmountOf(symbol) < freezeAmount {
 		logger.Info("freeze token failed", "reason", "no enough free tokens to freeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
-	newFrozenTokens := account.GetFrozenCoins().Plus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}})
-	newFreeTokens := account.GetCoins().Minus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(freezeAmount)}})
+	newFrozenTokens := account.GetFrozenCoins().Plus(sdk.Coins{{Denom: symbol, Amount: freezeAmount}})
+	newFreeTokens := account.GetCoins().Minus(sdk.Coins{{Denom: symbol, Amount: freezeAmount}})
 	account.SetFrozenCoins(newFrozenTokens)
 	account.SetCoins(newFreeTokens)
 	accKeeper.SetAccount(ctx, account)
@@ -53,14 +53,14 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
-	frozenAmount := account.GetFrozenCoins().AmountOf(symbol).Int64()
+	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	if frozenAmount < unfreezeAmount {
 		logger.Info("unfreeze token failed", "reason", "no enough frozen tokens to unfreeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 	}
 
-	newFrozenTokens := account.GetFrozenCoins().Minus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}})
-	newFreeTokens := account.GetCoins().Plus(sdk.Coins{{Denom: symbol, Amount: sdk.NewInt(unfreezeAmount)}})
+	newFrozenTokens := account.GetFrozenCoins().Minus(sdk.Coins{{Denom: symbol, Amount: unfreezeAmount}})
+	newFreeTokens := account.GetCoins().Plus(sdk.Coins{{Denom: symbol, Amount: unfreezeAmount}})
 	account.SetFrozenCoins(newFrozenTokens)
 	account.SetCoins(newFreeTokens)
 	accKeeper.SetAccount(ctx, account)

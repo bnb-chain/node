@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -80,7 +81,7 @@ func (fee Fee) serialize() string {
 	} else {
 		var buffer bytes.Buffer
 		for _, coin := range fee.Tokens {
-			buffer.WriteString(fmt.Sprintf("%s%s%s%s", coin.Denom, amountDenomSeparator, coin.Amount.String(), serializeSeparator))
+			buffer.WriteString(fmt.Sprintf("%s%s%s%s", coin.Denom, amountDenomSeparator, strconv.FormatInt(coin.Amount, 10), serializeSeparator))
 		}
 		res := buffer.String()
 		return res[:len(res)-1]
