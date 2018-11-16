@@ -34,6 +34,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 )
 
+func init() {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount("bnc", "bncp")
+	config.SetBech32PrefixForValidator("bva", "bvap")
+	config.SetBech32PrefixForConsensusNode("bca",  "bcap")
+	config.Seal()
+}
+
 const (
 	createTask = 1
 	submitTask = 2
@@ -145,7 +153,6 @@ func build(user string, side int8, symbol string, price int64, qty int64, tif st
 	cdc := MakeCodec()
 	viper.Set("node", vNodes[0])
 	viper.Set("chain-id", *chainId)
-	viper.Set("gas", 20000000000000)
 	viper.Set("home", fmt.Sprintf("%s", *cHome))
 	viper.Set("from", user)
 	viper.Set("trust-node", true)
@@ -382,7 +389,7 @@ func generateAccounts(keyword string) [][]string {
 	if err != nil {
 		panic(fmt.Sprint(err) + " : " + stderr.String())
 	}
-	expr := "(" + keyword + "[\\d]+).+(cosmos.+).+cosmos"
+	expr := "(" + keyword + "[\\d]+).+(bnc.+).+bnc"
 	res, err := regexp.Compile(expr)
 	if err != nil {
 		panic(err)
@@ -419,7 +426,7 @@ func generateTokens(sI int, eI int, flag bool) []string {
 				panic(fmt.Sprint(err) + " : " + stderr.String())
 			}
 			fmt.Println(token, stdout.String())
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 			stdout.Reset()
 			stderr.Reset()
 			cmd = exec.Command("bnbcli", "dex", "list", "--home="+*cHome, "--node="+*vNode, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId)
@@ -430,7 +437,7 @@ func generateTokens(sI int, eI int, flag bool) []string {
 				panic(fmt.Sprint(err) + " : " + stderr.String())
 			}
 			fmt.Println(token, stdout.String())
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 			stdout.Reset()
 			stderr.Reset()
 		}
@@ -456,7 +463,7 @@ func initializeAccounts(addresses []string, tokens []string, flag bool) {
 						l := buffer.String()
 						res := l[:len(l)-1]
 						buffer.Reset()
-						arg := []string{"token", "multi-send", "--home="+*cHome, "--node="+*vNode, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000"+tokens[i], "--to="+res}
+						arg := []string{"token", "multi-send", "--home="+*cHome, "--node="+*vNode, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000:"+tokens[i], "--to="+res}
 						cmd := exec.Command("bnbcli", arg...)
 						cmd.Stdout = &stdout
 						cmd.Stderr = &stderr
@@ -465,7 +472,7 @@ func initializeAccounts(addresses []string, tokens []string, flag bool) {
 							fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 							stdout.Reset()
 							stderr.Reset()
-							time.Sleep(2 * time.Second)
+							time.Sleep(5 * time.Second)
 							// multi-send, retry
 							fmt.Println("retry ...")
 							cmdR := exec.Command("bnbcli", arg...)
@@ -480,7 +487,7 @@ func initializeAccounts(addresses []string, tokens []string, flag bool) {
 						fmt.Println(stdout.String())
 						stdout.Reset()
 						stderr.Reset()
-						time.Sleep(2 * time.Second)
+						time.Sleep(5 * time.Second)
 					}
 				}
 			}
