@@ -10,9 +10,9 @@ import (
 )
 
 type MsgBase struct {
-	From    sdk.AccAddress `json:"from"`
-	Symbol  string         `json:"symbol"`
-	Amount  int64          `json:"amount"`
+	From   sdk.AccAddress `json:"from"`
+	Symbol string         `json:"symbol"`
+	Amount int64          `json:"amount"`
 }
 
 // ValidateBasic does a simple validation check that
