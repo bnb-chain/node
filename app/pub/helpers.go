@@ -126,18 +126,18 @@ func collectTradeForPublish(
 	defer wg.Done()
 	tradeIdx := 0
 	trades := make(map[*me.Trade]*Trade)
-	for feeHolder := range tradeHolderCh {
-		Logger.Debug("processing TradeHolder", "holder", feeHolder.String())
+	for tradeHolder := range tradeHolderCh {
+		Logger.Debug("processing TradeHolder", "holder", tradeHolder.String())
 		// one trade has two transfer, we can skip the second
-		if _, ok := trades[feeHolder.Trade]; !ok {
+		if _, ok := trades[tradeHolder.Trade]; !ok {
 			t := &Trade{
 				Id:     fmt.Sprintf("%d-%d", height, tradeIdx),
-				Symbol: feeHolder.Symbol,
-				Sid:    feeHolder.Trade.Sid,
-				Bid:    feeHolder.Trade.Bid,
-				Price:  feeHolder.Trade.LastPx,
-				Qty:    feeHolder.Trade.LastQty}
-			trades[feeHolder.Trade] = t
+				Symbol: tradeHolder.Symbol,
+				Sid:    tradeHolder.Trade.Sid,
+				Bid:    tradeHolder.Trade.Bid,
+				Price:  tradeHolder.Trade.LastPx,
+				Qty:    tradeHolder.Trade.LastQty}
+			trades[tradeHolder.Trade] = t
 			tradeIdx += 1
 			*tradesToPublish = append(*tradesToPublish, t)
 		}
@@ -230,12 +230,13 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		status = orderPkg.PartialFill
 	}
 	fee := getSerializedFeeForOrder(o, status, feeHolder, feeToPublish)
+	owner := o.Sender.String()
 	res := order{
 		o.Symbol,
 		status,
 		o.Id,
 		t.Id,
-		o.Sender.String(),
+		owner,
 		o.Side,
 		orderPkg.OrderType.LIMIT,
 		o.Price,
@@ -251,8 +252,10 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		o.TxHash,
 	}
 	if o.Side == orderPkg.Side.BUY {
+		t.BAddr = owner
 		t.Bfee = fee
 	} else {
+		t.SAddr = owner
 		t.Sfee = fee
 	}
 	return res

@@ -31,7 +31,9 @@ const (
 										{ "name": "sid", "type": "string" },
 										{ "name": "bid", "type": "string" },
 										{ "name": "sfee", "type": "string" },
-										{ "name": "bfee", "type": "string" }
+										{ "name": "bfee", "type": "string" },
+										{ "name": "saddr", "type": "string" },
+										{ "name": "baddr", "type": "string" }
 									]
 								}
 							}
