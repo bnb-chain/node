@@ -15,7 +15,7 @@ const (
 	PublicationChannelSize        = 10000
 	TransferCollectionChannelSize = 4000
 	ToRemoveOrderIdChannelSize    = 1000
-	MaxOrderBookLevel             = 20
+	MaxOrderBookLevel             = 100
 )
 
 var (
