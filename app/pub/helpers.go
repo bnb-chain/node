@@ -18,12 +18,12 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	res := make([]string, 0, len(tradesToPublish)*2+len(kp.OrderChanges))
 
 	for _, t := range tradesToPublish {
-		if bo, ok := kp.OrderChangesMap[t.Bid]; ok {
+		if bo, ok := kp.OrderInfosForPub[t.Bid]; ok {
 			res = append(res, string(bo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate buy order in OrderChangesMap for trade account resolving", "bid", t.Bid)
 		}
-		if so, ok := kp.OrderChangesMap[t.Sid]; ok {
+		if so, ok := kp.OrderInfosForPub[t.Sid]; ok {
 			res = append(res, string(so.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate sell order in OrderChangesMap for trade account resolving", "sid", t.Sid)
@@ -31,7 +31,7 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	}
 
 	for _, orderChange := range kp.OrderChanges {
-		if orderInfo := kp.OrderChangesMap[orderChange.Id]; orderInfo != nil {
+		if orderInfo := kp.OrderInfosForPub[orderChange.Id]; orderInfo != nil {
 			res = append(res, string(orderInfo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", orderChange.String())

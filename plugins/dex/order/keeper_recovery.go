@@ -180,9 +180,9 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, timeOfLatestBlock time.
 			}
 		}
 		if kp.CollectOrderInfoForPublish {
-			if _, exists := kp.OrderInfos[m.Id]; !exists {
+			if _, exists := kp.OrderInfosForPub[m.Id]; !exists {
 				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
-				kp.OrderInfos[m.Id] = &orderHolder
+				kp.OrderInfosForPub[m.Id] = &orderHolder
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDec
 				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
 					if kp.CollectOrderInfoForPublish {
 						bnclog.Debug("deleted order from order changes map", "orderId", msg.RefId, "isRecovery", true)
-						delete(kp.OrderInfos, msg.RefId)
+						delete(kp.OrderInfosForPub, msg.RefId)
 					}
 				})
 				if err != nil {

@@ -37,7 +37,7 @@ type Keeper struct {
 	lastTradePrices            map[string]int64                 // these prices should be updated after each round of match.
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
-	OrderInfos                 OrderInfoForPublish              // for publication usage
+	OrderInfosForPub           OrderInfoForPublish              // for publication usage
 	roundOrders                map[string][]string              // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
@@ -65,7 +65,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		lastTradePrices:            make(map[string]int64),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChanges:               make(OrderChanges, 0),
-		OrderInfos:                 make(OrderInfoForPublish),
+		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
@@ -122,7 +122,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
 		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
-		kp.OrderInfos[info.Id] = &info
+		kp.OrderInfosForPub[info.Id] = &info
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
@@ -250,7 +250,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching})
-				kp.OrderInfos[id] = msg
+				kp.OrderInfosForPub[id] = msg
 			}
 		}
 		return // no need to handle IOC

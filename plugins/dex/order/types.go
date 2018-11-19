@@ -69,10 +69,6 @@ func (oc OrderChange) String() string {
 	return fmt.Sprintf("id: %s, tpe: %s", oc.Id, oc.Tpe.String())
 }
 
-func (oc OrderChange) IsFailed() bool {
-	return oc.Tpe == FailedBlocking || oc.Tpe == FailedMatching
-}
-
 // provide an easy way to retrieve order related static fields during generate executed order status
 type OrderInfoForPublish map[string]*OrderInfo
 type OrderChanges []OrderChange // clean after publish each block's EndBlock and before next block's BeginBlock

@@ -49,8 +49,8 @@ const (
 
 // default home directories for expected binaries
 var (
-	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
-	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
+	DefaultCLIHome      = os.ExpandEnv("$HOME/.bnbcli")
+	DefaultNodeHome     = os.ExpandEnv("$HOME/.bnbchaind")
 	Bech32PrefixAccAddr string
 )
 
@@ -361,10 +361,25 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 	res = app.BaseApp.DeliverTx(txBytes)
 	if res.IsOK() {
 		// commit or panic
-		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
-		fees.Pool.CommitFee(txHash)
+		fees.Pool.CommitFee(cmn.HexBytes(tmhash.Sum(txBytes)).String())
+	} else {
+		if app.publicationConfig.PublishOrderUpdates {
+			app.processErrAbciResponseForPub(txBytes)
+		}
 	}
 
+	return res
+}
+
+// PreDeliverTx implements extended ABCI for concurrency
+// PreCheckTx would perform decoding, signture and other basic verification
+func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.PreDeliverTx(txBytes)
+	if res.IsErr() {
+		if app.publicationConfig.PublishOrderUpdates {
+			app.processErrAbciResponseForPub(txBytes)
+		}
+	}
 	return res
 }
 
@@ -373,46 +388,6 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
 	} else {
 		return !utils.SameDayInUTC(lastBlockTime, blockTime)
-	}
-}
-
-func (app *BinanceChain) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	if app.publicationConfig.PublishOrderUpdates {
-		response := app.BaseApp.DeliverTx(txBytes)
-		if response.IsErr() {
-			tx, err := app.TxDecoder(txBytes)
-			if err != nil {
-				app.Logger.Error("failed to process failed order during deliver, this is not a valid order msg")
-			} else {
-				newOrderMsg := tx.GetMsgs()[0].(order.NewOrderMsg)
-				app.Logger.Error("failed to process oid during deliver", "oid", newOrderMsg.Id)
-				keeper.OrderInfos[newOrderMsg.Id] = &order.OrderInfo{NewOrderMsg: newOrderMsg}
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{newOrderMsg.Id, order.FailedBlocking})
-			}
-		}
-		return response
-	} else {
-		return app.BaseApp.DeliverTx(txBytes)
-	}
-}
-
-func (app *BinanceChain) ReCheckTx(txBytes []byte) abci.ResponseCheckTx {
-	if app.publicationConfig.PublishOrderUpdates {
-		response := app.BaseApp.ReCheckTx(txBytes)
-		if response.IsErr() {
-			tx, err := app.TxDecoder(txBytes)
-			if err != nil {
-				app.Logger.Error("failed to process failed order during deliver, this is not a valid order msg")
-			} else {
-				newOrderMsg := tx.GetMsgs()[0].(order.NewOrderMsg)
-				app.Logger.Error("failed to process oid during deliver", "oid", newOrderMsg.Id)
-				keeper.OrderInfos[newOrderMsg.Id] = &order.OrderInfo{NewOrderMsg: newOrderMsg}
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{newOrderMsg.Id, order.FailedBlocking})
-			}
-		}
-		return response
-	} else {
-		return app.BaseApp.ReCheckTx(txBytes)
 	}
 }
 
@@ -666,8 +641,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
-		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.OrderInfos, // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
@@ -677,7 +652,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.OrderInfos, id)
+		delete(app.DexKeeper.OrderInfosForPub, id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)
