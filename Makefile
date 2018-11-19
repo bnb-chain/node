@@ -59,7 +59,7 @@ test: test_unit
 test_unit:
 	@go test $(PACKAGES)
 
-integration_test:
+integration_test: build
 	@echo "-->Integration Test"
 	@./integration_test.sh
 

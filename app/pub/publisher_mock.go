@@ -11,6 +11,7 @@ type MockMarketDataPublisher struct {
 	AccountPublished         []*accounts
 	BooksPublished           []*Books
 	TradesAndOrdersPublished []*tradesAndOrders
+	BlockFeePublished        []BlockFee
 }
 
 func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
@@ -21,6 +22,8 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, heig
 		publisher.BooksPublished = append(publisher.BooksPublished, msg.(*Books))
 	case tradesAndOrdersTpe:
 		publisher.TradesAndOrdersPublished = append(publisher.TradesAndOrdersPublished, msg.(*tradesAndOrders))
+	case blockFeeTpe:
+		publisher.BlockFeePublished = append(publisher.BlockFeePublished, msg.(BlockFee))
 	default:
 		panic(fmt.Errorf("does not support type %s", tpe.String()))
 	}
@@ -36,7 +39,9 @@ func NewMockMarketDataPublisher(config *config.PublicationConfig) (publisher *Mo
 	publisher = &MockMarketDataPublisher{
 		make([]*accounts, 0),
 		make([]*Books, 0),
-		make([]*tradesAndOrders, 0)}
+		make([]*tradesAndOrders, 0),
+		make([]BlockFee, 0),
+	}
 	if err := setup(config, publisher); err != nil {
 		publisher.Stop()
 		log.Error("Cannot start up market data kafka publisher", "err", err)

@@ -371,6 +371,13 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 	}
 
+	if app.publicationConfig.PublishOrderUpdates {
+		// merge roundCancelFee and trade/expire fee
+		for addr, fee := range app.DexKeeper.FeeManager.RoundCancelFees {
+			pub.UpdateFeeHolder(addr, *fee)
+		}
+	}
+
 	pub.Logger.Info("start to publish", "height", height,
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
@@ -395,6 +402,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 	}
 
 	// clean up intermediate cached data
+	pub.ResetFeeHolder()
 	app.DexKeeper.ClearOrderChanges()
+	app.DexKeeper.FeeManager.ClearRoundCancelFee()
 	pub.Logger.Debug("finish publish", "height", height)
 }

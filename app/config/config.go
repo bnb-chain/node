@@ -68,6 +68,9 @@ publishBlockFee = {{ .PublicationConfig.PublishBlockFee }}
 blockFeeTopic = "{{ .PublicationConfig.BlockFeeTopic }}"
 blockFeeKafka = "{{ .PublicationConfig.BlockFeeKafka }}"
 
+# Global setting
+publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
+
 [log]
 
 # Write logs to console instead of file
@@ -147,6 +150,8 @@ type PublicationConfig struct {
 	PublishBlockFee bool   `mapstructure:"publishBlockFee"`
 	BlockFeeTopic   string `mapstructure:"blockFeeTopic"`
 	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
+
+	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -166,6 +171,8 @@ func defaultPublicationConfig() *PublicationConfig {
 		PublishBlockFee: false,
 		BlockFeeTopic:   "accounts",
 		BlockFeeKafka:   "127.0.0.1:9092",
+
+		PublicationChannelSize: 10000,
 	}
 }
 
