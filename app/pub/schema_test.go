@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 func TestTradesAndOrdersMarshaling(t *testing.T) {
 	trades := trades{
 		numOfMsgs: 1,
-		trades: []*Trade{{
+		Trades: []*Trade{{
 			Id: "42-0", Symbol: "NNB_BNB", Price: 100, Qty: 100,
 			Sid: "s-1", Bid: "b-1",
 			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1"}},
@@ -35,9 +35,9 @@ func TestTradesAndOrdersMarshaling(t *testing.T) {
 	msg := tradesAndOrders{
 		height:    42,
 		timestamp: 100,
-		numOfMsgs: 4,
-		trades:    trades,
-		orders:    orders}
+		NumOfMsgs: 4,
+		Trades:    trades,
+		Orders:    orders}
 	_, err := marshal(&msg, tradesAndOrdersTpe)
 	if err != nil {
 		t.Fatal(err)

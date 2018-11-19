@@ -32,18 +32,20 @@ var (
 )
 
 type FeeManager struct {
-	cdc       *wire.Codec
-	storeKey  sdk.StoreKey
-	logger    tmlog.Logger
-	FeeConfig FeeConfig
+	cdc             *wire.Codec
+	storeKey        sdk.StoreKey
+	logger          tmlog.Logger
+	FeeConfig       FeeConfig
+	RoundCancelFees map[string]*types.Fee // map of string of addr bytes to fee
 }
 
 func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
-		cdc:       cdc,
-		storeKey:  storeKey,
-		logger:    logger,
-		FeeConfig: NewFeeConfig(),
+		cdc:             cdc,
+		storeKey:        storeKey,
+		logger:          logger,
+		FeeConfig:       NewFeeConfig(),
+		RoundCancelFees: make(map[string]*types.Fee, 256),
 	}
 }
 
@@ -259,6 +261,18 @@ func (m *FeeManager) CancelFee(feeType FeeType) int64 {
 	}
 
 	panic(fmt.Sprintf("invalid feeType: %v", feeType))
+}
+
+func (m *FeeManager) updateRoundCancelFee(addr string, fee types.Fee) {
+	if existingFee, ok := m.RoundCancelFees[addr]; ok {
+		existingFee.AddFee(fee)
+	} else {
+		m.RoundCancelFees[addr] = &fee
+	}
+}
+
+func (m *FeeManager) ClearRoundCancelFee() {
+	m.RoundCancelFees = make(map[string]*types.Fee, 256)
 }
 
 type FeeConfig struct {

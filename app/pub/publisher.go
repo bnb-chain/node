@@ -12,7 +12,6 @@ import (
 const (
 	// TODO(#66): revisit the setting / whole thread model here,
 	// do we need better way to make main thread less possibility to block
-	PublicationChannelSize        = 10000
 	TransferCollectionChannelSize = 4000
 	ToRemoveOrderIdChannelSize    = 1000
 	MaxOrderBookLevel             = 20
@@ -40,7 +39,7 @@ type MarketDataPublisher interface {
 func setup(config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
 	Logger = log.With("module", "pub")
 	cfg = config
-	ToPublishCh = make(chan BlockInfoToPublish, PublicationChannelSize)
+	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {
 		Logger.Error("failed to initialize avro codec", "err", err)
 		return err
@@ -115,12 +114,12 @@ func publish(publisher MarketDataPublisher) {
 func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
-	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, numOfMsgs: numOfTrades + numOfOrders}
+	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders}
 	if numOfOrders > 0 {
-		tradesAndOrdersMsg.orders = orders{numOfOrders, os}
+		tradesAndOrdersMsg.Orders = orders{numOfOrders, os}
 	}
 	if numOfTrades > 0 {
-		tradesAndOrdersMsg.trades = trades{numOfTrades, tradesToPublish}
+		tradesAndOrdersMsg.Trades = trades{numOfTrades, tradesToPublish}
 	}
 
 	publisher.publish(&tradesAndOrdersMsg, tradesAndOrdersTpe, height, timestamp)
@@ -170,4 +169,17 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 func setFeeHolder(fee map[string]*types.Fee) {
 	Logger.Debug("set fee holder", "feeHolder", fee)
 	feeHolderCache = fee
+}
+
+func UpdateFeeHolder(addr string, fee types.Fee) {
+	Logger.Debug("update fee holder", "addr", addr, "fee", fee.String())
+	if existingFee, ok := feeHolderCache[addr]; ok {
+		existingFee.AddFee(fee)
+	} else {
+		feeHolderCache[addr] = &fee
+	}
+}
+
+func ResetFeeHolder() {
+	feeHolderCache = make(map[string]*types.Fee)
 }
