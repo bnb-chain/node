@@ -152,6 +152,7 @@ type PublicationConfig struct {
 	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
 
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
+	FromHeightInclusive int64 `mapstructure:"fromHeightInclusive"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -173,11 +174,15 @@ func defaultPublicationConfig() *PublicationConfig {
 		BlockFeeKafka:   "127.0.0.1:9092",
 
 		PublicationChannelSize: 10000,
+		FromHeightInclusive: 1,
 	}
 }
 
 func (pubCfg PublicationConfig) ShouldPublishAny() bool {
-	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook || pubCfg.PublishBlockFee
+	return pubCfg.PublishOrderUpdates ||
+		pubCfg.PublishAccountBalance ||
+		pubCfg.PublishOrderBook ||
+		pubCfg.PublishBlockFee
 }
 
 type LogConfig struct {

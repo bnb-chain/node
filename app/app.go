@@ -244,7 +244,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
 	// TODO: update validators
 
-	if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
+	if app.publicationConfig.ShouldPublishAny() &&
+		pub.IsLive &&
+		height >= app.publicationConfig.FromHeightInclusive {
 		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
 	}
 
