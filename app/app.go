@@ -220,7 +220,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
 			tradesToPublish, ctx = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
+			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
 
 	} else {
@@ -364,13 +364,6 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 	}
 
-	if app.publicationConfig.PublishOrderUpdates {
-		// merge roundCancelFee and trade/expire fee
-		for addr, fee := range app.DexKeeper.FeeManager.RoundCancelFees {
-			pub.UpdateFeeHolder(addr, *fee)
-		}
-	}
-
 	pub.Logger.Info("start to publish", "height", height,
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
@@ -382,11 +375,12 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		height,
 		blockTime,
 		tradesToPublish,
-		app.DexKeeper.OrderChanges,    // thread-safety runMsgsis guarded by the signal from RemoveDoneCh
-		app.DexKeeper.OrderChangesMap, // ditto
+		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChangesMap, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
-		blockFee)
+		blockFee,
+		app.DexKeeper.RoundOrderFees)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
@@ -395,8 +389,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 	}
 
 	// clean up intermediate cached data
-	pub.ResetFeeHolder()
 	app.DexKeeper.ClearOrderChanges()
-	app.DexKeeper.FeeManager.ClearRoundCancelFee()
+	app.DexKeeper.ClearRoundFee()
 	pub.Logger.Debug("finish publish", "height", height)
 }

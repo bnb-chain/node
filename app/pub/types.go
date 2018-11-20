@@ -25,7 +25,8 @@ func NewBlockInfoToPublish(
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap,
-	blockFee BlockFee) BlockInfoToPublish {
+	blockFee BlockFee,
+	feeHolder orderPkg.FeeHolder) BlockInfoToPublish {
 	return BlockInfoToPublish{
 		height,
 		timestamp,
@@ -35,5 +36,5 @@ func NewBlockInfoToPublish(
 		accounts,
 		latestPriceLevels,
 		blockFee,
-		feeHolderCache}
+		feeHolder}
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -23,12 +22,6 @@ var (
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
-)
-
-var (
-	// Should only be set via setter method
-	// Should only be passed to NewBlockInfoToPublish
-	feeHolderCache orderPkg.FeeHolder
 )
 
 type MarketDataPublisher interface {
@@ -164,22 +157,4 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 
 func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blockFee BlockFee) {
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
-}
-
-func setFeeHolder(fee map[string]*types.Fee) {
-	Logger.Debug("set fee holder", "feeHolder", fee)
-	feeHolderCache = fee
-}
-
-func UpdateFeeHolder(addr string, fee types.Fee) {
-	Logger.Debug("update fee holder", "addr", addr, "fee", fee.String())
-	if existingFee, ok := feeHolderCache[addr]; ok {
-		existingFee.AddFee(fee)
-	} else {
-		feeHolderCache[addr] = &fee
-	}
-}
-
-func ResetFeeHolder() {
-	feeHolderCache = make(map[string]*types.Fee)
 }

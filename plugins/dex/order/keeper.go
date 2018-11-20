@@ -38,7 +38,8 @@ type Keeper struct {
 	OrderChangesMap            OrderInfoForPublish
 	roundOrders                map[string][]string // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
-	poolSize                   uint // number of concurrent channels, counted in the pow of 2
+	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
+	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
@@ -65,6 +66,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		OrderChangesMap:            make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
+		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
@@ -529,7 +531,6 @@ func (kp *Keeper) allocateAndCalcFee(
 	ctx sdk.Context,
 	tradeOuts []chan Transfer,
 	postAlloTransHandler TransferHandler,
-	postAlloFeeHandler FeeHandler,
 ) types.Fee {
 	concurrency := len(tradeOuts)
 	var wg sync.WaitGroup
@@ -551,14 +552,12 @@ func (kp *Keeper) allocateAndCalcFee(
 	for i := 0; i < concurrency; i++ {
 		totalFee.AddFee(feesPerCh[i])
 	}
-	if postAlloFeeHandler != nil {
-		totalFeePerAcc := make(map[string]*types.Fee)
+	if kp.CollectOrderInfoForPublish {
 		for _, m := range feesPerAcc {
 			for k, v := range m {
-				totalFeePerAcc[k] = v
+				kp.updateRoundOrderFee(k, *v)
 			}
 		}
-		postAlloFeeHandler(totalFeePerAcc)
 	}
 	return totalFee
 }
@@ -577,7 +576,6 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
-	postAlloFeeHandler FeeHandler,
 ) (newCtx sdk.Context) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time.Unix())
@@ -586,7 +584,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 		return ctx
 	}
 
-	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler, postAlloFeeHandler)
+	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
 	kp.clearAfterMatch()
 	return newCtx
@@ -658,14 +656,13 @@ func (kp *Keeper) ExpireOrders(
 	ctx sdk.Context,
 	blockTime time.Time,
 	postAlloTransHandler TransferHandler,
-	postAlloFeeHandler FeeHandler,
 ) (newCtx sdk.Context) {
 	transferChs := kp.expireOrders(ctx, blockTime)
 	if transferChs == nil {
 		return ctx
 	}
 
-	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler, postAlloFeeHandler)
+	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler)
 	newCtx = tx.WithFee(ctx, totalFee)
 	return newCtx
 }
@@ -726,4 +723,18 @@ func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, 
 func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
 	kp.logger.Info("Initializing Fees from Genesis")
 	kp.FeeManager.InitGenesis(ctx, genesis)
+}
+
+// deliberately make `fee` parameter not a pointer
+// in case we modify the original fee (which will be referenced when distribute to validator)
+func (kp *Keeper) updateRoundOrderFee(addr string, fee types.Fee) {
+	if existingFee, ok := kp.RoundOrderFees[addr]; ok {
+		existingFee.AddFee(fee)
+	} else {
+		kp.RoundOrderFees[addr] = &fee
+	}
+}
+
+func (kp *Keeper) ClearRoundFee() {
+	kp.RoundOrderFees = make(map[string]*types.Fee, 256)
 }

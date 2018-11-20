@@ -193,7 +193,7 @@ func handleCancelOrder(
 			if keeper.CollectOrderInfoForPublish {
 				change := OrderChange{msg.Id, Canceled}
 				keeper.OrderChanges = append(keeper.OrderChanges, change)
-				keeper.FeeManager.updateRoundCancelFee(string(msg.Sender), fee)
+				keeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}
 		})
 		if err != nil {
