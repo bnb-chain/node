@@ -170,7 +170,7 @@ func defaultPublicationConfig() *PublicationConfig {
 }
 
 func (pubCfg PublicationConfig) ShouldPublishAny() bool {
-	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook
+	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook || pubCfg.PublishBlockFee
 }
 
 type LogConfig struct {

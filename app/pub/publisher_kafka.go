@@ -73,6 +73,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if cfg.PublishBlockFee {
+		if _, ok := publisher.producers[cfg.BlockFeeTopic]; !ok {
+			publisher.producers[cfg.BlockFeeTopic], err =
+				publisher.connectWithRetry(strings.Split(cfg.BlockFeeKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create blockfee producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
