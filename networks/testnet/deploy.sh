@@ -262,12 +262,15 @@ sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" node_publisher/gaia
 sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/blockFeeKafka = \"127.0.0.1:9092\"/blockFeeKafka = \"${kafka_ip}:9092\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishBlockFee = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/blockFeeTopic = \"accounts\"/blockFeeTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 
 # distribute config
 echo "Stopping publisher node in host  ${witness_ip}..."
