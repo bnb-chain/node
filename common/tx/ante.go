@@ -4,17 +4,51 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/pkg/errors"
-
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 
+	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
 	maxMemoCharacters = 100
+
+	maxCacheNumber = 30000
 )
+
+type sigLRUCache struct {
+	*lru.Cache
+}
+
+func newSigLRUCache(cap int) *sigLRUCache {
+	cache, err := lru.New(cap)
+	if err != nil {
+		panic(err)
+	}
+
+	return &sigLRUCache{
+		cache,
+	}
+}
+
+func (cache *sigLRUCache) getSig(txHash string) (ok bool) {
+	_, ok = cache.Get(txHash)
+	return ok
+}
+
+func (cache *sigLRUCache) addSig(txHash string) {
+	if txHash != "" {
+		cache.Add(txHash, true)
+	}
+}
+
+// signature-key: txHash
+// based on the assumption that tx hash will never collide.
+var sigCache = newSigLRUCache(maxCacheNumber)
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
@@ -66,7 +100,9 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			if mode != sdk.RunTxModeReCheck {
 				// check signature, return account with incremented nonce
 				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-				res := processSig(sig, signerAcc, signBytes)
+				txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+
+				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return ctx, res, true
 				}
@@ -161,9 +197,14 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
-func processSig(
+func processSig(txHash string,
 	sig auth.StdSignature, acc auth.Account, signBytes []byte) (
 	res sdk.Result) {
+
+	if sigCache.getSig(txHash) {
+		log.Debug("Tx hits sig cache", "txHash", txHash)
+		return
+	}
 
 	pubKey := acc.GetPubKey()
 	// Check sig.
@@ -171,6 +212,7 @@ func processSig(
 		return sdk.ErrUnauthorized("signature verification failed").Result()
 	}
 
+	sigCache.addSig(txHash)
 	return
 }
 
