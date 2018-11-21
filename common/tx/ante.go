@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,7 +15,42 @@ import (
 
 const (
 	maxMemoCharacters = 100
+
+	maxCacheNumber = 30000
 )
+
+type sigLRUCache struct {
+	cap   int
+	cache *lru.Cache
+}
+
+func newSigLRUCache(cap int) *sigLRUCache {
+	cache, err := lru.New(cap)
+	if err != nil {
+		panic(err)
+	}
+
+	return &sigLRUCache{
+		cap:   cap,
+		cache: cache,
+	}
+}
+
+func (cache *sigLRUCache) getSig(sigKey string) (msgBytes []byte, ok bool) {
+	if cachedValue, ok := cache.cache.Get(sigKey); ok {
+		msgBytes = cachedValue.([]byte)
+		return msgBytes, ok
+	}
+	return nil, false
+}
+
+func (cache *sigLRUCache) addSig(sigKey string, msgBytes []byte) {
+	cache.cache.Add(sigKey, msgBytes)
+}
+
+// signature-key: public key + signature
+// signature-value: signature bytes
+var sigCache = newSigLRUCache(maxCacheNumber)
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
@@ -166,11 +202,21 @@ func processSig(
 	res sdk.Result) {
 
 	pubKey := acc.GetPubKey()
+
+	sigKey := pubKey.Address().String() + string(sig.Signature)
+	if msgBytes, ok := sigCache.getSig(sigKey); ok {
+		if !bytes.Equal(msgBytes, signBytes) {
+			return sdk.ErrUnauthorized("signature verification failed").Result()
+		}
+		return
+	}
+
 	// Check sig.
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return sdk.ErrUnauthorized("signature verification failed").Result()
 	}
 
+	sigCache.addSig(sigKey, signBytes)
 	return
 }
 
