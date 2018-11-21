@@ -44,7 +44,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 	_, _, sdkError := keeper.AddCoins(ctx, token.Owner,
 		sdk.Coins{{
 			Denom:  token.Symbol,
-			Amount: sdk.NewInt(token.TotalSupply.ToInt64()),
+			Amount: token.TotalSupply.ToInt64(),
 		}})
 	if sdkError != nil {
 		logger.Error("issue token failed", "reason", "update balance failed: "+sdkError.Error())

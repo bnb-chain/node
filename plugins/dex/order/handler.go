@@ -107,11 +107,11 @@ func handleNewOrder(
 		symbolToLock = strings.ToUpper(baseAsset)
 	}
 	freeBalance := acc.GetCoins()
-	if freeBalance.AmountOf(symbolToLock).Int64() < amountToLock {
+	if freeBalance.AmountOf(symbolToLock) < amountToLock {
 		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
 	}
 
-	toLockCoins := sdk.Coins{{Denom: symbolToLock, Amount: sdk.NewInt(amountToLock)}}
+	toLockCoins := sdk.Coins{{Denom: symbolToLock, Amount: amountToLock}}
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	// TODO: perform reduce avail + increase locked + insert orderbook atomically
 	acc.SetCoins(freeBalance.Minus(toLockCoins))

@@ -36,9 +36,9 @@ func BenchmarkGetAccount(b *testing.B) {
 		acc.BaseAccount.AccountNumber = testApp.AccountKeeper.GetNextAccountNumber(ctx)
 	}
 
-	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
-	acc.SetLockedCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
-	acc.SetFrozenCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetLockedCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetFrozenCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
 
 	testApp.AccountKeeper.SetAccount(ctx, acc)
 	for i := 0; i < b.N; i++ {
@@ -68,9 +68,9 @@ func BenchmarkSetAccount(b *testing.B) {
 		acc.BaseAccount.AccountNumber = testApp.AccountKeeper.GetNextAccountNumber(ctx)
 	}
 
-	acc.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
-	acc.SetLockedCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
-	acc.SetFrozenCoins(sdk.Coins{sdk.NewInt64Coin("BNB", 1000), sdk.NewInt64Coin("BTC", 1000), sdk.NewInt64Coin("ETH", 100)})
+	acc.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetLockedCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
+	acc.SetFrozenCoins(sdk.Coins{sdk.NewCoin("BNB", 1000), sdk.NewCoin("BTC", 1000), sdk.NewCoin("ETH", 100)})
 
 	for i := 0; i < b.N; i++ {
 		testApp.AccountKeeper.SetAccount(ctx, acc)

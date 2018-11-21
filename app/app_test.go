@@ -61,7 +61,7 @@ var (
 	logger                            = log.NewTMLogger(os.Stdout)
 	testApp                           = NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
-		sdk.Coins{sdk.NewInt64Coin("BNB", 500e8), sdk.NewInt64Coin("BTC", 200e8)})
+		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
 	testClient = NewTestClient(testApp)
 )
 
@@ -88,7 +88,7 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
 func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountKeeper.GetAccount(ctx, acc.GetAddress())
-		a.SetCoins(sdk.Coins{sdk.NewInt64Coin("BNB", ccy1), sdk.NewInt64Coin("BTC", ccy2), sdk.NewInt64Coin("ETH", ccy3)})
+		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
 		app.AccountKeeper.SetAccount(ctx, a)
 	}
 }
@@ -108,11 +108,11 @@ func NewTestClient(a *BinanceChain) *TestClient {
 }
 
 func GetAvail(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return testApp.CoinKeeper.GetCoins(ctx, add).AmountOf(ccy).Int64()
+	return testApp.CoinKeeper.GetCoins(ctx, add).AmountOf(ccy)
 }
 
 func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
-	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy).Int64()
+	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy)
 }
 
 func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
@@ -159,7 +159,7 @@ func TestGenesis(t *testing.T) {
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
-	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", sdk.NewInt(100000)}})
+	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}})
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 

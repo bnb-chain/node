@@ -38,7 +38,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	coins := keeper.GetCoins(ctx, token.Owner)
-	if coins.AmountOf(symbol).Int64() < burnAmount ||
+	if coins.AmountOf(symbol) < burnAmount ||
 		token.TotalSupply.ToInt64() < burnAmount {
 		logger.Info("burn token failed", "reason", "no enough tokens to burn")
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
@@ -46,7 +46,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 
 	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, sdk.Coins{{
 		Denom:  symbol,
-		Amount: sdk.NewInt(burnAmount),
+		Amount: burnAmount,
 	}})
 	if sdkError != nil {
 		logger.Error("burn token failed", "reason", "subtract tokens failed: "+sdkError.Error())

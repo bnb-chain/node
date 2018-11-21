@@ -48,8 +48,7 @@ func GetBalances(
 	for symb := range denoms {
 		symbs = append(symbs, symb)
 		// count locked and frozen coins
-		locked := sdk.NewInt(0)
-		frozen := sdk.NewInt(0)
+		var locked, frozen int64
 		lockedc, err := getLockedCC(cdc, ctx, addr)
 		if err != nil {
 			fmt.Println("getLockedCC error ignored, will use `0`")
@@ -64,9 +63,9 @@ func GetBalances(
 		}
 		bals = append(bals, TokenBalance{
 			Symbol: symb,
-			Free:   utils.Fixed8(coins.AmountOf(symb).Int64()),
-			Locked: utils.Fixed8(locked.Int64()),
-			Frozen: utils.Fixed8(frozen.Int64()),
+			Free:   utils.Fixed8(coins.AmountOf(symb)),
+			Locked: utils.Fixed8(locked),
+			Frozen: utils.Fixed8(frozen),
 		})
 	}
 

@@ -426,7 +426,7 @@ func (kp *Keeper) ClearOrderChanges() {
 
 func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	account := kp.am.GetAccount(ctx, tran.accAddress).(types.NamedAccount)
-	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock)})
+	newLocked := account.GetLockedCoins().Minus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock)})
 	// these two non-negative check are to ensure the Transfer gen result is correct before we actually operate the acc.
 	// they should never happen, there would be a severe bug if happen and we have to cancel all orders when app restarts.
 	if !newLocked.IsNotNegative() {
@@ -437,8 +437,8 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
-		Plus(sdk.Coins{sdk.NewInt64Coin(tran.inAsset, tran.in)}).
-		Plus(sdk.Coins{sdk.NewInt64Coin(tran.outAsset, tran.unlock-tran.out)}))
+		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
+		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
 
 	kp.am.SetAccount(ctx, account)
 	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
@@ -494,7 +494,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			acc := kp.am.GetAccount(ctx, addr)
 			fees := types.Fee{}
 			if assets.native != 0 {
-				fee := calcFeeAndDeduct(acc, sdk.NewInt64Coin(types.NativeToken, assets.native))
+				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
 				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}
@@ -517,7 +517,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 	collectFee(expireInAsset, func(acc auth.Account, in sdk.Coin) types.Fee {
 		var i int64 = 0
 		var fees types.Fee
-		for ; i < in.Amount.Int64(); i++ {
+		for ; i < in.Amount; i++ {
 			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.lastTradePrices)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 			fees.AddFee(fee)
