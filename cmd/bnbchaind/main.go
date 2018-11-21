@@ -49,7 +49,10 @@ func main() {
 	appInit := app.BinanceAppInit()
 	rootCmd.AddCommand(utils.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	rootCmd.AddCommand(utils.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
-	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, appInit, newApp, exportAppStateAndTMValidators)
+	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, exportAppStateAndTMValidators)
+	startCmd := server.StartCmd(ctx.ToCosmosServerCtx(), newApp)
+	startCmd.Flags().Int64VarP(&ctx.PublicationConfig.FromHeightInclusive, "fromHeight", "f", 1, "from which height (inclusive) we want publish market data")
+	rootCmd.AddCommand(startCmd)
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)

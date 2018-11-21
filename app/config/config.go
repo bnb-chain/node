@@ -152,7 +152,10 @@ type PublicationConfig struct {
 	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
 
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
-	FromHeightInclusive int64 `mapstructure:"fromHeightInclusive"`
+	// DO NOT put this option in template above
+	// deliberately make it only a command line arguments
+	// https://github.com/BiJie/BinanceChain/issues/161#issuecomment-438600434
+	FromHeightInclusive int64
 }
 
 func defaultPublicationConfig() *PublicationConfig {
