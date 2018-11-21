@@ -63,11 +63,10 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 		ctx sdk.Context, tx sdk.Tx, mode sdk.RunTxMode,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
 		newCtx = ctx
-
 		// This AnteHandler requires Txs to be StdTxs
 		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
-			return ctx, sdk.ErrInternal("tx must be StdTx").Result(), true
+			return newCtx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
 		if mode != sdk.RunTxModeReCheck {
@@ -118,7 +117,7 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
-			signerAcc, err := processAccount(ctx, am, signerAddr, sig)
+			signerAcc, err := processAccount(newCtx, am, signerAddr, sig)
 			if err != nil {
 				return newCtx, err.Result(), true
 			}
@@ -130,18 +129,21 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 
 				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
-					return ctx, res, true
+					return newCtx, res, true
 				}
 			}
 
 			// Save the account.
-			am.SetAccount(ctx, signerAcc)
+			am.SetAccount(newCtx, signerAcc)
 			signerAccs[i] = signerAcc
 		}
 
-		newCtx, res = calcAndCollectFees(ctx, am, signerAccs[0], msgs[0])
-		if !res.IsOK() {
-			return newCtx, res, true
+		// for blockHeight == 0, we do not collect fees since we have some StdTx(s) in InitChain.
+		if newCtx.BlockHeight() != 0 {
+			newCtx, res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0])
+			if !res.IsOK() {
+				return newCtx, res, true
+			}
 		}
 
 		// cache the signer accounts in the context
@@ -183,11 +185,19 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 		return nil, sdk.ErrUnknownAddress(addr.String())
 	}
 
-	// Check account number.
-	accnum := acc.GetAccountNumber()
-	if accnum != sig.AccountNumber {
-		return nil, sdk.ErrInvalidSequence(
-			fmt.Sprintf("Invalid account number. Got %d, expected %d", sig.AccountNumber, accnum))
+	// On InitChain, make sure account number == 0
+	if ctx.BlockHeight() == 0 {
+		if sig.AccountNumber != 0 {
+			return nil, sdk.ErrInvalidSequence(
+				fmt.Sprintf("Invalid account number for BlockHeight == 0. Got %d, expected 0", sig.AccountNumber))
+		}
+	} else {
+		// Check account number.
+		accnum := acc.GetAccountNumber()
+		if accnum != sig.AccountNumber {
+			return nil, sdk.ErrInvalidSequence(
+				fmt.Sprintf("Invalid account number. Got %d, expected %d", sig.AccountNumber, accnum))
+		}
 	}
 
 	// Check and increment sequence number.

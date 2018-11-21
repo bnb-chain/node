@@ -17,6 +17,7 @@ const (
 
 	DotBSuffix  = ".B"
 	NativeToken = "BNB"
+	NativeTokenTotalSupply = 2e16
 )
 
 type Token struct {

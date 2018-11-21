@@ -96,7 +96,6 @@
     "x/gov/tags",
     "x/ibc",
     "x/ibc/client/cli",
-    "x/mint",
     "x/mock",
     "x/params",
     "x/params/subspace",

@@ -1,4 +1,4 @@
-package utils
+package init
 
 import (
 	"bytes"
@@ -17,9 +17,10 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/cmd/gaia/app"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/mock"
+
+	"github.com/BiJie/BinanceChain/app"
 )
 
 func TestInitCmd(t *testing.T) {
@@ -143,8 +144,7 @@ func TestInitNodeValidatorFiles(t *testing.T) {
 	viper.Set(client.FlagName, "moniker")
 	cfg, err := tcmd.ParseConfig()
 	require.Nil(t, err)
-	nodeID, valPubKey, err := InitializeNodeValidatorFiles(cfg)
-	require.Nil(t, err)
+	nodeID, valPubKey := InitializeNodeValidatorFiles(cfg)
 	require.NotEqual(t, "", nodeID)
 	require.NotEqual(t, 0, len(valPubKey.Bytes()))
 }

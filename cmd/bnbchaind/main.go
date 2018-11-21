@@ -18,7 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/cmd/bnbchaind/utils"
+	bnbInit "github.com/BiJie/BinanceChain/cmd/bnbchaind/init"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -47,8 +47,8 @@ func main() {
 	}
 
 	appInit := app.BinanceAppInit()
-	rootCmd.AddCommand(utils.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
-	rootCmd.AddCommand(utils.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(bnbInit.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(bnbInit.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, exportAppStateAndTMValidators)
 	startCmd := server.StartCmd(ctx.ToCosmosServerCtx(), newApp)
 	startCmd.Flags().Int64VarP(&ctx.PublicationConfig.FromHeightInclusive, "fromHeight", "f", 1, "from which height (inclusive) we want publish market data")
