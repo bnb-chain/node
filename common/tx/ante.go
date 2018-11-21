@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 
@@ -20,8 +22,7 @@ const (
 )
 
 type sigLRUCache struct {
-	cap   int
-	cache *lru.Cache
+	*lru.Cache
 }
 
 func newSigLRUCache(cap int) *sigLRUCache {
@@ -31,25 +32,23 @@ func newSigLRUCache(cap int) *sigLRUCache {
 	}
 
 	return &sigLRUCache{
-		cap:   cap,
-		cache: cache,
+		cache,
 	}
 }
 
-func (cache *sigLRUCache) getSig(sigKey string) (msgBytes []byte, ok bool) {
-	if cachedValue, ok := cache.cache.Get(sigKey); ok {
-		msgBytes = cachedValue.([]byte)
-		return msgBytes, ok
+func (cache *sigLRUCache) getSig(txHash string) (ok bool) {
+	_, ok = cache.Get(txHash)
+	return ok
+}
+
+func (cache *sigLRUCache) addSig(txHash string) {
+	if txHash != "" {
+		cache.Add(txHash, true)
 	}
-	return nil, false
 }
 
-func (cache *sigLRUCache) addSig(sigKey string, msgBytes []byte) {
-	cache.cache.Add(sigKey, msgBytes)
-}
-
-// signature-key: public key + signature
-// signature-value: signature bytes
+// signature-key: txHash
+// based on the assumption that tx hash will never collide.
 var sigCache = newSigLRUCache(maxCacheNumber)
 
 // NewAnteHandler returns an AnteHandler that checks
@@ -102,7 +101,9 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			if mode != sdk.RunTxModeReCheck {
 				// check signature, return account with incremented nonce
 				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-				res := processSig(sig, signerAcc, signBytes)
+				txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+
+				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return ctx, res, true
 				}
@@ -197,26 +198,22 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
-func processSig(
+func processSig(txHash string,
 	sig auth.StdSignature, acc auth.Account, signBytes []byte) (
 	res sdk.Result) {
 
-	pubKey := acc.GetPubKey()
-
-	sigKey := pubKey.Address().String() + string(sig.Signature)
-	if msgBytes, ok := sigCache.getSig(sigKey); ok {
-		if !bytes.Equal(msgBytes, signBytes) {
-			return sdk.ErrUnauthorized("signature verification failed").Result()
-		}
+	if ok := sigCache.getSig(txHash); ok {
+		log.Debug("Tx hits sig cache", "txHash", txHash)
 		return
 	}
 
+	pubKey := acc.GetPubKey()
 	// Check sig.
 	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
 		return sdk.ErrUnauthorized("signature verification failed").Result()
 	}
 
-	sigCache.addSig(sigKey, signBytes)
+	sigCache.addSig(txHash)
 	return
 }
 
