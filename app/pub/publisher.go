@@ -5,14 +5,12 @@ import (
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 const (
 	// TODO(#66): revisit the setting / whole thread model here,
 	// do we need better way to make main thread less possibility to block
-	PublicationChannelSize        = 10000
 	TransferCollectionChannelSize = 4000
 	ToRemoveOrderIdChannelSize    = 1000
 	MaxOrderBookLevel             = 100
@@ -26,12 +24,6 @@ var (
 	IsLive            bool
 )
 
-var (
-	// Should only be set via setter method
-	// Should only be passed to NewBlockInfoToPublish
-	feeHolderCache orderPkg.FeeHolder
-)
-
 type MarketDataPublisher interface {
 	publish(msg AvroMsg, tpe msgType, height int64, timestamp int64)
 	Stop()
@@ -40,7 +32,7 @@ type MarketDataPublisher interface {
 func setup(config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
 	Logger = log.With("module", "pub")
 	cfg = config
-	ToPublishCh = make(chan BlockInfoToPublish, PublicationChannelSize)
+	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {
 		Logger.Error("failed to initialize avro codec", "err", err)
 		return err
@@ -115,12 +107,12 @@ func publish(publisher MarketDataPublisher) {
 func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
-	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, numOfMsgs: numOfTrades + numOfOrders}
+	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders}
 	if numOfOrders > 0 {
-		tradesAndOrdersMsg.orders = orders{numOfOrders, os}
+		tradesAndOrdersMsg.Orders = orders{numOfOrders, os}
 	}
 	if numOfTrades > 0 {
-		tradesAndOrdersMsg.trades = trades{numOfTrades, tradesToPublish}
+		tradesAndOrdersMsg.Trades = trades{numOfTrades, tradesToPublish}
 	}
 
 	publisher.publish(&tradesAndOrdersMsg, tradesAndOrdersTpe, height, timestamp)
@@ -165,9 +157,4 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 
 func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blockFee BlockFee) {
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
-}
-
-func setFeeHolder(fee map[string]*types.Fee) {
-	Logger.Debug("set fee holder", "feeHolder", fee)
-	feeHolderCache = fee
 }

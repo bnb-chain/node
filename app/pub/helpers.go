@@ -89,7 +89,7 @@ func MatchAndAllocateAllForPublish(
 			tradeHolderCh <- orderPkg.TradeHolder{tran.Oid, tran.Trade, tran.Symbol}
 		}
 	}
-	newCtx := dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, setFeeHolder)
+	newCtx := dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades)
 	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
@@ -110,7 +110,7 @@ func ExpireOrdersForPublish(
 			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid}
 		}
 	}
-	newCtx = dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires, setFeeHolder)
+	newCtx = dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires)
 	close(expireHolderCh)
 	wg.Wait()
 	return

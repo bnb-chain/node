@@ -70,32 +70,32 @@ func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 type tradesAndOrders struct {
 	height    int64
 	timestamp int64 // milli seconds since Epoch
-	numOfMsgs int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
-	trades    trades
-	orders    orders
+	NumOfMsgs int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
+	Trades    trades
+	Orders    orders
 }
 
 func (msg *tradesAndOrders) String() string {
-	return fmt.Sprintf("TradesAndOrders at height: %d, numOfMsgs: %d", msg.height, msg.numOfMsgs)
+	return fmt.Sprintf("TradesAndOrders at height: %d, numOfMsgs: %d", msg.height, msg.NumOfMsgs)
 }
 
 func (msg *tradesAndOrders) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.height
 	native["timestamp"] = msg.timestamp
-	native["numOfMsgs"] = msg.numOfMsgs
-	if msg.trades.numOfMsgs > 0 {
-		native["trades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.trades.ToNativeMap()}
+	native["numOfMsgs"] = msg.NumOfMsgs
+	if msg.Trades.numOfMsgs > 0 {
+		native["trades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.Trades.ToNativeMap()}
 	}
-	if msg.orders.numOfMsgs > 0 {
-		native["orders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.orders.ToNativeMap()}
+	if msg.Orders.numOfMsgs > 0 {
+		native["orders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.Orders.ToNativeMap()}
 	}
 	return native
 }
 
 type trades struct {
 	numOfMsgs int
-	trades    []*Trade
+	Trades    []*Trade
 }
 
 func (msg *trades) String() string {
@@ -105,8 +105,8 @@ func (msg *trades) String() string {
 func (msg *trades) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.numOfMsgs
-	ts := make([]map[string]interface{}, len(msg.trades), len(msg.trades))
-	for idx, trade := range msg.trades {
+	ts := make([]map[string]interface{}, len(msg.Trades), len(msg.Trades))
+	for idx, trade := range msg.Trades {
 		ts[idx] = trade.toNativeMap()
 	}
 	native["trades"] = ts
