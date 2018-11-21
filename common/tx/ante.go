@@ -201,7 +201,7 @@ func processSig(txHash string,
 	sig auth.StdSignature, acc auth.Account, signBytes []byte) (
 	res sdk.Result) {
 
-	if ok := sigCache.getSig(txHash); ok {
+	if sigCache.getSig(txHash) {
 		log.Debug("Tx hits sig cache", "txHash", txHash)
 		return
 	}
