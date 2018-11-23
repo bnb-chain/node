@@ -152,6 +152,10 @@ type PublicationConfig struct {
 	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
 
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
+	// DO NOT put this option in template above
+	// deliberately make it only a command line arguments
+	// https://github.com/BiJie/BinanceChain/issues/161#issuecomment-438600434
+	FromHeightInclusive int64
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -173,11 +177,15 @@ func defaultPublicationConfig() *PublicationConfig {
 		BlockFeeKafka:   "127.0.0.1:9092",
 
 		PublicationChannelSize: 10000,
+		FromHeightInclusive: 1,
 	}
 }
 
 func (pubCfg PublicationConfig) ShouldPublishAny() bool {
-	return pubCfg.PublishOrderUpdates || pubCfg.PublishAccountBalance || pubCfg.PublishOrderBook || pubCfg.PublishBlockFee
+	return pubCfg.PublishOrderUpdates ||
+		pubCfg.PublishAccountBalance ||
+		pubCfg.PublishOrderBook ||
+		pubCfg.PublishBlockFee
 }
 
 type LogConfig struct {
