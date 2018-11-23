@@ -3,7 +3,7 @@ package dex
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"time"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/BiJie/BinanceChain/app/pub"
 	app "github.com/BiJie/BinanceChain/common/types"
@@ -14,12 +14,12 @@ const AbciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper,
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
 ) {
 	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper) {
+	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 
