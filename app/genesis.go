@@ -4,20 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/server"
-	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
 	"github.com/tendermint/tendermint/crypto"
-	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -35,6 +30,9 @@ var (
 	DefaultUnbondingTime = 60 * 60 * 24 * 7 * time.Second
 	// default max validators to 15
 	DefaultMaxValidators uint16 = 15
+
+	// min gov deposit
+	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeToken, 2000e8)}
 )
 
 type GenesisState struct {
@@ -42,6 +40,7 @@ type GenesisState struct {
 	Accounts   []GenesisAccount   `json:"accounts"`
 	DexGenesis dex.Genesis        `json:"dex"`
 	StakeData  stake.GenesisState `json:"stake"`
+	GovData    gov.GenesisState   `json:"gov"`
 	GenTxs     []json.RawMessage  `json:"gentxs"`
 }
 
@@ -76,18 +75,6 @@ func BinanceAppInit() server.AppInit {
 	return server.AppInit{
 		AppGenState: BinanceAppGenState,
 	}
-}
-
-func BinanceAppGenTx(cdc *wire.Codec, valOperAddr sdk.ValAddress, pk crypto.PubKey, genTxConfig serverCfg.GenTx) (
-	appGenTx, cliPrint json.RawMessage, validator tmtypes.GenesisValidator, err error) {
-
-	// write app.toml when we run testnet command, we only know the `current` rootDir for each validator here
-	// otherwise, we can only generate at ~/.bnbchaind/config/app.toml
-	appConfigFilePath := filepath.Join(ServerContext.Context.Config.RootDir, "config/", config.AppConfigFileName+".toml")
-	if _, err := os.Stat(appConfigFilePath); os.IsNotExist(err) {
-		config.WriteConfigFile(appConfigFilePath, ServerContext.BinanceChainConfig)
-	}
-	return
 }
 
 // AppGenState sets up the app_state and appends the cool app state
@@ -129,12 +116,17 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	stakeData.Params.BondDenom = nativeToken.Symbol
 	stakeData.Params.UnbondingTime = DefaultUnbondingTime
 	stakeData.Params.MaxValidators = DefaultMaxValidators
+
+	govData := gov.DefaultGenesisState()
+	govData.DepositProcedure.MinDeposit = DefaultGovMinDesposit
+
 	genesisState := GenesisState{
 		Accounts:   genAccounts,
 		Tokens:     []types.Token{nativeToken},
 		DexGenesis: dex.DefaultGenesis,
 		StakeData:  stakeData,
 		GenTxs:     appGenTxs,
+		GovData:    govData,
 	}
 
 	appState, err = wire.MarshalJSONIndent(cdc, genesisState)

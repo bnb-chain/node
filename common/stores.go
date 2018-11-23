@@ -11,6 +11,7 @@ const (
 	PairStoreName    = "pairs"
 	StakeStoreName   = "stake"
 	ParamsStoreName  = "params"
+	GovStoreName     = "gov"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -26,6 +27,7 @@ var (
 	PairStoreKey    = sdk.NewKVStoreKey(PairStoreName)
 	StakeStoreKey   = sdk.NewKVStoreKey(StakeStoreName)
 	ParamsStoreKey  = sdk.NewKVStoreKey(ParamsStoreName)
+	GovStoreKey     = sdk.NewKVStoreKey(GovStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
