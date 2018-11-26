@@ -77,7 +77,7 @@ func TestFeeDistribution2Proposer(t *testing.T) {
 	am, valMapper, ctx, proposerAcc, _, _, _ := setup()
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 10)}, types.FeeForProposer))
 	blockFee := distributeFee(ctx, am, valMapper, true)
-	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{proposerAcc.GetAddress().String()}}, blockFee)
+	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{string(proposerAcc.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 100, 100, 100})
 }
 
@@ -87,12 +87,12 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// fee amount can be divided evenly
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 40)}, types.FeeForAll))
 	blockFee := distributeFee(ctx, am, valMapper, true)
-	require.Equal(t, pub.BlockFee{0, "BNB:40", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
+	require.Equal(t, pub.BlockFee{0, "BNB:40", []string{string(proposerAcc.GetAddress()), string(valAcc1.GetAddress()), string(valAcc2.GetAddress()), string(valAcc3.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
 	ctx = tx.WithFee(ctx, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeToken, 50)}, types.FeeForAll))
 	blockFee = distributeFee(ctx, am, valMapper, true)
-	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{proposerAcc.GetAddress().String(), valAcc1.GetAddress().String(), valAcc2.GetAddress().String(), valAcc3.GetAddress().String()}}, blockFee)
+	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{string(proposerAcc.GetAddress()), string(valAcc1.GetAddress()), string(valAcc2.GetAddress()), string(valAcc3.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valMapper, []int64{124, 122, 122, 122})
 }

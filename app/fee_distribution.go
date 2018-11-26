@@ -31,7 +31,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 	var validators []string
 	if publishBlockFee {
 		validators = make([]string, 0, valSize)
-		validators = append(validators, proposerAccAddr.String()) // the first validator to publish should be proposer
+		validators = append(validators, string(proposerAccAddr)) // the first validator to publish should be proposer
 	}
 
 	if fee.Type == types.FeeForProposer {
@@ -73,7 +73,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 						validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))
 					}
 				} else if publishBlockFee {
-					validators = append(validators, accAddr.String())
+					validators = append(validators, string(accAddr))
 				}
 				validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(avgTokens))
 				am.SetAccount(ctx, validatorAcc)
