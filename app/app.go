@@ -355,7 +355,12 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 	if app.publicationConfig.PublishAccountBalance {
 		txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
 		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
-		accountsToPublish = pub.GetAccountBalances(app.AccountKeeper, ctx, txRelatedAccounts, tradeRelatedAccounts)
+		accountsToPublish = pub.GetAccountBalances(
+			app.AccountKeeper,
+			ctx,
+			txRelatedAccounts,
+			tradeRelatedAccounts,
+			blockFee.Validators)
 		defer func() {
 			app.DeliverState.Ctx = ctx.WithValue(baseapp.InvolvedAddressKey, make([]string, 0))
 		}() // clean up
