@@ -39,11 +39,9 @@ cli_home="./testnodecli"
 home="./testnoded"
 chain_id="bnbchain-1000"
 
-keys_operation_words="bnc"
-
 # prepare_node generates a secret for alice and starts the node
 function prepare_node() {
-	cp -f ../networks/demo/*.exp .
+	stop_node
 
 	rm -rf ${cli_home}
 	rm -rf ${home}
@@ -63,7 +61,7 @@ function prepare_node() {
 
 # stop_node stops the chain node
 function stop_node() {
-	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
+	ps -ef | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
 }
 
 alice_secret=$(prepare_node)
@@ -79,4 +77,3 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnc[0-9a-
 # export a function to kill the node, as well as alice and bob's keys and secrets
 
 export -f stop_node
-
