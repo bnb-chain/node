@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/hashicorp/golang-lru"
-	"github.com/pkg/errors"
 
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
