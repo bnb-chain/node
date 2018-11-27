@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:83aa2a526bda5435a9eb9aec7ed8277ccfc2447b05a29d047e4dd851947b9be4"
+  digest = "1:7907ce410db0ffa5dd6ef290edebfe9834ed4510f9cddbc76a4d5fb7ff706cd3"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -67,7 +67,6 @@
     "client/rpc",
     "client/tx",
     "client/utils",
-    "cmd/gaia/app",
     "codec",
     "crypto",
     "crypto/keys",
@@ -88,18 +87,11 @@
     "x/bank/client",
     "x/bank/client/cli",
     "x/bank/client/rest",
-    "x/distribution",
-    "x/distribution/keeper",
-    "x/distribution/tags",
-    "x/distribution/types",
-    "x/gov",
-    "x/gov/tags",
     "x/ibc",
     "x/ibc/client/cli",
     "x/mock",
     "x/params",
     "x/params/subspace",
-    "x/slashing",
     "x/stake",
     "x/stake/client/cli",
     "x/stake/keeper",
@@ -808,7 +800,6 @@
     "github.com/cosmos/cosmos-sdk/client/rpc",
     "github.com/cosmos/cosmos-sdk/client/tx",
     "github.com/cosmos/cosmos-sdk/client/utils",
-    "github.com/cosmos/cosmos-sdk/cmd/gaia/app",
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
@@ -826,6 +817,7 @@
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/ibc/client/cli",
     "github.com/cosmos/cosmos-sdk/x/mock",
+    "github.com/cosmos/cosmos-sdk/x/params",
     "github.com/cosmos/cosmos-sdk/x/stake",
     "github.com/cosmos/cosmos-sdk/x/stake/client/cli",
     "github.com/deathowl/go-metrics-prometheus",

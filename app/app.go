@@ -179,8 +179,8 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		validatorAddrs := make([]sdk.AccAddress, len(genesisState.Accounts))
 		for i, gacc := range genesisState.Accounts {
 			acc := gacc.ToAppAccount()
-			acc.Coins = sdk.Coins{DefaultSelfDelegationToken}
-			app.AccountKeeper.NewAccount(ctx, acc)
+			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
+			app.AccountKeeper.SetAccount(ctx, acc)
 			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
 			validatorAddrs[i] = acc.Address
 		}
@@ -213,14 +213,14 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		// sanity check
 		if len(req.Validators) > 0 {
 			if len(req.Validators) != len(validators) {
-				panic(fmt.Errorf("len(RequestInitChain.Validators) != len(validators) (%d != %d)",
-					len(req.Validators), len(validators)))
+				panic(fmt.Errorf("genesis validator numbers are not matched, staked=%d, req=%d",
+					len(validators), len(req.Validators)))
 			}
 			sort.Sort(abci.ValidatorUpdates(req.Validators))
 			sort.Sort(abci.ValidatorUpdates(validators))
 			for i, val := range validators {
 				if !val.Equal(req.Validators[i]) {
-					panic(fmt.Errorf("validators[%d] != req.Validators[%d] ", i, i))
+					panic(fmt.Errorf("invalid genesis validator, index=%d", i))
 				}
 			}
 		}
@@ -235,12 +235,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
-	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []*pub.Trade
 
-	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
+	isBreatheBlock := !utils.SameDayInUTC(lastBlockTime, blockTime)
+	if !isBreatheBlock || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
@@ -248,7 +248,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		} else {
 			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
-
 	} else {
 		// breathe block
 		bnclog.Info("Start Breathe Block Handling",
@@ -261,13 +260,17 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
-	// TODO: need to determine whether we run stake/gov in every block or only in breathe block.
-	validatorUpdates := stake.EndBlocker(ctx, app.stakeKeeper)
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive &&
 		height >= app.publicationConfig.FromHeightInclusive {
 		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
+	}
+
+	var validatorUpdates abci.ValidatorUpdates
+	if isBreatheBlock {
+		// some endblockers without fees will execute after publish to make publication run as early as possible.
+		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
 
 	//match may end with transaction failure, which is better to save into
