@@ -8,7 +8,7 @@ all: get_vendor_deps format build
 ########################################
 ### CI
 
-ci: get_tools get_vendor_deps build test_cover
+ci: get_vendor_deps build
 
 ########################################
 ### Build
@@ -24,6 +24,9 @@ endif
 
 build-linux:
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+
+build-alpine:
+	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(MAKE) build
 
 install:
 	go install $(BUILD_FLAGS) ./cmd/bnbchaind

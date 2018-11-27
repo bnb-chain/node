@@ -150,7 +150,7 @@ seeds=$(grep persistent_peers node_bridge/gaiad/config/config.toml | grep -o '".
 sed -i -e "s/seeds = \"\"/seeds = ${seeds}/g" node_bridge/gaiad/config/config.toml
 
 # clear persistent peers
-sed -i -e 's/persistent_peers = ".*"/persistend_peers = ""/g' node_bridge/gaiad/config/config.toml
+sed -i -e 's/persistent_peers = ".*"/persistent_peers = ""/g' node_bridge/gaiad/config/config.toml
 
 # set private_ids
 private_ids=$(echo ${seeds} | sed 's/@[0-9]*.[0-9]*.[0-9]*.[0-9]*:[0-9]*//g')
