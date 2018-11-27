@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/server"
 	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
@@ -26,8 +27,14 @@ import (
 const DefaultKeyPass = "12345678"
 
 var (
-	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeToken, 1e8)
-	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply / 2
+	// each genesis validators will self delegate 1000e8 native tokens to become a validator
+	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeToken, 1000e8)
+	// we put 20% of the total supply to the stake pool
+	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply / 5
+	// set default unbonding duration to 7 days
+	DefaultUnbondingTime = 60 * 60 * 24 * 7 * time.Second
+	// default max validators to 15
+	DefaultMaxValidators uint16 = 15
 )
 
 type GenesisState struct {
@@ -120,6 +127,8 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	nativeToken := tokens.DefaultGenesisToken(genAccounts[0].Address)
 	stakeData.Pool.LooseTokens = sdk.NewDec(DefaultMaxBondedTokenAmount)
 	stakeData.Params.BondDenom = nativeToken.Symbol
+	stakeData.Params.UnbondingTime = DefaultUnbondingTime
+	stakeData.Params.MaxValidators = DefaultMaxValidators
 	genesisState := GenesisState{
 		Accounts:   genAccounts,
 		Tokens:     []types.Token{nativeToken},
