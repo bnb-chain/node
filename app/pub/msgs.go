@@ -5,6 +5,8 @@ import (
 
 	"github.com/linkedin/goavro"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -362,7 +364,7 @@ func (msg *accounts) ToNativeMap() map[string]interface{} {
 type BlockFee struct {
 	Height     int64
 	Fee        string
-	Validators []string
+	Validators []string // slice of string wrappers of bytes representation of sdk.AccAddress
 }
 
 func (msg BlockFee) String() string {
@@ -373,7 +375,11 @@ func (msg BlockFee) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
 	native["fee"] = msg.Fee
-	native["validators"] = msg.Validators
+	validators := make([]string, len(msg.Validators), len(msg.Validators))
+	for idx, addr := range msg.Validators {
+		validators[idx] = sdk.AccAddress(addr).String()
+	}
+	native["validators"] = validators
 	return native
 }
 
