@@ -14,8 +14,10 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/spf13/viper"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -26,12 +28,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 )
 
 func init() {
@@ -43,34 +44,34 @@ func init() {
 }
 
 const (
+	retry = 25
+	stime = 2000
 	createTask = 1
 	submitTask = 2
 	buy = 1
 	sell = 2
 )
 
-var cHome *string
-var owner *string
-var vNode *string
-var vNodes []string
+var home *string
+var node *string
 var chainId *string
-var ordersChnBuf *int
-var createPoolSize *int
-var transChnBuf *int
-var submitPoolSize *int
-var diskCachePath *string
+var owner *string
 var userPrefix *string
-var generateToken *bool
-var initialAccount *bool
 var batchSize *int
+var generateToken *bool
+var initiateAccount *bool
 var runCreate *bool
+var createChnBuf *int
+var createPoolSize *int
+var createPath *string
 var runSubmit *bool
-var submitOnlyPath *string
-var submitOnlySize *int
-var submitThinkTime *int64
+var submitChnBuf *int
+var submitPoolSize *int
+var submitPath *string
+var submitPause *int64
 var csvPath *string
 
-type DEXOrder struct {
+type DEXCreate struct {
 	ctx context.CLIContext
 	txBldr txbuilder.TxBuilder
 	addr sdk.AccAddress
@@ -80,330 +81,159 @@ type DEXOrder struct {
 	qty int64
 	tifCode int8
 }
+type DEXSubmit struct {
+	ctx context.CLIContext
+	txBldr txbuilder.TxBuilder
+	txBytes []byte
+}
 
 type sequence struct {
 	m sync.Mutex
 	seqMap map[string]int64
 }
+type txhash struct {
+	m sync.Mutex
+	trans []string
+}
 
-var ordersChn chan DEXOrder
-var transChn chan []byte
+var createChn chan DEXCreate
+var submitChn chan DEXSubmit
+
 var clientSeq sequence
+var hashReturned txhash
+
+var nodes []string
 var rpcs []*rpcclient.HTTP
 
 func init() {
-	cHome = flag.String("cHome", "/home/test/.bnbcli", "client home folder")
-	owner = flag.String("owner", "test4", "owner account")
-	vNode = flag.String("vNode", "0.0.0.0:26657", "target validator ip:port")
-	chainId = flag.String("chainId", "test-chain-sT34W7", "chain id")
-	ordersChnBuf = flag.Int("ordersChnBuf", 8, "orders channel buffer")
-	createPoolSize = flag.Int("createPoolSize", 4, "create orders pool size")
-	transChnBuf = flag.Int("transChnBuf", 128, "trans channel buffer")
-	submitPoolSize = flag.Int("submitPoolSize", 64, "submit trans pool size")
-	diskCachePath = flag.String("diskCachePath", "/home/test/orders", "disk cache path")
-	userPrefix = flag.String("userPrefix", "node1_user", "user account prefix")
-	generateToken = flag.Bool("generateToken", true, "if to generate tokens")
-	initialAccount = flag.Bool("initialAccount", true, "if to initial accounts")
-	batchSize = flag.Int("batchSize", 100, "batch size, i.e. # of prices generated")
-	runCreate = flag.Bool("runCreate", false, "if to run create")
-	runSubmit = flag.Bool("runSubmit", false, "if to run submit")
-	submitOnlyPath = flag.String("submitOnlyPath", "/home/test/orders2", "disk cache path")
-	submitOnlySize = flag.Int("submitOnlySize", 1, "# of submits")
-	submitThinkTime = flag.Int64("submitThinkTime", 0, "submit think time in ms")
-	csvPath = flag.String("csvPath", "/home/test/trans.csv", "csv path")
+	home = flag.String("home", "/home/test/.bnbcli", "bnbcli --home")
+	node = flag.String("node", "0.0.0.0:26657", "bnbcli --node")
+	chainId = flag.String("chainId", "chain-bnb", "bnbcli --chain-id")
+	owner = flag.String("owner", "test", "chain's master user")
+	userPrefix = flag.String("userPrefix", "node2_user", "user prefix")
+	batchSize = flag.Int("batchSize", 1, "# of create/submit tasks")
+	generateToken = flag.Bool("generateToken", false, "if to generate tokens")
+	initiateAccount = flag.Bool("initiateAccount", false, "if to initiate accounts")
+	runCreate = flag.Bool("runCreate", false, "if to run create task")
+	createChnBuf = flag.Int("createChnBuf", 1, "create channel buffer size")
+	createPoolSize = flag.Int("createPoolSize", 1, "create pool size")
+	createPath = flag.String("createPath", "/home/test/create", "create path")
+	runSubmit = flag.Bool("runSubmit", false, "if to run submit task")
+	submitChnBuf = flag.Int("submitChnBuf", 1, "submit channel buffer size")
+	submitPoolSize = flag.Int("submitPoolSize", 1, "submit pool size")
+	submitPath = flag.String("submitPath", "/home/test/submit", "submit path")
+	submitPause = flag.Int64("submitPause", 0, "submit pause time in ms")
+	csvPath = flag.String("csvPath", "/home/test", "csv path")
 	flag.Parse()
-	ordersChn = make(chan DEXOrder, *ordersChnBuf)
-	transChn = make(chan []byte, *transChnBuf)
-	clientSeq = sequence {seqMap: make(map[string]int64)}
-	vNodes = strings.Split(*vNode, ",")
-	rpcs = make([]*rpcclient.HTTP, len(vNodes))
-	for i, v := range vNodes {
+	createChn = make(chan DEXCreate, *createChnBuf)
+	submitChn = make(chan DEXSubmit, *submitChnBuf)
+	clientSeq = sequence{seqMap: make(map[string]int64)}
+	hashReturned = txhash{trans: make([]string,0,0)}
+	nodes = strings.Split(*node, ",")
+	rpcs = make([]*rpcclient.HTTP, len(nodes))
+	for i, v := range nodes {
 		rpcs[i] = rpcclient.NewHTTP(v, "/websocket")
 	}
 }
 
-func MakeCodec() *wire.Codec {
-	var cdc = wire.NewCodec()
-	wire.RegisterCrypto(cdc)
-	bank.RegisterCodec(cdc)
-	sdk.RegisterCodec(cdc)
-	dex.RegisterWire(cdc)
-	tokens.RegisterWire(cdc)
-	types.RegisterWire(cdc)
-	tx.RegisterWire(cdc)
-	return cdc
+var accounts map[string]string
+var sortKeys []string
+
+func main() {
+	fmt.Println("-home", *home)
+	fmt.Println("-node", *node)
+	fmt.Println("-chainId", *chainId)
+	fmt.Println("-owner", *owner)
+	fmt.Println("-userPrefix", *userPrefix)
+	fmt.Println("-batchSize", *batchSize)
+	fmt.Println("-generateToken", *generateToken)
+	fmt.Println("-initiateAccount", *initiateAccount)
+	fmt.Println("-runCreate", *runCreate)
+	fmt.Println("-createChnBuf", *createChnBuf)
+	fmt.Println("-createPoolSize", *createPoolSize)
+	fmt.Println("-createPath", *createPath)
+	fmt.Println("-runSubmit", *runSubmit)
+	fmt.Println("-submitChnBuf", *submitChnBuf)
+	fmt.Println("-submitPoolSize", *submitPoolSize)
+	fmt.Println("-submitPath", *submitPath)
+	fmt.Println("-submitPause", *submitPause)
+	fmt.Println("-csvPath", *csvPath)
+
+	lookupAccounts()
+
+	tokens := generateTokens(0, 2, *generateToken)
+	initializeAccounts(accounts, tokens, *initiateAccount)
+
+	if *runCreate == true {
+		createFolder(*createPath)
+		emptyFolder(*createPath)
+		sT := time.Now()
+		doCreateTask(accounts, tokens)
+		eT := time.Now()
+		elapsed := eT.Sub(sT)
+		fmt.Println("start:", sT)
+		fmt.Println("end:", eT)
+		fmt.Println("elapsed:", elapsed)
+	}
+
+	if *runSubmit == true {
+		createFolder(*submitPath)
+		emptyFolder(*submitPath)
+		moveFiles(*createPath, *submitPath, *batchSize)
+		sT := time.Now()
+		doSubmitTask()
+		eT := time.Now()
+		elapsed := eT.Sub(sT)
+		fmt.Println("start:", sT)
+		fmt.Println("end:", eT)
+		fmt.Println("elapsed:", elapsed)
+	}
+
+	// to generate data for AP and QS test
+	save_txhash()
+	save_hextx()
 }
 
-func generatePrices(noOfPrices int, margin float64) []int64 {
-	rand.Seed(1)
-	prices := make([]int64, noOfPrices)
-	for i := 0; i < noOfPrices; i++ {
-		f := rand.Float64() + margin
-		s := fmt.Sprintf("%.4f", f)
-		f, err := strconv.ParseFloat(s, 64)
+func execCommand(name string, arg ...string) *bytes.Buffer {
+	var err error
+	for i:= 0; i < retry; i++ {
+		fmt.Println("running round", ":", i, name)
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		cmd := exec.Command(name, arg...)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
 		if err != nil {
-			panic(err)
-		}
-		prices[i] = int64(f*10000)*10000
-	}
-	return prices
-}
-
-func build(user string, side int8, symbol string, price int64, qty int64, tif string) DEXOrder {
-	cdc := MakeCodec()
-	viper.Set("node", vNodes[0])
-	viper.Set("chain-id", *chainId)
-	viper.Set("home", fmt.Sprintf("%s", *cHome))
-	viper.Set("from", user)
-	viper.Set("trust-node", true)
-	ctx, txBldr := client.PrepareCtx(cdc)
-	ctx.Client = rpcs[0]
-	addr, err := ctx.GetFromAddress()
-	if err != nil {
-		fmt.Println(err)
-	}
-	accNum, err := ctx.GetAccountNumber(addr)
-	if err != nil {
-		fmt.Println(err)
-	}
-	txBldr = txBldr.WithAccountNumber(accNum)
-	tifCode, err := order.TifStringToTifCode(tif)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return DEXOrder{ctx, txBldr, addr, side, symbol, price, qty, tifCode}
-}
-
-func allocateOrders(tokens []string, users []string) {
-	var noOfPrices int = *batchSize
-	/*
-	when margin is 1:1, almost no lower and higher are produced
-	when margin is 1.01:1, ~1% of lower and higher are produced
-	when margin is 1.10:1, ~10% of lower anb higher are produced
- 	*/
-	var buyPrices []int64 = generatePrices(noOfPrices, 1.00)
-	var sellPrices []int64 = generatePrices(noOfPrices, 1.01)
-
-	orderIndex := 0
-	userIndex := 0
-
-	for i := 0; i < noOfPrices; i++ {
-		for j := 0; j < len(tokens); j++ {
-			symbol := fmt.Sprintf("%s_BNB", tokens[j])
-			fmt.Printf("allocating #%d\n", orderIndex)
-			ordersChn <- build(users[userIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
-			orderIndex+=1
-			userIndex+=1
-			if userIndex == len(users) {
-				userIndex = 0
-			}
-			ordersChn <- build(users[userIndex], sell, symbol, sellPrices[i], 100000000, "GTC")
-			orderIndex+=1
-			userIndex+=1
-			if userIndex == len(users) {
-				userIndex = 0
-			}
-			fmt.Println("b:", buyPrices[i], "s:", sellPrices[i])
-		}
-	}
-	close(ordersChn)
-}
-
-func create(wg *sync.WaitGroup, s *sequence) {
-	for item := range ordersChn {
-		name, err := item.ctx.GetFromName()
-		if err != nil {
-			fmt.Println(err)
+			fmt.Println(fmt.Sprint(err), stderr.String())
 			continue
 		}
-		s.m.Lock()
-		seq, hasKey := s.seqMap[name]
-		s.m.Unlock()
-		if hasKey == false {
-			var err error
-			seq, err = item.ctx.GetAccountSequence(item.addr)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-		}
-		item.txBldr = item.txBldr.WithSequence(seq)
-		id := fmt.Sprintf("%X-%d", item.addr, seq+1)
-		msg := order.NewOrderMsg{
-			//Version: 0x01,
-			Sender: item.addr,
-			Id: id,
-			Symbol: item.symbol,
-			OrderType: order.OrderType.LIMIT,
-			Side: item.side,
-			Price: item.price,
-			Quantity: item.qty,
-			TimeInForce: order.TimeInForce.GTC,
-		}
-		msg.TimeInForce = item.tifCode
-		msgs := []sdk.Msg{msg}
-		// txBytes, err := item.txBldr.BuildAndSign(name, "1qaz2wsx", msgs)
-		ssMsg := txbuilder.StdSignMsg {
-			ChainID: item.txBldr.ChainID,
-			AccountNumber: item.txBldr.AccountNumber,
-			Sequence: item.txBldr.Sequence,
-			Memo: item.txBldr.Memo,
-			Msgs: msgs,
-		}
-		keybase, err := keys.GetKeyBaseFromDir(*cHome)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		sigBytes, pubkey, err := keybase.Sign(name, "1qaz2wsx", ssMsg.Bytes())
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		sig := auth.StdSignature {
-			AccountNumber: ssMsg.AccountNumber,
-			Sequence: ssMsg.Sequence,
-			PubKey: pubkey,
-			Signature: sigBytes,
-		}
-		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo))
-		if err != nil {
-			fmt.Println("failed to sign tran: %v", err)
-			continue
-		}
-		ts := fmt.Sprintf("%d", time.Now().UnixNano())
-		file := filepath.Join(*diskCachePath, ts + "_" + name)
-		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
-		err = ioutil.WriteFile(file, txBytes, 0777)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		s.m.Lock()
-		s.seqMap[name] = seq+1
-		s.m.Unlock()
+		return &stdout
 	}
-	wg.Done()
+	panic(err)
 }
 
-func doCreateTask(tokens []string, users []string) {
-	go allocateOrders(tokens, users)
-	execute(*createPoolSize, createTask)
-}
-
-func allocateTrans() {
-	var trans [][]byte
-	files, err := ioutil.ReadDir(*diskCachePath)
-	if err != nil {
-		panic(err)
-	}
-	for _, file := range files {
-		tran, err := ioutil.ReadFile(filepath.Join(*diskCachePath, file.Name()))
-		if err != nil {
-			panic(err)
-		}
-		trans = append(trans, tran)
-	}
-	for index, item := range trans {
-		fmt.Printf("allocate tran #%d\n", index)
-		transChn <- item
-	}
-	close(transChn)
-}
-
-func doRecover() {
-	if r := recover(); r != nil {
-		fmt.Println("recoved from", r)
-		debug.PrintStack()
-	}
-}
-
-func async(ctx context.CLIContext, txBldr txbuilder.TxBuilder, tran []byte) {
-	defer doRecover()
-	res, err := ctx.BroadcastTxAsync(tran)
-	if err != nil {
-		fmt.Println(err)
-	}
-	if ctx.JSON {
-		type toJSON struct {
-			TxHash string
-		}
-		valueToJSON := toJSON{res.Hash.String()}
-		JSON, err := txBldr.Codec.MarshalJSON(valueToJSON)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(string(JSON))
-	} else {
-		fmt.Println("tran hash: ", res.Hash.String())
-	}
-}
-
-func submit(wg *sync.WaitGroup, ctx context.CLIContext, txBldr txbuilder.TxBuilder) {
-	for tran := range transChn {
-		async(ctx, txBldr, tran)
-		time.Sleep(time.Duration(*submitThinkTime) * time.Millisecond)
-	}
-	wg.Done()
-}
-
-func doSubmitTask() {
-	go allocateTrans()
-	execute(*submitPoolSize, submitTask)
-}
-
-func execute(poolSize int, mode int) {
-	var wg sync.WaitGroup
-	wg.Add(poolSize)
-	vIndex := 0
-	for i := 0; i < poolSize; i++ {
-		if mode == createTask {
-			go create(&wg, &clientSeq)
-		}
-		if mode == submitTask {
-			cdc := MakeCodec()
-			viper.Set("node", vNodes[vIndex])
-			viper.Set("chain-id", *chainId)
-			viper.Set("gas", 20000000000000)
-			ctx, txBldr := client.PrepareCtx(cdc)
-			ctx.Client = rpcs[vIndex]
-			vIndex+=1
-			if vIndex == len(vNodes) {
-				vIndex = 0
-			}
-			go submit(&wg, ctx, txBldr)
-		}
-	}
-	wg.Wait()
-}
-
-func generateAccounts(keyword string) [][]string {
-	var users []string
-	var addresses []string
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command("bnbcli", "--home="+*cHome, "keys", "list")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		panic(fmt.Sprint(err) + " : " + stderr.String())
-	}
-	expr := "(" + keyword + "[\\d]+).+(bnc.+).+bnc"
+func lookupAccounts() {
+	stdout := execCommand("bnbcli", "--home="+*home, "keys", "list")
+	expr := "(" + *userPrefix + "[\\d]+).+(bnc.+).+bnc"
 	res, err := regexp.Compile(expr)
 	if err != nil {
 		panic(err)
 	}
-	m := res.FindAllStringSubmatch(stdout.String(), -1)
-	if m != nil {
-		for _, v := range m {
-			users = append(users, v[1])
-			addresses = append(addresses, v[2])
+	accounts = make(map[string]string)
+	matched := res.FindAllStringSubmatch(stdout.String(), -1)
+	if matched != nil {
+		for _, v := range matched {
+			accounts[v[1]] = v[2]
 		}
 	} else {
-		panic("no matching accounts found")
+		panic("no accounts found")
 	}
-	return [][]string{users, addresses}
+	sortKeys = make([]string, 0, len(accounts))
+	for key, _ := range accounts {
+		sortKeys = append(sortKeys, key)
+	}
+	sort.Strings(sortKeys)
 }
 
 func generateTokens(sI int, eI int, flag bool) []string {
@@ -412,34 +242,16 @@ func generateTokens(sI int, eI int, flag bool) []string {
 		var token string
 		if sI < 10 {
 			token = fmt.Sprintf("X0%d", sI)
-		} else {
+		} else if sI >= 10 && sI < 100 {
 			token = fmt.Sprintf("X%d", sI)
+		} else {
+			panic("token index was out of range")
 		}
 		if flag == true {
-			var stdout bytes.Buffer
-			var stderr bytes.Buffer
-			cmd := exec.Command("bnbcli", "token", "issue", "--home="+*cHome, "--node="+*vNode, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId)
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-			err := cmd.Run()
-			if err != nil {
-				panic(fmt.Sprint(err) + " : " + stderr.String())
-			}
-			fmt.Println(token, stdout.String())
-			time.Sleep(5 * time.Second)
-			stdout.Reset()
-			stderr.Reset()
-			cmd = exec.Command("bnbcli", "dex", "list", "--home="+*cHome, "--node="+*vNode, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId)
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-			err = cmd.Run()
-			if err != nil {
-				panic(fmt.Sprint(err) + " : " + stderr.String())
-			}
-			fmt.Println(token, stdout.String())
-			time.Sleep(5 * time.Second)
-			stdout.Reset()
-			stderr.Reset()
+			execCommand("bnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId)
+			time.Sleep(stime * time.Millisecond)
+			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId)
+			time.Sleep(stime * time.Millisecond)
 		}
 		tokens = append(tokens, token)
 		sI++
@@ -447,48 +259,21 @@ func generateTokens(sI int, eI int, flag bool) []string {
 	return tokens
 }
 
-func initializeAccounts(addresses []string, tokens []string, flag bool) {
+func initializeAccounts(accounts map[string]string, tokens []string, flag bool) {
 	tokens = append(tokens, "BNB")
 	if flag == true {
-		var buffer bytes.Buffer
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-		for i := 0; i < len(tokens); i++ {
-			for j := 0; j < len(addresses); j++ {
-				buffer.WriteString(addresses[j])
+		for _, token := range tokens {
+			var buffer bytes.Buffer
+			for i, name := range sortKeys {
+				buffer.WriteString(accounts[name])
 				buffer.WriteString(":")
-				if j != 0 {
-					if j%2000 == 0 || j == len(addresses)-1 {
-						fmt.Println(tokens[i], j)
-						l := buffer.String()
-						res := l[:len(l)-1]
-						buffer.Reset()
-						arg := []string{"token", "multi-send", "--home="+*cHome, "--node="+*vNode, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000:"+tokens[i], "--to="+res}
-						cmd := exec.Command("bnbcli", arg...)
-						cmd.Stdout = &stdout
-						cmd.Stderr = &stderr
-						err := cmd.Run()
-						if err != nil {
-							fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-							stdout.Reset()
-							stderr.Reset()
-							time.Sleep(5 * time.Second)
-							// multi-send, retry
-							fmt.Println("retry ...")
-							cmdR := exec.Command("bnbcli", arg...)
-							cmdR.Stdout = &stdout
-							cmdR.Stderr = &stderr
-							err = cmd.Run()
-							if err != nil {
-								panic(err)
-							}
-							fmt.Println("retry, OK")
-						}
-						fmt.Println(stdout.String())
-						stdout.Reset()
-						stderr.Reset()
-						time.Sleep(5 * time.Second)
-					}
+				if i != 0 && (i%2000 == 0 || i == len(sortKeys)-1) {
+					fmt.Println(token, i)
+					list := buffer.String()
+					res := list[:len(list)-1]
+					buffer.Reset()
+					execCommand("bnbcli", "token", "multi-send", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000:"+token, "--to="+res)
+					time.Sleep(stime * time.Millisecond)
 				}
 			}
 		}
@@ -515,6 +300,275 @@ func emptyFolder(path string) {
 	}
 }
 
+func execute(poolSize int, mode int) {
+	var wg sync.WaitGroup
+	wg.Add(poolSize)
+	for i := 0; i < poolSize; i++ {
+		if mode == createTask {
+			go create(&wg, &clientSeq)
+		}
+		if mode == submitTask {
+			go submit(&wg, &hashReturned)
+		}
+	}
+	wg.Wait()
+}
+
+func doCreateTask(accounts map[string]string, tokens []string) {
+	go allocateCreate(accounts, tokens)
+	execute(*createPoolSize, createTask)
+}
+
+func allocateCreate(accounts map[string]string, tokens []string) {
+	var buyPrices []int64 = generatePrices(*batchSize, 1.00)
+	var sellPrices []int64 = generatePrices(*batchSize, 1.01)
+	createIndex := 0
+	nameIndex := 0
+	for i := 0; i < *batchSize; i++ {
+		for j := 0; j < len(tokens); j++ {
+			symbol := fmt.Sprintf("%s_BNB", tokens[j])
+			fmt.Printf("allocating #%d\n", createIndex)
+			createChn <- buildC(sortKeys[nameIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
+			createIndex++
+			if createIndex == *batchSize {
+				close(createChn)
+				return
+			}
+			nameIndex++
+			if nameIndex == len(sortKeys) {
+				nameIndex = 0
+			}
+			createChn <- buildC(sortKeys[nameIndex], sell, symbol, sellPrices[i], 100000000, "GTC")
+			createIndex++
+			if createIndex == *batchSize {
+				close(createChn)
+				return
+			}
+			nameIndex++
+			if nameIndex == len(sortKeys) {
+				nameIndex = 0
+			}
+		}
+	}
+}
+
+func generatePrices(noOfPrices int, margin float64) []int64 {
+	rand.Seed(1)
+	prices := make([]int64, noOfPrices)
+	for i := 0; i < noOfPrices; i++ {
+		f := rand.Float64() + margin
+		s := fmt.Sprintf("%.4f", f)
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			panic(err)
+		}
+		prices[i] = int64(f*10000)*10000
+	}
+	return prices
+}
+
+func buildC(from string, side int8, symbol string, price int64, qty int64, tif string) DEXCreate {
+	cdc := MakeCodec()
+	viper.Set("home", fmt.Sprintf("%s", *home))
+	viper.Set("node", nodes[0])
+	viper.Set("chain-id", *chainId)
+	viper.Set("from", from)
+	viper.Set("trust-node", true)
+	ctx, txBldr := client.PrepareCtx(cdc)
+	ctx.Client = rpcs[0]
+	addr, err := ctx.GetFromAddress()
+	if err != nil {
+		panic(err)
+	}
+	accNum, err := ctx.GetAccountNumber(addr)
+	if err != nil {
+		panic(err)
+	}
+	txBldr = txBldr.WithAccountNumber(accNum)
+	tifCode, err := order.TifStringToTifCode(tif)
+	if err != nil {
+		panic(err)
+	}
+	return DEXCreate{ctx, txBldr, addr, side, symbol, price, qty, tifCode}
+}
+
+func MakeCodec() *wire.Codec {
+	var cdc = wire.NewCodec()
+	wire.RegisterCrypto(cdc)
+	bank.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc)
+	dex.RegisterWire(cdc)
+	tokens.RegisterWire(cdc)
+	types.RegisterWire(cdc)
+	tx.RegisterWire(cdc)
+	return cdc
+}
+
+func create(wg *sync.WaitGroup, s *sequence) {
+	for item := range createChn {
+		name, err := item.ctx.GetFromName()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		s.m.Lock()
+		seq, hasKey := s.seqMap[name]
+		s.m.Unlock()
+		if hasKey == false {
+			var err error
+			seq, err = item.ctx.GetAccountSequence(item.addr)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+		}
+		item.txBldr = item.txBldr.WithSequence(seq)
+		id := fmt.Sprintf("%X-%d", item.addr, seq+1)
+		msg := order.NewOrderMsg{
+			Sender: item.addr,
+			Id: id,
+			Symbol: item.symbol,
+			OrderType: order.OrderType.LIMIT,
+			Side: item.side,
+			Price: item.price,
+			Quantity: item.qty,
+			TimeInForce: order.TimeInForce.GTC,
+		}
+		msg.TimeInForce = item.tifCode
+		msgs := []sdk.Msg{msg}
+		ssMsg := txbuilder.StdSignMsg {
+			ChainID: item.txBldr.ChainID,
+			AccountNumber: item.txBldr.AccountNumber,
+			Sequence: item.txBldr.Sequence,
+			Memo: item.txBldr.Memo,
+			Msgs: msgs,
+		}
+		keybase, err := keys.GetKeyBaseFromDir(*home)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		sigBytes, pubkey, err := keybase.Sign(name, "1qaz2wsx", ssMsg.Bytes())
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		sig := auth.StdSignature {
+			AccountNumber: ssMsg.AccountNumber,
+			Sequence: ssMsg.Sequence,
+			PubKey: pubkey,
+			Signature: sigBytes,
+		}
+		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo))
+		if err != nil {
+			fmt.Println("failed to sign tran: %v", err)
+			continue
+		}
+		ts := fmt.Sprintf("%d", time.Now().UnixNano())
+		file := filepath.Join(*createPath, ts + "_" + name)
+		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
+		err = ioutil.WriteFile(file, txBytes, 0777)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		s.m.Lock()
+		s.seqMap[name] = seq+1
+		s.m.Unlock()
+	}
+	wg.Done()
+}
+
+func doSubmitTask() {
+	go allocateSubmit()
+	execute(*submitPoolSize, submitTask)
+}
+
+func allocateSubmit() {
+	expr := "_(" + *userPrefix + "[\\d]+)$"
+	res, err := regexp.Compile(expr)
+	if err != nil {
+		panic(err)
+	}
+	files, err := ioutil.ReadDir(*submitPath)
+	if err != nil {
+		panic(err)
+	}
+	nodeIndex := 0
+	userNodeMap := make(map[string]int)
+	for i, file := range files {
+		matched := res.FindStringSubmatch(file.Name())
+		if matched != nil {
+			tran, err := ioutil.ReadFile(filepath.Join(*submitPath, file.Name()))
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("allocate tran #%d\n", i)
+			_, hasKey := userNodeMap[matched[1]]
+			if hasKey == false {
+				userNodeMap[matched[1]] = nodeIndex
+			}
+			submitChn <- buildS(userNodeMap[matched[1]], tran)
+			nodeIndex++
+			if nodeIndex == len(nodes) {
+				nodeIndex = 0
+			}
+		} else {
+			panic("invalid filename")
+		}
+	}
+	close(submitChn)
+}
+
+func buildS(index int, txBytes []byte) DEXSubmit {
+	cdc := MakeCodec()
+	viper.Set("node", nodes[index])
+	viper.Set("chain-id", *chainId)
+	ctx, txBldr := client.PrepareCtx(cdc)
+	ctx.Client = rpcs[index]
+	return DEXSubmit{ctx, txBldr, txBytes}
+}
+
+func submit(wg *sync.WaitGroup, txh *txhash) {
+	for item := range submitChn {
+		async(item.ctx, item.txBldr, item.txBytes, txh)
+		time.Sleep(time.Duration(*submitPause) * time.Millisecond)
+	}
+	wg.Done()
+}
+
+func async(ctx context.CLIContext, txBldr txbuilder.TxBuilder, txBytes []byte, txh *txhash) {
+	defer doRecover()
+	res, err := ctx.BroadcastTxAsync(txBytes)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if ctx.JSON {
+		type toJSON struct {
+			TxHash string
+		}
+		valueToJSON := toJSON{res.Hash.String()}
+		JSON, err := txBldr.Codec.MarshalJSON(valueToJSON)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(string(JSON))
+	} else {
+		str := res.Hash.String()
+		txh.m.Lock()
+		txh.trans = append(txh.trans, str)
+		txh.m.Unlock()
+		fmt.Println("tran hash:", str)
+	}
+}
+
+func doRecover() {
+	if r := recover(); r != nil {
+		fmt.Println("recoved from", r)
+		debug.PrintStack()
+	}
+}
+
 func moveFiles(srcPath string, dstPath string, count int) {
 	files, err := ioutil.ReadDir(srcPath)
 	if err != nil {
@@ -532,114 +586,71 @@ func moveFiles(srcPath string, dstPath string, count int) {
 	}
 }
 
-func generateCSV() {
-	csvFile, err := os.OpenFile(*csvPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+func save_txhash() {
+	if len(hashReturned.trans) > 0 {
+		path := filepath.Join(*csvPath, "txhash.csv")
+		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+		if err != nil {
+			panic(err)
+		}
+		defer csvFile.Close()
+		writer := bufio.NewWriter(csvFile)
+		for _, tran := range hashReturned.trans {
+			_, err = writer.WriteString(tran + "\n")
+			if err != nil {
+				continue
+			}
+		}
+		writer.Flush()
+	}
+}
+
+func save_hextx() {
+	path := filepath.Join(*csvPath, "trans.csv")
+	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {
 		panic(err)
 	}
 	defer csvFile.Close()
 	writer := bufio.NewWriter(csvFile)
-	files, err := ioutil.ReadDir(*diskCachePath)
+	expr := "_(" + *userPrefix + "[\\d]+)$"
+	res, err := regexp.Compile(expr)
 	if err != nil {
 		panic(err)
 	}
+	files, err := ioutil.ReadDir(*createPath)
+	if err != nil {
+		panic(err)
+	}
+	userIPMap := make(map[string]string)
 	for _, file := range files {
-		txBytes, err := ioutil.ReadFile(filepath.Join(*diskCachePath, file.Name()))
-		if err != nil {
-			panic(err)
-		}
-		hexBytes := make([]byte, len(txBytes) * 2)
-		hex.Encode(hexBytes, txBytes)
-		line := fmt.Sprintf("%s\n", hexBytes)
-		_, err = writer.WriteString(line)
-		if err != nil {
-			fmt.Println(file.Name(), err)
-			continue
+		matched := res.FindStringSubmatch(file.Name())
+		if matched != nil {
+			_, hasKey := userIPMap[matched[1]]
+			if hasKey == false {
+				var buffer bytes.Buffer
+				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
+				buffer.WriteString(".")
+				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
+				buffer.WriteString(".")
+				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
+				buffer.WriteString(".")
+				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
+				ip := buffer.String()
+				userIPMap[matched[1]] = ip
+			}
+			txBytes, err := ioutil.ReadFile(filepath.Join(*createPath, file.Name()))
+			if err != nil {
+				panic(err)
+			}
+			hexBytes := make([]byte, len(txBytes)*2)
+			hex.Encode(hexBytes, txBytes)
+			line := fmt.Sprintf("%s|%s|%s\n", accounts[matched[1]], userIPMap[matched[1]], hexBytes)
+			_, err = writer.WriteString(line)
+			if err != nil {
+				continue
+			}
 		}
 	}
 	writer.Flush()
-}
-
-func main() {
-
-	fmt.Println("-cHome", *cHome)
-	fmt.Println("-owner", *owner)
-	fmt.Println("-vNode", *vNode)
-	fmt.Println("vNodes", vNodes)
-	fmt.Println("-chainId", *chainId)
-	fmt.Println("-ordersChnBuf", *ordersChnBuf)
-	fmt.Println("-createPoolSize", *createPoolSize)
-	fmt.Println("-transChnBuf", *transChnBuf)
-	fmt.Println("-submitPoolSize", *submitPoolSize)
-	fmt.Println("-diskCachePath", *diskCachePath)
-	fmt.Println("-userPrefix", *userPrefix)
-	fmt.Println("-generateToken", *generateToken)
-	fmt.Println("-initialAccount", *initialAccount)
-	fmt.Println("-batchSize", *batchSize)
-	fmt.Println("-runCreate", *runCreate)
-	fmt.Println("-runSubmit", *runSubmit)
-	fmt.Println("-submitOnlyPath", *submitOnlyPath)
-	fmt.Println("-submitOnlySize", *submitOnlySize)
-	fmt.Println("-submitThinkTime", *submitThinkTime)
-	fmt.Println("-csvPath", *csvPath)
-
-	myAccounts := generateAccounts(*userPrefix)
-	myUsers := myAccounts[0]
-	fmt.Println(len(myUsers))
-	myAddresses := myAccounts[1]
-	fmt.Println(len(myAddresses))
-
-	myTokens := generateTokens(0, 2, *generateToken)
-	fmt.Println(myTokens)
-
-	initializeAccounts(myAddresses, myTokens, *initialAccount)
-
-	if *runCreate == true {
-		createFolder(*diskCachePath)
-		emptyFolder(*diskCachePath)
-		// do create task
-		sT := time.Now()
-		doCreateTask(myTokens, myUsers)
-		eT := time.Now()
-		elapsedC := eT.Sub(sT)
-		fmt.Println("start:", sT)
-		fmt.Println("end:", eT)
-		fmt.Println("elapsed:", elapsedC)
-
-		if *runSubmit == true {
-			// do submit task
-			sT := time.Now()
-			doSubmitTask()
-			eT := time.Now()
-			elapsedS := eT.Sub(sT)
-			fmt.Println("start:", sT)
-			fmt.Println("end:", eT)
-			fmt.Println("elapsed:", elapsedS)
-			os.Exit(0)
-		}
-	}
-
-	if *runSubmit == true {
-		// do submit task **ONLY**
-		createFolder(*submitOnlyPath)
-		emptyFolder(*submitOnlyPath)
-		moveFiles(*diskCachePath, *submitOnlyPath, *submitOnlySize)
-
-		temp := *diskCachePath
-		*diskCachePath = *submitOnlyPath
-
-		sT := time.Now()
-		doSubmitTask()
-		eT := time.Now()
-		elapsedS := eT.Sub(sT)
-		fmt.Println("start:", sT)
-		fmt.Println("end:", eT)
-		fmt.Println("elapsed:", elapsedS)
-		fmt.Println("total trans:", *submitOnlySize)
-
-		*diskCachePath = temp
-	}
-
-	generateCSV()
-
 }
