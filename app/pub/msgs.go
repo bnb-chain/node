@@ -319,20 +319,22 @@ func (msg *AssetBalance) ToNativeMap() map[string]interface{} {
 
 type Account struct {
 	Owner    string
+	Fee      string
 	Balances []*AssetBalance
 }
 
 func (msg *Account) String() string {
-	return fmt.Sprintf("Account of: %s, total kind of balance changes: %d", msg.Owner, len(msg.Balances))
+	return fmt.Sprintf("Account of: %s, fee: %s, num of balance changes: %d", msg.Owner, msg.Fee, len(msg.Balances))
 }
 
 func (msg *Account) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["owner"] = msg.Owner
+	native["owner"] = sdk.AccAddress(msg.Owner).String()
 	bs := make([]map[string]interface{}, len(msg.Balances), len(msg.Balances))
 	for idx, b := range msg.Balances {
 		bs[idx] = b.ToNativeMap()
 	}
+	native["fee"] = msg.Fee
 	native["balances"] = bs
 	return native
 }
