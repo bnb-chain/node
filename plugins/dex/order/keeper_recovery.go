@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -74,7 +75,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 		if err != nil {
 			return nil, err
 		}
-		logger.Info("Compressed and Saved order book snapshot", "pair", pair)
+		ctx.Logger().Info("Compressed and Saved order book snapshot", "pair", pair)
 	}
 
 	msgKeys := make([]string, 0)
@@ -94,14 +95,14 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 	snapshot := ActiveOrders{Orders: msgs}
 	key := genActiveOrdersSnapshotKey(height)
 	effectedStoreKeys = append(effectedStoreKeys, key)
-	logger.Info("Saving active orders", "height", height)
+	ctx.Logger().Info("Saving active orders", "height", height)
 	return effectedStoreKeys, compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
 func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, error) {
 	timeNow := utils.Now()
 	height := kp.getLastBreatheBlockHeight(ctx, timeNow, daysBack)
-	logger.Info("Loading order book snapshot from last breathe block", "blockHeight", height)
+	ctx.Logger().Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
 		// just initialize engines for all pairs
@@ -111,7 +112,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 				kp.AddEngine(pair)
 			}
 		}
-		logger.Info("No breathe block is ever saved. just created match engines for all the pairs.")
+		ctx.Logger().Info("No breathe block is ever saved. just created match engines for all the pairs.")
 		return height, nil
 	}
 
@@ -127,7 +128,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		bz := kvStore.Get([]byte(key))
 		if bz == nil {
 			// maybe that is a new listed pair
-			logger.Info("Pair is newly listed, no order book snapshot was saved", "pair", key)
+			ctx.Logger().Info("Pair is newly listed, no order book snapshot was saved", "pair", key)
 			continue
 		}
 		b := bytes.NewBuffer(bz)
@@ -149,13 +150,13 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
-		logger.Info("Successfully Loaded order snapshot", "pair", pair)
+		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}
 	kp.updateLastTradePrices()
 	key := genActiveOrdersSnapshotKey(height)
 	bz := kvStore.Get([]byte(key))
 	if bz == nil {
-		logger.Info("Pair is newly listed, no active order snapshot was saved", "pair", key)
+		ctx.Logger().Info("Pair is newly listed, no active order snapshot was saved", "pair", key)
 		return height, nil
 	}
 	b := bytes.NewBuffer(bz)
@@ -180,11 +181,11 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			}
 		}
 	}
-	logger.Info("Recovered active orders. Snapshot is fully loaded")
+	ctx.Logger().Info("Recovered active orders. Snapshot is fully loaded")
 	return height, nil
 }
 
-func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
+func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDecoder sdk.TxDecoder,
 	height int64, timestamp time.Time) {
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
@@ -229,12 +230,12 @@ func (kp *Keeper) replayOneBlocks(block *tmtypes.Block, txDecoder sdk.TxDecoder,
 	kp.MatchAll(height, timestamp.Unix()) //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(bc *bc.BlockStore, lastHeight, breatheHeight int64,
+func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
-		logger.Info("Relaying block for order book", "height", i)
-		kp.replayOneBlocks(block, txDecoder, i, block.Time)
+		ctx.Logger().Info("Relaying block for order book", "height", i)
+		kp.replayOneBlocks(ctx.Logger(), block, txDecoder, i, block.Time)
 	}
 	return nil
 }
@@ -246,8 +247,9 @@ func (kp *Keeper) InitOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, l
 		panic(err)
 	}
 	blockStore := bc.NewBlockStore(blockDB)
+	logger := ctx.Logger().With("module", "dex")
 	logger.Info("Initialized Block Store for replay")
-	err = kp.ReplayOrdersFromBlock(blockStore, lastHeight, height, txDecoder)
+	err = kp.ReplayOrdersFromBlock(ctx.WithLogger(logger), blockStore, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}
