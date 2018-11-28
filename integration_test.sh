@@ -39,7 +39,7 @@ function prepare_node() {
 
 function exit_test() {
 	# stop node
-#	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
+	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
 	exit $1
 }
 

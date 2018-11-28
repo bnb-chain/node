@@ -28,7 +28,7 @@ func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.K
 	}
 }
 
-func checkPrpopsal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
+func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	proposal := govKeeper.GetProposal(ctx, msg.ProposalId)
 	if proposal == nil {
 		return errors.New(fmt.Sprintf("proposal %d does not exist", msg.ProposalId))
@@ -71,8 +71,8 @@ func handleList(
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
-	if err := checkPrpopsal(ctx, govKeeper, msg); err != nil {
-		return sdk.ErrInvalidCoins(err.Error()).Result()
+	if err := checkProposal(ctx, govKeeper, msg); err != nil {
+		return types.ErrInvalidProposal(err.Error()).Result()
 	}
 
 	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
