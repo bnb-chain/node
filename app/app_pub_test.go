@@ -51,7 +51,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 		PublishOrderBook:       true,
 		PublicationChannelSize: 0, // deliberately sync publication
 	}
-	app.publisher = pub.NewMockMarketDataPublisher(app.publicationConfig)
+	app.publisher = pub.NewMockMarketDataPublisher(logger, app.publicationConfig)
 
 	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
 	ctx = app.DeliverState.Ctx
