@@ -15,8 +15,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/pkg/errors"
 
+	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -590,7 +590,7 @@ func (kp *Keeper) allocateAndCalcFee(
 		go allocatePerCh(i, tradeTranCh)
 	}
 	wg.Wait()
-	totalFee := tx.Fee(ctx)
+	totalFee := types.Fee{}
 	for i := 0; i < concurrency; i++ {
 		totalFee.AddFee(feesPerCh[i])
 	}
@@ -618,18 +618,17 @@ func (kp *Keeper) MatchAll() {
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
-) (newCtx sdk.Context) {
+) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time.Unix())
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return ctx
+		return
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
-	newCtx = tx.WithFee(ctx, totalFee)
+	fees.Pool.AddFee(totalFee)
 	kp.clearAfterMatch()
-	return newCtx
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer {
@@ -698,15 +697,14 @@ func (kp *Keeper) ExpireOrders(
 	ctx sdk.Context,
 	blockTime int64,
 	postAlloTransHandler TransferHandler,
-) (newCtx sdk.Context) {
+) {
 	transferChs := kp.expireOrders(ctx, blockTime)
 	if transferChs == nil {
-		return ctx
+		return
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler)
-	newCtx = tx.WithFee(ctx, totalFee)
-	return newCtx
+	fees.Pool.AddFee(totalFee)
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time) {

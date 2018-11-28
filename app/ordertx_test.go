@@ -11,7 +11,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/utils"
 	o "github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/dex/types"
@@ -192,7 +192,7 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
+	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("BTC_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
@@ -201,7 +201,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(int64(96e8), lastPx)
 	assert.Equal(4, len(trades))
 	// total execution is 900e8 BTC @ price 96e8, notional is 86400e8, fee is 43.2e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 86.4e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 86.4e8)}, fees.Pool.BlockFees().Tokens)
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -247,7 +247,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
-	ctx = testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
+	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("ETH_BNB")
 	t.Logf("buys: %v", buys)
 	t.Logf("sells: %v", sells)
@@ -261,7 +261,8 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(trades))
 	// total execution is 90e8 ETH @ price 97e8, notional is 8730e8
 	// fee for this round is 8.73e8 BNB, totalFee is 95.13e8 BNB
-	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 95.13e8)}, tx.Fee(ctx).Tokens)
+	assert.Equal(sdk.Coins{sdk.NewCoin("BNB", 95.13e8)}, fees.Pool.BlockFees().Tokens)
+	fees.Pool.Clear()
 	assert.Equal(int64(100900e8), GetAvail(ctx, add, "BTC"))
 	assert.Equal(int64(13556.8e8), GetAvail(ctx, add, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC"))
@@ -281,6 +282,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 	assert.Equal(int64(99890e8), GetAvail(ctx, add3, "ETH"))
 	assert.Equal(int64(20e8), GetLocked(ctx, add3, "ETH"))
+	fees.Pool.Clear()
 }
 
 func Test_handleCancelOrder_CheckTx(t *testing.T) {
