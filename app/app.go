@@ -218,9 +218,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish, ctx = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
 
 	} else {

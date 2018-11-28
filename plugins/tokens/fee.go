@@ -3,7 +3,7 @@ package tokens
 import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
 	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
@@ -18,9 +18,9 @@ const (
 )
 
 func init() {
-	tx.RegisterCalculator(issue.Route, tx.FixedFeeCalculator(IssueFee, types.FeeForAll))
-	tx.RegisterCalculator(burn.BurnRoute, tx.FixedFeeCalculator(BurnFee, types.FeeForProposer))
-	tx.RegisterCalculator(freeze.FreezeRoute, tx.FixedFeeCalculator(FreezeFee, types.FeeForProposer))
-	// TODO: we will rewrite Transfer tx, so put it here temporarily
-	tx.RegisterCalculator(bank.MsgSend{}.Type(), tx.FixedFeeCalculator(TransferFee, types.FeeForProposer))
+	fees.RegisterCalculator(issue.Route, fees.FixedFeeCalculator(IssueFee, types.FeeForAll))
+	fees.RegisterCalculator(burn.BurnRoute, fees.FixedFeeCalculator(BurnFee, types.FeeForProposer))
+	fees.RegisterCalculator(freeze.FreezeRoute, fees.FixedFeeCalculator(FreezeFee, types.FeeForProposer))
+	// TODO: we will rewrite Transfer fees, so put it here temporarily
+	fees.RegisterCalculator(bank.MsgSend{}.Type(), fees.FixedFeeCalculator(TransferFee, types.FeeForProposer))
 }
