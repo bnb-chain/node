@@ -18,10 +18,12 @@ ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
 	go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
+	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker.exe
 else
 	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
 	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
+	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
 endif
 
 build-linux:
