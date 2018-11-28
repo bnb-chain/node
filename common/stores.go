@@ -9,7 +9,11 @@ const (
 	TokenStoreName   = "tokens"
 	DexStoreName     = "dex"
 	PairStoreName    = "pairs"
-	// StakeStoreName   = "stake"
+	StakeStoreName   = "stake"
+	ParamsStoreName  = "params"
+
+	StakeTransientStoreName  = "transient_stake"
+	ParamsTransientStoreName = "transient_params"
 )
 
 var (
@@ -20,5 +24,9 @@ var (
 	TokenStoreKey   = sdk.NewKVStoreKey(TokenStoreName)
 	DexStoreKey     = sdk.NewKVStoreKey(DexStoreName)
 	PairStoreKey    = sdk.NewKVStoreKey(PairStoreName)
-	// StakingStoreKey = sdk.NewKVStoreKey(StakeStoreName)
+	StakeStoreKey   = sdk.NewKVStoreKey(StakeStoreName)
+	ParamsStoreKey  = sdk.NewKVStoreKey(ParamsStoreName)
+
+	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
+	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
 )
