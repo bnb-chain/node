@@ -1,6 +1,9 @@
 package pub
 
 import (
+	"fmt"
+	"time"
+
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
@@ -45,62 +48,82 @@ func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher Mark
 
 func publish(publisher MarketDataPublisher, Logger tmlog.Logger, cfg *config.PublicationConfig, ToPublishCh chan BlockInfoToPublish) {
 	for marketData := range ToPublishCh {
-		// Implementation note: publication order are important here,
-		// DEX query service team relies on the fact that we publish orders before trades so that
-		// they can assign buyer/seller address into trade before persist into DB
-		var opensToPublish []*order
-		var canceledToPublish []*order
-		var feeToPublish map[string]string
-		if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-			opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
-				marketData.tradesToPublish,
-				marketData.orderChanges,
-				marketData.orderChangesMap,
-				marketData.feeHolder,
-				marketData.timestamp)
-			for _, o := range opensToPublish {
-				if o.status == orderPkg.FullyFill {
-					Logger.Debug(
-						"going to delete fully filled order from order changes map",
-						"orderId", o.orderId)
-					ToRemoveOrderIdCh <- o.orderId
+		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
+
+		timer(fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
+			// Implementation note: publication order are important here,
+			// DEX query service team relies on the fact that we publish orders before trades so that
+			// they can assign buyer/seller address into trade before persist into DB
+			var opensToPublish []*order
+			var canceledToPublish []*order
+			var feeToPublish map[string]string
+			if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
+				opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
+					marketData.tradesToPublish,
+					marketData.orderChanges,
+					marketData.orderChangesMap,
+					marketData.feeHolder,
+					marketData.timestamp)
+				for _, o := range opensToPublish {
+					if o.status == orderPkg.FullyFill {
+						if ToRemoveOrderIdCh != nil {
+							Logger.Debug(
+								"going to delete fully filled order from order changes map",
+								"orderId", o.orderId)
+							ToRemoveOrderIdCh <- o.orderId
+						}
+					}
+				}
+				for _, o := range canceledToPublish {
+					if ToRemoveOrderIdCh != nil {
+						Logger.Debug(
+							"going to delete order from order changes map",
+							"orderId", o.orderId, "status", o.status)
+						ToRemoveOrderIdCh <- o.orderId
+					}
 				}
 			}
-			for _, o := range canceledToPublish {
-				Logger.Debug(
-					"going to delete order from order changes map",
-					"orderId", o.orderId, "status", o.status)
-				ToRemoveOrderIdCh <- o.orderId
+
+			// ToRemoveOrderIdCh would be only used in production code
+			// will be nil in mock (pressure testing, local publisher) and test code
+			if ToRemoveOrderIdCh != nil {
+				close(ToRemoveOrderIdCh)
 			}
-		}
-		close(ToRemoveOrderIdCh)
 
-		ordersToPublish := append(opensToPublish, canceledToPublish...)
-		if cfg.PublishOrderUpdates {
-			Logger.Debug("start to publish all orders")
-			publishOrderUpdates(
-				publisher,
-				marketData.height,
-				marketData.timestamp,
-				ordersToPublish,
-				marketData.tradesToPublish)
-		}
+			ordersToPublish := append(opensToPublish, canceledToPublish...)
+			if cfg.PublishOrderUpdates {
+				timer("publish all orders", func() {
+					publishOrderUpdates(
+						publisher,
+						marketData.height,
+						marketData.timestamp,
+						ordersToPublish,
+						marketData.tradesToPublish)
+				})
+			}
 
-		if cfg.PublishAccountBalance {
-			Logger.Debug("start to publish all changed accounts")
-			publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts, feeToPublish)
-		}
+			if cfg.PublishAccountBalance {
+				timer("publish all changed accounts", func() {
+					publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts, feeToPublish)
+				})
+			}
 
-		if cfg.PublishOrderBook {
-			Logger.Debug("start to publish changed order books")
-			changedPrices := filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
-			publishOrderBookDelta(publisher, marketData.height, marketData.timestamp, changedPrices)
-		}
+			if cfg.PublishOrderBook {
+				var changedPrices orderPkg.ChangedPriceLevelsMap
+				timer("prepare order books to publish", func() {
+					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
+				})
+				timer("publish changed order books", func() {
+					publishOrderBookDelta(publisher, marketData.height, marketData.timestamp, changedPrices)
+				})
+			}
 
-		if cfg.PublishBlockFee {
-			Logger.Debug("start to publish blockfee")
-			publishBlockFee(publisher, marketData.height, marketData.timestamp, marketData.blockFee)
-		}
+			if cfg.PublishBlockFee {
+				timer("publish blockfee", func() {
+					publishBlockFee(publisher, marketData.height, marketData.timestamp, marketData.blockFee)
+				})
+			}
+		})
 	}
 }
 
@@ -160,4 +183,12 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 
 func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blockFee BlockFee) {
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
+}
+
+func timer(description string, op func()) {
+	Logger.Debug(description, "status", "start")
+	start := time.Now()
+	op()
+	Logger.Debug(description, "status", "finish", "duration_ms", time.Since(start).Nanoseconds()/int64(time.Millisecond))
+	// TODO publish metrics to prometheus
 }
