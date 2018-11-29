@@ -3,8 +3,9 @@ package pub
 import (
 	"fmt"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
 )
 
 type MockMarketDataPublisher struct {
@@ -35,16 +36,16 @@ func (publisher *MockMarketDataPublisher) Stop() {
 	publisher.TradesAndOrdersPublished = make([]*tradesAndOrders, 0)
 }
 
-func NewMockMarketDataPublisher(config *config.PublicationConfig) (publisher *MockMarketDataPublisher) {
+func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationConfig) (publisher *MockMarketDataPublisher) {
 	publisher = &MockMarketDataPublisher{
 		make([]*accounts, 0),
 		make([]*Books, 0),
 		make([]*tradesAndOrders, 0),
 		make([]BlockFee, 0),
 	}
-	if err := setup(config, publisher); err != nil {
+	if err := setup(logger, config, publisher); err != nil {
 		publisher.Stop()
-		log.Error("Cannot start up market data kafka publisher", "err", err)
+		logger.Error("Cannot start up market data kafka publisher", "err", err)
 		panic(err)
 	}
 	return publisher

@@ -4,7 +4,6 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -29,8 +28,8 @@ type MarketDataPublisher interface {
 	Stop()
 }
 
-func setup(config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
-	Logger = log.With("module", "pub")
+func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
+	Logger = logger.With("module", "pub")
 	cfg = config
 	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {

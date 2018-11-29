@@ -428,7 +428,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
+	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))

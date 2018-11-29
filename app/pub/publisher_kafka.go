@@ -12,8 +12,9 @@ import (
 	"github.com/eapache/go-resiliency/breaker"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
 )
 
 const (
@@ -181,15 +182,15 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 	}
 }
 
-func NewKafkaMarketDataPublisher(config *config.PublicationConfig) (publisher *KafkaMarketDataPublisher) {
+func NewKafkaMarketDataPublisher(logger log.Logger, config *config.PublicationConfig) (publisher *KafkaMarketDataPublisher) {
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
 		producers: make(map[string]sarama.SyncProducer),
 	}
 
-	if err := setup(config, publisher); err != nil {
+	if err := setup(logger, config, publisher); err != nil {
 		publisher.Stop()
-		log.Error("Cannot start up market data kafka publisher", "err", err)
+		logger.Error("Cannot start up market data kafka publisher", "err", err)
 		panic(err)
 	}
 
