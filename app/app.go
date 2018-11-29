@@ -283,12 +283,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
 	}
 
+	tags := gov.EndBlocker(ctx, app.govKeeper)
+
 	var validatorUpdates abci.ValidatorUpdates
-	var tags sdk.Tags
 	if isBreatheBlock {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
-		tags = gov.EndBlocker(ctx, app.govKeeper)
 	}
 
 	//match may end with transaction failure, which is better to save into
