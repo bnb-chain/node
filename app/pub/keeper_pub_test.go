@@ -77,7 +77,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	seller = sellerAcc.GetAddress()
 
 	// to get pub Logger initialized
-	NewKafkaMarketDataPublisher(&config.PublicationConfig{})
+	NewKafkaMarketDataPublisher(logger, &config.PublicationConfig{})
 
 	return assert.New(t), require.New(t)
 }

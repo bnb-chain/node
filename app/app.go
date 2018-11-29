@@ -112,7 +112,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.Router().AddRoute("stake", stake.NewHandler(app.stakeKeeper))
 
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
+		app.publisher = pub.NewKafkaMarketDataPublisher(app.Logger, app.publicationConfig)
 	}
 
 	// finish app initialization
