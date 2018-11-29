@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -9,18 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -28,23 +34,51 @@ const (
 	iocExpireFee = 500
 )
 
+func prepareGenTx(cdc *codec.Codec, chainId string,
+	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
+	msg := stake.NewMsgCreateValidator(
+		valOperAddr,
+		valPubKey,
+		DefaultSelfDelegationToken,
+		stake.NewDescription("pub", "", "", ""),
+		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
+	)
+	tx := auth.NewStdTx([]sdk.Msg{msg}, nil, "")
+	txBytes, err := wire.MarshalJSONIndent(cdc, tx)
+	if err != nil {
+		panic(err)
+	}
+
+	return txBytes
+}
+
 func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	logger := log.NewTMLogger(os.Stdout)
 	db := dbm.NewMemDB()
+
 	app = NewBinanceChain(logger, db, os.Stdout)
-	app.SetEndBlocker(app.EndBlocker)
+	app.SetAnteHandler(nil)
 	am = app.AccountKeeper
 	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
-	proposerValAddr := ed25519.GenPrivKey().PubKey().Address()
+	proposerPubKey := ed25519.GenPrivKey().PubKey()
+	proposerValAddr := proposerPubKey.Address()
 	app.ValAddrMapper.SetVal(ctx, proposerValAddr, proposerAcc.GetAddress())
+	// set ante handler to nil to skip the sig verification. the side effect is that we also skip the tx fee collection.
+	chainId := "chain-pub"
+	genTx := prepareGenTx(app.Codec, chainId, sdk.ValAddress(proposerAcc.GetAddress()), proposerPubKey)
+	appState, _ := BinanceAppGenState(app.Codec, []json.RawMessage{genTx})
+	appGenState, _ := wire.MarshalJSONIndent(app.Codec, appState)
+	app.InitChain(abci.RequestInitChain{AppStateBytes: appGenState})
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr}})
+	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
+
 	proposer := abci.Validator{Address: proposerValAddr, Power: 10}
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: proposer, SignedLastBlock: true},
 	})
 
-	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
-	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
 	app.publicationConfig = &config.PublicationConfig{
 		PublishOrderUpdates:    true,
 		PublishAccountBalance:  true,
@@ -52,7 +86,6 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 		PublicationChannelSize: 0, // deliberately sync publication
 	}
 	app.publisher = pub.NewMockMarketDataPublisher(logger, app.publicationConfig)
-
 	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
 	ctx = app.DeliverState.Ctx
 	cdc = app.GetCodec()

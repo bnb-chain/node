@@ -154,7 +154,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -211,7 +211,7 @@ func TestAnteHandlerSequences(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -286,7 +286,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -335,7 +335,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -406,7 +406,7 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -457,7 +457,7 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHa
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler = tx.NewAnteHandler(mapper)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	return
 }
 
