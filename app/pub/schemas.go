@@ -141,6 +141,7 @@ const (
 							"namespace": "com.company",
 							"fields": [
 								{ "name": "owner", "type": "string" },
+								{ "name": "fee", "type": "string" },
 								{ "name": "balances", "type": {
 										"type": "array",
 										"items": {

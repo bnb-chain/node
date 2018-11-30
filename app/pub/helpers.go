@@ -55,8 +55,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						}
 					}
 
-					bech32Str := addr.String()
-					res[bech32Str] = Account{bech32Str, assets}
+					res[addrBytesStr] = Account{Owner: addrBytesStr, Balances: assets}
 				} else {
 					Logger.Error(fmt.Sprintf("failed to get account %s from AccountKeeper", addr.String()))
 				}
@@ -267,17 +266,17 @@ func collectOrdersToPublish(
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
-	timestamp int64) (opensToPublish []*order, canceledToPublish []*order) {
+	timestamp int64) (opensToPublish []*order, canceledToPublish []*order, feeToPublish map[string]string) {
 	opensToPublish = make([]*order, 0)
 	canceledToPublish = make([]*order, 0)
+	// serve as a cache to avoid fee's serialization several times for one address
+	feeToPublish = make(map[string]string)
 
 	// the following two maps are used to update fee field we published
 	// more detail can be found at:
 	// https://github.com/BiJie/BinanceChain-Doc/wiki/Fee-Calculation,-Collection-and-Distribution#publication
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
-	// serve as a cache to avoid fee's serialization several times for one address
-	feeToPublish := make(map[string]string)
 
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
@@ -358,7 +357,7 @@ func collectOrdersToPublish(
 		}
 	}
 
-	return opensToPublish, canceledToPublish
+	return opensToPublish, canceledToPublish, feeToPublish
 }
 
 func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) string {

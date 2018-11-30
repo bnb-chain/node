@@ -119,9 +119,11 @@ func TestAppPub_AddOrder(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.BooksPublished[0].Books, 1)
 	assert.Equal(pub.OrderBookDelta{"XYZ_BNB", []pub.PriceLevel{{102000, 3000000}}, make([]pub.PriceLevel, 0)}, publisher.BooksPublished[0].Books[0])
+	publisher.Lock.Unlock()
 }
 
 func TestAppPub_MatchOrder(t *testing.T) {
@@ -138,11 +140,13 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 41})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.AccountPublished, 1)
 	require.Len(publisher.AccountPublished[0].Accounts, 1)
-	expectedAccountToPub := pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ", 100000000000, 0, 0}}}
+	expectedAccountToPub := pub.Account{string(buyer), "", []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ", 100000000000, 0, 0}}}
 	require.Equal(expectedAccountToPub, publisher.AccountPublished[0].Accounts[0])
+	publisher.Lock.Unlock()
 
 	// we add a sell order to fully execute the buyer order
 	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ_BNB", 102000, 400000000)
@@ -153,15 +157,17 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
+	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 2)
 	require.Len(publisher.BooksPublished[1].Books, 1)
 	assert.Equal(pub.OrderBookDelta{"XYZ_BNB", []pub.PriceLevel{{102000, 0}}, []pub.PriceLevel{{102000, 100000000}}}, publisher.BooksPublished[1].Books[0])
-	expectedAccountToPub = pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ", 100300000000, 0, 0}}}
-	expectedAccountToPubSeller := pub.Account{seller.String(), []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ", 99600000000, 0, 100000000}}}
+	expectedAccountToPub = pub.Account{string(buyer), "BNB:153", []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ", 100300000000, 0, 0}}}
+	expectedAccountToPubSeller := pub.Account{string(seller), "BNB:153", []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ", 99600000000, 0, 100000000}}}
 	require.Len(publisher.AccountPublished, 2)
 	require.Len(publisher.AccountPublished[1].Accounts, 2)
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPub)
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPubSeller)
+	publisher.Lock.Unlock()
 
 	// we execute qty 1000000 sell order but add a new qty 1000000 sell order, both buy and sell price level should not publish
 	msg = orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ_BNB", 102000, 100000000)
@@ -174,15 +180,17 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	am.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 43})
-	expectedAccountToPub = pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ", 100100000000, 0, 0}}}
-	expectedAccountToPubSeller = pub.Account{seller.String(), []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ", 99900000000, 0, 0}}}
+	expectedAccountToPub = pub.Account{string(buyer), "BNB:51", []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ", 100100000000, 0, 0}}}
+	expectedAccountToPubSeller = pub.Account{string(seller), "BNB:51", []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ", 99900000000, 0, 0}}}
 
+	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 3)
 	require.Len(publisher.BooksPublished[2].Books, 0)
 	require.Len(publisher.AccountPublished, 3)
 	require.Len(publisher.AccountPublished[2].Accounts, 2)
 	require.Contains(publisher.AccountPublished[2].Accounts, expectedAccountToPub)
 	require.Contains(publisher.AccountPublished[2].Accounts, expectedAccountToPubSeller)
+	publisher.Lock.Unlock()
 }
 
 func TestAppPub_MatchAndCancelFee(t *testing.T) {
@@ -225,7 +233,9 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	publisher.Lock.Lock()
 	require.Len(publisher.TradesAndOrdersPublished, 2)
 	assert.Equal("BNB:51", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Sfee)
 	assert.Equal("BNB:57;#Cxl:1", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Bfee)
+	publisher.Lock.Unlock()
 }
