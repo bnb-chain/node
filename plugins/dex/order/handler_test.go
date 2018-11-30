@@ -5,11 +5,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	cstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -33,12 +32,13 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 
 func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context) {
 	ms, key, key2 := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 	pairMapper := store.NewTradingPairMapper(cdc, key)
 	accMapper := auth.NewAccountKeeper(cdc, key2, auth.ProtoBaseAccount)
+	accountCache := getAccountCache(cdc, ms, key2)
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 	return pairMapper, accMapper, ctx
 }
 

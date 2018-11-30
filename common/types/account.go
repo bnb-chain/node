@@ -45,6 +45,32 @@ func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins
 func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
 func (acc AppAccount) GetLockedCoins() sdk.Coins        { return acc.LockedCoins }
 func (acc *AppAccount) SetLockedCoins(frozen sdk.Coins) { acc.LockedCoins = frozen }
+func (acc *AppAccount) Clone() sdk.Account {
+	baseAcc := acc.BaseAccount.Clone().(*auth.BaseAccount)
+	clonedAcc := &AppAccount{
+		BaseAccount: *baseAcc,
+		Name:        acc.Name,
+	}
+	if acc.FrozenCoins == nil {
+		clonedAcc.FrozenCoins = nil
+	} else {
+		coins := sdk.Coins{}
+		for _, coin := range acc.FrozenCoins {
+			coins = append(coins, sdk.Coin{Denom: coin.Denom, Amount: coin.Amount})
+		}
+		clonedAcc.FrozenCoins = coins
+	}
+	if acc.LockedCoins == nil {
+		clonedAcc.LockedCoins = nil
+	} else {
+		coins := sdk.Coins{}
+		for _, coin := range acc.LockedCoins {
+			coins = append(coins, sdk.Coin{Denom: coin.Denom, Amount: coin.Amount})
+		}
+		clonedAcc.LockedCoins = coins
+	}
+	return clonedAcc
+}
 
 // Get the AccountDecoder function for the custom AppAccount
 func GetAccountDecoder(cdc *wire.Codec) auth.AccountDecoder {
