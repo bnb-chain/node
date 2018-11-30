@@ -20,7 +20,7 @@ import (
 const (
 	maxMemoCharacters = 100
 
-	maxCacheNumber = 30000
+	defaultMaxCacheNumber = 30000
 )
 
 type sigLRUCache struct {
@@ -51,7 +51,11 @@ func (cache *sigLRUCache) addSig(txHash string) {
 
 // signature-key: txHash
 // based on the assumption that tx hash will never collide.
-var sigCache = newSigLRUCache(maxCacheNumber)
+var sigCache = newSigLRUCache(defaultMaxCacheNumber)
+
+func InitSigCache(size int) {
+	sigCache = newSigLRUCache(size)
+}
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
@@ -94,27 +98,7 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 
 		// collect signer accounts
 		// TODO: abort if there is more than one signer?
-		var signerAccs = make([]auth.Account, len(signerAddrs))
-		for i := 0; i < len(sigs); i++ {
-			signerAddr := signerAddrs[i]
-			signerAcc := am.GetAccount(ctx, signerAddr)
-			signerAccs[i] = signerAcc
-		}
-
-		// TODO: order ID validation hoisted here temporarily for now - ensures sequence is always in sync with msg
-		// avoid importing NewOrderMsg, which causes an import cycle :(
-		if msgs[0].Type() == orderMsgType {
-			expectedOrderID := fmt.Sprintf("\"%X-%d\"", signerAccs[0].GetAddress(), sequences[0])
-			if !strings.Contains(string(msgs[0].GetSignBytes()), expectedOrderID) {
-				log.Info("Invalid order ID encountered", "signbytes", string(msgs[0].GetSignBytes()))
-				return newCtx, sdk.Result{
-					Code: sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownRequest),
-					Log:  fmt.Sprintf("Invalid order ID provided, expected `%s`.", expectedOrderID),
-					Data: []byte("Unexpected order ID encountered"),
-				}, true
-			}
-		}
-
+		var signerAccs = make([]sdk.Account, len(signerAddrs))
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
@@ -179,7 +163,7 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 }
 
 func processAccount(ctx sdk.Context, am auth.AccountKeeper,
-	addr sdk.AccAddress, sig auth.StdSignature) (acc auth.Account, err sdk.Error) {
+	addr sdk.AccAddress, sig auth.StdSignature) (acc sdk.Account, err sdk.Error) {
 	// Get the account.
 	acc = am.GetAccount(ctx, addr)
 	if acc == nil {
@@ -235,7 +219,7 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 // verify the signature and increment the sequence.
 // if the account doesn't have a pubkey, set it.
 func processSig(txHash string,
-	sig auth.StdSignature, acc auth.Account, signBytes []byte) (
+	sig auth.StdSignature, acc sdk.Account, signBytes []byte) (
 	res sdk.Result) {
 
 	if sigCache.getSig(txHash) {
@@ -253,7 +237,7 @@ func processSig(txHash string,
 	return
 }
 
-func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc auth.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -290,7 +274,7 @@ func calculateFees(msg sdk.Msg) (types.Fee, error) {
 	return calculator(msg), nil
 }
 
-func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
+func checkSufficientFunds(acc sdk.Account, fee types.Fee) sdk.Result {
 	coins := acc.GetCoins()
 
 	newCoins := coins.Minus(fee.Tokens.Sort())
@@ -302,7 +286,7 @@ func checkSufficientFunds(acc auth.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx sdk.Context, acc auth.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
+func deductFees(ctx sdk.Context, acc sdk.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}

@@ -6,20 +6,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
@@ -53,13 +51,14 @@ func prepareGenTx(cdc *codec.Codec, chainId string,
 }
 
 func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
-	logger := log.NewTMLogger(os.Stdout)
+	logger := log.NewNopLogger()
 	db := dbm.NewMemDB()
 
 	app = NewBinanceChain(logger, db, os.Stdout)
 	app.SetAnteHandler(nil)
+	app.SetDeliverState(abci.Header{})
 	am = app.AccountKeeper
-	ctx = sdk.NewContext(app.GetCommitMultiStore(), abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx = app.NewContext(sdk.RunTxModeDeliver, abci.Header{})
 
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	proposerPubKey := ed25519.GenPrivKey().PubKey()

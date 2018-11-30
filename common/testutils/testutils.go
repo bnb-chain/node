@@ -4,7 +4,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -44,7 +43,7 @@ func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
 	return priv, addr
 }
 
-func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, auth.Account) {
+func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	acc.SetCoins(NewNativeTokens(free))
@@ -52,7 +51,7 @@ func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.Priv
 	return privKey, acc
 }
 
-func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, auth.Account) {
+func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	coins := NewNativeTokens(free)

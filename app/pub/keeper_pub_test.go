@@ -5,14 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
@@ -50,14 +49,20 @@ var seller sdk.AccAddress
 var am auth.AccountKeeper
 var ctx sdk.Context
 
+func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStoreKey) sdk.AccountCache {
+	accountStore := ms.GetKVStore(accountKey)
+	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
+	return auth.NewAccountCache(accountStoreCache)
+}
+
 func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	cdc := pubtest.MakeCodec()
 	logger := log.NewTMLogger(os.Stdout)
 
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger)
 	am = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
-	coinKeeper := bank.NewBaseKeeper(am)
+	accountCache := getAccountCache(cdc, ms, capKey)
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger).WithAccountCache(accountCache)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper = orderPkg.NewKeeper(capKey2, coinKeeper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)

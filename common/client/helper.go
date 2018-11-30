@@ -7,7 +7,6 @@ import (
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/BiJie/BinanceChain/common/types"
@@ -37,7 +36,7 @@ func EnsureSequence(cliCtx context.CLIContext, txBldr *txbuilder.TxBuilder) erro
 	return nil
 }
 
-func BuildUnsignedTx(builder txbuilder.TxBuilder, acc auth.Account, msgs []sdk.Msg) (*[]byte, error) {
+func BuildUnsignedTx(builder txbuilder.TxBuilder, acc sdk.Account, msgs []sdk.Msg) (*[]byte, error) {
 	chainID := builder.ChainID
 	if chainID == "" {
 		return nil, errors.Errorf("chain ID required but not specified")

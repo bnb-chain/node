@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/require"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
@@ -94,6 +96,12 @@ func newTestTxWithSignBytes(msgs []sdk.Msg, privs []crypto.PrivKey, accNums []in
 	return tx
 }
 
+func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStoreKey) sdk.AccountCache {
+	accountStore := ms.GetKVStore(accountKey)
+	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
+	return auth.NewAccountCache(accountStoreCache)
+}
+
 // Test various error cases in the AnteHandler control flow.
 func TestAnteHandlerSigErrors(t *testing.T) {
 	// setup
@@ -102,7 +110,9 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -152,7 +162,8 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -209,7 +220,9 @@ func TestAnteHandlerSequences(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -327,7 +340,9 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -376,7 +391,9 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -513,7 +530,8 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler := tx.NewAnteHandler(mapper)
-	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
@@ -564,7 +582,9 @@ func setup() (mapper auth.AccountMapper, ctx sdk.Context, anteHandler sdk.AnteHa
 	auth.RegisterBaseAccount(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	anteHandler = tx.NewAnteHandler(mapper)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 	return
 }
 

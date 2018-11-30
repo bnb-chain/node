@@ -31,6 +31,12 @@ const (
 const appConfigTemplate = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
+[base]
+# Size of account cache
+accountCacheSize = {{ .BaseConfig.AccountCacheSize }}
+# Size of signature cache
+signatureCacheSize = {{ .BaseConfig.SignatureCacheSize }}
+
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
 bech32PrefixAccAddr = "{{ .AddressConfig.Bech32PrefixAccAddr }}"
@@ -104,6 +110,7 @@ type BinanceChainConfig struct {
 	*AddressConfig     `mapstructure:"addr"`
 	*PublicationConfig `mapstructure:"publication"`
 	*LogConfig         `mapstructure:"log"`
+	*BaseConfig        `mapstructure:"base"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -111,6 +118,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		AddressConfig:     defaultAddressConfig(),
 		PublicationConfig: defaultPublicationConfig(),
 		LogConfig:         defaultLogConfig(),
+		BaseConfig:        defaultBaseConfig(),
 	}
 }
 
@@ -177,7 +185,7 @@ func defaultPublicationConfig() *PublicationConfig {
 		BlockFeeKafka:   "127.0.0.1:9092",
 
 		PublicationChannelSize: 10000,
-		FromHeightInclusive: 1,
+		FromHeightInclusive:    1,
 	}
 }
 
@@ -199,6 +207,18 @@ func defaultLogConfig() *LogConfig {
 		LogToConsole: true,
 		LogFilePath:  "bnc.log",
 		LogBuffSize:  10000,
+	}
+}
+
+type BaseConfig struct {
+	AccountCacheSize   int `mapstructure:"accountCacheSize"`
+	SignatureCacheSize int `mapstructure:"signatureCacheSize"`
+}
+
+func defaultBaseConfig() *BaseConfig {
+	return &BaseConfig{
+		AccountCacheSize:   30000,
+		SignatureCacheSize: 30000,
 	}
 }
 

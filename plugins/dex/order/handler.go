@@ -39,7 +39,7 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Ha
 	}
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc auth.Account, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.Account, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
