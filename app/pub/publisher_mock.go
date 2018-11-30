@@ -2,6 +2,7 @@ package pub
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -13,9 +14,14 @@ type MockMarketDataPublisher struct {
 	BooksPublished           []*Books
 	TradesAndOrdersPublished []*tradesAndOrders
 	BlockFeePublished        []BlockFee
+
+	Lock *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
 }
 
 func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
+	publisher.Lock.Lock()
+	defer publisher.Lock.Unlock()
+
 	switch tpe {
 	case accountsTpe:
 		publisher.AccountPublished = append(publisher.AccountPublished, msg.(*accounts))
@@ -31,6 +37,9 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, heig
 }
 
 func (publisher *MockMarketDataPublisher) Stop() {
+	publisher.Lock.Lock()
+	defer publisher.Lock.Unlock()
+
 	publisher.AccountPublished = make([]*accounts, 0)
 	publisher.BooksPublished = make([]*Books, 0)
 	publisher.TradesAndOrdersPublished = make([]*tradesAndOrders, 0)
@@ -42,6 +51,7 @@ func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationCon
 		make([]*Books, 0),
 		make([]*tradesAndOrders, 0),
 		make([]BlockFee, 0),
+		&sync.Mutex{},
 	}
 	if err := setup(logger, config, publisher); err != nil {
 		publisher.Stop()
