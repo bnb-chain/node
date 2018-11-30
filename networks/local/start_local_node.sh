@@ -30,7 +30,6 @@ function prepare_node() {
 	ps -ef  | grep bnbc | grep testnoded | awk '{print $2}' | xargs kill
 
 	./bnbchaind start --home ${home}  > ./testnoded/node.log 2>&1 &
-	./bnbcli api-server --home ${cli_home}  > ./testnoded/api-server.log 2>&1 &
 
 	echo ${alice_secret}
 }
@@ -84,7 +83,7 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnc[0-9a-
 
 # wait for the chain
 
-sleep 10s
+sleep 15s
 
 # issue and list an NNB test token
 
@@ -106,6 +105,9 @@ if [ $? -ne 0 ]; then
 	echo "There was an error listing the NNB token!"
 	exit 1
 fi
+
+# delay starting the api-server to avoid cli problem for using shared cli_home when using recover, send and issue commands
+./bnbcli api-server --home ${cli_home}  > ./testnoded/api-server.log 2>&1 &
 
 # export a function to kill the node, as well as alice and bob's keys and secrets
 
