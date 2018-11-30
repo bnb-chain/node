@@ -59,7 +59,7 @@ func main() {
 	//}
 
 	finishSignal := make(chan struct{})
-	publisher := pub.NewKafkaMarketDataPublisher(&publicationConfig)
+	publisher := pub.NewKafkaMarketDataPublisher(&publicationConfig, nil)
 
 	generator := MessageGenerator{
 		numOfTradesPerBlock: defaultNumOfTradesPerBlock,
@@ -91,7 +91,7 @@ type MessageGenerator struct {
 }
 
 func (mg *MessageGenerator) setup() {
-	coins := sdk.Coins{sdk.NewCoin("BNB", sdk.NewInt(10000000000000000)), sdk.NewCoin("NNB", sdk.NewInt(10000000000000000))}
+	coins := sdk.Coins{sdk.NewCoin("BNB", 10000000000000000), sdk.NewCoin("NNB", 10000000000000000)}
 	_, mg.buyerAddrs, _, _ = mock.CreateGenAccounts(mg.numOfTradesPerBlock, coins)
 	_, mg.sellerAddrs, _, _ = mock.CreateGenAccounts(mg.numOfTradesPerBlock, coins)
 

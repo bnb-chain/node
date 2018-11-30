@@ -22,6 +22,7 @@ const (
 )
 
 type KafkaMarketDataPublisher struct {
+	metrics   *Metrics
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
 
@@ -182,13 +183,17 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 	}
 }
 
-func NewKafkaMarketDataPublisher(logger log.Logger, config *config.PublicationConfig) (publisher *KafkaMarketDataPublisher) {
+func NewKafkaMarketDataPublisher(
+	logger log.Logger,
+	config *config.PublicationConfig,
+	metrics *Metrics) (publisher *KafkaMarketDataPublisher) {
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
+		metrics:   metrics,
 		producers: make(map[string]sarama.SyncProducer),
 	}
 
-	if err := setup(logger, config, publisher); err != nil {
+	if err := setup(logger, config, metrics, publisher); err != nil {
 		publisher.Stop()
 		logger.Error("Cannot start up market data kafka publisher", "err", err)
 		panic(err)

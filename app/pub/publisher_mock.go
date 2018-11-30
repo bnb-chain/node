@@ -58,7 +58,7 @@ func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationCon
 		&sync.Mutex{},
 		0,
 	}
-	if err := setup(logger, config, publisher); err != nil {
+	if err := setup(logger, config, nil, publisher); err != nil {
 		publisher.Stop()
 		logger.Error("Cannot start up market data kafka publisher", "err", err)
 		panic(err)

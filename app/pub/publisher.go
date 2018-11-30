@@ -24,6 +24,8 @@ var (
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
+
+	metrics *Metrics
 )
 
 type MarketDataPublisher interface {
@@ -31,9 +33,14 @@ type MarketDataPublisher interface {
 	Stop()
 }
 
-func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
+func setup(
+	logger tmlog.Logger,
+	config *config.PublicationConfig,
+	m *Metrics,
+	publisher MarketDataPublisher) (err error) {
 	Logger = logger.With("module", "pub")
 	cfg = config
+	metrics = m
 	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {
 		Logger.Error("failed to initialize avro codec", "err", err)
@@ -46,11 +53,17 @@ func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher Mark
 	return nil
 }
 
-func publish(publisher MarketDataPublisher, Logger tmlog.Logger, cfg *config.PublicationConfig, ToPublishCh chan BlockInfoToPublish) {
+func publish(
+	publisher MarketDataPublisher,
+	Logger tmlog.Logger,
+	cfg *config.PublicationConfig,
+	ToPublishCh chan BlockInfoToPublish) {
+	var lastPublishedTime time.Time
 	for marketData := range ToPublishCh {
 		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
+		metrics.PublicationQueueSize.Set(float64(len(ToPublishCh)))
 
-		timer(fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
+		publishBlockTime := Timer(fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
 			// Implementation note: publication order are important here,
 			// DEX query service team relies on the fact that we publish orders before trades so that
 			// they can assign buyer/seller address into trade before persist into DB
@@ -92,7 +105,7 @@ func publish(publisher MarketDataPublisher, Logger tmlog.Logger, cfg *config.Pub
 
 			ordersToPublish := append(opensToPublish, canceledToPublish...)
 			if cfg.PublishOrderUpdates {
-				timer("publish all orders", func() {
+				duration := Timer("publish all orders", func() {
 					publishOrderUpdates(
 						publisher,
 						marketData.height,
@@ -100,30 +113,70 @@ func publish(publisher MarketDataPublisher, Logger tmlog.Logger, cfg *config.Pub
 						ordersToPublish,
 						marketData.tradesToPublish)
 				})
+
+				if metrics != nil {
+					metrics.NumTrade.Set(float64(len(marketData.tradesToPublish)))
+					metrics.NumOrder.Set(float64(len(ordersToPublish)))
+					metrics.PublishTradeAndOrderTimeMs.Set(float64(duration))
+				}
 			}
 
 			if cfg.PublishAccountBalance {
-				timer("publish all changed accounts", func() {
+				duration := Timer("publish all changed accounts", func() {
 					publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts, feeToPublish)
 				})
+
+				if metrics != nil {
+					metrics.NumAccounts.Set(float64(len(marketData.accounts)))
+					metrics.PublishAccountTimeMs.Set(float64(duration))
+				}
 			}
 
 			if cfg.PublishOrderBook {
 				var changedPrices orderPkg.ChangedPriceLevelsMap
-				timer("prepare order books to publish", func() {
+				duration := Timer("prepare order books to publish", func() {
 					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 				})
-				timer("publish changed order books", func() {
+				if metrics != nil {
+					numOfChangedPrices := 0
+					for _, changedPrice := range changedPrices {
+						numOfChangedPrices += len(changedPrice.Buys)
+						numOfChangedPrices += len(changedPrice.Sells)
+					}
+					metrics.NumOrderBook.Set(float64(numOfChangedPrices))
+					metrics.CollectOrderBookTimeMs.Set(float64(duration))
+				}
+
+				duration = Timer("publish changed order books", func() {
 					publishOrderBookDelta(publisher, marketData.height, marketData.timestamp, changedPrices)
 				})
+
+				if metrics != nil {
+					metrics.PublishOrderbookTimeMs.Set(float64(duration))
+				}
 			}
 
 			if cfg.PublishBlockFee {
-				timer("publish blockfee", func() {
+				duration := Timer("publish blockfee", func() {
 					publishBlockFee(publisher, marketData.height, marketData.timestamp, marketData.blockFee)
 				})
+
+				if metrics != nil {
+					metrics.PublishBlockfeeTimeMs.Set(float64(duration))
+				}
+			}
+
+			if metrics != nil {
+				metrics.PublicationHeight.Set(float64(marketData.height))
+				blockInterval := time.Since(lastPublishedTime)
+				lastPublishedTime = time.Now()
+				metrics.PublicationBlockIntervalMs.Set(float64(blockInterval.Nanoseconds() / int64(time.Millisecond)))
 			}
 		})
+
+		if metrics != nil {
+			metrics.PublishBlockTimeMs.Set(float64(publishBlockTime))
+		}
 	}
 }
 
@@ -185,10 +238,10 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
 }
 
-func timer(description string, op func()) {
-	Logger.Debug(description, "status", "start")
+func Timer(description string, op func()) (durationMs int64) {
 	start := time.Now()
 	op()
-	Logger.Debug(description, "status", "finish", "duration_ms", time.Since(start).Nanoseconds()/int64(time.Millisecond))
-	// TODO publish metrics to prometheus
+	durationMs = time.Since(start).Nanoseconds() / int64(time.Millisecond)
+	Logger.Debug(description, "durationMs", durationMs)
+	return durationMs
 }
