@@ -75,6 +75,8 @@ type BinanceChain struct {
 	baseConfig        *config.BaseConfig
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
+
+	metrics *pub.Metrics // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -125,8 +127,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 
+	if ServerContext.Config.Instrumentation.Prometheus {
+		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
+	}
+
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewKafkaMarketDataPublisher(app.Logger, app.publicationConfig)
+		app.publisher = pub.NewKafkaMarketDataPublisher(app.Logger, app.publicationConfig, app.metrics)
 	}
 
 	// finish app initialization
@@ -419,23 +425,30 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
-	if app.publicationConfig.PublishAccountBalance {
-		txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
-		tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
-		accountsToPublish = pub.GetAccountBalances(
-			app.AccountKeeper,
-			ctx,
-			txRelatedAccounts,
-			tradeRelatedAccounts,
-			blockFee.Validators)
-		defer func() {
-			app.DeliverState.Ctx = ctx.WithValue(baseapp.InvolvedAddressKey, make([]string, 0))
-		}() // clean up
-	}
-
 	var latestPriceLevels order.ChangedPriceLevelsMap
-	if app.publicationConfig.PublishOrderBook {
-		latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+
+	duration := pub.Timer(fmt.Sprintf("collect publish information, height=%d", height), func() {
+		if app.publicationConfig.PublishAccountBalance {
+			txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
+			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
+			accountsToPublish = pub.GetAccountBalances(
+				app.AccountKeeper,
+				ctx,
+				txRelatedAccounts,
+				tradeRelatedAccounts,
+				blockFee.Validators)
+			defer func() {
+				app.DeliverState.Ctx = ctx.WithValue(baseapp.InvolvedAddressKey, make([]string, 0))
+			}() // clean up
+		}
+
+		if app.publicationConfig.PublishOrderBook {
+			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+		}
+	})
+
+	if app.metrics != nil {
+		app.metrics.CollectBlockTimeMs.Set(float64(duration))
 	}
 
 	pub.Logger.Info("start to publish", "height", height,
