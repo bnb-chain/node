@@ -11,9 +11,9 @@ import (
 var (
 	keeper    *orderPkg.Keeper
 	buyer     sdk.AccAddress
-	buyerAcc  auth.Account
+	buyerAcc  sdk.Account
 	seller    sdk.AccAddress
-	sellerAcc auth.Account
+	sellerAcc sdk.Account
 	am        auth.AccountKeeper
 	ctx       sdk.Context
 	app       *BinanceChain

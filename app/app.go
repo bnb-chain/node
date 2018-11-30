@@ -38,6 +38,8 @@ import (
 
 const (
 	appName = "BNBChain"
+
+	accountCacheCap = 10000
 )
 
 // default home directories for expected binaries
@@ -149,6 +151,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
+
+	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
+	app.SetAccountStoreCache(cdc, accountStore, accountCacheCap)
 
 	// remaining plugin init
 	app.initDex()
@@ -306,7 +311,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 
 	// iterate to get the accounts
 	accounts := []GenesisAccount{}
-	appendAccount := func(acc auth.Account) (stop bool) {
+	appendAccount := func(acc sdk.Account) (stop bool) {
 		account := GenesisAccount{
 			Address: acc.GetAddress(),
 		}
