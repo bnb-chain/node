@@ -62,7 +62,7 @@ fi
 # build the chain
 
 echo "Building bnbchaind and bnbcli, please wait..."
-cd $GOPATH/src/github.com/$REPO && make build
+cd $GOPATH/src/github.com/$REPO && make get_vendor_deps && make build
 
 cd $GOPATH/src/github.com/$REPO/build
 if [ $? -ne 0 ]; then
