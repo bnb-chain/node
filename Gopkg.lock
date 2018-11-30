@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:d48ac9e8b2d185ac68bf466142646a41fb0052f0299c61fcba5371c0d77b5e24"
+  digest = "1:6adbd0230f85717cb767b34cc8476261854bdc3d49fe821cf37b4fe115efb9b0"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -87,6 +87,10 @@
     "x/bank/client",
     "x/bank/client/cli",
     "x/bank/client/rest",
+    "x/gov",
+    "x/gov/client",
+    "x/gov/client/cli",
+    "x/gov/tags",
     "x/ibc",
     "x/ibc/client/cli",
     "x/mock",
@@ -100,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "50b477aa4ea81bf6cdf3b54030c458e06455afbf"
+  revision = "821ae600755bf44ec3da822f8788c54b641f30cb"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -803,7 +807,6 @@
     "github.com/cosmos/cosmos-sdk/codec",
     "github.com/cosmos/cosmos-sdk/crypto/keys",
     "github.com/cosmos/cosmos-sdk/server",
-    "github.com/cosmos/cosmos-sdk/server/config",
     "github.com/cosmos/cosmos-sdk/server/mock",
     "github.com/cosmos/cosmos-sdk/store",
     "github.com/cosmos/cosmos-sdk/types",
@@ -815,6 +818,8 @@
     "github.com/cosmos/cosmos-sdk/x/bank",
     "github.com/cosmos/cosmos-sdk/x/bank/client/cli",
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
+    "github.com/cosmos/cosmos-sdk/x/gov",
+    "github.com/cosmos/cosmos-sdk/x/gov/client/cli",
     "github.com/cosmos/cosmos-sdk/x/ibc/client/cli",
     "github.com/cosmos/cosmos-sdk/x/mock",
     "github.com/cosmos/cosmos-sdk/x/params",

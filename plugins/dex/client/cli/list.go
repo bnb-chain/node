@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -16,6 +17,7 @@ import (
 const flagBaseAsset = "base-asset-symbol"
 const flagQuoteAsset = "quote-asset-symbol"
 const flagInitPrice = "init-price"
+const flagProposalId = "proposal-id"
 
 func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
@@ -50,8 +52,13 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := list.NewMsg(from, baseAsset, quoteAsset, initPrice)
-			client.SendOrPrintTx(cliCtx, txbldr, msg)
+			proposalId := viper.GetInt64(flagProposalId)
+			if proposalId <= 0 {
+				return errors.New("proposal id should larger than zero")
+			}
+
+			msg := list.NewMsg(from, proposalId, baseAsset, quoteAsset, initPrice)
+			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err
 			}
@@ -63,6 +70,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagBaseAsset, "s", "", "symbol of the base asset")
 	cmd.Flags().String(flagQuoteAsset, "", "symbol of the quote currency")
 	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
+	cmd.Flags().Int64(flagProposalId, 0, "list proposal id")
 
 	return cmd
 }

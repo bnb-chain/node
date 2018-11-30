@@ -15,14 +15,16 @@ var _ sdk.Msg = ListMsg{}
 
 type ListMsg struct {
 	From             sdk.AccAddress `json:"from"`
+	ProposalId       int64          `json:"proposal_id"`
 	BaseAssetSymbol  string         `json:"base_asset_symbol"`
 	QuoteAssetSymbol string         `json:"quote_asset_symbol"`
 	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
+func NewMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
 	return ListMsg{
 		From:             from,
+		ProposalId:       proposalId,
 		BaseAssetSymbol:  baseAssetSymbol,
 		QuoteAssetSymbol: quoteAssetSymbol,
 		InitPrice:        initPrice,
