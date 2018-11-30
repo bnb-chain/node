@@ -22,22 +22,22 @@ function prepare_node() {
 
 	cp -f ../networks/demo/*.exp .
 
-	alice_secret=$(./bnbchaind init --name testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
+	alice_secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
-	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+	$(cd "${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
 
 	# stop a previously running node
 	ps -ef  | grep bnbc | grep testnoded | awk '{print $2}' | xargs kill
 
 	./bnbchaind start --home ${home}  > ./testnoded/node.log 2>&1 &
-	./bnbcli api-server --home ${home}  > ./testnoded/api-server.log 2>&1 &
+	./bnbcli api-server --home ${cli_home}  > ./testnoded/api-server.log 2>&1 &
 
 	echo ${alice_secret}
 }
 
-# stop_node stops the chain node
+# stop_node stops the chain node and the api-server
 function stop_node() {
-	ps -ef | grep bnbc | grep testnoded | awk '{print $2}' | xargs kill
+	ps -ef | grep bnbc | grep testnode | awk '{print $2}' | xargs kill
 }
 
 # initial checks
@@ -62,8 +62,7 @@ fi
 # build the chain
 
 echo "Building bnbchaind and bnbcli, please wait..."
-cd $GOPATH/src/github.com/$REPO && cleanup
-cd $GOPATH/src/github.com/$REPO && make get_vendor_deps && make build
+cd $GOPATH/src/github.com/$REPO && make build
 
 cd $GOPATH/src/github.com/$REPO/build
 if [ $? -ne 0 ]; then
@@ -85,7 +84,7 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnc[0-9a-
 
 # wait for the chain
 
-sleep 5s
+sleep 10s
 
 # issue and list an NNB test token
 
