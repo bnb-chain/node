@@ -46,7 +46,7 @@ func (app *SentryApplication) BeginBlock(req abci.RequestBeginBlock) abci.Respon
 }
 
 func (app *SentryApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
-	return abci.ResponseInfo{Data: "{\"name\": \"dumyApp\"}"}
+	return abci.ResponseInfo{Data: "{\"name\": \"sentry node\"}"}
 }
 
 func (app *SentryApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
