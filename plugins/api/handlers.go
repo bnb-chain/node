@@ -8,6 +8,7 @@ import (
 
 	hnd "github.com/BiJie/BinanceChain/plugins/api/handlers"
 	dexapi "github.com/BiJie/BinanceChain/plugins/dex/client/rest"
+	paramapi "github.com/BiJie/BinanceChain/plugins/param/client/rest"
 	tksapi "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
@@ -124,4 +125,8 @@ func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CLIContext, toke
 
 func (s *server) handleBalanceReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {
 	return tksapi.BalanceReqHandler(cdc, ctx, tokens)
+}
+
+func (s *server) handleFeesParamReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return paramapi.GetFeesParamHandler(cdc, ctx)
 }

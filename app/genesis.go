@@ -15,6 +15,8 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/param"
+	paramtypes "github.com/BiJie/BinanceChain/plugins/param/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -36,12 +38,13 @@ var (
 )
 
 type GenesisState struct {
-	Tokens     []tokens.GenesisToken `json:"tokens"`
-	Accounts   []GenesisAccount      `json:"accounts"`
-	DexGenesis dex.Genesis           `json:"dex"`
-	StakeData  stake.GenesisState    `json:"stake"`
-	GovData    gov.GenesisState      `json:"gov"`
-	GenTxs     []json.RawMessage     `json:"gentxs"`
+	Tokens       []tokens.GenesisToken   `json:"tokens"`
+	Accounts     []GenesisAccount        `json:"accounts"`
+	DexGenesis   dex.Genesis             `json:"dex"`
+	ParamGenesis paramtypes.GenesisState `json:"param"`
+	StakeData    stake.GenesisState      `json:"stake"`
+	GovData      gov.GenesisState        `json:"gov"`
+	GenTxs       []json.RawMessage       `json:"gentxs"`
 }
 
 // GenesisAccount doesn't need pubkey or sequence
@@ -121,12 +124,13 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	govData.DepositProcedure.MinDeposit = DefaultGovMinDesposit
 
 	genesisState := GenesisState{
-		Accounts:   genAccounts,
-		Tokens:     []tokens.GenesisToken{nativeToken},
-		DexGenesis: dex.DefaultGenesis,
-		StakeData:  stakeData,
-		GenTxs:     appGenTxs,
-		GovData:    govData,
+		Tokens:       []tokens.GenesisToken{nativeToken},
+		Accounts:     genAccounts,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+		StakeData:    stakeData,
+		GenTxs:       appGenTxs,
+		GovData:      govData,
 	}
 
 	appState, err = wire.MarshalJSONIndent(cdc, genesisState)

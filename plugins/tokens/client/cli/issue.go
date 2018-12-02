@@ -13,7 +13,7 @@ import (
 const (
 	flagTotalSupply = "total-supply"
 	flagTokenName   = "token-name"
-	flagMintable = "mintable"
+	flagMintable    = "mintable"
 )
 
 func issueTokenCmd(cmdr Commander) *cobra.Command {
@@ -67,7 +67,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	mintable := viper.GetBool(flagMintable)
 
 	// build message

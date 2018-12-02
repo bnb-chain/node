@@ -15,6 +15,8 @@ const (
 	FeeForAll      = FeeDistributeType(0x02)
 	FeeFree        = FeeDistributeType(0x03)
 
+	ZeroFee = 0
+
 	canceledCharacter    = "#Cxl"
 	expiredCharacter     = "#Exp"
 	serializeSeparator   = ";"

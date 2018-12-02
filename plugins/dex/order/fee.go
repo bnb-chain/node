@@ -12,6 +12,7 @@ import (
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
+	param "github.com/BiJie/BinanceChain/plugins/param/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -23,17 +24,21 @@ const (
 
 	feeRateDecimals int64 = 6
 	nilFeeValue     int64 = -1
+
+	ExpireFeeField       = "ExpireFee"
+	ExpireFeeNativeField = "ExpireFeeNative"
+	CancelFeeField       = "CancelFee"
+	CancelFeeNativeField = "CancelFeeNative"
+	FeeRateField         = "FeeRate"
+	FeeRateNativeField   = "FeeRateNative"
 )
 
 var (
-	feeConfigKey = []byte("FeeConfig")
-
 	FeeRateMultiplier = big.NewInt(int64(math.Pow10(int(feeRateDecimals))))
 )
 
 type FeeManager struct {
 	cdc       *wire.Codec
-	storeKey  sdk.StoreKey
 	logger    tmlog.Logger
 	FeeConfig FeeConfig
 }
@@ -41,83 +46,22 @@ type FeeManager struct {
 func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
 		cdc:       cdc,
-		storeKey:  storeKey,
 		logger:    logger,
 		FeeConfig: NewFeeConfig(),
 	}
 }
 
-func (m *FeeManager) InitFeeConfig(ctx sdk.Context) {
-	feeConfig, err := m.getConfigFromStore(ctx)
-	if err != nil {
-		// this will only happen when the chain first starts up, and then InitGenesis would be called.
-		if ctx.BlockHeight() > 0 {
-			panic(errors.New("cannot init fee config from store"))
-		}
-	}
-
-	m.FeeConfig = feeConfig
-}
-
-func (m *FeeManager) InitGenesis(ctx sdk.Context, data TradingGenesis) {
-	feeConfig := NewFeeConfig()
-	feeConfig.ExpireFee = data.ExpireFee
-	feeConfig.ExpireFeeNative = data.ExpireFeeNative
-	feeConfig.IOCExpireFee = data.IOCExpireFee
-	feeConfig.IOCExpireFeeNative = data.IOCExpireFeeNative
-	feeConfig.CancelFee = data.CancelFee
-	feeConfig.CancelFeeNative = data.CancelFeeNative
-	feeConfig.FeeRate = data.FeeRate
-	feeConfig.FeeRateNative = data.FeeRateNative
-	m.logger.Info("Setting Genesis Fee/Rate", "FeeConfig", feeConfig)
-	err := m.UpdateConfig(ctx, feeConfig)
-	if err != nil {
-		panic(err)
-	}
-}
-
 // UpdateConfig should only happen when Init or in BreatheBlock
-func (m *FeeManager) UpdateConfig(ctx sdk.Context, feeConfig FeeConfig) error {
+func (m *FeeManager) UpdateConfig(feeConfig FeeConfig) error {
 	if feeConfig.anyEmpty() {
 		return errors.New("invalid FeeConfig")
 	}
-
-	store := ctx.KVStore(m.storeKey)
-	store.Set(feeConfigKey, m.encodeConfig(feeConfig))
 	m.FeeConfig = feeConfig
 	return nil
 }
 
 func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
-}
-
-func (m *FeeManager) getConfigFromStore(ctx sdk.Context) (FeeConfig, error) {
-	store := ctx.KVStore(m.storeKey)
-	bz := store.Get(feeConfigKey)
-	if bz == nil {
-		return NewFeeConfig(), errors.New("FeeConfig does not exist")
-	}
-
-	return m.decodeConfig(bz), nil
-}
-
-func (m *FeeManager) encodeConfig(config FeeConfig) []byte {
-	bz, err := m.cdc.MarshalBinaryBare(config)
-	if err != nil {
-		panic(err)
-	}
-
-	return bz
-}
-
-func (m *FeeManager) decodeConfig(bz []byte) (config FeeConfig) {
-	err := m.cdc.UnmarshalBinaryBare(bz, &config)
-	if err != nil {
-		panic(err)
-	}
-
-	return
 }
 
 // Note: the result of `CalcOrderFee` depends on the balances of the acc,
@@ -286,16 +230,45 @@ func NewFeeConfig() FeeConfig {
 }
 
 func (config FeeConfig) anyEmpty() bool {
-	if config.ExpireFee == nilFeeValue ||
-		config.ExpireFeeNative == nilFeeValue ||
-		config.IOCExpireFee == nilFeeValue ||
-		config.IOCExpireFeeNative == nilFeeValue ||
-		config.CancelFee == nilFeeValue ||
-		config.CancelFeeNative == nilFeeValue ||
-		config.FeeRate == nilFeeValue ||
-		config.FeeRateNative == nilFeeValue {
+	if config.ExpireFee < 0 ||
+		config.ExpireFeeNative < 0 ||
+		config.IOCExpireFee < 0 ||
+		config.IOCExpireFeeNative < 0 ||
+		config.CancelFee < 0 ||
+		config.CancelFeeNative < 0 ||
+		config.FeeRate < 0 ||
+		config.FeeRateNative < 0 {
 		return true
 	}
 
 	return false
+}
+
+func ParamToFeeConfig(feeParams []param.FeeParam) *FeeConfig {
+	for _, p := range feeParams {
+		if u, ok := p.(*param.DexFeeParam); ok {
+			config := FeeConfig{
+				IOCExpireFee:       0,
+				IOCExpireFeeNative: 0,
+			}
+			for _, d := range u.DexFeeFields {
+				switch d.FeeName {
+				case ExpireFeeField:
+					config.ExpireFee = d.FeeValue
+				case ExpireFeeNativeField:
+					config.ExpireFeeNative = d.FeeValue
+				case CancelFeeField:
+					config.CancelFee = d.FeeValue
+				case CancelFeeNativeField:
+					config.CancelFeeNative = d.FeeValue
+				case FeeRateField:
+					config.FeeRate = d.FeeValue
+				case FeeRateNativeField:
+					config.FeeRateNative = d.FeeValue
+				}
+			}
+			return &config
+		}
+	}
+	return nil
 }
