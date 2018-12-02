@@ -13,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -31,6 +30,8 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/ico"
+	"github.com/BiJie/BinanceChain/plugins/param"
+	"github.com/BiJie/BinanceChain/plugins/param/paramhub"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
@@ -68,9 +69,10 @@ type BinanceChain struct {
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
 	ValAddrMapper val.Mapper
-	paramsKeeper  params.Keeper
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
+	// keeper to process param store and update
+	ParamHub *param.ParamHub
 
 	baseConfig        *config.BaseConfig
 	publicationConfig *config.PublicationConfig
@@ -106,22 +108,21 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
-	app.paramsKeeper = params.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
+	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
-		app.CoinKeeper, app.paramsKeeper.Subspace(stake.DefaultParamspace),
+		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
-
 	app.govKeeper = gov.NewKeeper(
 		cdc,
 		common.GovStoreKey,
-		app.paramsKeeper, app.paramsKeeper.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
+		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
 		app.RegisterCodespace(gov.DefaultCodespace),
 	)
-
+	app.ParamHub.SetGovKeeper(app.govKeeper)
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -176,7 +177,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// remaining plugin init
 	app.initDex()
 	app.initPlugins()
-
+	app.initParams()
 	return app
 }
 
@@ -185,15 +186,11 @@ func (app *BinanceChain) initDex() {
 	// TODO: make the concurrency configurable
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.ShouldPublishAny())
+	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
 	}
-
-	tokens.InitPlugin(app, app.TokenMapper)
-	dex.InitPlugin(app, app.DexKeeper)
-
-	app.DexKeeper.FeeManager.InitFeeConfig(app.checkState.ctx)
 	// count back to 7 days.
 	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, 7,
 		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
@@ -202,6 +199,14 @@ func (app *BinanceChain) initDex() {
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
+	param.InitPlugin(app, app.ParamHub)
+}
+
+func (app *BinanceChain) initParams() {
+	if app.CheckState == nil || app.CheckState.Ctx.BlockHeight() == 0 {
+		return
+	}
+	app.ParamHub.Load(app.CheckState.Ctx)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -227,7 +232,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		tokens.InitGenesis(ctx, app.TokenMapper, app.CoinKeeper, genesisState.Tokens,
 			validatorAddrs, DefaultSelfDelegationToken.Amount)
 
-		app.DexKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
+		app.ParamHub.InitGenesis(ctx, genesisState.ParamGenesis)
 		validators, err := stake.InitGenesis(ctx, app.stakeKeeper, genesisState.StakeData)
 		gov.InitGenesis(ctx, app.govKeeper, genesisState.GovData)
 
@@ -282,7 +287,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var tradesToPublish []*pub.Trade
 
 	isBreatheBlock := !utils.SameDayInUTC(lastBlockTime, blockTime)
-	if !isBreatheBlock || height == 1 {
+	if height%1000 != 0 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
@@ -296,7 +301,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
-
+		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone
 	}
@@ -430,7 +435,7 @@ func MakeCodec() *wire.Codec {
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
-
+	param.RegisterWire(cdc)
 	return cdc
 }
 

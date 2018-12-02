@@ -71,7 +71,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	tradingPair := dextypes.NewTradingPair("XYZ-000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
-	keeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	keeper.FeeConfig.SetExpireFee(ctx, expireFee)
 	keeper.FeeConfig.SetIOCExpireFee(ctx, iocExpireFee)

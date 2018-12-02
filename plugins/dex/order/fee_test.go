@@ -26,7 +26,7 @@ func NewTestFeeConfig() FeeConfig {
 
 func TestFeeManager_CalcOrderFees(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(ctx, NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	lastTradePrices := map[string]int64{
 		"ABC-000_BNB": 1e7,
@@ -51,7 +51,7 @@ func TestFeeManager_CalcOrderFees(t *testing.T) {
 
 func TestFeeManager_CalcFixedFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(ctx, NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 1e4)
 	lastTradePrices := map[string]int64{
 		"ABC-000_BNB": 1e7,

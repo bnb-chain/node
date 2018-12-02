@@ -491,7 +491,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 
 func TestKeeper_ExpireOrders(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(ctx, NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC-000", "BNB", 1e6))

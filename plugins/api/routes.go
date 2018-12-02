@@ -39,6 +39,7 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 	r.HandleFunc(prefix+"/order", s.handleDexOrderReq(s.cdc, s.ctx, s.accStoreName)).
 		Methods("PUT", "POST")
+
 	r.HandleFunc(prefix+"/orders/open", s.handleDexOpenOrdersReq(s.cdc, s.ctx)).
 		Queries("address", "{address}", "symbol", "{symbol}").
 		Methods("GET")
@@ -51,6 +52,10 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc(prefix+"/balances/{address}", s.handleBalancesReq(s.cdc, s.ctx, s.tokens)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}/{symbol}", s.handleBalanceReq(s.cdc, s.ctx, s.tokens)).
+		Methods("GET")
+
+	// fee params
+	r.HandleFunc(prefix+"/fees", s.handleFeesParamReq(s.cdc, s.ctx)).
 		Methods("GET")
 
 	// legacy plugin routes

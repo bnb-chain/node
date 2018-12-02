@@ -20,6 +20,7 @@ import (
 
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/param"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 )
@@ -122,9 +123,10 @@ func setGenesis(bapp *BinanceChain, tokens []tokens.GenesisToken, accs ...*commo
 	}
 
 	genesisState := GenesisState{
-		Tokens:     tokens,
-		Accounts:   genaccs,
-		DexGenesis: dex.DefaultGenesis,
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
 	}
 
 	stateBytes, err := wire.MarshalJSONIndent(bapp.Codec, genesisState)
