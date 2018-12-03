@@ -35,7 +35,7 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/BiJie/bnc-tendermint"
-  version = "=0.25.1-br5"
+  version = "=0.25.1-br6"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
