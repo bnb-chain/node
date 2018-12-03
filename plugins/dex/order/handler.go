@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/log"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -183,6 +184,7 @@ func handleCancelOrder(
 	}
 	acc := keeper.am.GetAccount(ctx, msg.Sender)
 	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.lastTradePrices)
+	fees.Pool.AddFee(fee)
 	acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 	keeper.am.SetAccount(ctx, acc)
 

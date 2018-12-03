@@ -83,6 +83,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 		PublishOrderUpdates:    true,
 		PublishAccountBalance:  true,
 		PublishOrderBook:       true,
+		PublishBlockFee:        true,
 		PublicationChannelSize: 0, // deliberately sync publication
 	}
 	app.publisher = pub.NewMockMarketDataPublisher(logger, app.publicationConfig)
@@ -164,7 +165,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	expectedAccountToPub = pub.Account{string(buyer), "BNB:153", []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ", 100300000000, 0, 0}}}
 	expectedAccountToPubSeller := pub.Account{string(seller), "BNB:153", []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ", 99600000000, 0, 100000000}}}
 	require.Len(publisher.AccountPublished, 2)
-	require.Len(publisher.AccountPublished[1].Accounts, 2)
+	require.Len(publisher.AccountPublished[1].Accounts, 3) // including the validator's account
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPub)
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPubSeller)
 	publisher.Lock.Unlock()
@@ -187,7 +188,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Len(publisher.BooksPublished, 3)
 	require.Len(publisher.BooksPublished[2].Books, 0)
 	require.Len(publisher.AccountPublished, 3)
-	require.Len(publisher.AccountPublished[2].Accounts, 2)
+	require.Len(publisher.AccountPublished[2].Accounts, 3) // including the validator's account
 	require.Contains(publisher.AccountPublished[2].Accounts, expectedAccountToPub)
 	require.Contains(publisher.AccountPublished[2].Accounts, expectedAccountToPubSeller)
 	publisher.Lock.Unlock()
@@ -237,5 +238,6 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	require.Len(publisher.TradesAndOrdersPublished, 2)
 	assert.Equal("BNB:51", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Sfee)
 	assert.Equal("BNB:57;#Cxl:1", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Bfee)
+	assert.Equal("BNB:108", publisher.BlockFeePublished[1].Fee)
 	publisher.Lock.Unlock()
 }
