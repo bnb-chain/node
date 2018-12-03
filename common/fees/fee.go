@@ -1,4 +1,4 @@
-package tx
+package fees
 
 import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
