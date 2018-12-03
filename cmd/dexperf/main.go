@@ -20,6 +20,7 @@ import (
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/spf13/viper"
+	abci "github.com/tendermint/tendermint/abci/types"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	"io/ioutil"
 	"math/rand"
@@ -57,6 +58,7 @@ var node *string
 var chainId *string
 var owner *string
 var userPrefix *string
+var votingTime *int
 var batchSize *int
 var generateToken *bool
 var initiateAccount *bool
@@ -111,6 +113,7 @@ func init() {
 	chainId = flag.String("chainId", "chain-bnb", "bnbcli --chain-id")
 	owner = flag.String("owner", "test", "chain's master user")
 	userPrefix = flag.String("userPrefix", "node2_user", "user prefix")
+	votingTime = flag.Int("votingTime", 10, "voting time in sec")
 	batchSize = flag.Int("batchSize", 1, "# of create/submit tasks")
 	generateToken = flag.Bool("generateToken", false, "if to generate tokens")
 	initiateAccount = flag.Bool("initiateAccount", false, "if to initiate accounts")
@@ -145,6 +148,7 @@ func main() {
 	fmt.Println("-chainId", *chainId)
 	fmt.Println("-owner", *owner)
 	fmt.Println("-userPrefix", *userPrefix)
+	fmt.Println("-votingTime", *votingTime)
 	fmt.Println("-batchSize", *batchSize)
 	fmt.Println("-generateToken", *generateToken)
 	fmt.Println("-initiateAccount", *initiateAccount)
@@ -197,7 +201,7 @@ func main() {
 func execCommand(name string, arg ...string) *bytes.Buffer {
 	var err error
 	for i:= 0; i < retry; i++ {
-		fmt.Println("running round", ":", i, name)
+		fmt.Println("running round", ":", i, name, arg)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd := exec.Command(name, arg...)
@@ -250,7 +254,32 @@ func generateTokens(sI int, eI int, flag bool) []string {
 		if flag == true {
 			execCommand("bnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId)
 			time.Sleep(stime * time.Millisecond)
-			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId)
+			expireTime := strconv.FormatInt(time.Now().Unix() + 3600,10)
+			r := execCommand("bnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
+			type toJSON struct {
+				Height   int64
+				TxHash   string
+				Response abci.ResponseDeliverTx
+			}
+			j := toJSON{}
+			err := MakeCodec().UnmarshalJSON(r.Bytes(), &j)
+			if err != nil {
+				panic(err)
+			}
+			var pid int64
+			for _, tag := range j.Response.Tags {
+				if string(tag.Key) == "proposal-id" {
+					err := MakeCodec().UnmarshalBinaryBare(tag.Value, &pid)
+					if err != nil {
+						panic(err)
+					}
+				}
+			}
+			pidStr := strconv.FormatInt(pid,10)
+			time.Sleep(stime * time.Millisecond)
+			execCommand("bnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pidStr, "--option=yes")
+			time.Sleep(time.Duration(*votingTime) * time.Second)
+			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pidStr)
 			time.Sleep(stime * time.Millisecond)
 		}
 		tokens = append(tokens, token)
@@ -543,23 +572,11 @@ func async(ctx context.CLIContext, txBldr txbuilder.TxBuilder, txBytes []byte, t
 	if err != nil {
 		fmt.Println(err)
 	}
-	if ctx.JSON {
-		type toJSON struct {
-			TxHash string
-		}
-		valueToJSON := toJSON{res.Hash.String()}
-		JSON, err := txBldr.Codec.MarshalJSON(valueToJSON)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(string(JSON))
-	} else {
-		str := res.Hash.String()
-		txh.m.Lock()
-		txh.trans = append(txh.trans, str)
-		txh.m.Unlock()
-		fmt.Println("tran hash:", str)
-	}
+	str := res.Hash.String()
+	txh.m.Lock()
+	txh.trans = append(txh.trans, str)
+	txh.m.Unlock()
+	fmt.Println("tran hash:", str)
 }
 
 func doRecover() {
