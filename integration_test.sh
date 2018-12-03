@@ -28,7 +28,7 @@ function prepare_node() {
 	secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
 	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
-	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "100000000000"/g' genesis.json)
+	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
@@ -92,7 +92,7 @@ sleep 2s
 result=$(expect ./vote.exp alice ${chain_id} 1 Yes ${cli_home})
 check_operation "Vote" "${result}" "${chain_operation_words}"
 
-sleep 10s
+sleep 5s
 # list trading pair
 result=$(expect ./list.exp BTC BNB 100000000 bob ${chain_id} ${cli_home} 1)
 check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
