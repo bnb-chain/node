@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/BiJie/BinanceChain/app/pub"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
@@ -16,12 +17,12 @@ const AbciQueryPrefix = "dex"
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper,
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
 ) {
 	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper) {
+	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 
@@ -42,9 +43,9 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockT
 	// TODO: update fee/rate
 	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
-		newCtx = pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
+		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
-		newCtx = dexKeeper.ExpireOrders(ctx, blockTime, nil)
+		dexKeeper.ExpireOrders(ctx, blockTime, nil)
 	}
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)

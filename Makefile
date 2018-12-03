@@ -17,9 +17,11 @@ build:
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
+	go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
 else
 	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
+	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
 endif
 
 build-linux:
@@ -31,6 +33,7 @@ build-alpine:
 install:
 	go install $(BUILD_FLAGS) ./cmd/bnbchaind
 	go install $(BUILD_FLAGS) ./cmd/bnbcli
+	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 
 ########################################
 ### Dependencies
@@ -77,7 +80,7 @@ build-docker-node:
 
 # Run a 4-node testnet locally
 localnet-start: localnet-stop
-	@if ! [ -f build/node0/gaiad/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2 ; fi
+	@if ! [ -f build/node0/gaiad/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 -o . --starting-ip-address 172.20.0.2 ; fi
 	@for i in `seq 0 3`; do \
 		if [ "$(SKIP_TIMEOUT)" = "true" ]; then \
 			sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ./build/node$$i/gaiad/config/config.toml;\

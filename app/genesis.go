@@ -3,28 +3,45 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
+	"fmt"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/server"
-	serverCfg "github.com/cosmos/cosmos-sdk/server/config"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/tendermint/tendermint/crypto"
-	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
+const DefaultKeyPass = "12345678"
+
+var (
+	// each genesis validators will self delegate 1000e8 native tokens to become a validator
+	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeToken, 1000e8)
+	// we put 20% of the total supply to the stake pool
+	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply / 5
+	// set default unbonding duration to 7 days
+	DefaultUnbondingTime = 60 * 60 * 24 * 7 * time.Second
+	// default max validators to 15
+	DefaultMaxValidators uint16 = 15
+
+	// min gov deposit
+	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeToken, 2000e8)}
+)
+
 type GenesisState struct {
-	Tokens     []types.Token    `json:"tokens"`
-	Accounts   []GenesisAccount `json:"accounts"`
-	DexGenesis dex.Genesis      `json:"dex"`
+	Tokens     []types.Token      `json:"tokens"`
+	Accounts   []GenesisAccount   `json:"accounts"`
+	DexGenesis dex.Genesis        `json:"dex"`
+	StakeData  stake.GenesisState `json:"stake"`
+	GovData    gov.GenesisState   `json:"gov"`
+	GenTxs     []json.RawMessage  `json:"gentxs"`
 }
 
 // GenesisAccount doesn't need pubkey or sequence
@@ -56,71 +73,8 @@ func (ga *GenesisAccount) ToAppAccount() (acc *types.AppAccount) {
 
 func BinanceAppInit() server.AppInit {
 	return server.AppInit{
-		AppGenTx:    BinanceAppGenTx,
 		AppGenState: BinanceAppGenState,
 	}
-}
-
-type GenTx struct {
-	Name    string         `json:"name"`
-	Address sdk.AccAddress `json:"address"`
-	PubKey  crypto.PubKey  `json:"pub_key"`
-}
-
-func BinanceAppGenTx(cdc *wire.Codec, pk crypto.PubKey, genTxConfig serverCfg.GenTx) (
-	appGenTx, cliPrint json.RawMessage, validator tmtypes.GenesisValidator, err error) {
-
-	// write app.toml when we run testnet command, we only know the `current` rootDir for each validator here
-	// otherwise, we can only generate at ~/.bnbchaind/config/app.toml
-	appConfigFilePath := filepath.Join(ServerContext.Context.Config.RootDir, "config/", config.AppConfigFileName+".toml")
-	if _, err := os.Stat(appConfigFilePath); os.IsNotExist(err) {
-		config.WriteConfigFile(appConfigFilePath, ServerContext.BinanceChainConfig)
-	}
-
-	if genTxConfig.Name == "" {
-		return nil, nil, tmtypes.GenesisValidator{}, errors.New("Must specify --name (validator moniker)")
-	}
-
-	var addr sdk.AccAddress
-	var secret string
-	addr, secret, err = server.GenerateSaveCoinKey(genTxConfig.CliRoot, genTxConfig.Name, "1234567890", genTxConfig.Overwrite)
-	if err != nil {
-		return
-	}
-
-	cliPrint, err = makePrintMessage(cdc, secret)
-	if err != nil {
-		return
-	}
-
-	var bz []byte
-	genTx := GenTx{
-		Name:    genTxConfig.Name,
-		Address: addr,
-		PubKey:  pk,
-	}
-	bz, err = wire.MarshalJSONIndent(cdc, genTx)
-	if err != nil {
-		return
-	}
-	appGenTx = json.RawMessage(bz)
-
-	validator = tmtypes.GenesisValidator{
-		PubKey: pk,
-		// TODO: with the staking feature.
-		Power: 1,
-	}
-	return
-}
-
-func makePrintMessage(cdc *wire.Codec, secret string) (json.RawMessage, error) {
-	mm := map[string]string{"secret": secret}
-	bz, err := cdc.MarshalJSON(mm)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.RawMessage(bz), nil
 }
 
 // AppGenState sets up the app_state and appends the cool app state
@@ -131,27 +85,48 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	}
 
 	genAccounts := make([]GenesisAccount, len(appGenTxs))
-	for i, appGenTx := range appGenTxs {
-		var genTx GenTx
-		err = cdc.UnmarshalJSON(appGenTx, &genTx)
-		if err != nil {
+	for i, genTx := range appGenTxs {
+		var tx auth.StdTx
+		if err = cdc.UnmarshalJSON(genTx, &tx); err != nil {
 			return
 		}
-
-		// create the genesis account
-		appAccount := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(genTx.Address)}
-		if len(genTx.Name) > 0 {
-			appAccount.SetName(genTx.Name)
+		msgs := tx.GetMsgs()
+		if len(msgs) != 1 {
+			err = errors.New(
+				"must provide genesis StdTx with exactly 1 CreateValidator message")
+			return
 		}
-		acc := NewGenesisAccount(&appAccount, genTx.PubKey.Address())
-		genAccounts[i] = acc
+		if msg, ok := msgs[0].(stake.MsgCreateValidator); !ok {
+			err = fmt.Errorf(
+				"genesis transaction %v does not contain a MsgCreateValidator", i)
+			return
+		} else {
+			appAccount := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(sdk.AccAddress(msg.ValidatorAddr))}
+			if len(msg.Moniker) > 0 {
+				appAccount.SetName(msg.Moniker)
+			}
+			acc := NewGenesisAccount(&appAccount, msg.PubKey.Address())
+			genAccounts[i] = acc
+		}
 	}
 
-	// create the final app state
+	stakeData := stake.DefaultGenesisState()
+	nativeToken := tokens.DefaultGenesisToken(genAccounts[0].Address)
+	stakeData.Pool.LooseTokens = sdk.NewDec(DefaultMaxBondedTokenAmount)
+	stakeData.Params.BondDenom = nativeToken.Symbol
+	stakeData.Params.UnbondingTime = DefaultUnbondingTime
+	stakeData.Params.MaxValidators = DefaultMaxValidators
+
+	govData := gov.DefaultGenesisState()
+	govData.DepositProcedure.MinDeposit = DefaultGovMinDesposit
+
 	genesisState := GenesisState{
 		Accounts:   genAccounts,
-		Tokens:     append([]types.Token{}, tokens.DefaultGenesisToken(genAccounts[0].Address)),
+		Tokens:     []types.Token{nativeToken},
 		DexGenesis: dex.DefaultGenesis,
+		StakeData:  stakeData,
+		GenTxs:     appGenTxs,
+		GovData:    govData,
 	}
 
 	appState, err = wire.MarshalJSONIndent(cdc, genesisState)

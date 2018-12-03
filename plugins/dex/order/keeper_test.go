@@ -22,8 +22,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
@@ -428,7 +428,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	err := keeper.ReplayOrdersFromBlock(blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
+	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
@@ -498,7 +498,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime)
 
-	ctx = keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), nil)
+	keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), nil)
 	buys, sells := keeper.engines["ABC_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 0)
 	require.Len(t, sells, 1)
@@ -515,7 +515,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 		sdk.NewCoin("BNB", 6e4),
 		sdk.NewCoin("ABC", 1e7),
 	}.Sort(), types.FeeForProposer)
-	require.Equal(t, expectFees, tx.Fee(ctx))
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
 	acc = am.GetAccount(ctx, acc.GetAddress())
 	require.Equal(t, sdk.Coins{
 		sdk.NewCoin("ABC", 2e8),
@@ -525,6 +525,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 		sdk.NewCoin("ABC", 9e7),
 		sdk.NewCoin("BNB", 1e4),
 	}.Sort(), acc.GetCoins())
+	fees.Pool.Clear()
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {

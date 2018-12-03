@@ -20,20 +20,23 @@ function prepare_node() {
 	stop_node
 	cleanup
 
-	alice_secret=$(./bnbchaind init --name testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
+	cp -f ../networks/demo/*.exp .
 
-	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+	alice_secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
-	# stop and start node
-	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
+	$(cd "${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+
+	# stop a previously running node
+	ps -ef  | grep bnbc | grep testnoded | awk '{print $2}' | xargs kill
+
 	./bnbchaind start --home ${home}  > ./testnoded/node.log 2>&1 &
 
 	echo ${alice_secret}
 }
 
-# stop_node stops the chain node
+# stop_node stops the chain node and the api-server
 function stop_node() {
-	ps -ef | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
+	ps -ef | grep bnbc | grep testnode | awk '{print $2}' | xargs kill
 }
 
 # initial checks
@@ -57,7 +60,7 @@ fi
 
 # build the chain
 
-cd $GOPATH/src/github.com/$REPO && cleanup
+echo "Building bnbchaind and bnbcli, please wait..."
 cd $GOPATH/src/github.com/$REPO && make get_vendor_deps && make build
 
 cd $GOPATH/src/github.com/$REPO/build
@@ -77,6 +80,34 @@ result=$(expect ./add_key.exp "${bob_secret}" "bob")
 
 alice_addr=$(./bnbcli keys list --home ${cli_home} | grep alice | grep -o "bnc[0-9a-zA-Z]*")
 bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnc[0-9a-zA-Z]*")
+
+# wait for the chain
+
+sleep 15s
+
+# issue and list an NNB test token
+
+expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr}
+if [ $? -ne 0 ]; then
+	echo "There was an error sending BNB to Bob!"
+	exit 1
+fi
+
+expect ./issue.exp NNB TestToken 1000000000000000 bob ${chain_id} ${cli_home}
+if [ $? -ne 0 ]; then
+	echo "There was an error issuing the NNB token!"
+	exit 1
+fi
+sleep 1s
+
+expect ./list.exp NNB BNB 100000000 bob ${chain_id} ${cli_home}
+if [ $? -ne 0 ]; then
+	echo "There was an error listing the NNB token!"
+	exit 1
+fi
+
+# delay starting the api-server to avoid cli problem for using shared cli_home when using recover, send and issue commands
+./bnbcli api-server --home ${cli_home}  > ./testnoded/api-server.log 2>&1 &
 
 # export a function to kill the node, as well as alice and bob's keys and secrets
 

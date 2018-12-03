@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"sort"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
@@ -66,6 +68,9 @@ type BinanceChain struct {
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
 	ValAddrMapper val.Mapper
+	paramsKeeper  params.Keeper
+	stakeKeeper   stake.Keeper
+	govKeeper     gov.Keeper
 
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
@@ -94,23 +99,32 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
-
-	// handlers
+	app.paramsKeeper = params.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
+	app.stakeKeeper = stake.NewKeeper(
+		cdc,
+		common.StakeStoreKey, common.TStakeStoreKey,
+		app.CoinKeeper, app.paramsKeeper.Subspace(stake.DefaultParamspace),
+		app.RegisterCodespace(stake.DefaultCodespace),
+	)
 
-	// Currently we do not need the ibc and staking part
-	// app.ibcMapper = ibc.NewMapper(app.cdc, app.capKeyIBCStore, app.RegisterCodespace(ibc.DefaultCodespace))
-	// app.stakeKeeper = simplestake.NewKeeper(app.capKeyStakingStore, app.coinKeeper, app.RegisterCodespace(simplestake.DefaultCodespace))
+	app.govKeeper = gov.NewKeeper(
+		cdc,
+		common.GovStoreKey,
+		app.paramsKeeper, app.paramsKeeper.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
+		app.RegisterCodespace(gov.DefaultCodespace),
+	)
 
 	// legacy bank route (others moved to plugin init funcs)
-	sdkBankHandler := bank.NewHandler(app.CoinKeeper)
-	bankHandler := func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		return sdkBankHandler(ctx, msg)
-	}
-	app.Router().AddRoute("bank", bankHandler)
+	app.Router().
+		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
+		AddRoute("stake", stake.NewHandler(app.stakeKeeper)).
+		AddRoute("gov", gov.NewHandler(app.govKeeper))
+
+	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewKafkaMarketDataPublisher(app.publicationConfig)
+		app.publisher = pub.NewKafkaMarketDataPublisher(app.Logger, app.publicationConfig)
 	}
 
 	// finish app initialization
@@ -122,8 +136,13 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.ValAddrStoreKey,
 		common.TokenStoreKey,
 		common.DexStoreKey,
-		common.PairStoreKey)
+		common.PairStoreKey,
+		common.ParamsStoreKey,
+		common.StakeStoreKey,
+		common.GovStoreKey,
+	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
+	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
 	err := app.LoadLatestVersion(common.MainStoreKey)
@@ -156,7 +175,7 @@ func (app *BinanceChain) initDex() {
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -171,33 +190,60 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			// return sdk.ErrGenesisParse("").TraceCause(err, "")
 		}
 
-		for _, gacc := range genesisState.Accounts {
+		validatorAddrs := make([]sdk.AccAddress, len(genesisState.Accounts))
+		for i, gacc := range genesisState.Accounts {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
 			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
+			validatorAddrs[i] = acc.Address
 		}
+		tokens.InitGenesis(ctx, app.TokenMapper, app.CoinKeeper, genesisState.Tokens,
+			validatorAddrs, DefaultSelfDelegationToken.Amount)
 
-		for _, token := range genesisState.Tokens {
-			// TODO: replace by Issue and move to token.genesis
-			err = app.TokenMapper.NewToken(ctx, token)
-			if err != nil {
-				panic(err)
-			}
-
-			_, _, sdkErr := app.CoinKeeper.AddCoins(ctx, token.Owner, append((sdk.Coins)(nil),
-				sdk.Coin{
-					Denom:  token.Symbol,
-					Amount: token.TotalSupply.ToInt64(),
-				}))
-			if sdkErr != nil {
-				panic(sdkErr)
-			}
-		}
-
-		// Application specific genesis handling
 		app.DexKeeper.InitGenesis(ctx, genesisState.DexGenesis.TradingGenesis)
-		return abci.ResponseInitChain{}
+		validators, err := stake.InitGenesis(ctx, app.stakeKeeper, genesisState.StakeData)
+		gov.InitGenesis(ctx, app.govKeeper, genesisState.GovData)
+
+		if err != nil {
+			panic(err) // TODO find a way to do this w/o panics
+		}
+
+		// before we deliver the genTxs, we have transferred some delegation tokens to the validator candidates.
+		if len(genesisState.GenTxs) > 0 {
+			for _, genTx := range genesisState.GenTxs {
+				var tx auth.StdTx
+				err = app.Codec.UnmarshalJSON(genTx, &tx)
+				if err != nil {
+					panic(err)
+				}
+				bz := app.Codec.MustMarshalBinary(tx)
+				res := app.BaseApp.DeliverTx(bz)
+				if !res.IsOK() {
+					panic(res.Log)
+				}
+			}
+			validators = app.stakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
+		}
+
+		// sanity check
+		if len(req.Validators) > 0 {
+			if len(req.Validators) != len(validators) {
+				panic(fmt.Errorf("genesis validator numbers are not matched, staked=%d, req=%d",
+					len(validators), len(req.Validators)))
+			}
+			sort.Sort(abci.ValidatorUpdates(req.Validators))
+			sort.Sort(abci.ValidatorUpdates(validators))
+			for i, val := range validators {
+				if !val.Equal(req.Validators[i]) {
+					panic(fmt.Errorf("invalid genesis validator, index=%d", i))
+				}
+			}
+		}
+
+		return abci.ResponseInitChain{
+			Validators: validators,
+		}
 	}
 }
 
@@ -205,24 +251,19 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
-	// we shouldn't use ctx.BlockHeight() here because for the first block, it would be 0 and 2 for the second block
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []*pub.Trade
-	//match may end with transaction faliure, which is better to save into
-	//the EndBlock response. However, current cosmos doesn't support this.
-	//future TODO: add failure info.
-	response := abci.ResponseEndBlock{}
 
-	if utils.SameDayInUTC(lastBlockTime, blockTime) || height == 1 {
+	isBreatheBlock := !utils.SameDayInUTC(lastBlockTime, blockTime)
+	if !isBreatheBlock || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
-			tradesToPublish, ctx = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			ctx = app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
-
 	} else {
 		// breathe block
 		bnclog.Info("Start Breathe Block Handling",
@@ -235,7 +276,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
-	// TODO: update validators
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive &&
@@ -243,7 +283,21 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
 	}
 
-	return response
+	tags := gov.EndBlocker(ctx, app.govKeeper)
+
+	var validatorUpdates abci.ValidatorUpdates
+	if isBreatheBlock {
+		// some endblockers without fees will execute after publish to make publication run as early as possible.
+		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
+	}
+
+	//match may end with transaction failure, which is better to save into
+	//the EndBlock response. However, current cosmos doesn't support this.
+	//future TODO: add failure info.
+	return abci.ResponseEndBlock{
+		ValidatorUpdates: validatorUpdates,
+		Tags:             tags,
+	}
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.
@@ -344,6 +398,7 @@ func MakeCodec() *wire.Codec {
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)
+	gov.RegisterCodec(cdc)
 
 	return cdc
 }

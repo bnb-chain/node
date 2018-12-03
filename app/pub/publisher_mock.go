@@ -2,9 +2,11 @@ package pub
 
 import (
 	"fmt"
+	"sync"
+
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
 )
 
 type MockMarketDataPublisher struct {
@@ -12,9 +14,14 @@ type MockMarketDataPublisher struct {
 	BooksPublished           []*Books
 	TradesAndOrdersPublished []*tradesAndOrders
 	BlockFeePublished        []BlockFee
+
+	Lock *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
 }
 
 func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
+	publisher.Lock.Lock()
+	defer publisher.Lock.Unlock()
+
 	switch tpe {
 	case accountsTpe:
 		publisher.AccountPublished = append(publisher.AccountPublished, msg.(*accounts))
@@ -30,21 +37,25 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, heig
 }
 
 func (publisher *MockMarketDataPublisher) Stop() {
+	publisher.Lock.Lock()
+	defer publisher.Lock.Unlock()
+
 	publisher.AccountPublished = make([]*accounts, 0)
 	publisher.BooksPublished = make([]*Books, 0)
 	publisher.TradesAndOrdersPublished = make([]*tradesAndOrders, 0)
 }
 
-func NewMockMarketDataPublisher(config *config.PublicationConfig) (publisher *MockMarketDataPublisher) {
+func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationConfig) (publisher *MockMarketDataPublisher) {
 	publisher = &MockMarketDataPublisher{
 		make([]*accounts, 0),
 		make([]*Books, 0),
 		make([]*tradesAndOrders, 0),
 		make([]BlockFee, 0),
+		&sync.Mutex{},
 	}
-	if err := setup(config, publisher); err != nil {
+	if err := setup(logger, config, publisher); err != nil {
 		publisher.Stop()
-		log.Error("Cannot start up market data kafka publisher", "err", err)
+		logger.Error("Cannot start up market data kafka publisher", "err", err)
 		panic(err)
 	}
 	return publisher

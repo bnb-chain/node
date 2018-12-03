@@ -17,6 +17,7 @@ const (
 	CodeFailCancelOrder         sdk.CodeType = 404
 	CodeFailLocateOrderToCancel sdk.CodeType = 405
 	CodeDuplicatedOrder         sdk.CodeType = 406
+	CodeInvalidProposal         sdk.CodeType = 407
 )
 
 // ErrIncorrectDexOperation - Error returned upon an incorrect guess
@@ -30,4 +31,8 @@ func ErrInvalidOrderParam(paraName string, err string) sdk.Error {
 
 func ErrInvalidTradeSymbol(err string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidTradeSymbol, fmt.Sprintf("Invalid trade symbol: %s", err))
+}
+
+func ErrInvalidProposal(err string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidProposal, fmt.Sprintf("Invalid proposal: %s", err))
 }

@@ -4,12 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-
+	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -162,11 +160,4 @@ func TestGenesis(t *testing.T) {
 	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}})
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
-
-	// reload app and ensure the account is still there
-	bapp.InitChain(abci.RequestInitChain{AppStateBytes: []byte("{}")})
-	ctx = bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
-	res1 = bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
-	require.Equal(t, acc, res1)
-	TearDown()
 }

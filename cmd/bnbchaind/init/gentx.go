@@ -1,4 +1,4 @@
-package utils
+package init
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/cmd/gaia/app"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,6 +20,8 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/BiJie/BinanceChain/app"
 )
 
 const (
@@ -50,10 +51,7 @@ following delegation and commission default parameters:
 
 			config := ctx.Config
 			config.SetRoot(viper.GetString(tmcli.HomeFlag))
-			nodeID, valPubKey, err := InitializeNodeValidatorFiles(ctx.Config)
-			if err != nil {
-				return err
-			}
+			nodeID, valPubKey := InitializeNodeValidatorFiles(ctx.Config)
 			ip, err := server.ExternalIP()
 			if err != nil {
 				return err

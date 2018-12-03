@@ -1,4 +1,4 @@
-package tx
+package fees
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"

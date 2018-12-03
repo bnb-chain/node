@@ -4,7 +4,6 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
@@ -29,8 +28,8 @@ type MarketDataPublisher interface {
 	Stop()
 }
 
-func setup(config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
-	Logger = log.With("module", "pub")
+func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher MarketDataPublisher) (err error) {
+	Logger = logger.With("module", "pub")
 	cfg = config
 	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {
@@ -51,8 +50,9 @@ func publish(publisher MarketDataPublisher) {
 		// they can assign buyer/seller address into trade before persist into DB
 		var opensToPublish []*order
 		var canceledToPublish []*order
+		var feeToPublish map[string]string
 		if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-			opensToPublish, canceledToPublish = collectOrdersToPublish(
+			opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
 				marketData.tradesToPublish,
 				marketData.orderChanges,
 				marketData.orderChangesMap,
@@ -88,7 +88,7 @@ func publish(publisher MarketDataPublisher) {
 
 		if cfg.PublishAccountBalance {
 			Logger.Debug("start to publish all changed accounts")
-			publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts)
+			publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts, feeToPublish)
 		}
 
 		if cfg.PublishOrderBook {
@@ -118,12 +118,15 @@ func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp 
 	publisher.publish(&tradesAndOrdersMsg, tradesAndOrdersTpe, height, timestamp)
 }
 
-func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64, accountsToPublish map[string]Account) {
+func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64, accountsToPublish map[string]Account, feeToPublish map[string]string) {
 	numOfMsgs := len(accountsToPublish)
 
 	idx := 0
 	accs := make([]Account, numOfMsgs, numOfMsgs)
 	for _, acc := range accountsToPublish {
+		if fee, ok := feeToPublish[acc.Owner]; ok {
+			acc.Fee = fee
+		}
 		accs[idx] = acc
 		idx++
 	}
