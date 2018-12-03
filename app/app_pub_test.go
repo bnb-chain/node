@@ -144,7 +144,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.AccountPublished, 1)
 	require.Len(publisher.AccountPublished[0].Accounts, 1)
-	expectedAccountToPub := pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ", 100000000000, 0, 0}}}
+	expectedAccountToPub := pub.Account{string(buyer), "", []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ", 100000000000, 0, 0}}}
 	require.Equal(expectedAccountToPub, publisher.AccountPublished[0].Accounts[0])
 	publisher.Lock.Unlock()
 
@@ -161,8 +161,8 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Len(publisher.BooksPublished, 2)
 	require.Len(publisher.BooksPublished[1].Books, 1)
 	assert.Equal(pub.OrderBookDelta{"XYZ_BNB", []pub.PriceLevel{{102000, 0}}, []pub.PriceLevel{{102000, 100000000}}}, publisher.BooksPublished[1].Books[0])
-	expectedAccountToPub = pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ", 100300000000, 0, 0}}}
-	expectedAccountToPubSeller := pub.Account{seller.String(), []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ", 99600000000, 0, 100000000}}}
+	expectedAccountToPub = pub.Account{string(buyer), "BNB:153", []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ", 100300000000, 0, 0}}}
+	expectedAccountToPubSeller := pub.Account{string(seller), "BNB:153", []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ", 99600000000, 0, 100000000}}}
 	require.Len(publisher.AccountPublished, 2)
 	require.Len(publisher.AccountPublished[1].Accounts, 2)
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPub)
@@ -180,10 +180,10 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	am.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 43})
+	expectedAccountToPub = pub.Account{string(buyer), "BNB:51", []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ", 100100000000, 0, 0}}}
+	expectedAccountToPubSeller = pub.Account{string(seller), "BNB:51", []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ", 99900000000, 0, 0}}}
 
 	publisher.Lock.Lock()
-	expectedAccountToPub = pub.Account{buyer.String(), []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ", 100100000000, 0, 0}}}
-	expectedAccountToPubSeller = pub.Account{seller.String(), []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ", 99900000000, 0, 0}}}
 	require.Len(publisher.BooksPublished, 3)
 	require.Len(publisher.BooksPublished[2].Books, 0)
 	require.Len(publisher.AccountPublished, 3)
