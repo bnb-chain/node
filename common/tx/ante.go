@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
 )
@@ -251,15 +252,13 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc auth.Account
 		return ctx, res
 	}
 
-	// record fees in ctx.
-	totalFee := Fee(ctx)
-	totalFee.AddFee(fee)
-	ctx = WithFee(ctx, totalFee)
+	// add fee to pool
+	fees.Pool.AddFee(fee)
 	return ctx, sdk.Result{}
 }
 
 func calculateFees(msg sdk.Msg) (types.Fee, error) {
-	calculator := GetCalculator(msg.Type())
+	calculator := fees.GetCalculator(msg.Type())
 	if calculator == nil {
 		return types.Fee{}, errors.New("missing calculator for msgType:" + msg.Type())
 	}
