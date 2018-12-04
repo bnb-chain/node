@@ -175,7 +175,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 		if kp.CollectOrderInfoForPublish {
 			if _, exists := kp.OrderChangesMap[m.Id]; !exists {
 				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
-				kp.OrderChangesMap[m.Id] = &m
+				kp.OrderChangesMap[m.Id] = &orderHolder
 			}
 		}
 	}
