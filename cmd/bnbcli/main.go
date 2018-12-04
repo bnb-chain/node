@@ -9,7 +9,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
-	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
+	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
 	"github.com/spf13/cobra"
 
 	"github.com/tendermint/tendermint/libs/cli"
@@ -70,21 +70,6 @@ func main() {
 		client.PostCommands(
 			bankcmd.SendTxCmd(cdc),
 		)...)
-	rootCmd.AddCommand(
-		client.PostCommands(
-			ibccmd.IBCTransferCmd(cdc),
-		)...)
-
-	// temp. disabled staking commands
-	// rootCmd.AddCommand(
-	// 	client.PostCommands(
-	// 		ibccmd.IBCRelayCmd(cdc),
-	// 		simplestakingcmd.BondTxCmd(cdc),
-	// 	)...)
-	// rootCmd.AddCommand(
-	// 	client.PostCommands(
-	// 		simplestakingcmd.UnbondTxCmd(cdc),
-	// 	)...)
 
 	// add proxy, version and key info
 	rootCmd.AddCommand(
@@ -99,6 +84,12 @@ func main() {
 	dexcmd.AddCommands(rootCmd, cdc)
 	paramcmd.AddCommands(rootCmd, cdc)
 
+	// stake cmds
+	rootCmd.AddCommand(
+
+		client.PostCommands(
+			stakecmd.GetCmdCreateValidator(cdc),
+		)...)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 
