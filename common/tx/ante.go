@@ -19,7 +19,7 @@ import (
 const (
 	maxMemoCharacters = 100
 
-	maxCacheNumber = 30000
+	defaultMaxCacheNumber = 30000
 )
 
 type sigLRUCache struct {
@@ -50,7 +50,11 @@ func (cache *sigLRUCache) addSig(txHash string) {
 
 // signature-key: txHash
 // based on the assumption that tx hash will never collide.
-var sigCache = newSigLRUCache(maxCacheNumber)
+var sigCache = newSigLRUCache(defaultMaxCacheNumber)
+
+func InitSigCache(size int) {
+	sigCache = newSigLRUCache(size)
+}
 
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
