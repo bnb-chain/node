@@ -54,7 +54,7 @@ function prepare(){
     cd ${workspace}
     if ! [ -f ${home[0]}/gaiad/config/genesis.json ];
     then
-        docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 9 --o . --starting-ip-address 172.18.10.204 --node-dir-prefix=kubenode
+        docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 9 -o . --starting-ip-address 172.18.10.204 --node-dir-prefix=kubenode  --chain-id=chain-bnb
     fi
     for ihome in ${home[@]}; do
 
@@ -66,11 +66,11 @@ function prepare(){
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/\"chain_id\": \"chain-[a-zA-Z0-9]\{6\}\"/\"chain_id\": \"chain-bnb\"/g" genesis.json)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/prometheus = false/prometheus = true/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/flush_throttle_timeout = 0/flush_throttle_timeout = 10/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/peer_gossip_sleep_duration = 0/peer_gossip_sleep_duration = 10/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/size = 5000/size = 20000/g" config.toml)
+        $(cd "${ihome}/gaiad/config" && sed -i -e "s/\"voting_period\": \"1209600000000000\"/\"voting_period\": \"60000000000\"/g" genesis.json)
 
     done
     for j in {0..8}

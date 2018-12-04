@@ -65,7 +65,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        - /bnbchaind/bnbcli --home /bnbchaind/cli_home  --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server > /bnbchaind/bnbchain/api-server.log 2>&1
+        - /bnbchaind/bnbcli --chain-id chain-bnb --home /bnbchaind/cli_home  --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server > /bnbchaind/bnbchain/api-server.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/bnbchain
           name: bnbchain-volume
