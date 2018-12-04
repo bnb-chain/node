@@ -55,7 +55,7 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
 	return keeper
 }
 
@@ -261,11 +261,13 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
-	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 10000, 1000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
-	msg = NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ_BNB", 100000, 2000000)
+	msg123456 := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ_BNB", 102000, 3000000)
+	info123456 := OrderInfo{msg123456, 42, 0, 42, 0, 0, ""}
+	keeper.AddOrder(info123456, false)
+	msg123457 := NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ_BNB", 10000, 1000000)
+	info123457 := OrderInfo{msg123457, 42, 0, 42, 0, 0, ""}
+	keeper.AddOrder(info123457, false)
+	msg := NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ_BNB", 100000, 2000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(3, len(keeper.allOrders["XYZ_BNB"]))
@@ -282,6 +284,10 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(int64(2000000), keeper2.allOrders["XYZ_BNB"]["123456"].CumQty)
 	assert.Equal(int64(10000), keeper2.allOrders["XYZ_BNB"]["123457"].Price)
 	assert.Equal(int64(0), keeper2.allOrders["XYZ_BNB"]["123457"].CumQty)
+	info123456_Changed := info123456
+	info123456_Changed.CumQty = 2000000
+	assert.Equal(info123456_Changed, *keeper2.OrderChangesMap["123456"])
+	assert.Equal(info123457, *keeper2.OrderChangesMap["123457"])
 	assert.Equal(1, len(keeper2.engines))
 	assert.Equal(int64(102000), keeper2.engines["XYZ_BNB"].LastTradePrice)
 	assert.Equal(int64(43), h)
