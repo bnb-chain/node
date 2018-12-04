@@ -70,7 +70,6 @@ func main() {
 		client.PostCommands(
 			ibccmd.IBCTransferCmd(cdc),
 		)...)
-
 	// temp. disabled staking commands
 	// rootCmd.AddCommand(
 	// 	client.PostCommands(

@@ -58,7 +58,7 @@ function prepare(){
     fi
     for ihome in ${home[@]}; do
 
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/sprometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" config.toml)
+        $(cd "${ihome}/gaiad/config" && sed -i -e "s/prometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/flush_throttle_timeout = 100/flush_throttle_timeout = 0/g" config.toml)
         $(cd "${ihome}/gaiad/config" && sed -i -e "s/peer_gossip_sleep_duration = 100/peer_gossip_sleep_duration = 0/g" config.toml)
@@ -111,7 +111,7 @@ function build-bridge-config(){
     start=$(echo "$cluster_num*3" |bc)
     end=$((start + 3))
     while [ ${start} -lt ${end} ]; do
-        nid=$(cat ${workspace}/build/gentxs/kubenode${start}.json|jq .node_id | sed 's/\"//g')
+        nid=$(cat ${workspace}/build/gentxs/kubenode${start}.json|jq  .value.memo| sed 's/\"//g'|cut -f1 -d"@")
         if [ "$bridge_seeds"x == ""x ];then
             bridge_seeds="${nid}@${des_ips[$start]}:26656"
         else
