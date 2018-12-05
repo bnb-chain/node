@@ -38,8 +38,6 @@ import (
 
 const (
 	appName = "BNBChain"
-
-	accountCacheCap = 10000
 )
 
 // default home directories for expected binaries
