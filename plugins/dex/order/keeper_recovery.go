@@ -150,9 +150,9 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
+		kp.lastTradePrices[symbol] = ob.LastTradePrice
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}
-	kp.updateLastTradePrices()
 	key := genActiveOrdersSnapshotKey(height)
 	bz := kvStore.Get([]byte(key))
 	if bz == nil {
@@ -174,6 +174,12 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 	for _, m := range ao.Orders {
 		orderHolder := m
 		kp.allOrders[m.Symbol][m.Id] = &orderHolder
+		if m.CreatedHeight == height {
+			kp.roundOrders[m.Symbol] = append(kp.roundOrders[m.Symbol], m.Id)
+			if m.TimeInForce == TimeInForce.IOC {
+				kp.roundIOCOrders[m.Symbol] = append(kp.roundIOCOrders[m.Symbol], m.Id)
+			}
+		}
 		if kp.CollectOrderInfoForPublish {
 			if _, exists := kp.OrderChangesMap[m.Id]; !exists {
 				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
