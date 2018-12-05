@@ -7,10 +7,9 @@ import (
 	"sync"
 	"time"
 
-	tmlog "github.com/tendermint/tendermint/libs/log"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
@@ -71,7 +70,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		logger:                     logger,
+		logger: logger,
 	}
 }
 
@@ -488,7 +487,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 	}
 
 	feesPerAcc := make(map[string]*types.Fee)
-	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc auth.Account, in sdk.Coin) types.Fee) {
+	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc sdk.Account, in sdk.Coin) types.Fee) {
 		for addrStr, assets := range assetsMap {
 			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
@@ -509,12 +508,12 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			}
 		}
 	}
-	collectFee(tradeInAsset, func(acc auth.Account, in sdk.Coin) types.Fee {
+	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
 		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.lastTradePrices)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
-	collectFee(expireInAsset, func(acc auth.Account, in sdk.Coin) types.Fee {
+	collectFee(expireInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
 		var i int64 = 0
 		var fees types.Fee
 		for ; i < in.Amount; i++ {

@@ -3,11 +3,10 @@ package app
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
+	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
@@ -20,13 +19,21 @@ import (
 	"github.com/BiJie/BinanceChain/wire"
 )
 
-func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context, proposerAcc, valAcc1, valAcc2, valAcc3 auth.Account) {
+func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStoreKey) sdk.AccountCache {
+	accountStore := ms.GetKVStore(accountKey)
+	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
+	return auth.NewAccountCache(accountStoreCache)
+}
+
+func setup() (am auth.AccountKeeper, valMapper val.Mapper, ctx sdk.Context, proposerAcc, valAcc1, valAcc2, valAcc3 sdk.Account) {
 	ms, capKey, cap2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	am = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	valMapper = val.NewMapper(cap2)
-	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 	// setup proposer and other validators
 	_, proposerAcc = testutils.NewAccount(ctx, am, 100)
 	_, valAcc1 = testutils.NewAccount(ctx, am, 100)

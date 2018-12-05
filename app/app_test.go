@@ -68,7 +68,7 @@ func TearDown() {
 	os.RemoveAll(cfg.DefaultConfig().DBDir())
 }
 
-func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]auth.Account {
+func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]sdk.Account {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{
 			BaseAccount: auth.BaseAccount{
@@ -91,7 +91,7 @@ func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, c
 	}
 }
 
-func Account(i int) auth.Account {
+func Account(i int) sdk.Account {
 	return genAccs[i]
 }
 

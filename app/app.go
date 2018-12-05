@@ -72,6 +72,7 @@ type BinanceChain struct {
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
 
+	baseConfig        *config.BaseConfig
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
 }
@@ -90,6 +91,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
+		baseConfig:        ServerContext.BaseConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
 
@@ -149,6 +151,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
+
+	// init app cache
+	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
+	app.SetAccountStoreCache(cdc, accountStore, app.baseConfig.AccountCacheSize)
+
+	tx.InitSigCache(app.baseConfig.SignatureCacheSize)
 
 	// remaining plugin init
 	app.initDex()
@@ -306,7 +314,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 
 	// iterate to get the accounts
 	accounts := []GenesisAccount{}
-	appendAccount := func(acc auth.Account) (stop bool) {
+	appendAccount := func(acc sdk.Account) (stop bool) {
 		account := GenesisAccount{
 			Address: acc.GetAddress(),
 		}
