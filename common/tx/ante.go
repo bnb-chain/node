@@ -56,6 +56,51 @@ func InitSigCache(size int) {
 	sigCache = newSigLRUCache(size)
 }
 
+// this function is not implemented in AnteHandler in BaseApp.
+func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
+	return func(ctx sdk.Context, tx sdk.Tx) sdk.Result {
+		stdTx, ok := tx.(auth.StdTx)
+		if !ok {
+			return sdk.ErrInternal("tx must be StdTx").Result()
+		}
+		err := validateBasic(stdTx)
+		if err != nil {
+			return err.Result()
+		}
+		// the below code are somewhat similar as part of AnteHandler,
+		// because it is extracted out to enable Concurrent run.
+		// It might be revised to reduce duplication but so far they are very light
+		sigs := stdTx.GetSignatures()
+		signerAddrs := stdTx.GetSigners()
+		msgs := tx.GetMsgs()
+
+		// get the sign bytes (requires all account & sequence numbers and the fee)
+		sequences := make([]int64, len(sigs))
+		accNums := make([]int64, len(sigs))
+		for i := 0; i < len(sigs); i++ {
+			sequences[i] = sigs[i].Sequence
+			accNums[i] = sigs[i].AccountNumber
+		}
+
+		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+		chainID := ctx.ChainID()
+		// check sigs and nonce
+		for i := 0; i < len(sigs); i++ {
+			signerAddr, sig := signerAddrs[i], sigs[i]
+			signerAcc := am.GetAccount(ctx, signerAddr)
+			if signerAcc == nil {
+				return sdk.ErrUnknownAddress(signerAddr.String()).Result()
+			}
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
+			res := processSig(txHash, sig, signerAcc, signBytes)
+			if !res.IsOK() {
+				return res
+			}
+		}
+		return sdk.Result{}
+	}
+}
+
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
@@ -94,6 +139,8 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		// collect signer accounts
 		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]sdk.Account, len(signerAddrs))
+		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+		chainID := ctx.ChainID()
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
@@ -104,9 +151,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 
 			if mode != sdk.RunTxModeReCheck {
 				// check signature, return account with incremented nonce
-				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-				txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
-
+				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
 				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return newCtx, res, true

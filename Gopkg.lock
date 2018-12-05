@@ -56,8 +56,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "upgrade25"
-  digest = "1:18c004e5ff4a39a34e0b09fc6a2a8a02ade8be0807d4ae75e0e3d1c0fdce4f9f"
+  branch = "issue_bc298"
+  digest = "1:204d25a8f2aa8bed56a1a1c77ea73e9583bf0ee71e73acdc1efe4b972136b8c8"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -74,6 +74,8 @@
     "crypto/keys/keyerror",
     "crypto/keys/mintkey",
     "server",
+    "server/concurrent",
+    "server/concurrent/pool",
     "server/config",
     "server/mock",
     "store",
@@ -104,7 +106,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "b04825adf552ab106042da8806a2489f131bbab8"
+  revision = "412093b24cbba74f5d11693232df93ab7f55980a"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
