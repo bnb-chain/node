@@ -37,13 +37,13 @@ func setup(logger tmlog.Logger, config *config.PublicationConfig, publisher Mark
 		return err
 	}
 
-	go publish(publisher)
+	go publish(publisher, logger, config, ToPublishCh)
 	IsLive = true
 
 	return nil
 }
 
-func publish(publisher MarketDataPublisher) {
+func publish(publisher MarketDataPublisher, Logger tmlog.Logger, cfg *config.PublicationConfig, ToPublishCh chan BlockInfoToPublish) {
 	for marketData := range ToPublishCh {
 		// Implementation note: publication order are important here,
 		// DEX query service team relies on the fact that we publish orders before trades so that
