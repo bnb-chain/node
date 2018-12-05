@@ -60,7 +60,10 @@ lint:
 ########################################
 ### Testing
 
-test: test_unit
+test: test_unit test_race
+
+test_race:
+	@go test -race $(PACKAGES)
 
 test_unit:
 	@go test $(PACKAGES)
