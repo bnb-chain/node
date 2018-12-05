@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	IssueFee    = 1e10
+	IssueFee    = 2e11
 	BurnFee     = 1e6
 	FreezeFee   = 1e6
 	TransferFee = 1e6
