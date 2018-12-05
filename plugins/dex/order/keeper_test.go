@@ -289,6 +289,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(info123457, *keeper2.OrderChangesMap["123457"])
 	assert.Equal(1, len(keeper2.engines))
 	assert.Equal(int64(102000), keeper2.engines["XYZ_BNB"].LastTradePrice)
+	assert.Equal(keeper.lastTradePrices, keeper2.lastTradePrices)
 	assert.Equal(int64(43), h)
 	buys, sells := keeper2.engines["XYZ_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))

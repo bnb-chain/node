@@ -150,9 +150,9 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, daysBack int) (int64, e
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
+		kp.lastTradePrices[symbol] = ob.LastTradePrice
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}
-	kp.updateLastTradePrices()
 	key := genActiveOrdersSnapshotKey(height)
 	bz := kvStore.Get([]byte(key))
 	if bz == nil {
