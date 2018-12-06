@@ -17,25 +17,21 @@ cli="${clipath} --home ${clihome}"
 
 ${cli} keys add zc --recover
 ${cli} keys add zz
-result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chainId})
-nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
-echo ${nnb_symbol}
+${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chainId}
 sleep 10
-${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol NNB --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1544486400
 sleep 2
-${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 7 --option Yes
-sleep 61
-${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 7
+${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 1 --option Yes
+sleep 6
+${cli} dex list -s=NNB --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 1
 sleep 1
-result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chainId})
-zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
-echo ${zcb_symbol}
+${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chainId}
 sleep 10
-${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ZCB --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1544486400
 sleep 2
-${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 8 --option Yes
-sleep 61
-${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 8
+${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 2 --option Yes
+sleep 6
+${cli} dex list -s=ZCB --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 2
 sleep 1
 ${cli} send --from=zc --to=cosmosaccaddr1872gjuvfakc6nrrf8qdqsar7anp9ezjly8rrwh --amount=1000000000000000:BNB --chain-id ${chainId}
 sleep 10
