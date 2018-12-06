@@ -57,11 +57,13 @@ func publish(
 	publisher MarketDataPublisher,
 	Logger tmlog.Logger,
 	cfg *config.PublicationConfig,
-	ToPublishCh chan BlockInfoToPublish) {
+	ToPublishCh <-chan BlockInfoToPublish) {
 	var lastPublishedTime time.Time
 	for marketData := range ToPublishCh {
 		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
-		metrics.PublicationQueueSize.Set(float64(len(ToPublishCh)))
+		if metrics != nil {
+			metrics.PublicationQueueSize.Set(float64(len(ToPublishCh)))
+		}
 
 		publishBlockTime := Timer(fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
 			// Implementation note: publication order are important here,

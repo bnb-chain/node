@@ -2,22 +2,41 @@
 
 # This script is still working in progress. Basically it should be used under private-2 box in our jumpservers because kafka is deployed their
 
-clipath='/home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli'
-clihome='/server/bnc/node2/gaiacli'
-chainId='chain-rKZsqV'
+# For dev
+#clipath='/home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli'
+#clihome='/server/bnc/node2/gaiacli'
+#chainId='chain-rKZsqV'
+
+clipath='/root/zjubfd/github.com/src/BiJie/BinanceChain/build/bnbcli'
+clihome='/server/bnc/node0/gaiacli'
+chainId='chain-bnb'
+
 
 cli="${clipath} --home ${clihome}"
+#cli="${clipath} --home ${clihome} --node tcp://172.27.41.151:26657"
 
 ${cli} keys add zc --recover
 ${cli} keys add zz
-${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chainId}
+result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chainId})
+nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
+echo ${nnb_symbol}
 sleep 10
-${cli} dex list -s=NNB --quote-asset-symbol=BNB --init-price=110000000 --from=zc --chain-id ${chainId}
+${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+sleep 2
+${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 7 --option Yes
+sleep 61
+${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 7
+sleep 1
+result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chainId})
+zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
+echo ${zcb_symbol}
 sleep 10
-${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chainId}
-sleep 10
-${cli} dex list -s=ZCB --quote-asset-symbol=BNB --init-price=110000000 --from=zc --chain-id ${chainId}
-sleep 10
+${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+sleep 2
+${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 8 --option Yes
+sleep 61
+${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 8
+sleep 1
 ${cli} send --from=zc --to=cosmosaccaddr1872gjuvfakc6nrrf8qdqsar7anp9ezjly8rrwh --amount=1000000000000000:BNB --chain-id ${chainId}
 sleep 10
 
@@ -38,10 +57,10 @@ do
     pause=$(random 5 7)
     symbolNum=$(random 1 10)
 
-    symbol="NNB_BNB"
+    symbol="NNB-94A_BNB"
     if [ $symbolNum -lt 4 ]
     then
-        symbol="ZCB_BNB"
+        symbol="ZCB-E21_BNB"
     fi
 
     from="zc"

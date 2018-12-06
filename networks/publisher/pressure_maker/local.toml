@@ -1,0 +1,30 @@
+numOfTradesPerBlock = 2
+numOfBlocks = 5
+blockIntervalMs = 1000
+mode = 2
+
+##### publication related configurations #####
+[publication]
+# configurations ends with Kafka can be a semi-colon separated host-port list
+# Whether we want publish market data (this includes trades and order)
+publishOrderUpdates = true
+orderUpdatesTopic = "test"
+orderUpdatesKafka = "127.0.0.1:9092"
+
+# Whether we want publish account balance to notify browser db indexer persist latest account balance change
+publishAccountBalance = true
+accountBalanceTopic = "test"
+accountBalanceKafka = "127.0.0.1:9092"
+
+# Whether we want publish order book changes
+publishOrderBook = false
+orderBookTopic = "test"
+orderBookKafka = "127.0.0.1:9092"
+
+# Whether we want publish block fee changes
+publishBlockFee = false
+blockFeeTopic = "test"
+blockFeeKafka = "127.0.0.1:9092"
+
+# Global setting
+publicationChannelSize = "10000"

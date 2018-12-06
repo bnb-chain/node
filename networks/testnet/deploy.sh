@@ -69,6 +69,7 @@ for p in "${paths[@]}"
 do
   	$(cd "${p}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
     $(cd "${p}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
+	$(cd "${p}/gaiad/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
 
 	if [ "${skip_timeout}" = true ]
 	then
