@@ -139,8 +139,9 @@ func init() {
 	}
 }
 
-var accounts map[string]string
+var accToAdd map[string]string
 var sortKeys []string
+var accToIp map[string]string
 
 func main() {
 	fmt.Println("-home", *home)
@@ -166,13 +167,13 @@ func main() {
 	lookupAccounts()
 
 	tokens := generateTokens(0, 2, *generateToken)
-	initializeAccounts(accounts, tokens, *initiateAccount)
+	initializeAccounts(tokens, *initiateAccount)
 
 	if *runCreate == true {
 		createFolder(*createPath)
 		emptyFolder(*createPath)
 		sT := time.Now()
-		doCreateTask(accounts, tokens)
+		doCreateTask(tokens)
 		eT := time.Now()
 		elapsed := eT.Sub(sT)
 		fmt.Println("start:", sT)
@@ -224,20 +225,38 @@ func lookupAccounts() {
 	if err != nil {
 		panic(err)
 	}
-	accounts = make(map[string]string)
+	accToAdd = make(map[string]string)
 	matched := res.FindAllStringSubmatch(stdout.String(), -1)
 	if matched != nil {
 		for _, v := range matched {
-			accounts[v[1]] = v[2]
+			accToAdd[v[1]] = v[2]
 		}
 	} else {
-		panic("no accounts found")
+		panic("no account found")
 	}
-	sortKeys = make([]string, 0, len(accounts))
-	for key, _ := range accounts {
+	sortKeys = make([]string, 0, len(accToAdd))
+	for key, _ := range accToAdd {
 		sortKeys = append(sortKeys, key)
 	}
 	sort.Strings(sortKeys)
+	n, err := strconv.Atoi((*userPrefix)[4:5])
+	if err != nil {
+		panic(err)
+	}
+	accToIp = make(map[string]string)
+	index := 0
+	for a:=0; a<256; a++ {
+		for b:=0; b<256; b++ {
+			for c:=0; c<256; c++ {
+				ip := fmt.Sprintf("%d.%d.%d.%d", n, a, b ,c)
+				accToIp[sortKeys[index]] = ip
+				index++
+				if index == len(sortKeys) {
+					return
+				}
+			}
+		}
+	}
 }
 
 func generateTokens(sI int, eI int, flag bool) []string {
@@ -288,13 +307,13 @@ func generateTokens(sI int, eI int, flag bool) []string {
 	return tokens
 }
 
-func initializeAccounts(accounts map[string]string, tokens []string, flag bool) {
+func initializeAccounts(tokens []string, flag bool) {
 	tokens = append(tokens, "BNB")
 	if flag == true {
 		for _, token := range tokens {
 			var buffer bytes.Buffer
-			for i, name := range sortKeys {
-				buffer.WriteString(accounts[name])
+			for i, key := range sortKeys {
+				buffer.WriteString(accToAdd[key])
 				buffer.WriteString(":")
 				if i != 0 && (i%2000 == 0 || i == len(sortKeys)-1) {
 					fmt.Println(token, i)
@@ -343,12 +362,12 @@ func execute(poolSize int, mode int) {
 	wg.Wait()
 }
 
-func doCreateTask(accounts map[string]string, tokens []string) {
-	go allocateCreate(accounts, tokens)
+func doCreateTask(tokens []string) {
+	go allocateCreate(tokens)
 	execute(*createPoolSize, createTask)
 }
 
-func allocateCreate(accounts map[string]string, tokens []string) {
+func allocateCreate(tokens []string) {
 	var buyPrices []int64 = generatePrices(*batchSize, 1.00)
 	var sellPrices []int64 = generatePrices(*batchSize, 1.01)
 	createIndex := 0
@@ -560,13 +579,13 @@ func buildS(index int, txBytes []byte) DEXSubmit {
 
 func submit(wg *sync.WaitGroup, txh *txhash) {
 	for item := range submitChn {
-		async(item.ctx, item.txBldr, item.txBytes, txh)
+		async(item.ctx, item.txBytes, txh)
 		time.Sleep(time.Duration(*submitPause) * time.Millisecond)
 	}
 	wg.Done()
 }
 
-func async(ctx context.CLIContext, txBldr txbuilder.TxBuilder, txBytes []byte, txh *txhash) {
+func async(ctx context.CLIContext, txBytes []byte, txh *txhash) {
 	defer doRecover()
 	res, err := ctx.BroadcastTxAsync(txBytes)
 	if err != nil {
@@ -639,30 +658,17 @@ func save_hextx() {
 	if err != nil {
 		panic(err)
 	}
-	userIPMap := make(map[string]string)
 	for _, file := range files {
 		matched := res.FindStringSubmatch(file.Name())
 		if matched != nil {
-			_, hasKey := userIPMap[matched[1]]
-			if hasKey == false {
-				var buffer bytes.Buffer
-				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
-				buffer.WriteString(".")
-				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
-				buffer.WriteString(".")
-				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
-				buffer.WriteString(".")
-				buffer.WriteString(strconv.Itoa(rand.Intn(256)))
-				ip := buffer.String()
-				userIPMap[matched[1]] = ip
-			}
+			ip, _ := accToIp[matched[1]]
 			txBytes, err := ioutil.ReadFile(filepath.Join(*createPath, file.Name()))
 			if err != nil {
 				panic(err)
 			}
 			hexBytes := make([]byte, len(txBytes)*2)
 			hex.Encode(hexBytes, txBytes)
-			line := fmt.Sprintf("%s|%s|%s\n", accounts[matched[1]], userIPMap[matched[1]], hexBytes)
+			line := fmt.Sprintf("%s|%s|%s\n", accToAdd[matched[1]], ip, hexBytes)
 			_, err = writer.WriteString(line)
 			if err != nil {
 				continue
