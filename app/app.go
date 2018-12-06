@@ -76,7 +76,10 @@ type BinanceChain struct {
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
 
-	metrics *pub.Metrics // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
+	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
+	// check nil-ness to know whether metrics collection is turn on
+	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
+	metrics *pub.Metrics
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -437,9 +440,6 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 				txRelatedAccounts,
 				tradeRelatedAccounts,
 				blockFee.Validators)
-			defer func() {
-				app.DeliverState.Ctx = ctx.WithValue(baseapp.InvolvedAddressKey, make([]string, 0))
-			}() // clean up
 		}
 
 		if app.publicationConfig.PublishOrderBook {

@@ -22,7 +22,6 @@ const (
 )
 
 type KafkaMarketDataPublisher struct {
-	metrics   *Metrics
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
 
@@ -189,7 +188,6 @@ func NewKafkaMarketDataPublisher(
 	metrics *Metrics) (publisher *KafkaMarketDataPublisher) {
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
-		metrics:   metrics,
 		producers: make(map[string]sarama.SyncProducer),
 	}
 

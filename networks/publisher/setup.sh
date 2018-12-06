@@ -30,7 +30,7 @@ cd ${src}
 make build
 
 # init a validator and witness node
-${executable} init --name xxx --chain-id ${chain_id} > ${key_seed_path}/key_seed.json # cannot save into ${deamonhome}/init.json
+${executable} init --moniker xxx --chain-id ${chain_id} > ${key_seed_path}/key_seed.json # cannot save into ${deamonhome}/init.json
 secret=$(cat ${key_seed_path}/key_seed.json | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 #echo ${secret}
 
@@ -38,6 +38,7 @@ mkdir -p ${home}/.bnbchaind_witness/config
 
 #sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${deamonhome}/config/config.toml
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
+sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
 # config witness node
 cp ${deamonhome}/config/genesis.json ${witnesshome}/config/
@@ -67,13 +68,25 @@ result=$(expect ${scripthome}/add_key.exp "zz" "${clipath}" "${clihome}")
 zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnc[0-9a-zA-Z]*" | grep -v "bncp")
 
 # issue&list NNB and ZCB for ordergen
-${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id}
+result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id})
+nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
+echo ${nnb_symbol}
 sleep 5
-${cli} dex list -s=NNB --quote-asset-symbol=BNB --init-price=100000000 --from=zc --chain-id ${chain_id}
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+sleep 2
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 1 --option Yes
+sleep 6
+${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 1
+sleep 1
+result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chain_id})
+zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "ZCB-[0-9A-Z]*")
+echo ${zcb_symbol}
 sleep 5
-${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chain_id}
-sleep 5
-${cli} dex list -s=ZCB --quote-asset-symbol=BNB --init-price=100000000 --from=zc --chain-id ${chain_id}
-sleep 5
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+sleep 2
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 2 --option Yes
+sleep 6
+${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 2
+sleep 1
 ${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000:BNB --chain-id ${chain_id}
 sleep 5
