@@ -509,7 +509,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		}
 		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo))
 		if err != nil {
-			fmt.Println("failed to sign tran: %v", err)
+			fmt.Printf("failed to sign tran: %v\n", err)
 			continue
 		}
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
