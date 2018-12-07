@@ -1,0 +1,13 @@
+#!/usr/bin/expect
+
+set name [lindex $argv 0]
+set clipath [lindex $argv 1]
+set clihome [lindex $argv 2]
+
+set timeout 30
+	spawn $clipath --home $clihome keys add $name
+	expect "Enter*"
+	send "1qaz2wsx\r"
+	expect "Repeat*"
+	send "1qaz2wsx\r"
+interact
