@@ -16,6 +16,9 @@ type TradingPair struct {
 func NewTradingPair(baseAssetSymbol, quoteAssetSymbol string, price int64) TradingPair {
 	tickSize, lotSize := utils.CalcTickSizeAndLotSize(price)
 
+	// TODO: symbol validations should also happen here, but a lot of tests rely on this method.
+	//       for now, these checks are done in TradingPairMapper#AddTradingPair.
+
 	return TradingPair{
 		BaseAssetSymbol:  baseAssetSymbol,
 		QuoteAssetSymbol: quoteAssetSymbol,
