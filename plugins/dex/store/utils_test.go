@@ -42,7 +42,17 @@ func TestValidatePairSymbol(t *testing.T) {
 			args:    args{"XYZ.B-000000_BNX.B-000000"},
 			wantErr: false,
 		},
+		{
+			name:    "Valid pair symbol 5",
+			args:    args{"12345678.B-000000_12345678.B-000000"},
+			wantErr: false,
+		},
 		// bad
+		{
+			name:    "Invalid pair symbol - too long",
+			args:    args{"12345678.B-000000_12345678.B-000000A"},
+			wantErr: true,
+		},
 		{
 			name:    "Invalid pair symbol 1",
 			args:    args{"XYZ-000000_ABC-000000_" + types.NativeTokenSymbol},

@@ -12,7 +12,12 @@ func ValidatePairSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol pair must not be empty")
 	}
-	if len(symbol) > ((types.TokenSymbolMaxLen + types.TokenSymbolTxHashSuffixLen) * 2) + 2 {
+	// TokenSymbolMaxLen: BTC00000
+	// TokenSymbolTxHashSuffixLen: 000000
+	// + 2: ".B"
+	// * 2: BTC00000.B, ETH00000.B
+	// + 3: 2x `-` and 1x `_`
+	if len(symbol) > ((types.TokenSymbolMaxLen + types.TokenSymbolTxHashSuffixLen + 2) * 2) + 3 {
 		return errors.New("symbol pair is too long")
 	}
 	if !strings.Contains(symbol, "_") {
