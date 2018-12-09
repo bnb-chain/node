@@ -23,7 +23,7 @@ const DefaultKeyPass = "12345678"
 
 var (
 	// each genesis validators will self delegate 1000e8 native tokens to become a validator
-	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeToken, 1000e8)
+	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeTokenSymbol, 1000e8)
 	// we put 20% of the total supply to the stake pool
 	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply / 5
 	// set default unbonding duration to 7 days
@@ -32,7 +32,7 @@ var (
 	DefaultMaxValidators uint16 = 15
 
 	// min gov deposit
-	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeToken, 2000e8)}
+	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2000e8)}
 )
 
 type GenesisState struct {

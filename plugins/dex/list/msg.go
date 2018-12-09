@@ -37,11 +37,11 @@ func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg ListMsg) ValidateBasic() sdk.Error {
-	err := types.ValidateSymbol(msg.BaseAssetSymbol)
+	err := types.ValidateMapperTokenSymbol(msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
-	err = types.ValidateSymbol(msg.QuoteAssetSymbol)
+	err = types.ValidateMapperTokenSymbol(msg.QuoteAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
 	}

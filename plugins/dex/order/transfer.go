@@ -162,7 +162,7 @@ type sortedAsset struct {
 
 // not thread safe
 func (s *sortedAsset) addAsset(asset string, amt int64) {
-	if asset == types.NativeToken {
+	if asset == types.NativeTokenSymbol {
 		s.native += amt
 	} else {
 		if s.tokens == nil {

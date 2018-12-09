@@ -9,12 +9,16 @@ import (
 )
 
 func DefaultGenesisToken(owner sdk.AccAddress) types.Token {
-	return types.NewToken(
+	token, err := types.NewToken(
 		"Binance Chain Native Token",
-		types.NativeToken,
+		types.NativeTokenSymbol,
 		types.NativeTokenTotalSupply,
 		owner,
 	)
+	if err != nil {
+		panic(err)
+	}
+	return *token
 }
 
 func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keeper,
@@ -28,7 +32,7 @@ func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keep
 
 		_, _, sdkErr := coinKeeper.AddCoins(ctx, token.Owner,
 			sdk.Coins{ sdk.NewCoin(token.Symbol, token.TotalSupply.ToInt64())})
-		if token.Symbol == types.NativeToken {
+		if token.Symbol == types.NativeTokenSymbol {
 			nativeTokenOwner = token.Owner
 		}
 
@@ -45,11 +49,11 @@ func transferNativeTokensToValidators(ctx sdk.Context, coinKeeper bank.Keeper,
 	numValidators := len(validators)
 	outputs := make([]bank.Output, numValidators)
 	for i, val := range validators {
-		outputs[i] = bank.NewOutput(val, sdk.Coins{sdk.NewCoin(types.NativeToken, amtForEach)})
+		outputs[i] = bank.NewOutput(val, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach)})
 	}
 
 	inputs := []bank.Input{
-		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeToken, amtForEach * int64(numValidators))}),
+		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach * int64(numValidators))}),
 	}
 	coinKeeper.InputOutputCoins(ctx, inputs, outputs)
 }

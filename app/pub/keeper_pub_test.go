@@ -5,13 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
@@ -66,7 +68,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
-	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	tradingPair := dextypes.NewTradingPair("XYZ-000000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 	keeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
@@ -91,9 +93,9 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 func TestKeeper_AddOrder(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ_BNB", 102000, 3000000)
+	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000000_BNB", 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
-	msg = orderPkg.NewNewOrderMsg(buyer, "2", orderPkg.Side.BUY, "XYZ_BNB", 101000, 1000000)
+	msg = orderPkg.NewNewOrderMsg(buyer, "2", orderPkg.Side.BUY, "XYZ-000000_BNB", 101000, 1000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 43, 105, 43, 105, 0, "0D42245EB2BF574A5B9D485404E0E61B1A2397A9"}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -107,7 +109,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 	orderInfo1 := keeper.OrderChangesMap["2"]
 	assert.Equal(buyer, orderInfo1.Sender)
 	assert.Equal("2", orderInfo1.Id)
-	assert.Equal("XYZ_BNB", orderInfo1.Symbol)
+	assert.Equal("XYZ-000000_BNB", orderInfo1.Symbol)
 	assert.Equal(orderPkg.OrderType.LIMIT, orderInfo1.OrderType)
 	assert.Equal(orderPkg.Side.BUY, orderInfo1.Side)
 	assert.Equal(int64(101000), orderInfo1.Price)
@@ -121,7 +123,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
+	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
 
 	require.Len(keeper.OrderChanges, 1)
@@ -147,7 +149,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 func TestKeeper_ExpireWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
 
 	require.Len(keeper.OrderChanges, 1)
@@ -172,9 +174,9 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 func Test_IOCPartialExpire(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.IOC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -195,7 +197,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
-	assert.Equal("XYZ_BNB", trade0.Symbol)
+	assert.Equal("XYZ-000000_BNB", trade0.Symbol)
 	assert.Equal(int64(100000000), trade0.Price)
 	assert.Equal(int64(100000000), trade0.Qty)
 	assert.Equal("s-1", trade0.Sid)
@@ -212,9 +214,9 @@ func Test_IOCPartialExpire(t *testing.T) {
 func Test_GTCPartialExpire(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 100000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 300000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 300000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -232,7 +234,7 @@ func Test_GTCPartialExpire(t *testing.T) {
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
-	assert.Equal("XYZ_BNB", trade0.Symbol)
+	assert.Equal("XYZ-000000_BNB", trade0.Symbol)
 	assert.Equal(int64(100000000), trade0.Price)
 	assert.Equal(int64(100000000), trade0.Qty)
 	assert.Equal("s-1", trade0.Sid)
@@ -257,11 +259,11 @@ func Test_GTCPartialExpire(t *testing.T) {
 func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
-	msg3 := orderPkg.NewOrderMsg{seller, "s-2", "XYZ_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 200000000, orderPkg.TimeInForce.GTC}
+	msg3 := orderPkg.NewOrderMsg{seller, "s-2", "XYZ-000000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 200000000, orderPkg.TimeInForce.GTC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg3, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 3)
@@ -283,14 +285,14 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
-	assert.Equal("XYZ_BNB", trade0.Symbol)
+	assert.Equal("XYZ-000000_BNB", trade0.Symbol)
 	assert.Equal(int64(100000000), trade0.Price)
 	assert.Equal(int64(100000000), trade0.Qty)
 	assert.Equal("s-1", trade0.Sid)
 	assert.Equal("b-1", trade0.Bid)
 	trade1 := trades[1]
 	assert.Equal("0-1", trade1.Id)
-	assert.Equal("XYZ_BNB", trade1.Symbol)
+	assert.Equal("XYZ-000000_BNB", trade1.Symbol)
 	assert.Equal(int64(100000000), trade1.Price)
 	assert.Equal(int64(200000000), trade1.Qty)
 	assert.Equal("s-2", trade1.Sid)

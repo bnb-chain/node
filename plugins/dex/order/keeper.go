@@ -493,7 +493,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			acc := kp.am.GetAccount(ctx, addr)
 			fees := types.Fee{}
 			if assets.native != 0 {
-				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
+				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeTokenSymbol, assets.native))
 				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}

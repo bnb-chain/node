@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -32,7 +33,8 @@ var (
 	cdc    *wire.Codec
 )
 
-func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
+func setup(t *testing.T) (ass *assert.Assertions, req *require.Assertions, pair string) {
+	baseAssetSymbol := "XYZ-000000"
 	logger := log.NewTMLogger(os.Stdout)
 
 	db := dbm.NewMemDB()
@@ -42,7 +44,7 @@ func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	cdc = app.GetCodec()
 
 	keeper = app.(*appPkg.BinanceChain).DexKeeper
-	tradingPair := dextypes.NewTradingPair("XYZ", "BNB", 1e8)
+	tradingPair := dextypes.NewTradingPair(baseAssetSymbol, types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
@@ -53,5 +55,7 @@ func setup(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000)
 	seller = sellerAcc.GetAddress()
 
-	return assert.New(t), require.New(t)
+	pair = fmt.Sprintf("%s_%s", baseAssetSymbol, types.NativeTokenSymbol)
+
+	return assert.New(t), require.New(t), pair
 }

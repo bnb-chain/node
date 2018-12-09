@@ -17,6 +17,8 @@ func TestTradingPair2Asset(t *testing.T) {
 	assert.EqualError(e, "Failed to parse trading pair symbol:_BNB into assets")
 	_, _, e = TradingPair2Assets("__BNB")
 	assert.EqualError(e, "Failed to parse trading pair symbol:__BNB into assets")
+	_, _, e = TradingPair2Assets("BNB_ABC_XYZ")
+	assert.EqualError(e, "Failed to parse trading pair symbol:BNB_ABC_XYZ into assets")
 	tr, q, e := TradingPair2Assets("XRP_BNB")
 	assert.Equal("XRP", tr)
 	assert.Equal("BNB", q)
