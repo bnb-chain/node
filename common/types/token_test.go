@@ -66,8 +66,7 @@ func TestNewToken(t *testing.T) {
 		})
 	}
 	// extra test. an orig symbol that is valid in TestValidateIssueMsgTokenSymbol but not here
-	_, err := types.NewToken("XYZ", "XYZ", 100000, sdk.AccAddress{})
-	if err == nil {
+	if _, err := types.NewToken("XYZ", "XYZ", 100000, sdk.AccAddress{}); err == nil {
 		t.Errorf("NewToken() error = %v, expected XYZ to be invalid", err)
 	}
 }
@@ -81,8 +80,7 @@ func TestValidateIssueMsgTokenSymbol(t *testing.T) {
 		})
 	}
 	// extra test. an issued symbol that is valid in NewToken and ValidateMapperTokenSymbol but not here
-	err := types.ValidateIssueMsgTokenSymbol("XYZ-000000")
-	if err == nil {
+	if err := types.ValidateIssueMsgTokenSymbol("XYZ-000000"); err == nil {
 		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ-000000 to be invalid", err)
 	}
 }
@@ -96,8 +94,7 @@ func TestValidateMapperTokenSymbol(t *testing.T) {
 		})
 	}
 	// extra test. an issued symbol that is valid in ValidateIssueMsgTokenSymbol but not here
-	err := types.ValidateMapperTokenSymbol("XYZ")
-	if err == nil {
+	if err := types.ValidateMapperTokenSymbol("XYZ"); err == nil {
 		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ to be invalid", err)
 	}
 }
