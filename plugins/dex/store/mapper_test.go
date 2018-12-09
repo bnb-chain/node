@@ -1,6 +1,7 @@
 package store
 
 import (
+	types2 "github.com/BiJie/BinanceChain/common/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,8 +38,8 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey) {
 func TestMapper_GetAddTradingPair(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	baseAsset := "XYZ"
-	quoteAsset := "BNB"
+	baseAsset := "XYZ-000000"
+	quoteAsset := types2.NativeTokenSymbol
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	require.Empty(t, pair)
 	require.Error(t, err)
@@ -62,8 +63,8 @@ func TestMapper_GetAddTradingPair(t *testing.T) {
 func TestMapper_Exists(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	baseAsset := "XYZ"
-	quoteAsset := "BNB"
+	baseAsset := "XYZ-000000"
+	quoteAsset := types2.NativeTokenSymbol
 	exists := pairMapper.Exists(ctx, baseAsset, quoteAsset)
 	require.False(t, exists)
 	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair(baseAsset, quoteAsset, 1e8))
@@ -74,16 +75,16 @@ func TestMapper_Exists(t *testing.T) {
 
 func TestMapper_ListAllTradingPairs(t *testing.T) {
 	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000000", "BNB", 1e8))
 	require.NoError(t, err)
-	pairMapper.AddTradingPair(ctx, types.NewTradingPair("BBB", "BNB", 1e8))
+	pairMapper.AddTradingPair(ctx, types.NewTradingPair("BBB-000000", types2.NativeTokenSymbol, 1e8))
 	require.NoError(t, err)
-	pairMapper.AddTradingPair(ctx, types.NewTradingPair("CCC", "BNB", 1e8))
+	pairMapper.AddTradingPair(ctx, types.NewTradingPair("CCC-000000", types2.NativeTokenSymbol, 1e8))
 	require.NoError(t, err)
 
 	pairs := pairMapper.ListAllTradingPairs(ctx)
 	require.Len(t, pairs, 3)
-	require.Equal(t, "AAA", pairs[0].BaseAssetSymbol)
-	require.Equal(t, "BBB", pairs[1].BaseAssetSymbol)
-	require.Equal(t, "CCC", pairs[2].BaseAssetSymbol)
+	require.Equal(t, "AAA-000000", pairs[0].BaseAssetSymbol)
+	require.Equal(t, "BBB-000000", pairs[1].BaseAssetSymbol)
+	require.Equal(t, "CCC-000000", pairs[2].BaseAssetSymbol)
 }

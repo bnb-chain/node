@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	types2 "github.com/BiJie/BinanceChain/common/types"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -36,14 +37,14 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
-	if len(baseAsset) == 0 {
-		return errors.New("BaseAssetSymbol cannot be empty")
+	if err := types2.ValidateMapperTokenSymbol(baseAsset); err != nil {
+		return err
+	}
+	quoteAsset := pair.QuoteAssetSymbol
+	if err := types2.ValidateMapperTokenSymbol(quoteAsset); err != nil {
+		return err
 	}
 
-	quoteAsset := pair.QuoteAssetSymbol
-	if len(quoteAsset) == 0 {
-		return errors.New("QuoteAssetSymbol cannot be empty")
-	}
 	tradeSymbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	key := []byte(tradeSymbol)
 	store := ctx.KVStore(m.key)
