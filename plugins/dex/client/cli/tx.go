@@ -205,17 +205,5 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 func validatePairSymbol(symbol string) error {
-	tokenSymbols := strings.Split(symbol, "_")
-	if len(tokenSymbols) != 2 {
-		return errors.New("Invalid symbol")
-	}
-
-	for _, tokenSymbol := range tokenSymbols {
-		err := types.ValidateSymbol(tokenSymbol)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return store.ValidatePairSymbol(symbol)
 }

@@ -1,12 +1,14 @@
 package rest
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
 
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/wire"
@@ -63,7 +65,8 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 			return
 		}
 
-		output, err := cdc.MarshalJSON(token)
+		// no need to use cdc here because we do not want amino to inject a type attribute
+		output, err := json.Marshal(token)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

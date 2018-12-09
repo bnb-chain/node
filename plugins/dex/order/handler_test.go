@@ -62,14 +62,14 @@ func setupAccount(ctx sdk.Context, accMapper auth.AccountKeeper) (sdk.Account, s
 
 func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 	pairMapper, accMapper, ctx := setupMappers()
-	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	acc, _ := setupAccount(ctx, accMapper)
 
 	msg := NewOrderMsg{
-		Symbol:   "BBB_BNB",
+		Symbol:   "BBB-000_BNB",
 		Sender:   acc.GetAddress(),
 		Price:    1e8,
 		Quantity: 1e8,
@@ -112,14 +112,14 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 
 func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 	pairMapper, accMapper, ctx := setupMappers()
-	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	acc, _ := setupAccount(ctx, accMapper)
 
 	msg := NewOrderMsg{
-		Symbol:   "AAA_BNB",
+		Symbol:   "AAA-000_BNB",
 		Sender:   acc.GetAddress(),
 		Price:    1e3 + 1e2,
 		Quantity: 1e6,
@@ -133,14 +133,14 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 
 func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 	pairMapper, accMapper, ctx := setupMappers()
-	pair := types.NewTradingPair("AAA", "BNB", 1e8)
+	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
 
 	acc, _ := setupAccount(ctx, accMapper)
 
 	msg := NewOrderMsg{
-		Symbol:   "AAA_BNB",
+		Symbol:   "AAA-000_BNB",
 		Sender:   acc.GetAddress(),
 		Price:    1e3,
 		Quantity: 1e5 + 1e4,
@@ -154,13 +154,13 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 
 func TestHandler_ValidateOrder_Normal(t *testing.T) {
 	pairMapper, accMapper, ctx := setupMappers()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
 
 	acc, _ := setupAccount(ctx, accMapper)
 
 	msg := NewOrderMsg{
-		Symbol:   "AAA_BNB",
+		Symbol:   "AAA-000_BNB",
 		Sender:   acc.GetAddress(),
 		Price:    1e3,
 		Quantity: 1e5,
@@ -173,13 +173,13 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 
 func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 	pairMapper, accMapper, ctx := setupMappers()
-	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA", "BNB", 1e8))
+	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
 
 	acc, _ := setupAccount(ctx, accMapper)
 
 	msg := NewOrderMsg{
-		Symbol:   "AAA_BNB",
+		Symbol:   "AAA-000_BNB",
 		Sender:   acc.GetAddress(),
 		Price:    (math.MaxInt64 - 4) - ((int64)(math.MaxInt64-4) % 1e3),
 		Quantity: (math.MaxInt64 - 4) - ((int64)(math.MaxInt64-4) % 1e5),

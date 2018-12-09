@@ -4,10 +4,8 @@ import (
 	"os"
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -18,9 +16,13 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/mock"
+
 	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -59,7 +61,7 @@ var (
 	logger                            = log.NewTMLogger(os.Stdout)
 	testApp                           = NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
-		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC", 200e8)})
+		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC-000", 200e8)})
 	testClient = NewTestClient(testApp)
 )
 
@@ -86,7 +88,7 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]sdk.Account {
 func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountKeeper.GetAccount(ctx, acc.GetAddress())
-		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC", ccy2), sdk.NewCoin("ETH", ccy3)})
+		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC-000", ccy2), sdk.NewCoin("ETH-000", ccy3)})
 		app.AccountKeeper.SetAccount(ctx, a)
 	}
 }
@@ -113,7 +115,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy)
 }
 
-func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
+func setGenesis(bapp *BinanceChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
 	genaccs := make([]GenesisAccount, len(accs))
 	for i, acc := range accs {
 		pk := ed25519.GenPrivKey().PubKey()
@@ -150,14 +152,16 @@ func TestGenesis(t *testing.T) {
 	baseAcc := auth.BaseAccount{
 		Address: addr,
 	}
-	tokens := []common.Token{{"BNB", "BNB", utils.Fixed8(100000), addr}}
+	tokens := []tokens.GenesisToken{{"BNB", "BNB", 100000, addr}}
 	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
 	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
-	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}})
+	if err := acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}}); err != nil {
+		t.Fatalf("SetCoins error: "+err.Error())
+	}
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 }

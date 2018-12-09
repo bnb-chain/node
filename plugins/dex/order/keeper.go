@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
+	tmlog "github.com/tendermint/tendermint/libs/log"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
@@ -531,7 +532,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 			acc := kp.am.GetAccount(ctx, addr)
 			fees := types.Fee{}
 			if assets.native != 0 {
-				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeToken, assets.native))
+				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeTokenSymbol, assets.native))
 				fees.AddFee(fee)
 				totalFee.AddFee(fee)
 			}

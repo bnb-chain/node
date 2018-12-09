@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -9,9 +8,12 @@ import (
 const DELIMITER = "_"
 
 func TradingPair2Assets(symbol string) (baseAsset, quoteAsset string, err error) {
-	assets := strings.Split(symbol, DELIMITER)
+	assets := strings.SplitN(symbol, DELIMITER, 2)
 	if len(assets) != 2 || assets[0] == "" || assets[1] == "" {
-		return symbol, "", errors.New(fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", symbol))
+		return symbol, "", fmt.Errorf("Failed to parse trading pair symbol:%s into assets", symbol)
+	}
+	if strings.Contains(assets[1], DELIMITER) {
+		return symbol, "", fmt.Errorf("Failed to parse trading pair symbol:%s into assets", symbol)
 	}
 	return assets[0], assets[1], nil
 }

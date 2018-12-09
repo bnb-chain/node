@@ -86,17 +86,17 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 
 func getProposal() gov.Proposal {
 	listParams := gov.ListTradingPairParams{
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
-		Description:      "list BTC/BNB",
+		Description:      "list BTC-000/BNB",
 		ExpireTime:       time.Date(2018, 11, 27, 0, 0, 0, 0, time.UTC),
 	}
 
 	listParamsBz, _ := json.Marshal(listParams)
 	proposal := &gov.TextProposal{
 		ProposalID:   1,
-		Title:        "list BTC/BNB",
+		Title:        "list BTC-000/BNB",
 		Description:  string(listParamsBz),
 		ProposalType: gov.ProposalTypeListTradingPair,
 		Status:       gov.StatusDepositPeriod,
@@ -107,7 +107,7 @@ func getProposal() gov.Proposal {
 	return proposal
 }
 
-func TestHandler(t *testing.T) {
+func TestListHandler(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
@@ -166,8 +166,8 @@ func TestHandler(t *testing.T) {
 	})
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
 	require.Contains(t, result.Log, "list time expired")
@@ -176,15 +176,16 @@ func TestHandler(t *testing.T) {
 	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
-	require.Contains(t, result.Log, "token(BTC) not found")
+	require.Contains(t, result.Log, "token(BTC-000) not found")
 
 	tokenMapper.NewToken(ctx, types.Token{
-		Name:        "bitcoin",
-		Symbol:      "BTC",
+		Name:        "Bitcoin",
+		Symbol:      "BTC-000",
+		OrigSymbol:  "BTC",
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
@@ -192,24 +193,25 @@ func TestHandler(t *testing.T) {
 	// no quote asset
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
 	require.Contains(t, result.Log, "only the owner of the token can list the token")
 
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 		From:             sdk.AccAddress("testacc"),
 	})
 	require.Contains(t, result.Log, "quote token does not exist")
 
 	tokenMapper.NewToken(ctx, types.Token{
-		Name:        "binance coin",
-		Symbol:      "BNB",
+		Name:        "Native Token",
+		Symbol:      types.NativeTokenSymbol,
+		OrigSymbol:  types.NativeTokenSymbol,
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
@@ -217,8 +219,8 @@ func TestHandler(t *testing.T) {
 	// right case
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC",
-		QuoteAssetSymbol: "BNB",
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 		From:             sdk.AccAddress("testacc"),
 	})

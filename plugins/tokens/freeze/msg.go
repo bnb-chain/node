@@ -15,11 +15,11 @@ const FreezeRoute = "tokensFreeze"
 var _ sdk.Msg = FreezeMsg{}
 
 type FreezeMsg struct {
-	shared.MsgBase
+	shared.TokenOpMsgBase
 }
 
 func NewFreezeMsg(from sdk.AccAddress, symbol string, amount int64) FreezeMsg {
-	return FreezeMsg{shared.MsgBase{From: from, Symbol: symbol, Amount: amount}}
+	return FreezeMsg{shared.TokenOpMsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg FreezeMsg) Route() string {
@@ -41,11 +41,11 @@ func (msg FreezeMsg) GetInvolvedAddresses() []sdk.AccAddress {
 var _ sdk.Msg = UnfreezeMsg{}
 
 type UnfreezeMsg struct {
-	shared.MsgBase
+	shared.TokenOpMsgBase
 }
 
 func NewUnfreezeMsg(from sdk.AccAddress, symbol string, amount int64) UnfreezeMsg {
-	return UnfreezeMsg{shared.MsgBase{From: from, Symbol: symbol, Amount: amount}}
+	return UnfreezeMsg{shared.TokenOpMsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg UnfreezeMsg) Route() string {

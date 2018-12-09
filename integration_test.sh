@@ -80,11 +80,12 @@ check_operation "Send Token" "${result}" "${chain_operation_words}"
 sleep 1s
 # issue token
 result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 bob ${chain_id} ${cli_home})
+btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
 check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # propose list
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB BTC BNB 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} 1544486400)
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list ${btc_symbol}/BNB" "list ${btc_symbol}/BNB" ${cli_home} 1544486400)
 check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s
@@ -94,36 +95,35 @@ check_operation "Vote" "${result}" "${chain_operation_words}"
 
 sleep 5s
 # list trading pair
-result=$(expect ./list.exp BTC BNB 100000000 bob ${chain_id} ${cli_home} 1)
+result=$(expect ./list.exp ${btc_symbol} BNB 100000000 bob ${chain_id} ${cli_home} 1)
 check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
-
-order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]*-[0-9]*")
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
 printf "Order ID: $order_id\n"
 
 sleep 2s
 # cancel order
-result=$(expect ./cancel.exp BTC_BNB ${order_id} alice ${chain_id} ${cli_home})
+result=$(expect ./cancel.exp "${btc_symbol}_BNB" "${order_id}" alice ${chain_id} ${cli_home})
 check_operation "Cancel Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l BTC_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB
 
 sleep 1s
 # place Sell order
-result=$(expect ./order.exp BTC_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-result=$(./bnbcli dex show -l BTC_BNB)
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
 
@@ -133,31 +133,31 @@ round="2"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp BTC_BNB 1 100000000 2000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 2000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]*-[0-9]*")
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
 printf "Order ID: $order_id\n"
 
 sleep 2s
 # cancel order
-result=$(expect ./cancel.exp BTC_BNB ${order_id} alice ${chain_id} ${cli_home})
+result=$(expect ./cancel.exp ${btc_symbol}_BNB ${order_id} alice ${chain_id} ${cli_home})
 check_operation "Cancel Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp BTC_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l BTC_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB
 
 sleep 1s
 # place Sell order
-result=$(expect ./order.exp BTC_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-result=$(./bnbcli dex show -l BTC_BNB)
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
 

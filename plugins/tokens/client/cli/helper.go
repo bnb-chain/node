@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -30,7 +30,7 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateSymbol(symbol)
+	err = types.ValidateMapperTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}
