@@ -104,10 +104,9 @@ func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 
 func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 	symbol := token.Symbol
-	if len(symbol) == 0 {
-		return errors.New("symbol cannot be empty")
+	if err := types.ValidateToken(token); err != nil {
+		return err
 	}
-
 	key := []byte(strings.ToUpper(symbol))
 	store := ctx.KVStore(m.key)
 	value := m.encodeToken(token)

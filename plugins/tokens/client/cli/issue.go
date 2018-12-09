@@ -8,8 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
@@ -47,7 +45,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateSymbol(symbol)
+	err = types.ValidateIssueMsgTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -61,7 +59,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := buildMsg(from, name, symbol, supply)
+	msg := issue.NewMsg(from, name, symbol, supply)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
@@ -71,13 +69,9 @@ func parseSupply(supply string) (int64, error) {
 	}
 
 	n, err := strconv.ParseInt(supply, 10, 64)
-	if err != nil || n < 0 || n > types.MaxTotalSupply {
+	if err != nil || n < 0 || n > types.TokenMaxTotalSupply {
 		return 0, errors.New("invalid supply number")
 	}
 
 	return n, nil
-}
-
-func buildMsg(addr sdk.AccAddress, name string, symbol string, supply int64) sdk.Msg {
-	return issue.NewMsg(addr, name, symbol, supply)
 }

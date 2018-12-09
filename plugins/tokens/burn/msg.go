@@ -15,11 +15,11 @@ const BurnRoute = "tokensBurn"
 var _ sdk.Msg = BurnMsg{}
 
 type BurnMsg struct {
-	shared.MsgBase
+	shared.TokenOpMsgBase
 }
 
 func NewMsg(from sdk.AccAddress, symbol string, amount int64) BurnMsg {
-	return BurnMsg{shared.MsgBase{From: from, Symbol: symbol, Amount: amount}}
+	return BurnMsg{shared.TokenOpMsgBase{From: from, Symbol: symbol, Amount: amount}}
 }
 
 func (msg BurnMsg) Route() string {

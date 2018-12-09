@@ -32,13 +32,13 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			baseAsset := viper.GetString(flagBaseAsset)
-			err = types.ValidateSymbol(baseAsset)
+			err = types.ValidateMapperTokenSymbol(baseAsset)
 			if err != nil {
 				return err
 			}
 
 			quoteAsset := viper.GetString(flagQuoteAsset)
-			err = types.ValidateSymbol(quoteAsset)
+			err = types.ValidateMapperTokenSymbol(quoteAsset)
 			if err != nil {
 				return err
 			}

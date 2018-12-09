@@ -150,14 +150,16 @@ func TestGenesis(t *testing.T) {
 	baseAcc := auth.BaseAccount{
 		Address: addr,
 	}
-	tokens := []common.Token{{"BNB", "BNB", utils.Fixed8(100000), addr}}
+	tokens := []common.Token{{"BNB", "BNB", "BNB", utils.Fixed8(100000), addr}}
 	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
 	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
-	acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}})
+	if err := acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}}); err != nil {
+		t.Fatalf("SetCoins error: "+err.Error())
+	}
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)
 }

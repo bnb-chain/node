@@ -129,17 +129,17 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
-	if inSymbol == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, m.calcTradeFee(inAmt, FeeByNativeToken))
+	if inSymbol == types.NativeTokenSymbol {
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(inAmt, FeeByNativeToken))
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeToken)]; ok {
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			amountOfNativeToken = utils.CalBigNotional(lastTradePrice, inAmt)
 		} else {
 			// BNB_XYZ
-			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeToken, inSymbol)]
+			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
 			var amount big.Int
 			amountOfNativeToken = amount.Div(
 				amount.Mul(
@@ -148,9 +148,9 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 				big.NewInt(lastTradePrice)).Int64()
 		}
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
-		if balances.AmountOf(types.NativeToken) >= feeByNativeToken {
+		if balances.AmountOf(types.NativeTokenSymbol) >= feeByNativeToken {
 			// have sufficient native token to pay the fees
-			feeToken = sdk.NewCoin(types.NativeToken, feeByNativeToken)
+			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken)
 		} else {
 			// no enough NativeToken, use the received tokens as fee
 			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
@@ -182,11 +182,11 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	}
 
 	var feeToken sdk.Coin
-	nativeTokenBalance := balances.AmountOf(types.NativeToken)
-	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeToken {
-		feeToken = sdk.NewCoin(types.NativeToken, utils.MinInt(feeAmountNative, nativeTokenBalance))
+	nativeTokenBalance := balances.AmountOf(types.NativeTokenSymbol)
+	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeToken)]; ok {
+		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			var amount big.Int
 			feeAmount = amount.Div(
@@ -196,7 +196,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 				big.NewInt(lastTradePrice)).Int64()
 		} else {
 			// BNB_XYZ
-			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeToken, inAsset)]
+			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
 			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
 		}
 
