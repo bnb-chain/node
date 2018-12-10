@@ -20,17 +20,10 @@ func ValidatePairSymbol(symbol string) error {
 	if len(symbol) > ((types.TokenSymbolMaxLen + types.TokenSymbolTxHashSuffixLen + 2) * 2) + 3 {
 		return errors.New("symbol pair is too long")
 	}
-	if !strings.Contains(symbol, "_") {
-		return errors.New("symbol pair must contain `_`")
-	}
 	tokenSymbols := strings.SplitN(strings.ToUpper(symbol), "_", 2)
 	if len(tokenSymbols) != 2 {
-		return errors.New("invalid symbol")
+		return errors.New("invalid symbol: trading pair must contain an underscore ('_')")
 	}
-	if strings.Contains(tokenSymbols[1], "_") {
-		return errors.New("pair must contain only one underscore ('_')")
-	}
-
 	for _, tokenSymbol := range tokenSymbols {
 		if err := types.ValidateMapperTokenSymbol(tokenSymbol); err != nil {
 			return err
