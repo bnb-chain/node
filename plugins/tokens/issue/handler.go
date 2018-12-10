@@ -62,6 +62,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 	token, err := common.NewToken(msg.Name, symbol, msg.TotalSupply, msg.From)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "create token failed: "+err.Error())
+		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
 
 	if err := tokenMapper.NewToken(ctx, *token); err != nil {
@@ -81,6 +82,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 	serialized, err := json.Marshal(token)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "unable to json serialize token: "+err.Error())
+		serialized = []byte("{}")
 	}
 
 	logger.Info("finished issuing token")
