@@ -39,7 +39,6 @@ var tokenMapperSymbolTestCases = []struct {
 	{"XYZ-000", true},
 	{"1YZ-000", true},
 	{"XYZ.B-000", true},
-	{"XYZ.B-000", true},
 	// sad
 	{types.NativeTokenSymbol+"-000", false}, // no tx hash suffix for native token
 	{types.NativeTokenSymbolDotBSuffixed+"-000", false},
