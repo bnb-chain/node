@@ -152,7 +152,7 @@ func splitSuffixedTokenSymbol(suffixed string) ([]string, error) {
 	// as above, the native token symbol is given an exception - it is not required to be suffixed
 	if suffixed == NativeTokenSymbol ||
 		suffixed == NativeTokenSymbolDotBSuffixed {
-		return []string{NativeTokenSymbol, ""}, nil
+		return []string{suffixed, ""}, nil
 	}
 
 	split := strings.SplitN(suffixed, "-", 2)
