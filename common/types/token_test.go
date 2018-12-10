@@ -33,26 +33,26 @@ var tokenMapperSymbolTestCases = []struct {
 	// happy
 	{types.NativeTokenSymbol, true}, // BNB
 	{types.NativeTokenSymbolDotBSuffixed, true}, // BNB.B
-	{"XYZ45678-000000", true},
-	{"XYZ-000000", true},
-	{"1YZ-000000", true},
-	{"XYZ.B-000000", true},
-	{"XYZ.B-000000", true},
+	{"XYZ45678-000", true},
+	{"XYZ-000", true},
+	{"1YZ-000", true},
+	{"XYZ.B-000", true},
+	{"XYZ.B-000", true},
 	// sad
-	{types.NativeTokenSymbol+"-000000", false}, // no tx hash suffix for native token
-	{types.NativeTokenSymbolDotBSuffixed+"-000000", false},
-	{"XYZ-00000", false},
-	{"XYZ-0000000", false},
-	{"XYZ-X00000", false},
-	{"XYZ-$00000", false},
-	{"XYZ-000000-111111", false},
-	{"XYZ.C-000000", false},
-	{"XYZ.B-X00000", false},
-	{"XYZ.B-$00000", false},
-	{"XYZ.B-00000", false},
-	{"XYZ.B-0000000", false},
-	{"XYZ456789-0000000", false},
-	{"XYZ456789.B-0000000", false},
+	{types.NativeTokenSymbol+"-000", false}, // no tx hash suffix for native token
+	{types.NativeTokenSymbolDotBSuffixed+"-000", false},
+	{"XYZ-00", false}, // 2 != 3
+	{"XYZ-0000", false}, // 4 != 3
+	{"XYZ-X00", false},
+	{"XYZ-$00", false},
+	{"XYZ-000-111", false},
+	{"XYZ.C-000", false},
+	{"XYZ.B-X00", false},
+	{"XYZ.B-$00", false},
+	{"XYZ.B-00", false},
+	{"XYZ.B-0000", false},
+	{"XYZ456789-000", false},
+	{"XYZ456789.B-000", false},
 }
 
 func TestNewToken(t *testing.T) {
@@ -80,8 +80,8 @@ func TestValidateIssueMsgTokenSymbol(t *testing.T) {
 		})
 	}
 	// extra test. an issued symbol that is valid in NewToken and ValidateMapperTokenSymbol but not here
-	if err := types.ValidateIssueMsgTokenSymbol("XYZ-000000"); err == nil {
-		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ-000000 to be invalid", err)
+	if err := types.ValidateIssueMsgTokenSymbol("XYZ-000"); err == nil {
+		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ-000 to be invalid", err)
 	}
 }
 

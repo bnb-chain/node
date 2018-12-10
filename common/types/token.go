@@ -14,7 +14,7 @@ import (
 
 const (
 	TokenSymbolMaxLen          = 8
-	TokenSymbolTxHashSuffixLen = 6 // probably enough. if it collides (unlikely) the issuer can just use another tx.
+	TokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	TokenSymbolDotBSuffix      = ".B"
 
 	TokenDecimals       int8  = 8

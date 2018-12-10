@@ -18,7 +18,7 @@ type TokenOpMsgBase struct {
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg TokenOpMsgBase) ValidateBasic() sdk.Error {
-	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABCDEF")
+	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
 	err := types.ValidateMapperTokenSymbol(msg.Symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error())

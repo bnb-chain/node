@@ -19,78 +19,78 @@ func TestValidatePairSymbol(t *testing.T) {
 		// happy
 		{
 			name:    "Valid pair symbol 1",
-			args:    args{"1YZ-000000_" + types.NativeTokenSymbol},
+			args:    args{"1YZ-000_" + types.NativeTokenSymbol},
 			wantErr: false,
 		},
 		{
 			name:    "Valid pair symbol 2",
-			args:    args{"XYZ.B-000000_" + types.NativeTokenSymbol},
+			args:    args{"XYZ.B-000_" + types.NativeTokenSymbol},
 			wantErr: false,
 		},
 		{
 			name:    "Valid pair symbol 3",
-			args:    args{"XYZ.B-000000_" + types.NativeTokenSymbolDotBSuffixed},
+			args:    args{"XYZ.B-000_" + types.NativeTokenSymbolDotBSuffixed},
 			wantErr: false,
 		},
 		{
 			name:    "Valid pair symbol 4",
-			args:    args{"XYZ.B-000000_BNX-000000"},
+			args:    args{"XYZ.B-000_BNX-000"},
 			wantErr: false,
 		},
 		{
 			name:    "Valid pair symbol 5",
-			args:    args{"XYZ.B-000000_BNX.B-000000"},
+			args:    args{"XYZ.B-000_BNX.B-000"},
 			wantErr: false,
 		},
 		{
 			name:    "Valid pair symbol 5",
-			args:    args{"12345678.B-000000_12345678.B-000000"},
+			args:    args{"12345678.B-000_12345678.B-000"},
 			wantErr: false,
 		},
 		// bad
 		{
 			name:    "Invalid pair symbol - too long",
-			args:    args{"12345678.B-000000_12345678.B-000000A"},
+			args:    args{"12345678.B-000_12345678.B-000A"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 1",
-			args:    args{"XYZ-000000_ABC-000000_" + types.NativeTokenSymbol},
+			args:    args{"XYZ-000_ABC-000_" + types.NativeTokenSymbol},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 2",
-			args:    args{"XYZ.B-000000_BNB.Z-000000"},
+			args:    args{"XYZ.B-000_BNB.Z-000"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 3",
-			args:    args{"XYZ.B-000000_" + types.NativeTokenSymbol + ".Z"},
+			args:    args{"XYZ.B-000_" + types.NativeTokenSymbol + ".Z"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 4",
-			args:    args{"XYZ-000000_BN$-000000"},
+			args:    args{"XYZ-000_BN$-000"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 5",
-			args:    args{"XYZ-000000_ABC-0000001"},
+			args:    args{"XYZ-000_ABC-0001"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 6",
-			args:    args{"XYZ-00000_ABC-000000"},
+			args:    args{"XYZ-0000_ABC-000"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 7",
-			args:    args{"XYZ-X00000_ABC-000000"},
+			args:    args{"XYZ-X00000_ABC-000"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid pair symbol 8",
-			args:    args{"XYZ-000000_ABC456789-000000"},
+			args:    args{"XYZ-000_ABC456789-000"},
 			wantErr: true,
 		},
 	}

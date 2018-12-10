@@ -69,7 +69,7 @@ func Test_InvalidPair(t *testing.T) {
 func Test_NonListedPair(t *testing.T) {
 	assert, _, _ := setup(t)
 
-	res := issueQuery("NNB-000000_BNB", buyer.String())
+	res := issueQuery("NNB-000_BNB", buyer.String())
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
 	assert.Equal("pair is not listed", res.Log)
 }

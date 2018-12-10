@@ -34,7 +34,7 @@ var (
 )
 
 func setup(t *testing.T) (ass *assert.Assertions, req *require.Assertions, pair string) {
-	baseAssetSymbol := "XYZ-000000"
+	baseAssetSymbol := "XYZ-000"
 	logger := log.NewTMLogger(os.Stdout)
 
 	db := dbm.NewMemDB()
