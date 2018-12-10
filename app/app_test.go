@@ -21,8 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/mock"
 
 	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -115,7 +115,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy)
 }
 
-func setGenesis(bapp *BinanceChain, tokens []common.Token, accs ...*common.AppAccount) error {
+func setGenesis(bapp *BinanceChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
 	genaccs := make([]GenesisAccount, len(accs))
 	for i, acc := range accs {
 		pk := ed25519.GenPrivKey().PubKey()
@@ -152,7 +152,7 @@ func TestGenesis(t *testing.T) {
 	baseAcc := auth.BaseAccount{
 		Address: addr,
 	}
-	tokens := []common.Token{{"BNB", "BNB", "BNB", utils.Fixed8(100000), addr}}
+	tokens := []tokens.GenesisToken{{"BNB", "BNB", 100000, addr}}
 	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
 
 	err := setGenesis(bapp, tokens, acc)

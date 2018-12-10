@@ -8,7 +8,15 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-func DefaultGenesisToken(owner sdk.AccAddress) types.Token {
+
+type GenesisToken struct {
+	Name        string         `json:"name"`
+	Symbol      string         `json:"symbol"`
+	TotalSupply int64          `json:"total_supply"`
+	Owner       sdk.AccAddress `json:"owner"`
+}
+
+func DefaultGenesisToken(owner sdk.AccAddress) GenesisToken {
 	token, err := types.NewToken(
 		"Binance Chain Native Token",
 		types.NativeTokenSymbol,
@@ -18,14 +26,23 @@ func DefaultGenesisToken(owner sdk.AccAddress) types.Token {
 	if err != nil {
 		panic(err)
 	}
-	return *token
+	return GenesisToken{
+		Name: token.Name,
+		Symbol: token.Symbol,
+		TotalSupply: token.TotalSupply.ToInt64(),
+		Owner: token.Owner,
+	}
 }
 
 func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keeper,
-	tokens []types.Token, validators []sdk.AccAddress, transferAmtForEach int64) {
+	geneTokens []GenesisToken, validators []sdk.AccAddress, transferAmtForEach int64) {
 	var nativeTokenOwner sdk.AccAddress
-	for _, token := range tokens {
-		err := tokenMapper.NewToken(ctx, token)
+	for _, geneToken := range geneTokens {
+		token, err := types.NewToken(geneToken.Name, geneToken.Symbol, geneToken.TotalSupply, geneToken.Owner)
+		if err != nil {
+			panic(err)
+		}
+		err = tokenMapper.NewToken(ctx, *token)
 		if err != nil {
 			panic(err)
 		}

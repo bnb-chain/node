@@ -90,12 +90,20 @@ func (f *Fixed8) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	var fl float64
-	if err := json.Unmarshal(data, &fl); err != nil {
-		return err
+	// try int64 first, it will fail if there is a dot (.)
+	var in int64
+	if err := json.Unmarshal(data, &in); err != nil {
+		var fl float64
+		if err := json.Unmarshal(data, &fl); err != nil {
+			return err
+		}
+		// if a float is unmarshaled assume it already includes the fraction after the dot
+		*f = Fixed8(float64(Fixed8Decimals) * fl)
+	} else {
+		// if an int is unmarshaled assume it should be parsed with the fraction included (int/10^8)
+		*f = Fixed8(in)
 	}
 
-	*f = Fixed8(float64(Fixed8Decimals) * fl)
 	return nil
 }
 
