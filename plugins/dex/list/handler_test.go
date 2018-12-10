@@ -86,17 +86,17 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 
 func getProposal() gov.Proposal {
 	listParams := gov.ListTradingPairParams{
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
-		Description:      "list BTC-000000/BNB",
+		Description:      "list BTC-000/BNB",
 		ExpireTime:       time.Date(2018, 11, 27, 0, 0, 0, 0, time.UTC),
 	}
 
 	listParamsBz, _ := json.Marshal(listParams)
 	proposal := &gov.TextProposal{
 		ProposalID:   1,
-		Title:        "list BTC-000000/BNB",
+		Title:        "list BTC-000/BNB",
 		Description:  string(listParamsBz),
 		ProposalType: gov.ProposalTypeListTradingPair,
 		Status:       gov.StatusDepositPeriod,
@@ -166,7 +166,7 @@ func TestListHandler(t *testing.T) {
 	})
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
@@ -176,15 +176,15 @@ func TestListHandler(t *testing.T) {
 	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
-	require.Contains(t, result.Log, "token(BTC-000000) not found")
+	require.Contains(t, result.Log, "token(BTC-000) not found")
 
 	tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Bitcoin",
-		Symbol:      "BTC-000000",
+		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
@@ -193,7 +193,7 @@ func TestListHandler(t *testing.T) {
 	// no quote asset
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 	})
@@ -201,7 +201,7 @@ func TestListHandler(t *testing.T) {
 
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 		From:             sdk.AccAddress("testacc"),
@@ -219,7 +219,7 @@ func TestListHandler(t *testing.T) {
 	// right case
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId:       1,
-		BaseAssetSymbol:  "BTC-000000",
+		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 		From:             sdk.AccAddress("testacc"),

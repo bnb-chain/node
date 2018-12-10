@@ -61,7 +61,7 @@ var (
 	logger                            = log.NewTMLogger(os.Stdout)
 	testApp                           = NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
-		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC-000000", 200e8)})
+		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC-000", 200e8)})
 	testClient = NewTestClient(testApp)
 )
 
@@ -88,7 +88,7 @@ func InitAccounts(ctx sdk.Context, app *BinanceChain) *[]sdk.Account {
 func ResetAccounts(ctx sdk.Context, app *BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountKeeper.GetAccount(ctx, acc.GetAddress())
-		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC-000000", ccy2), sdk.NewCoin("ETH-000000", ccy3)})
+		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC-000", ccy2), sdk.NewCoin("ETH-000", ccy3)})
 		app.AccountKeeper.SetAccount(ctx, a)
 	}
 }

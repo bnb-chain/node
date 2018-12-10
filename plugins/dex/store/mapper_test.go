@@ -38,7 +38,7 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey) {
 func TestMapper_GetAddTradingPair(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	baseAsset := "XYZ-000000"
+	baseAsset := "XYZ-000"
 	quoteAsset := types.NativeTokenSymbol
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	require.Empty(t, pair)
@@ -63,7 +63,7 @@ func TestMapper_GetAddTradingPair(t *testing.T) {
 func TestMapper_Exists(t *testing.T) {
 	pairMapper, ctx := setup()
 
-	baseAsset := "XYZ-000000"
+	baseAsset := "XYZ-000"
 	quoteAsset := types.NativeTokenSymbol
 	exists := pairMapper.Exists(ctx, baseAsset, quoteAsset)
 	require.False(t, exists)
@@ -75,16 +75,16 @@ func TestMapper_Exists(t *testing.T) {
 
 func TestMapper_ListAllTradingPairs(t *testing.T) {
 	pairMapper, ctx := setup()
-	err := pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000000", "BNB", 1e8))
+	err := pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
-	pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000000", types.NativeTokenSymbol, 1e8))
+	pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
 	require.NoError(t, err)
-	pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("CCC-000000", types.NativeTokenSymbol, 1e8))
+	pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("CCC-000", types.NativeTokenSymbol, 1e8))
 	require.NoError(t, err)
 
 	pairs := pairMapper.ListAllTradingPairs(ctx)
 	require.Len(t, pairs, 3)
-	require.Equal(t, "AAA-000000", pairs[0].BaseAssetSymbol)
-	require.Equal(t, "BBB-000000", pairs[1].BaseAssetSymbol)
-	require.Equal(t, "CCC-000000", pairs[2].BaseAssetSymbol)
+	require.Equal(t, "AAA-000", pairs[0].BaseAssetSymbol)
+	require.Equal(t, "BBB-000", pairs[1].BaseAssetSymbol)
+	require.Equal(t, "CCC-000", pairs[2].BaseAssetSymbol)
 }

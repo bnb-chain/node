@@ -24,14 +24,14 @@ var (
 	app    = bca.NewBinanceChain(logger, db, os.Stdout)
 	pk     = ed25519.GenPrivKey().PubKey()
 	addr   = sdk.AccAddress(pk.Address())
-	token1Ptr, _ = common.NewToken("XXX", "XXX-000000", 10000000000, addr)
-	token2Ptr, _ = common.NewToken("XXY", "XXY-000000", 10000000000, addr)
+	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr)
+	token2Ptr, _ = common.NewToken("XXY", "XXY-000", 10000000000, addr)
 	token1 = *token1Ptr
 	token2 = *token2Ptr
 )
 
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
-	path := "/tokens/info/XXX-000000" // XXX created below
+	path := "/tokens/info/XXX-000" // XXX created below
 
 	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)
@@ -57,7 +57,7 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 }
 
 func Test_Tokens_ABCI_GetInfo_Error_NotFound(t *testing.T) {
-	path := "/tokens/info/XXY-000000" // will not exist!
+	path := "/tokens/info/XXY-000" // will not exist!
 
 	ctx := app.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	err := app.TokenMapper.NewToken(ctx, token1)

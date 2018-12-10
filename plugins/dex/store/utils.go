@@ -13,7 +13,7 @@ func ValidatePairSymbol(symbol string) error {
 		return errors.New("symbol pair must not be empty")
 	}
 	// TokenSymbolMaxLen: BTC00000
-	// TokenSymbolTxHashSuffixLen: 000000
+	// TokenSymbolTxHashSuffixLen: 000
 	// + 2: ".B"
 	// * 2: BTC00000.B, ETH00000.B
 	// + 3: 2x `-` and 1x `_`
