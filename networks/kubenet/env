@@ -1,0 +1,36 @@
+# validator ips
+des_ips="172.22.41.165 172.22.42.122 172.22.42.52 172.25.41.26 172.25.42.223 172.25.42.250 172.27.41.10 172.27.41.151 172.27.41.185"
+
+# bridge ips of specified cluster
+bridge_ips_cluster0="172.22.41.138"
+bridge_ips_cluster1=""
+bridge_ips_cluster2="172.27.41.19"
+
+#all bridge ips
+all_bridge_ips="172.22.41.138 172.27.41.19"
+
+# kafka_ip
+kafka_ip_cluster0="172.22.41.119:9092;172.22.42.159:9092;172.22.43.28:9092"
+kafka_ip_cluster1="172.25.41.144:9092;172.25.42.105:9092;172.25.43.54:9092"
+kafka_ip_cluster2="172.27.41.31:9092;172.27.42.7:9092;172.27.43.240:9092"
+
+# docker image registry
+docker_registry="172.22.41.103:5000"
+
+# deploy mode, qa or prod
+deploy_mode="qa"
+
+# rebuild the chain
+rebuild=TRUE
+
+# ip of data seed
+data_seed_ip_cluster0="172.22.43.12"
+data_seed_ip_cluster1=""
+data_seed_ip_cluster2="172.27.42.150"
+
+
+# explorer kafka ips, 127.0.0.1:9092,127.0.0.2:9092
+explorer_kafka_ip="172.22.41.72:9092;172.22.41.250:9092;172.22.41.124:9092"
+
+# bridge replica
+bridge_replica=1

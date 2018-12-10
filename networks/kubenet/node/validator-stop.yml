@@ -1,0 +1,81 @@
+---
+- hosts: tag_Name_*s1_validator_ec2_1
+  remote_user: ec2-user
+  become: yes
+  become_method: sudo
+  become_flags: "-i"
+  become_user: root
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+- hosts: tag_Name_*s1_validator_ec2_2
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+
+- hosts: tag_Name_*s1_validator_ec2_3
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+- hosts: tag_Name_*s4_validator_ec2_1
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+
+- hosts: tag_Name_*s4_validator_ec2_2
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+- hosts: tag_Name_*s4_validator_ec2_3
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+- hosts: tag_Name_*s6_validator_ec2_1
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+
+- hosts: tag_Name_*s6_validator_ec2_2
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop
+
+
+- hosts: tag_Name_*s6_validator_ec2_3
+  tasks:
+  - name: stop bnc
+    command: "{{item}}"
+    with_items:
+    - service bnbcli  stop
+    - service bnbchaind  stop

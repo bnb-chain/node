@@ -50,7 +50,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/bnbchain/node.log 2>&1
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;/bnbchaind/bnbchaind start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657">> /bnbchaind/bnbchain/node.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/bnbchain
           name: bnbchain-volume
@@ -65,7 +65,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        - /bnbchaind/bnbcli --chain-id chain-bnb  --home /bnbchaind/cli_home  --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server > /bnbchaind/bnbchain/api-server.log 2>&1
+        - /bnbchaind/bnbcli --chain-id chain-bnb  --home /bnbchaind/cli_home  --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server >> /bnbchaind/bnbchain/api-server.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/bnbchain
           name: bnbchain-volume

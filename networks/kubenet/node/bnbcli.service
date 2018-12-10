@@ -1,0 +1,15 @@
+[Unit]
+Description=bnbcli
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/server/bnbchaind/validator/bnbcli.sh -start
+ExecReload=/server/bnbchaind/validator/bnbcli.sh -restart
+ExecStop=/server/bnbchaind/validator/bnbcli.sh -stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

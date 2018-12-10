@@ -2,7 +2,7 @@
 ### Before execute, make sure that the kubernetes cluster labeled with tendermint-identity=node${i}
 
 basedir=$(cd `dirname $0`; pwd)
-workspace=$basedir/../../
+workspace=$basedir/../..
 
 home=("$workspace/build/kubenode0" "$workspace/build/kubenode1" "$workspace/build/kubenode2"
        "$workspace/build/kubenode3" "$workspace/build/kubenode4" "$workspace/build/kubenode5"
@@ -19,15 +19,7 @@ bridge_ids=""
 data_seed_addr=""
 
 command=$1
-des_ips=($2)
-
-cluster_num=$3
-bridge_ips=($4)
-kafka_ip=$5
-docker_registry=$6
-deploy_mode=$7
-rebuild=$8
-data_seed_ip=$9
+cluster_num=$2
 
 namespace=bnbchain
 image_tag=`date  "+%m_%d"`
@@ -56,29 +48,31 @@ function prepare(){
     then
         docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 9 -o . --starting-ip-address 172.18.10.204 --node-dir-prefix=kubenode  --chain-id=chain-bnb
     fi
-    for ihome in ${home[@]}; do
-
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/prometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/flush_throttle_timeout = 100/flush_throttle_timeout = 0/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/peer_gossip_sleep_duration = 100/peer_gossip_sleep_duration = 0/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/timeout_commit = 5000/timeout_commit = 0/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/prometheus = false/prometheus = true/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/flush_throttle_timeout = 0/flush_throttle_timeout = 10/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/peer_gossip_sleep_duration = 0/peer_gossip_sleep_duration = 10/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/size = 5000/size = 20000/g" config.toml)
-        $(cd "${ihome}/gaiad/config" && sed -i -e "s/\"voting_period\": \"1209600000000000\"/\"voting_period\": \"60000000000\"/g" genesis.json)
-
-    done
     for j in {0..8}
     do
         for i in {0..9}
         do
             sed -i -e "s/${src_ips[$i]}:[0-9]\{5\}/${des_ips[$i]}:26656/g" "${home[$j]}/gaiad/config/config.toml"
         done
+    done
+    for ihome in ${home[@]}; do
+        # change prome port
+        sed -i -e "s/prometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/flush_throttle_timeout = 100/flush_throttle_timeout = 0/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/peer_gossip_sleep_duration = 10/peer_gossip_sleep_duration = 0/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/timeout_commit = 5000/timeout_commit = 0/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/pex = true/pex = false/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/logToConsole = true/logToConsole = false/g" ${ihome}/gaiad/config/app.toml
+        sed -i -e "s/prometheus = false/prometheus = true/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/flush_throttle_timeout = 0/flush_throttle_timeout = 10/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/peer_gossip_sleep_duration = 0/peer_gossip_sleep_duration = 10/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/size = 5000/size = 20000/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/\"voting_period\": \"1209600000000000\"/\"voting_period\": \"60000000000\"/g" ${ihome}/gaiad/config/genesis.json
+        if [  $ihome != ${home[0]} ];then
+          cp -r ${home[0]}/gaiacli/keys/ ${ihome}/gaiacli/
+        fi
     done
 }
 
@@ -89,6 +83,9 @@ function build-configmap(){
         j=$((j + i))
         ${kubectl} create configmap  validator-${i}-config --from-file ${home[$j]}/gaiad/config/app.toml  --from-file ${home[$j]}/gaiad/config/config.toml --from-file ${home[$j]}/gaiad/config/genesis.json -n ${namespace}
     done
+}
+
+function build-cli-configmap(){
     ${kubectl} create configmap  cli-config --from-file ${home[0]}/gaiacli/keys/keys.db/000001.log --from-file ${home[0]}/gaiacli/keys/keys.db/CURRENT --from-file ${home[0]}/gaiacli/keys/keys.db/LOCK --from-file ${home[0]}/gaiacli/keys/keys.db/LOG --from-file ${home[0]}/gaiacli/keys/keys.db/MANIFEST-000000 -n ${namespace}
 }
 
@@ -185,10 +182,10 @@ function build-witness-order-config(){
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${witness_order_home}/gaiad/config/app.toml
-    sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
-    sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
+    sed -i -e "s/orderUpdatesKafka = \"127.0.0.1:9092\"/orderUpdatesKafka = \"${kafka_ip}\"/g" ${witness_order_home}/gaiad/config/app.toml
+    sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"orders\"/g" ${witness_order_home}/gaiad/config/app.toml
-    sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}:9092\"/g" ${witness_order_home}/gaiad/config/app.toml
+    sed -i -e "s/orderBookKafka = \"127.0.0.1:9092\"/orderBookKafka = \"${kafka_ip}\"/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${witness_order_home}/gaiad/config/app.toml
     sed -i -e "s/orderUpdatesTopic = \"test\"/orderUpdatesTopic = \"orders\"/g" ${witness_order_home}/gaiad/config/app.toml
@@ -228,25 +225,31 @@ function build-config(){
    build-secret
 }
 
-function build-deployment(){
+function build-validator(){
+    sed -i "s/{{REBUILD}}/$rebuild/g"  $basedir/node/validator.yml
+    sed -i "s?{{WORKDIR}}?$workspace?g"  $basedir/node/validator.yml
+    sed -i "s?{{NODEDIR}}?${basedir}/node/?g"  $basedir/node/validator.yml
+    sed -i "s/{{DEPLOY_MODE}}/qa/g"  $basedir/node/validator.yml
+
+    ansible-playbook $basedir/node/validator.yml -f 9
+}
+
+function build-validator-endpoint(){
     for i in {0..2}; do
         j=$(echo "$cluster_num*3" |bc)
         j=$((j + i))
-        sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g"  ${home[$j]}/gaiad/node/deployment.yaml
-        sed -i "s/{{REBUILD}}/$rebuild/g"  ${home[$j]}/gaiad/node/deployment.yaml
-        sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/gaiad/node/deployment.yaml
-        sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/gaiad/node/validator-svc.yaml
-        sed -i "s/{{DEPLOY_MODE}}/$deploy_mode/g"  ${home[$j]}/gaiad/node/deployment.yaml
-        sed -i "s/{{IMAGE_TAG}}/${image_tag}/g"  ${home[$j]}/gaiad/node/deployment.yaml
-        ${kubectl} create -f  ${home[$j]}/gaiad/node/deployment.yaml -n ${namespace}
-        ${kubectl} create -f  ${home[$j]}/gaiad/node/validator-svc.yaml -n ${namespace}
+        cp  $basedir/node/validator-svc.yaml ${home[$j]}/validator-svc.yaml
+        cp $basedir/node/validator-ep.yaml   ${home[$j]}/validator-ep.yaml
+        sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/validator-svc.yaml
+        ${kubectl} create -f  ${home[$j]}/validator-svc.yaml -n ${namespace}
+        sed -i "s/{{INSTANCE}}/$i/g"  ${home[$j]}/validator-ep.yaml
+	sed -i "s/{{VALIDATOR_IP}}/${des_ips[$i]}/g"  ${home[$j]}/validator-ep.yaml
+        ${kubectl} create -f  ${home[$j]}//validator-ep.yaml -n ${namespace}
+
     done
 }
 
 function clean(){
-    for i in {0..2}; do
-        ${kubectl} delete deploy validator-${i} --ignore-not-found=true -n ${namespace}
-    done
     ${kubectl} delete deploy seed data-seed bridge witness-explorer witness-order -n ${namespace} --ignore-not-found=true
 }
 
@@ -254,11 +257,11 @@ function clean-config(){
     ## Notice: notice is not able to clean data that in remote vm, should delete manually.
     ${kubectl} delete cm cli-config bridge-config data-seed-config seed-config witness-explorer-config witness-order-config -n ${namespace} --ignore-not-found=true
     for i in {0..2}; do
-        ${kubectl} delete cm validator-${i}-config --ignore-not-found=true -n ${namespace}
-        ${kubectl} delete secret validator-${i}-secret --ignore-not-found=true -n ${namespace}
         ${kubectl} delete svc validator-${i} --ignore-not-found=true -n ${namespace}
+        ${kubectl} delete ep validator-${i} --ignore-not-found=true -n ${namespace}
     done
     ${kubectl} delete svc data-seed seed witness-explorer witness-order -n ${namespace} --ignore-not-found=true
+
 
 }
 function check_operation() {
@@ -275,9 +278,9 @@ function deploy-bridge(){
     sed -i "s/{{DOCKER_REGISTRY}}/${docker_registry}/g"  ${basedir}/node/bridge-deployment.yaml
     sed -i "s/{{REBUILD}}/${rebuild}/g"  ${basedir}/node/bridge-deployment.yaml
     sed -i "s/{{IMAGE_TAG}}/${image_tag}/g"  ${basedir}/node/bridge-deployment.yaml
-
+    sed -i "s/{{BRIDGE_REPLICA}}/${bridge_replica}/g"  ${basedir}/node/bridge-deployment.yaml
     ${kubectl} create -f  ${basedir}/node/bridge-deployment.yaml -n ${namespace}
-    while [ $(${kubectl}  get deploy -n ${namespace}|grep bridge|awk '{print $5}') -ne 2 ]; do
+    while [ $(${kubectl}  get deploy -n ${namespace}|grep bridge|awk '{print $5}') -ne ${bridge_replica} ]; do
         sleep 1
         timeout=$((timeout + 1))
         if [ ${timeout} -gt 120 ]; then
@@ -286,8 +289,8 @@ function deploy-bridge(){
         fi
     done
     sleep 5
-    ## prepare seed node
-    for i in {0..1}; do
+    ## prepare seed no
+    for ((i=0;i<$bridge_replica;i++)); do
         bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiacli  --node "tcp://${bridge_ips[$i]}:26657" status)
         bridge_id=$(echo ${bridge_id} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
         if [ "$bridge_addr"x == ""x ];then
@@ -361,43 +364,85 @@ function deploy-explorer(){
     ${kubectl} create configmap  cli-config --from-file ${home[0]}/gaiacli/keys/keys.db/000001.log --from-file ${home[0]}/gaiacli/keys/keys.db/CURRENT --from-file ${home[0]}/gaiacli/keys/keys.db/LOCK --from-file ${home[0]}/gaiacli/keys/keys.db/LOG --from-file ${home[0]}/gaiacli/keys/keys.db/MANIFEST-000000 -n ${namespace}
 
     witness_explorer_home=${workspace}/build/witness_explorer
-    for i in {0..5}; do
-        bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiacli  --node "tcp://${bridge_ips[$i]}:26657" status)
+    for ((i=0;i<${#all_bridge_ips[@]};i++)); do
+        bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiacli  --node "tcp://${all_bridge_ips[$i]}:26657" status)
         bridge_id=$(echo ${bridge_id} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
         if [ "$bridge_addr"x == ""x ];then
-            bridge_addr=${bridge_id}@${bridge_ips[${i}]}:26656
+            bridge_addr=${bridge_id}@${all_bridge_ips[${i}]}:26656
         else
-            bridge_addr=${bridge_addr},${bridge_id}@${bridge_ips[$i]}:26656
+            bridge_addr=${bridge_addr},${bridge_id}@${all_bridge_ips[$i]}:26656
         fi
     done
 
 
     sed -i -e "s/moniker = \"kubenode0\"/moniker = \"explorer\"/g" ${witness_explorer_home}/gaiad/config/config.toml
-    sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${kafka_ip}:9092\"/g" ${witness_explorer_home}/gaiad/config/app.toml
-    sed -i -e "s/blockFeeKafka = \"127.0.0.1:9092\"/blockFeeKafka = \"${kafka_ip}:9092\"/g" ${witness_explorer_home}/gaiad/config/app.toml
-    sed -i -e "s/blockFeeKafka = \"127.0.0.1:9092\"/blockFeeKafka = \"${kafka_ip}:9092\"/g" ${witness_explorer_home}/gaiad/config/app.toml
+    sed -i -e "s/accountBalanceKafka = \"127.0.0.1:9092\"/accountBalanceKafka = \"${explorer_kafka_ip}\"/g" ${witness_explorer_home}/gaiad/config/app.toml
+    sed -i -e "s/blockFeeKafka = \"127.0.0.1:9092\"/blockFeeKafka = \"${explorer_kafka_ip}\"/g" ${witness_explorer_home}/gaiad/config/app.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     ${kubectl} create configmap  witness-explorer-config --from-file ${witness_explorer_home}/gaiad/config/app.toml --from-file ${witness_explorer_home}/gaiad/config/config.toml --from-file ${witness_explorer_home}/gaiad/config/genesis.json -n ${namespace}
     ${kubectl} create -f  ${basedir}/node/witness-explorer-deployment.yaml -n ${namespace}
     ${kubectl} create -f  ${basedir}/node/witness-explorer-svc.yaml -n ${namespace}
 }
 
+function envPrepare(){
+    if [ "${cluster_num}"x == "0"x ];then
+       export bridge_ips=($bridge_ips_cluster0)
+       export kafka_ip=$kafka_ip_cluster0
+       export data_seed_ip=($data_seed_ip_cluster0)
+    elif [ "${cluster_num}"x == "1"x ];then
+       export bridge_ips=($bridge_ips_cluster1)
+       export kafka_ip=$kafka_ip_cluster1
+       export data_seed_ip=$data_seed_ip_cluster1
+    elif [ "${cluster_num}"x == "2"x ]; then
+       export bridge_ips=($bridge_ips_cluster2)
+       export kafka_ip=$kafka_ip_cluster2
+       export data_seed_ip=$data_seed_ip_cluster2
+    fi
+    echo "finish env prepare"
+}
+
+function stop-validator(){
+    ansible-playbook $basedir/node/validator-stop.yml -f 9
+}
 
 
 set -e
 
+source ${basedir}/env
+des_ips=($des_ips)
+all_bridge_ips=($all_bridge_ips)
+
+    if [ "${cluster_num}"x == "0"x ];then
+       export bridge_ips=($bridge_ips_cluster0)
+       export kafka_ip=$kafka_ip_cluster0
+       export data_seed_ip=($data_seed_ip_cluster0)
+    elif [ "${cluster_num}"x == "1"x ];then
+       export bridge_ips=($bridge_ips_cluster1)
+       export kafka_ip=$kafka_ip_cluster1
+       export data_seed_ip=$data_seed_ip_cluster1
+    elif [ "${cluster_num}"x == "2"x ]; then
+       export bridge_ips=($bridge_ips_cluster2)
+       export kafka_ip=$kafka_ip_cluster2
+       export data_seed_ip=$data_seed_ip_cluster2
+    fi
+    echo "finish env prepare"
+
 if [ "$command"x == "prepare"x ];then
-    export docker_registry=$3
     echo "--> Start build-image..."
     build-image
     echo "--> Start Prepare..."
     prepare
+elif  [ "$command"x == "install_validator"x ];then
+    echo "--> Start build-validator..."
+    build-validator
+elif [ "$command"x == "stop_validator"x ];then
+    stop-validator
 elif [ "$command"x == "install"x ];then
     export kubectl="kubectl --kubeconfig=/home/cluster${cluster_num}-config"
-    echo "--> Start build-config..."
-    build-config
-    echo "--> Start build-deployment..."
-    build-deployment
+    echo "Start build validator endpoints."
+    build-validator-endpoint
+    echo echo "--> Start build-cli-config"
+    build-cli-configmap
     echo "--> Start build-bridge-config"
     build-bridge-config
     echo "--> Start deploy bridge"
@@ -410,16 +455,11 @@ elif [ "$command"x == "install"x ];then
     build-seed-config
     echo "--> Start deploy seed"
     deploy-seed
-    echo "--> Start build explorer witness config"
-    prepare-witness-explorer-config
-    echo "--> Start deploy explorer witness"
-    prepare-witness-explorer
     echo "--> Start build order witness config"
     build-witness-order-config
     echo "--> Start deploy order witness"
     deploy-witness-order
 elif [ "$command"x == "clean"x ];then
-    cluster_num=$2
     export kubectl="kubectl --kubeconfig=/home/cluster${cluster_num}-config"
     echo "--> Start clean..."
     clean
@@ -427,8 +467,10 @@ elif [ "$command"x == "clean"x ];then
     clean-config
 elif [ "$command"x == "install_explorer"x ];then
     export kubectl="kubectl --kubeconfig=/home/cluster3-config"
-    bridge_ips=($2)
-    kafka_ip=$3
+    echo "--> Start build explorer witness config"
+    prepare-witness-explorer-config
+    echo "--> Start deploy explorer witness"
+    prepare-witness-explorer
     deploy-explorer
 fi
 echo "--> Finish."

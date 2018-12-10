@@ -5,6 +5,7 @@ metadata:
     tendermint-identity: validator-{{INSTANCE}}
   name: validator-{{INSTANCE}}
 spec:
+  clusterIP: None
   ports:
   - name: api-server
     port: 8080
@@ -12,9 +13,10 @@ spec:
   - name: p2p
     port: 26656
     targetPort: 26656
+  - name: prome
+    port: 26660
+    targetPort: 26660
   - name: rpc
     port: 26657
     targetPort: 26657
-  selector:
-    tendermint-identity: validator-{{INSTANCE}}
   type: ClusterIP

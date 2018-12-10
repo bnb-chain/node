@@ -1,0 +1,15 @@
+[Unit]
+Description=bnbchain
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/server/bnbchaind/validator/chaind.sh -start
+ExecReload=/server/bnbchaind/validator/chaind.sh -restart
+ExecStop=/server/bnbchaind/validator/chaind.sh -stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

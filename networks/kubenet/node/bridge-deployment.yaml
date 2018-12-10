@@ -6,7 +6,7 @@ metadata:
     tendermint-identity: bridge
     app: tendermint-bridge
 spec:
-  replicas: 2
+  replicas: {{BRIDGE_REPLICA}}
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -55,7 +55,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;sed -i -e "s/external_address = \"\"/external_address = \"${MY_POD_IP}:26656\"/g" /bnbchaind/bnbchain/config/config.toml;/bnbchaind/bnbsentry start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657"> /bnbchaind/bnbchain/node.log 2>&1
+        - if [ "$REBUILD"x == "TRUE"x ]; then rm -rf /bnbchaind/bnbchain/*; fi;mkdir -p /bnbchaind/bnbchain/config; cp /bnbchaind/config/* /bnbchaind/bnbchain/config/;sed -i -e "s/external_address = \"\"/external_address = \"${MY_POD_IP}:26656\"/g" /bnbchaind/bnbchain/config/config.toml;/bnbchaind/bnbchaind start --home "/bnbchaind/bnbchain" --p2p.laddr  "tcp://0.0.0.0:26656" --address "tcp://0.0.0.0:26658" --rpc.laddr "tcp://0.0.0.0:26657">> /bnbchaind/bnbchain/node.log 2>&1
         volumeMounts:
         - mountPath: /bnbchaind/bnbchain
           name: bnbchain-volume
