@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
