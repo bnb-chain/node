@@ -133,10 +133,7 @@ func ValidateMapperTokenSymbol(symbol string) error {
 		return fmt.Errorf("token symbol tx hash suffix must be %d chars in length, got %d", TokenSymbolTxHashSuffixLen, len(txHashPart))
 	}
 
-	if !utils.IsAlphaNum(txHashPart) {
-		return errors.New("token symbol tx hash suffix should be alphanumeric")
-	}
-
+	// prohibit non-hexadecimal chars in the suffix part
 	isHex, err := regexp.MatchString(fmt.Sprintf("[0-9A-F]{%d}", TokenSymbolTxHashSuffixLen), txHashPart)
 	if err != nil {
 		return err
