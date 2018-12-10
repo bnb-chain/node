@@ -3,8 +3,6 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
-	"math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/BiJie/BinanceChain/common/types"
@@ -44,11 +42,11 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 	}
 
 	if len(msg.Name) == 0 || len(msg.Name) > 20 {
-		return sdk.ErrInvalidCoins("token name should have 1~20 characters")
+		return sdk.ErrInvalidCoins("token name should have 1 ~ 20 characters")
 	}
 
 	if msg.TotalSupply <= 0 || msg.TotalSupply > types.TokenMaxTotalSupply {
-		return sdk.ErrInvalidCoins("total supply should be <= " + string(types.TokenMaxTotalSupply/int64(math.Pow10(int(types.TokenDecimals)))))
+		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + string(types.TokenMaxTotalSupply))
 	}
 
 	return nil
