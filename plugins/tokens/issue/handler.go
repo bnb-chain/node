@@ -81,8 +81,8 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 
 	serialized, err := json.Marshal(token)
 	if err != nil {
-		logger.Error(errLogMsg, "reason", "unable to json serialize token: "+err.Error())
-		serialized = []byte("{}")
+		logger.Error(errLogMsg, "reason", "fatal! unable to json serialize token: "+err.Error())
+		panic(err) // fatal, the sky is falling in goland
 	}
 
 	logger.Info("finished issuing token")
