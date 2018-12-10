@@ -36,12 +36,12 @@ var (
 )
 
 type GenesisState struct {
-	Tokens     []types.Token      `json:"tokens"`
-	Accounts   []GenesisAccount   `json:"accounts"`
-	DexGenesis dex.Genesis        `json:"dex"`
-	StakeData  stake.GenesisState `json:"stake"`
-	GovData    gov.GenesisState   `json:"gov"`
-	GenTxs     []json.RawMessage  `json:"gentxs"`
+	Tokens     []tokens.GenesisToken `json:"tokens"`
+	Accounts   []GenesisAccount      `json:"accounts"`
+	DexGenesis dex.Genesis           `json:"dex"`
+	StakeData  stake.GenesisState    `json:"stake"`
+	GovData    gov.GenesisState      `json:"gov"`
+	GenTxs     []json.RawMessage     `json:"gentxs"`
 }
 
 // GenesisAccount doesn't need pubkey or sequence
@@ -122,7 +122,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 
 	genesisState := GenesisState{
 		Accounts:   genAccounts,
-		Tokens:     []types.Token{nativeToken},
+		Tokens:     []tokens.GenesisToken{nativeToken},
 		DexGenesis: dex.DefaultGenesis,
 		StakeData:  stakeData,
 		GenTxs:     appGenTxs,

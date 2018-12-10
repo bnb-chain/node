@@ -57,19 +57,28 @@ func TestFixed8DecodeString(t *testing.T) {
 }
 
 func TestFixed8UnmarshalJSON(t *testing.T) {
-	fl := float64(123.45)
-	str := "123.45"
-	expected, _ := Fixed8DecodeString(str)
+	flt := float64(123.45)
+	fls := "123.45"
+	int := int64(200000000)
+
+	expFltF8, _ := Fixed8DecodeString(fls)
+	expIntF8 := NewFixed8(2) // 2.00000000
 
 	// UnmarshalJSON should decode floats
-	var u1 Fixed8
-	s, _ := json.Marshal(fl)
-	assert.Nil(t, json.Unmarshal(s, &u1))
-	assert.Equal(t, expected, u1)
+	var fltF8 Fixed8
+	s, _ := json.Marshal(flt)
+	assert.Nil(t, json.Unmarshal(s, &fltF8))
+	assert.Equal(t, expFltF8, fltF8)
+
+	// UnmarshalJSON should decode ints
+	var intF8 Fixed8
+	s, _ = json.Marshal(int)
+	assert.Nil(t, json.Unmarshal(s, &intF8))
+	assert.Equal(t, expIntF8, intF8)
 
 	// UnmarshalJSON should decode strings
-	var u2 Fixed8
-	s, _ = json.Marshal(str)
-	assert.Nil(t, json.Unmarshal(s, &u2))
-	assert.Equal(t, expected, u2)
+	var flsF8 Fixed8
+	s, _ = json.Marshal(fls)
+	assert.Nil(t, json.Unmarshal(s, &flsF8))
+	assert.Equal(t, expFltF8, flsF8)
 }
