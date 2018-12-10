@@ -142,7 +142,7 @@ func ValidateMapperTokenSymbol(symbol string) error {
 		return err
 	}
 	if !isHex {
-		return errors.New("token symbol tx hash suffix must be hexadecimal")
+		return fmt.Errorf("token symbol tx hash suffix must be hex with a length of %d", TokenSymbolTxHashSuffixLen)
 	}
 
 	return nil
