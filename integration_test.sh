@@ -13,6 +13,8 @@ chain_id="bnbchain-1000"
 keys_operation_words="bnc"
 chain_operation_words="Committed"
 order_book_words="10.00000000"
+order_book_half_words="5.00000000"
+order_book_empty_words=" 0.00000000"
 
 round="1"
 rounds="2"
@@ -86,14 +88,14 @@ check_operation "Issue Token" "${result}" "${chain_operation_words}"
 sleep 1s
 # propose list
 result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list ${btc_symbol}/BNB" "list ${btc_symbol}/BNB" ${cli_home} 1644486400)
-check_operation "Propose list" "${result}" "${chain_operation_words}"
+check_operation "Propose List" "${result}" "${chain_operation_words}"
 
 sleep 2s
 # vote for propose
 result=$(expect ./vote.exp alice ${chain_id} 1 Yes ${cli_home})
 check_operation "Vote" "${result}" "${chain_operation_words}"
 
-sleep 5s
+sleep 3s
 # list trading pair
 result=$(expect ./list.exp ${btc_symbol} BNB 100000000 bob ${chain_id} ${cli_home} 1)
 check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
@@ -101,64 +103,91 @@ check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
 sleep 1s
 # place buy order
 result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
+check_operation "Place Buy Order" "${result}" "${chain_operation_words}"
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
 printf "Order ID: $order_id\n"
 
-sleep 2s
+sleep 1s
 # cancel order
 result=$(expect ./cancel.exp "${btc_symbol}_BNB" "${order_id}" alice ${chain_id} ${cli_home})
-check_operation "Cancel Order" "${result}" "${chain_operation_words}"
+check_operation "Cancel Buy Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
 result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
+check_operation "Place 2nd Buy Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l ${btc_symbol}_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6
 
 sleep 1s
-# place Sell order
+# place sell order
 result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*")
+check_operation "Place Sell Order" "${result}" "${chain_operation_words}"
 
-result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
-check_operation "Order Book" "${result}" "${order_book_words}"
+sleep 1s
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6)
+check_operation "Order Book - Matched" "${result}" "${order_book_words}"
+
+# reset to empty order book
+result=$(expect ./cancel.exp ${btc_symbol}_BNB ${order_id} bob ${chain_id} ${cli_home})
+check_operation "Cancel Order" "${result}" "${chain_operation_words}"
+
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6)
+check_operation "Order Book - Empty" "${result}" "${order_book_empty_words}"
 
 
-## ROUND 2 ##
+### ROUND 2 ##
 
 round="2"
 
 sleep 1s
 # place buy order
 result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 2000000000 alice ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
-
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
+check_operation "Place Buy Order" "${result}" "${chain_operation_words}"
 printf "Order ID: $order_id\n"
 
-sleep 2s
+sleep 1s
 # cancel order
 result=$(expect ./cancel.exp ${btc_symbol}_BNB ${order_id} alice ${chain_id} ${cli_home})
-check_operation "Cancel Order" "${result}" "${chain_operation_words}"
+check_operation "Cancel Buy Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
 result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
+check_operation "Place Buy Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l ${btc_symbol}_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6
 
 sleep 1s
-# place Sell order
-result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
-check_operation "Place Order" "${result}" "${chain_operation_words}"
+# place sell order
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 1500000000 bob ${chain_id} gtc ${cli_home})
+check_operation "Place Sell Order" "${result}" "${chain_operation_words}"
+order_id_1=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*")
 
-result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
-check_operation "Order Book" "${result}" "${order_book_words}"
+# place overpriced sell order
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 200000000 1000000000 bob ${chain_id} gtc ${cli_home})
+check_operation "Place Sell Order" "${result}" "${chain_operation_words}"
+order_id_2=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*")
+
+# show order book
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6)
+check_operation "Order Book - Half Matched" "${result}" "${order_book_half_words}"
+
+# cancel open orders in quick succession
+result=$(expect ./cancel.exp ${btc_symbol}_BNB ${order_id_1} bob ${chain_id} ${cli_home})
+check_operation "Quick Cancel Order" "${result}" "${chain_operation_words}"
+
+result=$(expect ./cancel.exp ${btc_symbol}_BNB ${order_id_2} bob ${chain_id} ${cli_home})
+check_operation "Quick Cancel Order" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# show empty order book
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB | head -n 6)
+check_operation "Order Book - Empty" "${result}" "${order_book_empty_words}"
 
 
 exit_test 0
