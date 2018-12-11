@@ -5,13 +5,15 @@ import (
 	"math"
 	"testing"
 
-	cstore "github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+
+	cstore "github.com/cosmos/cosmos-sdk/store"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
@@ -76,7 +78,7 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("trading pair not found: %s", msg.Symbol), err.Error())
 }
@@ -103,7 +105,7 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	}
 
 	for _, msg := range msgs {
-		err := validateOrder(ctx, pairMapper, nil, msg)
+		err := validateOrder(ctx, pairMapper, msg)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", msg.Symbol), err.Error())
 	}
@@ -125,7 +127,7 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize), err.Error())
 }
@@ -146,7 +148,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize), err.Error())
 }
@@ -166,7 +168,7 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, pairMapper, msg)
 	require.NoError(t, err)
 }
 
@@ -185,7 +187,7 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, pairMapper, msg)
 	require.Error(t, err)
 	require.Equal(t, "notional value of the order is too large(cannot fit in int64)", err.Error())
 }

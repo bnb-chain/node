@@ -3,6 +3,7 @@ package tx
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -61,7 +62,7 @@ func InitSigCache(size int) {
 // and deducts fees from the first signer.
 // NOTE: Receiving the `NewOrder` dependency here avoids an import cycle.
 // nolint: gocyclo
-func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
+func NewAnteHandler(am auth.AccountKeeper, orderMsgType string) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx, mode sdk.RunTxMode,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
@@ -92,30 +93,49 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		}
 
 		// collect signer accounts
-		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]sdk.Account, len(signerAddrs))
-		// check sigs and nonce
+
+		// collect signers into signerAccs first, so that we can do the order ID validation next
+		// TODO: abort if there is more than one signer?
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
 			signerAcc, err := processAccount(newCtx, am, signerAddr, sig)
 			if err != nil {
 				return newCtx, err.Result(), true
 			}
+			signerAccs[i] = signerAcc
+		}
 
+		// order ID validation is here because of our whole journey of issues with sequences and this works best
+		// TODO: order ID validation hoisted here temporarily for now - ensures sequence is always in sync with msg
+		// avoid importing NewOrderMsg, which causes an import cycle
+		if msgs[0].Type() == orderMsgType {
+			expectedOrderID := fmt.Sprintf("\"%X-%d\"", signerAccs[0].GetAddress(), sequences[0])
+			if !strings.Contains(string(msgs[0].GetSignBytes()), expectedOrderID) {
+				log.Info("Invalid order ID encountered", "signBytes", string(msgs[0].GetSignBytes()))
+				return newCtx, sdk.Result{
+					Code: sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownRequest),
+					Log:  fmt.Sprintf("Invalid order ID provided, expected `%s`.", expectedOrderID),
+					Data: []byte("Unexpected order ID encountered"),
+				}, true
+			}
+		}
+
+		// check sigs and nonce
+		for i := 0; i < len(sigs); i++ {
 			if mode != sdk.RunTxModeReCheck {
 				// check signature, return account with incremented nonce
 				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
 				txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
 
-				res := processSig(txHash, sig, signerAcc, signBytes)
+				res := processSig(txHash, sigs[i], signerAccs[i], signBytes)
 				if !res.IsOK() {
 					return newCtx, res, true
 				}
 			}
 
 			// Save the account.
-			am.SetAccount(newCtx, signerAcc)
-			signerAccs[i] = signerAcc
+			am.SetAccount(newCtx, signerAccs[i])
 		}
 
 		// for blockHeight == 0, we do not collect fees since we have some StdTx(s) in InitChain.

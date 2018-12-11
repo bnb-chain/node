@@ -39,17 +39,13 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Ha
 	}
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.Account, msg NewOrderMsg) error {
+func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
 	}
 
-	seq := acc.GetSequence()
-	expectedID := GenerateOrderID(seq, msg.Sender)
-	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
-	}
+	// NOTE: order ID validation has been temporarily moved to AnteHandler until sequence handling can be improved.
 
 	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	if err != nil {
@@ -82,7 +78,7 @@ func handleNewOrder(
 		// 3. trading pair is verified
 		// 4. price/qty may have odd tick size/lot size, but it can be handled as
 		//    other existing orders.
-		err := validateOrder(ctx, keeper.PairMapper, acc, msg)
+		err := validateOrder(ctx, keeper.PairMapper, msg)
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 		}

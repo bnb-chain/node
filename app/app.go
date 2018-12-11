@@ -7,6 +7,12 @@ import (
 	"os"
 	"sort"
 
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -14,11 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
@@ -143,7 +144,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.StakeStoreKey,
 		common.GovStoreKey,
 	)
-	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
+	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper, order.RouteNewOrder)) // passing in order msg type here avoids an import cycle
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB

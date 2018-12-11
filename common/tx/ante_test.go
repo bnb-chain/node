@@ -4,18 +4,21 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -109,7 +112,7 @@ func TestAnteHandlerSigErrors(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
@@ -161,7 +164,7 @@ func TestAnteHandlerAccountNumbers(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
@@ -219,7 +222,7 @@ func TestAnteHandlerSequences(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
@@ -296,7 +299,7 @@ func TestAnteHandlerMultiSigner(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
@@ -347,7 +350,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
@@ -414,13 +417,65 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
 }
 
+func TestAnteHandlerGoodOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
+	accountCache := getAccountCache(cdc, ms, capKey)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeCheck, log.NewNopLogger()).WithAccountCache(accountCache)
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+	// set the accounts
+	sequence := int64(50)
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	acc1.SetSequence(sequence)
+	mapper.SetAccount(ctx, acc1)
+	orderId := fmt.Sprintf("%X-%d", acc1.GetAddress(), sequence)
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 1, "XXX_XXX", 0, 0)
+	// bogus fees calculator
+	fees.UnsetAllCalculators()
+	fees.RegisterCalculator(orderMsg.Type(), fees.FreeFeeCalculator())
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{sequence}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs)
+	checkValidTx(t, anteHandler, ctx, txn)
+}
+func TestAnteHandlerBadOrderID(t *testing.T) {
+	// setup
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
+	accountCache := getAccountCache(cdc, ms, capKey)
+	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeCheck, log.NewNopLogger()).WithAccountCache(accountCache)
+	// keys and addresses
+	priv1, addr1 := testutils.PrivAndAddr()
+	// set the accounts
+	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetCoins(newCoins())
+	mapper.SetAccount(ctx, acc1)
+	orderId := "INVALID"
+	orderMsg := order.NewNewOrderMsg(acc1.GetAddress(), orderId, 2, "XXX_XXX", 0, 0)
+	anteHandler := tx.NewAnteHandler(mapper, orderMsg.Type())
+	msgs := []sdk.Msg{orderMsg}
+	// test good tx and signBytes
+	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
+	txn := newTestTx(ctx, msgs, privs, accnums, seqs)
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnknownRequest)
+}
+
 func TestAnteHandlerSetPubKey(t *testing.T) {
 	// setup
 	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler := tx.NewAnteHandler(mapper)
+	anteHandler := tx.NewAnteHandler(mapper, "")
 	accountCache := getAccountCache(cdc, ms, capKey)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
@@ -465,39 +520,6 @@ func TestAnteHandlerSetPubKey(t *testing.T) {
 
 	acc2 = mapper.GetAccount(ctx, addr2)
 	require.Nil(t, acc2.GetPubKey())
-}
-
-func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
-	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
-	cdc := wire.NewCodec()
-	auth.RegisterBaseAccount(cdc)
-	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
-	anteHandler = tx.NewAnteHandler(mapper)
-	accountCache := getAccountCache(cdc, ms, capKey)
-
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	return
-}
-
-func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...fees.FeeCalculator) sdk.Context {
-	for i := 0; i < len(fees); i++ {
-		msg := newTestMsgWithFeeCalculator(fees[i], addr)
-		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
-		ctx, _, _ = anteHandler(ctx, txn, sdk.RunTxModeCheck)
-	}
-
-	return ctx
-}
-
-func checkBalance(t *testing.T, am auth.AccountKeeper, ctx sdk.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
-	newBalance := am.GetAccount(ctx, addr).GetCoins()
-	require.Equal(t, accNewBalance, newBalance)
-}
-
-func checkFee(t *testing.T, expectFee types.Fee) {
-	fee := fees.Pool.BlockFees()
-	require.Equal(t, expectFee, fee)
-	fees.Pool.Clear()
 }
 
 // Test logic around fee deduction.
@@ -581,4 +603,37 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 		fees.FreeFeeCalculator())
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 80)})
 	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, types.FeeForAll))
+}
+
+func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHandler) {
+	ms, capKey, _ := testutils.SetupMultiStoreForUnitTest()
+	cdc := wire.NewCodec()
+	auth.RegisterBaseAccount(cdc)
+	mapper = auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
+	anteHandler = tx.NewAnteHandler(mapper, "")
+	accountCache := getAccountCache(cdc, ms, capKey)
+
+	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
+	return
+}
+
+func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...fees.FeeCalculator) sdk.Context {
+	for i := 0; i < len(fees); i++ {
+		msg := newTestMsgWithFeeCalculator(fees[i], addr)
+		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
+		ctx, _, _ = anteHandler(ctx, txn, sdk.RunTxModeCheck)
+	}
+
+	return ctx
+}
+
+func checkBalance(t *testing.T, am auth.AccountKeeper, ctx sdk.Context, addr sdk.AccAddress, accNewBalance sdk.Coins) {
+	newBalance := am.GetAccount(ctx, addr).GetCoins()
+	require.Equal(t, accNewBalance, newBalance)
+}
+
+func checkFee(t *testing.T, expectFee types.Fee) {
+	fee := fees.Pool.BlockFees()
+	require.Equal(t, expectFee, fee)
+	fees.Pool.Clear()
 }
