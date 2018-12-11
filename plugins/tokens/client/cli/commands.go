@@ -25,6 +25,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	tokenCmd.AddCommand(
 		client.PostCommands(
 			issueTokenCmd(cmdr),
+			mintTokenCmd(cmdr),
 			burnTokenCmd(cmdr),
 			freezeTokenCmd(cmdr),
 			unfreezeTokenCmd(cmdr))...)

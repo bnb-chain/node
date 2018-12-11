@@ -11,7 +11,11 @@ import (
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
-const Route = "tokensIssue"
+const (
+	Route        = "tokensIssue"
+	IssueMsgType = "issueMsg"
+	MintMsgType  = "mintMsg"
+)
 
 var _ sdk.Msg = IssueMsg{}
 
@@ -20,14 +24,16 @@ type IssueMsg struct {
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
 	TotalSupply int64          `json:"total_supply"`
+	Mintable    bool           `json:"mintable"`
 }
 
-func NewMsg(from sdk.AccAddress, name, symbol string, supply int64) IssueMsg {
+func NewIssueMsg(from sdk.AccAddress, name, symbol string, supply int64, mintable bool) IssueMsg {
 	return IssueMsg{
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
 		TotalSupply: supply,
+		Mintable:    mintable,
 	}
 }
 
@@ -55,7 +61,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 
 // Implements IssueMsg.
 func (msg IssueMsg) Route() string                { return Route }
-func (msg IssueMsg) Type() string                 { return Route }
+func (msg IssueMsg) Type() string                 { return IssueMsgType }
 func (msg IssueMsg) String() string               { return fmt.Sprintf("IssueMsg{%#v}", msg) }
 func (msg IssueMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 func (msg IssueMsg) GetSignBytes() []byte {
@@ -66,5 +72,56 @@ func (msg IssueMsg) GetSignBytes() []byte {
 	return b
 }
 func (msg IssueMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
+}
+
+type MintMsg struct {
+	From   sdk.AccAddress `json:"from"`
+	Symbol string         `json:"symbol"`
+	Amount int64          `json:"amount"`
+}
+
+func NewMintMsg(from sdk.AccAddress, symbol string, amount int64) MintMsg {
+	return MintMsg{
+		From:   from,
+		Symbol: symbol,
+		Amount: amount,
+	}
+}
+
+func (msg MintMsg) ValidateBasic() sdk.Error {
+	if msg.From == nil {
+		return sdk.ErrInvalidAddress("sender address cannot be empty")
+	}
+
+	if err := types.ValidateMapperTokenSymbol(msg.Symbol); err != nil {
+		return sdk.ErrInvalidCoins(err.Error())
+	}
+
+	if msg.Symbol == types.NativeTokenSymbol {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("cannot mint native token"))
+	}
+
+	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
+	if msg.Amount <= 0 || msg.Amount > types.TokenMaxTotalSupply {
+		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + string(types.TokenMaxTotalSupply))
+	}
+
+	return nil
+}
+
+// Implements MintMsg.
+func (msg MintMsg) Route() string                { return Route }
+func (msg MintMsg) Type() string                 { return MintMsgType }
+func (msg MintMsg) String() string               { return fmt.Sprintf("MintMsg{%#v}", msg) }
+func (msg MintMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
+func (msg MintMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg) // XXX: ensure some canonical form
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+func (msg MintMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }

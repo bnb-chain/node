@@ -62,7 +62,7 @@ var tokenMapperSymbolTestCases = []struct {
 func TestNewToken(t *testing.T) {
 	for _, tt := range tokenMapperSymbolTestCases {
 		t.Run(tt.symbol, func(t *testing.T) {
-			_, err := types.NewToken(tt.symbol, tt.symbol, 100000, sdk.AccAddress{})
+			_, err := types.NewToken(tt.symbol, tt.symbol, 100000, sdk.AccAddress{}, false)
 			if (err == nil) != tt.correct {
 				t.Errorf("NewToken() error = %v, correct %v", err, tt.correct)
 				return
@@ -70,7 +70,7 @@ func TestNewToken(t *testing.T) {
 		})
 	}
 	// extra test. an orig symbol that is valid in TestValidateIssueMsgTokenSymbol but not here
-	if _, err := types.NewToken("XYZ", "XYZ", 100000, sdk.AccAddress{}); err == nil {
+	if _, err := types.NewToken("XYZ", "XYZ", 100000, sdk.AccAddress{}, false); err == nil {
 		t.Errorf("NewToken() error = %v, expected XYZ to be invalid", err)
 	}
 }
