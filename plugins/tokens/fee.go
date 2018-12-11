@@ -11,14 +11,16 @@ import (
 )
 
 const (
-	IssueFee    = 2e11
+	IssueFee    = 2000e8
+	MintFee     = 500e8
 	BurnFee     = 1e6
 	FreezeFee   = 1e6
 	TransferFee = 1e6
 )
 
 func init() {
-	fees.RegisterCalculator(issue.Route, fees.FixedFeeCalculator(IssueFee, types.FeeForAll))
+	fees.RegisterCalculator(issue.IssueMsgType, fees.FixedFeeCalculator(IssueFee, types.FeeForAll))
+	fees.RegisterCalculator(issue.MintMsgType, fees.FixedFeeCalculator(MintFee, types.FeeForAll))
 	fees.RegisterCalculator(burn.BurnRoute, fees.FixedFeeCalculator(BurnFee, types.FeeForProposer))
 	fees.RegisterCalculator(freeze.FreezeRoute, fees.FixedFeeCalculator(FreezeFee, types.FeeForProposer))
 	// TODO: we will rewrite Transfer fees, so put it here temporarily

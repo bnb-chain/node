@@ -80,14 +80,19 @@ check_operation "Send Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # issue token
-result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 bob ${chain_id} ${cli_home})
+result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
 btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
 check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
+# mint token
+result=$(expect ./mint.exp ${btc_symbol} 1000000000000000 bob ${chain_id} ${cli_home})
+check_operation "Mint Token" "${result}" "${chain_operation_words}"
+
 sleep 1s
 # propose list
-r1544486400esult=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} 1644486400)
-check_operation "Propose List" "${result}" "${chain_operation_words}"
+((expire_time=$(date '+%s')+1000))
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time})
+check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s
 # vote for propose

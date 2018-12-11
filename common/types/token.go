@@ -31,9 +31,10 @@ type Token struct {
 	OrigSymbol  string         `json:"original_symbol"`
 	TotalSupply utils.Fixed8   `json:"total_supply"`
 	Owner       sdk.AccAddress `json:"owner"`
+	Mintable    bool           `json:"mintable"`
 }
 
-func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress) (*Token, error) {
+func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress, mintable bool) (*Token, error) {
 	// double check that the symbol is suffixed
 	if err := ValidateMapperTokenSymbol(symbol); err != nil {
 		return nil, err
@@ -48,13 +49,14 @@ func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress) (*To
 		OrigSymbol:  parts[0],
 		TotalSupply: utils.Fixed8(totalSupply),
 		Owner:       owner,
+		Mintable:    mintable,
 	}, nil
 }
 
 func (token *Token) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
 func (token Token) String() string {
-	return fmt.Sprintf("{Name: %v, Symbol: %v, TotalSupply: %v, Owner: %X}",
-		token.Name, token.Symbol, token.TotalSupply, token.Owner)
+	return fmt.Sprintf("{Name: %v, Symbol: %v, TotalSupply: %v, Owner: %X, Mintable: %v}",
+		token.Name, token.Symbol, token.TotalSupply, token.Owner, token.Mintable)
 }
 
 // Token Validation

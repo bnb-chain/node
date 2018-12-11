@@ -24,8 +24,8 @@ var (
 	app          = bca.NewBinanceChain(logger, db, os.Stdout)
 	pk           = ed25519.GenPrivKey().PubKey()
 	addr         = sdk.AccAddress(pk.Address())
-	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr)
-	token2Ptr, _ = common.NewToken("XXY", "XXY-000", 10000000000, addr)
+	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr, false)
+	token2Ptr, _ = common.NewToken("XXY", "XXY-000", 10000000000, addr, false)
 	token1       = *token1Ptr
 	token2       = *token2Ptr
 )

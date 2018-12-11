@@ -1,9 +1,6 @@
 package commands
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,6 +13,7 @@ import (
 const (
 	flagTotalSupply = "total-supply"
 	flagTokenName   = "token-name"
+	flagMintable = "mintable"
 )
 
 func issueTokenCmd(cmdr Commander) *cobra.Command {
@@ -27,8 +25,22 @@ func issueTokenCmd(cmdr Commander) *cobra.Command {
 
 	cmd.Flags().String(flagTokenName, "", "name of the new token")
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the new token")
-	cmd.Flags().StringP(flagTotalSupply, "n", "", "total supply of the new token")
+	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
+	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
+	cmd.MarkFlagRequired(flagTotalSupply)
+	return cmd
+}
 
+func mintTokenCmd(cmdr Commander) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mint",
+		Short: "mint tokens for an existing token",
+		RunE:  cmdr.mintToken,
+	}
+
+	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the token")
+	cmd.Flags().Int64P(flagAmount, "n", 0, "amount to mint")
+	cmd.MarkFlagRequired(flagAmount)
 	return cmd
 }
 
@@ -50,28 +62,45 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	symbol = strings.ToUpper(symbol)
+	supply := viper.GetInt64(flagTotalSupply)
+	err = checkSupplyAmount(supply)
+	if err != nil {
+		return err
+	}
+	
+	mintable := viper.GetBool(flagMintable)
 
-	supplyStr := viper.GetString(flagTotalSupply)
-	supply, err := parseSupply(supplyStr)
+	// build message
+	msg := issue.NewIssueMsg(from, name, symbol, supply, mintable)
+	return client.SendOrPrintTx(cliCtx, txBldr, msg)
+}
+
+func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
+	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
+	from, err := cliCtx.GetFromAddress()
 	if err != nil {
 		return err
 	}
 
-	// build message
-	msg := issue.NewMsg(from, name, symbol, supply)
+	symbol := viper.GetString(flagSymbol)
+	err = types.ValidateMapperTokenSymbol(symbol)
+	if err != nil {
+		return err
+	}
+
+	amount := viper.GetInt64(flagAmount)
+	err = checkSupplyAmount(amount)
+	if err != nil {
+		return err
+	}
+
+	msg := issue.NewMintMsg(from, symbol, amount)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
-func parseSupply(supply string) (int64, error) {
-	if len(supply) == 0 {
-		return 0, errors.New("you must provide total supply of the tokens")
+func checkSupplyAmount(amount int64) error {
+	if amount <= 0 || amount > types.TokenMaxTotalSupply {
+		return errors.New("invalid supply amount")
 	}
-
-	n, err := strconv.ParseInt(supply, 10, 64)
-	if err != nil || n < 0 || n > types.TokenMaxTotalSupply {
-		return 0, errors.New("invalid supply number")
-	}
-
-	return n, nil
+	return nil
 }
