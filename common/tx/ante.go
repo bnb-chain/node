@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -58,7 +60,7 @@ func InitSigCache(size int) {
 
 // this function is not implemented in AnteHandler in BaseApp.
 func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
-	return func(ctx sdk.Context, tx sdk.Tx) sdk.Result {
+	return func(ctx sdk.Context, txBytes []byte, tx sdk.Tx) sdk.Result {
 		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
 			return sdk.ErrInternal("tx must be StdTx").Result()
@@ -82,7 +84,8 @@ func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
 			accNums[i] = sigs[i].AccountNumber
 		}
 
-		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+		// TODO: optimization opportunity, txHash may be recalled later
+		txHash := common.HexBytes(tmhash.Sum(txBytes)).String()
 		chainID := ctx.ChainID()
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
@@ -117,7 +120,9 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			return newCtx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		if mode != sdk.RunTxModeReCheck {
+		if mode == sdk.RunTxModeDeliver ||
+			mode == sdk.RunTxModeCheck ||
+			mode == sdk.RunTxModeSimulate {
 			err := validateBasic(stdTx)
 			if err != nil {
 				return newCtx, err.Result(), true
@@ -149,7 +154,9 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 				return newCtx, err.Result(), true
 			}
 
-			if mode != sdk.RunTxModeReCheck {
+			if mode == sdk.RunTxModeDeliver ||
+				mode == sdk.RunTxModeCheck ||
+				mode == sdk.RunTxModeSimulate {
 				// check signature, return account with incremented nonce
 				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
 				res := processSig(txHash, sig, signerAcc, signBytes)
@@ -297,7 +304,7 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 		return ctx, res
 	}
 
-	if ctx.IsCheckTx() {
+	if !ctx.IsDeliverTx() {
 		return ctx, res
 	}
 
