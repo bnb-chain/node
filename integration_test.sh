@@ -85,7 +85,7 @@ check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # propose list
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list ${btc_symbol}/BNB" "list ${btc_symbol}/BNB" ${cli_home} 1544486400)
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list ${btc_symbol}/BNB" "list ${btc_symbol}/BNB" ${cli_home} 1644486400)
 check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s
