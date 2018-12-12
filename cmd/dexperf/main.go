@@ -36,14 +36,6 @@ import (
 	"time"
 )
 
-func init() {
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount("bnc", "bncp")
-	config.SetBech32PrefixForValidator("bva", "bvap")
-	config.SetBech32PrefixForConsensusNode("bca",  "bcap")
-	config.Seal()
-}
-
 const (
 	retry = 25
 	stime = 2000
@@ -108,6 +100,11 @@ var nodes []string
 var rpcs []*rpcclient.HTTP
 
 func init() {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount("bnc", "bncp")
+	config.SetBech32PrefixForValidator("bva", "bvap")
+	config.SetBech32PrefixForConsensusNode("bca",  "bcap")
+	config.Seal()
 	home = flag.String("home", "/home/test/.bnbcli", "bnbcli --home")
 	node = flag.String("node", "0.0.0.0:26657", "bnbcli --node")
 	chainId = flag.String("chainId", "chain-bnb", "bnbcli --chain-id")
@@ -167,6 +164,19 @@ func main() {
 	lookupAccounts()
 
 	tokens := generateTokens(0, 2, *generateToken)
+	if tokens == nil {
+		path := filepath.Join(*csvPath, "tokens.csv")
+		file, err := os.Open(path)
+		defer file.Close()
+		if err != nil {
+			panic(err)
+		}
+		s := bufio.NewScanner(file)
+		for s.Scan() {
+			tokens = append(tokens, s.Text())
+		}
+		fmt.Println("issued tokens:", tokens)
+	}
 	initializeAccounts(tokens, *initiateAccount)
 
 	if *runCreate == true {
@@ -261,32 +271,57 @@ func lookupAccounts() {
 
 func generateTokens(sI int, eI int, flag bool) []string {
 	var tokens []string
-	for sI <= eI {
-		var token string
-		if sI < 10 {
-			token = fmt.Sprintf("X0%d", sI)
-		} else if sI >= 10 && sI < 100 {
-			token = fmt.Sprintf("X%d", sI)
-		} else {
-			panic("token index was out of range")
+	if flag == true {
+		path := filepath.Join(*csvPath, "tokens.csv")
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+		if err != nil {
+			panic(err)
 		}
-		if flag == true {
-			execCommand("bnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId)
-			time.Sleep(stime * time.Millisecond)
-			expireTime := strconv.FormatInt(time.Now().Unix() + 3600,10)
-			r := execCommand("bnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
+		defer file.Close()
+		writer := bufio.NewWriter(file)
+		for sI <= eI {
+			var token string
+			if sI < 10 {
+				token = fmt.Sprintf("X0%d", sI)
+			} else if sI >= 10 && sI < 100 {
+				token = fmt.Sprintf("X%d", sI)
+			} else {
+				panic("token index was out of range")
+			}
 			type toJSON struct {
 				Height   int64
 				TxHash   string
 				Response abci.ResponseDeliverTx
 			}
+			r := execCommand("bnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId, "--json=true")
 			j := toJSON{}
 			err := MakeCodec().UnmarshalJSON(r.Bytes(), &j)
 			if err != nil {
 				panic(err)
 			}
+			expr := "^Msg 0: Issued (.+)$"
+			res, err := regexp.Compile(expr)
+			if err != nil {
+				panic(err)
+			}
+			matched := res.FindStringSubmatch(j.Response.Log)
+			if matched != nil {
+				token = matched[1]
+				writer.WriteString(token + "\n")
+				writer.Flush()
+			} else {
+				panic("token issue failed")
+			}
+			time.Sleep(stime * time.Millisecond)
+			expireTime := strconv.FormatInt(time.Now().Unix() + 3600,10)
+			r1 := execCommand("bnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
+			j1 := toJSON{}
+			err1 := MakeCodec().UnmarshalJSON(r1.Bytes(), &j1)
+			if err1 != nil {
+				panic(err)
+			}
 			var pid int64
-			for _, tag := range j.Response.Tags {
+			for _, tag := range j1.Response.Tags {
 				if string(tag.Key) == "proposal-id" {
 					err := MakeCodec().UnmarshalBinaryBare(tag.Value, &pid)
 					if err != nil {
@@ -300,9 +335,9 @@ func generateTokens(sI int, eI int, flag bool) []string {
 			time.Sleep(time.Duration(*votingTime) * time.Second)
 			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pidStr)
 			time.Sleep(stime * time.Millisecond)
+			tokens = append(tokens, token)
+			sI++
 		}
-		tokens = append(tokens, token)
-		sI++
 	}
 	return tokens
 }
