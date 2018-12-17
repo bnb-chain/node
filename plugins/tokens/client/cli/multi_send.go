@@ -67,7 +67,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 			fromCoins := sdk.Coins{}
 			for _, toCoin := range toCoins {
 				fromCoin := toCoin
-				fromCoin.Amount = fromCoin.Amount*int64(len(toAddrs))
+				fromCoin.Amount = fromCoin.Amount * int64(len(toAddrs))
 				fromCoins = append(fromCoins, fromCoin)
 			}
 

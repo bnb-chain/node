@@ -19,15 +19,15 @@ import (
 
 // util objects
 var (
-	db     = dbm.NewMemDB()
-	logger = log.NewTMLogger(os.Stdout)
-	app    = bca.NewBinanceChain(logger, db, os.Stdout)
-	pk     = ed25519.GenPrivKey().PubKey()
-	addr   = sdk.AccAddress(pk.Address())
+	db           = dbm.NewMemDB()
+	logger       = log.NewTMLogger(os.Stdout)
+	app          = bca.NewBinanceChain(logger, db, os.Stdout)
+	pk           = ed25519.GenPrivKey().PubKey()
+	addr         = sdk.AccAddress(pk.Address())
 	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr)
 	token2Ptr, _ = common.NewToken("XXY", "XXY-000", 10000000000, addr)
-	token1 = *token1Ptr
-	token2 = *token2Ptr
+	token1       = *token1Ptr
+	token2       = *token2Ptr
 )
 
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {

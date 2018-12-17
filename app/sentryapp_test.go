@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	"github.com/BiJie/BinanceChain/common/log"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
