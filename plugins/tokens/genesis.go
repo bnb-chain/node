@@ -8,7 +8,6 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/tokens/store"
 )
 
-
 type GenesisToken struct {
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
@@ -27,10 +26,10 @@ func DefaultGenesisToken(owner sdk.AccAddress) GenesisToken {
 		panic(err)
 	}
 	return GenesisToken{
-		Name: token.Name,
-		Symbol: token.Symbol,
+		Name:        token.Name,
+		Symbol:      token.Symbol,
 		TotalSupply: token.TotalSupply.ToInt64(),
-		Owner: token.Owner,
+		Owner:       token.Owner,
 	}
 }
 
@@ -48,7 +47,7 @@ func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keep
 		}
 
 		_, _, sdkErr := coinKeeper.AddCoins(ctx, token.Owner,
-			sdk.Coins{ sdk.NewCoin(token.Symbol, token.TotalSupply.ToInt64())})
+			sdk.Coins{sdk.NewCoin(token.Symbol, token.TotalSupply.ToInt64())})
 		if token.Symbol == types.NativeTokenSymbol {
 			nativeTokenOwner = token.Owner
 		}
@@ -70,7 +69,7 @@ func transferNativeTokensToValidators(ctx sdk.Context, coinKeeper bank.Keeper,
 	}
 
 	inputs := []bank.Input{
-		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach * int64(numValidators))}),
+		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach*int64(numValidators))}),
 	}
 	coinKeeper.InputOutputCoins(ctx, inputs, outputs)
 }

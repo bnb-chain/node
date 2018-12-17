@@ -89,6 +89,6 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Kee
 
 	return sdk.Result{
 		Data: serialized,
-		Log: fmt.Sprintf("Issued %s", token.Symbol),
+		Log:  fmt.Sprintf("Issued %s", token.Symbol),
 	}
 }

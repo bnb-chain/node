@@ -3,9 +3,10 @@ package main
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/BiJie/BinanceChain/app"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/BiJie/BinanceChain/app"
 )
 
 func main() {

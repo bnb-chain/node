@@ -31,7 +31,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 	}
 	postConsume := func() {
 		for _, numArr := range nums {
-			atomic.AddInt64(&sum,  int64(numArr[0]))
+			atomic.AddInt64(&sum, int64(numArr[0]))
 		}
 	}
 	utils.ConcurrentExecuteAsync(4, producer, consumer, postConsume)

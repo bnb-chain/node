@@ -28,6 +28,7 @@ function prepare_node() {
 	secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
 	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
 
 	# stop and start node
@@ -85,15 +86,15 @@ check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # propose list
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list ${btc_symbol}/BNB" "list ${btc_symbol}/BNB" ${cli_home} 1544486400)
-check_operation "Propose list" "${result}" "${chain_operation_words}"
+r1544486400esult=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} 1644486400)
+check_operation "Propose List" "${result}" "${chain_operation_words}"
 
 sleep 2s
 # vote for propose
 result=$(expect ./vote.exp alice ${chain_id} 1 Yes ${cli_home})
 check_operation "Vote" "${result}" "${chain_operation_words}"
 
-sleep 5s
+sleep 3s
 # list trading pair
 result=$(expect ./list.exp ${btc_symbol} BNB 100000000 bob ${chain_id} ${cli_home} 1)
 check_operation "List Trading Pair" "${result}" "${chain_operation_words}"

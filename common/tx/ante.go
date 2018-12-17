@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -56,6 +58,53 @@ func InitSigCache(size int) {
 	sigCache = newSigLRUCache(size)
 }
 
+// this function is not implemented in AnteHandler in BaseApp.
+func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
+	return func(ctx sdk.Context, txBytes []byte, tx sdk.Tx) sdk.Result {
+		stdTx, ok := tx.(auth.StdTx)
+		if !ok {
+			return sdk.ErrInternal("tx must be StdTx").Result()
+		}
+		err := validateBasic(stdTx)
+		if err != nil {
+			return err.Result()
+		}
+		// the below code are somewhat similar as part of AnteHandler,
+		// because it is extracted out to enable Concurrent run.
+		// It might be revised to reduce duplication but so far they are very light
+		sigs := stdTx.GetSignatures()
+		signerAddrs := stdTx.GetSigners()
+		msgs := tx.GetMsgs()
+
+		// get the sign bytes (requires all account & sequence numbers and the fee)
+		sequences := make([]int64, len(sigs))
+		accNums := make([]int64, len(sigs))
+		for i := 0; i < len(sigs); i++ {
+			sequences[i] = sigs[i].Sequence
+			accNums[i] = sigs[i].AccountNumber
+		}
+
+		// TODO: optimization opportunity, txHash may be recalled later
+		txHash := common.HexBytes(tmhash.Sum(txBytes)).String()
+		chainID := ctx.ChainID()
+		// check sigs and nonce
+		for i := 0; i < len(sigs); i++ {
+			signerAddr, sig := signerAddrs[i], sigs[i]
+			signerAcc, err := processAccount(ctx, am, signerAddr, sig, false)
+			if err != nil {
+				return sdk.ErrInternal(err.Error()).Result()
+			}
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
+
+			res := processSig(txHash, sig, signerAcc, signBytes)
+			if !res.IsOK() {
+				return res
+			}
+		}
+		return sdk.Result{}
+	}
+}
+
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
@@ -72,7 +121,9 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			return newCtx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		if mode != sdk.RunTxModeReCheck {
+		if mode == sdk.RunTxModeDeliver ||
+			mode == sdk.RunTxModeCheck ||
+			mode == sdk.RunTxModeSimulate {
 			err := validateBasic(stdTx)
 			if err != nil {
 				return newCtx, err.Result(), true
@@ -94,19 +145,21 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		// collect signer accounts
 		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]sdk.Account, len(signerAddrs))
+		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
+		chainID := ctx.ChainID()
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
-			signerAcc, err := processAccount(newCtx, am, signerAddr, sig)
+			signerAcc, err := processAccount(newCtx, am, signerAddr, sig, true)
 			if err != nil {
 				return newCtx, err.Result(), true
 			}
 
-			if mode != sdk.RunTxModeReCheck {
+			if mode == sdk.RunTxModeDeliver ||
+				mode == sdk.RunTxModeCheck ||
+				mode == sdk.RunTxModeSimulate {
 				// check signature, return account with incremented nonce
-				signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], sequences[i], msgs, stdTx.GetMemo())
-				txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
-
+				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
 				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return newCtx, res, true
@@ -158,7 +211,7 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 }
 
 func processAccount(ctx sdk.Context, am auth.AccountKeeper,
-	addr sdk.AccAddress, sig auth.StdSignature) (acc sdk.Account, err sdk.Error) {
+	addr sdk.AccAddress, sig auth.StdSignature, setSeq bool) (acc sdk.Account, err sdk.Error) {
 	// Get the account.
 	acc = am.GetAccount(ctx, addr)
 	if acc == nil {
@@ -180,16 +233,18 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 		}
 	}
 
-	// Check and increment sequence number.
-	seq := acc.GetSequence()
-	if seq != sig.Sequence {
-		return nil, sdk.ErrInvalidSequence(
-			fmt.Sprintf("Invalid sequence. Got %d, expected %d", sig.Sequence, seq))
-	}
-	errSeq := acc.SetSequence(seq + 1)
-	if errSeq != nil {
-		// Handle w/ #870
-		panic(err)
+	if setSeq {
+		// Check and increment sequence number.
+		seq := acc.GetSequence()
+		if seq != sig.Sequence {
+			return nil, sdk.ErrInvalidSequence(
+				fmt.Sprintf("Invalid sequence. Got %d, expected %d", sig.Sequence, seq))
+		}
+		errSeq := acc.SetSequence(seq + 1)
+		if errSeq != nil {
+			// Handle w/ #870
+			panic(err)
+		}
 	}
 	// If pubkey is not known for account,
 	// set it from the StdSignature.
@@ -252,7 +307,7 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 		return ctx, res
 	}
 
-	if ctx.IsCheckTx() {
+	if !ctx.IsDeliverTx() {
 		return ctx, res
 	}
 

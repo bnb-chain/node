@@ -2,8 +2,9 @@ package store
 
 import (
 	"errors"
-	types2 "github.com/BiJie/BinanceChain/common/types"
 	"strings"
+
+	types2 "github.com/BiJie/BinanceChain/common/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
