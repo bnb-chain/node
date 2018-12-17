@@ -659,9 +659,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "a1ad2535f7d05f2ee688f63efb37e0410ae595e9"
+  revision = "3f17d89ee2b1a6441279873d81a444b3e0e5eece"
   source = "github.com/BiJie/bnc-tendermint"
-  version = "v0.25.1-br6"
+  version = "v0.25.1-br7"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
