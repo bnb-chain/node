@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -119,6 +120,9 @@ func TestAppPub_AddOrder(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	for 4 != atomic.LoadUint32(&publisher.MessagePublished) {
+		time.Sleep(1000)
+	}
 	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.BooksPublished[0].Books, 1)
@@ -140,6 +144,9 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 41})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	for 4 != atomic.LoadUint32(&publisher.MessagePublished) {
+		time.Sleep(1000)
+	}
 	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.AccountPublished, 1)
@@ -156,6 +163,9 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	res = handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
+	for 8 != atomic.LoadUint32(&publisher.MessagePublished) {
+		time.Sleep(1000)
+	}
 
 	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 2)
@@ -180,6 +190,9 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	am.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 43})
+	for 12 != atomic.LoadUint32(&publisher.MessagePublished) {
+		time.Sleep(1000)
+	}
 	expectedAccountToPub = pub.Account{string(buyer), "BNB:51", []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ-000", 100100000000, 0, 0}}}
 	expectedAccountToPubSeller = pub.Account{string(seller), "BNB:51", []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ-000", 99900000000, 0, 0}}}
 
@@ -233,6 +246,9 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
+	for 8 != atomic.LoadUint32(&publisher.MessagePublished) {
+		time.Sleep(1000)
+	}
 	publisher.Lock.Lock()
 	require.Len(publisher.TradesAndOrdersPublished, 2)
 	assert.Equal("BNB:51", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Sfee)
