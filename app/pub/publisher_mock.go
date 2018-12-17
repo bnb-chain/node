@@ -3,6 +3,7 @@ package pub
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -15,7 +16,8 @@ type MockMarketDataPublisher struct {
 	TradesAndOrdersPublished []*tradesAndOrders
 	BlockFeePublished        []BlockFee
 
-	Lock *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
+	Lock             *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
+	MessagePublished uint32      // atomic integer used to determine the published messages
 }
 
 func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
@@ -34,6 +36,8 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, heig
 	default:
 		panic(fmt.Errorf("does not support type %s", tpe.String()))
 	}
+
+	atomic.AddUint32(&publisher.MessagePublished, 1)
 }
 
 func (publisher *MockMarketDataPublisher) Stop() {
@@ -52,6 +56,7 @@ func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationCon
 		make([]*tradesAndOrders, 0),
 		make([]BlockFee, 0),
 		&sync.Mutex{},
+		0,
 	}
 	if err := setup(logger, config, publisher); err != nil {
 		publisher.Stop()
