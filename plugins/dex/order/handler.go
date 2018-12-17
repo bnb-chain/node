@@ -184,7 +184,6 @@ func handleCancelOrder(
 	}
 	acc := keeper.am.GetAccount(ctx, msg.Sender)
 	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.lastTradePrices)
-	fees.Pool.AddFee(fee)
 	acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 	keeper.am.SetAccount(ctx, acc)
 
@@ -201,6 +200,8 @@ func handleCancelOrder(
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
 		}
+
+		fees.Pool.AddFee(fee)
 	}
 
 	return sdk.Result{}
