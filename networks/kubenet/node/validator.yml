@@ -18,23 +18,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode0
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode0
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -46,28 +46,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -95,23 +95,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode1
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode1
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -123,28 +123,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -172,23 +172,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode2
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode2
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -200,28 +200,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -248,23 +248,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode3
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode3
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -276,28 +276,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -325,23 +325,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode4
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode4
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -353,28 +353,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -401,23 +401,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode5
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode5
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -429,28 +429,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -477,23 +477,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode6
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode6
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -505,28 +505,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -554,23 +554,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode7
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode7
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -582,28 +582,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
@@ -631,23 +631,23 @@
       mode: 0755
   - name: Copy config files
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/kubenode8
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/kubenode8
       dest: /server/bnbchaind/validator
     when:
     - REBUILD == "TRUE"
   - name: Copy bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbchaind
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/../../build/bnbcli
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Copy run script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//start.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//start.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
   - name: Rename
@@ -659,28 +659,28 @@
     - REBUILD == "TRUE"
   - name: Copy service bnbchaind
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbchaind.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.service
       dest: /usr/lib/systemd/system/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbchaind script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//chaind.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:
     - INIT == "TRUE"
   - name: Copy service bnbcli script
     copy:
-      src: /root/zjubfd/src/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
+      src: /root/zjubfd/src/github.com/BiJie/BinanceChain/networks/kubenet/node//bnbcli.sh
       dest: /server/bnbchaind/validator/
       mode: 0777
     when:

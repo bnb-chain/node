@@ -2,11 +2,11 @@
 #
 
 function start_bnbcli() {
-   /server/bnbchaind/validator/bnbcli --chain-id chain-bnb --home  /server/bnbchaind/validator/node/gaiacli --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server>>  /server/bnbchaind/validator/api-server.log 2>&1 &
+   /server/bnbchaind/validator/bnbcli --chain-id chain-bnb --home  /server/bnbchaind/validator/node/gaiacli --laddr tcp://0.0.0.0:8080 --node tcp://localhost:26657 api-server>>  /server/bnbchaind/validator/api-server.log 2>&1
 }
 
 function stop_bnbcli() {
-    pid=`ps -ef | grep /server/bnbchaind/validator//bnbcli | grep -v grep | awk '{print $2}'`
+    pid=`ps -ef | grep /server/bnbchaind/validator/bnbcli | grep -v grep | awk '{print $2}'`
     if [ -n "$pid" ]; then
         for((i=1;i<=4;i++));
         do

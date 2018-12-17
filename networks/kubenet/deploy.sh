@@ -55,8 +55,10 @@ function prepare(){
             sed -i -e "s/${src_ips[$i]}:[0-9]\{5\}/${des_ips[$i]}:26656/g" "${home[$j]}/gaiad/config/config.toml"
         done
     done
-    for ihome in ${home[@]}; do
-        # change prome port
+    for i in {0..8}; do
+        ihome=${home[$i]}
+        external_ip=${des_ips[$i]}
+        sed -i -e "s/external_address = \"\"/external_address = \"${external_ip}:26656\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/prometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/flush_throttle_timeout = 100/flush_throttle_timeout = 0/g" ${ihome}/gaiad/config/config.toml
@@ -288,7 +290,7 @@ function deploy-bridge(){
             exit 1
         fi
     done
-    sleep 5
+    sleep 20
     ## prepare seed no
     for ((i=0;i<$bridge_replica;i++)); do
         bridge_id=$(${workspace}/build/bnbcli --home ${bridge_home}/gaiacli  --node "tcp://${bridge_ips[$i]}:26657" status)
@@ -323,7 +325,7 @@ function deploy-data-seed(){
             exit 1
         fi
     done
-    sleep 5
+    sleep 20
     data_seed_domain=$(${kubectl} get svc data-seed  -n bnbchain -ojson|jq .status.loadBalancer.ingress[0].hostname|sed 's/\"//g')
     while [ "${data_seed_domain}"x == ""x -o "${data_seed_domain}"x == "null"x ];do
         sleep 10
