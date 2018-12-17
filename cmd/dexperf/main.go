@@ -6,22 +6,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/BiJie/BinanceChain/common/client"
-	"github.com/BiJie/BinanceChain/common/tx"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/keys"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/spf13/viper"
-	abci "github.com/tendermint/tendermint/abci/types"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -34,15 +18,33 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/keys"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/spf13/viper"
+	abci "github.com/tendermint/tendermint/abci/types"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
+
+	"github.com/BiJie/BinanceChain/common/client"
+	"github.com/BiJie/BinanceChain/common/tx"
+	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
-	retry = 25
-	stime = 2000
+	retry      = 25
+	stime      = 2000
 	createTask = 1
 	submitTask = 2
-	buy = 1
-	sell = 2
+	buy        = 1
+	sell       = 2
 )
 
 var home *string
@@ -66,27 +68,27 @@ var submitPause *int64
 var csvPath *string
 
 type DEXCreate struct {
-	ctx context.CLIContext
-	txBldr txbuilder.TxBuilder
-	addr sdk.AccAddress
-	side int8
-	symbol string
-	price int64
-	qty int64
+	ctx     context.CLIContext
+	txBldr  txbuilder.TxBuilder
+	addr    sdk.AccAddress
+	side    int8
+	symbol  string
+	price   int64
+	qty     int64
 	tifCode int8
 }
 type DEXSubmit struct {
-	ctx context.CLIContext
-	txBldr txbuilder.TxBuilder
+	ctx     context.CLIContext
+	txBldr  txbuilder.TxBuilder
 	txBytes []byte
 }
 
 type sequence struct {
-	m sync.Mutex
+	m      sync.Mutex
 	seqMap map[string]int64
 }
 type txhash struct {
-	m sync.Mutex
+	m     sync.Mutex
 	trans []string
 }
 
@@ -103,7 +105,7 @@ func init() {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount("bnc", "bncp")
 	config.SetBech32PrefixForValidator("bva", "bvap")
-	config.SetBech32PrefixForConsensusNode("bca",  "bcap")
+	config.SetBech32PrefixForConsensusNode("bca", "bcap")
 	config.Seal()
 	home = flag.String("home", "/home/test/.bnbcli", "bnbcli --home")
 	node = flag.String("node", "0.0.0.0:26657", "bnbcli --node")
@@ -128,7 +130,7 @@ func init() {
 	createChn = make(chan DEXCreate, *createChnBuf)
 	submitChn = make(chan DEXSubmit, *submitChnBuf)
 	clientSeq = sequence{seqMap: make(map[string]int64)}
-	hashReturned = txhash{trans: make([]string,0,0)}
+	hashReturned = txhash{trans: make([]string, 0, 0)}
 	nodes = strings.Split(*node, ",")
 	rpcs = make([]*rpcclient.HTTP, len(nodes))
 	for i, v := range nodes {
@@ -211,7 +213,7 @@ func main() {
 
 func execCommand(name string, arg ...string) *bytes.Buffer {
 	var err error
-	for i:= 0; i < retry; i++ {
+	for i := 0; i < retry; i++ {
 		fmt.Println("running round", ":", i, name, arg)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -255,10 +257,10 @@ func lookupAccounts() {
 	}
 	accToIp = make(map[string]string)
 	index := 0
-	for a:=0; a<256; a++ {
-		for b:=0; b<256; b++ {
-			for c:=0; c<256; c++ {
-				ip := fmt.Sprintf("%d.%d.%d.%d", n, a, b ,c)
+	for a := 0; a < 256; a++ {
+		for b := 0; b < 256; b++ {
+			for c := 0; c < 256; c++ {
+				ip := fmt.Sprintf("%d.%d.%d.%d", n, a, b, c)
 				accToIp[sortKeys[index]] = ip
 				index++
 				if index == len(sortKeys) {
@@ -313,7 +315,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 				panic("token issue failed")
 			}
 			time.Sleep(stime * time.Millisecond)
-			expireTime := strconv.FormatInt(time.Now().Unix() + 3600,10)
+			expireTime := strconv.FormatInt(time.Now().Unix()+3600, 10)
 			proposalRep := execCommand("bnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
 			proposalJson := toJSON{}
 			err = MakeCodec().UnmarshalJSON(proposalRep.Bytes(), &proposalJson)
@@ -329,7 +331,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 					}
 				}
 			}
-			pidStr := strconv.FormatInt(pid,10)
+			pidStr := strconv.FormatInt(pid, 10)
 			time.Sleep(stime * time.Millisecond)
 			execCommand("bnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pidStr, "--option=yes")
 			time.Sleep(time.Duration(*votingTime) * time.Second)
@@ -445,7 +447,7 @@ func generatePrices(noOfPrices int, margin float64) []int64 {
 		if err != nil {
 			panic(err)
 		}
-		prices[i] = int64(f*10000)*10000
+		prices[i] = int64(f*10000) * 10000
 	}
 	return prices
 }
@@ -508,23 +510,23 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		item.txBldr = item.txBldr.WithSequence(seq)
 		id := fmt.Sprintf("%X-%d", item.addr, seq+1)
 		msg := order.NewOrderMsg{
-			Sender: item.addr,
-			Id: id,
-			Symbol: item.symbol,
-			OrderType: order.OrderType.LIMIT,
-			Side: item.side,
-			Price: item.price,
-			Quantity: item.qty,
+			Sender:      item.addr,
+			Id:          id,
+			Symbol:      item.symbol,
+			OrderType:   order.OrderType.LIMIT,
+			Side:        item.side,
+			Price:       item.price,
+			Quantity:    item.qty,
 			TimeInForce: order.TimeInForce.GTC,
 		}
 		msg.TimeInForce = item.tifCode
 		msgs := []sdk.Msg{msg}
-		ssMsg := txbuilder.StdSignMsg {
-			ChainID: item.txBldr.ChainID,
+		ssMsg := txbuilder.StdSignMsg{
+			ChainID:       item.txBldr.ChainID,
 			AccountNumber: item.txBldr.AccountNumber,
-			Sequence: item.txBldr.Sequence,
-			Memo: item.txBldr.Memo,
-			Msgs: msgs,
+			Sequence:      item.txBldr.Sequence,
+			Memo:          item.txBldr.Memo,
+			Msgs:          msgs,
 		}
 		keybase, err := keys.GetKeyBaseFromDir(*home)
 		if err != nil {
@@ -536,11 +538,11 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			fmt.Println(err)
 			continue
 		}
-		sig := auth.StdSignature {
+		sig := auth.StdSignature{
 			AccountNumber: ssMsg.AccountNumber,
-			Sequence: ssMsg.Sequence,
-			PubKey: pubkey,
-			Signature: sigBytes,
+			Sequence:      ssMsg.Sequence,
+			PubKey:        pubkey,
+			Signature:     sigBytes,
 		}
 		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo))
 		if err != nil {
@@ -548,7 +550,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			continue
 		}
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
-		file := filepath.Join(*createPath, ts + "_" + name)
+		file := filepath.Join(*createPath, ts+"_"+name)
 		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
 		err = ioutil.WriteFile(file, txBytes, 0777)
 		if err != nil {
@@ -556,7 +558,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			continue
 		}
 		s.m.Lock()
-		s.seqMap[name] = seq+1
+		s.seqMap[name] = seq + 1
 		s.m.Unlock()
 	}
 	wg.Done()

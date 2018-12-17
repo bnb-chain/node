@@ -160,7 +160,7 @@ func TestGenesis(t *testing.T) {
 	// A checkTx context
 	ctx := bapp.BaseApp.NewContext(sdk.RunTxModeCheck, abci.Header{})
 	if err := acc.SetCoins(sdk.Coins{sdk.Coin{"BNB", 100000}}); err != nil {
-		t.Fatalf("SetCoins error: "+err.Error())
+		t.Fatalf("SetCoins error: " + err.Error())
 	}
 	res1 := bapp.AccountKeeper.GetAccount(ctx, baseAcc.Address).(common.NamedAccount)
 	require.Equal(t, acc, res1)

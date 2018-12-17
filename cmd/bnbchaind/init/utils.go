@@ -108,7 +108,7 @@ func createValOperAccount(clientDir, keyName string) (sdk.ValAddress, string) {
 	return sdk.ValAddress(accAddr.Bytes()), secret
 }
 
-func makeAppMessage(cdc *codec.Codec, secret string) (json.RawMessage) {
+func makeAppMessage(cdc *codec.Codec, secret string) json.RawMessage {
 	mm := map[string]string{"secret": secret}
 	bz, err := cdc.MarshalJSON(mm)
 	if err != nil {

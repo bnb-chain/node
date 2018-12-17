@@ -5,8 +5,7 @@ Why we overwrite the Init/Testnet functions in cosmos-sdk:
 1. Cosmos moved init/testnet cmds to the gaia packages which we never and should not imports.
 2. Cosmos has a different init/testnet workflow from ours. Also, the init cmd has some bugs.
 3. After overwrite, the code is cleaner and easier to maintain.
- */
-
+*/
 
 import (
 	"encoding/json"
@@ -115,9 +114,9 @@ enabled, and the genesis file will not be generated.
 			writeConfigFile(config)
 
 			toPrint := printInfo{
-				ChainID: chainID,
-				Moniker: config.Moniker,
-				NodeID:  nodeID,
+				ChainID:    chainID,
+				Moniker:    config.Moniker,
+				NodeID:     nodeID,
 				AppMessage: makeAppMessage(cdc, secret),
 			}
 			return displayInfo(cdc, toPrint)
