@@ -188,7 +188,6 @@ func handleCancelOrder(
 	}
 	acc := keeper.am.GetAccount(ctx, msg.Sender)
 	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.lastTradePrices)
-	fees.Pool.AddFee(fee)
 	acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 	keeper.am.SetAccount(ctx, acc)
 
@@ -205,35 +204,8 @@ func handleCancelOrder(
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
 		}
-	} else {
-		logger.Info("Incoming Cancel", "cancel", msg)
-		ord, err = keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
-	}
-	if err != nil {
-		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
-	}
 
-	//unlocked the locked qty for the unfilled qty
-	unlockAmount := ord.LeavesQty()
-
-	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(origOrd.Symbol)
-	var symbolToUnlock string
-	if origOrd.Side == Side.BUY {
-		symbolToUnlock = strings.ToUpper(quoteAsset)
-		unlockAmount = utils.CalBigNotional(origOrd.Price, unlockAmount)
-	} else {
-		symbolToUnlock = strings.ToUpper(baseAsset)
-	}
-	account := accountMapper.GetAccount(ctx, msg.Sender).(common.NamedAccount)
-	lockedAmount := account.GetLockedCoins().AmountOf(symbolToUnlock).Int64()
-	if lockedAmount < unlockAmount {
-		return sdk.ErrInsufficientCoins("do not have enough token to unlock").Result()
-	}
-
-	_, _, sdkError := keeper.ck.AddCoins(ctx, msg.Sender, append((sdk.Coins)(nil), sdk.Coin{Denom: symbolToUnlock, Amount: sdk.NewInt(unlockAmount)}))
-
-	if sdkError != nil {
-		return sdkError.Result()
+		fees.Pool.AddFee(fee)
 	}
 
 	return sdk.Result{}
