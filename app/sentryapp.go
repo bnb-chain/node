@@ -6,20 +6,29 @@ import (
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 var (
 	DefaultCacheSize  = 20000
 	DefaultMaxSurvive = 10
+
+	defaultPower = utils.Fixed8One
 )
 
 type SentryApplication struct {
 	abci.BaseApplication
+	Codec *wire.Codec
 
 	logger log.Logger
 	cache  mapTxCache
@@ -33,8 +42,10 @@ type SentryConfig struct {
 var SentryAppConfig = SentryConfig{DefaultCacheSize, DefaultMaxSurvive}
 
 func NewSentryApplication(logger log.Logger, _ db.DB, _ io.Writer) abci.Application {
+	var cdc = Codec
 
 	return &SentryApplication{
+		Codec:  cdc,
 		logger: logger,
 		cache:  newMapTxCache(SentryAppConfig.CacheSize),
 	}
@@ -51,6 +62,38 @@ func (app *SentryApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseI
 
 func (app *SentryApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	return abci.ResponseCheckTx{Code: abci.CodeTypeOK}
+}
+
+func (app *SentryApplication) InitChain(req abci.RequestInitChain) (res abci.ResponseInitChain) {
+	stateJSON := req.AppStateBytes
+
+	genesisState := new(GenesisState)
+	err := app.Codec.UnmarshalJSON(stateJSON, genesisState)
+	if err != nil {
+		panic(err)
+	}
+	validators := make([]abci.ValidatorUpdate, 0)
+	if len(genesisState.GenTxs) > 0 {
+		for _, genTx := range genesisState.GenTxs {
+			var tx auth.StdTx
+			err = app.Codec.UnmarshalJSON(genTx, &tx)
+			if err != nil {
+				panic(err)
+			}
+			msgs := tx.GetMsgs()
+			for _, msg := range msgs {
+				switch msg := msg.(type) {
+				case stake.MsgCreateValidator:
+					validators = append(validators, abci.ValidatorUpdate{PubKey: tmtypes.TM2PB.PubKey(msg.PubKey), Power: defaultPower.ToInt64()})
+				default:
+					app.logger.Info("MsgType %s not supported ", msg.Type())
+				}
+			}
+		}
+	}
+	return abci.ResponseInitChain{
+		Validators: validators,
+	}
 }
 
 func (app *SentryApplication) ReCheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
