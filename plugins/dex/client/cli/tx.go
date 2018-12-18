@@ -36,7 +36,7 @@ const (
 
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce> -o <order source>",
+		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce> -c <order source>",
 		Short: "Submit a new order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, txBldr := client.PrepareCtx(cdc)
@@ -168,7 +168,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cancel -i <order id> -f <ref order id> -o <order source>",
+		Use:   "cancel -i <order id> -f <ref order id> -c <order source>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
