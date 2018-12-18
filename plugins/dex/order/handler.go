@@ -193,6 +193,15 @@ func handleCancelOrder(
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsDeliverTx() {
+		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); !ok {
+			return sdk.NewError(
+				types.DefaultCodespace,
+				types.CodeFailCancelOrder,
+				"cannot get txHash from ctx").Result()
+		} else {
+			// add fee to pool, even it's free
+			fees.Pool.AddFee(txHash, fee)
+		}
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
@@ -204,8 +213,6 @@ func handleCancelOrder(
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeFailCancelOrder, err.Error()).Result()
 		}
-
-		fees.Pool.AddFee(fee)
 	}
 
 	return sdk.Result{}
