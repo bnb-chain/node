@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/common/client"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -32,11 +31,12 @@ const (
 	flagSide        = "side"
 	flagTimeInForce = "tif"
 	flagDryRun      = "dry"
+	flagSource      = "source"
 )
 
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce>",
+		Use:   "order -l <pair> -s <side> -p <price> -q <qty> -t <timeInForce> -o <order source>",
 		Short: "Submit a new order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, txBldr := client.PrepareCtx(cdc)
@@ -83,7 +83,9 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 				}
 			}
 
-			msg, err := order.NewNewOrderMsgAuto(txBldr, from, side, symbol, price, qty)
+			source := viper.GetInt64(flagSource)
+
+			msg, err := order.NewNewOrderMsgAuto(txBldr, from, side, symbol, price, qty, source)
 			if err != nil {
 				return err
 			}
@@ -127,6 +129,8 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
 	cmd.Flags().StringP(flagTimeInForce, "t", "gtc", "TimeInForce for the order (gtc or ioc)")
 	cmd.Flags().BoolP(flagDryRun, "d", false, "Generate and return the tx bytes (do not broadcast)")
+	cmd.Flags().Int64P(flagSource, "c", 0, "order source")
+
 	return cmd
 }
 
@@ -164,7 +168,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cancel -i <order id> -f <ref order id>",
+		Use:   "cancel -i <order id> -f <ref order id> -o <order source>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
@@ -186,7 +190,9 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if refId == "" {
 				return errors.New("please input reference order id")
 			}
-			msg := order.NewCancelOrderMsg(from, symbol, id, refId)
+			source := viper.GetInt64(flagSource)
+
+			msg := order.NewCancelOrderMsg(from, symbol, id, refId, source)
 			if cliCtx.GenerateOnly {
 				return txutils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg}, false)
 			}
@@ -202,6 +208,8 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
 	cmd.Flags().StringP(flagId, "i", "", "id string of the cancellation")
 	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
+	cmd.Flags().Int64P(flagSource, "c", order.DefaultOrderSource, "order source")
+
 	return cmd
 }
 

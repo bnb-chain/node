@@ -115,7 +115,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 func TestAppPub_AddOrder(t *testing.T) {
 	assert, require := setupAppTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000)
+	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
@@ -133,7 +133,7 @@ func TestAppPub_AddOrder(t *testing.T) {
 func TestAppPub_MatchOrder(t *testing.T) {
 	assert, require := setupAppTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 300000000)
+	msg := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 300000000, 0)
 	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(0, 100)})
 	handler := orderPkg.NewHandler(cdc, keeper, am)
 	buyerAcc.SetSequence(1)
@@ -156,7 +156,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	publisher.Lock.Unlock()
 
 	// we add a sell order to fully execute the buyer order
-	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 400000000)
+	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 400000000, 0)
 	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 101)})
 	sellerAcc.SetSequence(1)
 	am.SetAccount(ctx, sellerAcc)
@@ -180,12 +180,12 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	publisher.Lock.Unlock()
 
 	// we execute qty 1000000 sell order but add a new qty 1000000 sell order, both buy and sell price level should not publish
-	msg = orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
+	msg = orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000, 0)
 	app.SetDeliverState(abci.Header{Height: 43, Time: time.Unix(0, 102)})
 	buyerAcc.SetSequence(2)
 	am.SetAccount(ctx, buyerAcc)
 	res = handler(ctx, msg)
-	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(2, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
+	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(2, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000, 0)
 	sellerAcc.SetSequence(2)
 	am.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
@@ -211,7 +211,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	handler := orderPkg.NewHandler(cdc, keeper, am)
 
 	// ==== Place a to-be-matched sell order and a to-be-cancelled buy order (in different symbol)
-	msg := orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
+	msg := orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000, 0)
 	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(0, 100)})
 	sellerAcc.SetSequence(1)
 	am.SetAccount(ctx, sellerAcc)
@@ -219,7 +219,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	res := handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
-	msg2 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "ZCB-000_BNB", 102000, 100000000)
+	msg2 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "ZCB-000_BNB", 102000, 100000000, 0)
 	buyerAcc.SetSequence(1)
 	am.SetAccount(ctx, buyerAcc)
 	res = handler(ctx, msg2)
@@ -228,7 +228,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 41})
 
 	// ==== Place a must-match buy order and a cancel message
-	msg3 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
+	msg3 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000, 0)
 	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 101)})
 	buyerAcc = am.GetAccount(ctx, buyer)
 	buyerAcc.SetSequence(2)
@@ -236,7 +236,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	res = handler(ctx, msg3)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
-	cxlMsg := orderPkg.NewCancelOrderMsg(buyer, "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyer), orderPkg.GenerateOrderID(1, buyer))
+	cxlMsg := orderPkg.NewCancelOrderMsg(buyer, "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyer), orderPkg.GenerateOrderID(1, buyer), 0)
 	buyerAcc = am.GetAccount(ctx, buyer)
 	buyerAcc.SetSequence(3)
 	am.SetAccount(ctx, buyerAcc)

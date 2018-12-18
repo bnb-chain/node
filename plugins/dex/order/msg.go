@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	RouteNewOrder    = "orderNew"
-	RouteCancelOrder = "orderCancel"
+	RouteNewOrder      = "orderNew"
+	RouteCancelOrder   = "orderCancel"
+	DefaultOrderSource = 0
+	maxMsgDataSize     = 32
 )
 
 // Side/TimeInForce/OrderType are const, following FIX protocol convention
@@ -158,11 +160,13 @@ type NewOrderMsg struct {
 	Price       int64          `json:"price"`
 	Quantity    int64          `json:"quantity"`
 	TimeInForce int8           `json:"timeinforce"`
+	Source      int64          `json:"source"`
+	Data        string         `json:"data"`
 }
 
 // NewNewOrderMsg constructs a new NewOrderMsg
 func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
-	symbol string, price int64, qty int64) NewOrderMsg {
+	symbol string, price int64, qty int64, source int64) NewOrderMsg {
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,
@@ -172,12 +176,13 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 		Price:       price,
 		Quantity:    qty,
 		TimeInForce: TimeInForce.GTC, // default
+		Source:      source,
 	}
 }
 
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
 func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
-	symbol string, price int64, qty int64) (NewOrderMsg, error) {
+	symbol string, price int64, qty int64, source int64) (NewOrderMsg, error) {
 	var id string
 	id = GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
@@ -189,6 +194,7 @@ func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, si
 		Price:       price,
 		Quantity:    qty,
 		TimeInForce: TimeInForce.GTC, // default
+		Source:      source,
 	}, nil
 }
 
@@ -221,15 +227,18 @@ type CancelOrderMsg struct {
 	Symbol string         `json:"symbol"`
 	Id     string         `json:"id"`
 	RefId  string         `json:"refid"`
+	Source int64          `json:"source"`
+	Data   string         `json:"data"`
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string, source int64) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
 		Symbol: symbol,
 		Id:     id,
 		RefId:  refId,
+		Source: source,
 	}
 }
 
@@ -288,7 +297,10 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 	if !IsValidTimeInForce(msg.TimeInForce) {
 		return types.ErrInvalidOrderParam("TimeInForce", fmt.Sprintf("Invalid TimeInForce:%d", msg.TimeInForce))
 	}
-
+	if len(msg.Data) > maxMsgDataSize {
+		return types.ErrInvalidOrderParam("Data", fmt.Sprintf("Data size(%d) exceeds limit(%d)",
+			len(msg.Data), maxMsgDataSize))
+	}
 	return nil
 }
 
@@ -299,6 +311,10 @@ func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
 	}
 	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
 		return types.ErrInvalidOrderParam("Id", fmt.Sprintf("Invalid order ID:%s", msg.Id))
+	}
+	if len(msg.Data) > maxMsgDataSize {
+		return types.ErrInvalidOrderParam("Data", fmt.Sprintf("Data size(%d) exceeds limit(%d)",
+			len(msg.Data), maxMsgDataSize))
 	}
 	return nil
 }

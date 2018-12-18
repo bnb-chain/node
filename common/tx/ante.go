@@ -4,22 +4,22 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
 const (
-	maxMemoCharacters = 100
+	maxMemoCharacters = 256
 
 	defaultMaxCacheNumber = 30000
 )
@@ -202,6 +202,14 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	}
 
 	memo := tx.GetMemo()
+
+	// memo is not supported in NewOrderMsg and CancelOrderMsg
+	_, isNewOrder := tx.Msgs[0].(order.NewOrderMsg)
+	_, isCancelOrder := tx.Msgs[0].(order.CancelOrderMsg)
+	if (isNewOrder || isCancelOrder) && len(memo) > 0 {
+		return sdk.ErrMemoTooLarge("memo is not supported in NewOrder and CancelOrder msg")
+	}
+
 	if len(memo) > maxMemoCharacters {
 		return sdk.ErrMemoTooLarge(
 			fmt.Sprintf("maximum number of characters is %d but received %d characters",

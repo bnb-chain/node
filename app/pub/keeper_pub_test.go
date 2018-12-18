@@ -5,15 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
@@ -93,9 +91,9 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 func TestKeeper_AddOrder(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000)
+	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
-	msg = orderPkg.NewNewOrderMsg(buyer, "2", orderPkg.Side.BUY, "XYZ-000_BNB", 101000, 1000000)
+	msg = orderPkg.NewNewOrderMsg(buyer, "2", orderPkg.Side.BUY, "XYZ-000_BNB", 101000, 1000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 43, 105, 43, 105, 0, "0D42245EB2BF574A5B9D485404E0E61B1A2397A9"}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -123,7 +121,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
+	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
 
 	require.Len(keeper.OrderChanges, 1)
@@ -149,7 +147,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 func TestKeeper_ExpireWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
 
 	require.Len(keeper.OrderChanges, 1)
@@ -174,9 +172,9 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 func Test_IOCPartialExpire(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.IOC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.IOC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -214,9 +212,9 @@ func Test_IOCPartialExpire(t *testing.T) {
 func Test_GTCPartialExpire(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 100000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 300000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 300000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 2)
@@ -259,11 +257,11 @@ func Test_GTCPartialExpire(t *testing.T) {
 func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
-	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.GTC}
+	msg := orderPkg.NewOrderMsg{buyer, "b-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 100000000, 300000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, ""}, false)
-	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC}
+	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, ""}, false)
-	msg3 := orderPkg.NewOrderMsg{seller, "s-2", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 200000000, orderPkg.TimeInForce.GTC}
+	msg3 := orderPkg.NewOrderMsg{seller, "s-2", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 200000000, orderPkg.TimeInForce.GTC, 0, ""}
 	keeper.AddOrder(orderPkg.OrderInfo{msg3, 42, 100, 42, 100, 0, ""}, false)
 
 	require.Len(keeper.OrderChanges, 3)

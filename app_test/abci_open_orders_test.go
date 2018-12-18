@@ -5,11 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/BiJie/BinanceChain/common/utils"
 	"github.com/BiJie/BinanceChain/plugins/dex"
@@ -20,7 +18,7 @@ import (
 func Test_Success(t *testing.T) {
 	assert, require, pair := setup(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, "b-1", orderPkg.Side.BUY, pair, 102000, 3000000)
+	msg := orderPkg.NewNewOrderMsg(buyer, "b-1", orderPkg.Side.BUY, pair, 102000, 3000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
 
 	openOrders := issueMustSuccessQuery(pair, buyer, assert)
@@ -28,7 +26,7 @@ func Test_Success(t *testing.T) {
 	expected := store.OpenOrder{"b-1", pair, utils.Fixed8(102000), utils.Fixed8(3000000), utils.Fixed8(0), int64(100), int64(0), int64(100), int64(0)}
 	assert.Equal(expected, openOrders[0])
 
-	msg = orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 1000000)
+	msg = orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 1000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 101, 1, 101, 1, 0, ""}, false)
 
 	openOrders = issueMustSuccessQuery(pair, seller, assert)
@@ -48,7 +46,7 @@ func Test_Success(t *testing.T) {
 	openOrders = issueMustSuccessQuery(pair, seller, assert)
 	require.Len(openOrders, 0)
 
-	msg = orderPkg.NewNewOrderMsg(buyer, "b-2", orderPkg.Side.BUY, pair, 104000, 6000000)
+	msg = orderPkg.NewNewOrderMsg(buyer, "b-2", orderPkg.Side.BUY, pair, 104000, 6000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 102, 2, 102, 2, 0, ""}, false)
 
 	openOrders = issueMustSuccessQuery(pair, buyer, assert)
@@ -85,7 +83,7 @@ func Test_InvalidAddr(t *testing.T) {
 func Test_NonExistAddr(t *testing.T) {
 	assert, _, pair := setup(t)
 
-	msg := orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 3000000)
+	msg := orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 3000000, 0)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
 
 	openOrders := issueMustSuccessQuery(pair, buyer, assert)

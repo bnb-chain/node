@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -74,7 +72,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	acc2 := Account(1)
 	add := acc.GetAddress()
 	add2 := acc2.GetAddress()
-	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 355e8, 100e8)
+	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 355e8, 100e8, 0)
 	res, e := testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -84,7 +82,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC-000"))
 
-	msg = o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 355e8, 1e8)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 355e8, 1e8, 0)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -95,7 +93,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 
 	// using acc2
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 355e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 355e8, 250e8, 0)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.NotEqual(uint32(0), res.Code)
 	assert.Nil(e)
@@ -105,7 +103,7 @@ func Test_handleNewOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(200e8), GetAvail(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 355e8, 200e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 355e8, 200e8, 0)
 	res, e = testClient.CheckTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -127,7 +125,7 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 
 	add := Account(0).GetAddress()
 	oid := fmt.Sprintf("%X-0", add)
-	msg := o.NewNewOrderMsg(add, oid, 1, "BTC-000_BNB", 355e8, 1e8)
+	msg := o.NewNewOrderMsg(add, oid, 1, "BTC-000_BNB", 355e8, 1e8, 0)
 
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
@@ -176,25 +174,25 @@ func Test_Match(t *testing.T) {
 	*/
 	t.Log(GetAvail(ctx, add, "BTC-000"))
 	t.Log(GetAvail(ctx, add, "BNB"))
-	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 102e8, 300e8)
+	msg := o.NewNewOrderMsg(add, genOrderID(add, 0, ctx, am), 1, "BTC-000_BNB", 102e8, 300e8, 0)
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Log(GetAvail(ctx, add, "BTC-000"))
 	t.Log(GetAvail(ctx, add, "BNB"))
-	msg = o.NewNewOrderMsg(add, genOrderID(add, 1, ctx, am), 1, "BTC-000_BNB", 100e8, 100e8)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 1, ctx, am), 1, "BTC-000_BNB", 100e8, 100e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Log(GetAvail(ctx, add, "BTC-000"))
 	t.Log(GetAvail(ctx, add, "BNB"))
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 96e8, 1000e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 96e8, 1000e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 1, ctx, am), 2, "BTC-000_BNB", 97e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 1, ctx, am), 2, "BTC-000_BNB", 97e8, 250e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 2, ctx, am), 2, "BTC-000_BNB", 98e8, 250e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 2, ctx, am), 2, "BTC-000_BNB", 98e8, 250e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add, genOrderID(add, 2, ctx, am), 1, "BTC-000_BNB", 99e8, 200e8)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 2, ctx, am), 1, "BTC-000_BNB", 99e8, 200e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
-	msg = o.NewNewOrderMsg(add, genOrderID(add, 3, ctx, am), 1, "BTC-000_BNB", 98e8, 300e8)
+	msg = o.NewNewOrderMsg(add, genOrderID(add, 3, ctx, am), 1, "BTC-000_BNB", 98e8, 300e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	buys, sells := getOrderBook("BTC-000_BNB")
 	assert.Equal(4, len(buys))
@@ -231,19 +229,19 @@ func Test_Match(t *testing.T) {
 		50     50      95              105    50           55
 	*/
 
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 3, ctx, am), 1, "ETH-000_BNB", 102e8, 30e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 3, ctx, am), 1, "ETH-000_BNB", 102e8, 30e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 4, ctx, am), 1, "ETH-000_BNB", 101e8, 10e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 4, ctx, am), 1, "ETH-000_BNB", 101e8, 10e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "ETH-000_BNB", 95e8, 50e8)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "ETH-000_BNB", 95e8, 50e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 1, ctx, am), 2, "ETH-000_BNB", 98e8, 10e8)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 1, ctx, am), 2, "ETH-000_BNB", 98e8, 10e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 2, ctx, am), 2, "ETH-000_BNB", 97e8, 50e8)
+	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 2, ctx, am), 2, "ETH-000_BNB", 97e8, 50e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 5, ctx, am), 1, "ETH-000_BNB", 96e8, 15e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 5, ctx, am), 1, "ETH-000_BNB", 96e8, 15e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 6, ctx, am), 1, "ETH-000_BNB", 99e8, 50e8)
+	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 6, ctx, am), 1, "ETH-000_BNB", 99e8, 50e8, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
 
@@ -308,11 +306,11 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	oid := fmt.Sprintf("%X-0", add)
 	add2 := Account(1).GetAddress()
 
-	msg := o.NewCancelOrderMsg(add, "BTC-000_BNB", oid, "doesnotexist")
+	msg := o.NewCancelOrderMsg(add, "BTC-000_BNB", oid, "doesnotexist", 0)
 	res, e := testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*Failed to find order \\[doesnotexist\\].*", res.GetLog())
 	assert.Nil(e)
-	newMsg := o.NewNewOrderMsg(add, oid, 1, "BTC-000_BNB", 355e8, 1e8)
+	newMsg := o.NewNewOrderMsg(add, oid, 1, "BTC-000_BNB", 355e8, 1e8, 0)
 	res, e = testClient.DeliverTxSync(newMsg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
@@ -320,10 +318,10 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(355e8), GetLocked(ctx, add, "BNB"))
 	assert.Equal(int64(200e8), GetAvail(ctx, add, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC-000"))
-	msg = o.NewCancelOrderMsg(add2, "BTC-000_BNB", oid, oid)
+	msg = o.NewCancelOrderMsg(add2, "BTC-000_BNB", oid, oid, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Regexp(".*does not belong to transaction sender.*", res.GetLog())
-	msg = o.NewCancelOrderMsg(add, "BTC-000_BNB", oid, oid)
+	msg = o.NewCancelOrderMsg(add, "BTC-000_BNB", oid, oid, 0)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)

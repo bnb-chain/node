@@ -71,7 +71,9 @@ const (
 									{ "name": "transactionTime", "type": "long" },
 									{ "name": "timeInForce", "type": "string" },
 									{ "name": "currentExecutionType", "type": "string" },
-									{ "name": "txHash", "type": "string" }
+									{ "name": "txHash", "type": "string" },
+									{ "name": "source", "type": "long" },
+									{ "name": "data", "type": "string" }
 								]
 							}
 						   }

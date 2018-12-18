@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -28,6 +29,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 		price   string
 		qty     string
 		tif     string
+		source  string
 	}
 
 	type response struct {
@@ -55,6 +57,9 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 		if strings.TrimSpace(params.qty) == "" {
 			return false
 		}
+		if strings.TrimSpace(params.source) == "" {
+			params.source = "0"
+		}
 		return true
 	}
 	throw := func(w http.ResponseWriter, status int, err error) {
@@ -73,6 +78,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 			price:   r.FormValue("price"),
 			qty:     r.FormValue("qty"),
 			tif:     r.FormValue("tif"),
+			source:  r.FormValue("source"),
 		}
 
 		if !validateFormParams(params) {
@@ -135,9 +141,15 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 			return
 		}
 
+		source, err := strconv.ParseInt(params.source, 10, 64)
+		if err != nil {
+			throw(w, http.StatusExpectationFailed, err)
+			return
+		}
+
 		seq := account.GetSequence()
 		id := order.GenerateOrderID(seq, addr)
-		msg := order.NewNewOrderMsg(addr, id, side, pair, price, qty)
+		msg := order.NewNewOrderMsg(addr, id, side, pair, price, qty, source)
 
 		if tif > -1 {
 			msg.TimeInForce = tif

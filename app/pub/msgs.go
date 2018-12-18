@@ -3,9 +3,8 @@ package pub
 import (
 	"fmt"
 
-	"github.com/linkedin/goavro"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/linkedin/goavro"
 
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
@@ -186,6 +185,8 @@ type order struct {
 	timeInForce          int8
 	currentExecutionType orderPkg.ExecutionType
 	txHash               string
+	source               int64
+	data                 string
 }
 
 func (msg *order) String() string {
@@ -226,6 +227,8 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	native["timeInForce"] = orderPkg.IToTimeInForce(msg.timeInForce)   //TODO(#66): confirm with all teams to make this uint8 enum
 	native["currentExecutionType"] = msg.currentExecutionType.String() //TODO(#66): confirm with all teams to make this uint8 enum
 	native["txHash"] = msg.txHash
+	native["source"] = msg.source
+	native["data"] = msg.data
 	return native
 }
 

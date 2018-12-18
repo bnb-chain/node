@@ -250,6 +250,8 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		o.TimeInForce,
 		orderPkg.NEW,
 		o.TxHash,
+		o.Source,
+		o.Data,
 	}
 	if o.Side == orderPkg.Side.BUY {
 		t.BAddr = owner
@@ -302,6 +304,8 @@ func collectOrdersToPublish(
 			orderInfo.TimeInForce,
 			orderPkg.NEW,
 			orderInfo.TxHash,
+			orderInfo.Source,
+			orderInfo.Data,
 		}
 		if o.Tpe == orderPkg.Ack {
 			opensToPublish = append(opensToPublish, &orderToPublish)
