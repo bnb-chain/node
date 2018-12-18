@@ -14,9 +14,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -24,7 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/cli"
@@ -140,7 +138,7 @@ func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 		stake.NewDescription(name, "", "", ""),
 		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 	)
-	tx := auth.NewStdTx([]sdk.Msg{msg}, []auth.StdSignature{}, memo)
+	tx := auth.NewStdTx([]sdk.Msg{msg}, []auth.StdSignature{}, memo, auth.DefaultSource)
 	txBldr := authtx.NewTxBuilderFromCLI().WithChainID(chainId).WithMemo(memo)
 	signedTx, err := txBldr.SignStdTx(name, app.DefaultKeyPass, tx, false)
 	if err != nil {
