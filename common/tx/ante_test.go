@@ -57,28 +57,28 @@ func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, 
 func newTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64) sdk.Tx {
 	sigs := make([]auth.StdSignature, len(privs))
 	for i, priv := range privs {
-		signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], msgs, "")
+		signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], msgs, "", 0)
 		sig, err := priv.Sign(signBytes)
 		if err != nil {
 			panic(err)
 		}
 		sigs[i] = auth.StdSignature{PubKey: priv.PubKey(), Signature: sig, AccountNumber: accNums[i], Sequence: seqs[i]}
 	}
-	tx := auth.NewStdTx(msgs, sigs, "")
+	tx := auth.NewStdTx(msgs, sigs, "", 0)
 	return tx
 }
 
 func newTestTxWithMemo(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64, memo string) sdk.Tx {
 	sigs := make([]auth.StdSignature, len(privs))
 	for i, priv := range privs {
-		signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], msgs, memo)
+		signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], msgs, memo, 0)
 		sig, err := priv.Sign(signBytes)
 		if err != nil {
 			panic(err)
 		}
 		sigs[i] = auth.StdSignature{PubKey: priv.PubKey(), Signature: sig, AccountNumber: accNums[i], Sequence: seqs[i]}
 	}
-	tx := auth.NewStdTx(msgs, sigs, memo)
+	tx := auth.NewStdTx(msgs, sigs, memo, 0)
 	return tx
 }
 
@@ -92,7 +92,7 @@ func newTestTxWithSignBytes(msgs []sdk.Msg, privs []crypto.PrivKey, accNums []in
 		}
 		sigs[i] = auth.StdSignature{PubKey: priv.PubKey(), Signature: sig, AccountNumber: accNums[i], Sequence: seqs[i]}
 	}
-	tx := auth.NewStdTx(msgs, sigs, memo)
+	tx := auth.NewStdTx(msgs, sigs, memo, 0)
 	return tx
 }
 
@@ -438,7 +438,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 		txn := newTestTxWithSignBytes(
 
 			msgs, privs, accnums, seqs,
-			auth.StdSignBytes(cs.chainID, cs.accnum, cs.seq, cs.msgs, ""),
+			auth.StdSignBytes(cs.chainID, cs.accnum, cs.seq, cs.msgs, "", 0),
 			"",
 		)
 		checkInvalidTx(t, anteHandler, ctx, txn, cs.code)
@@ -799,7 +799,7 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 		txn := newTestTxWithSignBytes(
 
 			msgs, privs, accnums, seqs,
-			auth.StdSignBytes(cs.chainID, cs.accnum, cs.seq, cs.msgs, ""),
+			auth.StdSignBytes(cs.chainID, cs.accnum, cs.seq, cs.msgs, "", 0),
 			"",
 		)
 		res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)

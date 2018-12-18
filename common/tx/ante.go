@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BiJie/BinanceChain/common/fees"
+	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -13,14 +16,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
-	maxMemoCharacters = 100
+	maxMemoCharacters = 128
 
 	defaultMaxCacheNumber = 30000
 )
@@ -95,7 +94,7 @@ func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
 			if err != nil {
 				return sdk.ErrInternal(err.Error()).Result()
 			}
-			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource())
 
 			res := processSig(txHash, sig, signerAcc, signBytes)
 			if !res.IsOK() {
@@ -164,7 +163,7 @@ func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler 
 				mode == sdk.RunTxModeCheck ||
 				mode == sdk.RunTxModeSimulate {
 				// check signature, return account with incremented nonce
-				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo())
+				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource())
 				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return newCtx, res, true
@@ -201,13 +200,15 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	}
 
 	// Assert that number of signatures is correct.
-	var signerAddrs = tx.GetSigners()
-	if len(sigs) != len(signerAddrs) {
+	if signerAddrs := tx.GetSigners(); len(sigs) != len(signerAddrs) {
 		return sdk.ErrUnauthorized("wrong number of signers")
 	}
 
-	memo := tx.GetMemo()
-	if len(memo) > maxMemoCharacters {
+	if data := tx.GetData(); len(data) > 0 {
+		return sdk.ErrUnauthorized("data field is not allowed to use in transaction for now")
+	}
+
+	if memo := tx.GetMemo(); len(memo) > maxMemoCharacters {
 		return sdk.ErrMemoTooLarge(
 			fmt.Sprintf("maximum number of characters is %d but received %d characters",
 				maxMemoCharacters, len(memo)))
