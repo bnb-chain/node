@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/app"
 	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/BiJie/BinanceChain/common/tx"
@@ -54,7 +60,7 @@ func checkInvalidTx(t *testing.T, anteHandler sdk.AnteHandler, ctx sdk.Context, 
 		fmt.Sprintf("Expected %v, got %v", sdk.ToABCICode(sdk.CodespaceRoot, code), result))
 }
 
-func newTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64) sdk.Tx {
+func newTestTx(ctx sdk.Context, msgs []sdk.Msg, privs []crypto.PrivKey, accNums []int64, seqs []int64) auth.StdTx {
 	sigs := make([]auth.StdSignature, len(privs))
 	for i, priv := range privs {
 		signBytes := auth.StdSignBytes(ctx.ChainID(), accNums[i], seqs[i], msgs, "", 0, nil)
@@ -479,11 +485,16 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHa
 	return
 }
 
-func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, fees ...fees.FeeCalculator) sdk.Context {
-	for i := 0; i < len(fees); i++ {
-		msg := newTestMsgWithFeeCalculator(fees[i], addr)
+func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, feeCalculators ...fees.FeeCalculator) sdk.Context {
+	for i := 0; i < len(feeCalculators); i++ {
+		msg := newTestMsgWithFeeCalculator(feeCalculators[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
-		ctx, _, _ = anteHandler(ctx, txn, sdk.RunTxModeCheck)
+		txBytes, _ := app.Codec.MarshalBinary(txn)
+		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+		ctx, _, _ = anteHandler(ctx.WithValue(baseapp.TxHashKey, txHash), txn, sdk.RunTxModeCheck)
+		if ctx.IsDeliverTx() {
+			fees.Pool.CommitFee(txHash)
+		}
 	}
 
 	return ctx

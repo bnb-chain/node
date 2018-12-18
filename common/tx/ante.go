@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
@@ -172,7 +173,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 
 		// for blockHeight == 0, we do not collect fees since we have some StdTx(s) in InitChain.
 		if newCtx.BlockHeight() != 0 {
-			newCtx, res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0])
+			res = calcAndCollectFees(newCtx, am, signerAccs[0], msgs[0], txHash)
 			if !res.IsOK() {
 				return newCtx, res, true
 			}
@@ -288,7 +289,7 @@ func processSig(txHash string,
 	return
 }
 
-func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account, msg sdk.Msg) (sdk.Context, sdk.Result) {
+func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account, msg sdk.Msg, txHash string) sdk.Result {
 	// first sig pays the fees
 	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
@@ -298,23 +299,19 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 		panic(err)
 	}
 
-	if fee.Type == types.FeeFree || fee.Tokens.IsZero() {
-		return ctx, sdk.Result{}
+	if fee.Type != types.FeeFree && !fee.Tokens.IsZero() {
+		fee.Tokens.Sort()
+		res := deductFees(ctx, acc, fee, am)
+		if !res.IsOK() {
+			return res
+		}
 	}
 
-	fee.Tokens.Sort()
-	res := deductFees(ctx, acc, fee, am)
-	if !res.IsOK() {
-		return ctx, res
+	if ctx.IsDeliverTx() {
+		// add fee to pool, even it's free
+		fees.Pool.AddFee(txHash, fee)
 	}
-
-	if !ctx.IsDeliverTx() {
-		return ctx, res
-	}
-
-	// add fee to pool
-	fees.Pool.AddFee(fee)
-	return ctx, sdk.Result{}
+	return sdk.Result{}
 }
 
 func calculateFees(msg sdk.Msg) (types.Fee, error) {

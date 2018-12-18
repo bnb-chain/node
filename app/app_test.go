@@ -14,10 +14,13 @@ import (
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/fees"
 	common "github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/plugins/dex"
 	"github.com/BiJie/BinanceChain/plugins/tokens"
@@ -27,6 +30,22 @@ import (
 type TestClient struct {
 	cl  abcicli.Client
 	cdc *wire.Codec
+}
+
+func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
+	return func(ctx sdk.Context, tx sdk.Tx, runTxMode sdk.RunTxMode) (newCtx sdk.Context, result sdk.Result, abort bool) {
+		msg := tx.GetMsgs()[0]
+		fee := fees.GetCalculator(msg.Type())(msg)
+
+		if ctx.IsDeliverTx() {
+			// add fee to pool, even it's free
+			stdTx := tx.(auth.StdTx)
+			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinary(stdTx))).String()
+			fees.Pool.AddFee(txHash, fee)
+		}
+
+		return newCtx, sdk.Result{}, false
+	}
 }
 
 func (tc *TestClient) DeliverTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
@@ -101,7 +120,7 @@ func Address(i int) sdk.AccAddress {
 
 func NewTestClient(a *BinanceChain) *TestClient {
 	a.SetCheckState(types.Header{})
-	a.SetAnteHandler(nil) // clear AnteHandler to skip the signature verification step
+	a.SetAnteHandler(NewMockAnteHandler(a.Codec)) // clear AnteHandler to skip the signature verification step
 	return &TestClient{abcicli.NewLocalClient(nil, a), MakeCodec()}
 }
 
