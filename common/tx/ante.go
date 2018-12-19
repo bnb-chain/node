@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/BiJie/BinanceChain/common/fees"
+	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 const (
@@ -200,7 +200,7 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	}
 
 	if data := tx.GetData(); len(data) > 0 {
-		return sdk.ErrUnauthorized("data in tx is not allowed temporarily")
+		return sdk.ErrUnauthorized("data field is not allowed to use in transaction for now")
 	}
 
 	if memo := tx.GetMemo(); len(memo) > maxMemoCharacters {
