@@ -368,7 +368,7 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 		AccountNumber: accountNumber,
 		Sequence:      seqNum,
 	}}
-	tx := auth.NewStdTx(signMsg.Msgs, sigs, signMsg.Memo)
+	tx := auth.NewStdTx(signMsg.Msgs, sigs, signMsg.Memo, 0)
 	return tx
 }
 
