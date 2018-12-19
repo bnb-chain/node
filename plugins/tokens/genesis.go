@@ -13,6 +13,7 @@ type GenesisToken struct {
 	Symbol      string         `json:"symbol"`
 	TotalSupply int64          `json:"total_supply"`
 	Owner       sdk.AccAddress `json:"owner"`
+	Mintable    bool           `json:"mintable"`
 }
 
 func DefaultGenesisToken(owner sdk.AccAddress) GenesisToken {
@@ -21,6 +22,7 @@ func DefaultGenesisToken(owner sdk.AccAddress) GenesisToken {
 		types.NativeTokenSymbol,
 		types.NativeTokenTotalSupply,
 		owner,
+		false,
 	)
 	if err != nil {
 		panic(err)
@@ -30,6 +32,7 @@ func DefaultGenesisToken(owner sdk.AccAddress) GenesisToken {
 		Symbol:      token.Symbol,
 		TotalSupply: token.TotalSupply.ToInt64(),
 		Owner:       token.Owner,
+		Mintable:    token.Mintable,
 	}
 }
 
@@ -37,7 +40,7 @@ func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keep
 	geneTokens []GenesisToken, validators []sdk.AccAddress, transferAmtForEach int64) {
 	var nativeTokenOwner sdk.AccAddress
 	for _, geneToken := range geneTokens {
-		token, err := types.NewToken(geneToken.Name, geneToken.Symbol, geneToken.TotalSupply, geneToken.Owner)
+		token, err := types.NewToken(geneToken.Name, geneToken.Symbol, geneToken.TotalSupply, geneToken.Owner, geneToken.Mintable)
 		if err != nil {
 			panic(err)
 		}
