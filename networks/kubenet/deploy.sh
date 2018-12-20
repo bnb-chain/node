@@ -58,6 +58,8 @@ function prepare(){
     for i in {0..8}; do
         ihome=${home[$i]}
         external_ip=${des_ips[$i]}
+        sed -i -e "s/create_empty_blocks_interval = 0/create_empty_blocks_interval = 1/g" ${ihome}/gaiad/config/config.toml
+        sed -i -e "s/indexer = \"kv\"/indexer = \"null\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/external_address = \"\"/external_address = \"${external_ip}:26656\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/prometheus_listen_addr = \":26656\"/prometheus_listen_addr = \":26660\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${ihome}/gaiad/config/config.toml
@@ -120,7 +122,6 @@ function build-bridge-config(){
     done
     sed -i -e "s/with_app_stat = true/with_app_stat = false/g" ${bridge_home}/gaiad/config/config.toml
     sed -i -e "s/moniker = \"kubenode0\"/moniker = \"bridge\"/g" ${bridge_home}/gaiad/config/config.toml
-    sed -i -e "s/recheck = true/recheck = false/g" ${bridge_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_seeds}\"/g" ${bridge_home}/gaiad/config/config.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_seeds}\"/g" ${bridge_home}/gaiad/config/config.toml
     sed -i -e "s/logToConsole = true/logToConsole = false/g" ${bridge_home}/gaiad/config/app.toml
@@ -177,9 +178,9 @@ function build-witness-order-config(){
     rm -rf ${witness_order_home}
     cp -r ${workspace}/build/kubenode0 ${witness_order_home}
     rm -rf ${witness_order_home}/gaiad/config/gentx ${witness_order_home}/gaiad/config/node_key.json ${witness_order_home}/gaiad/config/priv_validator.json
-
+    
+    sed -i -e "s/size = 20000/size = 1/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/moniker = \"kubenode0\"/moniker = \"order\"/g" ${witness_order_home}/gaiad/config/config.toml
-    sed -i -e "s/recheck = true/recheck = false/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/pex = false/pex = true/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_order_home}/gaiad/config/config.toml
@@ -203,8 +204,9 @@ function prepare-witness-explorer-config(){
     rm -rf ${witness_explorer_home}
     cp -r ${workspace}/build/kubenode0 ${witness_explorer_home}
     rm -rf ${witness_explorer_home}/gaiad/config/gentx ${witness_explorer_home}/gaiad/config/node_key.json ${witness_explorer_home}/gaiad/config/priv_validator.json
-
-    sed -i -e "s/recheck = true/recheck = false/g" ${witness_explorer_home}/gaiad/config/config.toml
+   
+    sed -i -e "s/size = 20000/size = 1/g" ${witness_explorer_home}/gaiad/config/config.toml
+    sed -i -e "s/indexer = \"null\"/indexer = \"kv\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/pex = false/pex = true/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${witness_explorer_home}/gaiad/config/config.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${witness_explorer_home}/gaiad/config/config.toml
