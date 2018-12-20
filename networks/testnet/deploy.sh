@@ -28,7 +28,7 @@ then
 	# these two lines are just used for generate a build directory own by bijieprd otherwise docker would create a build directory own by root
 	make build-linux
 	make build-docker-node
-	docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 --o . --starting-ip-address 172.20.0.2
+	docker run --rm -v $(pwd)/build:/bnbchaind:Z binance/bnbdnode testnet --v 4 -o . --starting-ip-address 172.20.0.2
 fi
 
 # variables
@@ -77,13 +77,6 @@ do
 	fi
 done
 
-# change gentx
-for i in {0..3}
-do
-	idx=`expr $i % 2`
-	$(cd "${paths[$i]}/gaiad/config/gentx/" && sed -i -e "s/172.20.0.[0-9]/${des_ips[$i]}/g" *.json)
-done
-
 # change port
 for i in {0..3}
 do
@@ -126,7 +119,7 @@ done
 for i in {0..3}
 do
 	echo "Starting validator ${paths[$i]} in host ${des_ips[$i]}..."
-	ssh bijieprd@${des_ips[$i]} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/${paths[$i]}/gaiad start > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
+	ssh bijieprd@${des_ips[$i]} "nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbchaind --home ${home_path}/${paths[$i]}/gaiad start > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
 done
 
 
@@ -166,7 +159,7 @@ echo "Copying config to bridge node ${bridge_ip}..."
 scp -r node_bridge bijieprd@${bridge_ip}:${home_path} > /dev/null
 
 echo "Starting bridge node..."
-ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_bridge/gaiad start > ${home_path}/node_bridge/node_bridge.log 2>&1 &"
+ssh bijieprd@${bridge_ip} "nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbchaind --home ${home_path}/node_bridge/gaiad start > ${home_path}/node_bridge/node_bridge.log 2>&1 &"
 
 ## prepare seed node
 bridge_id=$(ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && ./bnbcli --home ${home_path}/node_bridge/gaiad status")
@@ -227,7 +220,7 @@ echo "Copying config to witness node ${witness_ip}..."
 scp -r node_witness bijieprd@${witness_ip}:${home_path} > /dev/null
 
 echo "Starting witness node..."
-ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_witness/gaiad start >> ${home_path}/node_witness/gaiad/bnc.log 2>&1 &"
+ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbchaind --home ${home_path}/node_witness/gaiad start >> ${home_path}/node_witness/gaiad/bnc.log 2>&1 &"
 
 ## prepare publisher
 rm -rf node_publisher
@@ -267,7 +260,7 @@ sed -i -e "s/blockFeeKafka = \"127.0.0.1:9092\"/blockFeeKafka = \"${kafka_ip}:90
 sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
-sed -i -e "s/publishBlockFee = false/publishOrderBook = true/g" node_publisher/gaiad/config/app.toml
+sed -i -e "s/publishBlockFee = false/publishBlockFee = true/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
 sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"test\"/g" node_publisher/gaiad/config/app.toml
@@ -286,4 +279,4 @@ ps -ef | grep "bnbcli" | grep "api-server" | awk '{print $2}' | xargs kill -9
 nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
 
 echo "Starting publisher node..."
-ssh bijieprd@${witness_ip} "cd ~/gowork/src/github.com/BiJie/BinanceChain/build && nohup ./bnbchaind --home ${home_path}/node_publisher/gaiad start > ${home_path}/node_publisher/node_publisher.log 2>&1 &"
+ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbchaind --home ${home_path}/node_publisher/gaiad start > ${home_path}/node_publisher/node_publisher.log 2>&1 &"

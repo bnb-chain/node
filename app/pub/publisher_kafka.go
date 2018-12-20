@@ -119,7 +119,7 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 	if msg, err := marshal(avroMessage, tpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
 		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
-			Logger.Debug("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
+			Logger.Info("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish", "topic", topic, "msg", avroMessage.String(), "err", err)
 		}

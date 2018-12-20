@@ -124,8 +124,8 @@ type Trade struct {
 	Bid    string
 	Sfee   string
 	Bfee   string
-	SAddr  string
-	BAddr  string
+	SAddr  string // string representation of AccAddress
+	BAddr  string // string representation of AccAddress
 }
 
 func (msg *Trade) String() string {
@@ -142,8 +142,8 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
-	native["saddr"] = msg.SAddr
-	native["baddr"] = msg.BAddr
+	native["saddr"] = sdk.AccAddress(msg.SAddr).String()
+	native["baddr"] = sdk.AccAddress(msg.BAddr).String()
 	return native
 }
 
