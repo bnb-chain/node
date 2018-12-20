@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:d085ca3b3f2afa0d217586d544f537046b9cf83f77417dca6d4d5c18568035f3"
+  digest = "1:938e75b7cca7e036fc23d41e4db6b002f5db7fcdc5770573729cfefa1204c505"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -106,7 +106,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "09ea26e543acd75197b27def858004f23761da9d"
+  revision = "be3d06b766445fc87ac6e27532798b36c03cc63b"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -664,6 +664,17 @@
   version = "v0.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3e4c7966b60df887418bf1b880be9a1e6c36f97ef40491b7bad72d21a4334cd0"
+  name = "go.uber.org/ratelimit"
+  packages = [
+    ".",
+    "internal/clock",
+  ]
+  pruneopts = "UT"
+  revision = "c15da02342779cb6dc027fc95ee2277787698f36"
+
+[[projects]]
   digest = "1:aaff04fa01d9b824fde6799759cc597b3ac3671b9ad31924c28b6557d0ee5284"
   name = "golang.org/x/crypto"
   packages = [
@@ -832,7 +843,6 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/spf13/cobra",
-    "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
@@ -864,6 +874,7 @@
     "github.com/tendermint/tendermint/rpc/lib/server",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
+    "go.uber.org/ratelimit",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

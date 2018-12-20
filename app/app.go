@@ -285,7 +285,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if !isBreatheBlock || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
-		if app.publicationConfig.PublishOrderUpdates && pub.IsLive {
+		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
@@ -304,9 +304,14 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
 
 	if app.publicationConfig.ShouldPublishAny() &&
-		pub.IsLive &&
-		height >= app.publicationConfig.FromHeightInclusive {
-		app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
+		pub.IsLive {
+		if height >= app.publicationConfig.FromHeightInclusive {
+			app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
+		}
+
+		// clean up intermediate cached data
+		app.DexKeeper.ClearOrderChanges()
+		app.DexKeeper.ClearRoundFee()
 	}
 
 	tags := gov.EndBlocker(ctx, app.govKeeper)
@@ -437,8 +442,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
-			txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
-			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
+			txRelatedAccounts := app.Pool.TxRelatedAddrs()
+			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,
@@ -480,8 +485,5 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		delete(app.DexKeeper.OrderChangesMap, id)
 	}
 
-	// clean up intermediate cached data
-	app.DexKeeper.ClearOrderChanges()
-	app.DexKeeper.ClearRoundFee()
 	pub.Logger.Debug("finish publish", "height", height)
 }
