@@ -23,11 +23,13 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/BiJie/BinanceChain/admin"
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/runtime"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -90,10 +92,13 @@ type BinanceChain struct {
 
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BinanceChain {
-
+	// set running mode from cmd parameter or config
+	err := runtime.SetRunningMode(runtime.Mode(ServerContext.StartMode))
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 	// create app-level codec for txs and accounts
 	var cdc = Codec
-
 	// create composed tx decoder
 	decoders := wire.ComposeTxDecoders(cdc, defaultTxDecoder)
 
@@ -136,6 +141,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.RegisterQueryHandler("account", app.AccountHandler)
+	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -164,7 +170,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
-	err := app.LoadCMSLatestVersion()
+	err = app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
@@ -281,6 +287,46 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 		return abci.ResponseInitChain{
 			Validators: validators,
 		}
+	}
+}
+
+func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
+	var result sdk.Result
+	var tx sdk.Tx
+	// try to get the Tx first from cache, if succeed, it means it is PreChecked.
+	tx, ok := app.GetTxFromCache(txBytes)
+	if ok {
+		if admin.IsTxAllowed(tx) {
+			txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+			result = app.RunTx(sdk.RunTxModeCheckAfterPre, txBytes, tx, txHash)
+			if !result.IsOK() {
+				app.RemoveTxFromCache(txBytes)
+			}
+		} else {
+			result = admin.TxNotAllowedError().Result()
+		}
+	} else {
+		tx, err := app.TxDecoder(txBytes)
+		if err != nil {
+			result = err.Result()
+		} else {
+			if admin.IsTxAllowed(tx) {
+				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+				result = app.RunTx(sdk.RunTxModeCheck, txBytes, tx, txHash)
+				if result.IsOK() {
+					app.AddTxToCache(txBytes, tx)
+				}
+			} else {
+				result = admin.TxNotAllowedError().Result()
+			}
+		}
+	}
+
+	return abci.ResponseCheckTx{
+		Code: uint32(result.Code),
+		Data: result.Data,
+		Log:  result.Log,
+		Tags: result.Tags,
 	}
 }
 
