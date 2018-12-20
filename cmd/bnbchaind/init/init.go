@@ -138,7 +138,7 @@ func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 		stake.NewDescription(name, "", "", ""),
 		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 	)
-	tx := auth.NewStdTx([]sdk.Msg{msg}, []auth.StdSignature{}, memo, auth.DefaultSource)
+	tx := auth.NewStdTx([]sdk.Msg{msg}, []auth.StdSignature{}, memo, auth.DefaultSource, nil)
 	txBldr := authtx.NewTxBuilderFromCLI().WithChainID(chainId).WithMemo(memo)
 	signedTx, err := txBldr.SignStdTx(name, app.DefaultKeyPass, tx, false)
 	if err != nil {

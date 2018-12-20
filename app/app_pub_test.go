@@ -42,7 +42,7 @@ func prepareGenTx(cdc *codec.Codec, chainId string,
 		stake.NewDescription("pub", "", "", ""),
 		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 	)
-	tx := auth.NewStdTx([]sdk.Msg{msg}, nil, "", 0)
+	tx := auth.NewStdTx([]sdk.Msg{msg}, nil, "", 0, nil)
 	txBytes, err := wire.MarshalJSONIndent(cdc, tx)
 	if err != nil {
 		panic(err)
