@@ -24,8 +24,6 @@ var (
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
-
-	metrics *Metrics
 )
 
 type MarketDataPublisher interface {
@@ -40,14 +38,13 @@ func setup(
 	publisher MarketDataPublisher) (err error) {
 	Logger = logger.With("module", "pub")
 	cfg = config
-	metrics = m
 	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
 	if err = initAvroCodecs(); err != nil {
 		Logger.Error("failed to initialize avro codec", "err", err)
 		return err
 	}
 
-	go publish(publisher, logger, config, ToPublishCh)
+	go publish(publisher, m, logger, config, ToPublishCh)
 	IsLive = true
 
 	return nil
@@ -55,6 +52,7 @@ func setup(
 
 func publish(
 	publisher MarketDataPublisher,
+	metrics *Metrics,
 	Logger tmlog.Logger,
 	cfg *config.PublicationConfig,
 	ToPublishCh <-chan BlockInfoToPublish) {
@@ -65,7 +63,7 @@ func publish(
 			metrics.PublicationQueueSize.Set(float64(len(ToPublishCh)))
 		}
 
-		publishBlockTime := Timer(fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
+		publishBlockTime := Timer(Logger, fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
 			// Implementation note: publication order are important here,
 			// DEX query service team relies on the fact that we publish orders before trades so that
 			// they can assign buyer/seller address into trade before persist into DB
@@ -107,7 +105,7 @@ func publish(
 
 			ordersToPublish := append(opensToPublish, canceledToPublish...)
 			if cfg.PublishOrderUpdates {
-				duration := Timer("publish all orders", func() {
+				duration := Timer(Logger, "publish all orders", func() {
 					publishOrderUpdates(
 						publisher,
 						marketData.height,
@@ -124,7 +122,7 @@ func publish(
 			}
 
 			if cfg.PublishAccountBalance {
-				duration := Timer("publish all changed accounts", func() {
+				duration := Timer(Logger, "publish all changed accounts", func() {
 					publishAccount(publisher, marketData.height, marketData.timestamp, marketData.accounts, feeToPublish)
 				})
 
@@ -136,7 +134,7 @@ func publish(
 
 			if cfg.PublishOrderBook {
 				var changedPrices orderPkg.ChangedPriceLevelsMap
-				duration := Timer("prepare order books to publish", func() {
+				duration := Timer(Logger, "prepare order books to publish", func() {
 					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 				})
 				if metrics != nil {
@@ -149,7 +147,7 @@ func publish(
 					metrics.CollectOrderBookTimeMs.Set(float64(duration))
 				}
 
-				duration = Timer("publish changed order books", func() {
+				duration = Timer(Logger, "publish changed order books", func() {
 					publishOrderBookDelta(publisher, marketData.height, marketData.timestamp, changedPrices)
 				})
 
@@ -159,7 +157,7 @@ func publish(
 			}
 
 			if cfg.PublishBlockFee {
-				duration := Timer("publish blockfee", func() {
+				duration := Timer(Logger, "publish blockfee", func() {
 					publishBlockFee(publisher, marketData.height, marketData.timestamp, marketData.blockFee)
 				})
 
@@ -240,10 +238,10 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
 }
 
-func Timer(description string, op func()) (durationMs int64) {
+func Timer(logger tmlog.Logger, description string, op func()) (durationMs int64) {
 	start := time.Now()
 	op()
 	durationMs = time.Since(start).Nanoseconds() / int64(time.Millisecond)
-	Logger.Debug(description, "durationMs", durationMs)
+	logger.Debug(description, "durationMs", durationMs)
 	return durationMs
 }
