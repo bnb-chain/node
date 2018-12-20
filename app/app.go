@@ -430,7 +430,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 	var accountsToPublish map[string]pub.Account
 	var latestPriceLevels order.ChangedPriceLevelsMap
 
-	duration := pub.Timer(fmt.Sprintf("collect publish information, height=%d", height), func() {
+	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts, _ := ctx.Value(baseapp.InvolvedAddressKey).([]string)
 			tradeRelatedAccounts := app.DexKeeper.GetTradeAndOrdersRelatedAccounts(app.DexKeeper.OrderChanges)
