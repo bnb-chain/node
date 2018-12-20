@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/BiJie/BinanceChain/admin"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -96,6 +97,7 @@ func main() {
 	paramcmd.AddCommands(rootCmd, cdc)
 
 	govcmd.AddCommands(rootCmd, cdc)
+	admin.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
