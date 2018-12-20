@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/BiJie/BinanceChain/common/fees"
+	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 const (
@@ -93,7 +93,7 @@ func NewTxPreChecker(am auth.AccountKeeper) sdk.PreChecker {
 			if err != nil {
 				return sdk.ErrInternal(err.Error()).Result()
 			}
-			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource())
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 
 			res := processSig(txHash, sig, signerAcc, signBytes)
 			if !res.IsOK() {
@@ -158,7 +158,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 				mode == sdk.RunTxModeCheck ||
 				mode == sdk.RunTxModeSimulate {
 				// check signature, return account with incremented nonce
-				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource())
+				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 				res := processSig(txHash, sig, signerAcc, signBytes)
 				if !res.IsOK() {
 					return newCtx, res, true

@@ -544,7 +544,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			PubKey:        pubkey,
 			Signature:     sigBytes,
 		}
-		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo, ssMsg.Source))
+		txBytes, err := item.txBldr.Codec.MarshalBinary(auth.NewStdTx(ssMsg.Msgs, []auth.StdSignature{sig}, ssMsg.Memo, ssMsg.Source, ssMsg.Data))
 		if err != nil {
 			fmt.Printf("failed to sign tran: %v\n", err)
 			continue
