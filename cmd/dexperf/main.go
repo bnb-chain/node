@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"go.uber.org/ratelimit"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -63,8 +64,9 @@ var createPath *string
 var runSubmit *bool
 var submitChnBuf *int
 var submitPoolSize *int
+var submitAsync *bool
 var submitPath *string
-var submitPause *int64
+var submitPause *int
 var csvPath *string
 
 type DEXCreate struct {
@@ -101,6 +103,10 @@ var hashReturned txhash
 var nodes []string
 var rpcs []*rpcclient.HTTP
 
+// used as throughput controller
+// 1000 means 1000 calls per sec
+var rl = ratelimit.New(1000)
+
 func init() {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount("bnc", "bncp")
@@ -123,8 +129,9 @@ func init() {
 	runSubmit = flag.Bool("runSubmit", false, "if to run submit task")
 	submitChnBuf = flag.Int("submitChnBuf", 1, "submit channel buffer size")
 	submitPoolSize = flag.Int("submitPoolSize", 1, "submit pool size")
+	submitAsync = flag.Bool("submitAsync", false, "submit in async mode")
 	submitPath = flag.String("submitPath", "/home/test/submit", "submit path")
-	submitPause = flag.Int64("submitPause", 0, "submit pause time in ms")
+	submitPause = flag.Int("submitPause", 1000, "rate limit")
 	csvPath = flag.String("csvPath", "/home/test", "csv path")
 	flag.Parse()
 	createChn = make(chan DEXCreate, *createChnBuf)
@@ -136,6 +143,7 @@ func init() {
 	for i, v := range nodes {
 		rpcs[i] = rpcclient.NewHTTP(v, "/websocket")
 	}
+	rl = ratelimit.New(*submitPause)
 }
 
 var accToAdd map[string]string
@@ -616,8 +624,14 @@ func buildS(index int, txBytes []byte) DEXSubmit {
 
 func submit(wg *sync.WaitGroup, txh *txhash) {
 	for item := range submitChn {
-		async(item.ctx, item.txBytes, txh)
-		time.Sleep(time.Duration(*submitPause) * time.Millisecond)
+		// Take() will sleep until the following
+		// goroutine can execute
+		rl.Take()
+		if *submitAsync == true {
+			go async(item.ctx, item.txBytes, txh)
+		} else {
+			async(item.ctx, item.txBytes, txh)
+		}
 	}
 	wg.Done()
 }
