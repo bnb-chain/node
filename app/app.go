@@ -157,7 +157,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
-	err := app.LoadLatestVersion(common.MainStoreKey)
+	err := app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
@@ -167,6 +167,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.SetAccountStoreCache(cdc, accountStore, app.baseConfig.AccountCacheSize)
 
 	tx.InitSigCache(app.baseConfig.SignatureCacheSize)
+
+	err = app.InitFromStore(common.MainStoreKey)
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 
 	// remaining plugin init
 	app.initDex()
