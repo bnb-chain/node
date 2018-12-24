@@ -15,6 +15,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/encoding/amino"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tendermint/tendermint/state"
@@ -184,17 +185,27 @@ func resetAppVersionedTree(height int64, rootDir string) {
 	}
 	defer dbIns.Close()
 
-	keys := []store.StoreKey{common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey}
+	keys := []store.StoreKey{common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey,
+		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey, common.ParamsStoreKey, common.ValAddrStoreKey}
 
 	for _, key := range keys {
 		dbAccount := db.NewPrefixDB(dbIns, []byte("s/k:"+key.Name()+"/"))
-		//rootPrefixFmt := "r/%010d"
-		rootPrefixFmt := iavl.NewKeyFormat('r', 8)
-		for i := 1; i <= 50000; i++ {
-			dbAccount.Delete(rootPrefixFmt.Key(height + int64(i)))
+		roots, err := getRoots(dbIns, key)
+		if err != nil {
+			panic("get roots error")
 		}
 
-		//dbAccount.Close()
+		for version := range roots {
+			if version >= height {
+				deleteOrphans(dbIns, key, version)
+			}
+
+			if version > height {
+				rootPrefixFmt := iavl.NewKeyFormat('r', 8)
+				dbAccount.Delete(rootPrefixFmt.Key(version))
+				fmt.Println("delete root version ", version, key.Name())
+			}
+		}
 	}
 }
 
@@ -211,23 +222,42 @@ func resetPrivValidator(height int64, rootDir string) {
 	privValidator.Save()
 }
 
-func getBlockChainHeight(rootDir string) int64 {
-	blockDb, err := newLevelDb("blockstore", rootDir)
-	if err != nil {
-		fmt.Printf("new levelDb err in path %s\n", path.Join(rootDir, "data"))
-		return -1
-	}
-
-	blockState := blockchain.LoadBlockStoreStateJSON(blockDb)
-	return blockState.Height
-}
-
 func restartNodeAtHeight(height int64, rootDir string) {
 	resetBlockChainState(height, rootDir)
 	resetBlockStoreState(height, rootDir)
 	resetAppState(height, rootDir)
 	resetAppVersionedTree(height, rootDir)
 	resetPrivValidator(height, rootDir)
+}
+
+func getRoots(dbIns *db.GoLevelDB, storeKey store.StoreKey) (map[int64][]byte, error) {
+	roots := map[int64][]byte{}
+	rootKeyFormat := iavl.NewKeyFormat('r', 8)
+
+	prefixDB := db.NewPrefixDB(dbIns, []byte("s/k:"+storeKey.Name()+"/"))
+
+	itr := dbm.IteratePrefix(prefixDB, rootKeyFormat.Key())
+	defer itr.Close()
+
+	for ; itr.Valid(); itr.Next() {
+		var version int64
+		rootKeyFormat.Scan(itr.Key(), &version)
+		roots[version] = itr.Value()
+	}
+
+	return roots, nil
+}
+
+func deleteOrphans(dbIns *db.GoLevelDB, storeKey store.StoreKey, height int64) {
+	nodeKeyFormat := iavl.NewKeyFormat('o', 8, 8, 20)
+	dbAccount := db.NewPrefixDB(dbIns, []byte("s/k:"+storeKey.Name()+"/"))
+	itr := dbm.IteratePrefix(dbAccount, nodeKeyFormat.Key(height))
+	defer itr.Close()
+
+	for ; itr.Valid(); itr.Next() {
+		fmt.Printf("delete orphan %v %x\n", height, itr.Value())
+		dbAccount.Delete(itr.Key())
+	}
 }
 
 // Purpose:
