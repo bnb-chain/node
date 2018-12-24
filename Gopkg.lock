@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:ae6bfb916196e1f5bf393105286955f554f8dc079aad45d98df742118ee9111f"
+  digest = "1:d085ca3b3f2afa0d217586d544f537046b9cf83f77417dca6d4d5c18568035f3"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -106,7 +106,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "03f72292b6a608d948554679bbf9267fcb4acad0"
+  revision = "09ea26e543acd75197b27def858004f23761da9d"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -840,6 +840,7 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
