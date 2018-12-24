@@ -672,6 +672,17 @@
   version = "v0.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3e4c7966b60df887418bf1b880be9a1e6c36f97ef40491b7bad72d21a4334cd0"
+  name = "go.uber.org/ratelimit"
+  packages = [
+    ".",
+    "internal/clock",
+  ]
+  pruneopts = "UT"
+  revision = "c15da02342779cb6dc027fc95ee2277787698f36"
+
+[[projects]]
   digest = "1:aaff04fa01d9b824fde6799759cc597b3ac3671b9ad31924c28b6557d0ee5284"
   name = "golang.org/x/crypto"
   packages = [
@@ -872,6 +883,7 @@
     "github.com/tendermint/tendermint/rpc/lib/server",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
+    "go.uber.org/ratelimit",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

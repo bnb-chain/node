@@ -185,8 +185,8 @@ func resetAppVersionedTree(height int64, rootDir string) {
 	}
 	defer dbIns.Close()
 
-	keys := []store.StoreKey{common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey, common.PairStoreKey, common.GovStoreKey,
-		common.StakeStoreKey, common.ParamsStoreKey, common.ValAddrStoreKey}
+	keys := []store.StoreKey{common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey,
+		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey, common.ParamsStoreKey, common.ValAddrStoreKey}
 
 	for _, key := range keys {
 		dbAccount := db.NewPrefixDB(dbIns, []byte("s/k:"+key.Name()+"/"))
