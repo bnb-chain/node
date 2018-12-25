@@ -71,7 +71,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		logger: logger,
+		logger:                     logger,
 	}
 }
 
@@ -379,31 +379,6 @@ func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
-	return res
-}
-
-func (kp *Keeper) GetTradeAndOrdersRelatedAccounts(orders []OrderChange) []string {
-	res := make([]string, 0)
-
-	for _, eng := range kp.engines {
-		for _, t := range eng.Trades {
-			if orderChange, exists := kp.OrderChangesMap[t.Bid]; exists {
-				res = append(res, string(orderChange.Sender.Bytes()))
-			} else {
-				bnclog.Error("fail to locate order in order changes map", "orderId", t.Bid)
-			}
-			if orderChange, exists := kp.OrderChangesMap[t.Sid]; exists {
-				res = append(res, string(orderChange.Sender.Bytes()))
-			} else {
-				bnclog.Error("fail to locate order in order changes map", "orderId", t.Sid)
-			}
-		}
-	}
-
-	for _, orderChange := range orders {
-		res = append(res, string(kp.OrderChangesMap[orderChange.Id].Sender.Bytes()))
-	}
-
 	return res
 }
 

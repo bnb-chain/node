@@ -13,6 +13,29 @@ import (
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 )
 
+func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Trade) []string {
+	res := make([]string, 0, len(tradesToPublish)*2+len(kp.OrderChanges))
+
+	for _, t := range tradesToPublish {
+		if bo, ok := kp.OrderChangesMap[t.Bid]; ok {
+			res = append(res, string(bo.Sender.Bytes()))
+		} else {
+			Logger.Error("failed to locate order in OrderChangesMap for trade account resolving", "bid", t.Bid)
+		}
+		if so, ok := kp.OrderChangesMap[t.Sid]; ok {
+			res = append(res, string(so.Sender.Bytes()))
+		} else {
+			Logger.Error("failed to locate order in OrderChangesMap for trade account resolving", "sid", t.Sid)
+		}
+	}
+
+	for _, orderChange := range kp.OrderChanges {
+		res = append(res, string(kp.OrderChangesMap[orderChange.Id].Sender.Bytes()))
+	}
+
+	return res
+}
+
 func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ...[]string) (res map[string]Account) {
 	res = make(map[string]Account)
 
@@ -230,13 +253,13 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		status = orderPkg.PartialFill
 	}
 	fee := getSerializedFeeForOrder(o, status, feeHolder, feeToPublish)
-	owner := o.Sender.String()
+	owner := o.Sender
 	res := order{
 		o.Symbol,
 		status,
 		o.Id,
 		t.Id,
-		owner,
+		owner.String(),
 		o.Side,
 		orderPkg.OrderType.LIMIT,
 		o.Price,
@@ -252,10 +275,10 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		o.TxHash,
 	}
 	if o.Side == orderPkg.Side.BUY {
-		t.BAddr = owner
+		t.BAddr = string(owner.Bytes())
 		t.Bfee = fee
 	} else {
-		t.SAddr = owner
+		t.SAddr = string(owner.Bytes())
 		t.Sfee = fee
 	}
 	return res

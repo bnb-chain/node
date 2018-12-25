@@ -7,7 +7,7 @@
 #clihome='/server/bnc/node2/gaiacli'
 #chainId='chain-rKZsqV'
 
-clipath='/root/zjubfd/github.com/src/BiJie/BinanceChain/build/bnbcli'
+clipath='/root/zjubfd/src/github.com/BiJie/BinanceChain/build/bnbcli'
 clihome='/server/bnc/node0/gaiacli'
 chainId='chain-bnb'
 
