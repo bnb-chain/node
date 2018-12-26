@@ -19,6 +19,8 @@ import (
 	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
 	"github.com/BiJie/BinanceChain/plugins/dex/store"
 	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/BiJie/BinanceChain/plugins/param/paramhub"
+	paramTypes "github.com/BiJie/BinanceChain/plugins/param/types"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
@@ -264,6 +266,44 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			}
 		}
 	}
+}
+
+func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
+	hub.SubscribeParamChange(
+		func(ctx sdk.Context, changes []interface{}) {
+			for _, c := range changes {
+				switch change := c.(type) {
+				case []paramTypes.FeeParam:
+					feeConfig := ParamToFeeConfig(change)
+					if feeConfig != nil {
+						kp.FeeManager.UpdateConfig(*feeConfig)
+					}
+				default:
+					kp.logger.Debug("Receive param changes that not interested.")
+				}
+			}
+		},
+		func(context sdk.Context, state paramTypes.GenesisState) {
+			feeConfig := ParamToFeeConfig(state.FeeGenesis)
+			if feeConfig != nil {
+				kp.FeeManager.UpdateConfig(*feeConfig)
+			} else {
+				panic("Genesis with no dex fee config ")
+			}
+		},
+		func(context sdk.Context, iLoad interface{}) {
+			switch load := iLoad.(type) {
+			case []paramTypes.FeeParam:
+				feeConfig := ParamToFeeConfig(load)
+				if feeConfig != nil {
+					kp.FeeManager.UpdateConfig(*feeConfig)
+				} else {
+					panic("Genesis with no dex fee config ")
+				}
+			default:
+				kp.logger.Debug("Receive param load that not interested.")
+			}
+		})
 }
 
 // Run as postConsume procedure of async, no concurrent updates of orders map
@@ -691,11 +731,6 @@ func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, 
 	}
 	kp.logger.Info("Loaded breathe block height", "height", height)
 	return height
-}
-
-func (kp *Keeper) InitGenesis(ctx sdk.Context, genesis TradingGenesis) {
-	kp.logger.Info("Initializing Fees from Genesis")
-	kp.FeeManager.InitGenesis(ctx, genesis)
 }
 
 // deliberately make `fee` parameter not a pointer

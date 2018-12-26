@@ -152,7 +152,7 @@ func Test_Match(t *testing.T) {
 	btcPair := types.NewTradingPair("BTC-000", "BNB", 96e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	// setup accounts
 	am := testApp.AccountKeeper
@@ -301,7 +301,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC-000", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
-	testApp.DexKeeper.FeeManager.UpdateConfig(ctx, newTestFeeConfig())
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	// setup accounts
 	add := Account(0).GetAddress()

@@ -10,6 +10,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/libs/cli"
@@ -19,6 +20,7 @@ import (
 	"github.com/BiJie/BinanceChain/common/types"
 	apiserv "github.com/BiJie/BinanceChain/plugins/api"
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
+	paramcmd "github.com/BiJie/BinanceChain/plugins/param/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
 )
 
@@ -91,6 +93,7 @@ func main() {
 
 	tokencmd.AddCommands(rootCmd, cdc)
 	dexcmd.AddCommands(rootCmd, cdc)
+	paramcmd.AddCommands(rootCmd, cdc)
 
 	govcmd.AddCommands(rootCmd, cdc)
 
