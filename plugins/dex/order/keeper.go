@@ -600,7 +600,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
-	fees.Pool.AddFee(totalFee)
+	fees.Pool.AddAndCommitFee("MATCH", totalFee)
 	kp.clearAfterMatch()
 }
 
@@ -677,7 +677,7 @@ func (kp *Keeper) ExpireOrders(
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler)
-	fees.Pool.AddFee(totalFee)
+	fees.Pool.AddAndCommitFee("EXPIRE", totalFee)
 }
 
 func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time) {

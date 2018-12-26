@@ -13,7 +13,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -23,6 +25,7 @@ import (
 	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/app/val"
 	"github.com/BiJie/BinanceChain/common"
+	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
@@ -276,6 +279,18 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			Validators: validators,
 		}
 	}
+}
+
+// Implements ABCI
+func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.DeliverTx(txBytes)
+	if res.IsOK() {
+		// commit or panic
+		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+		fees.Pool.CommitFee(txHash)
+	}
+
+	return res
 }
 
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {

@@ -20,6 +20,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
 	"github.com/BiJie/BinanceChain/common/testutils"
@@ -215,7 +216,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(0, 100)})
 	sellerAcc.SetSequence(1)
 	am.SetAccount(ctx, sellerAcc)
-	ctx = ctx.WithValue(baseapp.TxHashKey, "")
+	ctx = ctx.WithValue(baseapp.TxHashKey, "").WithRunTxMode(sdk.RunTxModeDeliver)
 	res := handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
@@ -240,8 +241,10 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	buyerAcc = am.GetAccount(ctx, buyer)
 	buyerAcc.SetSequence(3)
 	am.SetAccount(ctx, buyerAcc)
+	ctx = ctx.WithValue(baseapp.TxHashKey, "CANCEL1")
 	res = handler(ctx, cxlMsg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
+	fees.Pool.CommitFee("CANCEL1")
 
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
 
