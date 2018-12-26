@@ -133,6 +133,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
+	app.RegisterQueryHandler("account", app.AccountHandler)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -392,6 +393,25 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 		return *res
 	}
 	return app.BaseApp.Query(req)
+}
+
+func (app *BinanceChain) AccountHandler(chainApp types.ChainApp, req abci.RequestQuery, path []string) *abci.ResponseQuery {
+	var res abci.ResponseQuery
+	if len(path) == 2 {
+		addr := path[1]
+		if accAddress, err := sdk.AccAddressFromBech32(addr); err == nil {
+			acc := app.CheckState.AccountCache.GetAccount(accAddress)
+			res = abci.ResponseQuery{
+				Code: uint32(sdk.ABCICodeOK),
+				Value: Codec.MustMarshalBinaryBare(acc),
+			}
+		} else {
+			res = sdk.ErrInvalidAddress(addr).QueryResult()
+		}
+	} else {
+		res = sdk.ErrUnknownRequest("invalid path").QueryResult()
+	}
+	return &res
 }
 
 // RegisterQueryHandler registers an abci query handler, implements ChainApp.RegisterQueryHandler.
