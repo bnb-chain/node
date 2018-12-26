@@ -85,8 +85,8 @@ func (s *server) handleNodeVersionReq() http.HandlerFunc {
 	return hnd.NodeVersionReqHandler(s.ctx)
 }
 
-func (s *server) handleAccountReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper, accStoreName string) http.HandlerFunc {
-	return hnd.AccountReqHandler(cdc, ctx, tokens, accStoreName)
+func (s *server) handleAccountReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return hnd.AccountReqHandler(cdc, ctx)
 }
 
 func (s *server) handleSimulateReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
