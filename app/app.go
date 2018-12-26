@@ -379,6 +379,13 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 
 // Query performs an abci query.
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	defer func() {
+		if r := recover(); r != nil {
+			app.Logger.Error("internal error caused by query", "req", req)
+			res = sdk.ErrInternal("internal error").QueryResult()
+		}
+	}()
+
 	path := baseapp.SplitPath(req.Path)
 	if len(path) == 0 {
 		msg := "no query path provided"
@@ -401,9 +408,14 @@ func (app *BinanceChain) AccountHandler(chainApp types.ChainApp, req abci.Reques
 		addr := path[1]
 		if accAddress, err := sdk.AccAddressFromBech32(addr); err == nil {
 			acc := app.CheckState.AccountCache.GetAccount(accAddress)
-			res = abci.ResponseQuery{
-				Code: uint32(sdk.ABCICodeOK),
-				Value: Codec.MustMarshalBinaryBare(acc),
+			bz, err := Codec.MarshalBinaryBare(acc)
+			if err != nil {
+				res = sdk.ErrInvalidAddress(addr).QueryResult()
+			} else {
+				res = abci.ResponseQuery{
+					Code:  uint32(sdk.ABCICodeOK),
+					Value: bz,
+				}
 			}
 		} else {
 			res = sdk.ErrInvalidAddress(addr).QueryResult()
