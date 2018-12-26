@@ -110,7 +110,7 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 		topic = cfg.OrderBookTopic
 	case accountsTpe:
 		topic = cfg.AccountBalanceTopic
-	case tradesAndOrdersTpe:
+	case executionResultTpe:
 		topic = cfg.OrderUpdatesTopic
 	case blockFeeTpe:
 		topic = cfg.BlockFeeTopic

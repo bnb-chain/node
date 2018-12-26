@@ -253,9 +253,9 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 		time.Sleep(1000)
 	}
 	publisher.Lock.Lock()
-	require.Len(publisher.TradesAndOrdersPublished, 2)
-	assert.Equal("BNB:51", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Sfee)
-	assert.Equal("BNB:57;#Cxl:1", publisher.TradesAndOrdersPublished[1].Trades.Trades[0].Bfee)
+	require.Len(publisher.ExecutionResultsPublished, 2)
+	assert.Equal("BNB:51", publisher.ExecutionResultsPublished[1].Trades.Trades[0].Sfee)
+	assert.Equal("BNB:57;#Cxl:1", publisher.ExecutionResultsPublished[1].Trades.Trades[0].Bfee)
 	assert.Equal("BNB:108", publisher.BlockFeePublished[1].Fee)
 	publisher.Lock.Unlock()
 }

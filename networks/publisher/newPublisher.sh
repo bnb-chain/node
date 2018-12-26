@@ -26,6 +26,7 @@ cp ${deamonhome}/config/app.toml ${witnesshome}/config/
 
 sed -i -e "s/26/29/g" ${witnesshome}/config/config.toml
 sed -i -e "s/6060/9060/g" ${witnesshome}/config/config.toml
+sed -i -e "s/logToConsole = true/logToConsole = false/g" ${witnesshome}/config/app.toml
 
 # get validator id
 validator_pid=$(ps aux | grep "bnbchaind start$" | awk '{print $2}')
@@ -46,6 +47,7 @@ sed -i -e "s/blockFeeTopic = \"accounts\"/blockFeeTopic = \"test\"/g" ${witnessh
 
 # turn on debug level log
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${witnesshome}/config/config.toml
+sed -i -e "s/index_all_tags = false/index_all_tags = true/g" ${witnesshome}/config/config.toml
 
 ${executable} start --home ${witnesshome} > ${witnesshome}/log.txt 2>&1 &
 witness_pid=$!

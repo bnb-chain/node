@@ -79,7 +79,8 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 		paramsKeeper, paramsKeeper.Subspace(gov.DefaultParamspace),
 		bankKeeper,
 		stakeKeeper,
-		gov.DefaultCodespace)
+		gov.DefaultCodespace,
+		new(sdk.Pool))
 
 	return ms, orderKeeper, tokenMapper, govKeeper
 }

@@ -1,10 +1,10 @@
 package pub
 
 const (
-	tradesAndOrdersSchema = `
+	executionResultSchema = `
 		{
 			"type": "record",
-			"name": "TradesAndOrders",
+			"name": "ExecutionResults",
 			"namespace": "org.binance.dex.model.avro",
 			"fields": [
 				{ "name": "height", "type": "long" },
@@ -72,6 +72,28 @@ const (
 									{ "name": "timeInForce", "type": "string" },
 									{ "name": "currentExecutionType", "type": "string" },
 									{ "name": "txHash", "type": "string" }
+								]
+							}
+						   }
+						}
+					]
+				}], "default": null },
+				{ "name": "proposals", "type": ["null", {
+					"type": "record",
+					"name": "Proposals",
+					"namespace": "org.binance.dex.model.avro",
+					"fields": [
+						{ "name": "numOfMsgs", "type": "int" },
+						{ "name": "proposals", "type": {
+							"type": "array",
+							"items":
+							{
+								"type": "record",
+								"name": "Proposal",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{ "name": "id", "type": "long" },
+									{ "name": "status", "type": "string" }
 								]
 							}
 						   }
