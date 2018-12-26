@@ -58,6 +58,7 @@ function prepare(){
     for i in {0..8}; do
         ihome=${home[$i]}
         external_ip=${des_ips[$i]}
+	    sed -i -e "s/timeout_propose = 3000/timeout_propose = 1000/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/create_empty_blocks_interval = 0/create_empty_blocks_interval = 1/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/indexer = \"kv\"/indexer = \"null\"/g" ${ihome}/gaiad/config/config.toml
         sed -i -e "s/external_address = \"\"/external_address = \"${external_ip}:26656\"/g" ${ihome}/gaiad/config/config.toml
@@ -143,7 +144,6 @@ function build-seed-config(){
 
     # turn on pex
     sed -i -e "s/moniker = \"kubenode0\"/moniker = \"seed\"/g" ${seed_home}/gaiad/config/config.toml
-    sed -i -e "s/recheck = true/recheck = false/g" ${seed_home}/gaiad/config/config.toml
     sed -i -e "s/pex = false/pex = true/g" ${seed_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${data_seed_addr}\"/g" ${seed_home}/gaiad/config/config.toml
     sed -i -e "s/seed_mode = false/seed_mode = true/g" ${seed_home}/gaiad/config/config.toml
@@ -162,13 +162,13 @@ function build-data-seed-config(){
 
     # turn on pex
     sed -i -e "s/moniker = \"kubenode0\"/moniker = \"data-seed\"/g" ${data_seed_home}/gaiad/config/config.toml
-    sed -i -e "s/recheck = true/recheck = false/g" ${data_seed_home}/gaiad/config/config.toml
     sed -i -e "s/private_peer_ids = \"\"/private_peer_ids = \"${bridge_ids}\"/g" ${data_seed_home}/gaiad/config/config.toml
     sed -i -e "s/pex = false/pex = true/g" ${data_seed_home}/gaiad/config/config.toml
     sed -i -e "s/seeds = \"\"/seeds = \"${bridge_addr}\"/g" ${data_seed_home}/gaiad/config/config.toml
     sed -i -e "s/persistent_peers = \".*\"/persistent_peers = \"${bridge_addr}\"/g" ${data_seed_home}/gaiad/config/config.toml
     sed -i -e "s/logToConsole = true/logToConsole = false/g" ${data_seed_home}/gaiad/config/app.toml
     sed -i -e "s/prometheus = false/prometheus = true/g" ${data_seed_home}/gaiad/config/config.toml
+    sed -i -e "s/indexer = \"null\"/indexer = \"kv\"/g" ${data_seed_home}/gaiad/config/config.toml
     ${kubectl} create configmap  data-seed-config --from-file ${data_seed_home}/gaiad/config/app.toml --from-file ${data_seed_home}/gaiad/config/config.toml --from-file ${data_seed_home}/gaiad/config/genesis.json -n ${namespace}
 }
 

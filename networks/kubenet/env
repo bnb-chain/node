@@ -1,4 +1,4 @@
-# validator ips
+#validator ips
 des_ips="172.22.41.165 172.22.42.122 172.22.42.52 172.25.41.26 172.25.42.223 172.25.42.250 172.27.41.104 172.27.41.151 172.27.41.185"
 
 # bridge ips of specified cluster
@@ -21,7 +21,7 @@ docker_registry="172.22.41.103:5000"
 deploy_mode="qa"
 
 # rebuild the chain
-rebuild=TRUE
+rebuild="FALSE"
 
 # ip of data seed
 data_seed_ip_cluster0="172.22.43.12"
