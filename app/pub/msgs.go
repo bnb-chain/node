@@ -13,7 +13,7 @@ import (
 var (
 	booksCodec            *goavro.Codec
 	accountCodec          *goavro.Codec
-	tradeseAndOrdersCodec *goavro.Codec
+	executionResultsCodec *goavro.Codec
 	blockFeeCodec         *goavro.Codec
 )
 
@@ -22,19 +22,20 @@ type msgType int8
 const (
 	accountsTpe = iota
 	booksTpe
-	tradesAndOrdersTpe
+	executionResultTpe
 	blockFeeTpe
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
+// !!!NOTE!!! Changes of these strings should notice consumers of kafka publisher
 func (this msgType) String() string {
 	switch this {
 	case accountsTpe:
 		return "Accounts"
 	case booksTpe:
 		return "Books"
-	case tradesAndOrdersTpe:
-		return "TradesAndOrders"
+	case executionResultTpe:
+		return "ExecutionResults"
 	case blockFeeTpe:
 		return "BlockFee"
 	default:
@@ -49,14 +50,15 @@ type AvroMsg interface {
 
 func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 	native := msg.ToNativeMap()
+	Logger.Debug("msgDetail", "msg", native)
 	var codec *goavro.Codec
 	switch tpe {
 	case accountsTpe:
 		codec = accountCodec
 	case booksTpe:
 		codec = booksCodec
-	case tradesAndOrdersTpe:
-		codec = tradeseAndOrdersCodec
+	case executionResultTpe:
+		codec = executionResultsCodec
 	case blockFeeTpe:
 		codec = blockFeeCodec
 	default:
@@ -69,19 +71,20 @@ func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 	return bb, err
 }
 
-type tradesAndOrders struct {
+type executionResults struct {
 	height    int64
 	timestamp int64 // milli seconds since Epoch
 	NumOfMsgs int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
 	Trades    trades
 	Orders    orders
+	Proposals Proposals
 }
 
-func (msg *tradesAndOrders) String() string {
-	return fmt.Sprintf("TradesAndOrders at height: %d, numOfMsgs: %d", msg.height, msg.NumOfMsgs)
+func (msg *executionResults) String() string {
+	return fmt.Sprintf("ExecutionResult at height: %d, numOfMsgs: %d", msg.height, msg.NumOfMsgs)
 }
 
-func (msg *tradesAndOrders) ToNativeMap() map[string]interface{} {
+func (msg *executionResults) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.height
 	native["timestamp"] = msg.timestamp
@@ -91,6 +94,9 @@ func (msg *tradesAndOrders) ToNativeMap() map[string]interface{} {
 	}
 	if msg.Orders.numOfMsgs > 0 {
 		native["orders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.Orders.ToNativeMap()}
+	}
+	if msg.Proposals.NumOfMsgs > 0 {
+		native["proposals"] = map[string]interface{}{"org.binance.dex.model.avro.Proposals": msg.Proposals.ToNativeMap()}
 	}
 	return native
 }
@@ -226,6 +232,60 @@ func (msg *order) toNativeMap() map[string]interface{} {
 	native["timeInForce"] = orderPkg.IToTimeInForce(msg.timeInForce)   //TODO(#66): confirm with all teams to make this uint8 enum
 	native["currentExecutionType"] = msg.currentExecutionType.String() //TODO(#66): confirm with all teams to make this uint8 enum
 	native["txHash"] = msg.txHash
+	return native
+}
+
+type Proposals struct {
+	NumOfMsgs int
+	Proposals []*Proposal
+}
+
+func (msg *Proposals) String() string {
+	return fmt.Sprintf("Proposals numOfMsgs: %d", msg.NumOfMsgs)
+}
+
+func (msg *Proposals) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	ps := make([]map[string]interface{}, len(msg.Proposals), len(msg.Proposals))
+	for idx, p := range msg.Proposals {
+		ps[idx] = p.toNativeMap()
+	}
+	native["proposals"] = ps
+	return native
+}
+
+type ProposalStatus uint8
+
+const (
+	Succeed ProposalStatus = iota
+	Failed
+)
+
+func (this ProposalStatus) String() string {
+	switch this {
+	case Succeed:
+		return "S"
+	case Failed:
+		return "F"
+	default:
+		return "Unknown"
+	}
+}
+
+type Proposal struct {
+	Id     int64
+	Status ProposalStatus
+}
+
+func (msg *Proposal) String() string {
+	return fmt.Sprintf("Proposal: %v", msg.toNativeMap())
+}
+
+func (msg *Proposal) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["id"] = msg.Id
+	native["status"] = msg.Status.String()
 	return native
 }
 
@@ -386,7 +446,7 @@ func (msg BlockFee) ToNativeMap() map[string]interface{} {
 }
 
 func initAvroCodecs() (err error) {
-	if tradeseAndOrdersCodec, err = goavro.NewCodec(tradesAndOrdersSchema); err != nil {
+	if executionResultsCodec, err = goavro.NewCodec(executionResultSchema); err != nil {
 		return err
 	} else if booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
 		return err

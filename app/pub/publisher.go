@@ -106,12 +106,13 @@ func publish(
 			ordersToPublish := append(opensToPublish, canceledToPublish...)
 			if cfg.PublishOrderUpdates {
 				duration := Timer(Logger, "publish all orders", func() {
-					publishOrderUpdates(
+					publishExecutionResult(
 						publisher,
 						marketData.height,
 						marketData.timestamp,
 						ordersToPublish,
-						marketData.tradesToPublish)
+						marketData.tradesToPublish,
+						marketData.proposalsToPublish)
 				})
 
 				if metrics != nil {
@@ -180,18 +181,22 @@ func publish(
 	}
 }
 
-func publishOrderUpdates(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade) {
+func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade, proposalsToPublish *Proposals) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
-	tradesAndOrdersMsg := tradesAndOrders{height: height, timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders}
+	numOfProposals := proposalsToPublish.NumOfMsgs
+	executionResultsMsg := executionResults{height: height, timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals}
 	if numOfOrders > 0 {
-		tradesAndOrdersMsg.Orders = orders{numOfOrders, os}
+		executionResultsMsg.Orders = orders{numOfOrders, os}
 	}
 	if numOfTrades > 0 {
-		tradesAndOrdersMsg.Trades = trades{numOfTrades, tradesToPublish}
+		executionResultsMsg.Trades = trades{numOfTrades, tradesToPublish}
+	}
+	if numOfProposals > 0 {
+		executionResultsMsg.Proposals = *proposalsToPublish
 	}
 
-	publisher.publish(&tradesAndOrdersMsg, tradesAndOrdersTpe, height, timestamp)
+	publisher.publish(&executionResultsMsg, executionResultTpe, height, timestamp)
 }
 
 func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64, accountsToPublish map[string]Account, feeToPublish map[string]string) {

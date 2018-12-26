@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestTradesAndOrdersMarshaling(t *testing.T) {
+func TestExecutionResultsMarshaling(t *testing.T) {
 	trades := trades{
 		numOfMsgs: 1,
 		Trades: []*Trade{{
@@ -33,13 +33,23 @@ func TestTradesAndOrdersMarshaling(t *testing.T) {
 			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:8;ETH:1", 99, 99, orderPkg.TimeInForce.GTC, orderPkg.NEW, ""},
 		},
 	}
-	msg := tradesAndOrders{
+	proposals := Proposals{
+		NumOfMsgs: 3,
+		Proposals: []*Proposal{
+			{1, Succeed},
+			{2, Succeed},
+			{3, Failed},
+		},
+	}
+	msg := executionResults{
 		height:    42,
 		timestamp: 100,
 		NumOfMsgs: 4,
 		Trades:    trades,
-		Orders:    orders}
-	_, err := marshal(&msg, tradesAndOrdersTpe)
+		Orders:    orders,
+		Proposals: proposals,
+	}
+	_, err := marshal(&msg, executionResultTpe)
 	if err != nil {
 		t.Fatal(err)
 	}

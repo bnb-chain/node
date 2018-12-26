@@ -11,10 +11,10 @@ import (
 )
 
 type MockMarketDataPublisher struct {
-	AccountPublished         []*accounts
-	BooksPublished           []*Books
-	TradesAndOrdersPublished []*tradesAndOrders
-	BlockFeePublished        []BlockFee
+	AccountPublished          []*accounts
+	BooksPublished            []*Books
+	ExecutionResultsPublished []*executionResults
+	BlockFeePublished         []BlockFee
 
 	Lock             *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
 	MessagePublished uint32      // atomic integer used to determine the published messages
@@ -29,8 +29,8 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, heig
 		publisher.AccountPublished = append(publisher.AccountPublished, msg.(*accounts))
 	case booksTpe:
 		publisher.BooksPublished = append(publisher.BooksPublished, msg.(*Books))
-	case tradesAndOrdersTpe:
-		publisher.TradesAndOrdersPublished = append(publisher.TradesAndOrdersPublished, msg.(*tradesAndOrders))
+	case executionResultTpe:
+		publisher.ExecutionResultsPublished = append(publisher.ExecutionResultsPublished, msg.(*executionResults))
 	case blockFeeTpe:
 		publisher.BlockFeePublished = append(publisher.BlockFeePublished, msg.(BlockFee))
 	default:
@@ -46,14 +46,14 @@ func (publisher *MockMarketDataPublisher) Stop() {
 
 	publisher.AccountPublished = make([]*accounts, 0)
 	publisher.BooksPublished = make([]*Books, 0)
-	publisher.TradesAndOrdersPublished = make([]*tradesAndOrders, 0)
+	publisher.ExecutionResultsPublished = make([]*executionResults, 0)
 }
 
 func NewMockMarketDataPublisher(logger log.Logger, config *config.PublicationConfig) (publisher *MockMarketDataPublisher) {
 	publisher = &MockMarketDataPublisher{
 		make([]*accounts, 0),
 		make([]*Books, 0),
-		make([]*tradesAndOrders, 0),
+		make([]*executionResults, 0),
 		make([]BlockFee, 0),
 		&sync.Mutex{},
 		0,

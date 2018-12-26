@@ -167,6 +167,18 @@ func collectTradeForPublish(
 	}
 }
 
+func CollectProposalsForPublish(passed, failed []int64) Proposals {
+	totalProposals := len(passed) + len(failed)
+	ps := make([]*Proposal, 0, totalProposals)
+	for _, p := range passed {
+		ps = append(ps, &Proposal{p, Succeed})
+	}
+	for _, p := range failed {
+		ps = append(ps, &Proposal{p, Failed})
+	}
+	return Proposals{totalProposals, ps}
+}
+
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
