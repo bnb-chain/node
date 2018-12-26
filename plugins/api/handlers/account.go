@@ -13,15 +13,13 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
 	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/BiJie/BinanceChain/common/utils"
 	tkclient "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
 	"github.com/BiJie/BinanceChain/wire"
 )
 
 // AccountReqHandler queries for an account and returns its information.
-func AccountReqHandler(
-	cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper, accStoreName string,
-) http.HandlerFunc {
+func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type response struct {
 		auth.BaseAccount
 		Balances []tkclient.TokenBalance `json:"balances"`
@@ -43,13 +41,13 @@ func AccountReqHandler(
 		vars := mux.Vars(r)
 		bech32addr := vars["address"]
 
-		addr, err := sdk.AccAddressFromBech32(bech32addr)
+		_, err := sdk.AccAddressFromBech32(bech32addr)
 		if err != nil {
 			throw(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
+		res, err := ctx.Query(fmt.Sprintf("/account/%s", bech32addr), nil)
 		if err != nil {
 			errMsg := fmt.Sprintf("couldn't query account. Error: %s", err.Error())
 			throw(w, http.StatusInternalServerError, errMsg)
@@ -70,14 +68,45 @@ func AccountReqHandler(
 			return
 		}
 
-		bals, err := tkclient.GetBalances(cdc, ctx, tokens, account.GetAddress())
+		appAccount := account.(*types.AppAccount)
 		resp := response{
-			BaseAccount: account.(*types.AppAccount).BaseAccount,
-			Balances:    bals,
+			BaseAccount: appAccount.BaseAccount,
+			Balances:    toTokenBalances(appAccount),
 		}
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(resp)
 	}
+}
+
+func toTokenBalances(acc *types.AppAccount) []tkclient.TokenBalance {
+	balances := make(map[string]tkclient.TokenBalance)
+	for _, coin := range acc.GetCoins() {
+		balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Free: utils.Fixed8(coin.Amount)}
+	}
+
+	for _, coin := range acc.GetLockedCoins() {
+		if balance, ok := balances[coin.Denom]; ok {
+			balance.Locked = utils.Fixed8(coin.Amount)
+		} else {
+			balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Locked: utils.Fixed8(coin.Amount)}
+		}
+	}
+
+	for _, coin := range acc.GetFrozenCoins() {
+		if balance, ok := balances[coin.Denom]; ok {
+			balance.Frozen = utils.Fixed8(coin.Amount)
+		} else {
+			balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Frozen: utils.Fixed8(coin.Amount)}
+		}
+	}
+
+	res := make([]tkclient.TokenBalance, len(balances), len(balances))
+	i := 0
+	for _, balance := range balances {
+		res[i] = balance
+		i++
+	}
+	return res
 }
