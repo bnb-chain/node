@@ -35,12 +35,13 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/BiJie/bnc-tendermint"
-  version = "=0.25.1-br7"
+  branch = "feature/simulate"
+  #version = "=0.25.1-br7"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/BiJie/bnc-cosmos-sdk"
-  branch = "upgrade25"
+  branch = "seq"
 
 [[constraint]]
   name = "github.com/pkg/errors"

@@ -1,5 +1,6 @@
 package app
 
+import "C"
 import (
 	"encoding/json"
 	"fmt"
@@ -129,6 +130,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
+	app.RegisterQueryHandler("simulate", app.SimulateAccountHandler)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -378,6 +380,25 @@ func (app *BinanceChain) RegisterQueryHandler(prefix string, handler types.AbciQ
 	} else {
 		app.queryHandlers[prefix] = handler
 	}
+}
+
+func (app *BinanceChain) SimulateAccountHandler(chainApp types.ChainApp, req abci.RequestQuery, path []string) *abci.ResponseQuery {
+	var res abci.ResponseQuery
+	if len(path) == 3 && path[1] == "account" {
+		addr := path[2]
+		if accAddress, err := sdk.AccAddressFromBech32(addr); err == nil {
+			acc := app.SimulateState.AccountCache.GetAccount(accAddress)
+			res = abci.ResponseQuery{
+				Code: uint32(sdk.ABCICodeOK),
+				Value: Codec.MustMarshalBinaryBare(acc),
+			}
+		} else {
+			res = sdk.ErrInvalidAddress(addr).QueryResult()
+		}
+	} else {
+		res = sdk.ErrUnknownRequest("invalid path").QueryResult()
+	}
+	return &res
 }
 
 // GetCodec returns the app's Codec.

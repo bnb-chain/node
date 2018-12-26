@@ -56,8 +56,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "upgrade25"
-  digest = "1:938e75b7cca7e036fc23d41e4db6b002f5db7fcdc5770573729cfefa1204c505"
+  branch = "seq"
+  digest = "1:75364bd9344c30645d2a326dd39b494ad688bdc1594f6bbc0b64203f8e3d025b"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -106,7 +106,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "be3d06b766445fc87ac6e27532798b36c03cc63b"
+  revision = "fe726ab9e3c327a8e2df4de6e83196787209bb35"
   source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
@@ -593,7 +593,8 @@
   version = "v0.11.0"
 
 [[projects]]
-  digest = "1:4b2c0e68c360933dfe4d834ab107c22cb73bc71df21ee289659882fe313062f2"
+  branch = "feature/simulate"
+  digest = "1:8864a7c3626e30fca90e006ed98b85fa84db118af37b27e68494352d8b9bc116"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -659,9 +660,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "3f17d89ee2b1a6441279873d81a444b3e0e5eece"
+  revision = "4111322f6a0c0e9e2d4308e2f11e8f2ec2cad184"
   source = "github.com/BiJie/bnc-tendermint"
-  version = "v0.25.1-br7"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"

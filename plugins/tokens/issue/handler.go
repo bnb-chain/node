@@ -69,9 +69,11 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
 
-	if err := tokenMapper.NewToken(ctx, *token); err != nil {
-		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
-		return sdk.ErrInvalidCoins(err.Error()).Result()
+	if !ctx.IsSimulate() {
+		if err := tokenMapper.NewToken(ctx, *token); err != nil {
+			logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
+			return sdk.ErrInvalidCoins(err.Error()).Result()
+		}
 	}
 
 	if _, _, sdkError := bankKeeper.AddCoins(ctx, token.Owner,
@@ -125,10 +127,13 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 			common.TokenMaxTotalSupply)).Result()
 	}
 	newTotalSupply := token.TotalSupply.ToInt64() + msg.Amount
-	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
-	if err != nil {
-		logger.Error(errLogMsg, "reason", "update total supply failed: "+err.Error())
-		return sdk.ErrInternal(fmt.Sprintf("update total supply failed")).Result()
+
+	if !ctx.IsSimulate() {
+		err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
+		if err != nil {
+			logger.Error(errLogMsg, "reason", "update total supply failed: "+err.Error())
+			return sdk.ErrInternal(fmt.Sprintf("update total supply failed")).Result()
+		}
 	}
 
 	_, _, sdkError := bankKeeper.AddCoins(ctx, token.Owner,

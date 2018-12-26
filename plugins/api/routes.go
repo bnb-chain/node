@@ -21,10 +21,11 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	// auth routes
-	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.tokens, s.accStoreName)).
+	r.HandleFunc(prefix+"/account/{address}", s.handleAccountReq(s.cdc, s.ctx, s.accStoreName)).
 		Methods("GET")
 
-	// tx routes
+	// simulation routes
+	r.HandleFunc(prefix+"/simulate/account/{address}", s.handleSimulateAccountReq(s.cdc, s.ctx))
 	r.HandleFunc(prefix+"/simulate", s.handleSimulateReq(s.cdc, s.ctx)).
 		Methods("POST")
 

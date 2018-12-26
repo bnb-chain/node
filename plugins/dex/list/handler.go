@@ -89,9 +89,11 @@ func handleList(
 	}
 
 	pair := types.NewTradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
-	err = keeper.PairMapper.AddTradingPair(ctx, pair)
-	if err != nil {
-		return sdk.ErrInternal(err.Error()).Result()
+	if !ctx.IsSimulate() {
+		err = keeper.PairMapper.AddTradingPair(ctx, pair)
+		if err != nil {
+			return sdk.ErrInternal(err.Error()).Result()
+		}
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!

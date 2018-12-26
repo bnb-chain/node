@@ -6,16 +6,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	cctx "github.com/BiJie/BinanceChain/common/client/context"
 	"github.com/BiJie/BinanceChain/wire"
+	"github.com/cosmos/cosmos-sdk/client/context"
 )
 
 // SimulateReqHandler simulates the execution of a single transaction, given its binary form
 func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	type response sdk.Result
 	responseType := "application/json"
 
 	throw := func(w http.ResponseWriter, status int, message string) {
@@ -42,24 +38,15 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 			return
 		}
 
-		res, err := cctx.QueryWithData(ctx, "/app/simulate", bz)
+		res, err := ctx.Client.SimulateTxSync(bz)
 		if err != nil {
 			errMsg := fmt.Sprintf("Couldn't simulate transaction. Error: %s", err.Error())
 			throw(w, http.StatusExpectationFailed, errMsg)
 			return
 		}
 
-		// expect abci query result to be `sdk.Result`
-		var resp response
-		err = cdc.UnmarshalBinary(res, &resp)
-		if err != nil {
-			errMsg := fmt.Sprintf("Couldn't unmarshal. Error: %s. Response: %s", err.Error(), res)
-			throw(w, http.StatusInternalServerError, errMsg)
-			return
-		}
-
 		// re-marshal to json
-		output, err := cdc.MarshalJSON(resp)
+		output, err := cdc.MarshalJSON(res)
 		if err != nil {
 			errMsg := fmt.Sprintf("Couldn't marshal. Error: %s", err.Error())
 			throw(w, http.StatusInternalServerError, errMsg)

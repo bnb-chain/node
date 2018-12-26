@@ -54,10 +54,12 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	newTotalSupply := token.TotalSupply.ToInt64() - burnAmount
-	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
-	if err != nil {
-		logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())
-		return sdk.ErrInternal(err.Error()).Result()
+    if !ctx.IsSimulate() {
+		err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
+		if err != nil {
+			logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())
+			return sdk.ErrInternal(err.Error()).Result()
+		}
 	}
 
 	logger.Info("successfully burnt token", "NewTotalSupply", newTotalSupply)
