@@ -83,7 +83,9 @@ publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
 logToConsole = {{ .LogConfig.LogToConsole }}
 
 ## The below parameters take effect only when logToConsole is false
-# Log file path relative to home path
+# Log file root, if not set, use home path
+logFileRoot = "{{ .LogConfig.LogFileRoot }}"
+# Log file path relative to log file root path
 logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
@@ -199,6 +201,7 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 
 type LogConfig struct {
 	LogToConsole bool   `mapstructure:"logToConsole"`
+	LogFileRoot  string `mapstructure:"logFileRoot"`
 	LogFilePath  string `mapstructure:"logFilePath"`
 	LogBuffSize  int64  `mapstructure:"logBuffSize"`
 }
@@ -206,6 +209,7 @@ type LogConfig struct {
 func defaultLogConfig() *LogConfig {
 	return &LogConfig{
 		LogToConsole: true,
+		LogFileRoot:  "",
 		LogFilePath:  "bnc.log",
 		LogBuffSize:  10000,
 	}
