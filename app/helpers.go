@@ -1,7 +1,9 @@
 package app
 
 import (
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -87,7 +89,17 @@ func newLogger(ctx *config.BinanceChainContext) log.Logger {
 	if ctx.LogConfig.LogToConsole {
 		return bnclog.NewConsoleLogger()
 	} else {
-		return bnclog.NewAsyncFileLogger(ctx.LogConfig.LogFilePath, ctx.LogConfig.LogBuffSize)
+		logFilePath := ""
+		if ctx.LogConfig.LogFileRoot == "" {
+			logFilePath = path.Join(ctx.Config.RootDir, ctx.LogConfig.LogFilePath)
+		} else {
+			logFilePath = path.Join(ctx.LogConfig.LogFileRoot, ctx.LogConfig.LogFilePath)
+		}
+		err := cmn.EnsureDir(path.Dir(logFilePath), 0755)
+		if err != nil {
+			panic(fmt.Sprintf("create log dir failed, err=%s", err.Error()))
+		}
+		return bnclog.NewAsyncFileLogger(logFilePath, ctx.LogConfig.LogBuffSize)
 	}
 }
 
