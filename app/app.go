@@ -303,7 +303,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var tradesToPublish []*pub.Trade
 
 	isBreatheBlock := !utils.SameDayInUTC(lastBlockTime, blockTime)
-	if height%1000 != 0 {
+	if !isBreatheBlock || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
