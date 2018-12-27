@@ -2,7 +2,6 @@ package app
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -89,7 +88,7 @@ func newLogger(ctx *config.BinanceChainContext) log.Logger {
 	if ctx.LogConfig.LogToConsole {
 		return bnclog.NewConsoleLogger()
 	} else {
-		return bnclog.NewAsyncFileLogger(path.Join(ctx.Config.RootDir, ctx.LogConfig.LogFilePath), ctx.LogConfig.LogBuffSize)
+		return bnclog.NewAsyncFileLogger(ctx.LogConfig.LogFilePath, ctx.LogConfig.LogBuffSize)
 	}
 }
 
