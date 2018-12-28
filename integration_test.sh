@@ -91,7 +91,8 @@ check_operation "Mint Token" "${result}" "${chain_operation_words}"
 sleep 1s
 # propose list
 ((expire_time=$(date '+%s')+1000))
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${btc_symbol} BNB 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time})
+lower_case_btc_symbol=$(echo ${btc_symbol} | tr 'A-Z' 'a-z')
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_btc_symbol} bnb 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time})
 check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s

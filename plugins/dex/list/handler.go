@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -54,8 +55,8 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 		return errors.New(fmt.Sprintf("list time expired, expire_time=%s", listParams.ExpireTime.String()))
 	}
 
-	if msg.BaseAssetSymbol != listParams.BaseAssetSymbol ||
-		msg.QuoteAssetSymbol != listParams.QuoteAssetSymbol ||
+	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) ||
+		strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) ||
 		msg.InitPrice != listParams.InitPrice {
 		return errors.New("list msg is not identical to proposal")
 	}
