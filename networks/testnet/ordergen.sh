@@ -4,7 +4,7 @@
 
 # For dev
 #clipath='/home/bijieprd/gowork/src/github.com/BiJie/BinanceChain/build/bnbcli'
-#clihome='/server/bnc/node2/gaiacli'
+#clihome='/server/bnc/node0/gaiacli'
 #chainId='chain-rKZsqV'
 
 clipath='/root/zjubfd/src/github.com/BiJie/BinanceChain/build/bnbcli'
@@ -28,10 +28,10 @@ sleep 61
 ${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chainId} --proposal-id 7
 sleep 1
 result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chainId})
-zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
+zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "ZCB-[0-9A-Z]*")
 echo ${zcb_symbol}
 sleep 10
-${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+${cli} gov submit-list-proposal --chain-id ${chainId} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list ZCB/BNB" --description "list ZCB/BNB" --expire-time 1644486400
 sleep 2
 ${cli} gov vote --from zc --chain-id ${chainId} --proposal-id 8 --option Yes
 sleep 61
@@ -57,10 +57,10 @@ do
     pause=$(random 5 7)
     symbolNum=$(random 1 10)
 
-    symbol="NNB-94A_BNB"
+    symbol=${nnb_symbol}_BNB
     if [ $symbolNum -lt 4 ]
     then
-        symbol="ZCB-E21_BNB"
+        symbol=${zcb_symbol}_BNB
     fi
 
     from="zc"

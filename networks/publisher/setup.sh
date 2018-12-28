@@ -72,9 +72,9 @@ result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB -
 nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
 echo ${nnb_symbol}
 sleep 5
-${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400 --json
 sleep 2
-${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 1 --option Yes
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 1 --option Yes --json
 sleep 6
 ${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 1
 sleep 1
@@ -82,9 +82,9 @@ result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --tota
 zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "ZCB-[0-9A-Z]*")
 echo ${zcb_symbol}
 sleep 5
-${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400 --json
 sleep 2
-${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 2 --option Yes
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 2 --option Yes --json
 sleep 6
 ${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 2
 sleep 1

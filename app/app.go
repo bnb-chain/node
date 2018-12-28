@@ -124,6 +124,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
 		app.RegisterCodespace(gov.DefaultCodespace),
+		app.Pool,
 	)
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 	// legacy bank route (others moved to plugin init funcs)
@@ -324,18 +325,23 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
 
+	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
+	var proposals pub.Proposals
+
+	if app.publicationConfig.PublishOrderUpdates {
+		proposals = pub.CollectProposalsForPublish(passed, failed)
+	}
+
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, blockFee, ctx, height, blockTime.Unix())
+			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.Unix())
 		}
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
-
-	tags := gov.EndBlocker(ctx, app.govKeeper)
 
 	var validatorUpdates abci.ValidatorUpdates
 	if isBreatheBlock {
@@ -486,7 +492,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -517,6 +523,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
 		len(app.DexKeeper.OrderChanges),
+		"numOfProposals",
+		proposalsToPublish.NumOfMsgs,
 		"numOfAccounts",
 		len(accountsToPublish))
 	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
@@ -524,6 +532,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, blockFee pub.Bloc
 		height,
 		blockTime,
 		tradesToPublish,
+		proposalsToPublish,
 		app.DexKeeper.OrderChanges,    // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderChangesMap, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
