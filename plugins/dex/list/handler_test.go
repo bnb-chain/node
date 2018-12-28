@@ -2,6 +2,7 @@ package list
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,9 +85,13 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 	return ms, orderKeeper, tokenMapper, govKeeper
 }
 
-func getProposal() gov.Proposal {
+func getProposal(lowerCase bool) gov.Proposal {
+	baseAssetSymbol := "BTC-000"
+	if lowerCase {
+		baseAssetSymbol = strings.ToLower(baseAssetSymbol)
+	}
 	listParams := gov.ListTradingPairParams{
-		BaseAssetSymbol:  "BTC-000",
+		BaseAssetSymbol:  baseAssetSymbol,
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		InitPrice:        1000,
 		Description:      "list BTC-000/BNB",
@@ -118,7 +123,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "proposal 1 does not exist")
 
-	proposal := getProposal()
+	proposal := getProposal(false)
 
 	// wrong status
 	govKeeper.SetProposal(ctx, proposal)
@@ -128,7 +133,7 @@ func TestListHandler(t *testing.T) {
 	require.Contains(t, result.Log, "proposal status 1 is not not passed")
 
 	// wrong type
-	proposal = getProposal()
+	proposal = getProposal(false)
 	proposal.SetProposalType(gov.ProposalTypeParameterChange)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
@@ -138,7 +143,7 @@ func TestListHandler(t *testing.T) {
 	require.Contains(t, result.Log, "proposal type ParameterChange is not equal to ListTradingPair")
 
 	// wrong params
-	proposal = getProposal()
+	proposal = getProposal(false)
 	proposal.SetStatus(gov.StatusPassed)
 	proposal.SetDescription("wrong params")
 	govKeeper.SetProposal(ctx, proposal)
@@ -148,7 +153,7 @@ func TestListHandler(t *testing.T) {
 	require.Contains(t, result.Log, "unmarshal list params error")
 
 	// msg not right
-	proposal = getProposal()
+	proposal = getProposal(false)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
@@ -157,7 +162,7 @@ func TestListHandler(t *testing.T) {
 	require.Contains(t, result.Log, "list msg is not identical to proposal")
 
 	// time expired
-	proposal = getProposal()
+	proposal = getProposal(false)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	expiredTime := time.Date(2018, 11, 28, 0, 0, 0, 0, time.UTC)
@@ -225,4 +230,39 @@ func TestListHandler(t *testing.T) {
 		From:             sdk.AccAddress("testacc"),
 	})
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
+}
+
+func TestListHandler_LowerCase(t *testing.T) {
+	cdc := MakeCodec()
+	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Bitcoin",
+		Symbol:      "BTC-000",
+		OrigSymbol:  "BTC",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+
+	tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      types.NativeTokenSymbol,
+		OrigSymbol:  types.NativeTokenSymbol,
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+
+	proposal := getProposal(true)
+	proposal.SetStatus(gov.StatusPassed)
+	govKeeper.SetProposal(ctx, proposal)
+	//ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	listMsg := ListMsg{
+		ProposalId:       1,
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
+		InitPrice:        1000,
+		From:             sdk.AccAddress("testacc"),
+	}
+	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
+	require.Equal(t, sdk.ABCICodeOK, result.Code)
 }
