@@ -57,7 +57,7 @@
 
 [[projects]]
   branch = "upgrade25"
-  digest = "1:7d79bc243dca6ad107138d9e72c57355f1f2187e679bc7412a40e71f0c63ca3c"
+  digest = "1:356beba2450da99130b22f1bae7ddb15c3e1f4d2a0b0991f3a1aba19d65d4ae0"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -851,6 +851,7 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
