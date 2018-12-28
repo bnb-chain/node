@@ -24,12 +24,14 @@ const (
 	TransferFee = 1e6
 
 	// Dex fee
-	ExpireFee       = 1e5
-	ExpireFeeNative = 2e4
-	CancelFee       = 1e5
-	CancelFeeNative = 2e4
-	FeeRate         = 500
-	FeeRateNative   = 250
+	ExpireFee          = 1e5
+	ExpireFeeNative    = 2e4
+	CancelFee          = 1e5
+	CancelFeeNative    = 2e4
+	FeeRate            = 500
+	FeeRateNative      = 250
+	IOCExpireFee       = 5e4
+	IOCExpireFeeNative = 1e4
 )
 
 var DefaultGenesisState = param.GenesisState{
@@ -62,6 +64,8 @@ var FeeGenesisState = []param.FeeParam{
 			{order.CancelFeeNativeField, CancelFeeNative},
 			{order.FeeRateField, FeeRate},
 			{order.FeeRateNativeField, FeeRateNative},
+			{order.IOCExpireFee, IOCExpireFee},
+			{order.IOCExpireFeeNative, IOCExpireFeeNative},
 		},
 	},
 }

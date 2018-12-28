@@ -31,6 +31,8 @@ const (
 	CancelFeeNativeField = "CancelFeeNative"
 	FeeRateField         = "FeeRate"
 	FeeRateNativeField   = "FeeRateNative"
+	IOCExpireFee         = "IOCExpireFee"
+	IOCExpireFeeNative   = "IOCExpireFeeNative"
 )
 
 var (
@@ -247,10 +249,7 @@ func (config FeeConfig) anyEmpty() bool {
 func ParamToFeeConfig(feeParams []param.FeeParam) *FeeConfig {
 	for _, p := range feeParams {
 		if u, ok := p.(*param.DexFeeParam); ok {
-			config := FeeConfig{
-				IOCExpireFee:       0,
-				IOCExpireFeeNative: 0,
-			}
+			config := FeeConfig{}
 			for _, d := range u.DexFeeFields {
 				switch d.FeeName {
 				case ExpireFeeField:
@@ -265,6 +264,10 @@ func ParamToFeeConfig(feeParams []param.FeeParam) *FeeConfig {
 					config.FeeRate = d.FeeValue
 				case FeeRateNativeField:
 					config.FeeRateNative = d.FeeValue
+				case IOCExpireFee:
+					config.IOCExpireFee = d.FeeValue
+				case IOCExpireFeeNative:
+					config.IOCExpireFeeNative = d.FeeValue
 				}
 			}
 			return &config
