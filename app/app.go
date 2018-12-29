@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 
-	"github.com/BiJie/BinanceChain/common/runtime"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -29,6 +28,7 @@ import (
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/fees"
 	bnclog "github.com/BiJie/BinanceChain/common/log"
+	"github.com/BiJie/BinanceChain/common/runtime"
 	"github.com/BiJie/BinanceChain/common/tx"
 	"github.com/BiJie/BinanceChain/common/types"
 	"github.com/BiJie/BinanceChain/common/utils"
@@ -92,7 +92,10 @@ type BinanceChain struct {
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BinanceChain {
 	// set running mode from cmd parameter or config
-	runtime.SetRunningMode(runtime.Mode(ServerContext.StartMode))
+	err := runtime.SetRunningMode(runtime.Mode(ServerContext.StartMode))
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 	// create app-level codec for txs and accounts
 	var cdc = Codec
 	// create composed tx decoder
@@ -165,7 +168,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
-	err := app.LoadCMSLatestVersion()
+	err = app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}

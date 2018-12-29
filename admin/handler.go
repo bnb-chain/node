@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/BiJie/BinanceChain/common/runtime"
 	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -48,12 +46,12 @@ func GetHandler(config *config.Config) types.AbciQueryHandler {
 			return &res
 		}
 
-		if strings.EqualFold(mode, "TransferOnly") {
-			runtime.RunningMode = runtime.TransferOnlyMode
-		} else if strings.EqualFold(mode, "RecoverOnly") {
-			runtime.RunningMode = runtime.RecoverOnlyMode
-		} else if strings.EqualFold(mode, "Normal") {
+		if mode == "0" {
 			runtime.RunningMode = runtime.NormalMode
+		} else if mode == "1" {
+			runtime.RunningMode = runtime.TransferOnlyMode
+		} else if mode == "2" {
+			runtime.RunningMode = runtime.RecoverOnlyMode
 		} else {
 			res := sdk.ErrUnknownRequest("invalid mode").QueryResult()
 			return &res

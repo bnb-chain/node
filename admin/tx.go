@@ -3,14 +3,29 @@ package admin
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	"github.com/BiJie/BinanceChain/common/runtime"
+	"github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
+	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
+	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
 )
 
-var AllowedTxs = map[runtime.Mode][]string{
-	runtime.TransferOnlyMode: {bank.MsgSend{}.Type()},
-	runtime.RecoverOnlyMode:  {},
+var transferOnlyModeBlackList = []string{
+	burn.BurnMsg{}.Type(),
+	freeze.FreezeMsg{}.Type(),
+	freeze.UnfreezeMsg{}.Type(),
+	issue.IssueMsg{}.Type(),
+	issue.MintMsg{}.Type(),
+	order.NewOrderMsg{}.Type(),
+	order.CancelOrderMsg{}.Type(),
+}
+
+var TxBlackList = map[runtime.Mode][]string{
+	runtime.TransferOnlyMode: transferOnlyModeBlackList,
+	runtime.RecoverOnlyMode:  append(transferOnlyModeBlackList, bank.MsgSend{}.Type()),
 }
 
 func TxNotAllowedError() sdk.Error {
@@ -31,11 +46,11 @@ func IsTxAllowed(tx sdk.Tx) bool {
 }
 
 func isMsgAllowed(msg sdk.Msg) bool {
-	for _, msgType := range AllowedTxs[runtime.RunningMode] {
+	for _, msgType := range TxBlackList[runtime.RunningMode] {
 		if msgType == msg.Type() {
-			return true
+			return false
 		}
 	}
 
-	return false
+	return true
 }

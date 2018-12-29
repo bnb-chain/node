@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/BiJie/BinanceChain/wire"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
@@ -28,8 +28,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	adminCmd.AddCommand(
 		client.GetCommands(
 			setModeCmd(cdc),
-			getModeCmd(cdc))...
-		)
+			getModeCmd(cdc))...,
+	)
 
 	adminCmd.AddCommand(client.LineBreak)
 	cmd.AddCommand(adminCmd)
@@ -37,8 +37,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 
 func setModeCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "set-mode [TransferOnly|RecoverOnly|Normal]",
-		Short: "set the current running mode",
+		Use:   "set-mode [0|1|2]",
+		Short: "set the current running mode, 0: Normal, 1: TransferOnly, 2: RecoverOnly",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pvFile := viper.GetString(flagPVPath)
@@ -48,9 +48,7 @@ func setModeCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			mode := args[0]
-			if strings.EqualFold(mode, "TransferOnly") ||
-				strings.EqualFold(mode, "RecoverOnly") ||
-				strings.EqualFold(mode, "Normal") {
+			if mode == "0" || mode == "1" || mode == "2" {
 				cliCtx := context.NewCLIContext().WithCodec(cdc)
 				rand.Seed(time.Now().UnixNano())
 				nonce := strconv.Itoa(rand.Int())
