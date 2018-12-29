@@ -330,20 +330,16 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 			if err != nil {
 				panic(err)
 			}
-			var pid int64
+			var pid string
 			for _, tag := range proposalJson.Response.Tags {
 				if string(tag.Key) == "proposal-id" {
-					err = MakeCodec().UnmarshalBinaryBare(tag.Value, &pid)
-					if err != nil {
-						panic(err)
-					}
+					pid = string(tag.Value)
 				}
 			}
-			pidStr := strconv.FormatInt(pid, 10)
 			time.Sleep(stime * time.Millisecond)
-			execCommand("bnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pidStr, "--option=yes")
+			execCommand("bnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pid, "--option=yes")
 			time.Sleep(time.Duration(*votingTime) * time.Second)
-			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pidStr)
+			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pid)
 			time.Sleep(stime * time.Millisecond)
 			tokens = append(tokens, token)
 			sIndex++
