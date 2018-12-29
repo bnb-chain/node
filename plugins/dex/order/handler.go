@@ -1,6 +1,7 @@
 package order
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -148,7 +149,7 @@ func handleNewOrder(
 	response := NewOrderResponse{
 		OrderID: msg.Id,
 	}
-	serialized, err := cdc.MarshalJSON(&response)
+	serialized, err := json.Marshal(&response)
 	if err != nil {
 		return sdk.ErrInternal(err.Error()).Result()
 	}
