@@ -14,8 +14,6 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(order.NewOrderMsg{}, "dex/NewOrder", nil)
 	cdc.RegisterConcrete(order.CancelOrderMsg{}, "dex/CancelOrder", nil)
 
-	cdc.RegisterConcrete(order.NewOrderResponse{}, "dex/NewOrderResponse", nil)
-
 	cdc.RegisterConcrete(list.ListMsg{}, "dex/ListMsg", nil)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 
