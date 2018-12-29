@@ -28,22 +28,21 @@ func (keeper *Keeper) UpdateFeeParams(ctx sdk.Context, updates []types.FeeParam)
 	dexFeeLoc := 0
 	for index, update := range origin {
 		switch update := update.(type) {
-		case *types.FixedFeeParams:
-			opFeeMap[update.MsgType] = index
+		case types.MsgFeeParams:
+			opFeeMap[update.GetMsgType()] = index
 		case *types.DexFeeParam:
 			dexFeeLoc = index
 		default:
 			keeper.logger.Debug("Origin Fee param not supported ", "feeParam", update)
 		}
-
 	}
 	for _, update := range updates {
 		switch update := update.(type) {
-		case *types.FixedFeeParams:
-			if index, exist := opFeeMap[update.MsgType]; exist {
+		case types.MsgFeeParams:
+			if index, exist := opFeeMap[update.GetMsgType()]; exist {
 				origin[index] = update
 			} else {
-				opFeeMap[update.MsgType] = len(origin)
+				opFeeMap[update.GetMsgType()] = len(origin)
 				origin = append(origin, update)
 			}
 		case *types.DexFeeParam:
@@ -93,8 +92,8 @@ func (keeper *Keeper) registerFeeParamCallBack() {
 func (keeper *Keeper) updateFeeCalculator(updates []types.FeeParam) {
 	fees.UnsetAllCalculators()
 	for _, u := range updates {
-		if u, ok := u.(*types.FixedFeeParams); ok {
-			generator := fees.GetCalculatorGenerator(u.MsgType)
+		if u, ok := u.(types.MsgFeeParams); ok {
+			generator := fees.GetCalculatorGenerator(u.GetMsgType())
 			if generator == nil {
 				continue
 			} else {
@@ -102,7 +101,7 @@ func (keeper *Keeper) updateFeeCalculator(updates []types.FeeParam) {
 				if err != nil {
 					panic(err)
 				}
-				fees.RegisterCalculator(u.MsgType, generator(u))
+				fees.RegisterCalculator(u.GetMsgType(), generator(u))
 			}
 		}
 	}

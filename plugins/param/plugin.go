@@ -10,6 +10,7 @@ import (
 	"github.com/BiJie/BinanceChain/plugins/dex/list"
 	"github.com/BiJie/BinanceChain/plugins/dex/order"
 	"github.com/BiJie/BinanceChain/plugins/param/paramhub"
+	"github.com/BiJie/BinanceChain/plugins/tokens"
 	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
 	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
 	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
@@ -46,6 +47,6 @@ func init() {
 		issue.MintMsgType:              fees.FixedFeeCalculatorGen,
 		burn.BurnRoute:                 fees.FixedFeeCalculatorGen,
 		freeze.FreezeRoute:             fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():          fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():          tokens.TransferFeeCalculatorGen,
 	}
 }
