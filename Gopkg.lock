@@ -56,7 +56,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:f76517ea7c07f133b3da12bcc7b8c5ac935ee06e41b2d859c451ebba1264d762"
+  branch = "issue357_upgrade"
+  digest = "1:c5f810727f579f432371aa63c6ce6518314433b3853489e18835062313ef057d"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -103,9 +104,8 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "8f161c2fa80d36154150653de2d390c3b5495bac"
-  source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.5"
+  revision = ""
+  source = "github.com/BiJie/bnc-cosmos-sdk"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -584,15 +584,17 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  digest = "1:e1cc8dd891e64aab63b0c09f2f12456cbe2cd9cbd9d96dfae3281245f05c2428"
+  branch = "feature/state_syncing_upgrade"
+  digest = "1:7d76ffe80a0b76d72f50c7965066e8cecf347d3fb304af9db57e10e459de2703"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "de0740903a67b624d887f9055d4c60175dcfa758"
-  version = "v0.12.0"
+  revision = ""
+  source = "github.com/ackratos/iavl"
 
 [[projects]]
-  digest = "1:b1beb1e12ecdcaae5d5055fb6c56a6d9646bb66429f3d926574eddba8cedf51d"
+  branch = "feature/state_reactor_upgrade"
+  digest = "1:b3a516db2d0bbf3b20e620cc01d1a2bb159e741ba75eab123d4c4a066d9e58b4"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -658,9 +660,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "25b8c24d03966bb1a41134b6d3dacb7b95051b7f"
-  source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.29.1-binance.2"
+  revision = ""
+  source = "github.com/BiJie/bnc-tendermint"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"

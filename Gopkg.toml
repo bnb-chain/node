@@ -31,17 +31,18 @@
 
 [[override]]
   name = "github.com/tendermint/iavl"
-  version = "=v0.12.0"
+  source = "github.com/ackratos/iavl"
+  branch = "feature/state_syncing_upgrade"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
-  source = "github.com/binance-chain/bnc-tendermint"
-  version = "=v0.29.1-binance.2"
+  source = "github.com/BiJie/bnc-tendermint"
+  branch = "feature/state_reactor_upgrade"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
-  source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "=v0.25.0-binance.5"
+  source = "github.com/BiJie/bnc-cosmos-sdk"
+  branch = "issue357_upgrade"
 
 [[constraint]]
   name = "github.com/pkg/errors"

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tendermint/iavl"
 	"io"
 	"os"
 	"runtime/debug"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	storePkg "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -455,6 +457,129 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		ValidatorUpdates: validatorUpdates,
 		Tags:             tags,
 	}
+}
+
+func (app *BinanceChain) LatestSnapshot() (height int64, numKeys map[string]int64, err error) {
+	app.Logger.Info("query latest snapshot")
+	numKeys = make(map[string]int64)
+	height = app.LastBlockHeight()
+
+	for _, key := range common.StoreKeyNames {
+		var numK int64
+		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[key])
+		itr := store.Iterator(nil, nil)
+		for ; itr.Valid(); itr.Next() {
+			numK++
+		}
+		numKeys[key] = numK
+	}
+
+	return
+}
+
+func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex int64) (chunk map[string][][]byte, err error) {
+	app.Logger.Info("read snapshot chunk", "height", height, "startIndex", startIndex, "endIndex", endIndex)
+	fmt.Printf("read snapshot height:%d\n", height)
+	chunk = make(map[string][][]byte)
+
+	for _, key := range common.StoreKeyNames {
+		keyValueBytes := make([][]byte, 0)
+		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[key])
+
+		// No needed temporaly (in case inject too many interfaces)
+		//itr := store.Iterator(nil, nil)
+		//fmt.Printf("read snapshot store:%s\n", key)
+		//for ; itr.Valid(); itr.Next() {
+		//	ik := itr.Key()
+		//	iv := itr.Value()
+		//	keyValueBytes = append(keyValueBytes, ik)
+		//	keyValueBytes = append(keyValueBytes, iv)
+		//	fmt.Printf("read snapshot key:%X, value:%X\n", ik, iv)
+		//}
+
+		mutableTree := store.(*storePkg.IavlStore).Tree
+		if tree, err := mutableTree.GetImmutable(height); err == nil {
+			// load a full tree from db to generate dot graph
+			tree.IterateFirst(func(nodeBytes []byte) {
+				keyValueBytes = append(keyValueBytes, nodeBytes)
+			})
+			tree.IterateMiddle(func(key []byte, value []byte, version int64) {
+				keyValueBytes = append(keyValueBytes, key)
+			})
+
+			if len(keyValueBytes)%2 != 0 {
+				panic("haha crash!!!")
+			}
+
+			if len(keyValueBytes) > 0 {
+				file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees/%s_%d.txt", key, height))
+				iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
+			}
+
+			chunk[key] = keyValueBytes
+		} else {
+			app.Logger.Error("failed to load immutable tree", "err", err)
+		}
+	}
+
+	return
+}
+
+func (app *BinanceChain) StartRecovery(height int64, numKeys map[string]int64) error {
+	app.Logger.Info("start recovery")
+	//for storeName, numKey := range numKeys {
+	//	if numKey > 0 {
+	//		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[storeName])
+	//		// pretend we have history
+	//		store.(*storePkg.IavlStore).Tree.SetVersion(height - 1)
+	//	}
+	//}
+	return nil
+}
+
+func (app *BinanceChain) WriteRecoveryChunk(storeName string, chunk [][]byte) error {
+	store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[storeName])
+	fmt.Printf("write snapshot store:%s\n", storeName)
+	nodes := make([]*iavl.Node, 0)
+	inOrderKeys := make([][]byte, 0)
+	for idx := 0; idx < len(chunk); idx++ {
+		if idx < len(chunk)/2 {
+			node, _ := iavl.MakeNode(chunk[idx])
+			nodes = append(nodes, node)
+		} else {
+			inOrderKeys = append(inOrderKeys, chunk[idx])
+		}
+	}
+
+	if len(chunk) > 0 {
+		mutableTree := store.(*storePkg.IavlStore).Tree
+		tree := mutableTree.ImmutableTree
+		tree.RecoverFromRemoteNodes(nodes, inOrderKeys)
+		// load a full tree from db to generate dot graph
+		//tree.Iterate(func(key []byte, value []byte) bool {
+		//	return false
+		//})
+		tree.Hash()
+		file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees_witness/%s.txt", storeName))
+		iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
+	}
+
+	app.Logger.Info("finished recovery", "store", storeName)
+	return nil
+}
+
+func (app *BinanceChain) EndRecovery(height int64) error {
+	app.Logger.Info("finished recovery")
+	stores := app.GetCommitMultiStore()
+	commitId := stores.CommitAt(height)
+	// block store required to hydrate dex OB
+	err := app.LoadCMSLatestVersion()
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
+	hashHex := fmt.Sprintf("%X", commitId.Hash)
+	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
+	return nil
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.

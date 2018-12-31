@@ -38,27 +38,30 @@ mkdir -p ${home}/.bnbchaind_witness/config
 
 #sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${deamonhome}/config/config.toml
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
+sed -i -e 's/logToConsole = true/logToConsole = false/g' ${deamonhome}/config/app.toml
 sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
 # config witness node
 cp ${deamonhome}/config/genesis.json ${witnesshome}/config/
+cp ${deamonhome}/config/app.toml ${witnesshome}/config/
 cp ${deamonhome}/config/config.toml ${witnesshome}/config/
 
 sed -i -e "s/26/27/g" ${witnesshome}/config/config.toml
 sed -i -e "s/6060/7060/g" ${witnesshome}/config/config.toml
+#sed -i -e "s/fastest_sync_height = -1/fastest_sync_height = 10/g" ${witnesshome}/config/config.toml
 
 # start validator
-${executable} start > ${deamonhome}/log.txt 2>&1 &
+${executable} start --pruning nothing > ${deamonhome}/log.txt 2>&1 &
 validator_pid=$!
 echo ${validator_pid}
-sleep 10 # sleep in case cli status call failed to get node id
+sleep 60 # sleep in case cli status call failed to get node id
 validatorStatus=$(${cli} status)
 validator_id=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
 #echo ${validator_id}
 
 # set witness peer to validator and start witness
 sed -i -e "s/persistent_peers = \"\"/persistent_peers = \"${validator_id}@127.0.0.1:26656\"/g" ${witnesshome}/config/config.toml
-${executable} start --home ${witnesshome} > ${witnesshome}/log.txt 2>&1 &
+${executable} start --pruning nothing --home ${witnesshome} > ${witnesshome}/log.txt 2>&1 &
 witness_pid=$!
 echo ${witness_pid}
 
