@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
@@ -13,8 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-        "github.com/cosmos/cosmos-sdk/baseapp"
-        "github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/server"
 
 	"github.com/binance-chain/node/app"
 	bnbInit "github.com/binance-chain/node/cmd/bnbchaind/init"
@@ -22,7 +20,7 @@ import (
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	return app.NewBinanceChain(logger, db, storeTracer, baseapp.SetPruning(viper.GetString("pruning")))
+	return app.NewBinanceChain(logger, db, storeTracer)
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {

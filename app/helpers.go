@@ -6,15 +6,18 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	cosmossrv "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/tendermint/tendermint/abci/server"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/blockchain"
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmcfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -26,6 +29,7 @@ import (
 
 	"github.com/binance-chain/node/app/config"
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -177,6 +181,60 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 				// deliberately do nothing for message other than NewOrderMsg
 				// in future, we may publish fail status of send msg
 			}
+		}
+	}
+}
+
+// binance-chain implementation of PruningStrategy
+type KeepRecentAndBreatheBlock struct {
+	breatheBlockInterval int64
+
+	// Keep recent number blocks in case of rollback
+	numRecent int64
+
+	blockStore *blockchain.BlockStore
+
+	blockStoreInitializer sync.Once
+}
+
+func NewKeepRecentAndBreatheBlock(breatheBlockInterval, numRecent int64, config *tmcfg.Config) *KeepRecentAndBreatheBlock {
+	return &KeepRecentAndBreatheBlock{
+		breatheBlockInterval: breatheBlockInterval,
+		numRecent:            numRecent,
+	}
+}
+
+// TODO: must enhance performance!
+func (strategy KeepRecentAndBreatheBlock) ShouldPrune(version, latestVersion int64) bool {
+	// we are replay the possible 1 block diff between state and blockstore db
+	// save this block anyway and don't init strategy's blockStore
+	if cosmossrv.BlockStore == nil {
+		return false
+	}
+
+	// only at this time block store is initialized!
+	// block store has been opened after the start of tendermint node, we have to share same instance of block store
+	strategy.blockStoreInitializer.Do(func() {
+		strategy.blockStore = cosmossrv.BlockStore
+	})
+
+	if version == 1 {
+		return false
+	} else if latestVersion-version < strategy.numRecent {
+		return false
+	} else {
+		if strategy.breatheBlockInterval > 0 {
+			return version%strategy.breatheBlockInterval != 0
+		} else {
+			lastBlock := strategy.blockStore.LoadBlock(version - 1)
+			block := strategy.blockStore.LoadBlock(version)
+
+			if lastBlock == nil {
+				// this node is a state_synced node, previously block is not synced
+				// so we cannot tell whether this (first) block is breathe block or not
+				return false
+			}
+			return utils.SameDayInUTC(lastBlock.Time, block.Time)
 		}
 	}
 }
