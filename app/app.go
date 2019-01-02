@@ -6,6 +6,7 @@ import (
 	"github.com/BiJie/BinanceChain/app/val"
 	"io"
 	"os"
+	"runtime/debug"
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -387,7 +388,7 @@ func (app *BinanceChain) ExportAppStateAndValidators() (appState json.RawMessage
 func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	defer func() {
 		if r := recover(); r != nil {
-			app.Logger.Error("internal error caused by query", "req", req)
+			app.Logger.Error("internal error caused by query", "req", req, "stack", debug.Stack())
 			res = sdk.ErrInternal("internal error").QueryResult()
 		}
 	}()
@@ -413,14 +414,22 @@ func (app *BinanceChain) AccountHandler(chainApp types.ChainApp, req abci.Reques
 	if len(path) == 2 {
 		addr := path[1]
 		if accAddress, err := sdk.AccAddressFromBech32(addr); err == nil {
-			acc := app.CheckState.AccountCache.GetAccount(accAddress)
-			bz, err := Codec.MarshalBinaryBare(acc)
-			if err != nil {
-				res = sdk.ErrInvalidAddress(addr).QueryResult()
+
+			if acc := app.CheckState.AccountCache.GetAccount(accAddress); acc != nil {
+				bz, err := Codec.MarshalBinaryBare(acc)
+				if err != nil {
+					res = sdk.ErrInvalidAddress(addr).QueryResult()
+				} else {
+					res = abci.ResponseQuery{
+						Code:  uint32(sdk.ABCICodeOK),
+						Value: bz,
+					}
+				}
 			} else {
+				// let api server return 204 No Content
 				res = abci.ResponseQuery{
 					Code:  uint32(sdk.ABCICodeOK),
-					Value: bz,
+					Value: make([]byte, 0, 0),
 				}
 			}
 		} else {
