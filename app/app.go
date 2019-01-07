@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -342,6 +342,14 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 	return res
 }
 
+func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, blockTime time.Time) bool {
+	if app.baseConfig.BreatheBlockInterval > 0 {
+		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
+	} else {
+		return !utils.SameDayInUTC(lastBlockTime, blockTime)
+	}
+}
+
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
@@ -350,7 +358,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	var tradesToPublish []*pub.Trade
 
-	isBreatheBlock := !utils.SameDayInUTC(lastBlockTime, blockTime)
+	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	if !isBreatheBlock || height == 1 {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)

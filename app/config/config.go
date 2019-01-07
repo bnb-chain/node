@@ -5,10 +5,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/server"
-
+	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 )
@@ -32,6 +30,8 @@ const appConfigTemplate = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
 [base]
+# Interval blocks of breathe block, if breatheBlockInterval is 0, breathe block will be created every day.
+breatheBlockInterval = {{ .BaseConfig.BreatheBlockInterval }}
 # Size of account cache
 accountCacheSize = {{ .BaseConfig.AccountCacheSize }}
 # Size of signature cache
@@ -218,16 +218,18 @@ func defaultLogConfig() *LogConfig {
 }
 
 type BaseConfig struct {
-	AccountCacheSize   int   `mapstructure:"accountCacheSize"`
-	SignatureCacheSize int   `mapstructure:"signatureCacheSize"`
-	StartMode          uint8 `mapstructure:"startMode"`
+	AccountCacheSize     int   `mapstructure:"accountCacheSize"`
+	SignatureCacheSize   int   `mapstructure:"signatureCacheSize"`
+	StartMode            uint8 `mapstructure:"startMode"`
+	BreatheBlockInterval int   `mapstructure:"breatheBlockInterval"`
 }
 
 func defaultBaseConfig() *BaseConfig {
 	return &BaseConfig{
-		AccountCacheSize:   30000,
-		SignatureCacheSize: 30000,
-		StartMode:          0,
+		AccountCacheSize:     30000,
+		SignatureCacheSize:   30000,
+		StartMode:            0,
+		BreatheBlockInterval: 0,
 	}
 }
 
