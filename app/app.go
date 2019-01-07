@@ -195,16 +195,16 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 func (app *BinanceChain) initDex() {
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	// TODO: make the concurrency configurable
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), 2, app.Codec, app.publicationConfig.ShouldPublishAny())
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
 	}
-	// count back to 7 days.
-	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, 7,
+	// count back to days in config.
+	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
 		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
 }
 
