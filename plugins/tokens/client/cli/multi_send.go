@@ -18,16 +18,16 @@ import (
 )
 
 const (
-	flagTx     = "tx"
-	flagTxPath = "tx-path"
+	flagTransfers     = "transfers"
+	flagTransfersFile = "transfers-file"
 )
 
-type Tx struct {
+type Transfer struct {
 	To     string `json:"to"`
 	Amount string `json:"amount"`
 }
 
-type Txs []Tx
+type Transfers []Transfer
 
 // MultiSendCmd will create a send tx and sign it with the given key
 func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
@@ -50,7 +50,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			txPath := viper.GetString(flagTxPath)
+			txPath := viper.GetString(flagTransfersFile)
 			txBytes := make([]byte, 0)
 			if txPath != "" {
 				txBytes, err = ioutil.ReadFile(txPath)
@@ -58,11 +58,11 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 					return err
 				}
 			} else {
-				txStr := viper.GetString(flagTx)
+				txStr := viper.GetString(flagTransfers)
 				txBytes = []byte(txStr)
 			}
 
-			txs := Txs{}
+			txs := Transfers{}
 			err = json.Unmarshal(txBytes, &txs)
 			if err != nil {
 				return err
@@ -109,8 +109,8 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagTx, "", "Tx details, format: [{\"to\": \"addr\", \"amount\": \"1:BNB,2:BTC\"}, ...]")
-	cmd.Flags().String(flagTxPath, "", "Path of tx details, if path is not empty, --tx will be ignored")
+	cmd.Flags().String(flagTransfers, "", "Transfers details, format: [{\"to\": \"addr\", \"amount\": \"1:BNB,2:BTC\"}, ...]")
+	cmd.Flags().String(flagTransfersFile, "", "File of transfers details, if transfers-file is not empty, --transfers will be ignored")
 
 	return cmd
 }
