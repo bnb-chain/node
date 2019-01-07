@@ -36,6 +36,8 @@ const appConfigTemplate = `# This is a TOML config file.
 accountCacheSize = {{ .BaseConfig.AccountCacheSize }}
 # Size of signature cache
 signatureCacheSize = {{ .BaseConfig.SignatureCacheSize }}
+# Running mode when start up, 0: Normal, 1: TransferOnly, 2: RecoverOnly
+startMode = {{ .BaseConfig.StartMode }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -216,14 +218,16 @@ func defaultLogConfig() *LogConfig {
 }
 
 type BaseConfig struct {
-	AccountCacheSize   int `mapstructure:"accountCacheSize"`
-	SignatureCacheSize int `mapstructure:"signatureCacheSize"`
+	AccountCacheSize   int   `mapstructure:"accountCacheSize"`
+	SignatureCacheSize int   `mapstructure:"signatureCacheSize"`
+	StartMode          uint8 `mapstructure:"startMode"`
 }
 
 func defaultBaseConfig() *BaseConfig {
 	return &BaseConfig{
 		AccountCacheSize:   30000,
 		SignatureCacheSize: 30000,
+		StartMode:          0,
 	}
 }
 
