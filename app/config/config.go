@@ -38,6 +38,10 @@ accountCacheSize = {{ .BaseConfig.AccountCacheSize }}
 signatureCacheSize = {{ .BaseConfig.SignatureCacheSize }}
 # Running mode when start up, 0: Normal, 1: TransferOnly, 2: RecoverOnly
 startMode = {{ .BaseConfig.StartMode }}
+# Concurrency of OrderKeeper, should be power of 2
+orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
+# Days count back for breathe block
+breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -218,18 +222,22 @@ func defaultLogConfig() *LogConfig {
 }
 
 type BaseConfig struct {
-	AccountCacheSize     int   `mapstructure:"accountCacheSize"`
-	SignatureCacheSize   int   `mapstructure:"signatureCacheSize"`
-	StartMode            uint8 `mapstructure:"startMode"`
-	BreatheBlockInterval int   `mapstructure:"breatheBlockInterval"`
+	AccountCacheSize          int   `mapstructure:"accountCacheSize"`
+	SignatureCacheSize        int   `mapstructure:"signatureCacheSize"`
+	StartMode                 uint8 `mapstructure:"startMode"`
+	BreatheBlockInterval      int   `mapstructure:"breatheBlockInterval"`
+	OrderKeeperConcurrency    uint  `mapstructure:"orderKeeperConcurrency"`
+	BreatheBlockDaysCountBack int   `mapstructure:"breatheBlockDaysCountBack"`
 }
 
 func defaultBaseConfig() *BaseConfig {
 	return &BaseConfig{
-		AccountCacheSize:     30000,
-		SignatureCacheSize:   30000,
-		StartMode:            0,
-		BreatheBlockInterval: 0,
+		AccountCacheSize:          30000,
+		SignatureCacheSize:        30000,
+		StartMode:                 0,
+		BreatheBlockInterval:      0,
+		OrderKeeperConcurrency:    2,
+		BreatheBlockDaysCountBack: 7,
 	}
 }
 
