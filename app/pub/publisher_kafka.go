@@ -37,7 +37,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Successes = true
 	config.Producer.Retry.Max = 20
-	config.Producer.Compression = sarama.CompressionNone
+	config.Producer.Compression = sarama.CompressionGZIP
 
 	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection
 	// to make sure messages won't out-of-order
