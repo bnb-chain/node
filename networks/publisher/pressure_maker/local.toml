@@ -2,6 +2,7 @@ numOfTradesPerBlock = 2
 numOfBlocks = 5
 blockIntervalMs = 1000
 mode = 2
+prometheusAddr = "127.0.0.1:29660"
 
 ##### publication related configurations #####
 [publication]
