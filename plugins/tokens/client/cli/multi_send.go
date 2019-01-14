@@ -1,11 +1,8 @@
 package commands
 
 import (
-	"strings"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"encoding/json"
+	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
@@ -13,19 +10,30 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/BiJie/BinanceChain/wire"
 )
 
 const (
-	flagTo = "to"
+	flagTransfers     = "transfers"
+	flagTransfersFile = "transfers-file"
 )
+
+type Transfer struct {
+	To     string `json:"to"`
+	Amount string `json:"amount"`
+}
+
+type Transfers []Transfer
 
 // MultiSendCmd will create a send tx and sign it with the given key
 func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "multi-send",
-		Short: "Create and sign a send tx",
+		Short: "Create and sign a multi send tx",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
 			ctx := context.NewCLIContext().
@@ -42,33 +50,48 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			toStr := viper.GetString(flagTo)
-
-			toAddrsStr := strings.Split(toStr, ":")
-
-			toAddrs := make([]sdk.AccAddress, 0, len(toAddrsStr))
-			for _, toAddr := range toAddrsStr {
-				println(toAddr)
-				to, err := sdk.AccAddressFromBech32(toAddr)
+			txPath := viper.GetString(flagTransfersFile)
+			txBytes := make([]byte, 0)
+			if txPath != "" {
+				txBytes, err = ioutil.ReadFile(txPath)
 				if err != nil {
 					return err
 				}
-
-				toAddrs = append(toAddrs, to)
+			} else {
+				txStr := viper.GetString(flagTransfers)
+				txBytes = []byte(txStr)
 			}
 
-			// parse toCoins trying to be sent
-			amount := viper.GetString(flagAmount)
-			toCoins, err := sdk.ParseCoins(amount)
+			txs := Transfers{}
+			err = json.Unmarshal(txBytes, &txs)
 			if err != nil {
 				return err
 			}
 
+			if len(txs) == 0 {
+				return errors.New("tx is empty")
+			}
+
+			toAddrs := make([]sdk.AccAddress, 0, len(txs))
+			toCoins := make([]sdk.Coins, 0, len(txs))
+
+			for _, tx := range txs {
+				to, err := sdk.AccAddressFromBech32(tx.To)
+				if err != nil {
+					return err
+				}
+				toAddrs = append(toAddrs, to)
+
+				toCoin, err := sdk.ParseCoins(tx.Amount)
+				if err != nil {
+					return err
+				}
+				toCoins = append(toCoins, toCoin)
+			}
+
 			fromCoins := sdk.Coins{}
 			for _, toCoin := range toCoins {
-				fromCoin := toCoin
-				fromCoin.Amount = fromCoin.Amount * int64(len(toAddrs))
-				fromCoins = append(fromCoins, fromCoin)
+				fromCoins = fromCoins.Plus(toCoin)
 			}
 
 			// ensure account has enough toCoins
@@ -76,32 +99,29 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			if !account.GetCoins().IsGTE(fromCoins) {
 				return errors.Errorf("Address %s doesn't have enough toCoins to pay for this transaction.", from)
 			}
 
 			// build and sign the transaction, then broadcast to Tendermint
-			msg := BuildMsg(from, fromCoins, toAddrs, toCoins)
+			msg := BuildMultiSendMsg(from, fromCoins, toAddrs, toCoins)
 			return utils.CompleteAndBroadcastTxCli(txBldr, ctx, []sdk.Msg{msg})
-
 		},
 	}
 
-	cmd.Flags().String(flagTo, "", "Address to send coins")
-	cmd.Flags().String(flagAmount, "", "Amount of coins to send")
+	cmd.Flags().String(flagTransfers, "", "Transfers details, format: [{\"to\": \"addr\", \"amount\": \"1:BNB,2:BTC\"}, ...]")
+	cmd.Flags().String(flagTransfersFile, "", "File of transfers details, if transfers-file is not empty, --transfers will be ignored")
 
 	return cmd
 }
 
-func BuildMsg(from sdk.AccAddress, fromCoins sdk.Coins, toAddrs []sdk.AccAddress, toCoins sdk.Coins) sdk.Msg {
+func BuildMultiSendMsg(from sdk.AccAddress, fromCoins sdk.Coins, toAddrs []sdk.AccAddress, toCoins []sdk.Coins) sdk.Msg {
 	input := bank.NewInput(from, fromCoins)
 
 	output := make([]bank.Output, 0, len(toAddrs))
-	for _, toAddr := range toAddrs {
-		output = append(output, bank.NewOutput(toAddr, toCoins))
+	for idx, toAddr := range toAddrs {
+		output = append(output, bank.NewOutput(toAddr, toCoins[idx]))
 	}
 	msg := bank.NewMsgSend([]bank.Input{input}, output)
-
 	return msg
 }
