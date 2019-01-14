@@ -15,13 +15,17 @@ import (
 
 const (
 	// Operate fee
-	GovFee      = 1e6
-	ListingFee  = 1e12
-	IssueFee    = 2000e8
-	MintFee     = 500e8
-	BurnFee     = 1e6
-	FreezeFee   = 1e6
-	TransferFee = 1e6
+	GovFee     = 1e6
+	ListingFee = 1e12
+	IssueFee   = 2000e8
+	MintFee    = 500e8
+	BurnFee    = 1e6
+	FreezeFee  = 1e6
+
+	// Transfer fee
+	TransferFee       = 1e6
+	MultiTransferFee  = 8e5
+	LowerLimitAsMulti = 2
 
 	// Dex fee
 	ExpireFee          = 1e5
@@ -53,7 +57,16 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{issue.MintMsgType, MintFee, sdk.FeeForAll},
 	&param.FixedFeeParams{burn.BurnRoute, BurnFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{freeze.FreezeRoute, FreezeFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{bank.MsgSend{}.Type(), TransferFee, sdk.FeeForProposer},
+
+	// Transfer
+	&param.TransferFeeParam{
+		FixedFeeParams: param.FixedFeeParams{
+			MsgType: bank.MsgSend{}.Type(),
+			Fee:     TransferFee,
+			FeeFor:  sdk.FeeForProposer},
+		MultiTransferFee:  MultiTransferFee,
+		LowerLimitAsMulti: LowerLimitAsMulti,
+	},
 
 	// Dex
 	&param.DexFeeParam{

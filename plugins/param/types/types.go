@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	OperateFeeType = "operate"
-	DexFeeType     = "dex"
+	OperateFeeType  = "operate"
+	TransferFeeType = "transfer"
+	DexFeeType      = "dex"
 )
 
 type LastProposalID struct {
@@ -33,6 +34,13 @@ type FeeParam interface {
 	Check() error
 }
 
+var _ FeeParam = MsgFeeParams(nil)
+type MsgFeeParams interface {
+	FeeParam
+	GetMsgType() string
+}
+
+var _ MsgFeeParams = (*FixedFeeParams)(nil)
 type FixedFeeParams struct {
 	MsgType string                  `json:"msg_type"`
 	Fee     int64                   `json:"fee"`
@@ -43,9 +51,45 @@ func (p *FixedFeeParams) GetParamType() string {
 	return OperateFeeType
 }
 
+func (p *FixedFeeParams) GetMsgType() string {
+	return p.MsgType
+}
+
 func (p *FixedFeeParams) Check() error {
 	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
 		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
+	}
+
+	if p.Fee < 0 {
+		return fmt.Errorf("fee(%d) should not be negative", p.Fee)
+	}
+	return nil
+}
+
+var _ MsgFeeParams = (*TransferFeeParam)(nil)
+type TransferFeeParam struct {
+	FixedFeeParams
+	MultiTransferFee  int64 `json:"multi_transfer_fee"`
+	LowerLimitAsMulti int64 `json:"lower_limit_as_multi"`
+}
+
+func (p *TransferFeeParam) GetParamType() string {
+	return TransferFeeType
+}
+
+func (p *TransferFeeParam) Check() error {
+	err := p.FixedFeeParams.Check()
+	if err != nil {
+		return err
+	}
+	if p.Fee <= 0 || p.MultiTransferFee <= 0 {
+		return fmt.Errorf("both fee(%d) and multi_transfer_fee(%d) should be positive", p.Fee, p.MultiTransferFee)
+	}
+	if p.MultiTransferFee > p.Fee {
+		return fmt.Errorf("multi_transfer_fee(%d) should not be bigger than fee(%d)", p.MultiTransferFee, p.Fee)
+	}
+	if p.LowerLimitAsMulti <= 1 {
+		return fmt.Errorf("lower_limit_as_multi should > 1")
 	}
 	return nil
 }
