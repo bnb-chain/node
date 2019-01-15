@@ -361,7 +361,7 @@ func initializeAccounts(tokens []string, flag bool) {
 		for i, key := range sortKeys {
 			var buffer bytes.Buffer
 			for j, token := range tokens {
-				buffer.WriteString("25000000000:")
+				buffer.WriteString("50000000000:")
 				buffer.WriteString(token)
 				if j != (len(tokens)-1) {
 					buffer.WriteString(",")
@@ -434,15 +434,20 @@ func doCreateTask(tokens []string) {
 }
 
 func allocateCreate(tokens []string) {
-	var buyPrices []int64 = generatePrices(*batchSize, 1.00)
-	var sellPrices []int64 = generatePrices(*batchSize, 1.01)
+	var buyPrices []int64 = generatePrices(*batchSize, 0.00)
+	var sellPrices []int64 = generatePrices(*batchSize, 0.01)
+	var largeBuyers []int
 	createIndex := 0
 	nameIndex := 0
 	for i := 0; i < *batchSize; i++ {
 		for j := 0; j < len(tokens); j++ {
 			symbol := fmt.Sprintf("%s_BNB", tokens[j])
 			fmt.Printf("allocating #%d\n", createIndex)
-			createChn <- buildC(sortKeys[nameIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
+			if largeBuyers != nil && isLargeBuyer(nameIndex, largeBuyers) {
+				createChn <- buildC(sortKeys[nameIndex], buy, symbol, 9990000, 10000000000, "GTC")
+			} else {
+				createChn <- buildC(sortKeys[nameIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
+			}
 			createIndex++
 			if createIndex == *batchSize {
 				close(createChn)
@@ -451,6 +456,8 @@ func allocateCreate(tokens []string) {
 			nameIndex++
 			if nameIndex == len(sortKeys) {
 				nameIndex = 0
+				largeBuyers = make([]int, len(sortKeys)/1000)
+				generateLargeBuyers(largeBuyers)
 			}
 			createChn <- buildC(sortKeys[nameIndex], sell, symbol, sellPrices[i], 100000000, "GTC")
 			createIndex++
@@ -461,6 +468,8 @@ func allocateCreate(tokens []string) {
 			nameIndex++
 			if nameIndex == len(sortKeys) {
 				nameIndex = 0
+				largeBuyers = make([]int, len(sortKeys)/1000)
+				generateLargeBuyers(largeBuyers)
 			}
 		}
 	}
@@ -470,7 +479,7 @@ func generatePrices(noOfPrices int, margin float64) []int64 {
 	rand.Seed(1)
 	prices := make([]int64, noOfPrices)
 	for i := 0; i < noOfPrices; i++ {
-		f := rand.Float64() + margin
+		f := rand.Float64()/10 + margin
 		s := fmt.Sprintf("%.4f", f)
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
@@ -479,6 +488,23 @@ func generatePrices(noOfPrices int, margin float64) []int64 {
 		prices[i] = int64(f*10000) * 10000
 	}
 	return prices
+}
+
+func generateLargeBuyers(largeBuyers []int) {
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < len(largeBuyers); i++ {
+		largeBuyers[i] = rand.Intn(len(sortKeys))
+	}
+	sort.Ints(largeBuyers)
+}
+
+func isLargeBuyer(index int, largeBuyers []int) bool {
+	for _, v := range largeBuyers {
+		if v == index {
+			return true
+		}
+	}
+	return false
 }
 
 func buildC(from string, side int8, symbol string, price int64, qty int64, tif string) DEXCreate {
