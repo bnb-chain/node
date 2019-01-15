@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go.uber.org/ratelimit"
@@ -173,7 +174,7 @@ func main() {
 
 	lookupAccounts()
 
-	tokens := generateTokens(0, 2, *generateToken)
+	tokens := generateTokens(0, 9, *generateToken)
 	if tokens == nil {
 		path := filepath.Join(*csvPath, "tokens.csv")
 		file, err := os.Open(path)
@@ -351,19 +352,43 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 func initializeAccounts(tokens []string, flag bool) {
 	tokens = append(tokens, "BNB")
 	if flag == true {
-		for _, token := range tokens {
+		type Transfer struct {
+			To 		string `json:to`
+			Amount 	string `json:amount`
+		}
+		b := 0
+		transfers := make([]Transfer, 2000)
+		for i, key := range sortKeys {
 			var buffer bytes.Buffer
-			for i, key := range sortKeys {
-				buffer.WriteString(accToAdd[key])
-				buffer.WriteString(":")
-				if i != 0 && (i%2000 == 0 || i == len(sortKeys)-1) {
-					fmt.Println(token, i)
-					list := buffer.String()
-					res := list[:len(list)-1]
-					buffer.Reset()
-					execCommand("bnbcli", "token", "multi-send", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--amount=10000000000:"+token, "--to="+res)
-					time.Sleep(stime * time.Millisecond)
+			for j, token := range tokens {
+				buffer.WriteString("25000000000:")
+				buffer.WriteString(token)
+				if j != (len(tokens)-1) {
+					buffer.WriteString(",")
 				}
+			}
+			transfers[b] = Transfer{
+				To: 	accToAdd[key],
+				Amount: buffer.String(),
+			}
+			b++
+			if b == len(transfers) || i == len(sortKeys)-1 {
+				b = 0
+				bytes, err := json.Marshal(transfers)
+				if err != nil {
+					panic(err)
+				}
+				path := filepath.Join(*csvPath, fmt.Sprintf("transfers_%d.data", i))
+				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+				if err != nil {
+					panic(err)
+				}
+				defer file.Close()
+				writer := bufio.NewWriter(file)
+				writer.Write(bytes)
+				writer.Flush()
+				execCommand("bnbcli", "token", "multi-send", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--transfers-file", path)
+				time.Sleep(stime * time.Millisecond)
 			}
 		}
 	}
