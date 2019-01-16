@@ -105,7 +105,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, ServerContext.PublishAccountBalance, baseAppOptions...),
+		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		baseConfig:        ServerContext.BaseConfig,
@@ -585,6 +585,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
+	var transferToPublish *pub.Transfers
 	var latestPriceLevels order.ChangedPriceLevelsMap
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
@@ -597,6 +598,9 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 				txRelatedAccounts,
 				tradeRelatedAccounts,
 				blockFee.Validators)
+		}
+		if app.publicationConfig.PublishTransfer {
+			transferToPublish = pub.GetTransferPublished(app.Pool, height, blockTime)
 		}
 
 		if app.publicationConfig.PublishOrderBook {
@@ -627,7 +631,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
-		app.DexKeeper.RoundOrderFees)
+		app.DexKeeper.RoundOrderFees,
+		transferToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {

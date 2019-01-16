@@ -21,4 +21,3 @@ func SetRunningMode(mode Mode) error {
 	RunningMode = mode
 	return nil
 }
-

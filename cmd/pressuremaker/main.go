@@ -23,11 +23,12 @@ import (
 type PressureMakerConfig struct {
 	config.PublicationConfig `mapstructure:"publication"`
 
-	NumOfTradesPerBlock int    `mapstructure:"numOfTradesPerBlock"`
-	Blocks              int    `mapstructure:"numOfBlocks"`
-	BlockIntervalMs     int    `mapstructure:"blockIntervalMs"`
-	PressureMode        int    `mapstructure:"mode"`
-	PrometheusAddr      string `mapstructure:"prometheusAddr"`
+	NumOfTradesPerBlock   int    `mapstructure:"numOfTradesPerBlock"`
+	NumOfTransferPerBlock int    `mapstructure:"numOfTransferPerBlock"`
+	Blocks                int    `mapstructure:"numOfBlocks"`
+	BlockIntervalMs       int    `mapstructure:"blockIntervalMs"`
+	PressureMode          int    `mapstructure:"mode"`
+	PrometheusAddr        string `mapstructure:"prometheusAddr"`
 }
 
 func main() {
@@ -95,10 +96,11 @@ var rootCmd = &cobra.Command{
 		}()
 
 		generator := utils.MessageGenerator{
-			NumOfTradesPerBlock: cfg.NumOfTradesPerBlock,
-			NumOfBlocks:         cfg.Blocks,
-			OrderChangeMap:      make(orderPkg.OrderInfoForPublish, 0),
-			TimeStart:           time.Now(),
+			NumOfTradesPerBlock:   cfg.NumOfTradesPerBlock,
+			NumOfTransferPerBlock: cfg.NumOfTransferPerBlock,
+			NumOfBlocks:           cfg.Blocks,
+			OrderChangeMap:        make(orderPkg.OrderInfoForPublish, 0),
+			TimeStart:             time.Now(),
 		}
 		generator.Setup()
 
@@ -106,21 +108,22 @@ var rootCmd = &cobra.Command{
 			var tradesToPublish []*pub.Trade
 			var orderChanges orderPkg.OrderChanges
 			var accounts map[string]pub.Account
+			var transfers *pub.Transfers
 			timeNow := generator.TimeStart.Add(time.Second * time.Duration(h))
 			timePub := timeNow.Unix()
 			switch cfg.PressureMode {
 			case 1:
 				// each trade has two equal quantity order
-				tradesToPublish, orderChanges, accounts = generator.OneOnOneMessages(h, timeNow)
+				tradesToPublish, orderChanges, accounts, transfers = generator.OneOnOneMessages(h, timeNow)
 			case 2:
 				// each big order eat two small orders
-				tradesToPublish, orderChanges, accounts = generator.TwoOnOneMessages(h, timeNow)
+				tradesToPublish, orderChanges, accounts, transfers = generator.TwoOnOneMessages(h, timeNow)
 			case 3:
 				// simulate 1 million expire orders to publish at breathe block
 				tradesToPublish, orderChanges, accounts = generator.ExpireMessages(h, timeNow)
 			}
 			time.Sleep(time.Duration(cfg.BlockIntervalMs) * time.Millisecond)
-			generator.Publish(int64(h), timePub, tradesToPublish, orderChanges, generator.OrderChangeMap, accounts)
+			generator.Publish(int64(h), timePub, tradesToPublish, orderChanges, generator.OrderChangeMap, accounts, transfers)
 		}
 
 		<-finishSignal
