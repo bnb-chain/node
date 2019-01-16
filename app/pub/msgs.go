@@ -16,6 +16,7 @@ const (
 	booksTpe
 	executionResultTpe
 	blockFeeTpe
+	transferType
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
@@ -30,6 +31,8 @@ func (this msgType) String() string {
 		return "ExecutionResults"
 	case blockFeeTpe:
 		return "BlockFee"
+	case transferType:
+		return "Transfers"
 	default:
 		return "Unknown"
 	}
@@ -451,4 +454,99 @@ func (msg BlockFee) ToNativeMap() map[string]interface{} {
 	}
 	native["validators"] = validators
 	return native
+}
+
+type Coin struct {
+	Denom  string `json:"denom"`
+	Amount int64  `json:"amount"`
+}
+
+func (coin Coin) String() string {
+	return fmt.Sprintf("%v%v", coin.Amount, coin.Denom)
+}
+
+func (msg Coin) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["denom"] = msg.Denom
+	native["amount"] = msg.Amount
+	return native
+}
+
+type Receiver struct {
+	Addr  string
+	Coins []Coin
+}
+
+func (msg Receiver) String() string {
+	return fmt.Sprintf("Transfer receiver %s get coin %v", msg.Addr, msg.Coins)
+}
+
+func (msg Receiver) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["addr"] = sdk.AccAddress(msg.Addr).String()
+	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	for idx, c := range msg.Coins {
+		coins[idx] = c.ToNativeMap()
+	}
+	native["coins"] = coins
+	return native
+}
+
+type Transfer struct {
+	From string
+	To   []Receiver
+}
+
+func (msg Transfer) String() string {
+	return fmt.Sprintf("Transfer : from: %s, to: %v", msg.From, msg.To)
+}
+
+func (msg Transfer) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["from"] = sdk.AccAddress(msg.From).String()
+	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
+	for idx, t := range msg.To {
+		to[idx] = t.ToNativeMap()
+	}
+	native["to"] = to
+	return native
+}
+
+type Transfers struct {
+	Height    int64
+	Num       int
+	Timestamp int64
+	Transfers []Transfer
+}
+
+func (msg *Transfers) String() string {
+	return fmt.Sprintf("Transfers in block %d, : %v", msg.Height, msg.Transfers)
+}
+
+func (msg *Transfers) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["height"] = msg.Height
+	transfers := make([]map[string]interface{}, len(msg.Transfers), len(msg.Transfers))
+	for idx, t := range msg.Transfers {
+		transfers[idx] = t.ToNativeMap()
+	}
+	native["timestamp"] = msg.Timestamp
+	native["num"] = msg.Num
+	native["transfers"] = transfers
+	return native
+}
+
+func initAvroCodecs() (err error) {
+	if executionResultsCodec, err = goavro.NewCodec(executionResultSchema); err != nil {
+		return err
+	} else if booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
+		return err
+	} else if accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
+		return err
+	} else if blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
+		return err
+	} else if transferCodec, err = goavro.NewCodec(transfersSchema); err != nil {
+		return err
+	}
+	return nil
 }

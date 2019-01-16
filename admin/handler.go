@@ -1,11 +1,12 @@
 package admin
 
 import (
-	"github.com/BiJie/BinanceChain/common/runtime"
-	"github.com/BiJie/BinanceChain/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/config"
+
+	"github.com/BiJie/BinanceChain/common/runtime"
+	"github.com/BiJie/BinanceChain/common/types"
 )
 
 // path:

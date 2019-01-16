@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
@@ -38,6 +39,27 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	}
 
 	return res
+}
+
+func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
+	transferToPublish := make([]Transfer, 0, 0)
+	msgs := pool.InterestMsgs(func(msg sdk.Msg) bool {
+		_, ok := msg.(bank.MsgSend)
+		return ok
+	})
+	for _, m := range msgs {
+		msg := m.(bank.MsgSend)
+		receivers := make([]Receiver, 0, len(msg.Outputs))
+		for _, o := range msg.Outputs {
+			coins := make([]Coin, 0, len(o.Coins))
+			for _, c := range o.Coins {
+				coins = append(coins, Coin{c.Denom, c.Amount})
+			}
+			receivers = append(receivers, Receiver{Addr: o.Address.String(), Coins: coins})
+		}
+		transferToPublish = append(transferToPublish, Transfer{From: msg.Inputs[0].Address.String(), To: receivers})
+	}
+	return &Transfers{Height: height, Num: len(transferToPublish), Timestamp: blockTime, Transfers: transferToPublish}
 }
 
 func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ...[]string) (res map[string]Account) {

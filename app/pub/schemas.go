@@ -199,4 +199,56 @@ const (
 			]
 		}
 	`
+	transfersSchema = `
+		{
+			"type": "record",
+			"name": "Transfers",
+			"namespace": "com.company",
+			"fields": [
+				{ "name": "height", "type": "long"},
+				{ "name": "num", "type": "int" },
+				{ "name": "timestamp", "type": "long" },
+				{ "name": "transfers",
+				  "type": {	
+				  	"type": "array",
+					"items": {
+						"type": "record",
+						"name": "Transfer",
+						"namespace": "com.company",
+						"fields": [
+							{ "name": "from", "type": "string"},
+							{ "name": "to", 
+                  				"type": {
+ 									"type": "array",
+                    				"items": {
+										"type": "record",
+                       				 	"name": "Receiver",
+										"namespace": "com.company",
+										"fields": [
+											{ "name": "addr", "type": "string" },
+											{ "name": "coins",
+												"type": {
+													"type": "array",
+                                  					"items": {
+														"type": "record",
+														"name": "Coin",
+														"namespace": "com.company",
+														"fields": [
+															{ "name": "denom", "type": "string" },
+															{ "name": "amount", "type": "long" }
+														]
+								  					}
+												}	
+											}
+										]
+									}
+				  				}
+							}
+						]
+					}
+                  }	
+				}
+			]
+		}
+	`
 )

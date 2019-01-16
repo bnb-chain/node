@@ -148,6 +148,16 @@ func Publish(
 				}
 			}
 
+			if cfg.PublishTransfer {
+				duration := Timer(Logger, "publish transfers", func() {
+					publishTransfers(publisher, marketData.height, marketData.timestamp, marketData.transfers)
+				})
+				if metrics != nil {
+					metrics.NumTransfers.Set(float64(len(marketData.transfers.Transfers)))
+					metrics.PublishTransfersTimeMs.Set(float64(duration))
+				}
+			}
+
 			if metrics != nil {
 				metrics.PublicationHeight.Set(float64(marketData.height))
 				blockInterval := time.Since(lastPublishedTime)
@@ -238,6 +248,12 @@ func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestam
 
 func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blockFee BlockFee) {
 	publisher.publish(blockFee, blockFeeTpe, height, timestamp)
+}
+
+func publishTransfers(publisher MarketDataPublisher, height, timestamp int64, transfers *Transfers) {
+	if transfers != nil {
+		publisher.publish(transfers, transferType, height, timestamp)
+	}
 }
 
 func Timer(logger tmlog.Logger, description string, op func()) (durationMs int64) {

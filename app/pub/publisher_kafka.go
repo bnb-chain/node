@@ -88,6 +88,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if cfg.PublishTransfer {
+		if _, ok := publisher.producers[cfg.TransferTopic]; !ok {
+			publisher.producers[cfg.TransferTopic], err =
+				publisher.connectWithRetry(strings.Split(cfg.TransferKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create transfers producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -118,6 +128,8 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tp
 		topic = Cfg.OrderUpdatesTopic
 	case blockFeeTpe:
 		topic = Cfg.BlockFeeTopic
+	case transferType:
+		topic = Cfg.TransferTopic
 	}
 
 	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {

@@ -85,3 +85,11 @@ func TestBlockFeeMarshaling(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTransferMarshaling(t *testing.T) {
+	msg := Transfers{42, 20, 1000, []Transfer{{From: "", To: []Receiver{Receiver{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, Receiver{"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
+	_, err := marshal(&msg, transferType)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

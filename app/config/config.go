@@ -80,6 +80,11 @@ publishBlockFee = {{ .PublicationConfig.PublishBlockFee }}
 blockFeeTopic = "{{ .PublicationConfig.BlockFeeTopic }}"
 blockFeeKafka = "{{ .PublicationConfig.BlockFeeKafka }}"
 
+# Whether we want publish transfers
+publishTransfer = {{ .PublicationConfig.PublishTransfer }}
+transferTopic = "{{ .PublicationConfig.TransferTopic }}"
+transferKafka = "{{ .PublicationConfig.TransferKafka }}"
+
 # Global setting
 publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
 publishKafka = {{ .PublicationConfig.PublishKafka }}
@@ -173,6 +178,10 @@ type PublicationConfig struct {
 	BlockFeeTopic   string `mapstructure:"blockFeeTopic"`
 	BlockFeeKafka   string `mapstructure:"blockFeeKafka"`
 
+	PublishTransfer bool   `mapstructure:"publishTransfer"`
+	TransferTopic   string `mapstructure:"transferTopic"`
+	TransferKafka   string `mapstructure:"transferKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -209,6 +218,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		BlockFeeTopic:   "accounts",
 		BlockFeeKafka:   "127.0.0.1:9092",
 
+		PublishTransfer: false,
+		TransferTopic:   "transfers",
+		TransferKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
@@ -222,7 +235,8 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 	return pubCfg.PublishOrderUpdates ||
 		pubCfg.PublishAccountBalance ||
 		pubCfg.PublishOrderBook ||
-		pubCfg.PublishBlockFee
+		pubCfg.PublishBlockFee ||
+		pubCfg.PublishTransfer
 }
 
 type LogConfig struct {
