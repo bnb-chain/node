@@ -44,6 +44,8 @@ sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g
 sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/blockFeeTopic = \"accounts\"/blockFeeTopic = \"test\"/g" ${witnesshome}/config/app.toml
+sed -i -e "s/publishKafka = false/publishKafka = true/g" ${witnesshome}/config/app.toml
+sed -i -e "s/publishLocal = false/publishLocal = true/g" ${witnesshome}/config/app.toml
 
 # turn on debug level log
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${witnesshome}/config/config.toml

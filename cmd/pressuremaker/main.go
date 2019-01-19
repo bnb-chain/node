@@ -76,7 +76,7 @@ var rootCmd = &cobra.Command{
 		// TODO: find an elegant way to exit
 		// The problem of shutdown is publication is async (we don't know when messages are
 		finishSignal := make(chan struct{})
-		publisher := pub.NewKafkaMarketDataPublisher(context.Logger, &cfg.PublicationConfig, nil)
+		publisher := pub.NewKafkaMarketDataPublisher(context.Logger)
 
 		srv := &http.Server{
 			Addr: cfg.PrometheusAddr,

@@ -148,7 +148,30 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	if app.publicationConfig.ShouldPublishAny() {
-		app.publisher = pub.NewKafkaMarketDataPublisher(app.Logger, app.publicationConfig, app.metrics)
+		pub.Logger = logger.With("module", "pub")
+		pub.Cfg = app.publicationConfig
+		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
+
+		publishers := make([]pub.MarketDataPublisher, 0)
+		if app.publicationConfig.PublishKafka {
+			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger))
+		}
+		if app.publicationConfig.PublishLocal {
+			publishers = append(publishers, pub.NewLocalMarketDataPublisher(ServerContext.Config.RootDir, app.Logger, app.publicationConfig))
+		}
+
+		if len(publishers) == 0 {
+			app.Logger.Error("Cannot find any publisher in config, there might be some wrong configuration")
+		} else {
+			if len(publishers) == 1 {
+				app.publisher = publishers[0]
+			} else {
+				app.publisher = pub.NewAggregatedMarketDataPublisher(publishers...)
+			}
+
+			go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
+			pub.IsLive = true
+		}
 	}
 
 	// finish app initialization

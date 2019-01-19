@@ -15,7 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/app/config"
 	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
 	"github.com/BiJie/BinanceChain/common"
 	"github.com/BiJie/BinanceChain/common/testutils"
@@ -83,9 +82,6 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 
 	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000)
 	seller = sellerAcc.GetAddress()
-
-	// to get pub Logger initialized
-	NewKafkaMarketDataPublisher(logger, &config.PublicationConfig{}, nil)
 
 	return assert.New(t), require.New(t)
 }

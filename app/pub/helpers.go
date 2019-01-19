@@ -198,7 +198,7 @@ func updateExpireFeeForPublish(
 
 // collect all changed books according to published order status
 func filterChangedOrderBooksByOrders(
-	ordersToPublish []*order,
+	ordersToPublish []*Order,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
 	var res = make(orderPkg.ChangedPriceLevelsMap)
 	// map from symbol -> price -> qty diff in this block
@@ -206,8 +206,8 @@ func filterChangedOrderBooksByOrders(
 	var sellQtyDiff = make(map[string]map[int64]int64)
 	var allSymbols = make(map[string]struct{})
 	for _, o := range ordersToPublish {
-		price := o.price
-		symbol := o.symbol
+		price := o.Price
+		symbol := o.Symbol
 
 		if _, ok := latestPriceLevels[symbol]; !ok {
 			continue
@@ -219,7 +219,7 @@ func filterChangedOrderBooksByOrders(
 			sellQtyDiff[symbol] = make(map[int64]int64)
 		}
 
-		switch o.side {
+		switch o.Side {
 		case orderPkg.Side.BUY:
 			if qty, ok := latestPriceLevels[symbol].Buys[price]; ok {
 				res[symbol].Buys[price] = qty
@@ -261,7 +261,7 @@ func filterChangedOrderBooksByOrders(
 	return res
 }
 
-func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) order {
+func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) Order {
 	var status orderPkg.ChangeType
 	if o.CumQty == o.Quantity {
 		status = orderPkg.FullyFill
@@ -270,7 +270,7 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 	}
 	fee := getSerializedFeeForOrder(o, status, feeHolder, feeToPublish)
 	owner := o.Sender
-	res := order{
+	res := Order{
 		o.Symbol,
 		status,
 		o.Id,
@@ -306,9 +306,9 @@ func collectOrdersToPublish(
 	orderChanges orderPkg.OrderChanges,
 	orderChangesMap orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
-	timestamp int64) (opensToPublish []*order, canceledToPublish []*order, feeToPublish map[string]string) {
-	opensToPublish = make([]*order, 0)
-	canceledToPublish = make([]*order, 0)
+	timestamp int64) (opensToPublish []*Order, canceledToPublish []*Order, feeToPublish map[string]string) {
+	opensToPublish = make([]*Order, 0)
+	canceledToPublish = make([]*Order, 0)
 	// serve as a cache to avoid fee's serialization several times for one address
 	feeToPublish = make(map[string]string)
 
@@ -321,7 +321,7 @@ func collectOrdersToPublish(
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
 		if orderInfo := orderChangesMap[o.Id]; orderInfo != nil {
-			orderToPublish := order{
+			orderToPublish := Order{
 				orderInfo.Symbol,
 				o.Tpe,
 				o.Id,
@@ -369,7 +369,7 @@ func collectOrdersToPublish(
 
 	// update C and E fields in serialized fee string
 	for _, order := range canceledToPublish {
-		senderStr := string(orderChangesMap[order.orderId].Sender)
+		senderStr := string(orderChangesMap[order.OrderId].Sender)
 		if _, ok := feeToPublish[senderStr]; !ok {
 			numOfChargedCanceled := chargedCancels[senderStr]
 			numOfExpiredCanceled := chargedExpires[senderStr]
