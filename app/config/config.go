@@ -82,6 +82,12 @@ blockFeeKafka = "{{ .PublicationConfig.BlockFeeKafka }}"
 
 # Global setting
 publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
+publishKafka = {{ .PublicationConfig.PublishKafka }}
+publishLocal = {{ .PublicationConfig.PublishLocal }}
+# max size in megabytes of marketdata json file before rotate
+localMaxSize = {{ .PublicationConfig.LocalMaxSize }}
+# max days of marketdata json files to keep before deleted
+localMaxAge = {{ .PublicationConfig.LocalMaxAge }}
 
 [log]
 
@@ -173,6 +179,16 @@ type PublicationConfig struct {
 	// deliberately make it only a command line arguments
 	// https://github.com/BiJie/BinanceChain/issues/161#issuecomment-438600434
 	FromHeightInclusive int64
+
+	PublishKafka bool `mapstructure:"publishKafka"`
+
+	// Start a local publisher which publish all topics into an auto-rotation json file
+	// For full-node user and debugging usage
+	PublishLocal bool `mapstructure:"publishLocal"`
+	// refer: https://github.com/natefinch/lumberjack/blob/7d6a1875575e09256dc552b4c0e450dcd02bd10e/lumberjack.go#L85-L87
+	LocalMaxSize int `mapstructure:"localMaxSize"`
+	// refer: https://github.com/natefinch/lumberjack/blob/7d6a1875575e09256dc552b4c0e450dcd02bd10e/lumberjack.go#L89-L94
+	LocalMaxAge int `mapstructure:"localMaxAge"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -195,6 +211,10 @@ func defaultPublicationConfig() *PublicationConfig {
 
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
+		PublishKafka:           false,
+		PublishLocal:           false,
+		LocalMaxSize:           500,
+		LocalMaxAge:            7,
 	}
 }
 
@@ -202,7 +222,8 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 	return pubCfg.PublishOrderUpdates ||
 		pubCfg.PublishAccountBalance ||
 		pubCfg.PublishOrderBook ||
-		pubCfg.PublishBlockFee
+		pubCfg.PublishBlockFee ||
+		pubCfg.PublishLocal
 }
 
 type LogConfig struct {

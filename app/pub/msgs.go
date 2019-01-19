@@ -1,6 +1,7 @@
 package pub
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/linkedin/goavro"
@@ -71,28 +72,28 @@ func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
 	return bb, err
 }
 
-type executionResults struct {
-	height    int64
-	timestamp int64 // milli seconds since Epoch
+type ExecutionResults struct {
+	Height    int64
+	Timestamp int64 // milli seconds since Epoch
 	NumOfMsgs int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
 	Trades    trades
-	Orders    orders
+	Orders    Orders
 	Proposals Proposals
 }
 
-func (msg *executionResults) String() string {
-	return fmt.Sprintf("ExecutionResult at height: %d, numOfMsgs: %d", msg.height, msg.NumOfMsgs)
+func (msg *ExecutionResults) String() string {
+	return fmt.Sprintf("ExecutionResult at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
 }
 
-func (msg *executionResults) ToNativeMap() map[string]interface{} {
+func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["height"] = msg.height
-	native["timestamp"] = msg.timestamp
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
 	native["numOfMsgs"] = msg.NumOfMsgs
-	if msg.Trades.numOfMsgs > 0 {
+	if msg.Trades.NumOfMsgs > 0 {
 		native["trades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.Trades.ToNativeMap()}
 	}
-	if msg.Orders.numOfMsgs > 0 {
+	if msg.Orders.NumOfMsgs > 0 {
 		native["orders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.Orders.ToNativeMap()}
 	}
 	if msg.Proposals.NumOfMsgs > 0 {
@@ -102,17 +103,17 @@ func (msg *executionResults) ToNativeMap() map[string]interface{} {
 }
 
 type trades struct {
-	numOfMsgs int
+	NumOfMsgs int
 	Trades    []*Trade
 }
 
 func (msg *trades) String() string {
-	return fmt.Sprintf("Trades numOfMsgs: %d", msg.numOfMsgs)
+	return fmt.Sprintf("Trades numOfMsgs: %d", msg.NumOfMsgs)
 }
 
 func (msg *trades) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["numOfMsgs"] = msg.numOfMsgs
+	native["numOfMsgs"] = msg.NumOfMsgs
 	ts := make([]map[string]interface{}, len(msg.Trades), len(msg.Trades))
 	for idx, trade := range msg.Trades {
 		ts[idx] = trade.toNativeMap()
@@ -134,6 +135,19 @@ type Trade struct {
 	BAddr  string // string representation of AccAddress
 }
 
+func (msg *Trade) MarshalJSON() ([]byte, error) {
+	type Alias Trade
+	return json.Marshal(&struct {
+		*Alias
+		SAddr string
+		BAddr string
+	}{
+		Alias: (*Alias)(msg),
+		SAddr: sdk.AccAddress(msg.SAddr).String(),
+		BAddr: sdk.AccAddress(msg.BAddr).String(),
+	})
+}
+
 func (msg *Trade) String() string {
 	return fmt.Sprintf("Trade: %v", msg.toNativeMap())
 }
@@ -153,36 +167,36 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	return native
 }
 
-type orders struct {
-	numOfMsgs int
-	orders    []*order
+type Orders struct {
+	NumOfMsgs int
+	Orders    []*Order
 }
 
-func (msg *orders) String() string {
-	return fmt.Sprintf("Orders numOfMsgs: %d", msg.numOfMsgs)
+func (msg *Orders) String() string {
+	return fmt.Sprintf("Orders numOfMsgs: %d", msg.NumOfMsgs)
 }
 
-func (msg *orders) ToNativeMap() map[string]interface{} {
+func (msg *Orders) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["numOfMsgs"] = msg.numOfMsgs
-	os := make([]map[string]interface{}, len(msg.orders), len(msg.orders))
-	for idx, o := range msg.orders {
+	native["numOfMsgs"] = msg.NumOfMsgs
+	os := make([]map[string]interface{}, len(msg.Orders), len(msg.Orders))
+	for idx, o := range msg.Orders {
 		os[idx] = o.toNativeMap()
 	}
 	native["orders"] = os
 	return native
 }
 
-type order struct {
-	symbol               string
-	status               orderPkg.ChangeType
-	orderId              string
-	tradeId              string
-	owner                string
-	side                 int8
-	orderType            int8
-	price                int64
-	qty                  int64
+type Order struct {
+	Symbol               string
+	Status               orderPkg.ChangeType
+	OrderId              string
+	TradeId              string
+	Owner                string
+	Side                 int8
+	OrderType            int8
+	Price                int64
+	Qty                  int64
 	lastExecutedPrice    int64
 	lastExecutedQty      int64
 	cumQty               int64
@@ -194,35 +208,35 @@ type order struct {
 	txHash               string
 }
 
-func (msg *order) String() string {
+func (msg *Order) String() string {
 	return fmt.Sprintf("Order: %v", msg.toNativeMap())
 }
 
-func (msg *order) effectQtyToOrderBook() int64 {
-	switch msg.status {
+func (msg *Order) effectQtyToOrderBook() int64 {
+	switch msg.Status {
 	case orderPkg.Ack:
-		return msg.qty
+		return msg.Qty
 	case orderPkg.FullyFill, orderPkg.PartialFill:
 		return -msg.lastExecutedQty
 	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled:
-		return msg.cumQty - msg.qty // deliberated be negative value
+		return msg.cumQty - msg.Qty // deliberated be negative value
 	default:
 		Logger.Error("does not supported order status", "order", msg.String())
 		return 0
 	}
 }
 
-func (msg *order) toNativeMap() map[string]interface{} {
+func (msg *Order) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["symbol"] = msg.symbol
-	native["status"] = msg.status.String() //TODO(#66): confirm with all teams to make this uint8 enum
-	native["orderId"] = msg.orderId
-	native["tradeId"] = msg.tradeId
-	native["owner"] = msg.owner
-	native["side"] = orderPkg.IToSide(msg.side)                //TODO(#66): confirm with all teams to make this uint8 enum
-	native["orderType"] = orderPkg.IToOrderType(msg.orderType) //TODO(#66): confirm with all teams to make this uint8 enum
-	native["price"] = msg.price
-	native["qty"] = msg.qty
+	native["symbol"] = msg.Symbol
+	native["status"] = msg.Status.String() //TODO(#66): confirm with all teams to make this uint8 enum
+	native["orderId"] = msg.OrderId
+	native["tradeId"] = msg.TradeId
+	native["owner"] = msg.Owner
+	native["side"] = orderPkg.IToSide(msg.Side)                //TODO(#66): confirm with all teams to make this uint8 enum
+	native["orderType"] = orderPkg.IToOrderType(msg.OrderType) //TODO(#66): confirm with all teams to make this uint8 enum
+	native["price"] = msg.Price
+	native["qty"] = msg.Qty
 	native["lastExecutedPrice"] = msg.lastExecutedPrice
 	native["lastExecutedQty"] = msg.lastExecutedQty
 	native["cumQty"] = msg.cumQty
@@ -378,9 +392,20 @@ func (msg *AssetBalance) ToNativeMap() map[string]interface{} {
 }
 
 type Account struct {
-	Owner    string
+	Owner    string // string representation of AccAddress
 	Fee      string
 	Balances []*AssetBalance
+}
+
+func (msg *Account) MarshalJSON() ([]byte, error) {
+	type Alias Account
+	return json.Marshal(&struct {
+		*Alias
+		Owner string
+	}{
+		Alias: (*Alias)(msg),
+		Owner: sdk.AccAddress(msg.Owner).String(),
+	})
 }
 
 func (msg *Account) String() string {
@@ -399,21 +424,21 @@ func (msg *Account) ToNativeMap() map[string]interface{} {
 	return native
 }
 
-type accounts struct {
-	height    int64
-	numOfMsgs int
+type Accounts struct {
+	Height    int64
+	NumOfMsgs int
 	Accounts  []Account
 }
 
-func (msg *accounts) String() string {
-	return fmt.Sprintf("Accounts at height: %d, numOfMsgs: %d", msg.height, msg.numOfMsgs)
+func (msg *Accounts) String() string {
+	return fmt.Sprintf("Accounts at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
 }
 
-func (msg *accounts) ToNativeMap() map[string]interface{} {
+func (msg *Accounts) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["height"] = msg.height
-	native["numOfMsgs"] = msg.numOfMsgs
-	if msg.numOfMsgs > 0 {
+	native["height"] = msg.Height
+	native["numOfMsgs"] = msg.NumOfMsgs
+	if msg.NumOfMsgs > 0 {
 		as := make([]map[string]interface{}, len(msg.Accounts), len(msg.Accounts))
 		for idx, a := range msg.Accounts {
 			as[idx] = a.ToNativeMap()
@@ -427,6 +452,21 @@ type BlockFee struct {
 	Height     int64
 	Fee        string
 	Validators []string // slice of string wrappers of bytes representation of sdk.AccAddress
+}
+
+func (msg BlockFee) MarshalJSON() ([]byte, error) {
+	bech32Strs := make([]string, len(msg.Validators), len(msg.Validators))
+	for id, val := range msg.Validators {
+		bech32Strs[id] = sdk.AccAddress(val).String()
+	}
+	type Alias BlockFee
+	return json.Marshal(&struct {
+		Alias
+		Validators []string
+	}{
+		Alias:      (Alias)(msg),
+		Validators: bech32Strs,
+	})
 }
 
 func (msg BlockFee) String() string {

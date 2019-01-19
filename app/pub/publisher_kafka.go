@@ -13,8 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/BiJie/BinanceChain/app/config"
 )
 
 const (
@@ -44,40 +42,40 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	// Refer: https://github.com/Shopify/sarama/issues/718
 	config.Net.MaxOpenRequests = 1
 
-	if cfg.PublishOrderUpdates {
-		if _, ok := publisher.producers[cfg.OrderUpdatesTopic]; !ok {
-			publisher.producers[cfg.OrderUpdatesTopic], err =
-				publisher.connectWithRetry(strings.Split(cfg.OrderUpdatesKafka, KafkaBrokerSep), config)
+	if Cfg.PublishOrderUpdates {
+		if _, ok := publisher.producers[Cfg.OrderUpdatesTopic]; !ok {
+			publisher.producers[Cfg.OrderUpdatesTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.OrderUpdatesKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create order updates producer", "err", err)
 			return
 		}
 	}
-	if cfg.PublishOrderBook {
-		if _, ok := publisher.producers[cfg.OrderBookTopic]; !ok {
-			publisher.producers[cfg.OrderBookTopic], err =
-				publisher.connectWithRetry(strings.Split(cfg.OrderBookKafka, KafkaBrokerSep), config)
+	if Cfg.PublishOrderBook {
+		if _, ok := publisher.producers[Cfg.OrderBookTopic]; !ok {
+			publisher.producers[Cfg.OrderBookTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.OrderBookKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create order book producer", "err", err)
 			return
 		}
 	}
-	if cfg.PublishAccountBalance {
-		if _, ok := publisher.producers[cfg.AccountBalanceTopic]; !ok {
-			publisher.producers[cfg.AccountBalanceTopic], err =
-				publisher.connectWithRetry(strings.Split(cfg.AccountBalanceKafka, KafkaBrokerSep), config)
+	if Cfg.PublishAccountBalance {
+		if _, ok := publisher.producers[Cfg.AccountBalanceTopic]; !ok {
+			publisher.producers[Cfg.AccountBalanceTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.AccountBalanceKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create account balance producer", "err", err)
 			return
 		}
 	}
-	if cfg.PublishBlockFee {
-		if _, ok := publisher.producers[cfg.BlockFeeTopic]; !ok {
-			publisher.producers[cfg.BlockFeeTopic], err =
-				publisher.connectWithRetry(strings.Split(cfg.BlockFeeKafka, KafkaBrokerSep), config)
+	if Cfg.PublishBlockFee {
+		if _, ok := publisher.producers[Cfg.BlockFeeTopic]; !ok {
+			publisher.producers[Cfg.BlockFeeTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BlockFeeKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create blockfee producer", "err", err)
@@ -107,13 +105,13 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 	var topic string
 	switch tpe {
 	case booksTpe:
-		topic = cfg.OrderBookTopic
+		topic = Cfg.OrderBookTopic
 	case accountsTpe:
-		topic = cfg.AccountBalanceTopic
+		topic = Cfg.AccountBalanceTopic
 	case executionResultTpe:
-		topic = cfg.OrderUpdatesTopic
+		topic = Cfg.OrderUpdatesTopic
 	case blockFeeTpe:
-		topic = cfg.BlockFeeTopic
+		topic = Cfg.BlockFeeTopic
 	}
 
 	if msg, err := marshal(avroMessage, tpe); err == nil {
@@ -183,22 +181,19 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 }
 
 func NewKafkaMarketDataPublisher(
-	logger log.Logger,
-	config *config.PublicationConfig,
-	metrics *Metrics) (publisher *KafkaMarketDataPublisher) {
+	logger log.Logger) (publisher *KafkaMarketDataPublisher) {
+	if err := initAvroCodecs(); err != nil {
+		Logger.Error("failed to initialize avro codec", "err", err)
+		panic(err)
+	}
+
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
 		producers: make(map[string]sarama.SyncProducer),
 	}
 
-	if err := setup(logger, config, metrics, publisher); err != nil {
-		publisher.Stop()
-		logger.Error("Cannot start up market data kafka publisher", "err", err)
-		panic(err)
-	}
-
 	if saramaCfg, err := publisher.newProducers(); err != nil {
-		Logger.Error("failed to create new kafka producer", "err", err)
+		logger.Error("failed to create new kafka producer", "err", err)
 		panic(err)
 	} else {
 		// we have to use the same prometheus registerer with tendermint
