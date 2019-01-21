@@ -276,6 +276,10 @@ func processSig(txHash string,
 	sig auth.StdSignature, pubKey crypto.PubKey, signBytes []byte) (
 	res sdk.Result) {
 
+	if !pubKey.Equals(sig.PubKey) {
+		return sdk.ErrUnauthorized("signer's pubkey does not match pubkey of signature").Result()
+	}
+
 	if sigCache.getSig(txHash) {
 		log.Debug("Tx hits sig cache", "txHash", txHash)
 		return
