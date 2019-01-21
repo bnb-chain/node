@@ -166,7 +166,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
-	app.SetPreChecker(tx.NewTxPreChecker(app.AccountKeeper))
+	app.SetPreChecker(tx.NewTxPreChecker())
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
