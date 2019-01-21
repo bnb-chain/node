@@ -105,7 +105,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, ServerContext.PublishAccountBalance, ServerContext.PublishTransfer, baseAppOptions...),
+		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		baseConfig:        ServerContext.BaseConfig,

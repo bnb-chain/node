@@ -462,7 +462,7 @@ type Coin struct {
 }
 
 func (coin Coin) String() string {
-	return fmt.Sprintf("%v%v", coin.Amount, coin.Denom)
+	return fmt.Sprintf("%d%s", coin.Amount, coin.Denom)
 }
 
 func (msg Coin) ToNativeMap() map[string]interface{} {
@@ -475,6 +475,17 @@ func (msg Coin) ToNativeMap() map[string]interface{} {
 type Receiver struct {
 	Addr  string
 	Coins []Coin
+}
+
+func (msg Receiver) MarshalJSON() ([]byte, error) {
+	type Alias Receiver
+	return json.Marshal(&struct {
+		Alias
+		Addr string
+	}{
+		Alias: (Alias)(msg),
+		Addr:  sdk.AccAddress(msg.Addr).String(),
+	})
 }
 
 func (msg Receiver) String() string {
@@ -495,6 +506,17 @@ func (msg Receiver) ToNativeMap() map[string]interface{} {
 type Transfer struct {
 	From string
 	To   []Receiver
+}
+
+func (msg Transfer) MarshalJSON() ([]byte, error) {
+	type Alias Transfer
+	return json.Marshal(&struct {
+		Alias
+		From string
+	}{
+		Alias: (Alias)(msg),
+		From:  sdk.AccAddress(msg.From).String(),
+	})
 }
 
 func (msg Transfer) String() string {
@@ -519,11 +541,11 @@ type Transfers struct {
 	Transfers []Transfer
 }
 
-func (msg *Transfers) String() string {
-	return fmt.Sprintf("Transfers in block %d, : %v", msg.Height, msg.Transfers)
+func (msg Transfers) String() string {
+	return fmt.Sprintf("Transfers in block %d, num: %d", msg.Height, msg.Num)
 }
 
-func (msg *Transfers) ToNativeMap() map[string]interface{} {
+func (msg Transfers) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
 	transfers := make([]map[string]interface{}, len(msg.Transfers), len(msg.Transfers))
@@ -534,19 +556,4 @@ func (msg *Transfers) ToNativeMap() map[string]interface{} {
 	native["num"] = msg.Num
 	native["transfers"] = transfers
 	return native
-}
-
-func initAvroCodecs() (err error) {
-	if executionResultsCodec, err = goavro.NewCodec(executionResultSchema); err != nil {
-		return err
-	} else if booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
-		return err
-	} else if accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
-		return err
-	} else if blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
-		return err
-	} else if transferCodec, err = goavro.NewCodec(transfersSchema); err != nil {
-		return err
-	}
-	return nil
 }
