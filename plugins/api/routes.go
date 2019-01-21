@@ -60,7 +60,11 @@ func (s *server) bindRoutes() *server {
 
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
-	keys.RegisterRoutes(r, true)
+	
+	// keys rest routes disabled for security. while the nodes with keys (validators) run in a secure ringfenced environment,
+	// disabling this is a precaution to protect third-party validators that might not have protected their networks adequately.
+	//keys.RegisterRoutes(r, true)
+	
 	rpc.RegisterRoutes(s.ctx, r)
 	tx.RegisterRoutes(s.ctx, r, s.cdc)
 	auth.RegisterRoutes(s.ctx, r, s.cdc, s.accStoreName)
