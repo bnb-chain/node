@@ -643,18 +643,21 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 	cdc.RegisterConcrete(sdk.TestMsg{}, "antetest/TestMsg", nil)
 	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
+	anteHandler := tx.NewAnteHandler(mapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
-	_, addr2 := testutils.PrivAndAddr()
+	priv2, addr2 := testutils.PrivAndAddr()
 
 	// set the accounts
 	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
+	acc1.SetPubKey(priv1.PubKey())
 	acc1.SetCoins(newCoins())
 	mapper.SetAccount(ctx, acc1)
 	acc2 := mapper.NewAccountWithAddress(ctx, addr2)
+	acc1.SetPubKey(priv2.PubKey())
 	acc2.SetCoins(newCoins())
 	mapper.SetAccount(ctx, acc2)
 
@@ -697,4 +700,11 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 		res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
 		require.NotEqual(t, sdk.ABCICodeOK, res.Code)
 	}
+
+	// test wrong signer if public key exist
+	privs, accnums, seqs = []crypto.PrivKey{priv2}, []int64{0}, []int64{0}
+	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
+	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	require.Equal(t, sdk.ABCICodeOK, res.Code)
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnauthorized)
 }
