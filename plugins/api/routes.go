@@ -1,7 +1,6 @@
 package api
 
 import (
-	keys "github.com/cosmos/cosmos-sdk/client/keys"
 	rpc "github.com/cosmos/cosmos-sdk/client/rpc"
 	tx "github.com/cosmos/cosmos-sdk/client/tx"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
