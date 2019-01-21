@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-
+	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -709,15 +707,14 @@ func TestNewTxPreCheckerEmptySigner(t *testing.T) {
 	auth.RegisterBaseAccount(cdc)
 	sdk.RegisterCodec(cdc)
 	cdc.RegisterConcrete(sdk.TestMsg{}, "antetest/TestMsg", nil)
-	mapper := auth.NewAccountKeeper(cdc, capKey, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
 
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
-	priv2, addr2 := testutils.PrivAndAddr()
-	priv3, addr3 := testutils.PrivAndAddr()
+	_, addr2 := testutils.PrivAndAddr()
+	_, addr3 := testutils.PrivAndAddr()
 
 	// msg and signatures
 	var txn sdk.Tx
@@ -735,7 +732,7 @@ func TestNewTxPreCheckerEmptySigner(t *testing.T) {
 	stdTx := txn.(auth.StdTx)
 	require.Equal(t, expectedSigners, stdTx.GetSigners())
 
-	prechecker := tx.NewTxPreChecker(mapper)
+	prechecker := tx.NewTxPreChecker()
 	res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
 	require.NotEqual(t, sdk.ABCICodeOK, res.Code, "Failed prechecker")
 	require.Contains(t, res.Log, "no signers")
@@ -745,13 +742,6 @@ func TestNewTxPreCheckerEmptySigner(t *testing.T) {
 	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
 	require.NotEqual(t, sdk.ABCICodeOK, res.Code, "Failed prechecker2")
 	require.Contains(t, res.Log, "wrong number of signers")
-
-	// test an unrecognized account
-	privs, accNums, seqs = []crypto.PrivKey{priv1, priv2, priv3}, []int64{0, 1, 2}, []int64{0, 0, 0}
-	txn = newTestTx(ctx, msgs, privs, accNums, seqs)
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
-	require.NotEqual(t, sdk.ABCICodeOK, res.Code, "Failed prechecker3")
-	require.Contains(t, res.Log, "cosmos")
 }
 
 func Test_NewTxPreCheckerSignature(t *testing.T) {
@@ -767,7 +757,7 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 
 	// keys and addresses
 	priv1, addr1 := testutils.PrivAndAddr()
-	priv2, addr2 := testutils.PrivAndAddr()
+	_, addr2 := testutils.PrivAndAddr()
 
 	// set the accounts
 	acc1 := mapper.NewAccountWithAddress(ctx, addr1)
@@ -784,7 +774,7 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 	// test good tx and signBytes
 	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
-	prechecker := tx.NewTxPreChecker(mapper)
+	prechecker := tx.NewTxPreChecker()
 	res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
 	require.Equal(t, sdk.ABCICodeOK, res.Code, "Failed prechecker")
 
@@ -816,20 +806,4 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 		res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
 		require.NotEqual(t, sdk.ABCICodeOK, res.Code)
 	}
-
-	// test wrong signer if public key exist
-	privs, accnums, seqs = []crypto.PrivKey{priv2}, []int64{0}, []int64{1}
-	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
-	require.NotEqual(t, sdk.ABCICodeOK, res.Code)
-	require.Contains(t, res.Log, "PubKey does not match Signer address")
-
-	// test wrong signer if public doesn't exist
-	msg = newTestMsg(addr2)
-	msgs = []sdk.Msg{msg}
-	privs, accnums, seqs = []crypto.PrivKey{priv1}, []int64{1}, []int64{0}
-	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
-	require.NotEqual(t, sdk.ABCICodeOK, res.Code)
-	require.Contains(t, res.Log, "PubKey does not match Signer address")
 }
