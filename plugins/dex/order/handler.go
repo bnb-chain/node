@@ -206,7 +206,7 @@ func handleCancelOrder(
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
-				change := OrderChange{msg.Id, Canceled}
+				change := OrderChange{msg.RefId, Canceled}
 				keeper.OrderChanges = append(keeper.OrderChanges, change)
 				keeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}

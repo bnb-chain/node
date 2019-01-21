@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	flagId          = "id"
 	flagRefId       = "refid"
 	flagPrice       = "price"
 	flagQty         = "qty"
@@ -163,7 +162,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 
 func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cancel -i <order id> -f <ref order id>",
+		Use:   "cancel -l <trading pair> -f <ref order id>",
 		Short: "Cancel an order",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := txbuilder.NewTxBuilderFromCLI().WithCodec(cdc)
@@ -177,15 +176,11 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			id := viper.GetString(flagId)
-			if id == "" {
-				return errors.New("please input order id")
-			}
 			refId := viper.GetString(flagRefId)
 			if refId == "" {
 				return errors.New("please input reference order id")
 			}
-			msg := order.NewCancelOrderMsg(from, symbol, id, refId)
+			msg := order.NewCancelOrderMsg(from, symbol, refId)
 			if cliCtx.GenerateOnly {
 				return txutils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg}, false)
 			}
@@ -199,7 +194,6 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
-	cmd.Flags().StringP(flagId, "i", "", "id string of the cancellation")
 	cmd.Flags().StringP(flagRefId, "f", "", "id string of the order")
 	return cmd
 }

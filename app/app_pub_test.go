@@ -20,9 +20,9 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/app/config"
 	"github.com/BiJie/BinanceChain/app/pub"
+	"github.com/BiJie/BinanceChain/common/fees"
 	"github.com/BiJie/BinanceChain/common/testutils"
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
 	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
@@ -237,7 +237,7 @@ func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	res = handler(ctx, msg3)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
-	cxlMsg := orderPkg.NewCancelOrderMsg(buyer, "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyer), orderPkg.GenerateOrderID(1, buyer))
+	cxlMsg := orderPkg.NewCancelOrderMsg(buyer, "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyer))
 	buyerAcc = am.GetAccount(ctx, buyer)
 	buyerAcc.SetSequence(3)
 	am.SetAccount(ctx, buyerAcc)
