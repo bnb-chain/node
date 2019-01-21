@@ -219,16 +219,14 @@ var _ sdk.Msg = CancelOrderMsg{}
 type CancelOrderMsg struct {
 	Sender sdk.AccAddress `json:"sender"`
 	Symbol string         `json:"symbol"`
-	Id     string         `json:"id"`
 	RefId  string         `json:"refid"`
 }
 
 // NewCancelOrderMsg constructs a new CancelOrderMsg
-func NewCancelOrderMsg(sender sdk.AccAddress, symbol, id, refId string) CancelOrderMsg {
+func NewCancelOrderMsg(sender sdk.AccAddress, symbol, refId string) CancelOrderMsg {
 	return CancelOrderMsg{
 		Sender: sender,
 		Symbol: symbol,
-		Id:     id,
 		RefId:  refId,
 	}
 }
@@ -238,7 +236,7 @@ func (msg CancelOrderMsg) Route() string                { return RouteCancelOrde
 func (msg CancelOrderMsg) Type() string                 { return RouteCancelOrder }
 func (msg CancelOrderMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Sender} }
 func (msg CancelOrderMsg) String() string {
-	return fmt.Sprintf("CancelOrderMsg{Sender: %v}", msg.Sender)
+	return fmt.Sprintf("CancelOrderMsg{Sender:%v, RefId: %s}", msg.Sender, msg.RefId)
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
@@ -297,8 +295,8 @@ func (msg CancelOrderMsg) ValidateBasic() sdk.Error {
 	if len(msg.Sender) == 0 {
 		return sdk.ErrUnknownAddress(msg.Sender.String()).TraceSDK("")
 	}
-	if len(msg.Id) == 0 || !strings.Contains(msg.Id, "-") {
-		return types.ErrInvalidOrderParam("Id", fmt.Sprintf("Invalid order ID:%s", msg.Id))
+	if len(msg.RefId) == 0 || !strings.Contains(msg.RefId, "-") {
+		return types.ErrInvalidOrderParam("RefId", fmt.Sprintf("Invalid ref ID:%s", msg.RefId))
 	}
 	return nil
 }

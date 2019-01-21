@@ -20,17 +20,21 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 		if bo, ok := kp.OrderChangesMap[t.Bid]; ok {
 			res = append(res, string(bo.Sender.Bytes()))
 		} else {
-			Logger.Error("failed to locate order in OrderChangesMap for trade account resolving", "bid", t.Bid)
+			Logger.Error("failed to locate buy order in OrderChangesMap for trade account resolving", "bid", t.Bid)
 		}
 		if so, ok := kp.OrderChangesMap[t.Sid]; ok {
 			res = append(res, string(so.Sender.Bytes()))
 		} else {
-			Logger.Error("failed to locate order in OrderChangesMap for trade account resolving", "sid", t.Sid)
+			Logger.Error("failed to locate sell order in OrderChangesMap for trade account resolving", "sid", t.Sid)
 		}
 	}
 
 	for _, orderChange := range kp.OrderChanges {
-		res = append(res, string(kp.OrderChangesMap[orderChange.Id].Sender.Bytes()))
+		if orderInfo := kp.OrderChangesMap[orderChange.Id]; orderInfo != nil {
+			res = append(res, string(orderInfo.Sender.Bytes()))
+		} else {
+			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", orderChange.String())
+		}
 	}
 
 	return res
@@ -316,47 +320,50 @@ func collectOrdersToPublish(
 
 	// collect orders (new, cancel, ioc-no-fill, expire) from orderChanges
 	for _, o := range orderChanges {
-		orderInfo := orderChangesMap[o.Id]
+		if orderInfo := orderChangesMap[o.Id]; orderInfo != nil {
+			orderToPublish := order{
+				orderInfo.Symbol,
+				o.Tpe,
+				o.Id,
+				"",
+				orderInfo.Sender.String(),
+				orderInfo.Side,
+				orderPkg.OrderType.LIMIT,
+				orderInfo.Price,
+				orderInfo.Quantity,
+				0,
+				0,
+				orderInfo.CumQty,
+				"",
+				orderInfo.CreatedTimestamp,
+				timestamp,
+				orderInfo.TimeInForce,
+				orderPkg.NEW,
+				orderInfo.TxHash,
+			}
 
-		orderToPublish := order{
-			orderInfo.Symbol,
-			o.Tpe,
-			o.Id,
-			"",
-			orderInfo.Sender.String(),
-			orderInfo.Side,
-			orderPkg.OrderType.LIMIT,
-			orderInfo.Price,
-			orderInfo.Quantity,
-			0,
-			0,
-			orderInfo.CumQty,
-			"",
-			orderInfo.CreatedTimestamp,
-			timestamp,
-			orderInfo.TimeInForce,
-			orderPkg.NEW,
-			orderInfo.TxHash,
-		}
-		if o.Tpe == orderPkg.Ack {
-			opensToPublish = append(opensToPublish, &orderToPublish)
-		} else {
-			if orderInfo.CumQty == 0 {
-				if o.Tpe == orderPkg.Canceled {
-					if _, ok := chargedCancels[string(orderInfo.Sender)]; ok {
-						chargedCancels[string(orderInfo.Sender)] += 1
+			if o.Tpe == orderPkg.Ack {
+				opensToPublish = append(opensToPublish, &orderToPublish)
+			} else {
+				if orderInfo.CumQty == 0 {
+					if o.Tpe == orderPkg.Canceled {
+						if _, ok := chargedCancels[string(orderInfo.Sender)]; ok {
+							chargedCancels[string(orderInfo.Sender)] += 1
+						} else {
+							chargedCancels[string(orderInfo.Sender)] = 1
+						}
 					} else {
-						chargedCancels[string(orderInfo.Sender)] = 1
-					}
-				} else {
-					if _, ok := chargedExpires[string(orderInfo.Sender)]; ok {
-						chargedExpires[string(orderInfo.Sender)] += 1
-					} else {
-						chargedExpires[string(orderInfo.Sender)] = 1
+						if _, ok := chargedExpires[string(orderInfo.Sender)]; ok {
+							chargedExpires[string(orderInfo.Sender)] += 1
+						} else {
+							chargedExpires[string(orderInfo.Sender)] = 1
+						}
 					}
 				}
+				canceledToPublish = append(canceledToPublish, &orderToPublish)
 			}
-			canceledToPublish = append(canceledToPublish, &orderToPublish)
+		} else {
+			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", o.String())
 		}
 	}
 

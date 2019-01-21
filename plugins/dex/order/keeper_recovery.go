@@ -220,8 +220,8 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDec
 			case CancelOrderMsg:
 				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
 					if kp.CollectOrderInfoForPublish {
-						bnclog.Debug("deleted order from order changes map", "orderId", msg.Id, "isRecovery", true)
-						delete(kp.OrderChangesMap, msg.Id)
+						bnclog.Debug("deleted order from order changes map", "orderId", msg.RefId, "isRecovery", true)
+						delete(kp.OrderChangesMap, msg.RefId)
 					}
 				})
 				if err != nil {
