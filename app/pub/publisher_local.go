@@ -22,7 +22,9 @@ type LocalMarketDataPublisher struct {
 
 func (publisher *LocalMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
 	if jsonBytes, err := json.Marshal(msg); err == nil {
-		publisher.producer.Println(string(jsonBytes))
+		if err := publisher.producer.Output(2, fmt.Sprintln(string(jsonBytes))); err != nil {
+			publisher.tmLogger.Error("failed to publish msg", "err", err, "height", height, "msg", msg.String())
+		}
 	} else {
 		publisher.tmLogger.Error("failed to publish msg", "err", err, "height", height, "msg", msg.String())
 	}

@@ -152,7 +152,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		pub.Cfg = app.publicationConfig
 		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
 
-		publishers := make([]pub.MarketDataPublisher, 0)
+		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
 			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger))
 		}
