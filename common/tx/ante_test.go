@@ -707,4 +707,12 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 	res = prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 	require.Equal(t, sdk.ABCICodeOK, res.Code)
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnauthorized)
+
+	// test empty pubkey
+	privs, accnums, seqs = []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
+	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
+	stdtx := txn.(auth.StdTx)
+	stdtx.Signatures[0].PubKey = nil
+	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	require.Equal(t, sdk.ABCICodeOK, res.Code)
 }

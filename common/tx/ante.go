@@ -88,10 +88,15 @@ func NewTxPreChecker() sdk.PreChecker {
 		// TODO: optimization opportunity, txHash may be recalled later
 		txHash := common.HexBytes(tmhash.Sum(txBytes)).String()
 		chainID := ctx.ChainID()
+
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			sig := sigs[i]
 			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
+
+			if sig.PubKey == nil {
+				continue
+			}
 
 			res := processSig(txHash, sig, sig.PubKey, signBytes)
 			if !res.IsOK() {
