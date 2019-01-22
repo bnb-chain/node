@@ -213,7 +213,7 @@ func defaultPublicationConfig() *PublicationConfig {
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
 		PublishLocal:           false,
-		LocalMaxSize:           500,
+		LocalMaxSize:           1024,
 		LocalMaxAge:            7,
 	}
 }
@@ -222,8 +222,7 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 	return pubCfg.PublishOrderUpdates ||
 		pubCfg.PublishAccountBalance ||
 		pubCfg.PublishOrderBook ||
-		pubCfg.PublishBlockFee ||
-		pubCfg.PublishLocal
+		pubCfg.PublishBlockFee
 }
 
 type LogConfig struct {
