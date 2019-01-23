@@ -260,7 +260,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 				if err != nil {
 					panic(err)
 				}
-				bz := app.Codec.MustMarshalBinary(tx)
+				bz := app.Codec.MustMarshalBinaryLengthPrefixed(tx)
 				res := app.BaseApp.DeliverTx(bz)
 				if !res.IsOK() {
 					panic(res.Log)
@@ -530,7 +530,7 @@ func defaultTxDecoder(cdc *wire.Codec) sdk.TxDecoder {
 
 		// StdTx.Msg is an interface. The concrete types
 		// are registered by MakeTxCodec
-		err := cdc.UnmarshalBinary(txBytes, &tx)
+		err := cdc.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 		if err != nil {
 			return nil, sdk.ErrTxDecode("").TraceSDK(err.Error())
 		}

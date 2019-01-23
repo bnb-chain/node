@@ -36,10 +36,11 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "apiserv")
 			maxOpen := viper.GetInt(flagMaxOpenConnections)
 
-			listener, err := tmserver.StartHTTPServer(
-				listenAddr, handler, logger,
-				tmserver.Config{MaxOpenConnections: maxOpen},
-			)
+			listener, err := tmserver.Listen(listenAddr, tmserver.Config{MaxOpenConnections: maxOpen})
+			if err != nil {
+				return err
+			}
+			err = tmserver.StartHTTPServer(listener, handler, logger)
 			if err != nil {
 				return err
 			}

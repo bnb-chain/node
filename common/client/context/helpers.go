@@ -21,8 +21,8 @@ func query(ctx context.CLIContext, path string, key common.HexBytes) (res []byte
 		return res, err
 	}
 	opts := rpcclient.ABCIQueryOptions{
-		Height:  ctx.Height,
-		Trusted: ctx.TrustNode,
+		Height: ctx.Height,
+		Prove:  !ctx.TrustNode,
 	}
 	result, err := node.ABCIQueryWithOptions(path, key, opts)
 	if err != nil {

@@ -161,7 +161,7 @@ func Test_compressAndSave(t *testing.T) {
 	l.InsertOrder("123463", me.SELLSIDE, 10005, 10033, 1000)
 	buys, sells := l.GetAllLevels()
 	snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: 100}
-	bytes, _ := cdc.MarshalBinary(snapshot)
+	bytes, _ := cdc.MarshalBinaryLengthPrefixed(snapshot)
 	t.Logf("before compress, size is %v", len(bytes))
 	kvstore := cms.GetKVStore(common.DexStoreKey)
 	key := "testcompress"
@@ -346,7 +346,7 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *wire.Codec) *tmtypes.Block {
 	tmTxs := make([]tmtypes.Tx, len(txs))
 	for i, tx := range txs {
-		tmTxs[i], _ = cdc.MarshalBinary(tx)
+		tmTxs[i], _ = cdc.MarshalBinaryLengthPrefixed(tx)
 	}
 	return tmtypes.MakeBlock(height, tmTxs, commit, nil)
 }

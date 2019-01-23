@@ -18,7 +18,7 @@ func GetHandler(config *config.Config) types.AbciQueryHandler {
 			return &result
 		}
 
-		pvFile := config.PrivValidatorFile()
+		pvFile := config.PrivValidatorKeyFile()
 		_, pubKey, err := readPrivValidator(pvFile)
 		if err != nil {
 			result := sdk.ErrInternal(err.Error()).QueryResult()
