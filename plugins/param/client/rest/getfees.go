@@ -30,7 +30,7 @@ func GetFeesParamHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			return
 		}
 		var fees []types.FeeParam
-		err = cdc.UnmarshalBinary(bz, &fees)
+		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &fees)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

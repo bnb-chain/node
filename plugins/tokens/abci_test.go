@@ -47,7 +47,7 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 
 	var actual common.Token
 	cdc := app.GetCodec()
-	err = cdc.UnmarshalBinary(res.Value, &actual)
+	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -108,7 +108,7 @@ func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
 
 	cdc := app.GetCodec()
 	actual := make([]common.Token, 2)
-	err = cdc.UnmarshalBinary(res.Value, &actual)
+	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -140,7 +140,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
 
 	cdc := app.GetCodec()
 	actual := make([]common.Token, 1)
-	err = cdc.UnmarshalBinary(res.Value, &actual)
+	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -172,7 +172,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
 
 	cdc := app.GetCodec()
 	actual := make([]common.Token, 1)
-	err = cdc.UnmarshalBinary(res.Value, &actual)
+	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

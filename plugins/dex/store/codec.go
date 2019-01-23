@@ -20,7 +20,7 @@ func queryOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string) (*[]by
 // decodeOrderBook decodes the order book to a set of OrderBookLevel structs
 func decodeOrderBook(cdc *wire.Codec, bz *[]byte) (*OrderBook, error) {
 	var ob OrderBook
-	err := cdc.UnmarshalBinary(*bz, &ob)
+	err := cdc.UnmarshalBinaryLengthPrefixed(*bz, &ob)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func queryOpenOrders(cdc *wire.Codec, ctx context.CLIContext, pair string, addr 
 
 func DecodeOpenOrders(cdc *wire.Codec, bz *[]byte) ([]OpenOrder, error) {
 	openOrders := make([]OpenOrder, 0)
-	if err := cdc.UnmarshalBinary(*bz, &openOrders); err != nil {
+	if err := cdc.UnmarshalBinaryLengthPrefixed(*bz, &openOrders); err != nil {
 		return nil, err
 	} else {
 		return openOrders, nil
