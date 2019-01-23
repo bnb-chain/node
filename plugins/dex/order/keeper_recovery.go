@@ -44,7 +44,7 @@ func genActiveOrdersSnapshotKey(height int64) string {
 func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.KVStore) error {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
-	bytes, err := cdc.MarshalBinary(snapshot)
+	bytes, err := cdc.MarshalBinaryLengthPrefixed(snapshot)
 	if err != nil {
 		panic(err)
 	}
@@ -138,7 +138,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, timeOfLatestBlock time.
 		}
 		io.Copy(&bw, r)
 		var ob OrderBookSnapshot
-		err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ob)
+		err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ob)
 		if err != nil {
 			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", key))
 		}
@@ -166,7 +166,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, timeOfLatestBlock time.
 	}
 	io.Copy(&bw, r)
 	var ao ActiveOrders
-	err = kp.cdc.UnmarshalBinary(bw.Bytes(), &ao)
+	err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ao)
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active orders [%s]", key))
 	}

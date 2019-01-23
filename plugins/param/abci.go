@@ -19,7 +19,7 @@ func createAbciQueryHandler(paramHub *ParamHub) app.AbciQueryHandler {
 		case "fees":
 			ctx := app.GetContextForCheckState()
 			fp := paramHub.GetFeeParams(ctx)
-			bz, err := app.GetCodec().MarshalBinary(fp)
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(fp)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),

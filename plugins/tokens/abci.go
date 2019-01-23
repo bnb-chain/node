@@ -42,7 +42,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Log:  err.Error(),
 				}
 			}
-			bz, err := app.GetCodec().MarshalBinary(token)
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(token)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -88,7 +88,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Log:  "malformed range",
 				}
 			}
-			bz, err := app.GetCodec().MarshalBinary(
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(
 				tokens[offset:end],
 			)
 			if err != nil {

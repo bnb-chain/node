@@ -22,7 +22,7 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 		return nil, err
 	}
 	tokens := make([]types.Token, 0)
-	err = cdc.UnmarshalBinary(bz, &tokens)
+	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
 	return tokens, nil
 }
 

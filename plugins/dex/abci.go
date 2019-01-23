@@ -58,7 +58,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					Log:  "malformed range",
 				}
 			}
-			bz, err := app.GetCodec().MarshalBinary(
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(
 				pairs[offset:end],
 			)
 			if err != nil {
@@ -86,7 +86,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Height: height,
 				Levels: levels,
 			}
-			bz, err := app.GetCodec().MarshalBinary(book)
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(book)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -132,7 +132,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			openOrders := keeper.GetOpenOrders(pair, addr)
-			bz, err := app.GetCodec().MarshalBinary(openOrders)
+			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(openOrders)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),

@@ -20,7 +20,7 @@ func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*type
 		return nil, err
 	}
 	var token types.Token
-	err = cdc.UnmarshalBinary(bz, &token)
+	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &token)
 	return &token, nil
 }
 

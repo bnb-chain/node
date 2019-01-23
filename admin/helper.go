@@ -9,14 +9,14 @@ import (
 )
 
 // read of create the private key file for this config
-func readPrivValidator(privValFile string) (crypto.PrivKey, crypto.PubKey, error) {
+func readPrivValidator(privValKeyFile string) (crypto.PrivKey, crypto.PubKey, error) {
 	var privValidator *privval.FilePV
 
-	if common.FileExists(privValFile) {
-		privValidator = privval.LoadFilePV(privValFile)
+	if common.FileExists(privValKeyFile) {
+		privValidator = privval.LoadFilePVEmptyState(privValKeyFile, "")
 	} else {
 		return nil, nil, errors.New("priv_val file does not exist")
 	}
 
-	return privValidator.PrivKey, privValidator.PubKey, nil
+	return privValidator.Key.PrivKey, privValidator.GetPubKey(), nil
 }
