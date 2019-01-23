@@ -407,8 +407,8 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *bc.BlockStore {
 	msgs11 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123463", Side.BUY, "XYZ-000_BNB", 96000, 2500000)}
 	msgs12 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123464", Side.BUY, "XYZ-000_BNB", 97000, 1500000)}
 	msgs13 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123465", Side.SELL, "XYZ-000_BNB", 107000, 1500000)}
-	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "XYZ-000_BNB", "123466", "123462")}
-	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "XYZ-000_BNB", "123467", "123465")}
+	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "XYZ-000_BNB", "123462")}
+	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "XYZ-000_BNB", "123465")}
 	txs = make([]auth.StdTx, 5)
 	txs[0] = MakeTxFromMsg(msgs11, int64(100), int64(9005), buyerPrivKey)
 	txs[1] = MakeTxFromMsg(msgs12, int64(100), int64(9006), buyerPrivKey)
