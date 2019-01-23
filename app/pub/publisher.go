@@ -27,7 +27,7 @@ var (
 )
 
 type MarketDataPublisher interface {
-	publish(msg AvroMsg, tpe msgType, height int64, timestamp int64)
+	publish(msg AvroOrJsonMsg, tpe msgType, height int64, timestamp int64)
 	Stop()
 }
 
@@ -160,6 +160,22 @@ func Publish(
 			metrics.PublishBlockTimeMs.Set(float64(publishBlockTime))
 		}
 	}
+}
+
+func Stop(publisher MarketDataPublisher) {
+	if IsLive == false {
+		Logger.Error("publication module has already been stopped")
+		return
+	}
+
+	IsLive = false
+
+	close(ToPublishCh)
+	if ToRemoveOrderIdCh != nil {
+		close(ToRemoveOrderIdCh)
+	}
+
+	publisher.Stop()
 }
 
 func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals) {

@@ -20,7 +20,7 @@ type LocalMarketDataPublisher struct {
 	tmLogger tmLogger.Logger
 }
 
-func (publisher *LocalMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
+func (publisher *LocalMarketDataPublisher) publish(msg AvroOrJsonMsg, tpe msgType, height int64, timestamp int64) {
 	if jsonBytes, err := json.Marshal(msg); err == nil {
 		if err := publisher.producer.Output(2, fmt.Sprintln(string(jsonBytes))); err != nil {
 			publisher.tmLogger.Error("failed to publish msg", "err", err, "height", height, "msg", msg.String())
@@ -31,7 +31,7 @@ func (publisher *LocalMarketDataPublisher) publish(msg AvroMsg, tpe msgType, hei
 }
 
 func (publisher *LocalMarketDataPublisher) Stop() {
-	IsLive = false
+	publisher.tmLogger.Info("local publisher stopped")
 }
 
 func NewLocalMarketDataPublisher(
