@@ -4,18 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/linkedin/goavro"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
-)
-
-var (
-	booksCodec            *goavro.Codec
-	accountCodec          *goavro.Codec
-	executionResultsCodec *goavro.Codec
-	blockFeeCodec         *goavro.Codec
 )
 
 type msgType int8
@@ -44,32 +35,9 @@ func (this msgType) String() string {
 	}
 }
 
-type AvroMsg interface {
+type AvroOrJsonMsg interface {
 	ToNativeMap() map[string]interface{}
 	String() string
-}
-
-func marshal(msg AvroMsg, tpe msgType) ([]byte, error) {
-	native := msg.ToNativeMap()
-	Logger.Debug("msgDetail", "msg", native)
-	var codec *goavro.Codec
-	switch tpe {
-	case accountsTpe:
-		codec = accountCodec
-	case booksTpe:
-		codec = booksCodec
-	case executionResultTpe:
-		codec = executionResultsCodec
-	case blockFeeTpe:
-		codec = blockFeeCodec
-	default:
-		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
-	}
-	bb, err := codec.BinaryFromNative(nil, native)
-	if err != nil {
-		Logger.Error("failed to serialize message", "msg", msg, "err", err)
-	}
-	return bb, err
 }
 
 type ExecutionResults struct {
@@ -483,17 +451,4 @@ func (msg BlockFee) ToNativeMap() map[string]interface{} {
 	}
 	native["validators"] = validators
 	return native
-}
-
-func initAvroCodecs() (err error) {
-	if executionResultsCodec, err = goavro.NewCodec(executionResultSchema); err != nil {
-		return err
-	} else if booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
-		return err
-	} else if accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
-		return err
-	} else if blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
-		return err
-	}
-	return nil
 }

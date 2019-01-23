@@ -161,7 +161,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		}
 
 		if len(publishers) == 0 {
-			app.Logger.Error("Cannot find any publisher in config, there might be some wrong configuration")
+			panic(fmt.Errorf("Cannot find any publisher in config, there might be some wrong configuration"))
 		} else {
 			if len(publishers) == 1 {
 				app.publisher = publishers[0]

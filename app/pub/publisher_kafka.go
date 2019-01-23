@@ -10,6 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/deathowl/go-metrics-prometheus"
 	"github.com/eapache/go-resiliency/breaker"
+	"github.com/linkedin/goavro"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -20,6 +21,11 @@ const (
 )
 
 type KafkaMarketDataPublisher struct {
+	booksCodec            *goavro.Codec
+	accountCodec          *goavro.Codec
+	executionResultsCodec *goavro.Codec
+	blockFeeCodec         *goavro.Codec
+
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
 
@@ -101,7 +107,7 @@ func (publisher *KafkaMarketDataPublisher) prepareMessage(
 	return msg
 }
 
-func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgType, height, timestamp int64) {
+func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tpe msgType, height, timestamp int64) {
 	var topic string
 	switch tpe {
 	case booksTpe:
@@ -114,7 +120,7 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 		topic = Cfg.BlockFeeTopic
 	}
 
-	if msg, err := marshal(avroMessage, tpe); err == nil {
+	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
 		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
 			Logger.Info("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
@@ -128,13 +134,6 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroMsg, tpe msgT
 
 func (publisher *KafkaMarketDataPublisher) Stop() {
 	Logger.Debug("start to stop KafkaMarketDataPublisher")
-	IsLive = false
-
-	close(ToPublishCh)
-	if ToRemoveOrderIdCh != nil {
-		close(ToRemoveOrderIdCh)
-	}
-
 	for topic, producer := range publisher.producers {
 		// nil check because this method would be called when we failed to create producer
 		if producer != nil {
@@ -180,16 +179,53 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 	}
 }
 
+func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgType) ([]byte, error) {
+	native := msg.ToNativeMap()
+	Logger.Debug("msgDetail", "msg", native)
+	var codec *goavro.Codec
+	switch tpe {
+	case accountsTpe:
+		codec = publisher.accountCodec
+	case booksTpe:
+		codec = publisher.booksCodec
+	case executionResultTpe:
+		codec = publisher.executionResultsCodec
+	case blockFeeTpe:
+		codec = publisher.blockFeeCodec
+	default:
+		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
+	}
+	bb, err := codec.BinaryFromNative(nil, native)
+	if err != nil {
+		Logger.Error("failed to serialize message", "msg", msg, "err", err)
+	}
+	return bb, err
+}
+
+func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
+	if publisher.executionResultsCodec, err = goavro.NewCodec(executionResultSchema); err != nil {
+		return err
+	} else if publisher.booksCodec, err = goavro.NewCodec(booksSchema); err != nil {
+		return err
+	} else if publisher.accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
+		return err
+	} else if publisher.blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
+		return err
+	}
+	return nil
+}
+
 func NewKafkaMarketDataPublisher(
 	logger log.Logger) (publisher *KafkaMarketDataPublisher) {
-	if err := initAvroCodecs(); err != nil {
-		Logger.Error("failed to initialize avro codec", "err", err)
-		panic(err)
-	}
 
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
 		producers: make(map[string]sarama.SyncProducer),
+	}
+
+	if err := publisher.initAvroCodecs(); err != nil {
+		Logger.Error("failed to initialize avro codec", "err", err)
+		panic(err)
 	}
 
 	if saramaCfg, err := publisher.newProducers(); err != nil {

@@ -16,7 +16,7 @@ type MockMarketDataPublisher struct {
 	MessagePublished uint32      // atomic integer used to determine the published messages
 }
 
-func (publisher *MockMarketDataPublisher) publish(msg AvroMsg, tpe msgType, height int64, timestamp int64) {
+func (publisher *MockMarketDataPublisher) publish(msg AvroOrJsonMsg, tpe msgType, height int64, timestamp int64) {
 	publisher.Lock.Lock()
 	defer publisher.Lock.Unlock()
 
