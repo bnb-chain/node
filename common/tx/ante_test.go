@@ -596,7 +596,7 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 	for i := 0; i < len(feeCalculators); i++ {
 		msg := newTestMsgWithFeeCalculator(feeCalculators[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
-		txBytes, _ := app.Codec.MarshalBinary(txn)
+		txBytes, _ := app.Codec.MarshalBinaryLengthPrefixed(txn)
 		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 		ctx, _, _ = anteHandler(ctx.WithValue(baseapp.TxHashKey, txHash), txn, sdk.RunTxModeCheck)
 		if ctx.IsDeliverTx() {
@@ -733,13 +733,13 @@ func TestNewTxPreCheckerEmptySigner(t *testing.T) {
 	require.Equal(t, expectedSigners, stdTx.GetSigners())
 
 	prechecker := tx.NewTxPreChecker()
-	res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	res := prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 	require.NotEqual(t, sdk.ABCICodeOK, res.Code, "Failed prechecker")
 	require.Contains(t, res.Log, "no signers")
 
 	privs, accNums, seqs = []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accNums, seqs)
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	res = prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 	require.NotEqual(t, sdk.ABCICodeOK, res.Code, "Failed prechecker2")
 	require.Contains(t, res.Log, "wrong number of signers")
 }
@@ -778,7 +778,7 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 	privs, accnums, seqs := []crypto.PrivKey{priv1}, []int64{0}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
 	prechecker := tx.NewTxPreChecker()
-	res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	res := prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 	require.Equal(t, sdk.ABCICodeOK, res.Code, "Failed prechecker")
 
 	chainID := ctx.ChainID()
@@ -806,14 +806,14 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 			auth.StdSignBytes(cs.chainID, cs.accnum, cs.seq, cs.msgs, "", 0, nil),
 			"",
 		)
-		res := prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+		res := prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 		require.NotEqual(t, sdk.ABCICodeOK, res.Code)
 	}
 
 	// test wrong signer if public key exist
 	privs, accnums, seqs = []crypto.PrivKey{priv2}, []int64{0}, []int64{0}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
+	res = prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
 	require.Equal(t, sdk.ABCICodeOK, res.Code)
 	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnauthorized)
 }

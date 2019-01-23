@@ -108,8 +108,9 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		gentxsDir := filepath.Join(outDir, "gentxs")
 		nodeDirs[i] = nodeDir
 
-		prepareNodeDir(nodeDir, clientDir)
 		config.SetRoot(nodeDir)
+		cfg.EnsureRoot(config.RootDir)
+		prepareClientDir(clientDir)
 
 		monikers[i] = nodeDirName
 		config.Moniker = nodeDirName
@@ -131,13 +132,8 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 	return nil
 }
 
-func prepareNodeDir(daemonDir, clientDir string) {
-	err := os.MkdirAll(filepath.Join(daemonDir, "config"), nodeDirPerm)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.MkdirAll(clientDir, nodeDirPerm)
+func prepareClientDir(clientDir string) {
+	err := os.MkdirAll(clientDir, nodeDirPerm)
 	if err != nil {
 		panic(err)
 	}
