@@ -87,7 +87,13 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 		PublishBlockFee:        true,
 		PublicationChannelSize: 0, // deliberately sync publication
 	}
-	app.publisher = pub.NewMockMarketDataPublisher(logger, app.publicationConfig)
+	pub.Logger = logger.With("module", "pub")
+	pub.Cfg = app.publicationConfig
+	pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
+	app.publisher = pub.NewMockMarketDataPublisher()
+	go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
+	pub.IsLive = true
+
 	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
 	ctx = app.DeliverState.Ctx
 	cdc = app.GetCodec()

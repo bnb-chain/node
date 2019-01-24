@@ -20,37 +20,18 @@ const (
 
 var (
 	Logger            tmlog.Logger
-	cfg               *config.PublicationConfig
+	Cfg               *config.PublicationConfig
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
 )
 
 type MarketDataPublisher interface {
-	publish(msg AvroMsg, tpe msgType, height int64, timestamp int64)
+	publish(msg AvroOrJsonMsg, tpe msgType, height int64, timestamp int64)
 	Stop()
 }
 
-func setup(
-	logger tmlog.Logger,
-	config *config.PublicationConfig,
-	m *Metrics,
-	publisher MarketDataPublisher) (err error) {
-	Logger = logger.With("module", "pub")
-	cfg = config
-	ToPublishCh = make(chan BlockInfoToPublish, config.PublicationChannelSize)
-	if err = initAvroCodecs(); err != nil {
-		Logger.Error("failed to initialize avro codec", "err", err)
-		return err
-	}
-
-	go publish(publisher, m, logger, config, ToPublishCh)
-	IsLive = true
-
-	return nil
-}
-
-func publish(
+func Publish(
 	publisher MarketDataPublisher,
 	metrics *Metrics,
 	Logger tmlog.Logger,
@@ -67,8 +48,8 @@ func publish(
 			// Implementation note: publication order are important here,
 			// DEX query service team relies on the fact that we publish orders before trades so that
 			// they can assign buyer/seller address into trade before persist into DB
-			var opensToPublish []*order
-			var canceledToPublish []*order
+			var opensToPublish []*Order
+			var canceledToPublish []*Order
 			var feeToPublish map[string]string
 			if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
 				opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
@@ -78,12 +59,12 @@ func publish(
 					marketData.feeHolder,
 					marketData.timestamp)
 				for _, o := range opensToPublish {
-					if o.status == orderPkg.FullyFill {
+					if o.Status == orderPkg.FullyFill {
 						if ToRemoveOrderIdCh != nil {
 							Logger.Debug(
 								"going to delete fully filled order from order changes map",
-								"orderId", o.orderId)
-							ToRemoveOrderIdCh <- o.orderId
+								"orderId", o.OrderId)
+							ToRemoveOrderIdCh <- o.OrderId
 						}
 					}
 				}
@@ -91,8 +72,8 @@ func publish(
 					if ToRemoveOrderIdCh != nil {
 						Logger.Debug(
 							"going to delete order from order changes map",
-							"orderId", o.orderId, "status", o.status)
-						ToRemoveOrderIdCh <- o.orderId
+							"orderId", o.OrderId, "status", o.Status)
+						ToRemoveOrderIdCh <- o.OrderId
 					}
 				}
 			}
@@ -181,13 +162,29 @@ func publish(
 	}
 }
 
-func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*order, tradesToPublish []*Trade, proposalsToPublish *Proposals) {
+func Stop(publisher MarketDataPublisher) {
+	if IsLive == false {
+		Logger.Error("publication module has already been stopped")
+		return
+	}
+
+	IsLive = false
+
+	close(ToPublishCh)
+	if ToRemoveOrderIdCh != nil {
+		close(ToRemoveOrderIdCh)
+	}
+
+	publisher.Stop()
+}
+
+func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	numOfProposals := proposalsToPublish.NumOfMsgs
-	executionResultsMsg := executionResults{height: height, timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals}
+	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals}
 	if numOfOrders > 0 {
-		executionResultsMsg.Orders = orders{numOfOrders, os}
+		executionResultsMsg.Orders = Orders{numOfOrders, os}
 	}
 	if numOfTrades > 0 {
 		executionResultsMsg.Trades = trades{numOfTrades, tradesToPublish}
@@ -211,7 +208,7 @@ func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64
 		accs[idx] = acc
 		idx++
 	}
-	accountsMsg := accounts{height, numOfMsgs, accs}
+	accountsMsg := Accounts{height, numOfMsgs, accs}
 
 	publisher.publish(&accountsMsg, accountsTpe, height, timestamp)
 }
