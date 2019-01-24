@@ -92,12 +92,11 @@ func NewTxPreChecker() sdk.PreChecker {
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			sig := sigs[i]
-			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
-
 			if sig.PubKey == nil {
 				continue
 			}
-
+			
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 			res := processSig(txHash, sig, sig.PubKey, signBytes)
 			if !res.IsOK() {
 				return res
