@@ -43,10 +43,10 @@ do
     pause=$(random 5 7)
     symbolNum=$(random 1 10)
 
-    symbol="NNB-FA3_BNB"
+    symbol="NNB-BE8_BNB"
     if [ $symbolNum -lt 4 ]
     then
-        symbol="NNB-FA3_BNB"
+        symbol="NNB-BE8_BNB"
     fi
 
     from="zc"
@@ -55,9 +55,9 @@ do
         from="zz"
     fi
 
-    printf "\n${cli} dex order --symbol=${symbol} --side=${side} --price=${price}00000000 --qty=${qty}00000000 --tif="GTC" --from=${from} --chain-id=${chainId}\n"
+    printf "\n${cli} dex order --symbol=${symbol} --side=${side} --price=${price}00000000 --qty=${qty}00000000 --tif="GTE" --from=${from} --chain-id=${chainId}\n"
 
-    ${cli} dex order --symbol=${symbol} --side=${side} --price=${price}00000000 --qty=${qty}00000000 --tif="GTC" --from=${from} --chain-id=${chainId}
+    ${cli} dex order --symbol=${symbol} --side=${side} --price=${price}00000000 --qty=${qty}00000000 --tif="GTE" --from=${from} --chain-id=${chainId}
 
     # -d is used for get response of expect script. TODO: better log redirection
 #    result=$(expect -d ${scripthome}/ordergen.exp "${clipath}" "${clihome}" "${symbol}" "${side}" "${price}00000000" "${qty}00000000" "${from}" "${chainId}")

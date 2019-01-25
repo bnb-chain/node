@@ -165,15 +165,15 @@ type Order struct {
 	OrderType            int8
 	Price                int64
 	Qty                  int64
-	lastExecutedPrice    int64
-	lastExecutedQty      int64
-	cumQty               int64
-	fee                  string
-	orderCreationTime    int64
-	transactionTime      int64
-	timeInForce          int8
-	currentExecutionType orderPkg.ExecutionType
-	txHash               string
+	LastExecutedPrice    int64
+	LastExecutedQty      int64
+	CumQty               int64
+	Fee                  string
+	OrderCreationTime    int64
+	TransactionTime      int64
+	TimeInForce          int8
+	CurrentExecutionType orderPkg.ExecutionType
+	TxHash               string
 }
 
 func (msg *Order) String() string {
@@ -185,9 +185,9 @@ func (msg *Order) effectQtyToOrderBook() int64 {
 	case orderPkg.Ack:
 		return msg.Qty
 	case orderPkg.FullyFill, orderPkg.PartialFill:
-		return -msg.lastExecutedQty
+		return -msg.LastExecutedQty
 	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled:
-		return msg.cumQty - msg.Qty // deliberated be negative value
+		return msg.CumQty - msg.Qty // deliberated be negative value
 	default:
 		Logger.Error("does not supported order status", "order", msg.String())
 		return 0
@@ -197,23 +197,23 @@ func (msg *Order) effectQtyToOrderBook() int64 {
 func (msg *Order) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["symbol"] = msg.Symbol
-	native["status"] = msg.Status.String() //TODO(#66): confirm with all teams to make this uint8 enum
+	native["status"] = msg.Status.String()
 	native["orderId"] = msg.OrderId
 	native["tradeId"] = msg.TradeId
 	native["owner"] = msg.Owner
-	native["side"] = orderPkg.IToSide(msg.Side)                //TODO(#66): confirm with all teams to make this uint8 enum
-	native["orderType"] = orderPkg.IToOrderType(msg.OrderType) //TODO(#66): confirm with all teams to make this uint8 enum
+	native["side"] = int(msg.Side) // without conversion avro encoder would complain: value does not match its schema: cannot encode binary int: expected: Go numeric; received: int8
+	native["orderType"] = int(msg.OrderType)
 	native["price"] = msg.Price
 	native["qty"] = msg.Qty
-	native["lastExecutedPrice"] = msg.lastExecutedPrice
-	native["lastExecutedQty"] = msg.lastExecutedQty
-	native["cumQty"] = msg.cumQty
-	native["fee"] = msg.fee
-	native["orderCreationTime"] = msg.orderCreationTime
-	native["transactionTime"] = msg.transactionTime
-	native["timeInForce"] = orderPkg.IToTimeInForce(msg.timeInForce)   //TODO(#66): confirm with all teams to make this uint8 enum
-	native["currentExecutionType"] = msg.currentExecutionType.String() //TODO(#66): confirm with all teams to make this uint8 enum
-	native["txHash"] = msg.txHash
+	native["lastExecutedPrice"] = msg.LastExecutedPrice
+	native["lastExecutedQty"] = msg.LastExecutedQty
+	native["cumQty"] = msg.CumQty
+	native["fee"] = msg.Fee
+	native["orderCreationTime"] = msg.OrderCreationTime
+	native["transactionTime"] = msg.TransactionTime
+	native["timeInForce"] = int(msg.TimeInForce)
+	native["currentExecutionType"] = msg.CurrentExecutionType.String()
+	native["txHash"] = msg.TxHash
 	return native
 }
 

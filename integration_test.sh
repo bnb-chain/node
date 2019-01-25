@@ -112,7 +112,7 @@ check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
 printf "Order ID: $order_id\n"
@@ -124,7 +124,7 @@ check_operation "Cancel Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
@@ -132,7 +132,7 @@ echo ""
 
 sleep 1s
 # place Sell order
-result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
@@ -145,7 +145,7 @@ round="2"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 2000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 2000000000 alice ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
@@ -158,7 +158,7 @@ check_operation "Cancel Order" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # place buy order
-result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
@@ -166,7 +166,7 @@ echo ""
 
 sleep 1s
 # place Sell order
-result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gtc ${cli_home})
+result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 result=$(./bnbcli dex show -l ${btc_symbol}_BNB)

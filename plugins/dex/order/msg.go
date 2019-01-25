@@ -30,17 +30,6 @@ var sideNames = map[string]int8{
 	"SELL": matcheng.SELLSIDE,
 }
 
-func IToSide(side int8) string {
-	switch side {
-	case Side.BUY:
-		return "BUY"
-	case Side.SELL:
-		return "SELL"
-	default:
-		return "UNKNOWN"
-	}
-}
-
 // GenerateOrderID generates an order ID
 func GenerateOrderID(sequence int64, addr sdk.AccAddress) string {
 	id := fmt.Sprintf("%X-%d", addr, sequence)
@@ -78,17 +67,6 @@ var OrderType = struct {
 	MARKET int8
 }{orderLimit, orderMarket}
 
-func IToOrderType(tpe int8) string {
-	switch tpe {
-	case OrderType.LIMIT:
-		return "LIMIT"
-	case OrderType.MARKET:
-		return "MARKET"
-	default:
-		return "UNKNOWN"
-	}
-}
-
 // IsValidOrderType validates that an order type is valid and supported by the matching engine
 func IsValidOrderType(ot int8) bool {
 	switch ot {
@@ -101,44 +79,33 @@ func IsValidOrderType(ot int8) bool {
 
 const (
 	_      int8 = iota
-	tifGTC int8 = iota
+	tifGTE int8 = iota
 	_      int8 = iota
 	tifIOC int8 = iota
 )
 
 // TimeInForce is an enum of TIF (Time in Force) options supported by the matching engine
 var TimeInForce = struct {
-	GTC int8
+	GTE int8
 	IOC int8
-}{tifGTC, tifIOC}
+}{tifGTE, tifIOC}
 
 var timeInForceNames = map[string]int8{
-	"GTC": tifGTC,
+	"GTE": tifGTE,
 	"IOC": tifIOC,
 }
 
 // IsValidTimeInForce validates that a tif code is correct
 func IsValidTimeInForce(tif int8) bool {
 	switch tif {
-	case TimeInForce.GTC, TimeInForce.IOC:
+	case TimeInForce.GTE, TimeInForce.IOC:
 		return true
 	default:
 		return false
 	}
 }
 
-func IToTimeInForce(tif int8) string {
-	switch tif {
-	case TimeInForce.GTC:
-		return "GTC"
-	case TimeInForce.IOC:
-		return "IOC"
-	default:
-		return "UNKNOWN"
-	}
-}
-
-// TifStringToTifCode converts a string like "GTC" to its internal tif code
+// TifStringToTifCode converts a string like "GTE" to its internal tif code
 func TifStringToTifCode(tif string) (int8, error) {
 	upperTif := strings.ToUpper(tif)
 	if val, ok := timeInForceNames[upperTif]; ok {
@@ -171,7 +138,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 		Side:        side,
 		Price:       price,
 		Quantity:    qty,
-		TimeInForce: TimeInForce.GTC, // default
+		TimeInForce: TimeInForce.GTE, // default
 	}
 }
 
@@ -188,7 +155,7 @@ func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, si
 		Side:        side,
 		Price:       price,
 		Quantity:    qty,
-		TimeInForce: TimeInForce.GTC, // default
+		TimeInForce: TimeInForce.GTE, // default
 	}, nil
 }
 
