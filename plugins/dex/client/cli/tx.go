@@ -123,7 +123,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagSide, "s", "", "side (buy as 1 or sell as 2) of the order")
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
-	cmd.Flags().StringP(flagTimeInForce, "t", "gtc", "TimeInForce for the order (gtc or ioc)")
+	cmd.Flags().StringP(flagTimeInForce, "t", "gte", "TimeInForce for the order (gte or ioc)")
 	cmd.Flags().BoolP(flagDryRun, "d", false, "Generate and return the tx bytes (do not broadcast)")
 	return cmd
 }

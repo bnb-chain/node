@@ -59,8 +59,8 @@ const (
 									{ "name": "orderId", "type": "string" },
 									{ "name": "tradeId", "type": "string" },
 									{ "name": "owner", "type": "string" },
-									{ "name": "side", "type": "string" },
-									{ "name": "orderType", "type": "string" },
+									{ "name": "side", "type": "int" },
+									{ "name": "orderType", "type": "int" },
 									{ "name": "price", "type": "long" },
 									{ "name": "qty", "type": "long" },
 									{ "name": "lastExecutedPrice", "type": "long" },
@@ -69,7 +69,7 @@ const (
 									{ "name": "fee", "type": "string" }, 
 									{ "name": "orderCreationTime", "type": "long" },
 									{ "name": "transactionTime", "type": "long" },
-									{ "name": "timeInForce", "type": "string" },
+									{ "name": "timeInForce", "type": "int" },
 									{ "name": "currentExecutionType", "type": "string" },
 									{ "name": "txHash", "type": "string" }
 								]
