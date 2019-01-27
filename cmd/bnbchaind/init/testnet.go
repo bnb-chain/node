@@ -77,6 +77,9 @@ Example:
 
 	cmd.Flags().String(client.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 
+	cmd.Flags().StringVar(&app.ServerContext.Bech32PrefixAccAddr, flagAccPrefix, "bnb", "bech32 prefix for AccAddress")
+	app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
+
 	return cmd
 }
 func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) error {

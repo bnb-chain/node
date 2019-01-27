@@ -13,12 +13,10 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/server"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/BiJie/BinanceChain/app"
 	bnbInit "github.com/BiJie/BinanceChain/cmd/bnbchaind/init"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/server"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -33,12 +31,6 @@ func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.
 func main() {
 	cdc := app.Codec
 	ctx := app.ServerContext
-
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(ctx.Bech32PrefixAccAddr, ctx.Bech32PrefixAccPub)
-	config.SetBech32PrefixForValidator(ctx.Bech32PrefixValAddr, ctx.Bech32PrefixValPub)
-	config.SetBech32PrefixForConsensusNode(ctx.Bech32PrefixConsAddr, ctx.Bech32PrefixConsPub)
-	config.Seal()
 
 	rootCmd := &cobra.Command{
 		Use:               "bnbchaind",
