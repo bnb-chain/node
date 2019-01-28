@@ -91,6 +91,9 @@ type BinanceChain struct {
 	// check nil-ness to know whether metrics collection is turn on
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	metrics *pub.Metrics
+
+	stateSyncHeight     int64
+	stateSyncStoreInfos []storePkg.StoreInfo
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -534,35 +537,71 @@ func (app *BinanceChain) StartRecovery(height int64, numKeys map[string]int64) e
 	//		store.(*storePkg.IavlStore).Tree.SetVersion(height - 1)
 	//	}
 	//}
+	app.stateSyncHeight = height - 1
+	app.stateSyncStoreInfos = make([]storePkg.StoreInfo, 0, len(numKeys))
+
 	return nil
 }
 
 func (app *BinanceChain) WriteRecoveryChunk(storeName string, chunk [][]byte) error {
-	store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[storeName])
+	//store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[storeName])
 	fmt.Printf("write snapshot store:%s\n", storeName)
 	nodes := make([]*iavl.Node, 0)
 	inOrderKeys := make([][]byte, 0)
 	for idx := 0; idx < len(chunk); idx++ {
 		if idx < len(chunk)/2 {
 			node, _ := iavl.MakeNode(chunk[idx])
+			node.Hash()
 			nodes = append(nodes, node)
 		} else {
 			inOrderKeys = append(inOrderKeys, chunk[idx])
 		}
 	}
 
+	//if len(chunk) > 0 {
+	//	mutableTree := store.(*store.IavlStore).Tree
+	//	tree := mutableTree.ImmutableTree
+	//	tree.RecoverFromRemoteNodes(nodes, inOrderKeys)
+	//	// load a full tree from db to generate dot graph
+	//	//tree.Iterate(func(key []byte, value []byte) bool {
+	//	//	return false
+	//	//})
+	//	tree.Hash()
+	//
+	//	file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees_witness/%s.txt", storeName))
+	//	iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
+	//}
+
 	if len(chunk) > 0 {
-		mutableTree := store.(*storePkg.IavlStore).Tree
-		tree := mutableTree.ImmutableTree
-		tree.RecoverFromRemoteNodes(nodes, inOrderKeys)
-		// load a full tree from db to generate dot graph
-		//tree.Iterate(func(key []byte, value []byte) bool {
-		//	return false
-		//})
-		tree.Hash()
-		file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees_witness/%s.txt", storeName))
-		iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
+		db := dbm.NewPrefixDB(app.GetDB(), []byte("s/k:"+storeName+"/"))
+		nodeDB := iavl.NewNodeDB(db, 10000)
+		nodeDB.SaveRoot(nodes[0], app.stateSyncHeight)
+		for _, node := range nodes[0:] {
+			nodeDB.SaveNode(node)
+		}
+		nodeDB.Commit()
+	} else {
+		db := dbm.NewPrefixDB(app.GetDB(), []byte("s/k:"+storeName+"/"))
+		nodeDB := iavl.NewNodeDB(db, 10000)
+		nodeDB.SaveEmptyRoot(app.stateSyncHeight)
+		nodeDB.Commit()
 	}
+
+	var nodeHash []byte
+	if len(nodes) > 0 {
+		nodeHash = nodes[0].Hash()
+	} else {
+		nodeHash = nil
+	}
+	app.stateSyncStoreInfos = append(app.stateSyncStoreInfos, storePkg.StoreInfo{
+		Name: storeName,
+		Core: storePkg.StoreCore{
+			CommitID: storePkg.CommitID{
+				Version: app.stateSyncHeight,
+				Hash:    nodeHash,
+			},
+		},
+	})
 
 	app.Logger.Info("finished recovery", "store", storeName)
 	return nil
@@ -570,13 +609,38 @@ func (app *BinanceChain) WriteRecoveryChunk(storeName string, chunk [][]byte) er
 
 func (app *BinanceChain) EndRecovery(height int64) error {
 	app.Logger.Info("finished recovery")
-	stores := app.GetCommitMultiStore()
-	commitId := stores.CommitAt(height)
+	//stores := app.GetCommitMultiStore()
+	//commitId := stores.CommitAt(height)
 	// block store required to hydrate dex OB
-	err := app.LoadCMSLatestVersion()
+
+	db := app.GetDB()
+	// simulate setLatestversion key
+	batch := db.NewBatch()
+	latestBytes, _ := app.Codec.MarshalBinary(height) // Does not error
+	batch.Set([]byte("s/latest"), latestBytes)
+
+	// simulate setCommitInfo
+	fmt.Printf("!!!cong!!!version=%d\n", height)
+
+	ci := storePkg.CommitInfo{
+		Version:    height,
+		StoreInfos: app.stateSyncStoreInfos,
+	}
+	cInfoBytes, err := app.Codec.MarshalBinary(ci)
+	if err != nil {
+		panic(err)
+	}
+	cInfoKey := fmt.Sprintf("s/%d", height)
+	batch.Set([]byte(cInfoKey), cInfoBytes)
+	batch.WriteSync()
+
+	// load into memory from db
+	err = app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
+	stores := app.GetCommitMultiStore()
+	commitId := stores.LastCommitID()
 	hashHex := fmt.Sprintf("%X", commitId.Hash)
 	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
 	return nil
