@@ -6,7 +6,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
@@ -23,6 +22,7 @@ import (
 	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
 	paramcmd "github.com/BiJie/BinanceChain/plugins/param/client/cli"
 	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
+	"github.com/BiJie/BinanceChain/version"
 )
 
 // rootCmd is the entry point for this binary

@@ -1,7 +1,11 @@
 PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
+
+COSMOS_RELEASE := $(shell grep 'github.com/BiJie/bnc-cosmos-sdk' Gopkg.toml -n1|grep branch|awk '{print $$4}'| sed 's/\"//g')
+TENDER_RELEASE := $(shell grep "github.com/BiJie/bnc-tendermint" Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
+
 BUILD_TAGS = netgo
-BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/BiJie/BinanceChain/version.GitCommit=${COMMIT_HASH}"
+BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/BiJie/BinanceChain/version.GitCommit=${COMMIT_HASH} -X github.com/BiJie/BinanceChain/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/BiJie/BinanceChain/version.TendermintRelease=${TENDER_RELEASE}"
 
 all: get_vendor_deps format build
 
