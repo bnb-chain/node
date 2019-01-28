@@ -125,7 +125,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 
 		tif, err := order.TifStringToTifCode(params.tif)
 		if err != nil {
-			// default to GTC
+			// default to GTE
 			tif = -1
 		}
 

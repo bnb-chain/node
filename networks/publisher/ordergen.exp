@@ -11,7 +11,7 @@ set chainId [lindex $argv 7]
 
 set timeout 30
     log_user 0
-	spawn $clipath --home $clihome dex order --symbol=$symbol --side=$side --price=$price --qty=$qty --tif=GTC --from=$from --chain-id=$chainId
+	spawn $clipath --home $clihome dex order --symbol=$symbol --side=$side --price=$price --qty=$qty --tif=GTE --from=$from --chain-id=$chainId
 	expect "Password to sign with*"
 	send "1234qwerasdf\r"
 	expect "Committed at block*"

@@ -353,8 +353,8 @@ func initializeAccounts(tokens []string, flag bool) {
 	tokens = append(tokens, "BNB")
 	if flag == true {
 		type Transfer struct {
-			To 		string `json:to`
-			Amount 	string `json:amount`
+			To     string `json:to`
+			Amount string `json:amount`
 		}
 		b := 0
 		transfers := make([]Transfer, 2000)
@@ -363,12 +363,12 @@ func initializeAccounts(tokens []string, flag bool) {
 			for j, token := range tokens {
 				buffer.WriteString("50000000000:")
 				buffer.WriteString(token)
-				if j != (len(tokens)-1) {
+				if j != (len(tokens) - 1) {
 					buffer.WriteString(",")
 				}
 			}
 			transfers[b] = Transfer{
-				To: 	accToAdd[key],
+				To:     accToAdd[key],
 				Amount: buffer.String(),
 			}
 			b++
@@ -444,9 +444,9 @@ func allocateCreate(tokens []string) {
 			symbol := fmt.Sprintf("%s_BNB", tokens[j])
 			fmt.Printf("allocating #%d\n", createIndex)
 			if largeBuyers != nil && isLargeBuyer(nameIndex, largeBuyers) {
-				createChn <- buildC(sortKeys[nameIndex], buy, symbol, 9990000, 10000000000, "GTC")
+				createChn <- buildC(sortKeys[nameIndex], buy, symbol, 9990000, 10000000000, "GTE")
 			} else {
-				createChn <- buildC(sortKeys[nameIndex], buy, symbol, buyPrices[i], 100000000, "GTC")
+				createChn <- buildC(sortKeys[nameIndex], buy, symbol, buyPrices[i], 100000000, "GTE")
 			}
 			createIndex++
 			if createIndex == *batchSize {
@@ -459,7 +459,7 @@ func allocateCreate(tokens []string) {
 				largeBuyers = make([]int, len(sortKeys)/1000)
 				generateLargeBuyers(largeBuyers)
 			}
-			createChn <- buildC(sortKeys[nameIndex], sell, symbol, sellPrices[i], 100000000, "GTC")
+			createChn <- buildC(sortKeys[nameIndex], sell, symbol, sellPrices[i], 100000000, "GTE")
 			createIndex++
 			if createIndex == *batchSize {
 				close(createChn)
@@ -572,7 +572,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 			Side:        item.side,
 			Price:       item.price,
 			Quantity:    item.qty,
-			TimeInForce: order.TimeInForce.GTC,
+			TimeInForce: order.TimeInForce.GTE,
 		}
 		msg.TimeInForce = item.tifCode
 		msgs := []sdk.Msg{msg}
