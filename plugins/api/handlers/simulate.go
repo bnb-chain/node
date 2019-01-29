@@ -51,7 +51,7 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 
 		// expect abci query result to be `sdk.Result`
 		var resp response
-		err = cdc.UnmarshalBinary(res, &resp)
+		err = cdc.UnmarshalBinaryLengthPrefixed(res, &resp)
 		if err != nil {
 			errMsg := fmt.Sprintf("Couldn't unmarshal. Error: %s. Response: %s", err.Error(), res)
 			throw(w, http.StatusInternalServerError, errMsg)

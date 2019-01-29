@@ -70,7 +70,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			side := int8(viper.GetInt(flagSide))
 
-			// avoids an ugly panic on sequence 0 with --dry
+			// avoids an ugly panin sequence 0 with --dry
 			acc, err := cliCtx.GetAccount(from)
 			if acc == nil || err != nil {
 				fmt.Println("No transactions involving this address yet. Using sequence 0.")
@@ -99,7 +99,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 					return err
 				}
 				var tx auth.StdTx
-				if err = txBldr.Codec.UnmarshalBinary(txBytes, &tx); err == nil {
+				if err = txBldr.Codec.UnmarshalBinaryLengthPrefixed(txBytes, &tx); err == nil {
 					json, err := txBldr.Codec.MarshalJSON(tx)
 					if err == nil {
 						fmt.Printf("TX JSON: %s\n", json)

@@ -41,7 +41,7 @@ func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
 		if ctx.IsDeliverTx() {
 			// add fee to pool, even it's free
 			stdTx := tx.(auth.StdTx)
-			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinary(stdTx))).String()
+			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinaryLengthPrefixed(stdTx))).String()
 			fees.Pool.AddFee(txHash, fee)
 		}
 
@@ -51,25 +51,25 @@ func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
 
 func (tc *TestClient) DeliverTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, nil, "test", 0, nil)
-	tx, _ := tc.cdc.MarshalBinary(stdtx)
+	tx, _ := tc.cdc.MarshalBinaryLengthPrefixed(stdtx)
 	return tc.cl.DeliverTxAsync(tx)
 }
 
 func (tc *TestClient) CheckTxAsync(msg sdk.Msg, cdc *wire.Codec) *abcicli.ReqRes {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, nil, "test", 0, nil)
-	tx, _ := tc.cdc.MarshalBinary(stdtx)
+	tx, _ := tc.cdc.MarshalBinaryLengthPrefixed(stdtx)
 	return tc.cl.CheckTxAsync(tx)
 }
 
 func (tc *TestClient) DeliverTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseDeliverTx, error) {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, nil, "test", 0, nil)
-	tx, _ := tc.cdc.MarshalBinary(stdtx)
+	tx, _ := tc.cdc.MarshalBinaryLengthPrefixed(stdtx)
 	return tc.cl.DeliverTxSync(tx)
 }
 
 func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseCheckTx, error) {
 	stdtx := auth.NewStdTx([]sdk.Msg{msg}, nil, "test", 0, nil)
-	tx, _ := tc.cdc.MarshalBinary(stdtx)
+	tx, _ := tc.cdc.MarshalBinaryLengthPrefixed(stdtx)
 	return tc.cl.CheckTxSync(tx)
 }
 

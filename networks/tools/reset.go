@@ -149,7 +149,7 @@ func resetBlockStoreState(height int64, rootDir string) {
 
 // Set the latest version.
 func setLatestVersion(batch db.DB, version int64) {
-	latestBytes, _ := cdc.MarshalBinary(version) // Does not error
+	latestBytes, _ := cdc.MarshalBinaryLengthPrefixed(version) // Does not error
 	batch.Set([]byte("s/latest"), latestBytes)
 }
 
@@ -172,7 +172,7 @@ func resetAppState(height int64, rootDir string) {
 	//cms.LoadLatestVersion()
 	//haha := dbIns.Get([]byte("s/latest"))
 	//var ha int64
-	//cdc.UnmarshalBinary(haha, &ha)
+	//cdc.UnmarshalBinaryLengthPrefixed(haha, &ha)
 	//fmt.Printf("%x", haha)
 	setLatestVersion(dbIns, height)
 }
@@ -211,14 +211,15 @@ func resetAppVersionedTree(height int64, rootDir string) {
 
 func resetPrivValidator(height int64, rootDir string) {
 	var privValidator *privval.FilePV
-	filePath := path.Join(rootDir, "config/priv_validator.json")
-	if cmn.FileExists(filePath) {
-		privValidator = privval.LoadFilePV(filePath)
+	keyPath := path.Join(rootDir, "config/priv_validator_key.json")
+	statePath := path.Join(rootDir, "data/priv_validator_state.json")
+	if cmn.FileExists(keyPath) && cmn.FileExists(statePath) {
+		privValidator = privval.LoadFilePV(keyPath, statePath)
 	} else {
 		fmt.Printf("This is not a validator node, no need to reset priv_validator file")
 	}
 	// TODO(#121): Should we also need reset LastRound, LastStep?
-	privValidator.LastHeight = height
+	privValidator.LastSignState.Height = height
 	privValidator.Save()
 }
 

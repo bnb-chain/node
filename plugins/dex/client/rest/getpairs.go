@@ -22,7 +22,7 @@ func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int, li
 		return nil, err
 	}
 	pairs := make([]types.TradingPair, 0)
-	err = cdc.UnmarshalBinary(bz, &pairs)
+	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &pairs)
 	return pairs, nil
 }
 
