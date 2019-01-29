@@ -477,17 +477,6 @@ type Receiver struct {
 	Coins []Coin
 }
 
-func (msg Receiver) MarshalJSON() ([]byte, error) {
-	type Alias Receiver
-	return json.Marshal(&struct {
-		Alias
-		Addr string
-	}{
-		Alias: (Alias)(msg),
-		Addr:  msg.Addr,
-	})
-}
-
 func (msg Receiver) String() string {
 	return fmt.Sprintf("Transfer receiver %s get coin %v", msg.Addr, msg.Coins)
 }
@@ -506,17 +495,6 @@ func (msg Receiver) ToNativeMap() map[string]interface{} {
 type Transfer struct {
 	From string
 	To   []Receiver
-}
-
-func (msg Transfer) MarshalJSON() ([]byte, error) {
-	type Alias Transfer
-	return json.Marshal(&struct {
-		Alias
-		From string
-	}{
-		Alias: (Alias)(msg),
-		From:  msg.From,
-	})
 }
 
 func (msg Transfer) String() string {
