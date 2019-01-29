@@ -42,6 +42,9 @@ func main() {
 	ctx := app.ServerContext
 
 	config := sdk.GetConfig()
+	if app.Bech32PrefixAccAddr != "" {
+		ctx.Bech32PrefixAccAddr = app.Bech32PrefixAccAddr
+	}
 	config.SetBech32PrefixForAccount(ctx.Bech32PrefixAccAddr, ctx.Bech32PrefixAccPub)
 	config.SetBech32PrefixForValidator(ctx.Bech32PrefixValAddr, ctx.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(ctx.Bech32PrefixConsAddr, ctx.Bech32PrefixConsPub)

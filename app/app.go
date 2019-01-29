@@ -51,6 +51,7 @@ const (
 var (
 	DefaultCLIHome  = os.ExpandEnv("$HOME/.bnbcli")
 	DefaultNodeHome = os.ExpandEnv("$HOME/.bnbchaind")
+	Bech32PrefixAccAddr string
 )
 
 // BinanceChain implements ChainApp
