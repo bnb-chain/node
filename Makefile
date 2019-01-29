@@ -2,6 +2,7 @@ PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 BUILD_TAGS = netgo
 BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/BiJie/BinanceChain/version.GitCommit=${COMMIT_HASH}"
+BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/BiJie/BinanceChain/app.Bech32PrefixAccAddr=tbnb"
 
 all: get_vendor_deps format build
 
@@ -16,12 +17,14 @@ ci: get_vendor_deps build
 build:
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
+	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
 	go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
-	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker.exe
+	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
 	go build $(BUILD_FLAGS) -o build/lightd.exe ./cmd/lightd
 else
 	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
+	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
 	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
 	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
