@@ -10,7 +10,7 @@ cli_home="./testnodecli"
 home="./testnoded"
 chain_id="bnbchain-1000"
 
-keys_operation_words="bnc"
+keys_operation_words="bnb"
 chain_operation_words="Committed"
 order_book_words="10.00000000"
 
@@ -65,8 +65,8 @@ bob_secret="bottom quick strong ranch section decide pepper broken oven demand c
 result=$(expect ./add_key.exp "${bob_secret}" "bob")
 check_operation "Add Key" "${result}" "${keys_operation_words}"
 
-alice_addr=$(./bnbcli keys list --home ${cli_home} | grep alice | grep -o "bnc1[0-9a-zA-Z]*")
-bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnc1[0-9a-zA-Z]*")
+alice_addr=$(./bnbcli keys list --home ${cli_home} | grep alice | grep -o "bnb1[0-9a-zA-Z]*")
+bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnb1[0-9a-zA-Z]*")
 
 # wait for the chain
 sleep 10s
