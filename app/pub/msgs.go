@@ -484,7 +484,7 @@ func (msg Receiver) MarshalJSON() ([]byte, error) {
 		Addr string
 	}{
 		Alias: (Alias)(msg),
-		Addr:  sdk.AccAddress(msg.Addr).String(),
+		Addr:  msg.Addr,
 	})
 }
 
@@ -494,7 +494,7 @@ func (msg Receiver) String() string {
 
 func (msg Receiver) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["addr"] = sdk.AccAddress(msg.Addr).String()
+	native["addr"] = msg.Addr
 	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
 	for idx, c := range msg.Coins {
 		coins[idx] = c.ToNativeMap()
@@ -515,7 +515,7 @@ func (msg Transfer) MarshalJSON() ([]byte, error) {
 		From string
 	}{
 		Alias: (Alias)(msg),
-		From:  sdk.AccAddress(msg.From).String(),
+		From:  msg.From,
 	})
 }
 
@@ -525,7 +525,7 @@ func (msg Transfer) String() string {
 
 func (msg Transfer) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
-	native["from"] = sdk.AccAddress(msg.From).String()
+	native["from"] = msg.From
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {
 		to[idx] = t.ToNativeMap()
