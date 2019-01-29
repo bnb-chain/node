@@ -15,16 +15,17 @@ import (
 
 const (
 	// Operate fee
-	GovFee     = 1e6
-	ListingFee = 1e12
+	ProposeFee = 10e8
+	DepositFee = 25e4
+	ListingFee = 10000e8
 	IssueFee   = 2000e8
-	MintFee    = 500e8
-	BurnFee    = 1e6
+	MintFee    = 200e8
+	BurnFee    = 1e8
 	FreezeFee  = 1e6
 
 	// Transfer fee
-	TransferFee       = 1e6
-	MultiTransferFee  = 8e5
+	TransferFee       = 25e4
+	MultiTransferFee  = 20e4 // discount 80%
 	LowerLimitAsMulti = 2
 
 	// Dex fee
@@ -32,8 +33,8 @@ const (
 	ExpireFeeNative    = 2e4
 	CancelFee          = 1e5
 	CancelFeeNative    = 2e4
-	FeeRate            = 500
-	FeeRateNative      = 250
+	FeeRate            = 1000
+	FeeRateNative      = 400
 	IOCExpireFee       = 5e4
 	IOCExpireFeeNative = 1e4
 )
@@ -47,8 +48,8 @@ var DefaultGenesisState = param.GenesisState{
 // ---------   Definition about fee prams  ------------------- //
 var FeeGenesisState = []param.FeeParam{
 	// Operate
-	&param.FixedFeeParams{gov.MsgSubmitProposal{}.Type(), GovFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{gov.MsgDeposit{}.Type(), GovFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{gov.MsgSubmitProposal{}.Type(), ProposeFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{gov.MsgDeposit{}.Type(), DepositFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{gov.MsgVote{}.Type(), sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{list.Route, ListingFee, sdk.FeeForAll},
 	&param.FixedFeeParams{order.RouteNewOrder, sdk.ZeroFee, sdk.FeeFree},
