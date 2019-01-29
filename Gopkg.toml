@@ -40,7 +40,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/BiJie/bnc-cosmos-sdk"
-  branch = "upgrade281"
+  version = "=v0.25.0-br0"
 
 [[constraint]]
   name = "github.com/pkg/errors"
