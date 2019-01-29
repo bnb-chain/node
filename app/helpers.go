@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/version"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/tendermint/tendermint/abci/server"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -116,6 +117,12 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 		if err != nil {
 			return err
 		}
+
+		config := sdk.GetConfig()
+		config.SetBech32PrefixForAccount(context.Bech32PrefixAccAddr, context.Bech32PrefixAccPub)
+		config.SetBech32PrefixForValidator(context.Bech32PrefixValAddr, context.Bech32PrefixValPub)
+		config.SetBech32PrefixForConsensusNode(context.Bech32PrefixConsAddr, context.Bech32PrefixConsPub)
+		config.Seal()
 
 		// TODO: add config for logging to stdout for debug sake
 		logger := newLogger(context)
