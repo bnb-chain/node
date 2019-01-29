@@ -34,6 +34,7 @@ var (
 	flagNodeDaemonHome    = "node-daemon-home"
 	flagNodeCliHome       = "node-cli-home"
 	flagStartingIPAddress = "starting-ip-address"
+	flagMonikers          = "monikers"
 )
 
 const nodeDirPerm = 0755
@@ -79,6 +80,7 @@ Example:
 
 	cmd.Flags().StringVar(&app.ServerContext.Bech32PrefixAccAddr, flagAccPrefix, "bnb", "bech32 prefix for AccAddress")
 	app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
+	cmd.Flags().StringSlice(flagMonikers, nil, "specify monikers for nodes if needed")
 
 	return cmd
 }
@@ -93,7 +95,15 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		chainID = "chain-" + cmn.RandStr(6)
 	}
 
-	monikers := make([]string, numValidators)
+	monikers := viper.GetStringSlice(flagMonikers)
+	if len(monikers) != 0 && len(monikers) != numValidators {
+		return fmt.Errorf("Len of monikers %d do not match validator num %d ", len(monikers), numValidators)
+	}
+	useCustomMoniker := true
+	if len(monikers) == 0 {
+		useCustomMoniker = false
+		monikers = make([]string, numValidators)
+	}
 	nodeDirs := make([]string, numValidators)
 	peers := make(map[string]string, numValidators) // moniker -> peer
 	genTxsJson := make([]json.RawMessage, numValidators)
@@ -111,14 +121,17 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		config.SetRoot(nodeDir)
 		cfg.EnsureRoot(config.RootDir)
 		prepareClientDir(clientDir)
-
-		monikers[i] = nodeDirName
-		config.Moniker = nodeDirName
+		if useCustomMoniker {
+			config.Moniker = monikers[i]
+		} else {
+			monikers[i] = nodeDirName
+			config.Moniker = nodeDirName
+		}
 
 		ip := getIP(i, viper.GetString(flagStartingIPAddress))
 		nodeId, valPubKey := InitializeNodeValidatorFiles(config)
 
-		addr, _ := createValOperAccount(clientDir, nodeDirName)
+		addr, _ := createValOperAccount(clientDir, config.Moniker)
 		nodeInfo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
 		peers[config.Moniker] = nodeInfo
 		genTxsJson[i] = prepareGenTx(cdc, chainID, config.Moniker, nodeInfo, gentxsDir, addr, valPubKey)
