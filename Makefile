@@ -1,7 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
-COSMOS_RELEASE := $(shell grep 'github.com/BiJie/bnc-cosmos-sdk' Gopkg.toml -n1|grep branch|awk '{print $$4}'| sed 's/\"//g')
+COSMOS_RELEASE := $(shell grep 'github.com/BiJie/bnc-cosmos-sdk' Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
 TENDER_RELEASE := $(shell grep "github.com/BiJie/bnc-tendermint" Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
 
 BUILD_TAGS = netgo
