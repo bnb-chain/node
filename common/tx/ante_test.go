@@ -408,7 +408,7 @@ func TestAnteHandlerBadSignBytes(t *testing.T) {
 	// test wrong signer if public key exist
 	privs, accnums, seqs = []crypto.PrivKey{priv2}, []int64{0}, []int64{1}
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
-	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeUnauthorized)
+	checkInvalidTx(t, anteHandler, ctx, txn, sdk.CodeInvalidPubKey)
 
 	// test wrong signer if public doesn't exist
 	msg = newTestMsg(addr2)

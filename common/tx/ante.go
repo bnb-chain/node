@@ -92,9 +92,6 @@ func NewTxPreChecker() sdk.PreChecker {
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			sig := sigs[i]
-			if sig.PubKey == nil {
-				return sdk.ErrInvalidPubKey("public key of signature should not be nil").Result()
-			}
 
 			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 			res := processSig(txHash, sig, sig.PubKey, signBytes)
@@ -194,6 +191,12 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	sigs := tx.GetSignatures()
 	if len(sigs) == 0 {
 		return sdk.ErrUnauthorized("no signers")
+	}
+
+	for _, sig := range sigs {
+		if sig.PubKey == nil {
+			return sdk.ErrInvalidPubKey("public key of signature should not be nil")
+		}
 	}
 
 	// Assert that number of signatures is correct.
