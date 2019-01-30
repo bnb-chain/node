@@ -107,7 +107,7 @@
   pruneopts = "UT"
   revision = "a918c20a72a69ab5dc41d0a9617091155640a54e"
   source = "github.com/BiJie/bnc-cosmos-sdk"
-  version = "v0.25.0-br2"
+  version = "v0.25.0-br3"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
