@@ -93,9 +93,9 @@ func NewTxPreChecker() sdk.PreChecker {
 		for i := 0; i < len(sigs); i++ {
 			sig := sigs[i]
 			if sig.PubKey == nil {
-				continue
+				return sdk.ErrInvalidPubKey("public key of signature should not be nil").Result()
 			}
-			
+
 			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 			res := processSig(txHash, sig, sig.PubKey, signBytes)
 			if !res.IsOK() {
@@ -265,7 +265,10 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 		if errKey != nil {
 			return nil, sdk.ErrInternal("setting PubKey on signer's account")
 		}
+	} else if !pubKey.Equals(sig.PubKey) {
+		return nil, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature")
 	}
+
 	return acc, nil
 }
 

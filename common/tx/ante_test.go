@@ -713,6 +713,6 @@ func Test_NewTxPreCheckerSignature(t *testing.T) {
 	txn = newTestTx(ctx, msgs, privs, accnums, seqs)
 	stdtx := txn.(auth.StdTx)
 	stdtx.Signatures[0].PubKey = nil
-	res = prechecker(ctx, cdc.MustMarshalBinary(txn), txn)
-	require.Equal(t, sdk.ABCICodeOK, res.Code)
+	res = prechecker(ctx, cdc.MustMarshalBinaryLengthPrefixed(txn), txn)
+	require.Equal(t, sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidPubKey), res.Code)
 }
