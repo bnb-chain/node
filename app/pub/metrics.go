@@ -35,6 +35,8 @@ type Metrics struct {
 	PublishAccountTimeMs metricsPkg.Gauge
 	// Time used to publish blockfee
 	PublishBlockfeeTimeMs metricsPkg.Gauge
+	// Time	used to publish transfer
+	PublishTransfersTimeMs metricsPkg.Gauge
 
 	// num of trade
 	NumTrade metricsPkg.Gauge
@@ -44,6 +46,8 @@ type Metrics struct {
 	NumOrderBook metricsPkg.Gauge
 	// num of account balance changes
 	NumAccounts metricsPkg.Gauge
+	// num of transfer
+	NumTransfers metricsPkg.Gauge
 }
 
 // PrometheusMetrics returns Metrics build using Prometheus client library.
@@ -99,6 +103,11 @@ func PrometheusMetrics() *Metrics {
 			Name:      "blockfee_pub_time",
 			Help:      "Time to publish block fee (ms)",
 		}, []string{}),
+		PublishTransfersTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+			Subsystem: "publication",
+			Name:      "transfers_pub_time",
+			Help:      "Time to publish transfers (ms)",
+		}, []string{}),
 
 		NumTrade: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Subsystem: "publication",
@@ -119,6 +128,11 @@ func PrometheusMetrics() *Metrics {
 			Subsystem: "publication",
 			Name:      "num_account",
 			Help:      "Number of accounts we published",
+		}, []string{}),
+		NumTransfers: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+			Subsystem: "publication",
+			Name:      "num_transfer",
+			Help:      "Number of transfer we published",
 		}, []string{}),
 	}
 }

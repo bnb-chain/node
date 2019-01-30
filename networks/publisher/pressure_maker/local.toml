@@ -1,7 +1,8 @@
 numOfTradesPerBlock = 2
+numOfTransferPerBlock = 2
 numOfBlocks = 5
 blockIntervalMs = 1000
-mode = 2
+mode = 1
 prometheusAddr = "127.0.0.1:29660"
 
 ##### publication related configurations #####
@@ -9,12 +10,12 @@ prometheusAddr = "127.0.0.1:29660"
 # configurations ends with Kafka can be a semi-colon separated host-port list
 # Whether we want publish market data (this includes trades and order)
 publishOrderUpdates = true
-orderUpdatesTopic = "test"
+orderUpdatesTopic = "orders"
 orderUpdatesKafka = "127.0.0.1:9092"
 
 # Whether we want publish account balance to notify browser db indexer persist latest account balance change
 publishAccountBalance = true
-accountBalanceTopic = "test"
+accountBalanceTopic = "accounts"
 accountBalanceKafka = "127.0.0.1:9092"
 
 # Whether we want publish order book changes
@@ -26,6 +27,10 @@ orderBookKafka = "127.0.0.1:9092"
 publishBlockFee = false
 blockFeeTopic = "test"
 blockFeeKafka = "127.0.0.1:9092"
+
+publishTransfer = true
+transferTopic = "transfers"
+transferKafka = "127.0.0.1:9092"
 
 # Global setting
 publicationChannelSize = "10000"

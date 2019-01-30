@@ -26,11 +26,6 @@ import (
 
 // This test makes sure non-execution order changes (non partial fill and fully fill) are correctly generated
 
-const (
-	expireFee    = 1000
-	iocExpireFee = 500
-)
-
 func newTestFeeConfig() orderPkg.FeeConfig {
 	feeConfig := orderPkg.NewFeeConfig()
 	feeConfig.FeeRateNative = 500

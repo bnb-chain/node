@@ -25,6 +25,7 @@ type KafkaMarketDataPublisher struct {
 	accountCodec          *goavro.Codec
 	executionResultsCodec *goavro.Codec
 	blockFeeCodec         *goavro.Codec
+	transfersCodec        *goavro.Codec
 
 	producers map[string]sarama.SyncProducer // topic -> producer
 }
@@ -88,6 +89,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishTransfer {
+		if _, ok := publisher.producers[Cfg.TransferTopic]; !ok {
+			publisher.producers[Cfg.TransferTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.TransferKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create transfers producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -118,6 +129,8 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tp
 		topic = Cfg.OrderUpdatesTopic
 	case blockFeeTpe:
 		topic = Cfg.BlockFeeTopic
+	case transferType:
+		topic = Cfg.TransferTopic
 	}
 
 	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {
@@ -192,6 +205,8 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.executionResultsCodec
 	case blockFeeTpe:
 		codec = publisher.blockFeeCodec
+	case transferType:
+		codec = publisher.transfersCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -210,6 +225,8 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.accountCodec, err = goavro.NewCodec(accountSchema); err != nil {
 		return err
 	} else if publisher.blockFeeCodec, err = goavro.NewCodec(blockfeeSchema); err != nil {
+		return err
+	} else if publisher.transfersCodec, err = goavro.NewCodec(transfersSchema); err != nil {
 		return err
 	}
 	return nil
