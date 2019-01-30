@@ -2,5 +2,5 @@
 
 for i in {0..1000}
 do
- ./add_key.exp node2_user$i /home/test/go/src/github.com/BiJie/BinanceChain/build/bnbcli /home/test/.bnbcli/
+ ./add_key.exp node0_user$i tbnbcli /home/test/.bnbcli/
 done
