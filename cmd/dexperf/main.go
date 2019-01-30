@@ -110,7 +110,7 @@ var rl = ratelimit.New(1000)
 
 func init() {
 	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount("bnc", "bncp")
+	config.SetBech32PrefixForAccount("tbnb", "bnbp")
 	config.SetBech32PrefixForValidator("bva", "bvap")
 	config.SetBech32PrefixForConsensusNode("bca", "bcap")
 	config.Seal()
@@ -240,8 +240,8 @@ func execCommand(name string, arg ...string) *bytes.Buffer {
 }
 
 func lookupAccounts() {
-	stdout := execCommand("bnbcli", "--home="+*home, "keys", "list")
-	expr := "(" + *userPrefix + "[\\d]+).+(bnc.+).+bnc"
+	stdout := execCommand("tbnbcli", "--home="+*home, "keys", "list")
+	expr := "(" + *userPrefix + "[\\d]+).+(tbnb.+).+bnb"
 	res, err := regexp.Compile(expr)
 	if err != nil {
 		panic(err)
@@ -284,7 +284,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 	var tokens []string
 	if flag == true {
 		path := filepath.Join(*csvPath, "tokens.csv")
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -304,7 +304,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 				TxHash   string
 				Response abci.ResponseDeliverTx
 			}
-			issueRep := execCommand("bnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId, "--json=true")
+			issueRep := execCommand("tbnbcli", "token", "issue", "--home="+*home, "--node="+*node, "--token-name="+token, "--symbol="+token, "--total-supply=20000000000000000", "--from="+*owner, "--chain-id="+*chainId, "--json=true")
 			issueJson := toJSON{}
 			err = MakeCodec().UnmarshalJSON(issueRep.Bytes(), &issueJson)
 			if err != nil {
@@ -325,7 +325,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 			}
 			time.Sleep(stime * time.Millisecond)
 			expireTime := strconv.FormatInt(time.Now().Unix()+3600, 10)
-			proposalRep := execCommand("bnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
+			proposalRep := execCommand("tbnbcli", "gov", "submit-list-proposal", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--deposit=200000000000:BNB", "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--title="+token+":BNB", "--description="+token+":BNB", "--expire-time="+expireTime, "--json=true")
 			proposalJson := toJSON{}
 			err = MakeCodec().UnmarshalJSON(proposalRep.Bytes(), &proposalJson)
 			if err != nil {
@@ -338,9 +338,9 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 				}
 			}
 			time.Sleep(stime * time.Millisecond)
-			execCommand("bnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pid, "--option=yes")
+			execCommand("tbnbcli", "gov", "vote", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--proposal-id="+pid, "--option=yes")
 			time.Sleep(time.Duration(*votingTime) * time.Second)
-			execCommand("bnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pid)
+			execCommand("tbnbcli", "dex", "list", "--home="+*home, "--node="+*node, "--base-asset-symbol="+token, "--quote-asset-symbol=BNB", "--init-price=100000000", "--from="+*owner, "--chain-id="+*chainId, "--proposal-id="+pid)
 			time.Sleep(stime * time.Millisecond)
 			tokens = append(tokens, token)
 			sIndex++
@@ -379,7 +379,7 @@ func initializeAccounts(tokens []string, flag bool) {
 					panic(err)
 				}
 				path := filepath.Join(*csvPath, fmt.Sprintf("transfers_%d.data", i))
-				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 				if err != nil {
 					panic(err)
 				}
@@ -387,7 +387,7 @@ func initializeAccounts(tokens []string, flag bool) {
 				writer := bufio.NewWriter(file)
 				writer.Write(bytes)
 				writer.Flush()
-				execCommand("bnbcli", "token", "multi-send", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--transfers-file", path)
+				execCommand("tbnbcli", "token", "multi-send", "--home="+*home, "--node="+*node, "--chain-id="+*chainId, "--from="+*owner, "--transfers-file", path)
 				time.Sleep(stime * time.Millisecond)
 			}
 		}
@@ -397,7 +397,7 @@ func initializeAccounts(tokens []string, flag bool) {
 
 func createFolder(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.Mkdir(path, 0777)
+		os.Mkdir(path, 0644)
 	}
 }
 
@@ -607,7 +607,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
 		file := filepath.Join(*createPath, ts+"_"+name)
 		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
-		err = ioutil.WriteFile(file, txBytes, 0777)
+		err = ioutil.WriteFile(file, txBytes, 0644)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -723,7 +723,7 @@ func moveFiles(srcPath string, dstPath string, count int) {
 func save_txhash() {
 	if len(hashReturned.trans) > 0 {
 		path := filepath.Join(*csvPath, "txhash.csv")
-		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -741,7 +741,7 @@ func save_txhash() {
 
 func save_hextx() {
 	path := filepath.Join(*csvPath, "trans.csv")
-	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		panic(err)
 	}
