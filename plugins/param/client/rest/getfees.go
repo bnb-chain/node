@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -36,7 +37,7 @@ func GetFeesParamHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			return
 		}
 
-		output, err := cdc.MarshalJSON(fees)
+		output, err := json.Marshal(fees)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
