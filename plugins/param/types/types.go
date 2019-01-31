@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common/types"
 )
 
 const (

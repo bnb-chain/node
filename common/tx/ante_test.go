@@ -15,12 +15,12 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/tx"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/common/tx"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/wire"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {

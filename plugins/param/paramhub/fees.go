@@ -3,8 +3,8 @@ package paramhub
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/plugins/param/types"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/plugins/param/types"
 )
 
 func (keeper *Keeper) initFeeGenesis(ctx sdk.Context, state types.GenesisState) {

@@ -31,13 +31,13 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
-	"github.com/BiJie/BinanceChain/common/client"
-	"github.com/BiJie/BinanceChain/common/tx"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/client"
+	"github.com/binance-chain/node/common/tx"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 const (

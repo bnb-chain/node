@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/BiJie/BinanceChain/app"
+	"github.com/binance-chain/node/app"
 )
 
 const flagSequentialABCI = "seq-abci"

@@ -20,13 +20,13 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/app/pub"
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
-	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/app/pub"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/testutils"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/wire"
 )
 
 const (

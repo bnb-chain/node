@@ -8,10 +8,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/wire"
 )
 
 type Tokens []types.Token

@@ -1,8 +1,8 @@
 package types
 
 import (
-	ctuils "github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/dex/utils"
+	ctuils "github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 type TradingPair struct {

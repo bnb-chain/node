@@ -6,7 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common/types"
 )
 
 type TokenOpMsgBase struct {

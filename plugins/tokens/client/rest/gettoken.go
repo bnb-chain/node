@@ -10,8 +10,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/wire"
 )
 
 func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*types.Token, error) {

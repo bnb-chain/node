@@ -10,9 +10,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 // BalanceReqHandler creates an http request handler to get an individual token balance of a given address

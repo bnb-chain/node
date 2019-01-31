@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/BiJie/BinanceChain/common/client"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/dex/list"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/client"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/wire"
 )
 
 const flagBaseAsset = "base-asset-symbol"

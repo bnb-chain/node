@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	app "github.com/BiJie/BinanceChain/common/types"
+	app "github.com/binance-chain/node/common/types"
 )
 
 func createAbciQueryHandler(paramHub *ParamHub) app.AbciQueryHandler {

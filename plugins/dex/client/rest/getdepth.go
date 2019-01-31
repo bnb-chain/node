@@ -8,9 +8,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	rutils "github.com/BiJie/BinanceChain/plugins/dex/client/rest/utils"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	"github.com/BiJie/BinanceChain/wire"
+	rutils "github.com/binance-chain/node/plugins/dex/client/rest/utils"
+	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/wire"
 )
 
 const allowedLimits = "5,10,20,50,100"

@@ -15,13 +15,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	pubtest "github.com/BiJie/BinanceChain/app/pub/testutils"
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/types"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
+	pubtest "github.com/binance-chain/node/app/pub/testutils"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/common/types"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 )
 
 // This test makes sure non-execution order changes (non partial fill and fully fill) are correctly generated

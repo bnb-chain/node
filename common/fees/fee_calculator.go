@@ -3,8 +3,8 @@ package fees
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	param "github.com/BiJie/BinanceChain/plugins/param/types"
+	"github.com/binance-chain/node/common/types"
+	param "github.com/binance-chain/node/plugins/param/types"
 )
 
 type FeeCalculator func(msg sdk.Msg) types.Fee

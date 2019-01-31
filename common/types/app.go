@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/wire"
 )
 
 // ChainApp represents the main ABCI application

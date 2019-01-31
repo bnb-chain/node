@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/dex/types"
 )
 
 // mainly used to test keeper.GetOpenOrders API

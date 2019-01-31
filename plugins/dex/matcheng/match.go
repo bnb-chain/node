@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/binance-chain/node/common/utils"
 )
 
 type LevelIndex struct {

@@ -13,12 +13,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/plugins/param"
-	paramtypes "github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/plugins/param"
+	paramtypes "github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 const DefaultKeyPass = "12345678"

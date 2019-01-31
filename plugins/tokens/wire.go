@@ -1,10 +1,10 @@
 package tokens
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
-	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
-	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/freeze"
+	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/wire"
 )
 
 // Register concrete types on wire codec

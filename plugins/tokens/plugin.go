@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	app "github.com/BiJie/BinanceChain/common/types"
+	app "github.com/binance-chain/node/common/types"
 )
 
 const abciQueryPrefix = "tokens"

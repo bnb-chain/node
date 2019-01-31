@@ -13,9 +13,9 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
 )
 
 const (

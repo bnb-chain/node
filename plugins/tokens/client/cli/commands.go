@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/wire"
 )
 
 const (

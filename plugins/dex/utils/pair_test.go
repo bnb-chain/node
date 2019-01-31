@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/BiJie/BinanceChain/plugins/dex/utils"
+	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 func TestCalcLotSizeAndCalcTickSize(t *testing.T) {

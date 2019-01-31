@@ -21,8 +21,8 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/app/config"
-	bnclog "github.com/BiJie/BinanceChain/common/log"
+	"github.com/binance-chain/node/app/config"
+	bnclog "github.com/binance-chain/node/common/log"
 )
 
 // RunForever - BasecoinApp execution and cleanup

@@ -12,10 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	tkclient "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	tkclient "github.com/binance-chain/node/plugins/tokens/client/rest"
+	"github.com/binance-chain/node/wire"
 )
 
 // AccountReqHandler queries for an account and returns its information.

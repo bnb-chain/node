@@ -20,16 +20,16 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/store"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 func MakeCodec() *wire.Codec {

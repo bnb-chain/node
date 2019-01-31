@@ -1,9 +1,9 @@
 package dex
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/plugins/dex/types"
 )
 
 // type MsgList = list.Msg

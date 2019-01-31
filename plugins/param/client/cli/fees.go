@@ -14,8 +14,8 @@ import (
 	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/plugins/param/types"
+	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/plugins/param/types"
 )
 
 const (

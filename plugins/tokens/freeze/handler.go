@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/log"
-	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/binance-chain/node/common/log"
+	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token freeze message handler

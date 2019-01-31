@@ -11,14 +11,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/log"
+	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/wire"
 )
 
 type NewOrderResponse struct {

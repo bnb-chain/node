@@ -8,11 +8,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/app/pub"
-	"github.com/BiJie/BinanceChain/app/val"
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/app/pub"
+	"github.com/binance-chain/node/app/val"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
 )
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper, publishBlockFee bool) (blockFee pub.BlockFee) {

@@ -21,10 +21,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/app"
-	appCfg "github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/app"
+	appCfg "github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/wire"
 )
 
 var (

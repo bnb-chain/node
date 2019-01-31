@@ -4,7 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/wire"
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {

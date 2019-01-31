@@ -6,7 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/BiJie/BinanceChain/version"
+	"github.com/binance-chain/node/version"
 )
 
 // CLIVersionReqHandler handles requests to the cli version REST handler endpoint

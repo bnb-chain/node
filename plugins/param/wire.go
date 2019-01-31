@@ -1,8 +1,8 @@
 package param
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 // Register concrete types on wire codec

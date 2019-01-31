@@ -14,10 +14,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 
-	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/app/pub"
-	"github.com/BiJie/BinanceChain/cmd/pressuremaker/utils"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/app/pub"
+	"github.com/binance-chain/node/cmd/pressuremaker/utils"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 type PressureMakerConfig struct {

@@ -8,7 +8,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "github.com/BiJie/BinanceChain/common/types"
+	app "github.com/binance-chain/node/common/types"
 )
 
 func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {

@@ -12,10 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	dextypes "github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/wire"
 )
 
 func setup() (TradingPairMapper, sdk.Context) {

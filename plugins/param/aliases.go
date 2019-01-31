@@ -1,7 +1,7 @@
 package param
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/param/paramhub"
+	"github.com/binance-chain/node/plugins/param/paramhub"
 )
 
 type ParamHub = paramhub.Keeper
