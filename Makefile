@@ -5,8 +5,8 @@ COSMOS_RELEASE := $(shell grep 'github.com/BiJie/bnc-cosmos-sdk' Gopkg.toml -n1|
 TENDER_RELEASE := $(shell grep "github.com/BiJie/bnc-tendermint" Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
 
 BUILD_TAGS = netgo
-BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/BiJie/BinanceChain/version.GitCommit=${COMMIT_HASH} -X github.com/BiJie/BinanceChain/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/BiJie/BinanceChain/version.TendermintRelease=${TENDER_RELEASE}"
-BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/BiJie/BinanceChain/app.Bech32PrefixAccAddr=tbnb"
+BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
 
 all: get_vendor_deps format build
 
@@ -59,7 +59,7 @@ get_vendor_deps:
 ### Format
 format:
 	@echo "-->Formatting"
-	$(shell cd ../../../ && goimports -w -local github.com/BiJie/BinanceChain $(PACKAGES))
+	$(shell cd ../../../ && goimports -w -local github.com/binance-chain/node $(PACKAGES))
 	$(shell cd ../../../ && gofmt -w $(PACKAGES))
 
 ########################################

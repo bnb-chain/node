@@ -6,11 +6,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/runtime"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
-	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
-	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
+	"github.com/binance-chain/node/common/runtime"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/freeze"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 )
 
 var transferOnlyModeBlackList = []string{

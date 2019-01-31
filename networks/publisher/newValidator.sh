@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-src='/Users/zhaocong/go/src/github.com/BiJie/BinanceChain'
-executable='/Users/zhaocong/go/src/github.com/BiJie/BinanceChain/build/bnbchaind'
-cli='/Users/zhaocong/go/src/github.com/BiJie/BinanceChain/build/bnbcli'
+src='/Users/zhaocong/go/src/github.com/binance-chain/node'
+executable='/Users/zhaocong/go/src/github.com/binance-chain/node/build/bnbchaind'
+cli='/Users/zhaocong/go/src/github.com/binance-chain/node/build/bnbcli'
 home='/Users/zhaocong'
 
 ## clean history data

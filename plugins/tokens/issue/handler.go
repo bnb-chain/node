@@ -12,10 +12,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
-	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
+	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token issue message handler

@@ -8,8 +8,8 @@ import (
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	dbm "github.com/tendermint/tendermint/libs/db"
 
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
 )
 
 func SetupMultiStoreForUnitTest() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {

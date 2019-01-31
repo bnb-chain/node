@@ -5,8 +5,8 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/config"
 
-	"github.com/BiJie/BinanceChain/common/runtime"
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common/runtime"
+	"github.com/binance-chain/node/common/types"
 )
 
 // path:

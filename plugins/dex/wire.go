@@ -1,10 +1,10 @@
 package dex
 
 import (
-	"github.com/BiJie/BinanceChain/plugins/dex/list"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/wire"
 )
 
 // Register concrete types on wire codec

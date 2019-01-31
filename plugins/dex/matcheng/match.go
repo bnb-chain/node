@@ -3,6 +3,8 @@ package matcheng
 import (
 	"math"
 	"sort"
+
+	"github.com/binance-chain/node/common/utils"
 )
 
 type LevelIndex struct {

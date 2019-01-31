@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	shared "github.com/BiJie/BinanceChain/plugins/shared/msg"
+	shared "github.com/binance-chain/node/plugins/shared/msg"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash

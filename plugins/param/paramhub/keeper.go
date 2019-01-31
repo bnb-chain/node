@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	bnclog "github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/plugins/param/types"
+	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/plugins/param/types"
 )
 
 var (

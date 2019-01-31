@@ -11,7 +11,7 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	common "github.com/BiJie/BinanceChain/common/types"
+	common "github.com/binance-chain/node/common/types"
 )
 
 func BenchmarkGetAccount(b *testing.B) {

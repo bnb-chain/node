@@ -10,10 +10,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/tokens"
 )
 
 // NewHandler initialises dex message handlers

@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/BiJie/BinanceChain/app/config"
-	"github.com/BiJie/BinanceChain/common/log"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/common/log"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 // This test ensures schema or AvroOrJsonMsg change are consistent and prevent marshal error in runtime

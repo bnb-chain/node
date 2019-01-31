@@ -9,9 +9,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/binance-chain/node/common/types"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Trade) []string {
@@ -341,7 +341,7 @@ func collectOrdersToPublish(
 
 	// the following two maps are used to update fee field we published
 	// more detail can be found at:
-	// https://github.com/BiJie/BinanceChain-Doc/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+	// https://github.com/binance-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
 

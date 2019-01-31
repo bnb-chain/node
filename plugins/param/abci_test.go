@@ -11,8 +11,8 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	bca "github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/plugins/param"
+	bca "github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/plugins/param"
 )
 
 // util objects

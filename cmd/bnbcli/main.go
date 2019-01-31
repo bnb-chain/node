@@ -14,15 +14,15 @@ import (
 
 	"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/BiJie/BinanceChain/admin"
-	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/types"
-	apiserv "github.com/BiJie/BinanceChain/plugins/api"
-	dexcmd "github.com/BiJie/BinanceChain/plugins/dex/client/cli"
-	paramcmd "github.com/BiJie/BinanceChain/plugins/param/client/cli"
-	tokencmd "github.com/BiJie/BinanceChain/plugins/tokens/client/cli"
-	"github.com/BiJie/BinanceChain/version"
+	"github.com/binance-chain/node/admin"
+	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
+	apiserv "github.com/binance-chain/node/plugins/api"
+	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
+	paramcmd "github.com/binance-chain/node/plugins/param/client/cli"
+	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
+	"github.com/binance-chain/node/version"
 )
 
 // rootCmd is the entry point for this binary

@@ -28,9 +28,9 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/BiJie/BinanceChain/app"
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/wire"
 )
 
 const (

@@ -13,10 +13,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	param "github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	param "github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 type FeeType uint8

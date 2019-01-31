@@ -16,9 +16,9 @@ import (
         "github.com/cosmos/cosmos-sdk/baseapp"
         "github.com/cosmos/cosmos-sdk/server"
 
-	"github.com/BiJie/BinanceChain/app"
-	bnbInit "github.com/BiJie/BinanceChain/cmd/bnbchaind/init"
-	"github.com/BiJie/BinanceChain/version"
+	"github.com/binance-chain/node/app"
+	bnbInit "github.com/binance-chain/node/cmd/bnbchaind/init"
+	"github.com/binance-chain/node/version"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {

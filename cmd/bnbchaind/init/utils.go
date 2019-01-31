@@ -16,7 +16,7 @@ import (
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tendermint/tendermint/types"
 
-	"github.com/BiJie/BinanceChain/app"
+	"github.com/binance-chain/node/app"
 )
 
 // ExportGenesisFile creates and writes the genesis configuration to disk. An

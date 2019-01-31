@@ -57,7 +57,7 @@ func (fee Fee) IsEmpty() bool {
 
 // Any change of this method should communicate with services (query, explorer) developers
 // More detail can be found:
-// https://github.com/BiJie/BinanceChain-Doc/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+// https://github.com/binance-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
 func (fee Fee) SerializeForPub(canceled, expired int) string {
 	if fee.IsEmpty() {
 		return ""

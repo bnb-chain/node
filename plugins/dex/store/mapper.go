@@ -4,15 +4,14 @@ import (
 	"errors"
 	"strings"
 
-	types2 "github.com/BiJie/BinanceChain/common/types"
+	types2 "github.com/binance-chain/node/common/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/wire"
-
-	"github.com/BiJie/BinanceChain/common/utils"
-	"github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/types"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
+	"github.com/binance-chain/node/wire"
 )
 
 type TradingPairMapper interface {

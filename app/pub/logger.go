@@ -3,7 +3,7 @@ package pub
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/log"
+	"github.com/binance-chain/node/common/log"
 )
 
 // this delegate sarama.StdLogger to common/log.logger

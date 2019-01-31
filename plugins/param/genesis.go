@@ -4,13 +4,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	sdk "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex/list"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	param "github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens/burn"
-	"github.com/BiJie/BinanceChain/plugins/tokens/freeze"
-	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
+	sdk "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/order"
+	param "github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/freeze"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 )
 
 const (

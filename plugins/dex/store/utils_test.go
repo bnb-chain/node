@@ -3,8 +3,8 @@ package store_test
 import (
 	"testing"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex/store"
 )
 
 func TestValidatePairSymbol(t *testing.T) {

@@ -5,9 +5,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/BiJie/BinanceChain/app/pub"
-	app "github.com/BiJie/BinanceChain/common/types"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/binance-chain/node/app/pub"
+	bnclog "github.com/binance-chain/node/common/log"
+	app "github.com/binance-chain/node/common/types"
+	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
 const AbciQueryPrefix = "dex"

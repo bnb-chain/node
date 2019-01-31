@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {

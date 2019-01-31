@@ -6,12 +6,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	hnd "github.com/BiJie/BinanceChain/plugins/api/handlers"
-	dexapi "github.com/BiJie/BinanceChain/plugins/dex/client/rest"
-	paramapi "github.com/BiJie/BinanceChain/plugins/param/client/rest"
-	tksapi "github.com/BiJie/BinanceChain/plugins/tokens/client/rest"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
-	"github.com/BiJie/BinanceChain/wire"
+	hnd "github.com/binance-chain/node/plugins/api/handlers"
+	dexapi "github.com/binance-chain/node/plugins/dex/client/rest"
+	paramapi "github.com/binance-chain/node/plugins/param/client/rest"
+	tksapi "github.com/binance-chain/node/plugins/tokens/client/rest"
+	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/wire"
 )
 
 // middleware (limits, parsing, etc)

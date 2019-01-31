@@ -12,16 +12,16 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	bnclog "github.com/BiJie/BinanceChain/common/log"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/plugins/param/paramhub"
-	paramTypes "github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/fees"
+	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/store"
+	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/param/paramhub"
+	paramTypes "github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 type FeeHandler func(map[string]*types.Fee)

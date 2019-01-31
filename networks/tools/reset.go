@@ -20,7 +20,7 @@ import (
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tendermint/tendermint/state"
 
-	"github.com/BiJie/BinanceChain/common"
+	"github.com/binance-chain/node/common"
 )
 
 var cdc = amino.NewCodec()
