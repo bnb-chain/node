@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/wire"
 )
 
 var _ sdk.Account = (NamedAccount)(nil)

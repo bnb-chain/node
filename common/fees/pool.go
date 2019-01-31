@@ -3,7 +3,7 @@ package fees
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/types"
+	"github.com/binance-chain/node/common/types"
 )
 
 // block level pool

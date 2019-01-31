@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/wire"
 )
 
 const (

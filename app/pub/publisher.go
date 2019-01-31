@@ -6,8 +6,8 @@ import (
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/app/config"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/binance-chain/node/app/config"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 const (

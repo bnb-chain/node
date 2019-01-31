@@ -5,9 +5,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/BiJie/BinanceChain/common/client"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens/issue"
+	"github.com/binance-chain/node/common/client"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 )
 
 const (

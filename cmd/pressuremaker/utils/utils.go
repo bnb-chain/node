@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 
-	"github.com/BiJie/BinanceChain/app/pub"
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	"github.com/binance-chain/node/app/pub"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 type MessageGenerator struct {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/binance-chain/node/common/utils"
 )
 
 func TestConcurrentExecuteAsync(t *testing.T) {

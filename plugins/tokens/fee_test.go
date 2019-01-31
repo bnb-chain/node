@@ -3,10 +3,10 @@ package tokens_test
 import (
 	"testing"
 
-	"github.com/BiJie/BinanceChain/common/testutils"
-	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
+	"github.com/binance-chain/node/common/testutils"
+	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"

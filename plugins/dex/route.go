@@ -5,10 +5,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/BiJie/BinanceChain/plugins/dex/list"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 // Routes exports dex message routes

@@ -5,9 +5,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/common/utils"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
 )
 
 type transferEventType uint8

@@ -3,8 +3,8 @@ package order
 import (
 	"fmt"
 
-	"github.com/BiJie/BinanceChain/common/types"
-	me "github.com/BiJie/BinanceChain/plugins/dex/matcheng"
+	"github.com/binance-chain/node/common/types"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
 )
 
 // The types here are shared between order and pub package

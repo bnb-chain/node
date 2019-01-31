@@ -19,13 +19,13 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/common"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex/order"
-	"github.com/BiJie/BinanceChain/plugins/dex/store"
-	dexTypes "github.com/BiJie/BinanceChain/plugins/dex/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	tokenStore "github.com/BiJie/BinanceChain/plugins/tokens/store"
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
+	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/tokens"
+	tokenStore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
 func MakeCodec() *codec.Codec {

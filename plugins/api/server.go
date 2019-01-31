@@ -7,9 +7,9 @@ import (
 	keyscli "github.com/cosmos/cosmos-sdk/client/keys"
 	keys "github.com/cosmos/cosmos-sdk/crypto/keys"
 
-	"github.com/BiJie/BinanceChain/common"
-	tkstore "github.com/BiJie/BinanceChain/plugins/tokens/store"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common"
+	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/wire"
 )
 
 // config consts

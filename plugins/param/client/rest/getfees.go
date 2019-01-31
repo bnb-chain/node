@@ -6,9 +6,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/BiJie/BinanceChain/plugins/param"
-	"github.com/BiJie/BinanceChain/plugins/param/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/plugins/param"
+	"github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 func GetFeesParamHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {

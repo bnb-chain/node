@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	cctx "github.com/BiJie/BinanceChain/common/client/context"
-	"github.com/BiJie/BinanceChain/wire"
+	cctx "github.com/binance-chain/node/common/client/context"
+	"github.com/binance-chain/node/wire"
 )
 
 // SimulateReqHandler simulates the execution of a single transaction, given its binary form

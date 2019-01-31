@@ -20,12 +20,12 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/common/fees"
-	common "github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/dex"
-	"github.com/BiJie/BinanceChain/plugins/param"
-	"github.com/BiJie/BinanceChain/plugins/tokens"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/fees"
+	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/plugins/param"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
 )
 
 type TestClient struct {

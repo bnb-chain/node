@@ -13,10 +13,10 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/plugins/tokens/store"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/wire"
 )
 
 func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {

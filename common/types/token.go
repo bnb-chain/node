@@ -9,7 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/BiJie/BinanceChain/common/utils"
+	"github.com/binance-chain/node/common/utils"
 )
 
 const (

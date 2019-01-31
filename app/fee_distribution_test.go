@@ -11,12 +11,12 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/BiJie/BinanceChain/app/pub"
-	"github.com/BiJie/BinanceChain/app/val"
-	"github.com/BiJie/BinanceChain/common/fees"
-	"github.com/BiJie/BinanceChain/common/testutils"
-	"github.com/BiJie/BinanceChain/common/types"
-	"github.com/BiJie/BinanceChain/wire"
+	"github.com/binance-chain/node/app/pub"
+	"github.com/binance-chain/node/app/val"
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/wire"
 )
 
 func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStoreKey) sdk.AccountCache {

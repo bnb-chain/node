@@ -6,7 +6,7 @@
 # TODO: support two validator without docker in same machine
 
 ########################### SETUP #########################
-src='/Users/zhaocong/go/src/github.com/BiJie/BinanceChain'
+src='/Users/zhaocong/go/src/github.com/binance-chain/node'
 home='/Users/zhaocong'
 deamonhome='/Users/zhaocong/.bnbchaind'
 witnesshome='/Users/zhaocong/.bnbchaind_witness'

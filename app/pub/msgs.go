@@ -6,7 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	orderPkg "github.com/BiJie/BinanceChain/plugins/dex/order"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 type msgType int8
