@@ -11,6 +11,7 @@ import (
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/plugins/dex/types"
 )
 
 // TODO: improve, should be configurable
@@ -34,21 +35,27 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			}
 			ctx := app.GetContextForCheckState()
 			pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
-			offset, err := strconv.Atoi(path[2])
+			var offset, limit, end int
+			var err error
+			if pairs == nil || len(pairs) == 0 {
+				pairs = make([]types.TradingPair, 0)
+				goto respond
+			}
+			offset, err = strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset > len(pairs)-1 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse offset",
 				}
 			}
-			limit, err := strconv.Atoi(path[3])
+			limit, err = strconv.Atoi(path[3])
 			if err != nil || limit <= 0 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse limit",
 				}
 			}
-			end := offset + limit
+			end = offset + limit
 			if end > len(pairs) {
 				end = len(pairs)
 			}
@@ -58,6 +65,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					Log:  "malformed range",
 				}
 			}
+		respond:
 			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(
 				pairs[offset:end],
 			)
