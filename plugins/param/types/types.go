@@ -68,7 +68,7 @@ func (p *FixedFeeParams) Check() error {
 
 var _ MsgFeeParams = (*TransferFeeParam)(nil)
 type TransferFeeParam struct {
-	FixedFeeParams
+	FixedFeeParams    `json:"fixed_fee_params"`
 	MultiTransferFee  int64 `json:"multi_transfer_fee"`
 	LowerLimitAsMulti int64 `json:"lower_limit_as_multi"`
 }
