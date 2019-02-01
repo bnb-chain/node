@@ -84,6 +84,10 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
+		if pairs == nil {
+			// assume this was an offset parse issue
+			pairs = make([]types.TradingPair, 0)
+		}
 
 		output, err := cdc.MarshalJSON(pairs)
 		if err != nil {
