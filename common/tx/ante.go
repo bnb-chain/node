@@ -162,6 +162,11 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 				if !res.IsOK() {
 					return newCtx, res, true
 				}
+			} else {
+				// if we do not processSig here, we should make sure pubKey of signature is identical to pubKey of account
+				if !signerAcc.GetPubKey().Equals(sig.PubKey) {
+					return newCtx, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature").Result(), true
+				}
 			}
 
 			// Save the account.
@@ -268,8 +273,6 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 		if errKey != nil {
 			return nil, sdk.ErrInternal("setting PubKey on signer's account")
 		}
-	} else if !pubKey.Equals(sig.PubKey) {
-		return nil, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature")
 	}
 
 	return acc, nil
@@ -280,10 +283,6 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 func processSig(txHash string,
 	sig auth.StdSignature, pubKey crypto.PubKey, signBytes []byte) (
 	res sdk.Result) {
-
-	if !pubKey.Equals(sig.PubKey) {
-		return sdk.ErrUnauthorized("signer's pubkey does not match pubkey of signature").Result()
-	}
 
 	if sigCache.getSig(txHash) {
 		log.Debug("Tx hits sig cache", "txHash", txHash)
