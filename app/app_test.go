@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/BiJie/BinanceChain/common/testutils"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -25,6 +24,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/testutils"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/param"
