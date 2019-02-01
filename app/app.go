@@ -93,6 +93,7 @@ type BinanceChain struct {
 	metrics *pub.Metrics
 
 	stateSyncHeight     int64
+	stateSyncNumKeys    []int64
 	stateSyncStoreInfos []storePkg.StoreInfo
 }
 
@@ -462,31 +463,42 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 }
 
-func (app *BinanceChain) LatestSnapshot() (height int64, numKeys map[string]int64, err error) {
+func (app *BinanceChain) LatestSnapshot() (height int64, numKeys []int64, err error) {
 	app.Logger.Info("query latest snapshot")
-	numKeys = make(map[string]int64)
+	numKeys = make([]int64, 0, len(common.StoreKeyNames))
 	height = app.LastBlockHeight()
 
 	for _, key := range common.StoreKeyNames {
-		var numK int64
+		var storeKeys int64
 		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[key])
-		itr := store.Iterator(nil, nil)
-		for ; itr.Valid(); itr.Next() {
-			numK++
+		//itr := store.Iterator(nil, nil)
+		//for ; itr.Valid(); itr.Next() {
+		//	storeKeys++
+		//}
+		//numKeys = append(numKeys, storeKeys)
+
+		mutableTree := store.(*storePkg.IavlStore).Tree
+		if tree, err := mutableTree.GetImmutable(height); err == nil {
+			tree.IterateFirst(func(nodeBytes []byte) {
+				storeKeys++
+			})
+		} else {
+			app.Logger.Error("failed to load immutable tree", "err", err)
 		}
-		numKeys[key] = numK
+		numKeys = append(numKeys, storeKeys)
 	}
 
 	return
 }
 
-func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex int64) (chunk map[string][][]byte, err error) {
+func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex int64) (chunk [][]byte, err error) {
 	app.Logger.Info("read snapshot chunk", "height", height, "startIndex", startIndex, "endIndex", endIndex)
 	fmt.Printf("read snapshot height:%d\n", height)
-	chunk = make(map[string][][]byte)
+	chunk = make([][]byte, 0, endIndex-startIndex)
 
+	// TODO: can be optimized - direct jump to expected store
+	iterated := int64(0)
 	for _, key := range common.StoreKeyNames {
-		keyValueBytes := make([][]byte, 0)
 		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[key])
 
 		// No needed temporaly (in case inject too many interfaces)
@@ -502,33 +514,25 @@ func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex in
 
 		mutableTree := store.(*storePkg.IavlStore).Tree
 		if tree, err := mutableTree.GetImmutable(height); err == nil {
-			// load a full tree from db to generate dot graph
 			tree.IterateFirst(func(nodeBytes []byte) {
-				keyValueBytes = append(keyValueBytes, nodeBytes)
+				if iterated >= startIndex && iterated < endIndex {
+					chunk = append(chunk, nodeBytes)
+				}
+				iterated += 1
 			})
-			tree.IterateMiddle(func(key []byte, value []byte, version int64) {
-				keyValueBytes = append(keyValueBytes, key)
-			})
-
-			if len(keyValueBytes)%2 != 0 {
-				panic("haha crash!!!")
-			}
-
-			if len(keyValueBytes) > 0 {
-				file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees/%s_%d.txt", key, height))
-				iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
-			}
-
-			chunk[key] = keyValueBytes
 		} else {
 			app.Logger.Error("failed to load immutable tree", "err", err)
 		}
 	}
 
+	if int64(len(chunk)) != (endIndex - startIndex) {
+		app.Logger.Error("failed to load enough chunk", "expected", endIndex-startIndex, "got", len(chunk))
+	}
+
 	return
 }
 
-func (app *BinanceChain) StartRecovery(height int64, numKeys map[string]int64) error {
+func (app *BinanceChain) StartRecovery(height int64, numKeys []int64) error {
 	app.Logger.Info("start recovery")
 	//for storeName, numKey := range numKeys {
 	//	if numKey > 0 {
@@ -538,24 +542,20 @@ func (app *BinanceChain) StartRecovery(height int64, numKeys map[string]int64) e
 	//	}
 	//}
 	app.stateSyncHeight = height - 1
-	app.stateSyncStoreInfos = make([]storePkg.StoreInfo, 0, len(numKeys))
+	app.stateSyncNumKeys = numKeys
+	app.stateSyncStoreInfos = make([]storePkg.StoreInfo, 0)
 
 	return nil
 }
 
-func (app *BinanceChain) WriteRecoveryChunk(storeName string, chunk [][]byte) error {
+func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 	//store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[storeName])
-	fmt.Printf("write snapshot store:%s\n", storeName)
+	app.Logger.Info("start write recovery chunk")
 	nodes := make([]*iavl.Node, 0)
-	inOrderKeys := make([][]byte, 0)
 	for idx := 0; idx < len(chunk); idx++ {
-		if idx < len(chunk)/2 {
-			node, _ := iavl.MakeNode(chunk[idx])
-			node.Hash()
-			nodes = append(nodes, node)
-		} else {
-			inOrderKeys = append(inOrderKeys, chunk[idx])
-		}
+		node, _ := iavl.MakeNode(chunk[idx])
+		node.Hash()
+		nodes = append(nodes, node)
 	}
 
 	//if len(chunk) > 0 {
@@ -572,38 +572,42 @@ func (app *BinanceChain) WriteRecoveryChunk(storeName string, chunk [][]byte) er
 	//	iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
 	//}
 
-	if len(chunk) > 0 {
+	iterated := int64(0)
+	for storeIdx, storeName := range common.StoreKeyNames {
 		db := dbm.NewPrefixDB(app.GetDB(), []byte("s/k:"+storeName+"/"))
 		nodeDB := iavl.NewNodeDB(db, 10000)
-		nodeDB.SaveRoot(nodes[0], app.stateSyncHeight)
-		for _, node := range nodes[0:] {
-			nodeDB.SaveNode(node)
+
+		var nodeHash []byte
+		storeKeys := app.stateSyncNumKeys[storeIdx]
+		if storeKeys > 0 {
+			nodeDB.SaveRoot(nodes[iterated], app.stateSyncHeight)
+			nodeHash = nodes[iterated].Hash()
+			for i := int64(0); i < storeKeys; i++ {
+				node := nodes[iterated+i]
+				fmt.Printf("saved node hash: %X\n", node.Hash())
+				nodeDB.SaveNode(node)
+			}
+		} else {
+			nodeDB.SaveEmptyRoot(app.stateSyncHeight)
+			nodeHash = nil
 		}
-		nodeDB.Commit()
-	} else {
-		db := dbm.NewPrefixDB(app.GetDB(), []byte("s/k:"+storeName+"/"))
-		nodeDB := iavl.NewNodeDB(db, 10000)
-		nodeDB.SaveEmptyRoot(app.stateSyncHeight)
-		nodeDB.Commit()
-	}
 
-	var nodeHash []byte
-	if len(nodes) > 0 {
-		nodeHash = nodes[0].Hash()
-	} else {
-		nodeHash = nil
-	}
-	app.stateSyncStoreInfos = append(app.stateSyncStoreInfos, storePkg.StoreInfo{
-		Name: storeName,
-		Core: storePkg.StoreCore{
-			CommitID: storePkg.CommitID{
-				Version: app.stateSyncHeight,
-				Hash:    nodeHash,
+		app.stateSyncStoreInfos = append(app.stateSyncStoreInfos, storePkg.StoreInfo{
+			Name: storeName,
+			Core: storePkg.StoreCore{
+				CommitID: storePkg.CommitID{
+					Version: app.stateSyncHeight,
+					Hash:    nodeHash,
+				},
 			},
-		},
-	})
+		})
 
-	app.Logger.Info("finished recovery", "store", storeName)
+		fmt.Printf("commit store: %d, root hash: %X\n", storeName, nodeHash)
+		nodeDB.Commit()
+		iterated += storeKeys
+	}
+
+	app.Logger.Info("finished write recovery chunk")
 	return nil
 }
 
@@ -613,10 +617,9 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 	//commitId := stores.CommitAt(height)
 	// block store required to hydrate dex OB
 
-	db := app.GetDB()
 	// simulate setLatestversion key
-	batch := db.NewBatch()
-	latestBytes, _ := app.Codec.MarshalBinary(height) // Does not error
+	batch := app.GetDB().NewBatch()
+	latestBytes, _ := app.Codec.MarshalBinaryLengthPrefixed(height) // Does not error
 	batch.Set([]byte("s/latest"), latestBytes)
 
 	// simulate setCommitInfo
@@ -626,7 +629,7 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 		Version:    height,
 		StoreInfos: app.stateSyncStoreInfos,
 	}
-	cInfoBytes, err := app.Codec.MarshalBinary(ci)
+	cInfoBytes, err := app.Codec.MarshalBinaryLengthPrefixed(ci)
 	if err != nil {
 		panic(err)
 	}
