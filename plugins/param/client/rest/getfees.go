@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -36,8 +37,25 @@ func GetFeesParamHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
-
-		output, err := json.Marshal(fees)
+		formats, exist := r.URL.Query()["format"]
+		format := types.JSONFORMAT
+		if exist {
+			if len(formats) < 1 {
+				throw(w, http.StatusBadRequest, errors.New(fmt.Sprintf("Format parameter is invalid")))
+				return
+			}
+			format = formats[0]
+			if format != types.JSONFORMAT && format != types.AMINOFORMAT {
+				throw(w, http.StatusBadRequest, errors.New(fmt.Sprintf("Format %s is not supported, options [%s, %s]", format, types.JSONFORMAT, types.AMINOFORMAT)))
+				return
+			}
+		}
+		var output []byte
+		if format == types.JSONFORMAT {
+			output, err = json.Marshal(fees)
+		} else if format == types.AMINOFORMAT {
+			output, err = cdc.MarshalJSON(fees)
+		}
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

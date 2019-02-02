@@ -15,7 +15,9 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	}
 	dexCmd.AddCommand(
 		client.PostCommands(
-			GetCmdSubmitFeeChangeProposal(cdc))...)
-
+			SubmitFeeChangeProposalCmd(cdc))...)
+	dexCmd.AddCommand(
+		client.GetCommands(
+			ShowFeeParamsCmd(cdc))...)
 	cmd.AddCommand(dexCmd)
 }
