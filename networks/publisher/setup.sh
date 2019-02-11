@@ -39,6 +39,7 @@ mkdir -p ${home}/.bnbchaind_witness/config
 #sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${deamonhome}/config/config.toml
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
 sed -i -e 's/logToConsole = true/logToConsole = false/g' ${deamonhome}/config/app.toml
+sed -i -e 's/breatheBlockInterval = 0/breatheBlockInterval = 100/g' ${deamonhome}/config/app.toml
 sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
 # config witness node
@@ -51,7 +52,7 @@ sed -i -e "s/6060/7060/g" ${witnesshome}/config/config.toml
 #sed -i -e "s/fastest_sync_height = -1/fastest_sync_height = 10/g" ${witnesshome}/config/config.toml
 
 # start validator
-${executable} start --pruning nothing > ${deamonhome}/log.txt 2>&1 &
+${executable} start --pruning breathe > ${deamonhome}/log.txt 2>&1 &
 validator_pid=$!
 echo ${validator_pid}
 sleep 60 # sleep in case cli status call failed to get node id
@@ -61,14 +62,15 @@ validator_id=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed
 
 # set witness peer to validator and start witness
 sed -i -e "s/persistent_peers = \"\"/persistent_peers = \"${validator_id}@127.0.0.1:26656\"/g" ${witnesshome}/config/config.toml
-${executable} start --pruning nothing --home ${witnesshome} > ${witnesshome}/log.txt 2>&1 &
+sed -i -e "s/state_sync = false/state_sync = true/g" ${witnesshome}/config/config.toml
+${executable} start --pruning breathe --home ${witnesshome} > ${witnesshome}/log.txt 2>&1 &
 witness_pid=$!
 echo ${witness_pid}
 
 # init accounts
 result=$(expect ${scripthome}/recover.exp "${secret}" "zc" "${clipath}" "${clihome}")
 result=$(expect ${scripthome}/add_key.exp "zz" "${clipath}" "${clihome}")
-zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnc[0-9a-zA-Z]*" | grep -v "bncp")
+zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnb[0-9a-zA-Z]*" | grep -v "bnbp")
 
 # issue&list NNB and ZCB for ordergen
 result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id})

@@ -3,21 +3,26 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tendermint/iavl"
 	"io"
 	"os"
 	"runtime/debug"
 	"sort"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/server"
 	storePkg "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+
+	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -95,6 +100,8 @@ type BinanceChain struct {
 	stateSyncHeight     int64
 	stateSyncNumKeys    []int64
 	stateSyncStoreInfos []storePkg.StoreInfo
+
+	blockStore *blockchain.BlockStore
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -117,7 +124,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		baseConfig:        ServerContext.BaseConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
-
+	app.SetPruning(viper.GetString("pruning"))
 	app.SetCommitMultiStoreTracer(traceStore)
 
 	// mappers
@@ -234,8 +241,14 @@ func (app *BinanceChain) initDex() {
 		return
 	}
 	// count back to days in config.
-	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
-		baseapp.LoadBlockDB(), baseapp.LoadTxDB(), app.LastBlockHeight(), app.TxDecoder)
+	app.DexKeeper.InitOrderBook(
+		app.CheckState.Ctx,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack,
+		baseapp.LoadBlockDB(),
+		baseapp.LoadTxDB(),
+		app.LastBlockHeight(),
+		app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
@@ -466,7 +479,23 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 func (app *BinanceChain) LatestSnapshot() (height int64, numKeys []int64, err error) {
 	app.Logger.Info("query latest snapshot")
 	numKeys = make([]int64, 0, len(common.StoreKeyNames))
-	height = app.LastBlockHeight()
+
+	// we should only sync to breathe block height
+	latestBlockHeight := app.LastBlockHeight()
+	var timeOfLatestBlock time.Time
+	if latestBlockHeight == 0 {
+		timeOfLatestBlock = utils.Now()
+	} else {
+		block := server.BlockStore.LoadBlock(latestBlockHeight)
+		timeOfLatestBlock = block.Time
+	}
+
+	height = app.DexKeeper.GetLastBreatheBlockHeight(
+		app.CheckState.Ctx,
+		latestBlockHeight,
+		timeOfLatestBlock,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack)
 
 	for _, key := range common.StoreKeyNames {
 		var storeKeys int64
@@ -602,7 +631,7 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 			},
 		})
 
-		fmt.Printf("commit store: %d, root hash: %X\n", storeName, nodeHash)
+		fmt.Printf("commit store: %s, root hash: %X\n", storeName, nodeHash)
 		nodeDB.Commit()
 		iterated += storeKeys
 	}
@@ -646,6 +675,19 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 	commitId := stores.LastCommitID()
 	hashHex := fmt.Sprintf("%X", commitId.Hash)
 	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
+
+	app.SetCheckState(abci.Header{})
+
+	//TODO: figure out how to get block time here to get rid of time.Now() :(
+	_, err = app.DexKeeper.LoadOrderBookSnapshot(app.CheckState.Ctx, height, time.Now(), app.baseConfig.BreatheBlockInterval, app.baseConfig.BreatheBlockDaysCountBack)
+	if err != nil {
+		panic(err)
+	}
+
+	// init app cache
+	accountStore := stores.GetKVStore(common.AccountStoreKey)
+	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
+
 	return nil
 }
 
@@ -851,4 +893,27 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)
+}
+
+// SetPruning sets a pruning option on the multistore associated with the app
+func (app *BinanceChain) SetPruning(pruning string) {
+	var pruningStrategy sdk.PruningStrategy
+	switch pruning {
+	case "nothing":
+		pruningStrategy = sdk.PruneNothing{}
+	case "everything":
+		pruningStrategy = sdk.PruneEverything{}
+	case "syncable":
+		// TODO: make these parameters configurable
+		pruningStrategy = sdk.PruneSyncable{NumRecent: 100, StoreEvery: 10000}
+	case "breathe":
+		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 100, ServerContext.Config)
+	default:
+		panic(fmt.Sprintf("invalid pruning strategy: %s", pruning))
+	}
+	app.BaseApp.SetPruning(pruningStrategy)
+}
+
+func (app *BinanceChain) SetBlockStore(store *blockchain.BlockStore) {
+	app.blockStore = store
 }

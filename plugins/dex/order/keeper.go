@@ -709,29 +709,33 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 	return height, nil
 }
 
-func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
-	bz := []byte(nil)
-	for i := 0; i <= daysBack; i++ {
-		t := timeNow.AddDate(0, 0, -i).Unix()
-		key := utils.Int642Bytes(t / utils.SecondsPerDay)
-		bz = store.Get([]byte(key))
-		if bz != nil {
-			kp.logger.Info("Located day to load breathe block height", "epochDay", key)
-			break
+func (kp *Keeper) GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight int64, timeNow time.Time, blockInterval, daysBack int) int64 {
+	if blockInterval != 0 {
+		return (latestBlockHeight / int64(blockInterval)) * int64(blockInterval)
+	} else {
+		store := ctx.KVStore(kp.storeKey)
+		bz := []byte(nil)
+		for i := 0; i <= daysBack; i++ {
+			t := timeNow.AddDate(0, 0, -i).Unix()
+			key := utils.Int642Bytes(t / utils.SecondsPerDay)
+			bz = store.Get([]byte(key))
+			if bz != nil {
+				kp.logger.Info("Located day to load breathe block height", "epochDay", key)
+				break
+			}
 		}
+		if bz == nil {
+			kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
+			return 0
+		}
+		var height int64
+		err := kp.cdc.UnmarshalBinaryBare(bz, &height)
+		if err != nil {
+			panic(err)
+		}
+		kp.logger.Info("Loaded breathe block height", "height", height)
+		return height
 	}
-	if bz == nil {
-		kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
-		return 0
-	}
-	var height int64
-	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-	if err != nil {
-		panic(err)
-	}
-	kp.logger.Info("Loaded breathe block height", "height", height)
-	return height
 }
 
 // deliberately make `fee` parameter not a pointer

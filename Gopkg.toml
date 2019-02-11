@@ -36,12 +36,12 @@
 
 [[override]]
   name = "github.com/tendermint/tendermint"
-  source = "github.com/BiJie/bnc-tendermint"
+  source = "github.com/binance-chain/bnc-tendermint"
   branch = "feature/state_reactor_upgrade"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
-  source = "github.com/BiJie/bnc-cosmos-sdk"
+  source = "github.com/binance-chain/bnc-cosmos-sdk"
   branch = "issue357_upgrade"
 
 [[constraint]]
