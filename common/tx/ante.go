@@ -88,11 +88,12 @@ func NewTxPreChecker() sdk.PreChecker {
 		// TODO: optimization opportunity, txHash may be recalled later
 		txHash := common.HexBytes(tmhash.Sum(txBytes)).String()
 		chainID := ctx.ChainID()
+
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			sig := sigs[i]
-			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 
+			signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 			res := processSig(txHash, sig, sig.PubKey, signBytes)
 			if !res.IsOK() {
 				return res
@@ -161,6 +162,11 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 				if !res.IsOK() {
 					return newCtx, res, true
 				}
+			} else {
+				// if we do not processSig here, we should make sure pubKey of signature is identical to pubKey of account
+				if !signerAcc.GetPubKey().Equals(sig.PubKey) {
+					return newCtx, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature").Result(), true
+				}
 			}
 
 			// Save the account.
@@ -190,6 +196,12 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	sigs := tx.GetSignatures()
 	if len(sigs) == 0 {
 		return sdk.ErrUnauthorized("no signers")
+	}
+
+	for _, sig := range sigs {
+		if sig.PubKey == nil {
+			return sdk.ErrInvalidPubKey("public key of signature should not be nil")
+		}
 	}
 
 	// Assert that number of signatures is correct.
@@ -262,6 +274,7 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 			return nil, sdk.ErrInternal("setting PubKey on signer's account")
 		}
 	}
+
 	return acc, nil
 }
 
@@ -270,10 +283,6 @@ func processAccount(ctx sdk.Context, am auth.AccountKeeper,
 func processSig(txHash string,
 	sig auth.StdSignature, pubKey crypto.PubKey, signBytes []byte) (
 	res sdk.Result) {
-
-	if !pubKey.Equals(sig.PubKey) {
-		return sdk.ErrUnauthorized("signer's pubkey does not match pubkey of signature").Result()
-	}
 
 	if sigCache.getSig(txHash) {
 		log.Debug("Tx hits sig cache", "txHash", txHash)
