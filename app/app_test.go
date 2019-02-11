@@ -277,9 +277,8 @@ func TestPreCheckTxWithRightPubKey(t *testing.T) {
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ABCICodeOK))
 	res = app.CheckTx(txBytes)
@@ -310,9 +309,8 @@ func TestPreCheckTxWithWrongPubKey(t *testing.T) {
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ABCICodeOK))
 	res = app.CheckTx(txBytes)
@@ -344,9 +342,8 @@ func TestPreCheckTxWithEmptyPubKey(t *testing.T) {
 	tx.Signatures[0].PubKey = nil
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidPubKey)))
 	require.Contains(t, res.Log, "public key of signature should not be nil")
@@ -376,9 +373,8 @@ func TestPreCheckTxWithEmptySignatures(t *testing.T) {
 	tx.Signatures = []auth.StdSignature{}
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "no signers")
@@ -408,9 +404,8 @@ func TestPreCheckTxWithWrongSignerNum(t *testing.T) {
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "wrong number of signers")
@@ -439,11 +434,9 @@ func TestPreCheckTxWithData(t *testing.T) {
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, []byte("data"), "")
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
-	println(res.Log)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "data field is not allowed to use in transaction for now")
 }
@@ -471,11 +464,9 @@ func TestPreCheckTxWithLargeMemo(t *testing.T) {
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, string(make([]byte, 200, 200)))
 
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
-	println(res.Log)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeMemoTooLarge)))
 	require.Contains(t, res.Log, "maximum number of characters")
 }
@@ -502,9 +493,8 @@ func TestPreCheckTxWithWrongPubKeyAndEmptyAccountPubKey(t *testing.T) {
 
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.PreCheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.CodeOK))
 	res = app.CheckTx(txBytes)
@@ -532,9 +522,8 @@ func TestCheckTxWithUnrecognizedAccount(t *testing.T) {
 
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.CheckTx(txBytes)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownAddress)))
 }
@@ -561,11 +550,9 @@ func TestCheckTxWithWrongSequence(t *testing.T) {
 
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.CheckTx(txBytes)
-	println(res.Log)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidSequence)))
 	require.Contains(t, res.Log, "Invalid sequence")
 }
@@ -592,11 +579,9 @@ func TestCheckTxWithWrongAccountNum(t *testing.T) {
 
 	tx := newTestTx(ctx, []sdk.Msg{msg}, privs, accnums, seqs, nil, "")
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
-	if err != nil {
-		println(err.Error())
-	}
+	require.Nil(t, err)
+
 	res := app.CheckTx(txBytes)
-	println(res.Log)
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidSequence)))
 	require.Contains(t, res.Log, "Invalid account number")
 }
