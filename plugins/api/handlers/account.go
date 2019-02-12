@@ -81,16 +81,16 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 }
 
 func toTokenBalances(acc *types.AppAccount) []tkclient.TokenBalance {
-	balances := make(map[string]tkclient.TokenBalance)
+	balances := make(map[string]*tkclient.TokenBalance)
 	for _, coin := range acc.GetCoins() {
-		balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Free: utils.Fixed8(coin.Amount)}
+		balances[coin.Denom] = &tkclient.TokenBalance{Symbol: coin.Denom, Free: utils.Fixed8(coin.Amount)}
 	}
 
 	for _, coin := range acc.GetLockedCoins() {
 		if balance, ok := balances[coin.Denom]; ok {
 			balance.Locked = utils.Fixed8(coin.Amount)
 		} else {
-			balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Locked: utils.Fixed8(coin.Amount)}
+			balances[coin.Denom] = &tkclient.TokenBalance{Symbol: coin.Denom, Locked: utils.Fixed8(coin.Amount)}
 		}
 	}
 
@@ -98,14 +98,14 @@ func toTokenBalances(acc *types.AppAccount) []tkclient.TokenBalance {
 		if balance, ok := balances[coin.Denom]; ok {
 			balance.Frozen = utils.Fixed8(coin.Amount)
 		} else {
-			balances[coin.Denom] = tkclient.TokenBalance{Symbol: coin.Denom, Frozen: utils.Fixed8(coin.Amount)}
+			balances[coin.Denom] = &tkclient.TokenBalance{Symbol: coin.Denom, Frozen: utils.Fixed8(coin.Amount)}
 		}
 	}
 
 	res := make([]tkclient.TokenBalance, len(balances), len(balances))
 	i := 0
 	for _, balance := range balances {
-		res[i] = balance
+		res[i] = *balance
 		i++
 	}
 	return res
