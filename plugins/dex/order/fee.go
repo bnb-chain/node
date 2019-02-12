@@ -12,6 +12,7 @@ import (
 
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
@@ -66,12 +67,16 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
 }
 
-// Note: the result of `CalcOrderFee` depends on the balances of the acc,
+// Note1: the result of `CalcOrderFee` depends on the balances of the acc,
 // so the right way of allocation is:
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
+//
+// Note2: even though the function is called in multiple threads,
+// `engines` map would stay the same as no other function may change it in fee calculation stage,
+// so no race condition concern
+func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
@@ -80,18 +85,18 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
+		if market, ok := engines[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
-			amountOfNativeToken = utils.CalBigNotional(lastTradePrice, inAmt)
+			amountOfNativeToken = utils.CalBigNotional(market.LastTradePrice, inAmt)
 		} else {
 			// BNB_XYZ
-			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
+			market := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
 			var amount big.Int
 			amountOfNativeToken = amount.Div(
 				amount.Mul(
 					big.NewInt(inAmt),
 					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(lastTradePrice)).Int64()
+				big.NewInt(market.LastTradePrice)).Int64()
 		}
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
 		if balances.AmountOf(types.NativeTokenSymbol) >= feeByNativeToken {
@@ -112,7 +117,7 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, lastPrices map[string]int64) types.Fee {
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
 	var feeAmountNative int64
 	var feeAmount int64
 	if eventType == eventFullyExpire {
@@ -132,18 +137,18 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
 		feeToken = sdk.NewCoin(types.NativeTokenSymbol, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
+		if market, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			var amount big.Int
 			feeAmount = amount.Div(
 				amount.Mul(
 					big.NewInt(feeAmount),
 					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(lastTradePrice)).Int64()
+				big.NewInt(market.LastTradePrice)).Int64()
 		} else {
 			// BNB_XYZ
-			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
-			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
+			market = engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
+			feeAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
 		}
 
 		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset))
