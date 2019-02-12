@@ -56,7 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:d06faed8740bd8d02adaa1b9a3d0236d9aa785cef8ac047521d7d898cc785de0"
+  digest = "1:6b5dfeec07f66e471ad2dd5b7a36854767b32e3bdc05deab3d044a7097b1a181"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
