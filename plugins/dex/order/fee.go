@@ -15,6 +15,7 @@ import (
 
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
@@ -74,7 +75,7 @@ func (m *FeeManager) GetConfig() FeeConfig {
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPrices map[string]int64) types.Fee {
+func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
@@ -83,18 +84,18 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 	} else {
 		// price against native token
 		var amountOfNativeToken int64
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
+		if pair, ok := engines[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
-			amountOfNativeToken = utils.CalBigNotional(lastTradePrice, inAmt)
+			amountOfNativeToken = utils.CalBigNotional(pair.LastTradePrice, inAmt)
 		} else {
 			// BNB_XYZ
-			lastTradePrice := lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
+			pair := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
 			var amount big.Int
 			amountOfNativeToken = amount.Div(
 				amount.Mul(
 					big.NewInt(inAmt),
 					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(lastTradePrice)).Int64()
+				big.NewInt(pair.LastTradePrice)).Int64()
 		}
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
 		if balances.AmountOf(types.NativeTokenSymbol) >= feeByNativeToken {
@@ -115,7 +116,7 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, lastPric
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, lastPrices map[string]int64) types.Fee {
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
 	var feeAmountNative int64
 	var feeAmount int64
 	if eventType == eventFullyExpire {
@@ -135,18 +136,18 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
 		feeToken = sdk.NewCoin(types.NativeTokenSymbol, utils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
-		if lastTradePrice, ok := lastPrices[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
+		if pair, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			var amount big.Int
 			feeAmount = amount.Div(
 				amount.Mul(
 					big.NewInt(feeAmount),
 					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(lastTradePrice)).Int64()
+				big.NewInt(pair.LastTradePrice)).Int64()
 		} else {
 			// BNB_XYZ
-			lastTradePrice = lastPrices[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
-			feeAmount = utils.CalBigNotional(lastTradePrice, feeAmount)
+			pair = engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
+			feeAmount = utils.CalBigNotional(pair.LastTradePrice, feeAmount)
 		}
 
 		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset))

@@ -148,7 +148,6 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, timeOfLatestBlock time.
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
-		kp.lastTradePrices[symbol] = ob.LastTradePrice
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}
 	key := genActiveOrdersSnapshotKey(height)

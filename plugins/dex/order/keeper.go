@@ -34,7 +34,6 @@ type Keeper struct {
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
-	lastTradePrices			   map[string]int64 // these prices should be updated after each round of match.
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
 	OrderChangesMap            OrderInfoForPublish
@@ -62,7 +61,6 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountMapper, tradingPairMapper store.
 		storeKey:                   key,
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
-		lastTradePrices: 			make(map[string]int64),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChanges:               make(OrderChanges, 0),
 		OrderChangesMap:            make(OrderInfoForPublish),
@@ -82,15 +80,7 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
-	kp.lastTradePrices[symbol] = eng.LastTradePrice
 	return eng
-}
-
-func (kp *Keeper) updateLastTradePrices() {
-	// only update the pairs that matched in this round
-	for symbol, _ := range kp.roundOrders {
-		kp.lastTradePrices[symbol] = kp.engines[symbol].LastTradePrice
-	}
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
@@ -506,7 +496,6 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 }
 
 func (kp *Keeper) clearAfterMatch() {
-	kp.updateLastTradePrices()
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
@@ -570,7 +559,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		}
 	}
 	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
-		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.lastTradePrices)
+		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
@@ -578,7 +567,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		var i int64 = 0
 		var fees types.Fee
 		for ; i < in.Amount; i++ {
-			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.lastTradePrices)
+			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.engines)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 			fees.AddFee(fee)
 		}
