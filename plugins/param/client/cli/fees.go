@@ -1,10 +1,11 @@
 package cli
 
 import (
-	"io/ioutil"
-
+	"encoding/json"
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
@@ -15,7 +16,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 const (
@@ -25,9 +28,10 @@ const (
 
 	//Fee flag
 	flagFeeParamFile = "fee-param-file"
+	flagFormat       = "format"
 )
 
-func GetCmdSubmitFeeChangeProposal(cdc *codec.Codec) *cobra.Command {
+func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 	feeParam := types.FeeChangeParams{[]types.FeeParam{}, ""}
 	cmd := &cobra.Command{
 		Use:   "submit-fee-change-proposal",
@@ -82,5 +86,47 @@ func GetCmdSubmitFeeChangeProposal(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagDescription, "", "description of proposal")
 	cmd.Flags().String(flagDeposit, "", "deposit of proposal")
 	cmd.Flags().Var(&feeParam, "fee-param", "Set the operate fee, '{param type}/{param map}'. e.g: 'operate/{\"send\": \"\",\"fee\":100000,\"fee_for\":1}'")
+	return cmd
+}
+
+func ShowFeeParamsCmd(cdc *wire.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show-fees",
+		Short: "Show order book of the listed currency pair",
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+			format := viper.GetString(flagFormat)
+			if format != types.JSONFORMAT && format != types.AMINOFORMAT {
+				return fmt.Errorf("format %s is not supported, options [%s, %s] ", format, types.JSONFORMAT, types.AMINOFORMAT)
+			}
+
+			bz, err := cliCtx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
+			if err != nil {
+				return err
+			}
+			var fees []types.FeeParam
+			err = cdc.UnmarshalBinaryLengthPrefixed(bz, &fees)
+			if err != nil {
+				return err
+			}
+
+			var output []byte
+			if format == types.JSONFORMAT {
+				output, err = json.MarshalIndent(fees, "", "\t")
+			} else if format == types.AMINOFORMAT {
+				output, err = cdc.MarshalJSONIndent(fees, "", "\t")
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(output))
+			return nil
+		},
+	}
+
+	cmd.Flags().String(flagFormat, types.AMINOFORMAT, fmt.Sprintf("the response format, options: [%s, %s]", types.AMINOFORMAT, types.JSONFORMAT))
 	return cmd
 }

@@ -12,6 +12,9 @@ const (
 	OperateFeeType  = "operate"
 	TransferFeeType = "transfer"
 	DexFeeType      = "dex"
+
+	JSONFORMAT  = "json"
+	AMINOFORMAT = "amino"
 )
 
 type LastProposalID struct {
@@ -35,12 +38,14 @@ type FeeParam interface {
 }
 
 var _ FeeParam = MsgFeeParams(nil)
+
 type MsgFeeParams interface {
 	FeeParam
 	GetMsgType() string
 }
 
 var _ MsgFeeParams = (*FixedFeeParams)(nil)
+
 type FixedFeeParams struct {
 	MsgType string                  `json:"msg_type"`
 	Fee     int64                   `json:"fee"`
@@ -67,6 +72,7 @@ func (p *FixedFeeParams) Check() error {
 }
 
 var _ MsgFeeParams = (*TransferFeeParam)(nil)
+
 type TransferFeeParam struct {
 	FixedFeeParams    `json:"fixed_fee_params"`
 	MultiTransferFee  int64 `json:"multi_transfer_fee"`
