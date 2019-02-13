@@ -36,13 +36,15 @@ const (
 
 func prepareGenTx(cdc *codec.Codec, chainId string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
-	msg := stake.NewMsgCreateValidator(
-		valOperAddr,
-		valPubKey,
-		DefaultSelfDelegationToken,
-		stake.NewDescription("pub", "", "", ""),
-		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
-	)
+	msg := stake.MsgCreateValidatorProposal{
+		MsgCreateValidator: stake.NewMsgCreateValidator(
+			valOperAddr,
+			valPubKey,
+			DefaultSelfDelegationToken,
+			stake.NewDescription("pub", "", "", ""),
+			stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
+		),
+	}
 	tx := auth.NewStdTx([]sdk.Msg{msg}, nil, "", 0, nil)
 	txBytes, err := wire.MarshalJSONIndent(cdc, tx)
 	if err != nil {

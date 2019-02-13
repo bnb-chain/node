@@ -132,13 +132,15 @@ enabled, and the genesis file will not be generated.
 
 func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
-	msg := stake.NewMsgCreateValidator(
-		valOperAddr,
-		valPubKey,
-		app.DefaultSelfDelegationToken,
-		stake.NewDescription(name, "", "", ""),
-		stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
-	)
+	msg := stake.MsgCreateValidatorProposal{
+		MsgCreateValidator:stake.NewMsgCreateValidator(
+			valOperAddr,
+			valPubKey,
+			app.DefaultSelfDelegationToken,
+			stake.NewDescription(name, "", "", ""),
+			stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
+		),
+	}
 	tx := auth.NewStdTx([]sdk.Msg{msg}, []auth.StdSignature{}, memo, auth.DefaultSource, nil)
 	txBldr := authtx.NewTxBuilderFromCLI().WithChainID(chainId).WithMemo(memo)
 	signedTx, err := txBldr.SignStdTx(name, app.DefaultKeyPass, tx, false)
