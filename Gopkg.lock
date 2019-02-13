@@ -56,7 +56,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:6b5dfeec07f66e471ad2dd5b7a36854767b32e3bdc05deab3d044a7097b1a181"
+  digest = "1:8cfd1b75fb97d34d136819155bff993300493f8efb7aa840bbd7ead14deec245"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -92,8 +92,6 @@
     "x/gov/client",
     "x/gov/client/cli",
     "x/gov/tags",
-    "x/ibc",
-    "x/ibc/client/cli",
     "x/mock",
     "x/params",
     "x/params/subspace",
@@ -105,9 +103,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "7685e982ed13470a2d78f8291cf04743bb008395"
+  revision = "e30be76717e63d73561dbfa858cbab4a432e02f8"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-br3"
+  version = "v0.25.0-binance.4"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -569,12 +567,13 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:ad9c4c1a4e7875330b1f62906f2830f043a23edb5db997e3a5ac5d3e6eadf80a"
+  digest = "1:a2318b27cf0fb75eb19db3a31039accaae12ab39786b609ed9d2f79ecbf4367d"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
   pruneopts = "UT"
-  revision = "dc14acf9ef15f85828bfbc561ed9dd9d2a284885"
-  version = "v0.14.1"
+  revision = "b3a81203066cc46107dcf5e2ae6d78260ccc7c5a"
+  source = "github.com/binance-chain/bnc-go-amino"
+  version = "v0.14.1-binance.1"
 
 [[projects]]
   digest = "1:e1cc8dd891e64aab63b0c09f2f12456cbe2cd9cbd9d96dfae3281245f05c2428"
@@ -585,7 +584,7 @@
   version = "v0.12.0"
 
 [[projects]]
-  digest = "1:171062a60aed2126606047d1eb1db7bc3211f8558429c4933826a7b563f153bf"
+  digest = "1:12dacb81fc2047319e3f8c5ce012e3a71265893d0353a9e4ec14323919a06627"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -651,9 +650,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "e92d05af5852aacc17c0c3ae32c443753e032fd4"
+  revision = "b388137620746753c78c2f2ad42cdd47b9c6dceb"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.29.1-br0"
+  version = "v0.29.1-binance.1"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
@@ -827,7 +826,6 @@
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/gov",
     "github.com/cosmos/cosmos-sdk/x/gov/client/cli",
-    "github.com/cosmos/cosmos-sdk/x/ibc/client/cli",
     "github.com/cosmos/cosmos-sdk/x/mock",
     "github.com/cosmos/cosmos-sdk/x/params",
     "github.com/cosmos/cosmos-sdk/x/stake",
