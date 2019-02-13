@@ -11,7 +11,7 @@ type BlockInfoToPublish struct {
 	tradesToPublish    []*Trade
 	proposalsToPublish *Proposals
 	orderChanges       orderPkg.OrderChanges
-	orderChangesMap    orderPkg.OrderInfoForPublish
+	orderInfos         orderPkg.OrderInfoForPublish
 	accounts           map[string]Account
 	latestPricesLevels orderPkg.ChangedPriceLevelsMap
 	blockFee           BlockFee
@@ -25,7 +25,7 @@ func NewBlockInfoToPublish(
 	tradesToPublish []*Trade,
 	proposalsToPublish *Proposals,
 	orderChanges orderPkg.OrderChanges,
-	orderChangesMap orderPkg.OrderInfoForPublish,
+	orderInfos orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap,
 	blockFee BlockFee,
@@ -36,7 +36,7 @@ func NewBlockInfoToPublish(
 		tradesToPublish,
 		proposalsToPublish,
 		orderChanges,
-		orderChangesMap,
+		orderInfos,
 		accounts,
 		latestPriceLevels,
 		blockFee,

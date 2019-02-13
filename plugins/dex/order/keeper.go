@@ -36,8 +36,8 @@ type Keeper struct {
 	engines                    map[string]*me.MatchEng
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
-	OrderChangesMap            OrderInfoForPublish
-	roundOrders                map[string][]string // limit to the total tx number in a block
+	OrderInfosForPub           OrderInfoForPublish              // for publication usage
+	roundOrders                map[string][]string              // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
 	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
@@ -63,7 +63,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		engines:                    make(map[string]*me.MatchEng),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChanges:               make(OrderChanges, 0),
-		OrderChangesMap:            make(OrderInfoForPublish),
+		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
@@ -112,7 +112,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
 		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
-		kp.OrderChangesMap[info.Id] = &info
+		kp.OrderInfosForPub[info.Id] = &info
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
@@ -220,9 +220,6 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// in this block. Ideally the order IDs would be stored in the EndBlock response,
 		// but this is not implemented yet, pending Tendermint to better handle EndBlock
 		// for index service.
-		//
-		// the order status publisher should publish these abnormal
-		// order status change out too.
 		kp.logger.Error("Fatal error occurred in matching, cancell all incoming new orders",
 			"symbol", symbol)
 		thisRoundIds := kp.roundOrders[symbol]
@@ -237,6 +234,13 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 				}
 			} else {
 				kp.logger.Error("Failed to remove order, may be fatal!", "orderID", id)
+			}
+
+			// let the order status publisher publish these abnormal
+			// order status change outs.
+			if kp.CollectOrderInfoForPublish {
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching})
+				kp.OrderInfosForPub[id] = msg
 			}
 		}
 		return // no need to handle IOC
