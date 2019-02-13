@@ -570,7 +570,7 @@ func (app *BinanceChain) StartRecovery(height int64, numKeys []int64) error {
 	//		store.(*storePkg.IavlStore).Tree.SetVersion(height - 1)
 	//	}
 	//}
-	app.stateSyncHeight = height - 1
+	app.stateSyncHeight = height
 	app.stateSyncNumKeys = numKeys
 	app.stateSyncStoreInfos = make([]storePkg.StoreInfo, 0)
 

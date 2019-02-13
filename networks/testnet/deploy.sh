@@ -119,7 +119,7 @@ done
 for i in {0..3}
 do
 	echo "Starting validator ${paths[$i]} in host ${des_ips[$i]}..."
-	ssh bijieprd@${des_ips[$i]} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/${paths[$i]}/gaiad start > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
+	ssh bijieprd@${des_ips[$i]} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/${paths[$i]}/gaiad start --pruning breathe > ${home_path}/${paths[$i]}/${paths[$i]}.log 2>&1 &"
 done
 
 
@@ -145,6 +145,7 @@ sed -i -e "s/seeds = \"\"/seeds = ${seeds}/g" node_bridge/gaiad/config/config.to
 
 # clear persistent peers
 sed -i -e 's/persistent_peers = ".*"/persistent_peers = ""/g' node_bridge/gaiad/config/config.toml
+sed -i -e "s/state_sync = false/state_sync = true/g" node_bridge/gaiad/config/config.toml
 
 # set private_ids
 private_ids=$(echo ${seeds} | sed 's/@[0-9]*.[0-9]*.[0-9]*.[0-9]*:[0-9]*//g')
@@ -159,7 +160,7 @@ echo "Copying config to bridge node ${bridge_ip}..."
 scp -r node_bridge bijieprd@${bridge_ip}:${home_path} > /dev/null
 
 echo "Starting bridge node..."
-ssh bijieprd@${bridge_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_bridge/gaiad start > ${home_path}/node_bridge/node_bridge.log 2>&1 &"
+ssh bijieprd@${bridge_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_bridge/gaiad start --pruning breathe > ${home_path}/node_bridge/node_bridge.log 2>&1 &"
 
 ## prepare seed node
 bridge_id=$(ssh bijieprd@${bridge_ip} "cd ~/gowork/src/github.com/binance-chain/node/build && ./bnbcli --home ${home_path}/node_bridge/gaiad status")
@@ -188,7 +189,7 @@ rm -rf ${home_path}/node_seed
 cp -r node_seed ${home_path}/node_seed
 
 echo "Starting seed node..."
-nohup ./bnbchaind --home ${home_path}/node_seed/gaiad start > ${home_path}/node_seed/node_seed.log 2>&1 &
+nohup ./bnbchaind --home ${home_path}/node_seed/gaiad start --pruning breathe > ${home_path}/node_seed/node_seed.log 2>&1 &
 
 ## prepare witness
 rm -rf node_witness
@@ -220,7 +221,7 @@ echo "Copying config to witness node ${witness_ip}..."
 scp -r node_witness bijieprd@${witness_ip}:${home_path} > /dev/null
 
 echo "Starting witness node..."
-ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_witness/gaiad start >> ${home_path}/node_witness/gaiad/bnc.log 2>&1 &"
+ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_witness/gaiad start --pruning breathe >> ${home_path}/node_witness/gaiad/bnc.log 2>&1 &"
 
 ## prepare publisher
 rm -rf node_publisher
@@ -279,4 +280,4 @@ ps -ef | grep "bnbcli" | grep "api-server" | awk '{print $2}' | xargs kill -9
 nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbcli --laddr tcp://0.0.0.0:8080 --node tcp://${witness_ip}:27657 api-server > ${home_path}/cong/api-server.log 2>&1 &
 
 echo "Starting publisher node..."
-ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_publisher/gaiad start > ${home_path}/node_publisher/node_publisher.log 2>&1 &"
+ssh bijieprd@${witness_ip} "nohup /home/bijieprd/gowork/src/github.com/binance-chain/node/build/bnbchaind --home ${home_path}/node_publisher/gaiad start --pruning breathe > ${home_path}/node_publisher/node_publisher.log 2>&1 &"
