@@ -16,7 +16,7 @@ import (
 const (
 	// Operate fee
 	ProposeFee = 10e8
-	DepositFee = 25e4
+	DepositFee = 125e3
 	ListingFee = 10000e8
 	IssueFee   = 2000e8
 	MintFee    = 200e8
@@ -24,8 +24,8 @@ const (
 	FreezeFee  = 1e6
 
 	// Transfer fee
-	TransferFee       = 25e4
-	MultiTransferFee  = 20e4 // discount 80%
+	TransferFee       = 125e3
+	MultiTransferFee  = 100e3 // discount 80%
 	LowerLimitAsMulti = 2
 
 	// Dex fee
