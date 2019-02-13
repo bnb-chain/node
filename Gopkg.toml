@@ -26,7 +26,8 @@
 
 [[override]]
   name = "github.com/tendermint/go-amino"
-  version = "=v0.14.1"
+  source = "github.com/binance-chain/bnc-go-amino"
+  version = "=v0.14.1-binance.1"
 
 [[override]]
   name = "github.com/tendermint/iavl"
@@ -35,12 +36,12 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "=v0.29.1-br0"
+  version = "=v0.29.1-binance.1"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "=v0.25.0-br3"
+  version = "=v0.25.0-binance.4"
 
 [[constraint]]
   name = "github.com/pkg/errors"

@@ -99,7 +99,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 				"must provide genesis StdTx with exactly 1 CreateValidator message")
 			return
 		}
-		if msg, ok := msgs[0].(stake.MsgCreateValidator); !ok {
+		if msg, ok := msgs[0].(stake.MsgCreateValidatorProposal); !ok {
 			err = fmt.Errorf(
 				"genesis transaction %v does not contain a MsgCreateValidator", i)
 			return
