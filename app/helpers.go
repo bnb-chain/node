@@ -188,7 +188,6 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	}
 }
 
-
 // binance-chain implementation of PruningStrategy
 type KeepRecentAndBreatheBlock struct {
 	breatheBlockInterval int64
@@ -227,7 +226,9 @@ func (strategy KeepRecentAndBreatheBlock) Prune(version, latestVersion int64) bo
 	})
 
 	if version == 1 {
-		return true
+		return false
+	} else if latestVersion-version < strategy.numRecent {
+		return false
 	} else {
 		lastBlock := strategy.blockStore.LoadBlock(version - 1)
 		block := strategy.blockStore.LoadBlock(version)

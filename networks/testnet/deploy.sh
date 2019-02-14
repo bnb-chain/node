@@ -51,13 +51,13 @@ then
 	cd ${work_path}/..
 
 	cp -rf utils.go /home/bijieprd/gowork/src/github.com/binance-chain/node/vendor/github.com/cosmos/cosmos-sdk/client/keys/ > /dev/null
-	tar -zcvf BinanceChain.tar.gz --exclude=BinanceChain/build BinanceChain > /dev/null
+	tar -zcvf BinanceChain.tar.gz --exclude=node/build node > /dev/null
 	for i in {0..2}
 	do
 		echo "Copying repo to host ${machines[$i]}..."
 		ssh bijieprd@${machines[$i]} "sudo rm -rf ~/gowork/src/github.com/binance-chain/node"
-		scp BinanceChain.tar.gz bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/BiJie > /dev/null
-		ssh bijieprd@${machines[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/BiJie && tar -zxvf BinanceChain.tar.gz > /dev/null && cd BinanceChain && make build"
+		scp BinanceChain.tar.gz bijieprd@${machines[$i]}:/home/bijieprd/gowork/src/github.com/binance-chain > /dev/null
+		ssh bijieprd@${machines[$i]} "source ~/.zshrc && cd ~/gowork/src/github.com/binance-chain && tar -zxvf BinanceChain.tar.gz > /dev/null && cd node && make build"
 	done
 fi
 

@@ -907,7 +907,7 @@ func (app *BinanceChain) SetPruning(pruning string) {
 		// TODO: make these parameters configurable
 		pruningStrategy = sdk.PruneSyncable{NumRecent: 100, StoreEvery: 10000}
 	case "breathe":
-		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 100, ServerContext.Config)
+		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
 	default:
 		panic(fmt.Sprintf("invalid pruning strategy: %s", pruning))
 	}
