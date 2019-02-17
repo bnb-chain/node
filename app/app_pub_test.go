@@ -54,15 +54,15 @@ func prepareGenTx(cdc *codec.Codec, chainId string,
 	return txBytes
 }
 
-func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
+func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *BinanceChain, sdk.Account, sdk.Account) {
 	logger := log.NewNopLogger()
 	db := dbm.NewMemDB()
 
-	app = NewBinanceChain(logger, db, os.Stdout)
+	app := NewBinanceChain(logger, db, os.Stdout)
 	app.SetAnteHandler(nil)
 	app.SetDeliverState(abci.Header{})
-	am = app.AccountKeeper
-	ctx = app.NewContext(sdk.RunTxModeDeliver, abci.Header{})
+	am := app.AccountKeeper
+	ctx := app.NewContext(sdk.RunTxModeDeliver, abci.Header{})
 
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	proposerPubKey := ed25519.GenPrivKey().PubKey()
@@ -78,9 +78,10 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
 
 	proposer := abci.Validator{Address: proposerValAddr, Power: 10}
-	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{
+	app.DeliverState.Ctx = app.DeliverState.Ctx.WithBlockHeader(abci.Header{ProposerAddress: proposerValAddr}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: proposer, SignedLastBlock: true},
 	})
+	am.SetAccount(app.DeliverState.Ctx, proposerAcc)
 
 	app.publicationConfig = &config.PublicationConfig{
 		PublishOrderUpdates:    true,
@@ -96,16 +97,13 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
 	pub.IsLive = true
 
-	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
-	ctx = app.DeliverState.Ctx
-	cdc = app.GetCodec()
-	keeper = app.DexKeeper
+	keeper := app.DexKeeper
 	keeper.CollectOrderInfoForPublish = true
 	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 102000)
-	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.PairMapper.AddTradingPair(app.DeliverState.Ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 	tradingPair = dextypes.NewTradingPair("ZCB-000", "BNB", 102000)
-	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.PairMapper.AddTradingPair(app.DeliverState.Ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 	keeper.FeeManager.FeeConfig.ExpireFee = expireFee
 	keeper.FeeManager.FeeConfig.IOCExpireFee = iocExpireFee
@@ -114,19 +112,17 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	keeper.FeeManager.FeeConfig.CancelFee = 12
 	keeper.FeeManager.FeeConfig.CancelFeeNative = 6
 
-	_, buyerAcc = testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0) // give user enough coins to pay the fee
-	buyer = buyerAcc.GetAddress()
-	_, sellerAcc = testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0)
-	seller = sellerAcc.GetAddress()
-	return assert.New(t), require.New(t)
+	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0) // give user enough coins to pay the fee
+	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0)
+	return assert.New(t), require.New(t), app, buyerAcc, sellerAcc
 }
 
 func TestAppPub_AddOrder(t *testing.T) {
-	assert, require := setupAppTest(t)
+	assert, require, app, buyerAcc, _ := setupAppTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000)
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
-	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
+	msg := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000)
+	app.DexKeeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
+	app.EndBlocker(app.DeliverState.Ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
 	for 4 != atomic.LoadUint32(&publisher.MessagePublished) {
@@ -140,13 +136,14 @@ func TestAppPub_AddOrder(t *testing.T) {
 }
 
 func TestAppPub_MatchOrder(t *testing.T) {
-	assert, require := setupAppTest(t)
+	assert, require, app, buyerAcc, sellerAcc := setupAppTest(t)
 
-	msg := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 300000000)
-	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(0, 100)})
-	handler := orderPkg.NewHandler(cdc, keeper, am)
+	ctx := app.DeliverState.Ctx
+	msg := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), orderPkg.GenerateOrderID(1, buyerAcc.GetAddress()), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 300000000)
+	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper)
+	app.DeliverState.Ctx = app.DeliverState.Ctx.WithBlockHeight(41).WithBlockTime(time.Unix(0, 100))
 	buyerAcc.SetSequence(1)
-	am.SetAccount(ctx, buyerAcc)
+	app.AccountKeeper.SetAccount(ctx, buyerAcc)
 	ctx = ctx.WithValue(baseapp.TxHashKey, "")
 	res := handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
@@ -160,15 +157,15 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Len(publisher.BooksPublished, 1)
 	require.Len(publisher.AccountPublished, 1)
 	require.Len(publisher.AccountPublished[0].Accounts, 1)
-	expectedAccountToPub := pub.Account{string(buyer), "", []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ-000", 100000000000, 0, 0}}}
+	expectedAccountToPub := pub.Account{string(buyerAcc.GetAddress()), "", []*pub.AssetBalance{{"BNB", 99999694000, 0, 306000}, {"XYZ-000", 100000000000, 0, 0}}}
 	require.Equal(expectedAccountToPub, publisher.AccountPublished[0].Accounts[0])
 	publisher.Lock.Unlock()
 
 	// we add a sell order to fully execute the buyer order
-	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 400000000)
-	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 101)})
+	msg = orderPkg.NewNewOrderMsg(sellerAcc.GetAddress(), orderPkg.GenerateOrderID(1, sellerAcc.GetAddress()), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 400000000)
+	ctx = ctx.WithBlockHeight(42).WithBlockTime(time.Unix(0, 101))
 	sellerAcc.SetSequence(1)
-	am.SetAccount(ctx, sellerAcc)
+	app.AccountKeeper.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 42})
@@ -180,8 +177,8 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	require.Len(publisher.BooksPublished, 2)
 	require.Len(publisher.BooksPublished[1].Books, 1)
 	assert.Equal(pub.OrderBookDelta{"XYZ-000_BNB", []pub.PriceLevel{{102000, 0}}, []pub.PriceLevel{{102000, 100000000}}}, publisher.BooksPublished[1].Books[0])
-	expectedAccountToPub = pub.Account{string(buyer), "BNB:153", []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ-000", 100300000000, 0, 0}}}
-	expectedAccountToPubSeller := pub.Account{string(seller), "BNB:153", []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ-000", 99600000000, 0, 100000000}}}
+	expectedAccountToPub = pub.Account{string(buyerAcc.GetAddress()), "BNB:153", []*pub.AssetBalance{{"BNB", 99999693847, 0, 0}, {"XYZ-000", 100300000000, 0, 0}}}
+	expectedAccountToPubSeller := pub.Account{string(sellerAcc.GetAddress()), "BNB:153", []*pub.AssetBalance{{"BNB", 100000305847, 0, 0}, {"XYZ-000", 99600000000, 0, 100000000}}}
 	require.Len(publisher.AccountPublished, 2)
 	require.Len(publisher.AccountPublished[1].Accounts, 3) // including the validator's account
 	require.Contains(publisher.AccountPublished[1].Accounts, expectedAccountToPub)
@@ -189,21 +186,21 @@ func TestAppPub_MatchOrder(t *testing.T) {
 	publisher.Lock.Unlock()
 
 	// we execute qty 1000000 sell order but add a new qty 1000000 sell order, both buy and sell price level should not publish
-	msg = orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
-	app.SetDeliverState(abci.Header{Height: 43, Time: time.Unix(0, 102)})
+	msg = orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), orderPkg.GenerateOrderID(2, buyerAcc.GetAddress()), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
+	ctx = ctx.WithBlockHeight(43).WithBlockTime(time.Unix(0, 102))
 	buyerAcc.SetSequence(2)
-	am.SetAccount(ctx, buyerAcc)
+	app.AccountKeeper.SetAccount(ctx, buyerAcc)
 	res = handler(ctx, msg)
-	msg = orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(2, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
+	msg = orderPkg.NewNewOrderMsg(sellerAcc.GetAddress(), orderPkg.GenerateOrderID(2, sellerAcc.GetAddress()), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
 	sellerAcc.SetSequence(2)
-	am.SetAccount(ctx, sellerAcc)
+	app.AccountKeeper.SetAccount(ctx, sellerAcc)
 	res = handler(ctx, msg)
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 43})
 	for 12 != atomic.LoadUint32(&publisher.MessagePublished) {
 		time.Sleep(1000)
 	}
-	expectedAccountToPub = pub.Account{string(buyer), "BNB:51", []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ-000", 100100000000, 0, 0}}}
-	expectedAccountToPubSeller = pub.Account{string(seller), "BNB:51", []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ-000", 99900000000, 0, 0}}}
+	expectedAccountToPub = pub.Account{string(buyerAcc.GetAddress()), "BNB:51", []*pub.AssetBalance{{"BNB", 99999897949, 0, 0}, {"XYZ-000", 100100000000, 0, 0}}}
+	expectedAccountToPubSeller = pub.Account{string(sellerAcc.GetAddress()), "BNB:51", []*pub.AssetBalance{{"BNB", 100000101949, 0, 0}, {"XYZ-000", 99900000000, 0, 0}}}
 
 	publisher.Lock.Lock()
 	require.Len(publisher.BooksPublished, 3)
@@ -216,39 +213,40 @@ func TestAppPub_MatchOrder(t *testing.T) {
 }
 
 func TestAppPub_MatchAndCancelFee(t *testing.T) {
-	assert, require := setupAppTest(t)
-	handler := orderPkg.NewHandler(cdc, keeper, am)
+	assert, require, app, buyerAcc, sellerAcc := setupAppTest(t)
+	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper)
+	ctx := app.DeliverState.Ctx
 
 	// ==== Place a to-be-matched sell order and a to-be-cancelled buy order (in different symbol)
-	msg := orderPkg.NewNewOrderMsg(seller, orderPkg.GenerateOrderID(1, seller), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
-	app.SetDeliverState(abci.Header{Height: 41, Time: time.Unix(0, 100)})
+	msg := orderPkg.NewNewOrderMsg(sellerAcc.GetAddress(), orderPkg.GenerateOrderID(1, sellerAcc.GetAddress()), orderPkg.Side.SELL, "XYZ-000_BNB", 102000, 100000000)
+	ctx = ctx.WithBlockHeight(41).WithBlockTime(time.Unix(0, 100))
 	sellerAcc.SetSequence(1)
-	am.SetAccount(ctx, sellerAcc)
+	app.AccountKeeper.SetAccount(ctx, sellerAcc)
 	ctx = ctx.WithValue(baseapp.TxHashKey, "").WithRunTxMode(sdk.RunTxModeDeliver)
 	res := handler(ctx, msg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
-	msg2 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(1, buyer), orderPkg.Side.BUY, "ZCB-000_BNB", 102000, 100000000)
+	msg2 := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), orderPkg.GenerateOrderID(1, buyerAcc.GetAddress()), orderPkg.Side.BUY, "ZCB-000_BNB", 102000, 100000000)
 	buyerAcc.SetSequence(1)
-	am.SetAccount(ctx, buyerAcc)
+	app.AccountKeeper.SetAccount(ctx, buyerAcc)
 	res = handler(ctx, msg2)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
 	app.EndBlocker(ctx, abci.RequestEndBlock{Height: 41})
 
 	// ==== Place a must-match buy order and a cancel message
-	msg3 := orderPkg.NewNewOrderMsg(buyer, orderPkg.GenerateOrderID(2, buyer), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
-	app.SetDeliverState(abci.Header{Height: 42, Time: time.Unix(0, 101)})
-	buyerAcc = am.GetAccount(ctx, buyer)
+	msg3 := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), orderPkg.GenerateOrderID(2, buyerAcc.GetAddress()), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 100000000)
+	ctx = ctx.WithBlockHeight(42).WithBlockTime(time.Unix(0, 101))
+	buyerAcc = app.AccountKeeper.GetAccount(ctx, buyerAcc.GetAddress())
 	buyerAcc.SetSequence(2)
-	am.SetAccount(ctx, buyerAcc)
+	app.AccountKeeper.SetAccount(ctx, buyerAcc)
 	res = handler(ctx, msg3)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
 
-	cxlMsg := orderPkg.NewCancelOrderMsg(buyer, "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyer))
-	buyerAcc = am.GetAccount(ctx, buyer)
+	cxlMsg := orderPkg.NewCancelOrderMsg(buyerAcc.GetAddress(), "ZCB-000_BNB", orderPkg.GenerateOrderID(1, buyerAcc.GetAddress()))
+	buyerAcc = app.AccountKeeper.GetAccount(ctx, buyerAcc.GetAddress())
 	buyerAcc.SetSequence(3)
-	am.SetAccount(ctx, buyerAcc)
+	app.AccountKeeper.SetAccount(ctx, buyerAcc)
 	ctx = ctx.WithValue(baseapp.TxHashKey, "CANCEL1")
 	res = handler(ctx, cxlMsg)
 	require.Equal(sdk.ABCICodeOK, res.Code, res.Log)
