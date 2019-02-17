@@ -230,7 +230,7 @@ func (app *BinanceChain) initDex() {
 	}
 	// count back to days in config.
 	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
-		baseapp.LoadBlockDB(), app.LastBlockHeight(), app.TxDecoder)
+		baseapp.LoadBlockDB(), baseapp.LoadTxDB(), app.LastBlockHeight(), app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
