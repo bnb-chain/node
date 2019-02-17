@@ -377,9 +377,12 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 	res = app.BaseApp.PreDeliverTx(txBytes)
 	if res.IsErr() {
-		if app.publicationConfig.PublishOrderUpdates {
-			app.processErrAbciResponseForPub(txBytes)
-		}
+		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+		app.Logger.Error("failed to process invalid tx during pre-deliver", "tx", txHash, "res", res.String())
+		// TODO(#446): comment out temporally for thread safety
+		//if app.publicationConfig.PublishOrderUpdates {
+		//	app.processErrAbciResponseForPub(txBytes)
+		//}
 	}
 	return res
 }

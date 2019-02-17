@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -143,6 +144,13 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 }
 
 func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := fmt.Sprintf("recovered: %v\nstack:\n%v", r, string(debug.Stack()))
+			app.Logger.Error(stackTrace)
+		}
+
+	}()
 	tx, err := app.TxDecoder(txBytes)
 	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 	if err != nil {
@@ -155,12 +163,18 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 			switch msg := msgs[0].(type) {
 			case order.NewOrderMsg:
 				app.Logger.Error("failed to process NewOrderMsg", "oid", msg.Id)
-				keeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
+				// The error on deliver should be rare and only impact witness publisher's performance
+				app.DexKeeper.OrderChangesMtx.Lock()
+				app.DexKeeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
 				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking})
+				app.DexKeeper.OrderChangesMtx.Unlock()
 			case order.CancelOrderMsg:
 				app.Logger.Error("failed to process CancelOrderMsg", "oid", msg.RefId)
+				// The error on deliver should be rare and only impact witness publisher's performance
+				app.DexKeeper.OrderChangesMtx.Lock()
 				// OrderInfo must has been in keeper.OrderInfosForPub
 				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking})
+				app.DexKeeper.OrderChangesMtx.Unlock()
 			default:
 				// deliberately do nothing for message other than NewOrderMsg
 				// in future, we may publish fail status of send msg

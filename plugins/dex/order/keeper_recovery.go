@@ -222,7 +222,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDec
 					}
 				})
 				if err != nil {
-					panic(fmt.Sprintf("Failed to replay cancel msg for: [%s]", err.Error()))
+					logger.Error("Failed to replay cancel msg", "err", err)
 				}
 				logger.Info("Canceled Order", "order", msg)
 			}
