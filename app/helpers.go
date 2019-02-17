@@ -156,7 +156,7 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 			switch msg := msgs[0].(type) {
 			case order.NewOrderMsg:
 				app.Logger.Error("failed to process NewOrderMsg", "oid", msg.Id)
-				keeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
+				app.DexKeeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
 				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking})
 			case order.CancelOrderMsg:
 				app.Logger.Error("failed to process CancelOrderMsg", "oid", msg.RefId)
