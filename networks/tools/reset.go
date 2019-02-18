@@ -25,6 +25,8 @@ import (
 
 var cdc = amino.NewCodec()
 
+const latestStateToKeep int64 = 1 << 20
+
 func init() {
 	cryptoAmino.RegisterAmino(cdc)
 }
@@ -43,7 +45,7 @@ func newLevelDb(id string, rootDir string) (db.DB, error) {
 }
 
 func calcStateKey(height int64) []byte {
-	return []byte(fmt.Sprintf("stateKey:%v", height))
+	return []byte(fmt.Sprintf("stateKey:%v", height%latestStateToKeep))
 }
 
 func calcValidatorsKey(height int64) []byte {
