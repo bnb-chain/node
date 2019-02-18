@@ -42,6 +42,10 @@ func newLevelDb(id string, rootDir string) (db.DB, error) {
 	return dbIns, err
 }
 
+func calcStateKey(height int64) []byte {
+	return []byte(fmt.Sprintf("stateKey:%v", height))
+}
+
 func calcValidatorsKey(height int64) []byte {
 	return []byte(fmt.Sprintf("validatorsKey:%v", height))
 }
@@ -68,24 +72,6 @@ func loadValidatorsInfo(db db.DB, height int64) *state.ValidatorsInfo {
 	return v
 }
 
-func loadConsensusParamsInfo(db db.DB, height int64) *state.ConsensusParamsInfo {
-	buf := db.Get(calcConsensusParamsKey(height))
-	if len(buf) == 0 {
-		return nil
-	}
-
-	paramsInfo := new(state.ConsensusParamsInfo)
-	err := cdc.UnmarshalBinaryBare(buf, paramsInfo)
-	if err != nil {
-		// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-		cmn.Exit(fmt.Sprintf(`LoadConsensusParams: Data has been corrupted or its spec has changed:
-                %v\n`, err))
-	}
-	// TODO: ensure that buf is completely read.
-
-	return paramsInfo
-}
-
 func resetBlockChainState(height int64, rootDir string) {
 	stateDb, err := newLevelDb("state", rootDir)
 	if err != nil {
@@ -94,41 +80,13 @@ func resetBlockChainState(height int64, rootDir string) {
 	}
 	defer stateDb.Close()
 
-	blockDb, err := newLevelDb("blockstore", rootDir)
+	var blockState state.State
+	buf := stateDb.Get(calcStateKey(height))
+	err = cdc.UnmarshalBinaryBare(buf, &blockState)
 	if err != nil {
-		fmt.Printf("new levelDb err in path %s\n", path.Join(rootDir, "data"))
-		return
-	}
-	defer blockDb.Close()
-
-	bs := blockchain.NewBlockStore(blockDb)
-	block := bs.LoadBlock(height + 1)
-	previousBlock := bs.LoadBlock(height)
-
-	lastValidators, _ := state.LoadValidators(stateDb, height)
-	validators, _ := state.LoadValidators(stateDb, height+1)
-	validatorInfo := loadValidatorsInfo(stateDb, height)
-
-	lastConsensusParams, _ := state.LoadConsensusParams(stateDb, height+1)
-	consensusInfo := loadConsensusParamsInfo(stateDb, height)
-
-	blockState := state.State{
-		ChainID:          block.ChainID,
-		LastBlockHeight:  height,
-		LastBlockTotalTx: block.TotalTxs - block.NumTxs,
-		LastBlockID:      block.LastBlockID,
-		LastBlockTime:    previousBlock.Time,
-
-		NextValidators:              validators,
-		Validators:                  validators,
-		LastValidators:              lastValidators,
-		LastHeightValidatorsChanged: validatorInfo.LastHeightChanged,
-
-		ConsensusParams:                  lastConsensusParams,
-		LastHeightConsensusParamsChanged: consensusInfo.LastHeightChanged,
-
-		LastResultsHash: block.LastResultsHash,
-		AppHash:         block.AppHash,
+		// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
+		cmn.Exit(fmt.Sprintf(`LoadState: Data has been corrupted or its spec has changed:
+                %v\n`, err))
 	}
 
 	state.SaveState(stateDb, blockState)
