@@ -242,7 +242,7 @@ func (msg NewOrderMsg) ValidateBasic() sdk.Error {
 		return types.ErrInvalidOrderParam("Quantity", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
 	}
 	if msg.Price <= 0 {
-		return types.ErrInvalidOrderParam("Price", fmt.Sprintf("Zero/Negative Number:%d", msg.Quantity))
+		return types.ErrInvalidOrderParam("Price", fmt.Sprintf("Zero/Negative Number:%d", msg.Price))
 	}
 	if !IsValidOrderType(msg.OrderType) {
 		return types.ErrInvalidOrderParam("OrderType", fmt.Sprintf("Invalid order type:%d", msg.OrderType))

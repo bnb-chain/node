@@ -35,6 +35,7 @@ type Keeper struct {
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
+	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
 	OrderInfosForPub           OrderInfoForPublish              // for publication usage
 	roundOrders                map[string][]string              // limit to the total tx number in a block
@@ -62,6 +63,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
+		OrderChangesMtx:            &sync.Mutex{},
 		OrderChanges:               make(OrderChanges, 0),
 		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
@@ -220,7 +222,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// in this block. Ideally the order IDs would be stored in the EndBlock response,
 		// but this is not implemented yet, pending Tendermint to better handle EndBlock
 		// for index service.
-		kp.logger.Error("Fatal error occurred in matching, cancell all incoming new orders",
+		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
 		thisRoundIds := kp.roundOrders[symbol]
 		for _, id := range thisRoundIds {
@@ -239,8 +241,10 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// let the order status publisher publish these abnormal
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
+				kp.OrderChangesMtx.Lock()
 				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching})
 				kp.OrderInfosForPub[id] = msg
+				kp.OrderChangesMtx.Unlock()
 			}
 		}
 		return // no need to handle IOC
@@ -439,7 +443,11 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	// these two non-negative check are to ensure the Transfer gen result is correct before we actually operate the acc.
 	// they should never happen, there would be a severe bug if happen and we have to cancel all orders when app restarts.
 	if !newLocked.IsNotNegative() {
-		panic(errors.New("No enough locked tokens to unlock"))
+		panic(errors.New(fmt.Sprintf(
+			"No enough locked tokens to unlock, oid: %s, newLocked: %s, unlock: %d",
+			tran.Oid,
+			newLocked.String(),
+			tran.unlock)))
 	}
 	if tran.unlock < tran.out {
 		panic(errors.New("Unlocked tokens cannot cover the expense"))
