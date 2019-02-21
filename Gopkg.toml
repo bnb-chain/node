@@ -37,16 +37,12 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "=v0.30.1-binance.0"
+  version = "=v0.29.1-binance.3"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "=v0.25.0-binance.8"
-
-[[constraint]]
-  name = "github.com/btcsuite/btcd"
-  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
+  version = "=v0.25.0-binance.6"
 
 [[constraint]]
   name = "github.com/pkg/errors"

@@ -341,7 +341,7 @@ func checkSufficientFunds(acc sdk.Account, fee types.Fee) sdk.Result {
 
 	newCoins := coins.Minus(fee.Tokens.Sort())
 	if !newCoins.IsNotNegative() {
-		errMsg := fmt.Sprintf("%s < %s", coins, fee.Tokens)
+		errMsg := fmt.Sprintf("insufficient fund. you got %s, but %s fee needed.", coins, fee.Tokens)
 		return sdk.ErrInsufficientFunds(errMsg).Result()
 	}
 
