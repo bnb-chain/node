@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -120,12 +121,20 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
+	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.publicationConfig.ShouldPublishAny())
+	app.DexKeeper.SubscribeParamChange(app.ParamHub)
+
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
+
 	app.govKeeper = gov.NewKeeper(
 		cdc,
 		common.GovStoreKey,
@@ -133,7 +142,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
+	app.govKeeper = app.govKeeper.SetHooks(NewGovHooks(list.NewListHooks(app.DexKeeper, app.TokenMapper)))
 	app.ParamHub.SetGovKeeper(app.govKeeper)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -218,11 +229,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 }
 
 func (app *BinanceChain) initDex() {
-	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, tradingPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
-		app.publicationConfig.ShouldPublishAny())
-	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
