@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -19,9 +20,16 @@ import (
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	dexutils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
+)
+
+const (
+	numPricesStored  = 2000
+	pricesStoreEvery = 1000
+	minimalNumPrices = 500
 )
 
 type FeeHandler func(map[string]*types.Fee)
@@ -34,6 +42,7 @@ type Keeper struct {
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
+	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest 2000 prices per 1000 blocks
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
@@ -62,6 +71,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		storeKey:                   key,
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
+		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChangesMtx:            &sync.Mutex{},
 		OrderChanges:               make(OrderChanges, 0),
@@ -77,12 +87,34 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
+func (kp *Keeper) Init(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	// count back to days in config.
+	kp.initOrderBook(ctx, daysBack, blockDB, txDB, lastHeight, txDecoder)
+	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx)
+}
+
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
+}
+
+func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+
+	recentPrices := kp.PairMapper.GetRecentPrices(ctx)
+	for _, pair := range tradingPairs {
+		if prices, ok := recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
+			priceWMA := dexutils.CalcPriceWMA(prices)
+			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, priceWMA)
+			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
+		} else {
+			// keep the current tick_size/lot_size
+			continue
+		}
+	}
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
@@ -467,6 +499,18 @@ func (kp *Keeper) clearAfterMatch() {
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
+func (kp *Keeper) storeTradePrices(ctx sdk.Context) {
+	if ctx.BlockHeight()%pricesStoreEvery == 0 {
+		for symbol, engine := range kp.engines {
+			if _, ok := kp.recentPrices[symbol]; !ok {
+				kp.recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
+			}
+			kp.recentPrices[symbol].Push(engine.LastTradePrice)
+		}
+		kp.PairMapper.UpdateRecentPrices(ctx, kp.recentPrices)
+	}
+}
+
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -602,6 +646,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	fees.Pool.AddAndCommitFee("MATCH", totalFee)
+	kp.storeTradePrices(ctx)
 	kp.clearAfterMatch()
 }
 

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -14,12 +15,16 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
+var recentPricesKey = []byte("recentPrices")
+
 type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
 	Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64)
+	UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing)
+	GetRecentPrices(ctx sdk.Context) map[string]*utils.FixedSizeRing
 }
 
 var _ TradingPairMapper = mapper{}
@@ -101,6 +106,30 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 		m.AddTradingPair(ctx, pair)
 	}
 	return tickSize, lotSize
+}
+
+func (m mapper) UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing) {
+	store := ctx.KVStore(m.key)
+	value, err :=json.Marshal(recentPrices)
+	if err != nil {
+		panic(err)
+	}
+
+	store.Set(recentPricesKey, value)
+	ctx.Logger().Debug("Updated recentPrices", "recentPrices", recentPrices)
+}
+
+func (m mapper) GetRecentPrices(ctx sdk.Context) map[string]*utils.FixedSizeRing {
+	store := ctx.KVStore(m.key)
+	bz := store.Get(recentPricesKey)
+	var res map[string]*utils.FixedSizeRing
+	if bz != nil {
+		err :=json.Unmarshal(bz, &res)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return res
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {

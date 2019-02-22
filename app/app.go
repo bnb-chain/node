@@ -236,7 +236,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 		return
 	}
 	// count back to days in config.
-	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
+	app.DexKeeper.Init(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
 		baseapp.LoadBlockDB(), baseapp.LoadTxDB(), app.LastBlockHeight(), app.TxDecoder)
 }
 
