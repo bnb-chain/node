@@ -58,6 +58,10 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New(fmt.Sprintf("trading pair exists"))
 	}
 
+	if err := checkPrerequisiteTradingPair(ctx, hooks.orderKeeper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+		return err
+	}
+
 	if !hooks.tokenMapper.Exists(ctx, listParams.BaseAssetSymbol) {
 		return errors.New(fmt.Sprintf("base token does not exist"))
 	}

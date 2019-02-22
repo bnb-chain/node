@@ -131,7 +131,6 @@ func TestWrongExpireTime(t *testing.T) {
 }
 
 func TestTradingPairExists(t *testing.T) {
-
 	listParams := gov.ListTradingPairParams{
 		BaseAssetSymbol:  "BNB",
 		QuoteAssetSymbol: "BTC-ABC",
@@ -160,6 +159,65 @@ func TestTradingPairExists(t *testing.T) {
 	require.NotNil(t, err, "err should not be nil")
 
 	require.Contains(t, err.Error(), "trading pair exists")
+}
+
+func TestPrerequisiteTradingPair(t *testing.T) {
+	listParams := gov.ListTradingPairParams{
+		BaseAssetSymbol:  "BTC-ABC",
+		QuoteAssetSymbol: "ETH-ABC",
+		InitPrice:        1,
+		ExpireTime:       time.Now(),
+	}
+
+	listParamsBz, err := json.Marshal(listParams)
+	require.Nil(t, err, "marshal list params error")
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeListTradingPair,
+		Description:  string(listParamsBz),
+	}
+
+	cdc := MakeCodec()
+	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
+
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+	require.Contains(t, err.Error(), "trading pair BTC-ABC against native token should exist before listing other trading pairs")
+
+	pair := dexTypes.NewTradingPair(listParams.BaseAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+	require.Contains(t, err.Error(), "trading pair ETH-ABC against native token should exist before listing other trading pairs")
+
+	pair = dexTypes.NewTradingPair(listParams.QuoteAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.BaseAssetSymbol,
+		OrigSymbol:  "BTC",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.QuoteAssetSymbol,
+		OrigSymbol:  "ETH",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.Nil(t, err, "err should be nil")
 }
 
 func TestBaseTokenDoesNotExist(t *testing.T) {
