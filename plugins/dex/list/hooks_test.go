@@ -15,6 +15,17 @@ import (
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 )
 
+func TestWrongTypeOfProposal(t *testing.T) {
+	hooks := NewListHooks(nil, nil)
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeCreateValidator,
+		Description:  "nonsense",
+	}
+
+	err := hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.Nil(t, err, "err should be nil")
+}
+
 func TestUnmarshalError(t *testing.T) {
 	hooks := NewListHooks(nil, nil)
 	proposal := gov.TextProposal{
