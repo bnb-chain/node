@@ -28,7 +28,7 @@ var _ gov.GovHooks = ListHooks{}
 
 func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
-		return nil
+		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
 	}
 
 	listParams := gov.ListTradingPairParams{}
