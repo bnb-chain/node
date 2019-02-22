@@ -9,19 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/stake"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
-
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
@@ -42,6 +29,19 @@ import (
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 const (
@@ -142,7 +142,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-	app.govKeeper = app.govKeeper.SetHooks(NewGovHooks(list.NewListHooks(app.DexKeeper, app.TokenMapper)))
+	listHooks := list.NewListHooks(tradingPairMapper, app.TokenMapper)
+	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
+
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	// legacy bank route (others moved to plugin init funcs)

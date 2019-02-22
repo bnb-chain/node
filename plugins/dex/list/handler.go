@@ -13,6 +13,7 @@ import (
 	"github.com/binance-chain/node/common/log"
 	commonTypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 )
@@ -65,7 +66,7 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	return nil
 }
 
-func checkPrerequisiteTradingPair(ctx sdk.Context, orderKeeper *order.Keeper, baseAssetSymbol, quoteAssetSymbol string) error {
+func checkPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairMapper, baseAssetSymbol, quoteAssetSymbol string) error {
 	// trading pair against native token should exist if quote token is not native token
 	baseAssetSymbol = strings.ToUpper(baseAssetSymbol)
 	quoteAssetSymbol = strings.ToUpper(quoteAssetSymbol)
@@ -73,18 +74,18 @@ func checkPrerequisiteTradingPair(ctx sdk.Context, orderKeeper *order.Keeper, ba
 	if baseAssetSymbol != commonTypes.NativeTokenSymbol &&
 		quoteAssetSymbol != commonTypes.NativeTokenSymbol {
 
-		if !orderKeeper.PairMapper.Exists(ctx, baseAssetSymbol, commonTypes.NativeTokenSymbol) &&
-			!orderKeeper.PairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, baseAssetSymbol) {
+		if !pairMapper.Exists(ctx, baseAssetSymbol, commonTypes.NativeTokenSymbol) &&
+			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, baseAssetSymbol) {
 			return errors.New(
-				fmt.Sprintf("trading pair %s against native token should exist before listing other trading pairs",
-					baseAssetSymbol))
+				fmt.Sprintf("Token %s should be listed against BNB before against %s",
+					baseAssetSymbol, quoteAssetSymbol))
 		}
 
-		if !orderKeeper.PairMapper.Exists(ctx, quoteAssetSymbol, commonTypes.NativeTokenSymbol) &&
-			!orderKeeper.PairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, quoteAssetSymbol) {
+		if !pairMapper.Exists(ctx, quoteAssetSymbol, commonTypes.NativeTokenSymbol) &&
+			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, quoteAssetSymbol) {
 			return errors.New(
-				fmt.Sprintf("trading pair %s against native token should exist before listing other trading pairs",
-					quoteAssetSymbol))
+				fmt.Sprintf("Token %s should be listed against BNB before listing %s against %s",
+					quoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol))
 		}
 	}
 	return nil
@@ -102,7 +103,7 @@ func handleList(
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
-	if err := checkPrerequisiteTradingPair(ctx, keeper, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+	if err := checkPrerequisiteTradingPair(ctx, keeper.PairMapper, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 

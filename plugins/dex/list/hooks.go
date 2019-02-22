@@ -8,18 +8,18 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
 type ListHooks struct {
-	orderKeeper *order.Keeper
+	pairMapper  store.TradingPairMapper
 	tokenMapper tokens.Mapper
 }
 
-func NewListHooks(orderKeeper *order.Keeper, tokenMapper tokens.Mapper) ListHooks {
+func NewListHooks(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) ListHooks {
 	return ListHooks{
-		orderKeeper: orderKeeper,
+		pairMapper:  pairMapper,
 		tokenMapper: tokenMapper,
 	}
 }
@@ -53,21 +53,21 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("expire time should after now")
 	}
 
-	if hooks.orderKeeper.PairMapper.Exists(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol) ||
-		hooks.orderKeeper.PairMapper.Exists(ctx, listParams.QuoteAssetSymbol, listParams.BaseAssetSymbol) {
-		return errors.New(fmt.Sprintf("trading pair exists"))
-	}
-
-	if err := checkPrerequisiteTradingPair(ctx, hooks.orderKeeper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
-		return err
-	}
-
 	if !hooks.tokenMapper.Exists(ctx, listParams.BaseAssetSymbol) {
 		return errors.New(fmt.Sprintf("base token does not exist"))
 	}
 
 	if !hooks.tokenMapper.Exists(ctx, listParams.QuoteAssetSymbol) {
 		return errors.New(fmt.Sprintf("quote token does not exist"))
+	}
+
+	if hooks.pairMapper.Exists(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol) ||
+		hooks.pairMapper.Exists(ctx, listParams.QuoteAssetSymbol, listParams.BaseAssetSymbol) {
+		return errors.New(fmt.Sprintf("trading pair exists"))
+	}
+
+	if err := checkPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+		return err
 	}
 
 	return nil

@@ -147,9 +147,27 @@ func TestTradingPairExists(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper, tokenMapper)
+	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.BaseAssetSymbol,
+		OrigSymbol:  listParams.BaseAssetSymbol,
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.QuoteAssetSymbol,
+		OrigSymbol:  "BTC",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
 
 	pair := dexTypes.NewTradingPair(listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol, listParams.InitPrice)
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
@@ -178,13 +196,31 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper, tokenMapper)
+	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.BaseAssetSymbol,
+		OrigSymbol:  "BTC",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      listParams.QuoteAssetSymbol,
+		OrigSymbol:  "ETH",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
 	err = hooks.OnProposalSubmitted(ctx, &proposal)
 	require.NotNil(t, err, "err should not be nil")
-	require.Contains(t, err.Error(), "trading pair BTC-ABC against native token should exist before listing other trading pairs")
+	require.Contains(t, err.Error(), "Token BTC-ABC should be listed against BNB before against ETH-ABC")
 
 	pair := dexTypes.NewTradingPair(listParams.BaseAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
@@ -192,7 +228,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	err = hooks.OnProposalSubmitted(ctx, &proposal)
 	require.NotNil(t, err, "err should not be nil")
-	require.Contains(t, err.Error(), "trading pair ETH-ABC against native token should exist before listing other trading pairs")
+	require.Contains(t, err.Error(), "Token ETH-ABC should be listed against BNB before listing BTC-ABC against ETH-ABC")
 
 	pair = dexTypes.NewTradingPair(listParams.QuoteAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
@@ -237,7 +273,7 @@ func TestBaseTokenDoesNotExist(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper, tokenMapper)
+	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -264,14 +300,14 @@ func TestQuoteTokenDoesNotExist(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper, tokenMapper)
+	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	err = tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
-		OrigSymbol:  listParams.BaseAssetSymbol,
+		OrigSymbol:  "BNB",
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
@@ -300,7 +336,7 @@ func TestRightProposal(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper, tokenMapper)
+	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 

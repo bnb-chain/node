@@ -293,11 +293,13 @@ func TestListHandler_WrongTradingPair(t *testing.T) {
 		From:             sdk.AccAddress("testacc"),
 	}
 	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
-	require.Contains(t, result.Log, fmt.Sprintf("trading pair %s against native token should exist before listing other trading pairs", baseAsset))
+	require.Contains(t, result.Log, fmt.Sprintf("Token %s should be listed against BNB before against %s",
+		baseAsset, quoteAsset))
 
 	pair := dexTypes.NewTradingPair(baseAsset, types.NativeTokenSymbol, 1000)
 	err := orderKeeper.PairMapper.AddTradingPair(ctx, pair)
 	require.Nil(t, err, "new trading pair error")
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
-	require.Contains(t, result.Log, fmt.Sprintf("trading pair %s against native token should exist before listing other trading pairs", quoteAsset))
+	require.Contains(t, result.Log, fmt.Sprintf("Token %s should be listed against BNB before listing %s against %s",
+		quoteAsset, baseAsset, quoteAsset))
 }
