@@ -37,8 +37,7 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockTime time.Time) {
 	logger := bnclog.With("module", "dex")
 	logger.Info("Update tick size / lot size")
-	updateTickSizeAndLotSize(ctx, dexKeeper)
-	// TODO: update fee/rate
+	dexKeeper.UpdateTickSizeAndLotSize(ctx)
 	logger.Info("Expire stale orders")
 	if dexKeeper.CollectOrderInfoForPublish {
 		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
@@ -52,17 +51,4 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockT
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
 	return
-}
-
-func updateTickSizeAndLotSize(ctx sdk.Context, dexKeeper *DexKeeper) {
-	tradingPairs := dexKeeper.PairMapper.ListAllTradingPairs(ctx)
-
-	for _, pair := range tradingPairs {
-		_, lastPrice := dexKeeper.GetLastTradesForPair(pair.GetSymbol())
-		if lastPrice == 0 {
-			continue
-		}
-		_, lotSize := dexKeeper.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, lastPrice)
-		dexKeeper.UpdateLotSize(pair.GetSymbol(), lotSize)
-	}
 }
