@@ -613,7 +613,6 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 			nodeHash = nodes[iterated].Hash()
 			for i := int64(0); i < storeKeys; i++ {
 				node := nodes[iterated+i]
-				fmt.Printf("saved node hash: %X\n", node.Hash())
 				nodeDB.SaveNode(node)
 			}
 		} else {
@@ -676,7 +675,9 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 	hashHex := fmt.Sprintf("%X", commitId.Hash)
 	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
 
+	// simulate we just "Commit()" :P
 	app.SetCheckState(abci.Header{})
+	app.DeliverState = nil
 
 	//TODO: figure out how to get block time here to get rid of time.Now() :(
 	_, err = app.DexKeeper.LoadOrderBookSnapshot(app.CheckState.Ctx, height, time.Now(), app.baseConfig.BreatheBlockInterval, app.baseConfig.BreatheBlockDaysCountBack)
@@ -686,6 +687,7 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 
 	// init app cache
 	accountStore := stores.GetKVStore(common.AccountStoreKey)
+	fmt.Printf("account store addr: %p\n", accountStore)
 	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
 
 	return nil
