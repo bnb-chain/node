@@ -22,9 +22,9 @@ type TradingPairMapper interface {
 	Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
-	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64)
+	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64)
 	UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing)
-	GetRecentPrices(ctx sdk.Context) map[string]*utils.FixedSizeRing
+	GetRecentPrices(ctx sdk.Context, numPricesStored int64) map[string]*utils.FixedSizeRing
 }
 
 var _ TradingPairMapper = mapper{}
@@ -92,8 +92,9 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	return res
 }
 
-func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, price int64) (tickSize, lotSize int64) {
-	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(price)
+func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64) {
+	priceWMA := dexUtils.CalcPriceWMA(recentPrices)
+	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(priceWMA)
 
 	if tickSize != pair.TickSize.ToInt64() ||
 		lotSize != pair.LotSize.ToInt64() {
@@ -110,26 +111,50 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 
 func (m mapper) UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing) {
 	store := ctx.KVStore(m.key)
-	value, err :=json.Marshal(recentPrices)
-	if err != nil {
-		panic(err)
-	}
-
-	store.Set(recentPricesKey, value)
+	bz := m.encodeRecentPrices(recentPrices)
+	store.Set(recentPricesKey, bz)
 	ctx.Logger().Debug("Updated recentPrices", "recentPrices", recentPrices)
 }
 
-func (m mapper) GetRecentPrices(ctx sdk.Context) map[string]*utils.FixedSizeRing {
+func (m mapper) GetRecentPrices(ctx sdk.Context, numPricesStored int64) map[string]*utils.FixedSizeRing {
 	store := ctx.KVStore(m.key)
 	bz := store.Get(recentPricesKey)
-	var res map[string]*utils.FixedSizeRing
-	if bz != nil {
-		err :=json.Unmarshal(bz, &res)
-		if err != nil {
-			panic(err)
+	if bz == nil {
+		return nil
+	}
+	recentPrices := m.decodeRecentPrices(bz, numPricesStored)
+	return recentPrices
+}
+
+func (m mapper) encodeRecentPrices(recentPrices map[string]*utils.FixedSizeRing) []byte {
+	values := map[string][]interface{}{}
+	for symbol, prices := range recentPrices {
+		values[symbol] = prices.Elements()
+	}
+	// json marshal will sort for map values
+	bz, err := json.Marshal(values)
+	if err != nil {
+		panic(err)
+	}
+	return bz
+}
+
+func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) map[string]*utils.FixedSizeRing {
+	recentPrices := make(map[string]*utils.FixedSizeRing, 256)
+	values := make(map[string][]int64, 256)
+	err := json.Unmarshal(bz, &values)
+	if err != nil {
+		panic(err)
+	}
+	for symbol, value := range values {
+		if _, ok := recentPrices[symbol]; !ok {
+			recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
+		}
+		for _, price := range value {
+			recentPrices[symbol].Push(price)
 		}
 	}
-	return res
+	return recentPrices
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {

@@ -1,6 +1,8 @@
 package store
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -87,4 +89,19 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 	require.Equal(t, "AAA-000", pairs[0].BaseAssetSymbol)
 	require.Equal(t, "BBB-000", pairs[1].BaseAssetSymbol)
 	require.Equal(t, "CCC-000", pairs[2].BaseAssetSymbol)
+}
+
+func TestMapper_UpdateRecentPrices(t *testing.T) {
+	pairMapper, ctx := setup()
+	pricesRing := utils.NewFixedSizedRing(2000)
+	for i:=0; i<3000; i++ {
+		pricesRing.Push(rand.Int63())
+	}
+	recentPrices := make(map[string]*utils.FixedSizeRing, 256)
+	recentPrices["ABC"] = pricesRing
+	fmt.Printf("%#v\n", recentPrices)
+	pairMapper.UpdateRecentPrices(ctx, recentPrices)
+	newRecentPrices := pairMapper.GetRecentPrices(ctx, 2000)
+	require.Equal(t, int64(2000), newRecentPrices["ABC"].Count())
+	require.Equal(t, recentPrices["ABC"].Elements(), newRecentPrices["ABC"].Elements())
 }

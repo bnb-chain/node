@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,20 @@ func TestFixedSizeRing_PushAndElements(t *testing.T) {
 	require.Equal(t, []interface{}{5,2,3,4}, q.buf)
 }
 
+// ~0.26 ns for each mod op
+func BenchmarkFixedSizeRing_mod(b *testing.B) {
+	nums := make([]int64, 10000)
+	for i:=0; i<len(nums); i++ {
+		nums[i] = rand.Int63()
+	}
+	for i:=0; i<b.N; i++ {
+		for _, num := range nums {
+			_  = num % 2000
+		}
+	}
+}
 
+// ~20ns/op
 func BenchmarkFixedSizeRing_Push(b *testing.B) {
 	q := NewFixedSizedRing(2000)
 	for i:=0; i<b.N; i++ {
@@ -35,6 +49,7 @@ func BenchmarkFixedSizeRing_Push(b *testing.B) {
 	}
 }
 
+// ~6000ns/op
 func BenchmarkFixedSizeRing_FullElements(b *testing.B) {
 	q := NewFixedSizedRing(2000)
 	for i:=0; i<2000; i++ {

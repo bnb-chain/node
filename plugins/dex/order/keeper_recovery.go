@@ -42,24 +42,16 @@ func genActiveOrdersSnapshotKey(height int64) string {
 }
 
 func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.KVStore) error {
-	var b bytes.Buffer
-	w := zlib.NewWriter(&b)
 	bytes, err := cdc.MarshalBinaryLengthPrefixed(snapshot)
 	if err != nil {
 		panic(err)
 	}
-	_, err = w.Write(bytes)
+	compressedBytes, err := utils.Compress(bytes)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	err = w.Flush()
-	if err != nil {
-		return err
-	}
-	bytes = b.Bytes()
 	bnclog.Debug(fmt.Sprintf("compressAndSave key: %s, value: %v", key, bytes))
-	kv.Set([]byte(key), bytes)
-	w.Close()
+	kv.Set([]byte(key), compressedBytes)
 	return nil
 }
 

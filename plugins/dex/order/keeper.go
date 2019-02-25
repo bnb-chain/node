@@ -20,7 +20,6 @@ import (
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
-	dexutils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
@@ -42,7 +41,7 @@ type Keeper struct {
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
-	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest 2000 prices per 1000 blocks
+	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
@@ -90,7 +89,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 func (kp *Keeper) Init(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	// count back to days in config.
 	kp.initOrderBook(ctx, daysBack, blockDB, txDB, lastHeight, txDecoder)
-	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx)
+	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, numPricesStored)
+	if kp.recentPrices == nil {
+		kp.recentPrices = make(map[string]*utils.FixedSizeRing, 256)
+	}
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
@@ -103,12 +105,9 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 
 func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
 	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-
-	recentPrices := kp.PairMapper.GetRecentPrices(ctx)
 	for _, pair := range tradingPairs {
-		if prices, ok := recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
-			priceWMA := dexutils.CalcPriceWMA(prices)
-			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, priceWMA)
+		if prices, ok := kp.recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
+			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, prices)
 			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
 		} else {
 			// keep the current tick_size/lot_size

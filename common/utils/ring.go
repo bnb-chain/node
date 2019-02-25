@@ -29,13 +29,14 @@ func (q *FixedSizeRing) Count() int64 {
 	return q.size
 }
 
-func(q *FixedSizeRing) Push(v interface{}) {
+func(q *FixedSizeRing) Push(v interface{}) *FixedSizeRing {
 	q.buf[q.tail] = v
 	q.tail = (q.tail + 1) % q.cap
 
 	if q.size < q.cap {
 		q.size++
 	}
+	return q
 }
 
 func (q *FixedSizeRing) Elements() []interface{} {
