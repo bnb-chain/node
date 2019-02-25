@@ -11,7 +11,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/common/log"
+	commonTypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 )
@@ -64,16 +66,45 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	return nil
 }
 
+func checkPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairMapper, baseAssetSymbol, quoteAssetSymbol string) error {
+	// trading pair against native token should exist if quote token is not native token
+	baseAssetSymbol = strings.ToUpper(baseAssetSymbol)
+	quoteAssetSymbol = strings.ToUpper(quoteAssetSymbol)
+
+	if baseAssetSymbol != commonTypes.NativeTokenSymbol &&
+		quoteAssetSymbol != commonTypes.NativeTokenSymbol {
+
+		if !pairMapper.Exists(ctx, baseAssetSymbol, commonTypes.NativeTokenSymbol) &&
+			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, baseAssetSymbol) {
+			return errors.New(
+				fmt.Sprintf("Token %s should be listed against BNB before against %s",
+					baseAssetSymbol, quoteAssetSymbol))
+		}
+
+		if !pairMapper.Exists(ctx, quoteAssetSymbol, commonTypes.NativeTokenSymbol) &&
+			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, quoteAssetSymbol) {
+			return errors.New(
+				fmt.Sprintf("Token %s should be listed against BNB before listing %s against %s",
+					quoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol))
+		}
+	}
+	return nil
+}
+
 func handleList(
 	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper, msg ListMsg,
 ) sdk.Result {
+	if err := checkProposal(ctx, govKeeper, msg); err != nil {
+		return types.ErrInvalidProposal(err.Error()).Result()
+	}
+
 	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) ||
 		keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
-	if err := checkProposal(ctx, govKeeper, msg); err != nil {
-		return types.ErrInvalidProposal(err.Error()).Result()
+	if err := checkPrerequisiteTradingPair(ctx, keeper.PairMapper, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
 	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
