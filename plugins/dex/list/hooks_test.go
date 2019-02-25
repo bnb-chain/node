@@ -22,8 +22,9 @@ func TestWrongTypeOfProposal(t *testing.T) {
 		Description:  "nonsense",
 	}
 
-	err := hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
-	require.Nil(t, err, "err should be nil")
+	require.Panics(t, func() {
+		hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	}, "should panic here")
 }
 
 func TestUnmarshalError(t *testing.T) {
