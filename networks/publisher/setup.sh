@@ -40,6 +40,11 @@ mkdir -p ${home}/.bnbchaind_witness/config
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
 sed -i -e 's/logToConsole = true/logToConsole = false/g' ${deamonhome}/config/app.toml
 sed -i -e 's/breatheBlockInterval = 0/breatheBlockInterval = 100/g' ${deamonhome}/config/app.toml
+sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${deamonhome}/config/app.toml
+sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${deamonhome}/config/app.toml
+sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${deamonhome}/config/app.toml
+sed -i -e "s/publishBlockFee = false/publishBlockFee = true/g" ${deamonhome}/config/app.toml
+sed -i -e "s/publishLocal = false/publishLocal = true/g" ${deamonhome}/config/app.toml
 sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
 # config witness node

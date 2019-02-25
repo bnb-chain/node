@@ -201,26 +201,22 @@ type KeepRecentAndBreatheBlock struct {
 }
 
 func NewKeepRecentAndBreatheBlock(breatheBlockInterval, numRecent int64, config *tmcfg.Config) *KeepRecentAndBreatheBlock {
-	//if blockStoreDB, err := node.DefaultDBProvider(&node.DBContext{"blockstore", config}); err != nil {
-	//	panic(err)
-	//} else {
-	//	return &KeepRecentAndBreatheBlock{
-	//		breatheBlockInterval: breatheBlockInterval,
-	//		numRecent: numRecent,
-	//		blockStore: blockchain.NewBlockStore(blockStoreDB),
-	//	}
-	//}
 	return &KeepRecentAndBreatheBlock{
 		breatheBlockInterval: breatheBlockInterval,
 		numRecent:            numRecent,
-		//blockStore: cosmossrv.BlockStore,
 	}
 }
 
 // TODO: must enhance performance!
 func (strategy KeepRecentAndBreatheBlock) Prune(version, latestVersion int64) bool {
+	// we are replay the possible 1 block diff between state and blockstore db
+	// save this block anyway and don't init strategy's blockStore
+	if cosmossrv.BlockStore == nil {
+		return false
+	}
 
 	// only at this time block store is initialized!
+	// block store has been opened after the start of tendermint node, we have to share same instance of block store
 	strategy.blockStoreInitializer.Do(func() {
 		strategy.blockStore = cosmossrv.BlockStore
 	})
@@ -230,12 +226,17 @@ func (strategy KeepRecentAndBreatheBlock) Prune(version, latestVersion int64) bo
 	} else if latestVersion-version < strategy.numRecent {
 		return false
 	} else {
-		lastBlock := strategy.blockStore.LoadBlock(version - 1)
-		block := strategy.blockStore.LoadBlock(version)
-
 		if strategy.breatheBlockInterval > 0 {
 			return version%strategy.breatheBlockInterval != 0
 		} else {
+			lastBlock := strategy.blockStore.LoadBlock(version - 1)
+			block := strategy.blockStore.LoadBlock(version)
+
+			if lastBlock == nil {
+				// this node is a state_synced node, previously block is not synced
+				// so we cannot tell whether this (first) block is breathe block or not
+				return false
+			}
 			return utils.SameDayInUTC(lastBlock.Time, block.Time)
 		}
 	}

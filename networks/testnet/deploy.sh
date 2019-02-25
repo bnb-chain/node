@@ -68,8 +68,11 @@ cd ${work_path}/build
 for p in "${paths[@]}"
 do
   	$(cd "${p}/gaiad/config" && sed -i -e "s/pex = true/pex = false/g" config.toml)
+  	$(cd "${p}/gaiad/config" && sed -i -e 's/addr_book_strict = true/addr_book_strict = false/g' config.toml)
+  	$(cd "${p}/gaiad/config" && sed -i -e 's/allow_duplicate_ip = false/allow_duplicate_ip = true/g' config.toml)
+    $(cd "${p}/gaiad/config" && sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" config.toml)
     $(cd "${p}/gaiad/config" && sed -i -e "s/logToConsole = true/logToConsole = false/g" app.toml)
-	$(cd "${p}/gaiad/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
+	$(cd "${p}/gaiad/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "60000000000"/g' genesis.json)
 
 	if [ "${skip_timeout}" = true ]
 	then

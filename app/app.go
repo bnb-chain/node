@@ -522,7 +522,6 @@ func (app *BinanceChain) LatestSnapshot() (height int64, numKeys []int64, err er
 
 func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex int64) (chunk [][]byte, err error) {
 	app.Logger.Info("read snapshot chunk", "height", height, "startIndex", startIndex, "endIndex", endIndex)
-	fmt.Printf("read snapshot height:%d\n", height)
 	chunk = make([][]byte, 0, endIndex-startIndex)
 
 	// TODO: can be optimized - direct jump to expected store
@@ -558,6 +557,7 @@ func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex in
 		app.Logger.Error("failed to load enough chunk", "expected", endIndex-startIndex, "got", len(chunk))
 	}
 
+	app.Logger.Info("finish read snapshot chunk", "height", height, "startIndex", startIndex, "endIndex", endIndex)
 	return
 }
 
@@ -687,7 +687,6 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 
 	// init app cache
 	accountStore := stores.GetKVStore(common.AccountStoreKey)
-	fmt.Printf("account store addr: %p\n", accountStore)
 	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
 
 	return nil
