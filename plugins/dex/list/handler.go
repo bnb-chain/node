@@ -38,7 +38,7 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	}
 
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
-		return errors.New(fmt.Sprintf("proposal type(%s) shoule be %s",
+		return errors.New(fmt.Sprintf("proposal type(%s) should be %s",
 			proposal.GetProposalType(), gov.ProposalTypeListTradingPair))
 	}
 
