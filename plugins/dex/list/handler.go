@@ -38,19 +38,19 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	}
 
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
-		return errors.New(fmt.Sprintf("proposal type %s is not equal to %s",
+		return errors.New(fmt.Sprintf("proposal type(%s) shoule be %s",
 			proposal.GetProposalType(), gov.ProposalTypeListTradingPair))
 	}
 
 	if proposal.GetStatus() != gov.StatusPassed {
-		return errors.New(fmt.Sprintf("proposal status %d is not not passed",
+		return errors.New(fmt.Sprintf("proposal status(%s) should be Passed before you can list your token",
 			proposal.GetStatus()))
 	}
 
 	listParams := gov.ListTradingPairParams{}
 	err := json.Unmarshal([]byte(proposal.GetDescription()), &listParams)
 	if err != nil {
-		return errors.New(fmt.Sprintf("unmarshal list params error, err=%s", err.Error()))
+		return errors.New(fmt.Sprintf("illegal list params in proposal, params=%s", proposal.GetDescription()))
 	}
 
 	if ctx.BlockHeader().Time.After(listParams.ExpireTime) {
@@ -60,7 +60,7 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) ||
 		strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) ||
 		msg.InitPrice != listParams.InitPrice {
-		return errors.New("list msg is not identical to proposal")
+		return errors.New("list params are not identical to proposal")
 	}
 
 	return nil
