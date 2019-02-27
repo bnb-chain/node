@@ -208,7 +208,7 @@ func NewKeepRecentAndBreatheBlock(breatheBlockInterval, numRecent int64, config 
 }
 
 // TODO: must enhance performance!
-func (strategy KeepRecentAndBreatheBlock) Prune(version, latestVersion int64) bool {
+func (strategy KeepRecentAndBreatheBlock) ShouldPrune(version, latestVersion int64) bool {
 	// we are replay the possible 1 block diff between state and blockstore db
 	// save this block anyway and don't init strategy's blockStore
 	if cosmossrv.BlockStore == nil {

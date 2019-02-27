@@ -406,10 +406,12 @@ func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverT
 }
 
 func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, blockTime time.Time) bool {
+	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
+	// state sync from breathe block, the height is breathe block + 1)
 	if app.baseConfig.BreatheBlockInterval > 0 {
 		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
 	} else {
-		return !utils.SameDayInUTC(lastBlockTime, blockTime)
+		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
 }
 
@@ -422,7 +424,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var tradesToPublish []*pub.Trade
 
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-	if !isBreatheBlock || height == 1 {
+	if !isBreatheBlock {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
@@ -462,7 +464,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	var validatorUpdates abci.ValidatorUpdates
-	if isBreatheBlock {
+	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
+	//  otherwise, apphash fail
+	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
+	if isBreatheBlock || height == 1 {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
@@ -529,17 +534,6 @@ func (app *BinanceChain) ReadSnapshotChunk(height int64, startIndex, endIndex in
 	for _, key := range common.StoreKeyNames {
 		store := app.GetCommitMultiStore().GetKVStore(common.StoreKeyNameMap[key])
 
-		// No needed temporaly (in case inject too many interfaces)
-		//itr := store.Iterator(nil, nil)
-		//fmt.Printf("read snapshot store:%s\n", key)
-		//for ; itr.Valid(); itr.Next() {
-		//	ik := itr.Key()
-		//	iv := itr.Value()
-		//	keyValueBytes = append(keyValueBytes, ik)
-		//	keyValueBytes = append(keyValueBytes, iv)
-		//	fmt.Printf("read snapshot key:%X, value:%X\n", ik, iv)
-		//}
-
 		mutableTree := store.(*storePkg.IavlStore).Tree
 		if tree, err := mutableTree.GetImmutable(height); err == nil {
 			tree.IterateFirst(func(nodeBytes []byte) {
@@ -587,20 +581,6 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 		nodes = append(nodes, node)
 	}
 
-	//if len(chunk) > 0 {
-	//	mutableTree := store.(*store.IavlStore).Tree
-	//	tree := mutableTree.ImmutableTree
-	//	tree.RecoverFromRemoteNodes(nodes, inOrderKeys)
-	//	// load a full tree from db to generate dot graph
-	//	//tree.Iterate(func(key []byte, value []byte) bool {
-	//	//	return false
-	//	//})
-	//	tree.Hash()
-	//
-	//	file, _ := os.Create(fmt.Sprintf("/Users/zhaocong/trees_witness/%s.txt", storeName))
-	//	iavl.WriteDOTGraph(file, tree, []iavl.PathToLeaf{})
-	//}
-
 	iterated := int64(0)
 	for storeIdx, storeName := range common.StoreKeyNames {
 		db := dbm.NewPrefixDB(app.GetDB(), []byte("s/k:"+storeName+"/"))
@@ -630,7 +610,7 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 			},
 		})
 
-		fmt.Printf("commit store: %s, root hash: %X\n", storeName, nodeHash)
+		app.Logger.Debug("commit store: %s, root hash: %X\n", storeName, nodeHash)
 		nodeDB.Commit()
 		iterated += storeKeys
 	}
@@ -640,7 +620,7 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 }
 
 func (app *BinanceChain) EndRecovery(height int64) error {
-	app.Logger.Info("finished recovery")
+	app.Logger.Info("finished recovery", "height", height)
 	//stores := app.GetCommitMultiStore()
 	//commitId := stores.CommitAt(height)
 	// block store required to hydrate dex OB
@@ -649,9 +629,6 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 	batch := app.GetDB().NewBatch()
 	latestBytes, _ := app.Codec.MarshalBinaryLengthPrefixed(height) // Does not error
 	batch.Set([]byte("s/latest"), latestBytes)
-
-	// simulate setCommitInfo
-	fmt.Printf("!!!cong!!!version=%d\n", height)
 
 	ci := storePkg.CommitInfo{
 		Version:    height,
