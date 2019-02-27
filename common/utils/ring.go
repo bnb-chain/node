@@ -56,3 +56,8 @@ func (q *FixedSizeRing) Elements() []interface{} {
 	}
 	return result
 }
+
+func (q *FixedSizeRing) String() string {
+	return fmt.Sprintf("%#v", q)
+}
+

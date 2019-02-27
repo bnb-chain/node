@@ -1,8 +1,10 @@
 package store
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
+	"fmt"
+	"sort"
 	"strings"
 
 	types2 "github.com/binance-chain/node/common/types"
@@ -15,7 +17,7 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-var recentPricesKey = []byte("recentPrices")
+var recentPricesKeyPrefix = "recentPrices"
 
 type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
@@ -23,8 +25,8 @@ type TradingPairMapper interface {
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64)
-	UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing)
-	GetRecentPrices(ctx sdk.Context, numPricesStored int64) map[string]*utils.FixedSizeRing
+	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
+	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
 }
 
 var _ TradingPairMapper = mapper{}
@@ -85,6 +87,10 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	defer iter.Close()
 
 	for ; iter.Valid(); iter.Next() {
+		// TODO: temp solution, will add prefix to the trading pair key and use prefix iterator instead.
+		if bytes.HasPrefix(iter.Key(), []byte(recentPricesKeyPrefix)) {
+			continue
+		}
 		pair := m.decodeTradingPair(iter.Value())
 		res = append(res, pair)
 	}
@@ -109,50 +115,90 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 	return tickSize, lotSize
 }
 
-func (m mapper) UpdateRecentPrices(ctx sdk.Context, recentPrices map[string]*utils.FixedSizeRing) {
-	store := ctx.KVStore(m.key)
-	bz := m.encodeRecentPrices(recentPrices)
-	store.Set(recentPricesKey, bz)
-	ctx.Logger().Debug("Updated recentPrices", "recentPrices", recentPrices)
+func (m mapper) getRecentPricesSeq(height, pricesStoreEvery, numPricesStored int64) int64 {
+	return (height/pricesStoreEvery - 1) % numPricesStored
 }
 
-func (m mapper) GetRecentPrices(ctx sdk.Context, numPricesStored int64) map[string]*utils.FixedSizeRing {
+func (m mapper) calcRecentPricesKey(seq int64) []byte {
+	return []byte(fmt.Sprintf("%s:%v", recentPricesKeyPrefix, seq))
+}
+
+func (m mapper) UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64) {
 	store := ctx.KVStore(m.key)
-	bz := store.Get(recentPricesKey)
-	if bz == nil {
-		return nil
+	seq := m.getRecentPricesSeq(ctx.BlockHeight(), pricesStoreEvery, numPricesStored)
+	key := m.calcRecentPricesKey(seq)
+	bz := m.encodeRecentPrices(lastTradePrices)
+	store.Set(key, bz)
+	ctx.Logger().Debug("Updated recentPrices", "key", string(key), "lastTradePrices", lastTradePrices)
+}
+
+func (m mapper) GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing {
+	recentPrices := make(map[string]*utils.FixedSizeRing, 256)
+	height := ctx.BlockHeight()
+	if height == 0 {
+		return recentPrices
 	}
-	recentPrices := m.decodeRecentPrices(bz, numPricesStored)
+
+	store := ctx.KVStore(m.key)
+	recordStarted := false
+	lastSeq := m.getRecentPricesSeq(height, pricesStoreEvery, numPricesStored)
+	var i int64 = 1
+	for ;i <= numPricesStored; i++ {
+		key := m.calcRecentPricesKey((lastSeq + i)%numPricesStored)
+		bz := store.Get(key)
+		if bz == nil {
+			if recordStarted {
+				// we have sequential keys
+				panic(fmt.Errorf("BUG!!! should not be here, key: %s", string(key)))
+			} else {
+				continue
+			}
+		} else {
+			recordStarted = true
+		}
+		prices := m.decodeRecentPrices(bz, numPricesStored)
+		for symbol, price := range prices {
+			if _, ok := recentPrices[symbol]; !ok {
+				recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
+			}
+			recentPrices[symbol].Push(price)
+		}
+	}
+
+	ctx.Logger().Debug("Got recentPrices", "lastSeq", lastSeq, "recentPrices", recentPrices)
 	return recentPrices
 }
 
-func (m mapper) encodeRecentPrices(recentPrices map[string]*utils.FixedSizeRing) []byte {
-	values := map[string][]interface{}{}
-	for symbol, prices := range recentPrices {
-		values[symbol] = prices.Elements()
+func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
+	value := RecentPrice{}
+	numSymbol := len(recentPrices)
+	symbols := make([]string, numSymbol)
+	i := 0
+	for symbol, _ := range recentPrices {
+		symbols[i] = symbol
+		i++
 	}
-	// json marshal will sort for map values
-	bz, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
+	// must sort to make it deterministic
+	sort.Strings(symbols)
+	if numSymbol != 0 {
+		value.Pair = make([]string, numSymbol)
+		value.Price = make([]int64, numSymbol)
 	}
+	for i, symbol := range symbols {
+		value.Pair[i] = symbol
+		value.Price[i] = recentPrices[symbol]
+	}
+	bz := m.cdc.MustMarshalBinaryBare(value)
 	return bz
 }
 
-func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) map[string]*utils.FixedSizeRing {
-	recentPrices := make(map[string]*utils.FixedSizeRing, 256)
-	values := make(map[string][]int64, 256)
-	err := json.Unmarshal(bz, &values)
-	if err != nil {
-		panic(err)
-	}
-	for symbol, value := range values {
-		if _, ok := recentPrices[symbol]; !ok {
-			recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
-		}
-		for _, price := range value {
-			recentPrices[symbol].Push(price)
-		}
+func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) map[string]int64 {
+	value := RecentPrice{}
+	m.cdc.MustUnmarshalBinaryBare(bz, &value)
+	numSymbol := len(value.Pair)
+	recentPrices := make(map[string]int64, numSymbol)
+	for i:=0; i<numSymbol;i++ {
+		recentPrices[value.Pair[i]] = value.Price[i]
 	}
 	return recentPrices
 }

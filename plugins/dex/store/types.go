@@ -29,3 +29,8 @@ type OpenOrder struct {
 	LastUpdatedHeight    int64        `json:"lastUpdatedHeight"`
 	LastUpdatedTimestamp int64        `json:"lastUpdatedTimestamp"`
 }
+
+type RecentPrice struct {
+	Pair  []string
+	Price []int64
+}

@@ -1,8 +1,6 @@
 package store
 
 import (
-	"fmt"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,9 +20,10 @@ import (
 
 func setup() (TradingPairMapper, sdk.Context) {
 	ms, key := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{Height:1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
+	cdc.RegisterConcrete(RecentPrice{}, "dex/RecentPrice", nil)
 	return NewTradingPairMapper(cdc, key), ctx
 }
 
@@ -93,15 +92,14 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 
 func TestMapper_UpdateRecentPrices(t *testing.T) {
 	pairMapper, ctx := setup()
-	pricesRing := utils.NewFixedSizedRing(2000)
 	for i:=0; i<3000; i++ {
-		pricesRing.Push(rand.Int63())
+		lastPrices := make(map[string]int64, 1)
+		lastPrices["ABC"] = 10
+		ctx = ctx.WithBlockHeight(int64(2*(i+1)))
+		pairMapper.UpdateRecentPrices(ctx, 2, 5, lastPrices)
 	}
-	recentPrices := make(map[string]*utils.FixedSizeRing, 256)
-	recentPrices["ABC"] = pricesRing
-	fmt.Printf("%#v\n", recentPrices)
-	pairMapper.UpdateRecentPrices(ctx, recentPrices)
-	newRecentPrices := pairMapper.GetRecentPrices(ctx, 2000)
-	require.Equal(t, int64(2000), newRecentPrices["ABC"].Count())
-	require.Equal(t, recentPrices["ABC"].Elements(), newRecentPrices["ABC"].Elements())
+
+	allRecentPrices := pairMapper.GetRecentPrices(ctx, 2, 5)
+	require.Equal(t, int64(5), allRecentPrices["ABC"].Count())
+	require.Equal(t, []interface{}{int64(10), int64(10),int64(10),int64(10),int64(10)}, allRecentPrices["ABC"].Elements())
 }

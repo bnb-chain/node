@@ -87,10 +87,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 }
 
 func (kp *Keeper) Init(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	// count back to days in config.
 	kp.initOrderBook(ctx, daysBack, blockDB, txDB, lastHeight, txDecoder)
-	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, numPricesStored)
+	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
 	if kp.recentPrices == nil {
+		kp.logger.Debug("no recentPrices stored")
 		kp.recentPrices = make(map[string]*utils.FixedSizeRing, 256)
 	}
 }
@@ -498,15 +498,20 @@ func (kp *Keeper) clearAfterMatch() {
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
-func (kp *Keeper) storeTradePrices(ctx sdk.Context) {
+func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
+	// TODO: check block height != 0
 	if ctx.BlockHeight()%pricesStoreEvery == 0 {
+		lastTradePrices := make(map[string]int64, len(kp.engines))
 		for symbol, engine := range kp.engines {
+			lastTradePrices[symbol] = engine.LastTradePrice
 			if _, ok := kp.recentPrices[symbol]; !ok {
 				kp.recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
 			}
 			kp.recentPrices[symbol].Push(engine.LastTradePrice)
 		}
-		kp.PairMapper.UpdateRecentPrices(ctx, kp.recentPrices)
+		if len(lastTradePrices) != 0 {
+			kp.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
+		}
 	}
 }
 
@@ -645,7 +650,6 @@ func (kp *Keeper) MatchAndAllocateAll(
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	fees.Pool.AddAndCommitFee("MATCH", totalFee)
-	kp.storeTradePrices(ctx)
 	kp.clearAfterMatch()
 }
 
