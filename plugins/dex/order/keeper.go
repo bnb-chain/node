@@ -89,10 +89,6 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 func (kp *Keeper) Init(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	kp.initOrderBook(ctx, daysBack, blockDB, txDB, lastHeight, txDecoder)
 	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
-	if kp.recentPrices == nil {
-		kp.logger.Debug("no recentPrices stored")
-		kp.recentPrices = make(map[string]*utils.FixedSizeRing, 256)
-	}
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {

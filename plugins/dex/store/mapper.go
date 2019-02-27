@@ -143,8 +143,8 @@ func (m mapper) GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStor
 	recordStarted := false
 	lastSeq := m.getRecentPricesSeq(height, pricesStoreEvery, numPricesStored)
 	var i int64 = 1
-	for ;i <= numPricesStored; i++ {
-		key := m.calcRecentPricesKey((lastSeq + i)%numPricesStored)
+	for ; i <= numPricesStored; i++ {
+		key := m.calcRecentPricesKey((lastSeq + i) % numPricesStored)
 		bz := store.Get(key)
 		if bz == nil {
 			if recordStarted {
@@ -157,11 +157,13 @@ func (m mapper) GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStor
 			recordStarted = true
 		}
 		prices := m.decodeRecentPrices(bz, numPricesStored)
-		for symbol, price := range prices {
+		numSymbol := len(prices.Pair)
+		for i := 0; i < numSymbol; i++ {
+			symbol := prices.Pair[i]
 			if _, ok := recentPrices[symbol]; !ok {
 				recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
 			}
-			recentPrices[symbol].Push(price)
+			recentPrices[symbol].Push(prices.Price[i])
 		}
 	}
 
@@ -192,15 +194,10 @@ func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
 	return bz
 }
 
-func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) map[string]int64 {
+func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) *RecentPrice {
 	value := RecentPrice{}
 	m.cdc.MustUnmarshalBinaryBare(bz, &value)
-	numSymbol := len(value.Pair)
-	recentPrices := make(map[string]int64, numSymbol)
-	for i:=0; i<numSymbol;i++ {
-		recentPrices[value.Pair[i]] = value.Price[i]
-	}
-	return recentPrices
+	return &value
 }
 
 func (m mapper) encodeTradingPair(pair types.TradingPair) []byte {
