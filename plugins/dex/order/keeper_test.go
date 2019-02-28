@@ -460,7 +460,7 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	ctx = sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper2.InitOrderBook(ctx, 7, memDB, db.NewMemDB(), 3, auth.DefaultTxDecoder(cdc))
+	keeper2.initOrderBook(ctx, 7, memDB, db.NewMemDB(), 3, auth.DefaultTxDecoder(cdc))
 	buys, sells := keeper2.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
 	assert.Equal(1, len(sells))

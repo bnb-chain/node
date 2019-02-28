@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,6 +25,12 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
+const (
+	numPricesStored  = 2000
+	pricesStoreEvery = 1000
+	minimalNumPrices = 500
+)
+
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
@@ -34,6 +41,7 @@ type Keeper struct {
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
+	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
@@ -62,6 +70,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		storeKey:                   key,
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
+		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChangesMtx:            &sync.Mutex{},
 		OrderChanges:               make(OrderChanges, 0),
@@ -77,12 +86,30 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
+func (kp *Keeper) Init(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kp.initOrderBook(ctx, daysBack, blockDB, txDB, lastHeight, txDecoder)
+	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
+}
+
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
+}
+
+func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if prices, ok := kp.recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
+			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, prices)
+			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
+		} else {
+			// keep the current tick_size/lot_size
+			continue
+		}
+	}
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
@@ -465,6 +492,23 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 func (kp *Keeper) clearAfterMatch() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
+}
+
+func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
+	// TODO: check block height != 0
+	if ctx.BlockHeight()%pricesStoreEvery == 0 {
+		lastTradePrices := make(map[string]int64, len(kp.engines))
+		for symbol, engine := range kp.engines {
+			lastTradePrices[symbol] = engine.LastTradePrice
+			if _, ok := kp.recentPrices[symbol]; !ok {
+				kp.recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
+			}
+			kp.recentPrices[symbol].Push(engine.LastTradePrice)
+		}
+		if len(lastTradePrices) != 0 {
+			kp.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
+		}
+	}
 }
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (

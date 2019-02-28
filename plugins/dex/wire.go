@@ -3,6 +3,7 @@ package dex
 import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
 )
@@ -20,4 +21,5 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(order.FeeConfig{}, "dex/FeeConfig", nil)
 	cdc.RegisterConcrete(order.OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(order.ActiveOrders{}, "dex/ActiveOrders", nil)
+	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
 }
