@@ -17,11 +17,11 @@ func TestAccount_ToBalances(t *testing.T) {
 	privKey, addr := testutils.PrivAndAddr()
 	acc := &types.AppAccount{
 		BaseAccount: auth.BaseAccount{
-			Address: addr,
-			Coins: nil,
-			PubKey: privKey.PubKey(),
+			Address:       addr,
+			Coins:         nil,
+			PubKey:        privKey.PubKey(),
 			AccountNumber: 1,
-			Sequence :1,
+			Sequence:      1,
 		},
 	}
 	balances := toTokenBalances(acc)

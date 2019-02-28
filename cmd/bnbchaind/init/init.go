@@ -133,7 +133,7 @@ enabled, and the genesis file will not be generated.
 func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
 	msg := stake.MsgCreateValidatorProposal{
-		MsgCreateValidator:stake.NewMsgCreateValidator(
+		MsgCreateValidator: stake.NewMsgCreateValidator(
 			valOperAddr,
 			valPubKey,
 			app.DefaultSelfDelegationToken,
