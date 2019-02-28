@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/iavl"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
 )
@@ -182,7 +182,6 @@ func compareAccount(height int64, root1, root2, addr string) {
 
 	cms1 := prepareCms(root1, db1, keys, height)
 	cms2 := prepareCms(root2, db2, keys, height)
-
 
 	a, _ := sdk.AccAddressFromBech32(addr)
 	key := auth.AddressStoreKey(a)
