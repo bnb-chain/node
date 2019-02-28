@@ -33,7 +33,7 @@ var TransferFeeCalculatorGen = fees.FeeCalculatorGenerator(func(params param.Fee
 		}
 		num := utils.MaxInt(inputNum, outputNum)
 		if num >= transferFeeParam.LowerLimitAsMulti {
-			if num > types.TokenMaxTotalSupply / transferFeeParam.MultiTransferFee {
+			if num > types.TokenMaxTotalSupply/transferFeeParam.MultiTransferFee {
 				totalFee = types.TokenMaxTotalSupply
 			} else {
 				totalFee = transferFeeParam.MultiTransferFee * num
