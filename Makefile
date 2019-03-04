@@ -7,9 +7,18 @@ TENDER_RELEASE := $(shell grep "github.com/binance-chain/bnc-tendermint" Gopkg.t
 BUILD_TAGS = netgo
 BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 # Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
-BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lstdc++"
+BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
 BUILD_CFLAGS = ${BUILD_FLAGS} -tags "gcc"
 BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    # On CentOS, this requires on control machine:
+    # yum group install "Development Tools"
+    # yum install glibc-static
+    # build cmake, leveldb, snappy and copy libleveldb.a and libsnappy.a into /usr/lib
+	BUILD_CFLAGS += -ldflags '-extldflags "-static"'
+endif
 
 all: get_vendor_deps format build
 
