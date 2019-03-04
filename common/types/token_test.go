@@ -19,6 +19,8 @@ var issueMsgSymbolTestCases = []struct {
 	{"XYZ45678", true},
 	{"XYZ45678.B", true}, // still ok - .B suffix extends max len by suffix len
 	// sad
+	{"XY", false},
+	{"XY.B", false},
 	{"#@#$", false},
 	{"#@#$.B", false},
 	{"XYZ.B.B", false},
@@ -42,6 +44,8 @@ var tokenMapperSymbolTestCases = []struct {
 	// sad
 	{types.NativeTokenSymbol + "-000", false}, // no tx hash suffix for native token
 	{types.NativeTokenSymbolDotBSuffixed + "-000", false},
+	{"XY-000", false},
+	{"XY.B-000", false},
 	{"#@#$-000", false},
 	{"#@#$.B-000", false},
 	{"XYZ.B.B-000", false},

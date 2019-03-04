@@ -14,6 +14,7 @@ import (
 
 const (
 	TokenSymbolMaxLen          = 8
+	TokenSymbolMinLen		   = 3
 	TokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	TokenSymbolDotBSuffix      = ".B"
 
@@ -81,8 +82,8 @@ func ValidateIssueMsgTokenSymbol(symbol string) error {
 	}
 
 	// check len without .B suffix
-	if len(symbol) > TokenSymbolMaxLen {
-		return errors.New("token symbol is too long")
+	if symbolLen := len(symbol); symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolMinLen {
+		return errors.New("length of token symbol is limited to 3~8")
 	}
 
 	if !utils.IsAlphaNum(symbol) {
@@ -121,6 +122,9 @@ func ValidateMapperTokenSymbol(symbol string) error {
 	}
 
 	// check len without .B suffix
+	if len(symbolPart) < TokenSymbolMinLen {
+		return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
+	}
 	if len(symbolPart) > TokenSymbolMaxLen {
 		return fmt.Errorf("token symbol part is too long, got %d chars", len(symbolPart))
 	}
