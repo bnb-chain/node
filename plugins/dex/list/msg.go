@@ -37,6 +37,9 @@ func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg ListMsg) ValidateBasic() sdk.Error {
+	if msg.ProposalId <= 0 {
+		return sdk.ErrInvalidCoins("proposal id should be positive")
+	}
 	err := types.ValidateMapperTokenSymbol(msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
@@ -44,6 +47,9 @@ func (msg ListMsg) ValidateBasic() sdk.Error {
 	err = types.ValidateMapperTokenSymbol(msg.QuoteAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
+	}
+	if msg.BaseAssetSymbol == msg.QuoteAssetSymbol {
+		return sdk.ErrInvalidCoins("base token and quote token should not be the same")
 	}
 	if msg.InitPrice <= 0 {
 		return sdk.ErrInvalidCoins("price should be positive")

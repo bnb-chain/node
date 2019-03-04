@@ -38,6 +38,11 @@ $ make get_vendor_deps
 $ make install
 ```
 
+> If you want run bnbchaind with cleveldb as backend, please ensure leveldb is installed: https://github.com/google/leveldb#building, 
+> and change `make install` to `make install_c`
+> For mac, `brew install leveldb` would help. For linux, you can build from source
+
+
 **Windows**
 
 If you are working on windows, `GOPATH` and `PATH` should already be set when you install golang.

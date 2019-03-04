@@ -12,7 +12,10 @@ var (
 	Version string
 )
 
+const NodeVersion = "0.5.0"
+
 func init() {
+	Version = fmt.Sprintf("Binance Chain Release: %s;", NodeVersion)
 	if GitCommit != "" {
 		Version += fmt.Sprintf("Binance Chain Commit: %s;", GitCommit)
 	}

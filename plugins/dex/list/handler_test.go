@@ -2,6 +2,7 @@ package list
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -86,23 +87,24 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 	return ms, orderKeeper, tokenMapper, govKeeper
 }
 
-func getProposal(lowerCase bool) gov.Proposal {
-	baseAssetSymbol := "BTC-000"
+func getProposal(lowerCase bool, baseAssetSymbol string, quoteAssetSymbol string) gov.Proposal {
 	if lowerCase {
 		baseAssetSymbol = strings.ToLower(baseAssetSymbol)
+		quoteAssetSymbol = strings.ToLower(quoteAssetSymbol)
 	}
+
 	listParams := gov.ListTradingPairParams{
 		BaseAssetSymbol:  baseAssetSymbol,
-		QuoteAssetSymbol: types.NativeTokenSymbol,
+		QuoteAssetSymbol: quoteAssetSymbol,
 		InitPrice:        1000,
-		Description:      "list BTC-000/BNB",
+		Description:      fmt.Sprintf("list %s/%s", baseAssetSymbol, quoteAssetSymbol),
 		ExpireTime:       time.Date(2018, 11, 27, 0, 0, 0, 0, time.UTC),
 	}
 
 	listParamsBz, _ := json.Marshal(listParams)
 	proposal := &gov.TextProposal{
 		ProposalID:   1,
-		Title:        "list BTC-000/BNB",
+		Title:        fmt.Sprintf("list %s/%s", baseAssetSymbol, quoteAssetSymbol),
 		Description:  string(listParamsBz),
 		ProposalType: gov.ProposalTypeListTradingPair,
 		Status:       gov.StatusDepositPeriod,
@@ -124,46 +126,46 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "proposal 1 does not exist")
 
-	proposal := getProposal(false)
+	proposal := getProposal(false, "BTC-000", "BNB")
 
 	// wrong status
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "proposal status 1 is not not passed")
+	require.Contains(t, result.Log, "proposal status(DepositPeriod) should be Passed before you can list your token")
 
 	// wrong type
-	proposal = getProposal(false)
+	proposal = getProposal(false, "BTC-000", "BNB")
 	proposal.SetProposalType(gov.ProposalTypeParameterChange)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "proposal type ParameterChange is not equal to ListTradingPair")
+	require.Contains(t, result.Log, "proposal type(ParameterChange) should be ListTradingPair")
 
 	// wrong params
-	proposal = getProposal(false)
+	proposal = getProposal(false, "BTC-000", "BNB")
 	proposal.SetStatus(gov.StatusPassed)
 	proposal.SetDescription("wrong params")
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "unmarshal list params error")
+	require.Contains(t, result.Log, "illegal list params in proposal")
 
 	// msg not right
-	proposal = getProposal(false)
+	proposal = getProposal(false, "BTC-000", "BNB")
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "list msg is not identical to proposal")
+	require.Contains(t, result.Log, "list params are not identical to proposal")
 
 	// time expired
-	proposal = getProposal(false)
+	proposal = getProposal(false, "BTC-000", "BNB")
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	expiredTime := time.Date(2018, 11, 28, 0, 0, 0, 0, time.UTC)
@@ -188,13 +190,14 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "token(BTC-000) not found")
 
-	tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
+	require.Nil(t, err, "new token error")
 
 	// no quote asset
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
@@ -214,13 +217,14 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "quote token does not exist")
 
-	tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
+	require.Nil(t, err, "new token error")
 
 	// right case
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
@@ -237,23 +241,25 @@ func TestListHandler_LowerCase(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
+	require.Nil(t, err, "new token error")
 
-	tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
 		TotalSupply: 10000,
 		Owner:       sdk.AccAddress("testacc"),
 	})
+	require.Nil(t, err, "new token error")
 
-	proposal := getProposal(true)
+	proposal := getProposal(true, "BTC-000", "BNB")
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	//ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
@@ -266,4 +272,34 @@ func TestListHandler_LowerCase(t *testing.T) {
 	}
 	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
+}
+
+func TestListHandler_WrongTradingPair(t *testing.T) {
+	cdc := MakeCodec()
+	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	baseAsset := "BTC-000"
+	quoteAsset := "ETH-000"
+
+	proposal := getProposal(true, baseAsset, quoteAsset)
+	proposal.SetStatus(gov.StatusPassed)
+	govKeeper.SetProposal(ctx, proposal)
+	listMsg := ListMsg{
+		ProposalId:       1,
+		BaseAssetSymbol:  baseAsset,
+		QuoteAssetSymbol: quoteAsset,
+		InitPrice:        1000,
+		From:             sdk.AccAddress("testacc"),
+	}
+	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
+	require.Contains(t, result.Log, fmt.Sprintf("Token %s should be listed against BNB before against %s",
+		baseAsset, quoteAsset))
+
+	pair := dexTypes.NewTradingPair(baseAsset, types.NativeTokenSymbol, 1000)
+	err := orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "new trading pair error")
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
+	require.Contains(t, result.Log, fmt.Sprintf("Token %s should be listed against BNB before listing %s against %s",
+		quoteAsset, baseAsset, quoteAsset))
 }
