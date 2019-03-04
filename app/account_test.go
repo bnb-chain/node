@@ -76,3 +76,6 @@ func BenchmarkSetAccount(b *testing.B) {
 		testApp.AccountKeeper.SetAccount(ctx, acc)
 	}
 }
+
+func TestBinanceAppGenState(t *testing.T) {
+}

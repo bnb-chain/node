@@ -2,13 +2,16 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmo" +
+		"s/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -23,9 +26,10 @@ import (
 )
 
 const (
-	flagTitle       = "title"
-	flagDescription = "description"
-	flagDeposit     = "deposit"
+	flagTitle        = "title"
+	flagDescription  = "description"
+	flagDeposit      = "deposit"
+	flagVotingPeriod = "voting-period"
 
 	//Fee flag
 	flagFeeParamFile = "fee-param-file"
@@ -46,6 +50,8 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			initialDeposit := viper.GetString(flagDeposit)
 			feeParamFile := viper.GetString(flagFeeParamFile)
 			feeParam.Description = viper.GetString(flagDescription)
+			votingPeriodInSeconds := viper.GetInt64(flagVotingPeriod)
+
 			if feeParamFile != "" {
 				bz, err := ioutil.ReadFile(feeParamFile)
 				if err != nil {
@@ -73,7 +79,17 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount)
+
+			if votingPeriodInSeconds <= 0 {
+				return errors.New("voting period should be positive")
+			}
+
+			votingPeriod := time.Duration(votingPeriodInSeconds) * time.Second
+			if votingPeriod > gov.MaxVotingPeriod {
+				return errors.New(fmt.Sprintf("voting period should less than %d seconds", gov.MaxVotingPeriod/time.Second))
+			}
+
+			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount, votingPeriod)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -84,6 +100,7 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 	}
 	cmd.Flags().String(flagFeeParamFile, "", "the file of fee params (json format)")
 	cmd.Flags().String(flagTitle, "", "title of proposal")
+	cmd.Flags().Int64(flagVotingPeriod, 7*24*60*60, "voting period in seconds")
 	cmd.Flags().String(flagDescription, "", "description of proposal")
 	cmd.Flags().String(flagDeposit, "", "deposit of proposal")
 	cmd.Flags().Var(&feeParam, "fee-param", "Set the operate fee, '{param type}/{param map}'. e.g: 'operate/{\"send\": \"\",\"fee\":100000,\"fee_for\":1}'")
