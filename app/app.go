@@ -9,13 +9,17 @@ import (
 	"sort"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -81,6 +85,8 @@ type BinanceChain struct {
 	govKeeper     gov.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
+	// manage state sync related status
+	StateSyncManager
 
 	baseConfig        *config.BaseConfig
 	publicationConfig *config.PublicationConfig
@@ -90,6 +96,8 @@ type BinanceChain struct {
 	// check nil-ness to know whether metrics collection is turn on
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	metrics *pub.Metrics
+
+	blockStore *blockchain.BlockStore
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -112,7 +120,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		baseConfig:        ServerContext.BaseConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
-
+	app.SetPruning(viper.GetString("pruning"))
 	app.SetCommitMultiStoreTracer(traceStore)
 
 	// mappers
@@ -236,8 +244,14 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 		return
 	}
 	// count back to days in config.
-	app.DexKeeper.InitOrderBook(app.CheckState.Ctx, app.baseConfig.BreatheBlockDaysCountBack,
-		baseapp.LoadBlockDB(), baseapp.LoadTxDB(), app.LastBlockHeight(), app.TxDecoder)
+	app.DexKeeper.Init(
+		app.CheckState.Ctx,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack,
+		baseapp.LoadBlockDB(),
+		baseapp.LoadTxDB(),
+		app.LastBlockHeight(),
+		app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
@@ -395,10 +409,12 @@ func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverT
 }
 
 func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, blockTime time.Time) bool {
+	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
+	// state sync from breathe block, the height is breathe block + 1)
 	if app.baseConfig.BreatheBlockInterval > 0 {
 		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
 	} else {
-		return !utils.SameDayInUTC(lastBlockTime, blockTime)
+		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
 }
 
@@ -411,7 +427,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var tradesToPublish []*pub.Trade
 
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-	if !isBreatheBlock || height == 1 {
+	if !isBreatheBlock {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
@@ -430,6 +446,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		<-icoDone
 	}
 
+	app.DexKeeper.StoreTradePrices(ctx)
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
@@ -451,7 +468,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	var validatorUpdates abci.ValidatorUpdates
-	if isBreatheBlock {
+	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
+	//  otherwise, apphash fail
+	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
+	if isBreatheBlock || height == 1 {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
@@ -667,4 +687,28 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)
+}
+
+// SetPruning sets a pruning option on the multistore associated with the app
+func (app *BinanceChain) SetPruning(pruning string) {
+	var pruningStrategy sdk.PruningStrategy
+	switch pruning {
+	case "nothing":
+		pruningStrategy = sdk.PruneNothing{}
+	case "everything":
+		pruningStrategy = sdk.PruneEverything{}
+	case "syncable":
+		// TODO: make these parameters configurable
+		pruningStrategy = sdk.PruneSyncable{NumRecent: 100, StoreEvery: 10000}
+	case "breathe":
+		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
+	default:
+		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
+		app.Logger.Error("failed to load pruning, set to breathe", "strategy", pruning)
+	}
+	app.BaseApp.SetPruning(pruningStrategy)
+}
+
+func (app *BinanceChain) SetBlockStore(store *blockchain.BlockStore) {
+	app.blockStore = store
 }

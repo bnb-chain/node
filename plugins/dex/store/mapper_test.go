@@ -20,9 +20,10 @@ import (
 
 func setup() (TradingPairMapper, sdk.Context) {
 	ms, key := setupMultiStore()
-	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	ctx := sdk.NewContext(ms, abci.Header{Height:1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
+	cdc.RegisterConcrete(RecentPrice{}, "dex/RecentPrice", nil)
 	return NewTradingPairMapper(cdc, key), ctx
 }
 
@@ -87,4 +88,18 @@ func TestMapper_ListAllTradingPairs(t *testing.T) {
 	require.Equal(t, "AAA-000", pairs[0].BaseAssetSymbol)
 	require.Equal(t, "BBB-000", pairs[1].BaseAssetSymbol)
 	require.Equal(t, "CCC-000", pairs[2].BaseAssetSymbol)
+}
+
+func TestMapper_UpdateRecentPrices(t *testing.T) {
+	pairMapper, ctx := setup()
+	for i:=0; i<3000; i++ {
+		lastPrices := make(map[string]int64, 1)
+		lastPrices["ABC"] = 10
+		ctx = ctx.WithBlockHeight(int64(2*(i+1)))
+		pairMapper.UpdateRecentPrices(ctx, 2, 5, lastPrices)
+	}
+
+	allRecentPrices := pairMapper.GetRecentPrices(ctx, 2, 5)
+	require.Equal(t, int64(5), allRecentPrices["ABC"].Count())
+	require.Equal(t, []interface{}{int64(10), int64(10),int64(10),int64(10),int64(10)}, allRecentPrices["ABC"].Elements())
 }

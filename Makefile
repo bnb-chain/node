@@ -2,11 +2,23 @@ PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 COSMOS_RELEASE := $(shell grep 'github.com/binance-chain/bnc-cosmos-sdk' Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
-TENDER_RELEASE := $(shell grep "github.com/binance-chain/bnc-tendermint" Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
+TENDER_RELEASE := $(shell grep 'github.com/tendermint/tendermint' Gopkg.toml -n2|grep version|awk '{print $$4}'| sed 's/\"//g')
 
 BUILD_TAGS = netgo
 BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+# Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
+BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
+BUILD_CFLAGS = ${BUILD_FLAGS} -tags "gcc libsecp256k1"
 BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    # On CentOS, this requires on control machine:
+    # yum group install "Development Tools"
+    # yum install glibc-static
+    # build cmake, leveldb, snappy and copy libleveldb.a and libsnappy.a into /usr/lib
+	BUILD_CFLAGS += -ldflags '-extldflags "-static"'
+endif
 
 all: get_vendor_deps format build
 
@@ -35,14 +47,42 @@ else
 	go build $(BUILD_FLAGS) -o build/lightd ./cmd/lightd
 endif
 
+build_c:
+ifeq ($(OS),Windows_NT)
+	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
+	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
+	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd.exe ./cmd/lightd
+else
+	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
+	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbchaind ./cmd/bnbchaind
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry ./cmd/bnbsentry
+	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
+	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd ./cmd/lightd
+endif
+
 build-linux:
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+
+build-linux_c:
+	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build_c
 
 build-alpine:
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(MAKE) build
 
+build-alpine_c:
+    LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(MAKE) build_c
+
 install:
 	go install $(BUILD_FLAGS) ./cmd/bnbchaind
+	go install $(BUILD_FLAGS) ./cmd/bnbcli
+	go install $(BUILD_FLAGS) ./cmd/bnbsentry
+
+install_c:
+	$(BUILD_CGOFLAGS) go install $(BUILD_CFLAGS) ./cmd/bnbchaind
 	go install $(BUILD_FLAGS) ./cmd/bnbcli
 	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 

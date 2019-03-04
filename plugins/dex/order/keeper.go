@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,6 +25,12 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
+const (
+	numPricesStored  = 2000
+	pricesStoreEvery = 1000
+	minimalNumPrices = 500
+)
+
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
@@ -34,6 +41,7 @@ type Keeper struct {
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
 	engines                    map[string]*me.MatchEng
+	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
 	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
 	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
@@ -62,6 +70,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		storeKey:                   key,
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
+		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
 		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 		OrderChangesMtx:            &sync.Mutex{},
 		OrderChanges:               make(OrderChanges, 0),
@@ -77,12 +86,30 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
+func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kp.initOrderBook(ctx, blockInterval, daysBack, blockDB, txDB, lastHeight, txDecoder)
+	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
+}
+
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
+}
+
+func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if prices, ok := kp.recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
+			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, prices)
+			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
+		} else {
+			// keep the current tick_size/lot_size
+			continue
+		}
+	}
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
@@ -467,6 +494,23 @@ func (kp *Keeper) clearAfterMatch() {
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
+func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
+	// TODO: check block height != 0
+	if ctx.BlockHeight()%pricesStoreEvery == 0 {
+		lastTradePrices := make(map[string]int64, len(kp.engines))
+		for symbol, engine := range kp.engines {
+			lastTradePrices[symbol] = engine.LastTradePrice
+			if _, ok := kp.recentPrices[symbol]; !ok {
+				kp.recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
+			}
+			kp.recentPrices[symbol].Push(engine.LastTradePrice)
+		}
+		if len(lastTradePrices) != 0 {
+			kp.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
+		}
+	}
+}
+
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -621,6 +665,12 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 		return nil
 	}
 
+	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
+	//if ctx.BlockHeight() > 300 {
+	//	expireHeight = ctx.BlockHeight() - 300
+	//}
+	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
+
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	if size%concurrency != 0 {
@@ -709,29 +759,33 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 	return height, nil
 }
 
-func (kp *Keeper) getLastBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) int64 {
-	store := ctx.KVStore(kp.storeKey)
-	bz := []byte(nil)
-	for i := 0; i <= daysBack; i++ {
-		t := timeNow.AddDate(0, 0, -i).Unix()
-		key := utils.Int642Bytes(t / utils.SecondsPerDay)
-		bz = store.Get([]byte(key))
-		if bz != nil {
-			kp.logger.Info("Located day to load breathe block height", "epochDay", key)
-			break
+func (kp *Keeper) GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight int64, timeNow time.Time, blockInterval, daysBack int) int64 {
+	if blockInterval != 0 {
+		return (latestBlockHeight / int64(blockInterval)) * int64(blockInterval)
+	} else {
+		store := ctx.KVStore(kp.storeKey)
+		bz := []byte(nil)
+		for i := 0; i <= daysBack; i++ {
+			t := timeNow.AddDate(0, 0, -i).Unix()
+			key := utils.Int642Bytes(t / utils.SecondsPerDay)
+			bz = store.Get([]byte(key))
+			if bz != nil {
+				kp.logger.Info("Located day to load breathe block height", "epochDay", key)
+				break
+			}
 		}
+		if bz == nil {
+			kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
+			return 0
+		}
+		var height int64
+		err := kp.cdc.UnmarshalBinaryBare(bz, &height)
+		if err != nil {
+			panic(err)
+		}
+		kp.logger.Info("Loaded breathe block height", "height", height)
+		return height
 	}
-	if bz == nil {
-		kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
-		return 0
-	}
-	var height int64
-	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-	if err != nil {
-		panic(err)
-	}
-	kp.logger.Info("Loaded breathe block height", "height", height)
-	return height
 }
 
 // deliberately make `fee` parameter not a pointer

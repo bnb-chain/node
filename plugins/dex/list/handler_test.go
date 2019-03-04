@@ -133,7 +133,7 @@ func TestListHandler(t *testing.T) {
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "proposal status 1 is not not passed")
+	require.Contains(t, result.Log, "proposal status(DepositPeriod) should be Passed before you can list your token")
 
 	// wrong type
 	proposal = getProposal(false, "BTC-000", "BNB")
@@ -143,7 +143,7 @@ func TestListHandler(t *testing.T) {
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "proposal type ParameterChange is not equal to ListTradingPair")
+	require.Contains(t, result.Log, "proposal type(ParameterChange) should be ListTradingPair")
 
 	// wrong params
 	proposal = getProposal(false, "BTC-000", "BNB")
@@ -153,7 +153,7 @@ func TestListHandler(t *testing.T) {
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "unmarshal list params error")
+	require.Contains(t, result.Log, "illegal list params in proposal")
 
 	// msg not right
 	proposal = getProposal(false, "BTC-000", "BNB")
@@ -162,7 +162,7 @@ func TestListHandler(t *testing.T) {
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
 		ProposalId: 1,
 	})
-	require.Contains(t, result.Log, "list msg is not identical to proposal")
+	require.Contains(t, result.Log, "list params are not identical to proposal")
 
 	// time expired
 	proposal = getProposal(false, "BTC-000", "BNB")
