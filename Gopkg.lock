@@ -41,12 +41,11 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2c00f064ba355903866cbfbf3f7f4c0fe64af6638cc7d1b8bdcf3181bc67f1d8"
+  digest = "1:093bf93a65962e8191e3e8cd8fc6c363f83d43caca9739c906531ba7210a9904"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
   pruneopts = "UT"
-  revision = "fdfc19097e7ac6b57035062056f5b7b4638b8898"
+  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
 
 [[projects]]
   digest = "1:386de157f7d19259a7f9c81f26ce011223ce0f090353c1152ffdf730d7d10ac2"
@@ -56,8 +55,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "issue357_upgrade"
-  digest = "1:c5f810727f579f432371aa63c6ce6518314433b3853489e18835062313ef057d"
+  digest = "1:acf67ec6e59dc0ca6920bdb598bf814676c1ade4ad5ebf779eaf7f93e352ee69"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -104,8 +102,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = ""
-  source = "github.com/BiJie/bnc-cosmos-sdk"
+  revision = "ce8925bf61ea06db65bff761d205601174a34a9d"
+  source = "github.com/binance-chain/bnc-cosmos-sdk"
+  version = "v0.25.0-binance.8"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -153,6 +152,14 @@
   pruneopts = "UT"
   revision = "44cc805cf13205b55f69e14bcb69867d1ae92f98"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:fed20bf7f0da387c96d4cfc140a95572e5aba4bb984beb7de910e090ae39849b"
+  name = "github.com/ethereum/go-ethereum"
+  packages = ["crypto/secp256k1"]
+  pruneopts = "UT"
+  revision = "c942700427557e3ff6de3aaf6b916e2f056c1ec2"
+  version = "v1.8.23"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -567,14 +574,6 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
-  digest = "1:83f5e189eea2baad419a6a410984514266ff690075759c87e9ede596809bd0b8"
-  name = "github.com/tendermint/btcd"
-  packages = ["btcec"]
-  pruneopts = "UT"
-  revision = "80daadac05d1cd29571fccf27002d79667a88b58"
-  version = "v0.1.1"
-
-[[projects]]
   digest = "1:a2318b27cf0fb75eb19db3a31039accaae12ab39786b609ed9d2f79ecbf4367d"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
@@ -584,17 +583,16 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  branch = "feature/state_syncing_upgrade"
-  digest = "1:7d76ffe80a0b76d72f50c7965066e8cecf347d3fb304af9db57e10e459de2703"
+  digest = "1:c317eec9047bdcd14dff925f34e07d22c6886faf22bf7c9286ea56ad962bcc22"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = ""
-  source = "github.com/ackratos/iavl"
+  revision = "65e487d3a8d4d6624d8779c1f42cff31d61a9146"
+  source = "github.com/binance-chain/bnc-tendermint-iavl"
+  version = "v0.12.0-binance.0"
 
 [[projects]]
-  branch = "feature/state_reactor_upgrade"
-  digest = "1:b3a516db2d0bbf3b20e620cc01d1a2bb159e741ba75eab123d4c4a066d9e58b4"
+  digest = "1:09921dbdc56888c7a8d926a35ddd829a7891d6dd3b6eb91a0eb4849f4c0348ce"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -660,8 +658,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = ""
-  source = "github.com/BiJie/bnc-tendermint"
+  revision = "3abb98b2e97b6ef6286e6f7d4b164012fe36ec80"
+  source = "github.com/binance-chain/bnc-tendermint"
+  version = "v0.30.1-binance.0"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
