@@ -65,6 +65,17 @@
   source = "https://github.com/tendermint/crypto"
   revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
 
+# we use the secp256k1 implementation:
+[[override]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "^v1.8.21"
+
+   # Prevent dep from pruning build scripts and codegen templates
+   # note: this leaves the whole go-ethereum package in vendor
+   # can be removed when https://github.com/golang/dep/issues/1847 is resolved
+   [[prune.project]]
+     name = "github.com/ethereum/go-ethereum"
+     unused-packages = false
 
 [prune]
   go-tests = true
