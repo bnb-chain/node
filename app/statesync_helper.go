@@ -106,7 +106,7 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 	nodes := make([]*iavl.Node, 0)
 	for idx := 0; idx < len(chunk); idx++ {
 		node, _ := iavl.MakeNode(chunk[idx])
-		node.Hash()
+		iavl.Hash(node)
 		nodes = append(nodes, node)
 	}
 
@@ -119,7 +119,7 @@ func (app *BinanceChain) WriteRecoveryChunk(chunk [][]byte) error {
 		storeKeys := app.stateSyncNumKeys[storeIdx]
 		if storeKeys > 0 {
 			nodeDB.SaveRoot(nodes[iterated], app.stateSyncHeight, true)
-			nodeHash = nodes[iterated].Hash()
+			nodeHash = iavl.Hash(nodes[iterated])
 			for i := int64(0); i < storeKeys; i++ {
 				node := nodes[iterated+i]
 				nodeDB.SaveNode(node)
