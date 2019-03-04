@@ -699,7 +699,8 @@ func (app *BinanceChain) SetPruning(pruning string) {
 	case "breathe":
 		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
 	default:
-		panic(fmt.Sprintf("invalid pruning strategy: %s", pruning))
+		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
+		app.Logger.Error("failed to load pruning, set to breathe", "strategy", pruning)
 	}
 	app.BaseApp.SetPruning(pruningStrategy)
 }
