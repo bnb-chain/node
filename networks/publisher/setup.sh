@@ -38,6 +38,9 @@ mkdir -p ${home}/.bnbchaind_witness/config
 
 #sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" ${deamonhome}/config/config.toml
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
+sed -i -e "s/allow_duplicate_ip = false/allow_duplicate_ip = true/g" ${deamonhome}/config/config.toml
+sed -i -e "s/addr_book_strict = true/addr_book_strict = false/g" ${deamonhome}/config/config.toml
+
 sed -i -e 's/logToConsole = true/logToConsole = false/g' ${deamonhome}/config/app.toml
 sed -i -e 's/breatheBlockInterval = 0/breatheBlockInterval = 100/g' ${deamonhome}/config/app.toml
 sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${deamonhome}/config/app.toml
