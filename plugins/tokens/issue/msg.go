@@ -15,6 +15,8 @@ const (
 	Route        = "tokensIssue"
 	IssueMsgType = "issueMsg"
 	MintMsgType  = "mintMsg"
+
+	maxTokenNameLength = 32
 )
 
 var _ sdk.Msg = IssueMsg{}
@@ -48,8 +50,8 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
-	if len(msg.Name) == 0 || len(msg.Name) > 20 {
-		return sdk.ErrInvalidCoins("token name should have 1 ~ 20 characters")
+	if len(msg.Name) == 0 || len(msg.Name) > maxTokenNameLength {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token name should have 1 ~ %v characters", maxTokenNameLength))
 	}
 
 	if msg.TotalSupply <= 0 || msg.TotalSupply > types.TokenMaxTotalSupply {
