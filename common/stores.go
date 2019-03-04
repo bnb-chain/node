@@ -31,4 +31,30 @@ var (
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
+
+	StoreKeyNameMap = map[string]sdk.StoreKey{
+		MainStoreName:            MainStoreKey,
+		AccountStoreName:         AccountStoreKey,
+		ValAddrStoreName:         ValAddrStoreKey,
+		TokenStoreName:           TokenStoreKey,
+		DexStoreName:             DexStoreKey,
+		PairStoreName:            PairStoreKey,
+		StakeStoreName:           StakeStoreKey,
+		ParamsStoreName:          ParamsStoreKey,
+		GovStoreName:             GovStoreKey,
+		StakeTransientStoreName:  TStakeStoreKey,
+		ParamsTransientStoreName: TParamsStoreKey,
+	}
+
+	StoreKeyNames = []string{
+		MainStoreName,
+		AccountStoreName,
+		ValAddrStoreName,
+		TokenStoreName,
+		DexStoreName,
+		PairStoreName,
+		StakeStoreName,
+		ParamsStoreName,
+		GovStoreName,
+	}
 )

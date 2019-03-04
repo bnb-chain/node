@@ -91,8 +91,8 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 	return effectedStoreKeys, compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, timeOfLatestBlock time.Time, daysBack int) (int64, error) {
-	height := kp.getLastBreatheBlockHeight(ctx, timeOfLatestBlock, daysBack)
+func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
+	height := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
 	ctx.Logger().Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	if height == 0 {
@@ -259,7 +259,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB
 	return nil
 }
 
-func (kp *Keeper) initOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	defer blockDB.Close()
 	defer txDB.Close()
 	blockStore := bc.NewBlockStore(blockDB)
@@ -270,7 +270,7 @@ func (kp *Keeper) initOrderBook(ctx sdk.Context, daysBack int, blockDB dbm.DB, t
 		block := blockStore.LoadBlock(lastHeight)
 		timeOfLatestBlock = block.Time
 	}
-	height, err := kp.LoadOrderBookSnapshot(ctx, timeOfLatestBlock, daysBack)
+	height, err := kp.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
 	if err != nil {
 		panic(err)
 	}

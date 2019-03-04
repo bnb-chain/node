@@ -125,17 +125,17 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 	tt, _ := time.Parse(time.RFC3339, "2018-01-02T15:04:05Z")
 	keeper.MarkBreatheBlock(ctx, 42, tt)
-	h := keeper.getLastBreatheBlockHeight(ctx, tt, 10)
+	h := keeper.GetLastBreatheBlockHeight(ctx, 42, tt, 0, 10)
 	assert.Equal(int64(42), h)
 	tt.AddDate(0, 0, 9)
-	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
+	h = keeper.GetLastBreatheBlockHeight(ctx, 42, tt, 0, 10)
 	assert.Equal(int64(42), h)
 	tt, _ = time.Parse(time.RFC3339, "2018-01-03T15:04:05Z")
 	keeper.MarkBreatheBlock(ctx, 43, tt)
-	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
+	h = keeper.GetLastBreatheBlockHeight(ctx, 42, tt, 0, 10)
 	assert.Equal(int64(43), h)
 	tt.AddDate(0, 0, 9)
-	h = keeper.getLastBreatheBlockHeight(ctx, tt, 10)
+	h = keeper.GetLastBreatheBlockHeight(ctx, 42, tt, 0, 10)
 	assert.Equal(int64(43), h)
 }
 
@@ -227,7 +227,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
-	h, err := keeper2.LoadOrderBookSnapshot(ctx, utils.Now(), 10)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(7, len(keeper2.allOrders["XYZ-000_BNB"]))
 	o123459 := keeper2.allOrders["XYZ-000_BNB"]["123459"]
 	assert.Equal(int64(98000), o123459.Price)
@@ -277,7 +277,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
-	h, err := keeper2.LoadOrderBookSnapshot(ctx, utils.Now(), 10)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(2, len(keeper2.allOrders["XYZ-000_BNB"]))
 	assert.Equal(int64(102000), keeper2.allOrders["XYZ-000_BNB"]["123456"].Price)
 	assert.Equal(int64(2000000), keeper2.allOrders["XYZ-000_BNB"]["123456"].CumQty)
@@ -320,7 +320,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 
 	keeper2 := MakeKeeper(cdc)
-	h, err := keeper2.LoadOrderBookSnapshot(ctx, utils.Now(), 10)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(int64(43), h)
 	assert.Equal(0, len(keeper2.allOrders["XYZ-000_BNB"]))
 	buys, sells = keeper2.engines["XYZ-000_BNB"].Book.GetAllLevels()
@@ -337,7 +337,7 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 
 	keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("XYZ-000", "BNB", 1e8))
-	h, err := keeper.LoadOrderBookSnapshot(ctx, utils.Now(), 10)
+	h, err := keeper.LoadOrderBookSnapshot(ctx, 0, utils.Now(), 0, 10)
 	assert.Zero(h)
 	assert.Nil(err)
 }
