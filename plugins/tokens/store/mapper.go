@@ -14,6 +14,8 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
+var tokenKeyPrefix = []byte{0x01}
+
 type Tokens []types.Token
 
 func (t Tokens) GetSymbols() *[]string {
@@ -48,11 +50,13 @@ func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
 	}
 }
 
+func getTokenKey(symbol string) []byte {
+	return append(tokenKeyPrefix, []byte(strings.ToUpper(symbol))...)
+}
+
 func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 	store := ctx.KVStore(m.key)
-	key := []byte(strings.ToUpper(symbol))
-
-	bz := store.Get(key)
+	bz := store.Get(getTokenKey(symbol))
 	if bz != nil {
 		return m.decodeToken(bz), nil
 	}
@@ -61,8 +65,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 }
 
 func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
-	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, err := ctx.QueryStore(getTokenKey(symbol), common.TokenStoreName)
 	if err != nil {
 		return types.Token{}, err
 	}
@@ -75,7 +78,7 @@ func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, 
 func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
 	var res Tokens
 	store := ctx.KVStore(m.key)
-	iter := store.Iterator(nil, nil)
+	iter := sdk.KVStorePrefixIterator(store, tokenKeyPrefix)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		token := m.decodeToken(iter.Value())
@@ -86,13 +89,11 @@ func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
 
 func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
 	store := ctx.KVStore(m.key)
-	key := []byte(strings.ToUpper(symbol))
-	return store.Has(key)
+	return store.Has(getTokenKey(symbol))
 }
 
 func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
-	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, err := ctx.QueryStore(getTokenKey(symbol), common.TokenStoreName)
 	if err != nil {
 		return false
 	}
@@ -107,10 +108,9 @@ func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
 	if err := types.ValidateToken(token); err != nil {
 		return err
 	}
-	key := []byte(strings.ToUpper(symbol))
 	store := ctx.KVStore(m.key)
 	value := m.encodeToken(token)
-	store.Set(key, value)
+	store.Set(getTokenKey(symbol), value)
 	return nil
 }
 
@@ -119,7 +119,7 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 		return errors.New("symbol cannot be empty")
 	}
 
-	key := []byte(strings.ToUpper(symbol))
+	key := getTokenKey(symbol)
 	store := ctx.KVStore(m.key)
 	bz := store.Get(key)
 	if bz == nil {

@@ -1,7 +1,6 @@
 package store
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -17,7 +16,10 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-var recentPricesKeyPrefix = "recentPrices"
+var (
+	tradingPairKeyPrefix  = []byte{0x01}
+	recentPricesKeyPrefix = []byte{0x02}
+)
 
 type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
@@ -43,6 +45,10 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 	}
 }
 
+func (m mapper) getTradingPairKey(tradeSymbol string) []byte {
+	return append(tradingPairKeyPrefix, []byte(tradeSymbol)...)
+}
+
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
 	if err := types2.ValidateMapperTokenSymbol(baseAsset); err != nil {
@@ -54,7 +60,7 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	}
 
 	tradeSymbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
-	key := []byte(tradeSymbol)
+	key := m.getTradingPairKey(tradeSymbol)
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
@@ -66,13 +72,13 @@ func (m mapper) Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
 	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
-	return store.Has([]byte(symbol))
+	return store.Has(m.getTradingPairKey(symbol))
 }
 
 func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
 	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
-	bz := store.Get([]byte(symbol))
+	bz := store.Get(m.getTradingPairKey(symbol))
 
 	if bz == nil {
 		return types.TradingPair{}, errors.New("trading pair not found: " + symbol)
@@ -83,18 +89,12 @@ func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (t
 
 func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	store := ctx.KVStore(m.key)
-	iter := store.Iterator(nil, nil)
+	iter := sdk.KVStorePrefixIterator(store, tradingPairKeyPrefix)
 	defer iter.Close()
-
 	for ; iter.Valid(); iter.Next() {
-		// TODO: temp solution, will add prefix to the trading pair key and use prefix iterator instead.
-		if bytes.HasPrefix(iter.Key(), []byte(recentPricesKeyPrefix)) {
-			continue
-		}
 		pair := m.decodeTradingPair(iter.Value())
 		res = append(res, pair)
 	}
-
 	return res
 }
 
@@ -120,7 +120,7 @@ func (m mapper) getRecentPricesSeq(height, pricesStoreEvery, numPricesStored int
 }
 
 func (m mapper) calcRecentPricesKey(seq int64) []byte {
-	return []byte(fmt.Sprintf("%s:%v", recentPricesKeyPrefix, seq))
+	return append(recentPricesKeyPrefix, []byte(fmt.Sprintf("%d", seq))...)
 }
 
 func (m mapper) UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64) {
