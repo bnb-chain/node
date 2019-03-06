@@ -673,12 +673,6 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 		return nil
 	}
 
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-	//if ctx.BlockHeight() > 300 {
-	//	expireHeight = ctx.BlockHeight() - 300
-	//}
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	if size%concurrency != 0 {

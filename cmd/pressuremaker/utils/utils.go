@@ -131,7 +131,7 @@ func (mg *MessageGenerator) ExpireMessages(height int, timeNow time.Time) (trade
 	orderChanges = make(orderPkg.OrderChanges, 0, 100000)
 	accounts = make(map[string]pub.Account)
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1000000; i++ {
 		o := makeOrderInfo(mg.buyerAddrs[0], 1, int64(height), 1000000000, 1000000000, 500000000, timePub)
 		mg.OrderChangeMap[fmt.Sprintf("%d", i)] = &o
 		orderChanges = append(orderChanges, orderPkg.OrderChange{fmt.Sprintf("%d", i), orderPkg.Expired})
