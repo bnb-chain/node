@@ -57,10 +57,19 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 		return errors.New(fmt.Sprintf("list time expired, expire_time=%s", listParams.ExpireTime.String()))
 	}
 
-	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) ||
-		strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) ||
-		msg.InitPrice != listParams.InitPrice {
-		return errors.New("list params are not identical to proposal")
+	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) {
+		return errors.New(fmt.Sprintf("base asset symbol(%s) is not identical to symbol in proposal(%s)",
+			msg.BaseAssetSymbol, listParams.BaseAssetSymbol))
+	}
+
+	if strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) {
+		return errors.New(fmt.Sprintf("quote asset symbol(%s) is not identical to symbol in proposal(%s)",
+			msg.QuoteAssetSymbol, listParams.QuoteAssetSymbol))
+	}
+
+	if msg.InitPrice != listParams.InitPrice {
+		return errors.New(fmt.Sprintf("init price(%d) is not identical to price in proposal(%d)",
+			msg.InitPrice, listParams.InitPrice))
 	}
 
 	return nil

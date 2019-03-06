@@ -7,6 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkStore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,10 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/types"
@@ -160,9 +161,25 @@ func TestListHandler(t *testing.T) {
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
-		ProposalId: 1,
+		BaseAssetSymbol: "BTC-001",
+		ProposalId:      1,
 	})
-	require.Contains(t, result.Log, "list params are not identical to proposal")
+	require.Contains(t, result.Log, "base asset symbol(BTC-001) is not identical to symbol in proposal(BTC-000)")
+
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: "BNC",
+		ProposalId:       1,
+	})
+	require.Contains(t, result.Log, "quote asset symbol(BNC) is not identical to symbol in proposal(BNB)")
+
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: "BNB",
+		InitPrice:        100,
+		ProposalId:       1,
+	})
+	require.Contains(t, result.Log, "init price(100) is not identical to price in proposal(1000)")
 
 	// time expired
 	proposal = getProposal(false, "BTC-000", "BNB")
