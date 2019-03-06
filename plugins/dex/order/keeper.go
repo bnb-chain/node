@@ -88,6 +88,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountMapper, tradingPairMapper store.
 
 func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	kp.initOrderBook(ctx, blockInterval, daysBack, blockDB, txDB, lastHeight, txDecoder)
+	kp.InitRecentPrices(ctx)
+}
+
+func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
 }
 
