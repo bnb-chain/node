@@ -805,3 +805,12 @@ func (kp *Keeper) updateRoundOrderFee(addr string, fee types.Fee) {
 func (kp *Keeper) ClearRoundFee() {
 	kp.RoundOrderFees = make(map[string]*types.Fee, 256)
 }
+
+// used by state sync to clear memory order book after we synced latest breathe block
+func (kp *Keeper) ClearOrders() {
+	kp.engines = make(map[string]*me.MatchEng)
+	kp.allOrders = make(map[string]map[string]*OrderInfo, 256)
+	kp.roundOrders = make(map[string][]string, 256)
+	kp.roundIOCOrders = make(map[string][]string, 256)
+	kp.OrderInfosForPub = make(OrderInfoForPublish)
+}
