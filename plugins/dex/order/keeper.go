@@ -601,7 +601,11 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		for addrStr, assets := range assetsMap {
 			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
-			fees := types.Fee{}
+
+			var fees types.Fee
+			if exists, ok := feesPerAcc[addrStr]; ok {
+				fees = *exists
+			}
 			if assets.native != 0 {
 				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeTokenSymbol, assets.native))
 				fees.AddFee(fee)
