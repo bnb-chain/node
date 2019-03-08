@@ -2,29 +2,28 @@ package app
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-	"strings"
-	"testing"
-
 	common "github.com/binance-chain/node/common/types"
-	ty "github.com/tendermint/tendermint/abci/types"
-
-	"github.com/stretchr/testify/assert"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/utils"
 	o "github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
+
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+	ty "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 type level struct {
@@ -454,8 +453,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(4, len(trades))
 
 	assert.Equal(int64(100090e8), GetAvail(ctx, add2, "BTC-000"))
-	// TODO: confirm fee is calculated using list price
-	assert.Equal(int64(99459.55e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(99459.73e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99850e8), GetAvail(ctx, add3, "BTC-000"))
@@ -503,8 +501,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(2, len(trades))
 
 	assert.Equal(int64(100105e8), GetAvail(ctx, add2, "BTC-000"))
-	// TODO: confirm fee is calculated using previous trade price
-	assert.Equal(int64(99369.5050e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(99369.6850e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99850e8), GetAvail(ctx, add3, "BTC-000"))
@@ -570,7 +567,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(4, len(trades))
 
 	assert.Equal(int64(100130e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(99194.43e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(99194.5975e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99850e8), GetAvail(ctx, add3, "BTC-000"))
@@ -625,7 +622,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(3, len(trades))
 
 	assert.Equal(int64(100150e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(99034.36e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(99034.5175e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99825e8), GetAvail(ctx, add3, "BTC-000"))
@@ -675,7 +672,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(2, len(trades))
 
 	assert.Equal(int64(100170e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(98874.28e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(98874.4375e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99815e8), GetAvail(ctx, add3, "BTC-000"))
@@ -726,7 +723,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(3, len(trades))
 
 	assert.Equal(int64(100185e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(98613.22e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(98613.3745e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(135e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99815e8), GetAvail(ctx, add3, "BTC-000"))
@@ -782,7 +779,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(4, len(trades))
 
 	assert.Equal(int64(100225e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(97973.0520e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(97973.1545e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(335e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99785e8), GetAvail(ctx, add3, "BTC-000"))
@@ -839,7 +836,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(3, len(trades))
 
 	assert.Equal(int64(100265e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(97572.8320e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(97572.8545e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(135e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99735e8), GetAvail(ctx, add3, "BTC-000"))
@@ -904,7 +901,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(3, len(trades))
 
 	assert.Equal(int64(100295e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(97242.6070e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(97242.6895e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(135e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99685e8), GetAvail(ctx, add3, "BTC-000"))
@@ -949,7 +946,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(3, len(trades))
 
 	assert.Equal(int64(100325e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(96732.4420e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(96732.4345e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(135e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99685e8), GetAvail(ctx, add3, "BTC-000"))
@@ -1002,7 +999,7 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(2, len(trades))
 
 	assert.Equal(int64(100345e8), GetAvail(ctx, add2, "BTC-000"))
-	assert.Equal(int64(96492.2720e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(96492.3145e8), GetAvail(ctx, add2, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add2, "BTC-000"))
 	assert.Equal(int64(135e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99655e8), GetAvail(ctx, add3, "BTC-000"))
