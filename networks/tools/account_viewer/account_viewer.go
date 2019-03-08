@@ -152,21 +152,53 @@ func getNode(key []byte, cms sdk.CommitMultiStore) *iavl.Node {
 	return innerGetNode(key, rootNode, tree)
 }
 
+func getAccByNum(home string, height, targetAccNum int64) types.AppAccount {
+	db := openAppDB(home)
+	defer db.Close()
+
+	cms := prepareCms(home, db, height)
+	tree := cms.GetCommitStore(common.AccountStoreKey).(store.TreeStore).GetImmutableTree()
+	var targetAcc types.AppAccount
+	tree.Iterate(func(key []byte, value []byte) bool {
+		acc := accountValueDecoder(value).(types.AppAccount)
+		if acc.AccountNumber == targetAccNum {
+			targetAcc = acc
+			return true
+		}
+		return false
+	})
+	return targetAcc
+}
+
+func analysisAccByNum(height, accNum int64, home string) {
+	var prevAccState types.AppAccount
+	var currAccState types.AppAccount
+	if height > 0 {
+		prevAccState = getAccByNum(home, height-1, accNum)
+		if prevAccState.Address == nil {
+			fmt.Println(fmt.Sprintf("acc number %v does not exist", accNum))
+			return
+		}
+	}
+
+	currAccState = getAccount(height, home, prevAccState.Address.String())
+	analysis(currAccState, prevAccState, height)
+}
+
 func analysisAcc(height int64, home, addr string) {
 	var prevAccState types.AppAccount
 	var currAccState types.AppAccount
 
 	if height > 0 {
 		prevAccState = getAccount(height-1, home, addr)
-		jsonValue, _ := json.Marshal(prevAccState)
-		fmt.Printf("%s@%d\n", prevAccState.Address.String(), height-1)
-		fmt.Printf("%s\n\n", string(jsonValue))
 	}
-
 	currAccState = getAccount(height, home, addr)
-	jsonValue, _ := json.Marshal(currAccState)
-	fmt.Printf("%s@%d\n", currAccState.Address.String(), height)
-	fmt.Printf("%s\n\n", string(jsonValue))
+	analysis(currAccState, prevAccState, height)
+}
+
+func analysis(currAccState, prevAccState types.AppAccount, height int64) {
+	printAccState(prevAccState, height -1)
+	printAccState(currAccState, height)
 
 	if prevAccState.Address == nil && currAccState.Address != nil {
 		fmt.Printf("this account is newly created in height %d\n", height)
@@ -195,6 +227,12 @@ func analysisAcc(height int64, home, addr string) {
 	}
 }
 
+func printAccState(accState types.AppAccount, height int64) {
+	jsonValue, _ := json.Marshal(accState)
+	fmt.Printf("%s@%d\n", accState.Address.String(), height)
+	fmt.Printf("%s\n\n", string(jsonValue))
+}
+
 func normalizeAccCoins(acc types.AppAccount) types.AppAccount {
 	if acc.Coins == nil {
 		acc.Coins = sdk.Coins{}
@@ -214,7 +252,7 @@ func normalizeAccCoins(acc types.AppAccount) types.AppAccount {
 func main() {
 	args := os.Args
 	if len(args) != 3 && len(args) != 4 {
-		fmt.Printf("usage: ./account_viewer height home_path [account_addr]")
+		fmt.Printf("usage: ./account_viewer height home_path [account_addr|account_number]")
 		return
 	}
 
@@ -230,6 +268,11 @@ func main() {
 		getAccountNumber(height, home)
 		return
 	}
-	addr := os.Args[3]
-	analysisAcc(height, home, addr)
+	arg3 := os.Args[3]
+	if accNum, err := strconv.ParseInt(arg3, 10, 64); err == nil {
+		analysisAccByNum(height, accNum, home)
+	} else {
+		analysisAcc(height, home, arg3)
+	}
+
 }
