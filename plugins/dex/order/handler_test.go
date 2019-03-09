@@ -127,7 +127,7 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
 	require.Error(t, err)
-	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize), err.Error())
+	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()), err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
@@ -148,7 +148,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 
 	err = validateOrder(ctx, pairMapper, acc, msg)
 	require.Error(t, err)
-	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize), err.Error())
+	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()), err.Error())
 }
 
 func TestHandler_ValidateOrder_Normal(t *testing.T) {

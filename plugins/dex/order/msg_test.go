@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/binance-chain/node/common/testutils"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/tendermint/tendermint/libs/bech32"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -56,9 +56,7 @@ func TestIsValidTimeInForce(t *testing.T) {
 
 func TestNewOrderMsg_ValidateBasic(t *testing.T) {
 	assert := assert.New(t)
-	add, e := bech32.ConvertAndEncode(sdk.Bech32PrefixAccAddr, []byte("NEWORDERVALIDATE"))
-	acct, e := sdk.AccAddressFromBech32(add)
-	t.Log(e)
+	_, acct := testutils.PrivAndAddr()
 	msg := NewNewOrderMsg(acct, "addr-1", 1, "BTC.B_BNB", 355, 100)
 	assert.Nil(msg.ValidateBasic())
 	msg = NewNewOrderMsg(acct, "addr-1", 5, "BTC.B_BNB", 355, 100)
