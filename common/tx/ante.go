@@ -205,8 +205,14 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	}
 
 	// Assert that number of signatures is correct.
-	if signerAddrs := tx.GetSigners(); len(sigs) != len(signerAddrs) {
+	signerAddrs := tx.GetSigners()
+	if len(sigs) != len(signerAddrs) {
 		return sdk.ErrUnauthorized("wrong number of signers")
+	}
+	for _, signerAddr := range signerAddrs {
+		if len(signerAddr) != sdk.AddrLen {
+			return sdk.ErrInvalidAddress("contains invalid signer address")
+		}
 	}
 
 	if data := tx.GetData(); len(data) > 0 {

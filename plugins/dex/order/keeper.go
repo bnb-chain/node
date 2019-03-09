@@ -88,6 +88,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 
 func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	kp.initOrderBook(ctx, blockInterval, daysBack, blockDB, txDB, lastHeight, txDecoder)
+	kp.InitRecentPrices(ctx)
+}
+
+func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
 }
 
@@ -552,7 +556,11 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		for addrStr, assets := range assetsMap {
 			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
-			fees := types.Fee{}
+
+			var fees types.Fee
+			if exists, ok := feesPerAcc[addrStr]; ok {
+				fees = *exists
+			}
 			if assets.native != 0 {
 				fee := calcFeeAndDeduct(acc, sdk.NewCoin(types.NativeTokenSymbol, assets.native))
 				fees.AddFee(fee)
@@ -800,4 +808,13 @@ func (kp *Keeper) updateRoundOrderFee(addr string, fee types.Fee) {
 
 func (kp *Keeper) ClearRoundFee() {
 	kp.RoundOrderFees = make(map[string]*types.Fee, 256)
+}
+
+// used by state sync to clear memory order book after we synced latest breathe block
+func (kp *Keeper) ClearOrders() {
+	kp.engines = make(map[string]*me.MatchEng)
+	kp.allOrders = make(map[string]map[string]*OrderInfo, 256)
+	kp.roundOrders = make(map[string][]string, 256)
+	kp.roundIOCOrders = make(map[string][]string, 256)
+	kp.OrderInfosForPub = make(OrderInfoForPublish)
 }

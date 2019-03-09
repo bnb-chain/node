@@ -179,18 +179,27 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
 
 	// simulate we just "Commit()" :P
-	app.SetCheckState(abci.Header{})
+	app.SetCheckState(abci.Header{Height: height})
 	app.DeliverState = nil
 
-	//TODO: figure out how to get block time here to get rid of time.Now() :(
-	_, err = app.DexKeeper.LoadOrderBookSnapshot(app.CheckState.Ctx, height, time.Now(), app.baseConfig.BreatheBlockInterval, app.baseConfig.BreatheBlockDaysCountBack)
-	if err != nil {
-		panic(err)
-	}
+	// TODO: sync the breathe block on state sync and just call app.DexKeeper.Init() to recover order book and recentPrices to memory
+	app.resetDexKeeper(height)
 
 	// init app cache
 	accountStore := stores.GetKVStore(common.AccountStoreKey)
 	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
 
 	return nil
+}
+
+func (app BinanceChain) resetDexKeeper(height int64) {
+	app.DexKeeper.ClearOrders()
+
+	// TODO: figure out how to get block time here to get rid of time.Now() :(
+	_, err := app.DexKeeper.LoadOrderBookSnapshot(app.CheckState.Ctx, height, time.Now(), app.baseConfig.BreatheBlockInterval, app.baseConfig.BreatheBlockDaysCountBack)
+	if err != nil {
+		panic(err)
+	}
+	app.DexKeeper.InitRecentPrices(app.CheckState.Ctx)
+
 }

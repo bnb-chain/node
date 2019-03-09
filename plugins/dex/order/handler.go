@@ -58,11 +58,11 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 	}
 
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize))
+		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()))
 	}
 
 	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize))
+		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()))
 	}
 
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
@@ -135,10 +135,7 @@ func handleNewOrder(
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 			}
 		} else {
-			return sdk.NewError(
-				types.DefaultCodespace,
-				types.CodeFailInsertOrder,
-				"cannot get txHash from ctx").Result()
+			panic("cannot get txHash from ctx")
 		}
 	}
 
@@ -183,18 +180,18 @@ func handleCancelOrder(
 	if sdkError != nil {
 		return sdkError.Result()
 	}
-	acc := keeper.am.GetAccount(ctx, msg.Sender)
-	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.engines)
-	acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-	keeper.am.SetAccount(ctx, acc)
+	fee := common.Fee{}
+	if !transfer.FeeFree() {
+		acc := keeper.am.GetAccount(ctx, msg.Sender)
+		fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.engines)
+		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
+		keeper.am.SetAccount(ctx, acc)
+	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsDeliverTx() {
 		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); !ok {
-			return sdk.NewError(
-				types.DefaultCodespace,
-				types.CodeFailCancelOrder,
-				"cannot get txHash from ctx").Result()
+			panic("cannot get txHash from ctx")
 		} else {
 			// add fee to pool, even it's free
 			fees.Pool.AddFee(txHash, fee)
