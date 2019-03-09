@@ -42,7 +42,11 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "=v0.25.0-binance.6"
+  version = "=v0.25.0-binance.9"
+
+[[constraint]]
+  name = "github.com/btcsuite/btcd"
+  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
 
 [[constraint]]
   name = "github.com/pkg/errors"
