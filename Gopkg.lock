@@ -55,7 +55,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:5876c6898f89abc1ecc7c8e36fcbe2a42f549ec0d2e33c3fa907799c8686d32e"
+  digest = "1:b9f9d75b28ecbda458c17133031ec80eba4e9b608b222b154e526abd5132c72d"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -102,9 +102,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "be0e7edc20875434089820f03f9f8bead4784f90"
+  revision = "fa4356b7d100b58b8f2d8346a24d3ad85478cf40"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.9"
+  version = "v0.25.0-binance.11"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -870,7 +870,6 @@
     "github.com/tendermint/tendermint/crypto/encoding/amino",
     "github.com/tendermint/tendermint/crypto/secp256k1",
     "github.com/tendermint/tendermint/crypto/tmhash",
-    "github.com/tendermint/tendermint/libs/bech32",
     "github.com/tendermint/tendermint/libs/cli",
     "github.com/tendermint/tendermint/libs/cli/flags",
     "github.com/tendermint/tendermint/libs/common",
