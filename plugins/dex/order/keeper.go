@@ -673,12 +673,6 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 		return nil
 	}
 
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-	//if ctx.BlockHeight() > 300 {
-	//	expireHeight = ctx.BlockHeight() - 300
-	//}
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	if size%concurrency != 0 {
@@ -694,11 +688,14 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
 		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
 			// gen transfer
-			ordMsg := orders[ord.Id]
-			h := channelHash(ordMsg.Sender, concurrency)
-			transferChs[h] <- TransferFromExpired(ord, *ordMsg)
-			// delete from allOrders
-			delete(orders, ord.Id)
+			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
+				h := channelHash(ordMsg.Sender, concurrency)
+				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
+				// delete from allOrders
+				delete(orders, ord.Id)
+			} else {
+				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
+			}
 		})
 	}
 
