@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/deathowl/go-metrics-prometheus"
+	prometheusmetrics "github.com/deathowl/go-metrics-prometheus"
 	"github.com/eapache/go-resiliency/breaker"
 	"github.com/linkedin/goavro"
 	"github.com/prometheus/client_golang/prometheus"
