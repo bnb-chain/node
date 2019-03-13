@@ -226,6 +226,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
 	app.initParams()
+	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
 	return app
 }
 
@@ -440,6 +441,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone
+		// fire and forget reload snapshot
+		go app.reloadSnapshot(height, true)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)

@@ -11,8 +11,8 @@ const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
 const FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
 
 func init() {
-	Mgr.AddUpgradeHeight(FixOrderSeqInPriceLevelName, 2500000)
-	Mgr.AddUpgradeHeight(FixDropFilledOrderSeqName, 2500000)
+	Mgr.AddUpgradeHeight(FixOrderSeqInPriceLevelName, 2855000)
+	Mgr.AddUpgradeHeight(FixDropFilledOrderSeqName, 2855000)
 }
 
 func Upgrade(name string, before func(), in func(), after func()) {
