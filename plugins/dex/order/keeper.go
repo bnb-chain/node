@@ -98,7 +98,7 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
+	eng := CreateMatchEng(pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
