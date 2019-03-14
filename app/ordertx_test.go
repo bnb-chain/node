@@ -984,6 +984,533 @@ func Test_Cancel_7(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add0, "BTC-000"))
 }
 
+// #1: one IOC order, (either buy or sell), no fill, expire in next block
+func Test_IOC_1(t *testing.T) {
+	assert := assert.New(t)
+
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
+	baseAcc := auth.BaseAccount{Address: addr}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genaccs := make([]GenesisAccount, 1)
+	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+
+	genesisState := GenesisState{
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
+
+	ctx := testApp.DeliverState.Ctx
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 0}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
+	msgB.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, _ := getOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(1e8), GetLocked(ctx, add0, "BNB"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	buys, _ = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99999.9999e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+
+	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
+	msgS.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	_, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	_, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(99999.9999e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
+// #2: numbers of IOC orders (either buy or sell), no fill, expire in next block
+func Test_IOC_2(t *testing.T) {
+	assert := assert.New(t)
+
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
+	baseAcc := auth.BaseAccount{Address: addr}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genaccs := make([]GenesisAccount, 1)
+	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+
+	genesisState := GenesisState{
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
+
+	ctx := testApp.DeliverState.Ctx
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 0}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	for i := 0; i < 5; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
+		msg.TimeInForce = 3
+		_, err = testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	buys, _ := getOrderBook("BTC-000_BNB")
+	assert.Equal(5, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99945e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(55e8), GetLocked(ctx, add0, "BNB"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	buys, _ = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99999.9995e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+
+	for i := 0; i < 5; i++ {
+		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
+		msg.TimeInForce = 3
+		_, err = testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	_, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(5, len(sells))
+	assert.Equal(int64(99985e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(15e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	_, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99999.9995e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BTC-000"))
+}
+
+// #3: one IOC buy order, one IOC sell order, partial fill, expire in next block
+func Test_IOC_3(t *testing.T) {
+	assert := assert.New(t)
+
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
+	baseAcc := auth.BaseAccount{Address: addr}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genaccs := make([]GenesisAccount, 1)
+	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+
+	genesisState := GenesisState{
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
+
+	ctx := testApp.DeliverState.Ctx
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 0}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	acc1 := Account(1)
+	add0 := acc0.GetAddress()
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 2e8)
+	msgB.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
+	msgS.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys))
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99998e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(2e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(1e8), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99998.9995e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.9995e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
+// #4: numbers of IOC orders: 1 full fill, 1 partial fill, 3 no fill and expire in next block
+func Test_IOC_4(t *testing.T) {
+	assert := assert.New(t)
+
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
+	baseAcc := auth.BaseAccount{Address: addr}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genaccs := make([]GenesisAccount, 1)
+	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+
+	genesisState := GenesisState{
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
+
+	ctx := testApp.DeliverState.Ctx
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 0}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	/*
+	sum    sell    price    buy    sum    exec    imbal
+	10             5        6      6      6	      -4
+	10             4*       5      11	  10      1
+	10             3        4      15     10      5
+	10             2	    3	   18	  10	  8
+	10     10      1        2      20     10      10
+	*/
+
+	for i := 0; i < 5; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+2)*1e8)
+		msg.TimeInForce = 3
+		_, err = testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	msgB := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 10e8)
+	msgB.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(5, len(buys))
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99930e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(70e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99990e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(10e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(4e8), lastPx)
+	assert.Equal(2, len(trades))
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100010e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99959.9797e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99990e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100039.9800e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
+// #5: numbers of GTE & IOC orders: GTE full fill, IOC partial fill and expire in next block
+func Test_IOC_5(t *testing.T) {
+	assert := assert.New(t)
+
+	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
+	baseAcc := auth.BaseAccount{Address: addr}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genaccs := make([]GenesisAccount, 1)
+	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+
+	genesisState := GenesisState{
+		Tokens:       tokens,
+		Accounts:     genaccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
+
+	ctx := testApp.DeliverState.Ctx
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 0}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	InitAccounts(ctx, testApp)
+	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
+	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	/*
+	sum    sell    price    buy    sum    exec    imbal
+	20             6        7      7      7       -14
+	20             5        6      13     13	  -7
+	20             4        5      18	  18      -2
+	20             3*       20     38     20      18
+	20     10      2               38     20      18
+	10     10      1               38     20      28
+	*/
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 6e8, 7e8)
+	_, err = testClient.DeliverTxSync(msgB1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgB2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 5e8, 6e8)
+	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgB3 := o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 4e8, 5e8)
+	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgB4 := o.NewNewOrderMsg(add0, genOrderID(add0, 3, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
+	msgB4.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgB4, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgB5 := o.NewNewOrderMsg(add0, genOrderID(add0, 4, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
+	msgB5.TimeInForce = 3
+	_, err = testClient.DeliverTxSync(msgB5, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 1e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(4, len(buys))
+	assert.Equal(2, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99848e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(152e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99980e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(20e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(3e8), lastPx)
+	assert.Equal(6, len(trades))
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100020e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99939.9700e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99980e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100059.97000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
 func Test_Match_And_Allocation(t *testing.T) {
 	assert := assert.New(t)
 
