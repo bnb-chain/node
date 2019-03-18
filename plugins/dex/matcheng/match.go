@@ -31,6 +31,7 @@ func (li *SurplusIndex) clear() {
 
 //sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
 //reCalNxtTrade should be true at the beginning and false when nxtTrade is changed by allocation logic
+//note: the result would never overflow because we have checked when place order.
 func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
 	var s int64
 	k := len(orders)
@@ -50,14 +51,25 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
 		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
-		accum += l.SellTotal
+		if accum + l.SellTotal < 0 {
+			// overflow
+			// actually, for sell orders, we would never reach here because of the limit of total supply
+			accum = math.MaxInt64
+		} else {
+			accum += l.SellTotal
+		}
 		l.AccumulatedSell = accum
 	}
 	accum = 0
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
-		accum += l.BuyTotal
+		if accum + l.BuyTotal < 0 {
+			// overflow, it's safe to use MaxInt64 because the final execution would never exceed the total supply of the base asset
+			accum = math.MaxInt64
+		} else {
+			accum += l.BuyTotal
+		}
 		l.AccumulatedBuy = accum
 		l.AccumulatedExecutions = utils.MinInt(l.AccumulatedBuy, l.AccumulatedSell)
 		l.BuySellSurplus = l.AccumulatedBuy - l.AccumulatedSell
