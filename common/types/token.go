@@ -26,6 +26,13 @@ const (
 	NativeTokenTotalSupply        = 2e16
 )
 
+type TokenUpdateHook func(token Token)
+var tokenUpdateHooks []TokenUpdateHook
+
+func RegisterTokenUpdateHook(hook TokenUpdateHook) {
+	tokenUpdateHooks = append(tokenUpdateHooks, hook)
+}
+
 type Token struct {
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
@@ -58,6 +65,12 @@ func (token *Token) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token
 func (token Token) String() string {
 	return fmt.Sprintf("{Name: %v, Symbol: %v, TotalSupply: %v, Owner: %X, Mintable: %v}",
 		token.Name, token.Symbol, token.TotalSupply, token.Owner, token.Mintable)
+}
+
+func (token *Token) Updated() {
+	for _, hook := range tokenUpdateHooks {
+		hook(*token)
+	}
 }
 
 // Token Validation

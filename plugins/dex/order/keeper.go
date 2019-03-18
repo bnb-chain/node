@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -24,6 +25,7 @@ import (
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
+	tokenStore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -39,6 +41,7 @@ type TransferHandler func(Transfer)
 // in the future, this may be distributed via Sharding
 type Keeper struct {
 	PairMapper                 store.TradingPairMapper
+	tokenMapper				   tokenStore.Mapper
 	am                         auth.AccountKeeper
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
 	codespace                  sdk.CodespaceType
@@ -54,6 +57,7 @@ type Keeper struct {
 	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
+	TokensCache				   *lru.Cache
 	CollectOrderInfoForPublish bool
 	logger                     tmlog.Logger
 }
@@ -63,11 +67,16 @@ func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
+func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, tokenMapper tokenStore.Mapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
-	return &Keeper{
+	tokenCache, err := lru.New(256)
+	if err != nil {
+		panic(err)
+	}
+	kp := Keeper{
 		PairMapper:                 tradingPairMapper,
+		tokenMapper:tokenMapper,
 		am:                         am,
 		storeKey:                   key,
 		codespace:                  codespace,
@@ -83,9 +92,30 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
+		TokensCache:				tokenCache,
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 	}
+
+	types.RegisterTokenUpdateHook(kp.updateTokensCache)
+	return &kp
+}
+
+func (kp *Keeper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
+	if value, ok := kp.TokensCache.Get(symbol); ok {
+		return value.(types.Token), nil
+	}
+
+	token, err := kp.tokenMapper.GetToken(ctx, symbol)
+	if err == nil && ctx.IsDeliverTx() {
+		kp.TokensCache.Add(symbol, token)
+	}
+
+	return token, err
+}
+
+func (kp *Keeper) updateTokensCache(token types.Token) {
+	kp.TokensCache.Add(token.Symbol, token)
 }
 
 func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
@@ -460,7 +490,16 @@ func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
+
 	return res
+}
+
+func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Book.GetPriceLevel(price, side)
+	} else {
+		return nil
+	}
 }
 
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
@@ -555,6 +594,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 					fees = &sortedAsset{}
 					tradeInAsset[addrStr] = fees
 				}
+				// no possible to overflow, for tran.in == otherSide.tran.out <= TotalSupply(otherSide.tran.outAsset)
 				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}
