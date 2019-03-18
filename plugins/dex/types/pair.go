@@ -29,5 +29,5 @@ func NewTradingPair(baseAssetSymbol, quoteAssetSymbol string, listPrice int64) T
 }
 
 func (pair *TradingPair) GetSymbol() string {
-	return ctuils.Assets2TradingPair(pair.BaseAssetSymbol, pair.QuoteAssetSymbol)
+	return utils.Assets2TradingPair(pair.BaseAssetSymbol, pair.QuoteAssetSymbol)
 }

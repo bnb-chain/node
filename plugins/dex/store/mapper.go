@@ -7,10 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	types2 "github.com/binance-chain/node/common/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	cmn "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
@@ -45,15 +44,15 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
-	if err := types2.ValidateMapperTokenSymbol(baseAsset); err != nil {
+	if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
 		return err
 	}
 	quoteAsset := pair.QuoteAssetSymbol
-	if err := types2.ValidateMapperTokenSymbol(quoteAsset); err != nil {
+	if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
 		return err
 	}
 
-	tradeSymbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	tradeSymbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	key := []byte(tradeSymbol)
 	store := ctx.KVStore(m.key)
 	value := m.encodeTradingPair(pair)
@@ -65,13 +64,13 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 func (m mapper) Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool {
 	store := ctx.KVStore(m.key)
 
-	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	symbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	return store.Has([]byte(symbol))
 }
 
 func (m mapper) GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error) {
 	store := ctx.KVStore(m.key)
-	symbol := utils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	symbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	bz := store.Get([]byte(symbol))
 
 	if bz == nil {
