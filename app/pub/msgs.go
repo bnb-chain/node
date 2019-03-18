@@ -189,8 +189,10 @@ func (msg *Order) effectQtyToOrderBook() int64 {
 		return msg.Qty
 	case orderPkg.FullyFill, orderPkg.PartialFill:
 		return -msg.LastExecutedQty
-	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled:
+	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled, orderPkg.FailedMatching:
 		return msg.CumQty - msg.Qty // deliberated be negative value
+	case orderPkg.FailedBlocking:
+		return 0
 	default:
 		Logger.Error("does not supported order status", "order", msg.String())
 		return 0
@@ -218,6 +220,14 @@ func (msg *Order) toNativeMap() map[string]interface{} {
 	native["currentExecutionType"] = msg.CurrentExecutionType.String()
 	native["txHash"] = msg.TxHash
 	return native
+}
+
+func (msg Order) isChargedCancel() bool {
+	return msg.CumQty == 0 && msg.Status == orderPkg.Canceled
+}
+
+func (msg Order) isChargedExpire() bool {
+	return msg.CumQty == 0 && (msg.Status == orderPkg.IocNoFill || msg.Status == orderPkg.Expired)
 }
 
 type Proposals struct {
