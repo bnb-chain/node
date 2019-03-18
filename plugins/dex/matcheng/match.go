@@ -4,6 +4,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
@@ -196,8 +197,10 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 
 	t := sumOrdersTotalLeft(orders, false)
 
-	// orders should have the same time, sort here to get deterministic sequence
-	sort.Slice(orders, func(i, j int) bool { return orders[i].Id < orders[j].Id })
+	upgrade.FixOrderSeqInPriceLevel(func() {
+		sort.Slice(orders, func(i, j int) bool { return orders[i].Id < orders[j].Id })
+	}, nil, nil)
+
 	residual := *toAlloc
 	halfLot := lotSize / 2
 

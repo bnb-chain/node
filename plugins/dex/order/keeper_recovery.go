@@ -18,6 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/wire"
@@ -253,6 +254,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		ctx.Logger().Info("Relaying block for order book", "height", i)
+		upgrade.Mgr.SetHeight(i)
 		kp.replayOneBlocks(ctx.Logger(), block, txDB, txDecoder, i, block.Time)
 	}
 	return nil

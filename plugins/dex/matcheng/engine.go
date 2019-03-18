@@ -3,6 +3,8 @@ package matcheng
 import (
 	"math"
 	"sort"
+
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 type MatchEng struct {
@@ -39,14 +41,12 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	origBuyPx := me.overLappedLevel[i].Price
-	origSellPx := me.overLappedLevel[j].Price
-	// sort 1st to get the same seq of fills across different nodes
-	// TODO: duplicated sort called here via multiple call of fillOrders on the same i or j
-	// not a big deal so far since re-sort on a sorted slice is fast.
-	// stable sort is not used here to prevent sort-multiple-times changing the sequence
-	// because order id should be always different
-	sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
-	sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
+
+	upgrade.FixOrderSeqInPriceLevel(func() {
+		sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
+		sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
+	}, nil,nil)
+
 	bLength := len(buys)
 	sLength := len(sells)
 	for k < bLength && h < sLength {
