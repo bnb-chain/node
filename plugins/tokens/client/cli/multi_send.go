@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/binance-chain/node/wire"
 )
@@ -94,11 +95,16 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 				fromCoins = fromCoins.Plus(toCoin)
 			}
 
+			if !fromCoins.IsPositive() {
+				return errors.Errorf("The number of coins you want to send(%s) should be positive!", fromCoins.String())
+			}
+
 			// ensure account has enough toCoins
 			account, err := ctx.GetAccount(from)
 			if err != nil {
 				return err
 			}
+
 			if !account.GetCoins().IsGTE(fromCoins) {
 				return errors.Errorf("Address %s doesn't have enough toCoins to pay for this transaction.", from)
 			}
