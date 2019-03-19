@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/iavl"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
 )
@@ -112,7 +112,6 @@ func getAccountNumber(height int64, root string) {
 	}
 	fmt.Printf("total account number: %d\n", num)
 }
-
 
 func getAccount(height int64, root, addr string) types.AppAccount {
 	db := openAppDB(root)

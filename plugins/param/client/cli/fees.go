@@ -3,9 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
