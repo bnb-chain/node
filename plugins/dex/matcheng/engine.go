@@ -45,7 +45,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	upgrade.FixOrderSeqInPriceLevel(func() {
 		sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
 		sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
-	}, nil,nil)
+	}, nil, nil)
 
 	bLength := len(buys)
 	sLength := len(sells)
@@ -233,9 +233,17 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
-				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
-				}
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.BuyOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
+						}
+					}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					}
+				})
 			}
 		}
 		toRemoveStartIdx = toRemoveEndIdx
@@ -250,9 +258,17 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
-				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
-				}
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.SellOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
+						}
+					}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					}
+				})
 			}
 		}
 	}
