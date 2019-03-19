@@ -401,6 +401,13 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	return tradeOuts
 }
 
+func (kp *Keeper) GetOrderBook(pair string) me.OrderBookInterface {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Book
+	}
+	return nil
+}
+
 func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
 	orderbook := make([]store.OrderBookLevel, maxLevels)
 
