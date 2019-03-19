@@ -89,6 +89,7 @@ func main() {
 
 		client.PostCommands(
 			stakecmd.GetCmdCreateValidator(cdc),
+			stakecmd.GetCmdRemoveValidator(cdc),
 		)...)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)

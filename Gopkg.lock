@@ -55,7 +55,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:b9f9d75b28ecbda458c17133031ec80eba4e9b608b222b154e526abd5132c72d"
+  branch = "haoyang/add-remove-validator"
+  digest = "1:d49f290cfae8faf8ebe88dcb9e0e7fd29729a39fa5cd13267c6ec261fad9ef48"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -102,9 +103,8 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "fa4356b7d100b58b8f2d8346a24d3ad85478cf40"
+  revision = "98da7c3d389822b9a8beab70924ad31e574640cb"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.11"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"

@@ -3,6 +3,7 @@ package param
 import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	sdk "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/list"
@@ -51,6 +52,8 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{gov.MsgSubmitProposal{}.Type(), ProposeFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{gov.MsgDeposit{}.Type(), DepositFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{gov.MsgVote{}.Type(), sdk.ZeroFee, sdk.FeeFree},
+	&param.FixedFeeParams{stake.MsgCreateValidator{}.Type(), sdk.ZeroFee, sdk.FeeFree},
+	&param.FixedFeeParams{stake.MsgRemoveValidator{}.Type(), sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{list.Route, ListingFee, sdk.FeeForAll},
 	&param.FixedFeeParams{order.RouteNewOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{order.RouteCancelOrder, sdk.ZeroFee, sdk.FeeFree},
