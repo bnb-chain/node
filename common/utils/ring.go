@@ -9,7 +9,7 @@ type FixedSizeRing struct {
 	buf  []interface{}
 	tail int64
 	size int64
-	cap int64
+	cap  int64
 }
 
 func NewFixedSizedRing(cap int64) *FixedSizeRing {
@@ -17,7 +17,7 @@ func NewFixedSizedRing(cap int64) *FixedSizeRing {
 		buf:  make([]interface{}, cap, cap),
 		tail: 0,
 		size: 0,
-		cap: cap,
+		cap:  cap,
 	}
 }
 
@@ -29,7 +29,7 @@ func (q *FixedSizeRing) Count() int64 {
 	return q.size
 }
 
-func(q *FixedSizeRing) Push(v interface{}) *FixedSizeRing {
+func (q *FixedSizeRing) Push(v interface{}) *FixedSizeRing {
 	q.buf[q.tail] = v
 	q.tail = (q.tail + 1) % q.cap
 
@@ -60,4 +60,3 @@ func (q *FixedSizeRing) Elements() []interface{} {
 func (q *FixedSizeRing) String() string {
 	return fmt.Sprintf("%#v", q)
 }
-

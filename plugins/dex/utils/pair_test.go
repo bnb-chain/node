@@ -35,22 +35,22 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 func BenchmarkRecentPrices_Size(b *testing.B) {
 	pricesRing := cmnutils.NewFixedSizedRing(2000)
 	prices := make([]int64, 2000)
-	for i:=0; i<2000; i++ {
+	for i := 0; i < 2000; i++ {
 		prices[i] = rand.Int63()
 	}
-	for i:= 0; i<2000; i++ {
+	for i := 0; i < 2000; i++ {
 		pricesRing.Push(prices[i])
 	}
 
 	recentPrices := make(map[string]*cmnutils.FixedSizeRing, 256)
-	for i:=0; i<10; i++ {
+	for i := 0; i < 10; i++ {
 		recentPrices[string(i)] = pricesRing
 	}
 
 	bz, _ := json.Marshal(pricesRing.Elements())
 
-	for i:=0; i<b.N; i++ {
-		bz, _= cmnutils.Compress(bz)
+	for i := 0; i < b.N; i++ {
+		bz, _ = cmnutils.Compress(bz)
 	}
 
 }
@@ -66,13 +66,13 @@ func TestCalcPriceWMA_Basic(t *testing.T) {
 }
 
 func TestCalcPriceWMA_Real(t *testing.T) {
-	for k:=0; k<2000; k++ {
+	for k := 0; k < 2000; k++ {
 		prices := make([]int64, 2000)
-		for i:=0; i<2000; i++ {
-			prices[i] = int64((i+1)*1e8)
+		for i := 0; i < 2000; i++ {
+			prices[i] = int64((i + 1) * 1e8)
 		}
 		pricesRing := cmnutils.NewFixedSizedRing(2000)
-		for i:= 0; i<2000; i++ {
+		for i := 0; i < 2000; i++ {
 			pricesRing.Push(prices[i])
 		}
 		require.Equal(t, int64(133366600000), utils.CalcPriceWMA(pricesRing))
@@ -82,11 +82,11 @@ func TestCalcPriceWMA_Real(t *testing.T) {
 // about 8800 ns/op for 2000 prices, including some FixedSizedRing ops.
 func BenchmarkCalcPriceWMA(b *testing.B) {
 	prices := cmnutils.NewFixedSizedRing(2000)
-	for i:=0; i<2000; i++ {
+	for i := 0; i < 2000; i++ {
 		prices.Push(rand.Int63())
 	}
 
-	for i:=0; i<b.N; i++ {
+	for i := 0; i < b.N; i++ {
 		utils.CalcPriceWMA(prices)
 	}
 }

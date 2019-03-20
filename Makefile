@@ -1,3 +1,11 @@
+GOTOOLS = \
+	github.com/mitchellh/gox \
+	github.com/golang/dep/cmd/dep \
+	github.com/golangci/golangci-lint/cmd/golangci-lint \
+	github.com/gogo/protobuf/protoc-gen-gogo \
+	github.com/square/certstrap
+GOBIN?=${GOPATH}/bin
+
 PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
@@ -30,7 +38,7 @@ ci: get_vendor_deps build
 ########################################
 ### Build
 
-build:
+build: get_tools
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
@@ -111,7 +119,29 @@ lint:
 ########################################
 ### Testing
 
-test: test_unit test_race
+get_tools:
+	@echo "--> Installing tools"
+	./scripts/get_tools.sh
+
+test:
+	make set_with_deadlock
+	make test_unit
+	make test_race
+	make cleanup_after_test_with_deadlock
+
+# uses https://github.com/sasha-s/go-deadlock/ to detect potential deadlocks
+set_with_deadlock:
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.RWMutex/deadlock.RWMutex/'
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.Mutex/deadlock.Mutex/'
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+
+# cleanes up after you ran test_with_deadlock
+cleanup_after_test_with_deadlock:
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.RWMutex/sync.RWMutex/'
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.Mutex/sync.Mutex/'
+	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go.mutex_bak" | grep -v "vendor/" | xargs rm
+
 
 test_race:
 	@go test -race $(PACKAGES)

@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -139,7 +141,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack}
+		change := OrderChange{info.Id, Ack, nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
@@ -273,8 +275,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching})
-				kp.OrderInfosForPub[id] = msg
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, nil})
 				kp.OrderChangesMtx.Unlock()
 			}
 		}
@@ -344,6 +345,17 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+	// when we reach the upgrade height, we must sort the orders in each price level even when this pair does not need match in this round.
+	upgrade.FixOrderSeqInPriceLevel(nil, func() {
+		priceLevelUpdater := func(pl *me.PriceLevel) {
+			orders := pl.Orders
+			sort.Slice(orders, func(i, j int) bool { return orders[i].Time < orders[j].Time })
+		}
+		for _, eng := range kp.engines {
+			eng.Book.UpdateForEachPriceLevel(me.BUYSIDE, priceLevelUpdater)
+			eng.Book.UpdateForEachPriceLevel(me.SELLSIDE, priceLevelUpdater)
+		}
+	}, nil)
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -673,12 +685,6 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 		return nil
 	}
 
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-	//if ctx.BlockHeight() > 300 {
-	//	expireHeight = ctx.BlockHeight() - 300
-	//}
-	//!!!!!!!!!!!!!!!!!!!! DELETE BEFORE MERGE
-
 	channelSize := size >> kp.poolSize
 	concurrency := 1 << kp.poolSize
 	if size%concurrency != 0 {
@@ -694,11 +700,14 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
 		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
 			// gen transfer
-			ordMsg := orders[ord.Id]
-			h := channelHash(ordMsg.Sender, concurrency)
-			transferChs[h] <- TransferFromExpired(ord, *ordMsg)
-			// delete from allOrders
-			delete(orders, ord.Id)
+			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
+				h := channelHash(ordMsg.Sender, concurrency)
+				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
+				// delete from allOrders
+				delete(orders, ord.Id)
+			} else {
+				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
+			}
 		})
 	}
 
