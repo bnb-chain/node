@@ -218,41 +218,59 @@ func (me *MatchEng) Match() bool {
 //DropFilledOrder() would clear the order to remove
 func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 	droppedIds = make([]string, 0, len(me.overLappedLevel)<<1)
+	toRemoveStartIdx := 0
+	toRemoveEndIdx := 0
 	for _, p := range me.overLappedLevel {
+		toRemoveStartIdx = toRemoveEndIdx
 		if len(p.BuyOrders) > 0 {
 			p.BuyTotal = sumOrdersTotalLeft(p.BuyOrders, true)
 			for _, o := range p.BuyOrders {
 				if o.nxtTrade == 0 {
 					droppedIds = append(droppedIds, o.Id)
+					toRemoveEndIdx++
 				}
 			}
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
-				for _, o := range p.BuyOrders {
-					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.BuyOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
+						}
 					}
-				}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					}
+				})
 			}
 		}
+		toRemoveStartIdx = toRemoveEndIdx
 		if len(p.SellOrders) > 0 {
 			p.SellTotal = sumOrdersTotalLeft(p.SellOrders, true)
 			for _, o := range p.SellOrders {
 				if o.nxtTrade == 0 {
 					droppedIds = append(droppedIds, o.Id)
+					toRemoveEndIdx++
 				}
 			}
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
-				for _, o := range p.SellOrders {
-					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.SellOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
+						}
 					}
-				}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					}
+				})
 			}
 		}
 	}
-	return droppedIds
+	return
 }
