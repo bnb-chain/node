@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -344,6 +346,17 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+	// when we reach the upgrade height, we must sort the orders in each price level even when this pair does not need match in this round.
+	upgrade.FixOrderSeqInPriceLevel(nil, func() {
+		priceLevelUpdater := func(pl *me.PriceLevel) {
+			orders := pl.Orders
+			sort.Slice(orders, func(i, j int) bool { return orders[i].Time < orders[j].Time })
+		}
+		for _, eng := range kp.engines {
+			eng.Book.UpdateForEachPriceLevel(me.BUYSIDE, priceLevelUpdater)
+			eng.Book.UpdateForEachPriceLevel(me.SELLSIDE, priceLevelUpdater)
+		}
+	}, nil)
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
