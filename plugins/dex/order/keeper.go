@@ -141,7 +141,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack}
+		change := OrderChange{info.Id, Ack, nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
@@ -275,8 +275,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching})
-				kp.OrderInfosForPub[id] = msg
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, nil})
 				kp.OrderChangesMtx.Unlock()
 			}
 		}
