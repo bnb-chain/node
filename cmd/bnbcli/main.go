@@ -90,6 +90,8 @@ func main() {
 		client.PostCommands(
 			stakecmd.GetCmdCreateValidator(cdc),
 			stakecmd.GetCmdRemoveValidator(cdc),
+			stakecmd.GetCmdQueryValidators("stake", cdc),
+			stakecmd.GetCmdQueryUnbondingDelegations("stake", cdc),
 		)...)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)

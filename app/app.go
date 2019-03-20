@@ -50,7 +50,6 @@ import (
 
 const (
 	appName = "BNBChain"
-	blockCountForStakeEndBlocker = 50
 )
 
 // default home directories for expected binaries
@@ -468,11 +467,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.DexKeeper.ClearRoundFee()
 	}
 
+	stakeChange := false
+	if _, exist := ctx.RouterCallRecord()["stake"]; exist {
+		stakeChange = true
+	}
 	var validatorUpdates abci.ValidatorUpdates
 	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
 	//  otherwise, apphash fail
 	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
-	if isBreatheBlock || height == 1 || ctx.BlockHeight() % blockCountForStakeEndBlocker == 0 {
+	if isBreatheBlock || height == 1 || stakeChange {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
