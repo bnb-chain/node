@@ -10,7 +10,7 @@ var Mgr = sdk.UpgradeMgr
 const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
 
 func init()  {
-	Mgr.AddUpgradeHeight(FixOrderSeqInPriceLevelName, 2500000)
+	Mgr.AddUpgradeHeight(FixOrderSeqInPriceLevelName, 2855000)
 }
 
 func Upgrade(name string, before func(), in func(), after func()) {
