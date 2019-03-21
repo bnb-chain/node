@@ -42,7 +42,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "haoyang/add-remove-validator"
+  branch = "develop"
 
 [[constraint]]
   name = "github.com/btcsuite/btcd"
