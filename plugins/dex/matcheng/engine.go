@@ -3,6 +3,8 @@ package matcheng
 import (
 	"math"
 	"sort"
+
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 type MatchEng struct {
@@ -39,13 +41,12 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	origBuyPx := me.overLappedLevel[i].Price
-	// sort 1st to get the same seq of fills across different nodes
-	// TODO: duplicated sort called here via multiple call of fillOrders on the same i or j
-	// not a big deal so far since re-sort on a sorted slice is fast.
-	// stable sort is not used here to prevent sort-multiple-times changing the sequence
-	// because order id should be always different
-	sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
-	sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
+
+	upgrade.FixOrderSeqInPriceLevel(func() {
+		sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
+		sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
+	}, nil,nil)
+
 	bLength := len(buys)
 	sLength := len(sells)
 	for k < bLength && h < sLength {
@@ -217,41 +218,59 @@ func (me *MatchEng) Match() bool {
 //DropFilledOrder() would clear the order to remove
 func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 	droppedIds = make([]string, 0, len(me.overLappedLevel)<<1)
+	toRemoveStartIdx := 0
+	toRemoveEndIdx := 0
 	for _, p := range me.overLappedLevel {
+		toRemoveStartIdx = toRemoveEndIdx
 		if len(p.BuyOrders) > 0 {
 			p.BuyTotal = sumOrdersTotalLeft(p.BuyOrders, true)
 			for _, o := range p.BuyOrders {
 				if o.nxtTrade == 0 {
 					droppedIds = append(droppedIds, o.Id)
+					toRemoveEndIdx++
 				}
 			}
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
-				for _, o := range p.BuyOrders {
-					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.BuyOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
+						}
 					}
-				}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					}
+				})
 			}
 		}
+		toRemoveStartIdx = toRemoveEndIdx
 		if len(p.SellOrders) > 0 {
 			p.SellTotal = sumOrdersTotalLeft(p.SellOrders, true)
 			for _, o := range p.SellOrders {
 				if o.nxtTrade == 0 {
 					droppedIds = append(droppedIds, o.Id)
+					toRemoveEndIdx++
 				}
 			}
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
-				for _, o := range p.SellOrders {
-					if o.nxtTrade == 0 {
-						me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
+				upgrade.FixDropFilledOrderSeq(func() {
+					for _, o := range p.SellOrders {
+						if o.nxtTrade == 0 {
+							me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
+						}
 					}
-				}
+				}, func() {
+					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+						me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					}
+				})
 			}
 		}
 	}
-	return droppedIds
+	return
 }

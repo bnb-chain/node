@@ -59,8 +59,8 @@ func (mg *MessageGenerator) OneOnOneMessages(height int, timeNow time.Time) (tra
 		mg.OrderChangeMap[buyOrder.Id] = &buyOrder
 		mg.OrderChangeMap[sellOrder.Id] = &sellOrder
 
-		orderChanges[i*2] = orderPkg.OrderChange{buyOrder.Id, orderPkg.Ack}
-		orderChanges[i*2+1] = orderPkg.OrderChange{sellOrder.Id, orderPkg.Ack}
+		orderChanges[i*2] = orderPkg.OrderChange{buyOrder.Id, orderPkg.Ack, nil}
+		orderChanges[i*2+1] = orderPkg.OrderChange{sellOrder.Id, orderPkg.Ack, nil}
 
 		tradesToPublish[i] = makeTradeToPub(fmt.Sprintf("%d-%d", height, i), sellOrder.Id, buyOrder.Id, mg.sellerAddrs[i].String(), mg.buyerAddrs[i].String(), price, amount)
 
@@ -88,7 +88,7 @@ func (mg *MessageGenerator) TwoOnOneMessages(height int, timeNow time.Time) (tra
 		for i := 0; i < mg.NumOfTradesPerBlock; i++ {
 			buyOrder := makeOrderInfo(mg.buyerAddrs[i], 1, int64(height), 100000000, 100000000, 0, timePub)
 			mg.OrderChangeMap[buyOrder.Id] = &buyOrder
-			orderChanges[i] = orderPkg.OrderChange{buyOrder.Id, orderPkg.Ack}
+			orderChanges[i] = orderPkg.OrderChange{buyOrder.Id, orderPkg.Ack, nil}
 		}
 	} else {
 		// place big sell orders
@@ -106,7 +106,7 @@ func (mg *MessageGenerator) TwoOnOneMessages(height int, timeNow time.Time) (tra
 			}
 			sellOrder := makeOrderInfo(mg.sellerAddrs[i/2], 2, int64(height), 100000000, 200000000, cumQty, timePub)
 			if i%2 == 0 {
-				orderChanges[i/2] = orderPkg.OrderChange{sellOrder.Id, orderPkg.Ack}
+				orderChanges[i/2] = orderPkg.OrderChange{sellOrder.Id, orderPkg.Ack, nil}
 			}
 			tradesToPublish[i] = makeTradeToPub(fmt.Sprintf("%d-%d", height, i), buyOrder.Id, sellOrder.Id, mg.sellerAddrs[i].String(),
 				mg.buyerAddrs[i].String(), 100000000, 100000000)
@@ -134,7 +134,7 @@ func (mg *MessageGenerator) ExpireMessages(height int, timeNow time.Time) (trade
 	for i := 0; i < 100000; i++ {
 		o := makeOrderInfo(mg.buyerAddrs[0], 1, int64(height), 1000000000, 1000000000, 500000000, timePub)
 		mg.OrderChangeMap[fmt.Sprintf("%d", i)] = &o
-		orderChanges = append(orderChanges, orderPkg.OrderChange{fmt.Sprintf("%d", i), orderPkg.Expired})
+		orderChanges = append(orderChanges, orderPkg.OrderChange{fmt.Sprintf("%d", i), orderPkg.Expired, nil})
 	}
 	return
 }

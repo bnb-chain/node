@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.4
+
+IMPROVEMENTS
+
+BUG FIXES
+
+* [\#502](https://github.com/binance-chain/node/pull/502) [MatchEngine] Fix order sequence in price level
+* [\#500](https://github.com/binance-chain/node/pull/500) [Publish] Failed blocking should not be regarded as closed order
+* [\#495](https://github.com/binance-chain/node/pull/500) [MatchEngine] Fully fill order might not be correctly removed in orderbook when two continuous orders fully filled.
+
+
 ## 0.5.1
 
 BREAKING CHANGES

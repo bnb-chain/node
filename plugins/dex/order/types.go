@@ -22,8 +22,17 @@ const (
 	FailedMatching
 )
 
-func (this ChangeType) String() string {
-	switch this {
+// True for should not remove order in these status from OrderInfoForPub
+// False for remove
+func (tpe ChangeType) IsOpen() bool {
+	// FailedBlocking tx doesn't effect OrderInfoForPub, should not be put into closedToPublish
+	return tpe == Ack ||
+		tpe == PartialFill ||
+		tpe == FailedBlocking
+}
+
+func (tpe ChangeType) String() string {
+	switch tpe {
 	case Ack:
 		return "Ack"
 	case Canceled:
@@ -61,12 +70,37 @@ func (this ExecutionType) String() string {
 }
 
 type OrderChange struct {
-	Id  string
-	Tpe ChangeType
+	Id             string
+	Tpe            ChangeType
+	MsgForFailedTx interface{} // pointer to NewOrderMsg or CancelOrderMsg
 }
 
 func (oc OrderChange) String() string {
 	return fmt.Sprintf("id: %s, tpe: %s", oc.Id, oc.Tpe.String())
+}
+
+func (oc OrderChange) failedBlockingMsg() *OrderInfo {
+	switch msg := oc.MsgForFailedTx.(type) {
+	case NewOrderMsg:
+		return &OrderInfo{
+			NewOrderMsg: msg,
+		}
+	case CancelOrderMsg:
+		return &OrderInfo{
+			NewOrderMsg: NewOrderMsg{Sender: msg.Sender, Id: msg.RefId, Symbol: msg.Symbol},
+		}
+	default:
+		return nil
+	}
+}
+
+func (oc OrderChange) ResolveOrderInfo(orderInfos OrderInfoForPublish) *OrderInfo {
+	switch oc.Tpe {
+	case FailedBlocking:
+		return oc.failedBlockingMsg()
+	default:
+		return orderInfos[oc.Id]
+	}
 }
 
 // provide an easy way to retrieve order related static fields during generate executed order status

@@ -49,26 +49,16 @@ func Publish(
 			// DEX query service team relies on the fact that we publish orders before trades so that
 			// they can assign buyer/seller address into trade before persist into DB
 			var opensToPublish []*Order
-			var canceledToPublish []*Order
+			var closedToPublish []*Order
 			var feeToPublish map[string]string
 			if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-				opensToPublish, canceledToPublish, feeToPublish = collectOrdersToPublish(
+				opensToPublish, closedToPublish, feeToPublish = collectOrdersToPublish(
 					marketData.tradesToPublish,
 					marketData.orderChanges,
 					marketData.orderInfos,
 					marketData.feeHolder,
 					marketData.timestamp)
-				for _, o := range opensToPublish {
-					if o.Status == orderPkg.FullyFill {
-						if ToRemoveOrderIdCh != nil {
-							Logger.Debug(
-								"going to delete fully filled order from order changes map",
-								"orderId", o.OrderId)
-							ToRemoveOrderIdCh <- o.OrderId
-						}
-					}
-				}
-				for _, o := range canceledToPublish {
+				for _, o := range closedToPublish {
 					if ToRemoveOrderIdCh != nil {
 						Logger.Debug(
 							"going to delete order from order changes map",
@@ -84,7 +74,7 @@ func Publish(
 				close(ToRemoveOrderIdCh)
 			}
 
-			ordersToPublish := append(opensToPublish, canceledToPublish...)
+			ordersToPublish := append(opensToPublish, closedToPublish...)
 			if cfg.PublishOrderUpdates {
 				duration := Timer(Logger, "publish all orders", func() {
 					publishExecutionResult(

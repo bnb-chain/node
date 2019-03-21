@@ -159,7 +159,7 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	tx, err := app.TxDecoder(txBytes)
 	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 	if err != nil {
-		app.Logger.Error("failed to process invalid tx", "tx", txHash)
+		app.Logger.Info("failed to process invalid tx", "tx", txHash)
 	} else {
 		if msgs := tx.GetMsgs(); len(msgs) != 1 {
 			// The error message here should be consistent with vendor/github.com/cosmos/cosmos-sdk/baseapp/baseapp.go:537
@@ -167,18 +167,17 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 		} else {
 			switch msg := msgs[0].(type) {
 			case order.NewOrderMsg:
-				app.Logger.Error("failed to process NewOrderMsg", "oid", msg.Id)
+				app.Logger.Info("failed to process NewOrderMsg", "oid", msg.Id)
 				// The error on deliver should be rare and only impact witness publisher's performance
 				app.DexKeeper.OrderChangesMtx.Lock()
-				app.DexKeeper.OrderInfosForPub[msg.Id] = &order.OrderInfo{NewOrderMsg: msg, TxHash: txHash}
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking})
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking, msg})
 				app.DexKeeper.OrderChangesMtx.Unlock()
 			case order.CancelOrderMsg:
-				app.Logger.Error("failed to process CancelOrderMsg", "oid", msg.RefId)
+				app.Logger.Info("failed to process CancelOrderMsg", "oid", msg.RefId)
 				// The error on deliver should be rare and only impact witness publisher's performance
 				app.DexKeeper.OrderChangesMtx.Lock()
 				// OrderInfo must has been in keeper.OrderInfosForPub
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking})
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking, msg})
 				app.DexKeeper.OrderChangesMtx.Unlock()
 			default:
 				// deliberately do nothing for message other than NewOrderMsg

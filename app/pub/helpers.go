@@ -218,7 +218,7 @@ func updateExpireFeeForPublish(
 	defer wg.Done()
 	for tranHolder := range tranHolderCh {
 		Logger.Debug("transfer collector for order", "orderId", tranHolder.OrderId)
-		change := orderPkg.OrderChange{tranHolder.OrderId, reason}
+		change := orderPkg.OrderChange{tranHolder.OrderId, reason, nil}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
 }
@@ -333,9 +333,9 @@ func collectOrdersToPublish(
 	orderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
-	timestamp int64) (opensToPublish []*Order, canceledToPublish []*Order, feeToPublish map[string]string) {
+	timestamp int64) (opensToPublish []*Order, closedToPublish []*Order, feeToPublish map[string]string) {
 	opensToPublish = make([]*Order, 0)
-	canceledToPublish = make([]*Order, 0)
+	closedToPublish = make([]*Order, 0)
 	// serve as a cache to avoid fee's serialization several times for one address
 	feeToPublish = make(map[string]string)
 
@@ -347,47 +347,35 @@ func collectOrdersToPublish(
 
 	// collect orders (new, cancel, ioc-no-fill, expire, failed-blocking and failed-matching) from orderChanges
 	for _, o := range orderChanges {
-		if orderInfo := orderInfos[o.Id]; orderInfo != nil {
+		if orderInfo := o.ResolveOrderInfo(orderInfos); orderInfo != nil {
 			orderToPublish := Order{
-				orderInfo.Symbol,
-				o.Tpe,
-				o.Id,
-				"",
-				orderInfo.Sender.String(),
-				orderInfo.Side,
-				orderPkg.OrderType.LIMIT,
-				orderInfo.Price,
-				orderInfo.Quantity,
-				0,
-				0,
-				orderInfo.CumQty,
-				"",
-				orderInfo.CreatedTimestamp,
-				timestamp,
-				orderInfo.TimeInForce,
-				orderPkg.NEW,
-				orderInfo.TxHash,
+				orderInfo.Symbol, o.Tpe, o.Id,
+				"", orderInfo.Sender.String(), orderInfo.Side,
+				orderPkg.OrderType.LIMIT, orderInfo.Price, orderInfo.Quantity,
+				0, 0, orderInfo.CumQty, "",
+				orderInfo.CreatedTimestamp, timestamp, orderInfo.TimeInForce,
+				orderPkg.NEW, orderInfo.TxHash,
 			}
 
-			if o.Tpe == orderPkg.Ack {
+			if o.Tpe.IsOpen() {
 				opensToPublish = append(opensToPublish, &orderToPublish)
 			} else {
-				if orderInfo.CumQty == 0 {
-					if o.Tpe == orderPkg.Canceled {
-						if _, ok := chargedCancels[string(orderInfo.Sender)]; ok {
-							chargedCancels[string(orderInfo.Sender)] += 1
-						} else {
-							chargedCancels[string(orderInfo.Sender)] = 1
-						}
-					} else {
-						if _, ok := chargedExpires[string(orderInfo.Sender)]; ok {
-							chargedExpires[string(orderInfo.Sender)] += 1
-						} else {
-							chargedExpires[string(orderInfo.Sender)] = 1
-						}
-					}
+				closedToPublish = append(closedToPublish, &orderToPublish)
+			}
+
+			// fee field handling
+			if orderToPublish.isChargedCancel() {
+				if _, ok := chargedCancels[string(orderInfo.Sender)]; ok {
+					chargedCancels[string(orderInfo.Sender)] += 1
+				} else {
+					chargedCancels[string(orderInfo.Sender)] = 1
 				}
-				canceledToPublish = append(canceledToPublish, &orderToPublish)
+			} else if orderToPublish.isChargedExpire() {
+				if _, ok := chargedExpires[string(orderInfo.Sender)]; ok {
+					chargedExpires[string(orderInfo.Sender)] += 1
+				} else {
+					chargedExpires[string(orderInfo.Sender)] = 1
+				}
 			}
 		} else {
 			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", o.String())
@@ -395,18 +383,22 @@ func collectOrdersToPublish(
 	}
 
 	// update C and E fields in serialized fee string
-	for _, order := range canceledToPublish {
-		senderStr := string(orderInfos[order.OrderId].Sender)
-		if _, ok := feeToPublish[senderStr]; !ok {
-			numOfChargedCanceled := chargedCancels[senderStr]
-			numOfExpiredCanceled := chargedExpires[senderStr]
-			if raw, ok := feeHolder[senderStr]; ok {
-				fee := raw.SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
-				feeToPublish[senderStr] = fee
-				order.Fee = fee
-			} else {
-				// TODO(#192): handle cancel fee is not included within feeHolder
+	for _, order := range closedToPublish {
+		if orderInfo, ok := orderInfos[order.OrderId]; ok {
+			senderBytesStr := string(orderInfo.Sender)
+			if _, ok := feeToPublish[senderBytesStr]; !ok {
+				numOfChargedCanceled := chargedCancels[senderBytesStr]
+				numOfExpiredCanceled := chargedExpires[senderBytesStr]
+				if raw, ok := feeHolder[senderBytesStr]; ok {
+					fee := raw.SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
+					feeToPublish[senderBytesStr] = fee
+					order.Fee = fee
+				} else {
+					Logger.Error("cannot find fee for cancel/expire", "sender", order.Owner)
+				}
 			}
+		} else {
+			Logger.Error("should not to locate order in OrderChangesMap", "oid", order.OrderId)
 		}
 	}
 
@@ -414,20 +406,28 @@ func collectOrdersToPublish(
 	for _, t := range trades {
 		if o, exists := orderInfos[t.Bid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
-			opensToPublish = append(opensToPublish, &orderToPublish)
+			if orderToPublish.Status.IsOpen() {
+				opensToPublish = append(opensToPublish, &orderToPublish)
+			} else {
+				closedToPublish = append(closedToPublish, &orderToPublish)
+			}
 		} else {
 			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Bid)
 		}
 
 		if o, exists := orderInfos[t.Sid]; exists {
 			orderToPublish := tradeToOrder(t, o, timestamp, feeHolder, feeToPublish)
-			opensToPublish = append(opensToPublish, &orderToPublish)
+			if orderToPublish.Status.IsOpen() {
+				opensToPublish = append(opensToPublish, &orderToPublish)
+			} else {
+				closedToPublish = append(closedToPublish, &orderToPublish)
+			}
 		} else {
 			Logger.Error("failed to resolve order information from orderInfos", "orderId", t.Sid)
 		}
 	}
 
-	return opensToPublish, canceledToPublish, feeToPublish
+	return opensToPublish, closedToPublish, feeToPublish
 }
 
 func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.ChangeType, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string) string {
