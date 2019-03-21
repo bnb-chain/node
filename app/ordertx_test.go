@@ -6,17 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	ty "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
@@ -27,6 +16,17 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+	ty "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type level struct {
@@ -360,11 +360,15 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 }
 
 // it's required setup for simulating endblock in test
-func testSetup() (sdk.Context, crypto.Address) {
+func testSetup(prices ...int64) (sdk.Context, crypto.Address) {
+	items := []int64{int64(10e8), int64(10e8), int64(10e8)}
+	for i, price := range prices {
+		items[i] = price
+	}
 	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
 	baseAcc := auth.BaseAccount{Address: addr}
-	tokens := []tokens.GenesisToken{{"BNB", "BNB", 100000000e8, addr, false}}
-	appAcc := &common.AppAccount{baseAcc, "baseAcc", sdk.Coins(nil), sdk.Coins(nil)}
+	tokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,addr,false}}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
 
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
 	genaccs := make([]GenesisAccount, 1)
@@ -383,18 +387,31 @@ func testSetup() (sdk.Context, crypto.Address) {
 	}
 
 	testApp.InitChain(abci.RequestInitChain{
-		Validators:    []abci.ValidatorUpdate{},
+		Validators: []abci.ValidatorUpdate{},
 		AppStateBytes: stateBytes},
 	)
 
 	ctx := testApp.DeliverState.Ctx
 
-	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
+	btcPair := types.NewTradingPair("BTC-000", "BNB", items[0])
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
+
+	ethPair := types.NewTradingPair("ETH-000", "BNB", items[1])
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
+	testApp.DexKeeper.AddEngine(ethPair)
+
+	ethbtcPair := types.NewTradingPair("BTC-000", "ETH-000", items[2])
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethbtcPair)
+	testApp.DexKeeper.AddEngine(ethbtcPair)
+
+	fmt.Println(testApp.DexKeeper.PairMapper.ListAllTradingPairs(ctx))
+
 	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
+	testApp.DexKeeper.ClearOrderBook("ETH-000_BNB")
+	testApp.DexKeeper.ClearOrderBook("BTC-000_ETH-000")
 
 	InitAccounts(ctx, testApp)
 
@@ -478,7 +495,7 @@ func Test_Cancel_1(t *testing.T) {
 func Test_Cancel_2(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -536,7 +553,7 @@ func Test_Cancel_2(t *testing.T) {
 func Test_Cancel_3(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -660,7 +677,7 @@ func Test_Cancel_5(t *testing.T) {
 
 	orderMsgs := make([]o.NewOrderMsg, 16)
 	for i := 0; i < len(orderMsgs); i++ {
-		ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: int64(i + 1)}).WithVoteInfos([]abci.VoteInfo{
+		ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: int64(i+1)}).WithVoteInfos([]abci.VoteInfo{
 			{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
 		})
 		testApp.DeliverState.Ctx = ctx
@@ -710,7 +727,7 @@ func Test_Cancel_5(t *testing.T) {
 func Test_Cancel_6(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -796,7 +813,7 @@ func Test_Cancel_6(t *testing.T) {
 func Test_Cancel_7(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -877,7 +894,7 @@ func Test_Cancel_7(t *testing.T) {
 func Test_IOC_1(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -1108,12 +1125,12 @@ func Test_IOC_4(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		sum    sell    price    buy    sum    exec    imbal
-		10             5        6      6      6	      -4
-		10             4*       5      11	  10      1
-		10             3        4      15     10      5
-		10             2	    3	   18	  10	  8
-		10     10      1        2      20     10      10
+	sum    sell    price    buy    sum    exec    imbal
+	10             5        6      6      6	      -4
+	10             4*       5      11	  10      1
+	10             3        4      15     10      5
+	10             2	    3	   18	  10	  8
+	10     10      1        2      20     10      10
 	*/
 
 	for i := 0; i < 5; i++ {
@@ -1186,13 +1203,13 @@ func Test_IOC_5(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		sum    sell    price    buy    sum    exec    imbal
-		20             6        7      7      7       -14
-		20             5        6      13     13	  -7
-		20             4        5      18	  18      -2
-		20             3*       20     38     20      18
-		20     10      2               38     20      18
-		10     10      1               38     20      28
+	sum    sell    price    buy    sum    exec    imbal
+	20             6        7      7      7       -14
+	20             5        6      13     13	  -7
+	20             4        5      18	  18      -2
+	20             3*       20     38     20      18
+	20     10      2               38     20      18
+	10     10      1               38     20      28
 	*/
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 6e8, 7e8)
@@ -1439,7 +1456,7 @@ func Test_Fill_3(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
-		if i%2 == 0 {
+		if i % 2 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -1494,7 +1511,7 @@ func Test_Fill_3(t *testing.T) {
 func Test_Fill_4(t *testing.T) {
 	assert := assert.New(t)
 
-	ctx, valAddr := testSetup()
+    ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -1509,17 +1526,17 @@ func Test_Fill_4(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		sum    sell    price    buy    sum    exec    imbal
-		6              5        3      3      3       -3
-		6              4        2      5      5       -1
-		6      3       3*       1      6	  6       0
-		3      2       2               6      3       3
-		1      1       1	           6      1       5
+	sum    sell    price    buy    sum    exec    imbal
+	6              5        3      3      3       -3
+	6              4        2      5      5       -1
+	6      3       3*       1      6	  6       0
+	3      2       2               6      3       3
+	1      1       1	           6      1       5
 	*/
 
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+3)*1e8, int64(i+1)*1e8)
-		if i%1 == 0 {
+		if i % 1 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -1530,7 +1547,7 @@ func Test_Fill_4(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
-		if i%2 == 0 {
+		if i % 2 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -1596,10 +1613,10 @@ func Test_Fill_5(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		sum    sell    price    buy    sum    exec    imbal
-		22             3*       30     30	  22      8
-		22     7       2               30     22      8
-		15     15      1	           30     15      15
+	sum    sell    price    buy    sum    exec    imbal
+	22             3*       30     30	  22      8
+	22     7       2               30     22      8
+	15     15      1	           30     15      15
 	*/
 
 	for i := 0; i < 3; i++ {
@@ -1679,10 +1696,10 @@ func Test_Fill_6(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		sum    sell    price    buy    sum    exec    imbal
-		22             3*       30     30	  22      8
-		22     7       2               30     22      8
-		15     15      1	           30     15      15
+	sum    sell    price    buy    sum    exec    imbal
+	22             3*       30     30	  22      8
+	22     7       2               30     22      8
+	15     15      1	           30     15      15
 	*/
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
@@ -1868,10 +1885,10 @@ func Test_Fill_7(t *testing.T) {
 	assert.Equal(int64(5e8), GetLocked(ctx, add1, "BTC-000"))
 
 	/* trade @ 9
-	   sum    sell    price    buy    sum    exec    imbal
-	   5              9        10     10     5	      5
-	   5      5       8	           10     5       5
-	*/
+    sum    sell    price    buy    sum    exec    imbal
+    5              9        10     10     5	      5
+    5      5       8	           10     5       5
+    */
 
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 9e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
@@ -1911,10 +1928,10 @@ func Test_Fill_7(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
 
 	/* trade @ 8.55
-	   sum    sell    price    buy    sum    exec    imbal
-	   10             9        5      5      5	      -5
-	   10     10      5	           5      5       -5
-	*/
+    sum    sell    price    buy    sum    exec    imbal
+    10             9        5      5      5	      -5
+    10     10      5	           5      5       -5
+    */
 
 	msgS = o.NewNewOrderMsg(add1, genOrderID(add1, 2, ctx, am), 2, "BTC-000_BNB", 5e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
@@ -1954,10 +1971,10 @@ func Test_Fill_7(t *testing.T) {
 	assert.Equal(int64(5e8), GetLocked(ctx, add1, "BTC-000"))
 
 	/* trade @ 8.9775
-	   sum    sell    price    buy    sum    exec    imbal
-	   5              12       10     10     5	      5
-	   5      5       5	           10     5       5
-	*/
+    sum    sell    price    buy    sum    exec    imbal
+    5              12       10     10     5	      5
+    5      5       5	           10     5       5
+    */
 
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 12e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
@@ -2012,7 +2029,7 @@ func Test_Expire_1(t *testing.T) {
 
 	tNow := time.Now()
 	// it's required for breath block check
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2121,7 +2138,7 @@ func Test_Expire_2a(t *testing.T) {
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2205,7 +2222,7 @@ func Test_Expire_2b(t *testing.T) {
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2289,7 +2306,7 @@ func Test_Expire_3(t *testing.T) {
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2460,7 +2477,7 @@ func Test_Expire_4a(t *testing.T) {
 	assert.Equal(0, len(sells))
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2536,7 +2553,7 @@ func Test_Expire_4b(t *testing.T) {
 	assert.Equal(3, len(sells[0].Orders))
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2577,7 +2594,7 @@ func Test_Expire_5(t *testing.T) {
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -2629,7 +2646,7 @@ func Test_Expire_6(t *testing.T) {
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
 	tNow := time.Now()
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -3125,47 +3142,404 @@ func Test_Special_5(t *testing.T) {
 	assert.Equal(int64(0.0770e8), GetLocked(ctx, add3, "BTC-000"))
 }
 
-// test match and allocation rules
-func Test_Match_And_Allocation(t *testing.T) {
+// #1a: multiple buy orders (same price level) overflow int64 max
+func Test_Overflow_1a(t *testing.T) {
 	assert := assert.New(t)
 
-	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())
-	baseAcc := auth.BaseAccount{Address: addr}
-	tokens := []tokens.GenesisToken{{"BNB", "BNB", 100000000e8, addr, false}}
-	appAcc := &common.AppAccount{baseAcc, "baseAcc", sdk.Coins(nil), sdk.Coins(nil)}
+	ctx, valAddr := testSetup(1)
 
-	valAddr := ed25519.GenPrivKey().PubKey().Address()
-	genaccs := make([]GenesisAccount, 1)
-	genaccs[0] = NewGenesisAccount(appAcc, valAddr)
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
-	genesisState := GenesisState{
-		Tokens:       tokens,
-		Accounts:     genaccs,
-		DexGenesis:   dex.DefaultGenesis,
-		ParamGenesis: param.DefaultGenesisState,
-	}
-
-	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
-	if err != nil {
-		panic(err)
-	}
-
-	testApp.InitChain(abci.RequestInitChain{Validators: []abci.ValidatorUpdate{}, AppStateBytes: stateBytes})
-
-	ctx := testApp.DeliverState.Ctx
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
 	})
 	testApp.DeliverState.Ctx = ctx
 
-	InitAccounts(ctx, testApp)
-	testApp.DexKeeper.ClearOrderBook("BTC-000_BNB")
-	btcPair := types.NewTradingPair("BTC-000", "BNB", 10e8)
-	t.Log("lotSize:", btcPair.LotSize)
-	t.Log("tickSize:", btcPair.TickSize)
-	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
-	testApp.DexKeeper.AddEngine(btcPair)
-	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
+	// 10 * 1e18 > int64 max
+	for i := 0; i < 10; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", 1, 1e18)
+		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+		// make sure that the msg is valid
+		assert.Equal(uint32(0), res.Code)
+		fmt.Println(res.Log)
+	}
+
+	buys, _ := getOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys))
+	// overflow issue reproduced
+	assert.True(buys[0].qty < 1)
+}
+
+// #1b: multiple buy orders (diff price levels) overflow int64 max
+func Test_Overflow_1b(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	/* sum of buy side overflowed as [10e18] > int64 max
+	sum    sell    price    buy    sum      exec    imbal
+	1e8   	       10*      1e18   1e18     1e8     the smallest abs
+	1e8   	       9        1e18   2e18     1e8     -
+	1e8            8        1e18   3e18     1e8     -
+	1e8            7        1e18   4e18     1e8     -
+	1e8            6        1e18   5e18     1e8     -
+	1e8            5        1e18   6e18     1e8     -
+	1e8            4        1e18   7e18     1e8     -
+	1e8            3        1e18   8e18     1e8     -
+	1e8            2        1e18   9e18     1e8     -
+	1e8    1e8     1        1e18   [10e18]  1e8     the largest abs
+	*/
+	// although sum of buy side overflowed, in this case, match and allocation of orders can still be completed properly
+
+	for i := 0; i < 10; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1), 1e18)
+		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(uint32(0), res.Code)
+		fmt.Println(res.Log)
+	}
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", int64(1), 1e8)
+	res, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(uint32(0), res.Code)
+	fmt.Println(res.Log)
+
+	buys, sells := getOrderBook("BTC-000_BNB")
+	assert.Equal(10, len(buys))
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(5500e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(10), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(10, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
+	// TODO: no fee charged, too small?
+	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.00000010e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", int64(10), 1e8)
+	res, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(uint32(0), res.Code)
+	fmt.Println(res.Log)
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(10, len(buys))
+	assert.Equal(1, len(sells))
+	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.00000010e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx = testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(10), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getOrderBook("BTC-000_BNB")
+	assert.Equal(10, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(int64(100002e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(5499.99999980e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.00000020e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
+// #2a: multiple sell orders (same price level) overflow int64 max
+func Test_Overflow_2a(t *testing.T) {
+	assert := assert.New(t)
+
+	price := int64(1e18)
+	ctx, valAddr := testSetup(price)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	for i := 0; i < 10; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 2, "BTC-000_BNB", price, 1e8)
+		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+		// make sure that the msg is valid
+		assert.Equal(uint32(0), res.Code)
+		fmt.Println(res.Log)
+	}
+
+	_, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(10, len(sells[0].Orders))
+	// TODO: do we grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max?
+}
+
+// #2b: multiple sell orders (diff price levels) overflow int64 max
+func Test_Overflow_2b(t *testing.T) {
+	assert := assert.New(t)
+
+	price := int64(1e18)
+	ctx, valAddr := testSetup(price)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	for i := 0; i < 5; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 2, "BTC-000_BNB", price*int64(i+1), 1e8)
+		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
+		if err != nil {
+			panic(err)
+		}
+		// make sure that the msg is valid
+		assert.Equal(uint32(0), res.Code)
+		fmt.Println(res.Log)
+	}
+
+	_, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(5, len(sells))
+	// TODO: do we grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max?
+}
+
+// #3: non bnb pair (with cheap bnb) leads to overflow of int64 max
+func Test_Overflow_3(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e18, 1e18, 10e8)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_ETH-000", 10e8, 1e8)
+	res, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(uint32(0), res.Code)
+	fmt.Println(res.Log)
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_ETH-000", 10e8, 1e8)
+	res, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(uint32(0), res.Code)
+	fmt.Println(res.Log)
+
+	buys, sells := getRawOrderBook("BTC-000_ETH-000")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_ETH-000")
+	assert.Equal(int64(10e8), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_ETH-000")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+
+	assert.Equal(int64(99990e8), GetAvail(ctx, add0, "ETH-000"))
+	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
+	// for buy side: insufficent bnb (1x1e18 > 100000e8), so fee is deducted from btc-000 => 100001 - 1 * 0.001
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(100010e8), GetAvail(ctx, add1, "ETH-000"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	// TODO: for sell side: it is overflowed (10x1e18 > int64 max), so it ends up with funny bnb balance in add1
+	assert.Equal(int64(4233372036854776), GetAvail(ctx, add1, "BNB"))
+}
+
+// #4: non bnb pair (with expansive bnb) leads to no fee (too small?)
+func Test_Overflow_4(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1, 1, 10e8)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_ETH-000", 10e8, 1e8)
+	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_ETH-000", 10e8, 1e8)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, sells := getRawOrderBook("BTC-000_ETH-000")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_ETH-000")
+	assert.Equal(int64(10e8), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_ETH-000")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+
+	assert.Equal(int64(99990e8), GetAvail(ctx, add0, "ETH-000"))
+	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	// TODO: for buy side: no fee charged, too small?
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(100010e8), GetAvail(ctx, add1, "ETH-000"))
+	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	// TODO: for sell side: no fee charged, too small?
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+}
+
+// #5: sum of orders overflowed leads to unexpected trade failure
+func Test_Overflow_5(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 9e18, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	/* sum of buy side overflowed as 10e18 > int64 max
+	sum    sell    price    buy    sum      exec    imbal
+	9e18   	       5        5e18   5e18     5e18    -4e18
+	9e18   	       4        5e18   [10e18]  9e18    unknown
+	9e18   9e18	   3               [10e18]  9e18    unknown
+	*/
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 5, 5e18)
+	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgB2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 4, 5e18)
+	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 3, 9e18)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
+	buys, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(2, len(buys))
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(1, len(buys[1].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(3), lastPx)
+	// TODO: no trade, due to sum overflow?
+	assert.Equal(0, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(2, len(buys))
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(1, len(buys[1].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+}
+
+// test match and allocation rules
+func Test_Match_And_Allocation(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -3178,12 +3552,23 @@ func Test_Match_And_Allocation(t *testing.T) {
 	add3 := acc3.GetAddress()
 	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
 
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
 	//#1 cannot buy with more than they have
 	msg1_1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
-	res, err := testClient.DeliverTxSync(msg1_1, testApp.Codec)
+	_, err := testClient.DeliverTxSync(msg1_1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
 
 	msg1_2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
-	res, err = testClient.DeliverTxSync(msg1_2, testApp.Codec)
+	res, err := testClient.DeliverTxSync(msg1_2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
 
 	assert.Equal(true, strings.Contains(res.Log, "do not have enough token to lock"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
@@ -3192,10 +3577,16 @@ func Test_Match_And_Allocation(t *testing.T) {
 
 	//#2 cannot sell more than they have
 	msg2_1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 60000e8)
-	res, err = testClient.DeliverTxSync(msg2_1, testApp.Codec)
+	_, err = testClient.DeliverTxSync(msg2_1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
 
 	msg2_2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 1e8, 60000e8)
 	res, err = testClient.DeliverTxSync(msg2_2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
 
 	assert.Equal(true, strings.Contains(res.Log, "do not have enough token to lock"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
@@ -3204,38 +3595,54 @@ func Test_Match_And_Allocation(t *testing.T) {
 
 	//#3 cancel will return fund
 	msg3_1 := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msg1_1.Id)
-	res, err = testClient.DeliverTxSync(msg3_1, testApp.Codec)
+	_, err = testClient.DeliverTxSync(msg3_1, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(99999.9998e8), GetAvail(ctx, add0, "BNB"))
 
 	msg3_2 := o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
-	res, err = testClient.DeliverTxSync(msg3_2, testApp.Codec)
+	_, err = testClient.DeliverTxSync(msg3_2, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(24999.9998e8), GetAvail(ctx, add0, "BNB"))
 	assert.Equal(int64(75000e8), GetLocked(ctx, add0, "BNB"))
 
 	msg3_3 := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msg3_2.Id)
-	res, err = testClient.DeliverTxSync(msg3_3, testApp.Codec)
+	_, err = testClient.DeliverTxSync(msg3_3, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(99999.9996e8), GetAvail(ctx, add0, "BNB"))
 
 	msg3_4 := o.NewCancelOrderMsg(add1, "BTC-000_BNB", msg2_1.Id)
-	res, err = testClient.DeliverTxSync(msg3_4, testApp.Codec)
+	_, err = testClient.DeliverTxSync(msg3_4, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BTC-000"))
 	assert.Equal(int64(99999.9998e8), GetAvail(ctx, add1, "BNB"))
 
 	//#4, test different price and allocation rules
 
 	/*
-		[- min surplus (absolute leftover volume)]
-		sum    sell    price    buy    sum    exec    imbal
-		150            12       30     30     30	  -120
-		150		       11              30	  30      -120
-		150		       10       10     40     40      -110
-		150            9	    20	   60	  60	  -90
-		150	   25	   8	    30	   90	  90	  -60
-		125	   25	   7		       90     90	  -35
-		100	   100	   6		       90	  90	  -10
+	[- min surplus (absolute leftover volume)]
+	sum    sell    price    buy    sum    exec    imbal
+	150            12       30     30     30	  -120
+	150		       11              30	  30      -120
+	150		       10       10     40     40      -110
+	150            9	    20	   60	  60	  -90
+	150	   25	   8	    30	   90	  90	  -60
+	125	   25	   7		       90     90	  -35
+	100	   100	   6		       90	  90	  -10
 	*/
 
 	msg := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 12e8, 30e8)
@@ -3287,19 +3694,19 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 15 @ 12
-	    sell 10 @ 6
-		[- min surplus (absolute leftover volume)
-		 - orders from earlier are filled first]
-		sum    sell    price    buy    sum    exec    imbal
-		70             12       15	   15	  15      -55
-		70  		   11              15	  15	  -55
-		70		       10		       15	  15	  -55
-		70		       9		       15	  15      -55
-		70	   25	   8		       15	  15      -55
-		45	   25	   7		       15	  15	  -30
-		20	   20	   6		       15	  15      -5
+	incoming
+    buy 15 @ 12
+    sell 10 @ 6
+	[- min surplus (absolute leftover volume)
+	 - orders from earlier are filled first]
+	sum    sell    price    buy    sum    exec    imbal
+	70             12       15	   15	  15      -55
+	70  		   11              15	  15	  -55
+	70		       10		       15	  15	  -55
+	70		       9		       15	  15      -55
+	70	   25	   8		       15	  15      -55
+	45	   25	   7		       15	  15	  -30
+	20	   20	   6		       15	  15      -5
 	*/
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 4, ctx, am), 1, "BTC-000_BNB", 12e8, 15e8)
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
@@ -3345,20 +3752,20 @@ func Test_Match_And_Allocation(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	/*
-		incoming
-	    buy 5 @ 12
-	    buy 5 @ 10
-	    buy 10 @ 8
-	    buy 5 @ 7
-		[- max matched volume]
-		sum    sell    price    buy    sum    exec    imbal
-	    55		       12	    5	   5	  5	      -50
-	    55		       11		       5	  5	      -50
-	    55		       10	    5	   10	  10	  -45
-	    55		       9		       10	  10	  -45
-	    55	   25	   8	    10	   20	  20	  -35
-	    30	   25	   7	    5	   25	  25	  -5
-	    5	   5	   6		       25	  5	      20
+	incoming
+    buy 5 @ 12
+    buy 5 @ 10
+    buy 10 @ 8
+    buy 5 @ 7
+	[- max matched volume]
+	sum    sell    price    buy    sum    exec    imbal
+    55		       12	    5	   5	  5	      -50
+    55		       11		       5	  5	      -50
+    55		       10	    5	   10	  10	  -45
+    55		       9		       10	  10	  -45
+    55	   25	   8	    10	   20	  20	  -35
+    30	   25	   7	    5	   25	  25	  -5
+    5	   5	   6		       25	  5	      20
 	*/
 
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 5, ctx, am), 1, "BTC-000_BNB", 12e8, 5e8)
@@ -3405,19 +3812,19 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BNB"))
 
 	/*
-		incoming
-		buy 10 @ 13
-	    buy 10 @ 10
-	    sell 25 @ 8
-		[- adjust market pressure, sell side, ap > rp - 5% => lowest]
-		sum    sell    price    buy    sum    exec    imbal
-	    30		       13	    10	   10	  10	  -20
-	    30		       12		       10	  10      -20
-	    30		       11		       10	  10	  -20
-	    30		       10	    10	   20	  20	  -10
-	    30		       9		       20	  20	  -10
-	    30	   25	   8		       20     20	  -10
-	    5	   5	   7		       20	  5	      15
+	incoming
+	buy 10 @ 13
+    buy 10 @ 10
+    sell 25 @ 8
+	[- adjust market pressure, sell side, ap > rp - 5% => lowest]
+	sum    sell    price    buy    sum    exec    imbal
+    30		       13	    10	   10	  10	  -20
+    30		       12		       10	  10      -20
+    30		       11		       10	  10	  -20
+    30		       10	    10	   20	  20	  -10
+    30		       9		       20	  20	  -10
+    30	   25	   8		       20     20	  -10
+    5	   5	   7		       20	  5	      15
 	*/
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 9, ctx, am), 1, "BTC-000_BNB", 13e8, 10e8)
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
@@ -3456,18 +3863,18 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 10 @ 13
-	    buy 10 @ 10
-	    sell 10 @ 11
-		[- adjust market pressure, sell side, ap > rp - 5% => lowest]
-		sum    sell    price    buy    sum    exec    imbal
-	    45		       13	    10	   10	  10	  -35
-	    45		       12		       10	  10	  -35
-	    45	   10	   11		       10	  10	  -35
-	    35	           10	    10	   20	  10	  -15
-	    35		       9		       20	  10	  -15
-	    35	   35	   8		       20	  10	  -15
+	incoming
+    buy 10 @ 13
+    buy 10 @ 10
+    sell 10 @ 11
+	[- adjust market pressure, sell side, ap > rp - 5% => lowest]
+	sum    sell    price    buy    sum    exec    imbal
+    45		       13	    10	   10	  10	  -35
+    45		       12		       10	  10	  -35
+    45	   10	   11		       10	  10	  -35
+    35	           10	    10	   20	  10	  -15
+    35		       9		       20	  10	  -15
+    35	   35	   8		       20	  10	  -15
 	*/
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 11, ctx, am), 1, "BTC-000_BNB", 13e8, 10e8)
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
@@ -3506,18 +3913,18 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 10 @ 12
-	    buy 10 @ 9
-	    buy 10 @ 9
-		[- adjust market pressure, buy side, else: min(rp + 5%, highest)
-		 - orders with same price and block height are split proportionally]
-		sum    sell    price    buy    sum    exec    imbal
-	    25		       12	    10	   10	  10	  -15
-	    25	   10	   11		       10	  10	  -15
-	    15		       10		       10	  10	  -5
-	    15		       9	    20	   20	  15	  5
-	    15	   15	   8		       20	  15	  5
+	incoming
+    buy 10 @ 12
+    buy 10 @ 9
+    buy 10 @ 9
+	[- adjust market pressure, buy side, else: min(rp + 5%, highest)
+	 - orders with same price and block height are split proportionally]
+	sum    sell    price    buy    sum    exec    imbal
+    25		       12	    10	   10	  10	  -15
+    25	   10	   11		       10	  10	  -15
+    15		       10		       10	  10	  -5
+    15		       9	    20	   20	  15	  5
+    15	   15	   8		       20	  15	  5
 	*/
 
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 13, ctx, am), 1, "BTC-000_BNB", 12e8, 10e8)
@@ -3557,21 +3964,21 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 50 @ 20
-	    sell 10 @ 10
-	    sell 10 @ 9
-	    sell 10 @ 7
-		[- adjust market pressure, buy side, ap > rp + 5% => lowest]
-		big order (up)
-		sum    sell    price    buy    sum    exec    imbal
-	    40		       20	    50	   50	  40	  10
-	    40		       12		       50	  40	  10
-	    40	   10	   11		       50	  40	  10
-	    30	   10	   10		       50	  30	  20
-	    20	   10	   9	    15	   65	  20	  45
-		10	           8	           65	  10	  55
-	    10	   10	   7		       65	  10	  55
+	incoming
+    buy 50 @ 20
+    sell 10 @ 10
+    sell 10 @ 9
+    sell 10 @ 7
+	[- adjust market pressure, buy side, ap > rp + 5% => lowest]
+	big order (up)
+	sum    sell    price    buy    sum    exec    imbal
+    40		       20	    50	   50	  40	  10
+    40		       12		       50	  40	  10
+    40	   10	   11		       50	  40	  10
+    30	   10	   10		       50	  30	  20
+    20	   10	   9	    15	   65	  20	  45
+	10	           8	           65	  10	  55
+    10	   10	   7		       65	  10	  55
 	*/
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 16, ctx, am), 1, "BTC-000_BNB", 20e8, 50e8)
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
@@ -3613,21 +4020,21 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 30 @ 15
-	    sell 10 @ 17
-	    sell 10 @ 15
-	    sell 30 @ 9
-		[- min surplus (absolute leftover volume)]
-		big order (up)
-		sum    sell    price    buy    sum    exec    imbal
-	    50		       20	    10	   10	  10	  -40
-	    50	   10	   17		       10	  10	  -40
-	    40	   10	   15	    30	   40	  30	  0
-	    30		       12		       40	  30	  10
-	    30		       11		       40	  30	  10
-	    30		       10		       40	  30	  10
-	    30	   30	   9	    15	   55	  15	  25
+	incoming
+    buy 30 @ 15
+    sell 10 @ 17
+    sell 10 @ 15
+    sell 30 @ 9
+	[- min surplus (absolute leftover volume)]
+	big order (up)
+	sum    sell    price    buy    sum    exec    imbal
+    50		       20	    10	   10	  10	  -40
+    50	   10	   17		       10	  10	  -40
+    40	   10	   15	    30	   40	  30	  0
+    30		       12		       40	  30	  10
+    30		       11		       40	  30	  10
+    30		       10		       40	  30	  10
+    30	   30	   9	    15	   55	  15	  25
 	*/
 
 	msg = o.NewNewOrderMsg(add3, genOrderID(add3, 8, ctx, am), 2, "BTC-000_BNB", 17e8, 10e8)
@@ -3670,23 +4077,23 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 10 @ 17
-	    buy 10 @ 15
-	    buy 10 @ 11
-	    sell 10 @ 16
-	    sell 10 @ 15
-	    sell 30 @ 9
-		[- rp or close to rp]
-		big order (down)
-		sum    sell    price    buy    sum    exec    imbal
-	    60	   10	   17	    10	   10	  10	  -50
-	    50	   10	   16		       10	  10	  -40
-	    40	   10	   15	    10	   20	  20	  -20
-	    30	           12		       20	  20	  -10
-	    30		       11	    10	   30	  30	  0
-	    30		       10		       30	  30	  0
-	    30	   30	   9	    15	   45	  30	  15
+	incoming
+    buy 10 @ 17
+    buy 10 @ 15
+    buy 10 @ 11
+    sell 10 @ 16
+    sell 10 @ 15
+    sell 30 @ 9
+	[- rp or close to rp]
+	big order (down)
+	sum    sell    price    buy    sum    exec    imbal
+    60	   10	   17	    10	   10	  10	  -50
+    50	   10	   16		       10	  10	  -40
+    40	   10	   15	    10	   20	  20	  -20
+    30	           12		       20	  20	  -10
+    30		       11	    10	   30	  30	  0
+    30		       10		       30	  30	  0
+    30	   30	   9	    15	   45	  30	  15
 	*/
 
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 18, ctx, am), 1, "BTC-000_BNB", 17e8, 10e8)
@@ -3735,18 +4142,18 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 30 @ 17
-		[- max matched volume]
-		big order (up)
-		sum    sell    price    buy    sum    exec    imbal
-	    30	   10	   17	    30	   30	  30	  0
-	    20	   10	   16		       30     20	  10
-		10	   10	   15		       30	  10	  20
-	    0	           12		       30	  0	      30
-	    0		       11		       30	  0	      30
-	    0		       10		       30	  0	      30
-	    0		       9	    15	   45	  0	      45
+	incoming
+    buy 30 @ 17
+	[- max matched volume]
+	big order (up)
+	sum    sell    price    buy    sum    exec    imbal
+    30	   10	   17	    30	   30	  30	  0
+    20	   10	   16		       30     20	  10
+	10	   10	   15		       30	  10	  20
+    0	           12		       30	  0	      30
+    0		       11		       30	  0	      30
+    0		       10		       30	  0	      30
+    0		       9	    15	   45	  0	      45
 	*/
 
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 21, ctx, am), 1, "BTC-000_BNB", 17e8, 30e8)
@@ -3780,20 +4187,20 @@ func Test_Match_And_Allocation(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BNB"))
 
 	/*
-		incoming
-	    buy 10 @ 17
-	    buy 10 @ 12
-	    sell 30 @ 10
-		[ - adjust market pressure, sell side, ap < rp - 5% => highest]
-		big order (down)
-		sum    sell    price    buy    sum    exec    imbal
-	    30		       17	    10	   10	  10	  -20
-	    30		       16		       10	  10	  -20
-	    30		       15		       10	  10	  -20
-	    30		       12	    10	   20	  20	  -10
-	    30		       11		       20	  20	  -10
-	    30	   30	   10		       20	  20	  -10
-	    0		       9	    15	   35	  0	      35
+	incoming
+    buy 10 @ 17
+    buy 10 @ 12
+    sell 30 @ 10
+	[ - adjust market pressure, sell side, ap < rp - 5% => highest]
+	big order (down)
+	sum    sell    price    buy    sum    exec    imbal
+    30		       17	    10	   10	  10	  -20
+    30		       16		       10	  10	  -20
+    30		       15		       10	  10	  -20
+    30		       12	    10	   20	  20	  -10
+    30		       11		       20	  20	  -10
+    30	   30	   10		       20	  20	  -10
+    0		       9	    15	   35	  0	      35
 	*/
 
 	msg = o.NewNewOrderMsg(add2, genOrderID(add2, 22, ctx, am), 1, "BTC-000_BNB", 17e8, 10e8)
