@@ -15,6 +15,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/wire"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -28,6 +29,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, 1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, 1)
+}
 
 type level struct {
 	price utils.Fixed8
@@ -49,7 +55,7 @@ func getOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
-// it is raw order book as it does NOT aggregate the quantity in a price level
+// it is the raw order book as it does not aggregate the quantity in a price level
 func getRawOrderBook(pair string) ([]matcheng.PriceLevel, []matcheng.PriceLevel) {
 	rawOrderBook := testApp.DexKeeper.GetOrderBook(pair)
 	if rawOrderBook != nil {
@@ -58,6 +64,7 @@ func getRawOrderBook(pair string) ([]matcheng.PriceLevel, []matcheng.PriceLevel)
 	return nil, nil
 }
 
+// check the order entry in allorders
 func getOrderExist(pair string, id string) bool {
 	_, exist := testApp.DexKeeper.OrderExists(pair, id)
 	return exist
@@ -359,7 +366,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add, "BTC-000"))
 }
 
-// it's required setup for simulating endblock in test
+// it's the required setup for simulating endblock in test
 func testSetup(prices ...int64) (sdk.Context, crypto.Address) {
 	items := []int64{int64(10e8), int64(10e8), int64(10e8)}
 	for i, price := range prices {
@@ -438,9 +445,7 @@ func Test_Cancel_1(t *testing.T) {
 	for i := 0; i < len(orderMsgs); i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, 1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 	}
 
@@ -455,9 +460,7 @@ func Test_Cancel_1(t *testing.T) {
 
 	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsgs[10].Id)
 	_, err := testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(19, len(buys))
@@ -477,9 +480,7 @@ func Test_Cancel_1(t *testing.T) {
 
 	msgC = o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsgs[9].Id)
 	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(18, len(buys))
@@ -495,7 +496,7 @@ func Test_Cancel_1(t *testing.T) {
 func Test_Cancel_2(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -511,9 +512,7 @@ func Test_Cancel_2(t *testing.T) {
 	for i := 0; i < len(orderMsgs); i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, 1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 	}
 
@@ -535,9 +534,7 @@ func Test_Cancel_2(t *testing.T) {
 
 	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsgs[0].Id)
 	_, err := testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(9, len(buys))
@@ -553,7 +550,7 @@ func Test_Cancel_2(t *testing.T) {
 func Test_Cancel_3(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -569,9 +566,7 @@ func Test_Cancel_3(t *testing.T) {
 	for i := 0; i < len(orderMsgs); i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, 1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 	}
 
@@ -593,9 +588,7 @@ func Test_Cancel_3(t *testing.T) {
 
 	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsgs[15].Id)
 	_, err := testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(15, len(buys))
@@ -627,9 +620,7 @@ func Test_Cancel_4(t *testing.T) {
 	for i := 0; i < len(orderMsgs); i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, 1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 	}
 
@@ -652,9 +643,7 @@ func Test_Cancel_4(t *testing.T) {
 	for _, orderMsg := range orderMsgs {
 		msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsg.Id)
 		_, err := testClient.DeliverTxSync(msgC, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
@@ -684,9 +673,7 @@ func Test_Cancel_5(t *testing.T) {
 
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, 1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 
 		testClient.cl.EndBlockSync(ty.RequestEndBlock{})
@@ -711,9 +698,7 @@ func Test_Cancel_5(t *testing.T) {
 	for _, orderMsg := range orderMsgs {
 		msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsg.Id)
 		_, err := testClient.DeliverTxSync(msgC, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
@@ -727,7 +712,7 @@ func Test_Cancel_5(t *testing.T) {
 func Test_Cancel_6(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -745,17 +730,13 @@ func Test_Cancel_6(t *testing.T) {
 	for i := 0; i < len(orderMsgs); i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", 1e8, 2e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		orderMsgs[i] = msg
 	}
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 16e8)
 	_, err := testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys))
@@ -793,9 +774,7 @@ func Test_Cancel_6(t *testing.T) {
 	for _, orderMsg := range orderMsgs {
 		msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", orderMsg.Id)
 		_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
@@ -813,7 +792,7 @@ func Test_Cancel_6(t *testing.T) {
 func Test_Cancel_7(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -827,9 +806,7 @@ func Test_Cancel_7(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -846,9 +823,7 @@ func Test_Cancel_7(t *testing.T) {
 
 	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msgB.Id)
 	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
@@ -858,9 +833,7 @@ func Test_Cancel_7(t *testing.T) {
 
 	msgS := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(sells[0].Orders))
@@ -878,9 +851,7 @@ func Test_Cancel_7(t *testing.T) {
 
 	msgC = o.NewCancelOrderMsg(add0, "BTC-000_BNB", msgS.Id)
 	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	_, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(sells))
@@ -894,7 +865,7 @@ func Test_Cancel_7(t *testing.T) {
 func Test_IOC_1(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -911,9 +882,7 @@ func Test_IOC_1(t *testing.T) {
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	msgB.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, _ := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -937,9 +906,7 @@ func Test_IOC_1(t *testing.T) {
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	msgS.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(sells[0].Orders))
@@ -983,9 +950,7 @@ func Test_IOC_2(t *testing.T) {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, _ := getRawOrderBook("BTC-000_BNB")
@@ -1014,9 +979,7 @@ func Test_IOC_2(t *testing.T) {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
@@ -1063,16 +1026,12 @@ func Test_IOC_3(t *testing.T) {
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 2e8)
 	msgB.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	msgS.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1137,17 +1096,13 @@ func Test_IOC_4(t *testing.T) {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+2)*1e8)
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	msgB := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 10e8)
 	msgB.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(5, len(buys))
@@ -1214,47 +1169,33 @@ func Test_IOC_5(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 6e8, 7e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 5e8, 6e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB3 := o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 4e8, 5e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB4 := o.NewNewOrderMsg(add0, genOrderID(add0, 3, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 	msgB4.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgB4, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB5 := o.NewNewOrderMsg(add0, genOrderID(add0, 4, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 	msgB5.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgB5, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 1e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1314,15 +1255,11 @@ func Test_Fill_1(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1354,16 +1291,12 @@ func Test_Fill_1(t *testing.T) {
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	msgB.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS = o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	msgB.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1394,16 +1327,12 @@ func Test_Fill_1(t *testing.T) {
 
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS = o.NewNewOrderMsg(add1, genOrderID(add1, 2, ctx, am), 2, "BTC-000_BNB", 1e8, 1e8)
 	msgB.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1460,17 +1389,13 @@ func Test_Fill_3(t *testing.T) {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 100e8)
 	msgS.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(5, len(buys))
@@ -1511,7 +1436,7 @@ func Test_Fill_3(t *testing.T) {
 func Test_Fill_4(t *testing.T) {
 	assert := assert.New(t)
 
-    ctx, valAddr := testSetup()
+	ctx, valAddr := testSetup()
 
 	am := testApp.AccountKeeper
 	acc0 := Account(0)
@@ -1540,9 +1465,7 @@ func Test_Fill_4(t *testing.T) {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	for i := 0; i < 3; i++ {
@@ -1551,9 +1474,7 @@ func Test_Fill_4(t *testing.T) {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
@@ -1622,23 +1543,17 @@ func Test_Fill_5(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 15e8)
 	msgS1.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 2e8, 7e8)
 	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -1704,34 +1619,24 @@ func Test_Fill_6(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 3e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 15e8)
 	msgS1.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS2 := o.NewNewOrderMsg(add3, genOrderID(add3, 1, ctx, am), 2, "BTC-000_BNB", 2e8, 7e8)
 	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -1749,6 +1654,9 @@ func Test_Fill_6(t *testing.T) {
 	assert.Equal(int64(99978e8), GetAvail(ctx, add3, "BTC-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add3, "BNB"))
 	assert.Equal(int64(22e8), GetLocked(ctx, add3, "BTC-000"))
+
+	// set the height for executing the new code path
+	upgrade.Mgr.SetHeight(int64(2))
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -1800,15 +1708,11 @@ func Test_Fill_7(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 10e8, 10e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 10e8, 5e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1849,9 +1753,7 @@ func Test_Fill_7(t *testing.T) {
 
 	msgS = o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 8e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1892,9 +1794,7 @@ func Test_Fill_7(t *testing.T) {
 
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 9e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1935,9 +1835,7 @@ func Test_Fill_7(t *testing.T) {
 
 	msgS = o.NewNewOrderMsg(add1, genOrderID(add1, 2, ctx, am), 2, "BTC-000_BNB", 5e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -1978,9 +1876,7 @@ func Test_Fill_7(t *testing.T) {
 
 	msgB = o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 12e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -2039,9 +1935,7 @@ func Test_Expire_1(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, _ := getRawOrderBook("BTC-000_BNB")
@@ -2084,9 +1978,7 @@ func Test_Expire_1(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
@@ -2148,9 +2040,7 @@ func Test_Expire_2a(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, _ := getRawOrderBook("BTC-000_BNB")
@@ -2171,15 +2061,11 @@ func Test_Expire_2a(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 5, ctx, am), 1, "BTC-000_BNB", 10e8, 10e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 11e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(6, len(buys))
@@ -2232,9 +2118,7 @@ func Test_Expire_2b(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
@@ -2255,15 +2139,11 @@ func Test_Expire_2b(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 10e8, 10e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 5, ctx, am), 2, "BTC-000_BNB", 11e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -2316,16 +2196,12 @@ func Test_Expire_3(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+2)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		if i == 2 {
 			for j := 0; j < 2; j++ {
 				msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i+1+j), ctx, am), 1, "BTC-000_BNB", int64(i+2)*1e8, int64(i+1)*1e8)
 				_, err = testClient.DeliverTxSync(msg, testApp.Codec)
-				if err != nil {
-					panic(err)
-				}
+				assert.NoError(err)
 			}
 		}
 	}
@@ -2333,16 +2209,12 @@ func Test_Expire_3(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", int64(i+5)*1e8, int64(i+1)*1e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		if i == 2 {
 			for j := 0; j < 2; j++ {
 				msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i+1+j), ctx, am), 2, "BTC-000_BNB", int64(i+5)*1e8, int64(i+1)*1e8)
 				_, err = testClient.DeliverTxSync(msg, testApp.Codec)
-				if err != nil {
-					panic(err)
-				}
+				assert.NoError(err)
 			}
 		}
 	}
@@ -2370,27 +2242,19 @@ func Test_Expire_3(t *testing.T) {
 
 	msgB5 := o.NewNewOrderMsg(add0, genOrderID(add0, 5, ctx, am), 1, "BTC-000_BNB", 1e8, 10e8)
 	_, err := testClient.DeliverTxSync(msgB5, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB6 := o.NewNewOrderMsg(add0, genOrderID(add0, 6, ctx, am), 1, "BTC-000_BNB", 4.25e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB6, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS5 := o.NewNewOrderMsg(add1, genOrderID(add1, 5, ctx, am), 2, "BTC-000_BNB", 4.75e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS5, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS6 := o.NewNewOrderMsg(add1, genOrderID(add1, 6, ctx, am), 2, "BTC-000_BNB", 10e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS6, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
 	// for buy: price level is ordered from high to low
@@ -2449,16 +2313,12 @@ func Test_Expire_4a(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", 1e8, 10e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 15e8)
 	_, err := testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -2524,16 +2384,12 @@ func Test_Expire_4b(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 15e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	for i := 0; i < 3; i++ {
 		msg := o.NewNewOrderMsg(add1, genOrderID(add1, int64(i), ctx, am), 2, "BTC-000_BNB", 1e8, 10e8)
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 	}
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
@@ -2604,16 +2460,12 @@ func Test_Expire_5(t *testing.T) {
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	msgB.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 1e8)
 	msgS.TimeInForce = 3
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -2655,15 +2507,11 @@ func Test_Expire_6(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -2720,27 +2568,19 @@ func Test_Special_1(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -2749,6 +2589,8 @@ func Test_Special_1(t *testing.T) {
 	assert.True(getOrderExist("BTC-000_BNB", msgB2.Id))
 	assert.True(getOrderExist("BTC-000_BNB", msgB3.Id))
 	assert.True(getOrderExist("BTC-000_BNB", msgS.Id))
+
+	upgrade.Mgr.SetHeight(int64(1))
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -2776,7 +2618,6 @@ func Test_Special_1(t *testing.T) {
 	assert.Equal(int64(99990e8), GetAvail(ctx, add3, "BTC-000"))
 	assert.Equal(int64(100019.99e8), GetAvail(ctx, add3, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC-000"))
-
 }
 
 // #2: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from different blocks
@@ -2803,9 +2644,7 @@ func Test_Special_2(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -2816,9 +2655,7 @@ func Test_Special_2(t *testing.T) {
 
 	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -2829,9 +2666,7 @@ func Test_Special_2(t *testing.T) {
 
 	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -2842,9 +2677,7 @@ func Test_Special_2(t *testing.T) {
 
 	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -2906,27 +2739,19 @@ func Test_Special_3(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 2e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 2e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 2e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 3e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -2988,27 +2813,19 @@ func Test_Special_4(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 3e8)
 	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(3, len(buys[0].Orders))
@@ -3070,33 +2887,23 @@ func Test_Special_5(t *testing.T) {
 
 	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 12e8)
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
 	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS4 := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS4, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys[0].Orders))
@@ -3106,6 +2913,8 @@ func Test_Special_5(t *testing.T) {
 	assert.True(getOrderExist("BTC-000_BNB", msgS2.Id))
 	assert.True(getOrderExist("BTC-000_BNB", msgS3.Id))
 	assert.True(getOrderExist("BTC-000_BNB", msgS4.Id))
+
+	upgrade.Mgr.SetHeight(int64(1))
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -3162,18 +2971,17 @@ func Test_Overflow_1a(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", 1, 1e18)
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
+		assert.NoError(err)
+		if i < 9 {
+			assert.Equal(uint32(0), res.Code)
+		} else {
+			assert.True(strings.Contains(res.Log, "order quantity is too large to be placed on this price level"))
 		}
-		// make sure that the msg is valid
-		assert.Equal(uint32(0), res.Code)
-		fmt.Println(res.Log)
 	}
 
 	buys, _ := getOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys))
-	// overflow issue reproduced
-	assert.True(buys[0].qty < 1)
+	assert.Equal(utils.Fixed8(9e18), buys[0].qty)
 }
 
 // #1b: multiple buy orders (diff price levels) overflow int64 max
@@ -3207,25 +3015,20 @@ func Test_Overflow_1b(t *testing.T) {
 	1e8            2        1e18   9e18     1e8     -
 	1e8    1e8     1        1e18   [10e18]  1e8     the largest abs
 	*/
+
 	// although sum of buy side overflowed, in this case, match and allocation of orders can still be completed properly
 
 	for i := 0; i < 10; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1), 1e18)
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
+		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
-		fmt.Println(res.Log)
 	}
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", int64(1), 1e8)
 	res, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
-	fmt.Println(res.Log)
 
 	buys, sells := getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
@@ -3246,13 +3049,15 @@ func Test_Overflow_1b(t *testing.T) {
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(0, len(sells))
-	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	// for buy side: bnb is so cheap, so fee is charged using btc
+	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
-	// TODO: no fee charged, too small?
 	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
+	// for sell side: no fee charged; TODO: fix required!!!
 	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
 	assert.Equal(int64(100000.00000010e8), GetAvail(ctx, add1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+	assert.True(false)
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -3261,16 +3066,14 @@ func Test_Overflow_1b(t *testing.T) {
 
 	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", int64(10), 1e8)
 	res, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
 	fmt.Println(res.Log)
 
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(1, len(sells))
-	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
 	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
 	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
@@ -3286,11 +3089,60 @@ func Test_Overflow_1b(t *testing.T) {
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(0, len(sells))
-	assert.Equal(int64(100002e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(100001.9980e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
 	assert.Equal(int64(5499.99999980e8), GetLocked(ctx, add0, "BNB"))
 	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
 	assert.Equal(int64(100000.00000020e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
+}
+
+// #1c: additional test case using very cheap bnb, not really overflow related
+func Test_Overflow_1c(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e18)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+
+	ResetAccounts(ctx, testApp, 2e18, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e18, 1)
+	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	assert.NoError(err)
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e18, 1)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	assert.NoError(err)
+
+	buys, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(1e18), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+
+	assert.Equal(int64(10000000000001), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(1999999989995000000), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(9999999999999), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(2000000009995000000), GetAvail(ctx, add1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
 }
 
@@ -3314,17 +3166,13 @@ func Test_Overflow_2a(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 2, "BTC-000_BNB", price, 1e8)
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
-		// make sure that the msg is valid
+		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
-		fmt.Println(res.Log)
 	}
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(sells[0].Orders))
-	// TODO: do we grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max?
+	// grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max
 }
 
 // #2b: multiple sell orders (diff price levels) overflow int64 max
@@ -3347,17 +3195,13 @@ func Test_Overflow_2b(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 2, "BTC-000_BNB", price*int64(i+1), 1e8)
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
-		if err != nil {
-			panic(err)
-		}
-		// make sure that the msg is valid
+		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
-		fmt.Println(res.Log)
 	}
 
 	_, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(5, len(sells))
-	// TODO: do we grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max?
+	// grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max
 }
 
 // #3: non bnb pair (with cheap bnb) leads to overflow of int64 max
@@ -3379,20 +3223,12 @@ func Test_Overflow_3(t *testing.T) {
 	testApp.DeliverState.Ctx = ctx
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_ETH-000", 10e8, 1e8)
-	res, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(uint32(0), res.Code)
-	fmt.Println(res.Log)
+	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_ETH-000", 10e8, 1e8)
-	res, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(uint32(0), res.Code)
-	fmt.Println(res.Log)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_ETH-000")
 	assert.Equal(1, len(buys[0].Orders))
@@ -3412,13 +3248,13 @@ func Test_Overflow_3(t *testing.T) {
 	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
 	// for buy side: insufficent bnb (1x1e18 > 100000e8), so fee is deducted from btc-000 => 100001 - 1 * 0.001
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BNB"))
-	assert.Equal(int64(100010e8), GetAvail(ctx, add1, "ETH-000"))
+	assert.Equal(int64(100009.9900e8), GetAvail(ctx, add1, "ETH-000"))
 	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
-	// TODO: for sell side: it is overflowed (10x1e18 > int64 max), so it ends up with funny bnb balance in add1
-	assert.Equal(int64(4233372036854776), GetAvail(ctx, add1, "BNB"))
+	// for sell side: it is overflowed (10x1e18 > int64 max), so fee is deducted from eth-000 => 10e8 * 0.001 = 0.01e8
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
 }
 
-// #4: non bnb pair (with expansive bnb) leads to no fee (too small?)
+// #4: non bnb pair (with expansive bnb) leads to no fee (too small)
 func Test_Overflow_4(t *testing.T) {
 	assert := assert.New(t)
 
@@ -3438,15 +3274,11 @@ func Test_Overflow_4(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_ETH-000", 10e8, 1e8)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_ETH-000", 10e8, 1e8)
 	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_ETH-000")
 	assert.Equal(1, len(buys[0].Orders))
@@ -3463,12 +3295,10 @@ func Test_Overflow_4(t *testing.T) {
 	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(99990e8), GetAvail(ctx, add0, "ETH-000"))
-	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
-	// TODO: for buy side: no fee charged, too small?
+	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BNB"))
-	assert.Equal(int64(100010e8), GetAvail(ctx, add1, "ETH-000"))
+	assert.Equal(int64(100009.9900e8), GetAvail(ctx, add1, "ETH-000"))
 	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
-	// TODO: for sell side: no fee charged, too small?
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
 }
 
@@ -3483,7 +3313,14 @@ func Test_Overflow_5(t *testing.T) {
 	add0 := acc0.GetAddress()
 	acc1 := Account(1)
 	add1 := acc1.GetAddress()
-	ResetAccounts(ctx, testApp, 100000e8, 9e18, 100000e8)
+
+	a := testApp.AccountKeeper.GetAccount(ctx, acc0.GetAddress())
+	a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 100000e8), sdk.NewCoin("BTC-000", 0)})
+	testApp.AccountKeeper.SetAccount(ctx, a)
+
+	a = testApp.AccountKeeper.GetAccount(ctx, acc1.GetAddress())
+	a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", 100000e8), sdk.NewCoin("BTC-000", 9e18)})
+	testApp.AccountKeeper.SetAccount(ctx, a)
 
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
@@ -3499,21 +3336,15 @@ func Test_Overflow_5(t *testing.T) {
 
 	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 5, 5e18)
 	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgB2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 4, 5e18)
 	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 3, 9e18)
 	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	buys, sells := getRawOrderBook("BTC-000_BNB")
 	assert.Equal(2, len(buys))
@@ -3525,14 +3356,19 @@ func Test_Overflow_5(t *testing.T) {
 
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
 	assert.Equal(int64(3), lastPx)
-	// TODO: no trade, due to sum overflow?
-	assert.Equal(0, len(trades))
+	assert.Equal(2, len(trades))
 
 	buys, sells = getRawOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
+	assert.Equal(1, len(buys))
 	assert.Equal(1, len(buys[0].Orders))
-	assert.Equal(1, len(buys[1].Orders))
-	assert.Equal(1, len(sells[0].Orders))
+	assert.Equal(0, len(sells))
+
+	assert.Equal(int64(9e18), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(96898.6500e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(400e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(102698.6500e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
 }
 
 // test match and allocation rules
@@ -3560,15 +3396,11 @@ func Test_Match_And_Allocation(t *testing.T) {
 	//#1 cannot buy with more than they have
 	msg1_1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
 	_, err := testClient.DeliverTxSync(msg1_1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msg1_2 := o.NewNewOrderMsg(add0, genOrderID(add0, 1, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
 	res, err := testClient.DeliverTxSync(msg1_2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(true, strings.Contains(res.Log, "do not have enough token to lock"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
@@ -3578,15 +3410,11 @@ func Test_Match_And_Allocation(t *testing.T) {
 	//#2 cannot sell more than they have
 	msg2_1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", 1e8, 60000e8)
 	_, err = testClient.DeliverTxSync(msg2_1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	msg2_2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", 1e8, 60000e8)
 	res, err = testClient.DeliverTxSync(msg2_2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(true, strings.Contains(res.Log, "do not have enough token to lock"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
@@ -3596,18 +3424,14 @@ func Test_Match_And_Allocation(t *testing.T) {
 	//#3 cancel will return fund
 	msg3_1 := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msg1_1.Id)
 	_, err = testClient.DeliverTxSync(msg3_1, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(99999.9998e8), GetAvail(ctx, add0, "BNB"))
 
 	msg3_2 := o.NewNewOrderMsg(add0, genOrderID(add0, 2, ctx, am), 1, "BTC-000_BNB", 1e8, 75000e8)
 	_, err = testClient.DeliverTxSync(msg3_2, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(24999.9998e8), GetAvail(ctx, add0, "BNB"))
@@ -3615,18 +3439,14 @@ func Test_Match_And_Allocation(t *testing.T) {
 
 	msg3_3 := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msg3_2.Id)
 	_, err = testClient.DeliverTxSync(msg3_3, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(99999.9996e8), GetAvail(ctx, add0, "BNB"))
 
 	msg3_4 := o.NewCancelOrderMsg(add1, "BTC-000_BNB", msg2_1.Id)
 	_, err = testClient.DeliverTxSync(msg3_4, testApp.Codec)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(err)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BTC-000"))
 	assert.Equal(int64(99999.9998e8), GetAvail(ctx, add1, "BNB"))
