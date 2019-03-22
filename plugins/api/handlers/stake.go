@@ -3,17 +3,60 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/binance-chain/node/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
-	"github.com/binance-chain/node/wire"
 	"github.com/gorilla/mux"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 // ValidatorQueryReqHandler queries the whole validator set
 func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+
+	type ValidatorOutput struct {
+		AccoutAddr         sdk.AccAddress    `json:"account_address"`
+		OperatorAddr       sdk.ValAddress    `json:"operator_address"`
+		ConsPubKey         crypto.PubKey     `json:"consensus_pubkey"`
+		ConsAddr           cmn.HexBytes      `json:"consensus_address"`
+		Jailed             bool              `json:"jailed"`
+		Status             string            `json:"status"`
+		Tokens             sdk.Dec           `json:"tokens"`
+		Power              int64             `json:"power"`
+		DelegatorShares    sdk.Dec           `json:"delegator_shares"`
+		Description        stake.Description `json:"description"`
+		BondHeight         int64             `json:"bond_height"`
+		BondIntraTxCounter int16             `json:"bond_intra_tx_counter"`
+		UnbondingHeight    int64             `json:"unbonding_height"`
+		UnbondingMinTime   time.Time         `json:"unbonding_time"`
+		Commission         stake.Commission  `json:"commission"`
+	}
+
+	convertToValidatorOutputs := func(validators []stake.Validator) (validatorOutputs []ValidatorOutput) {
+		for _, val := range validators {
+			validatorOutputs = append(validatorOutputs, ValidatorOutput{
+				AccoutAddr:         sdk.AccAddress(val.OperatorAddr),
+				OperatorAddr:       val.OperatorAddr,
+				ConsPubKey:         val.ConsPubKey,
+				ConsAddr:           val.ConsPubKey.Address(),
+				Jailed:             val.Jailed,
+				Status:             sdk.BondStatusToString(val.Status),
+				Tokens:             val.Tokens,
+				Power:              val.GetPower().RawInt(),
+				DelegatorShares:    val.DelegatorShares,
+				Description:        val.Description,
+				BondHeight:         val.BondHeight,
+				BondIntraTxCounter: val.BondIntraTxCounter,
+				UnbondingHeight:    val.UnbondingHeight,
+				UnbondingMinTime:   val.UnbondingMinTime,
+				Commission:         val.Commission,
+			})
+		}
+		return
+	}
 
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -39,7 +82,7 @@ func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Hand
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(validators)
+		json.NewEncoder(w).Encode(convertToValidatorOutputs(validators))
 	}
 }
 
