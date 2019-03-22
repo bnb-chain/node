@@ -61,27 +61,39 @@ func TestCalcPriceWMA_Basic(t *testing.T) {
 	prices.Push(int64(1e5))
 	require.Equal(t, int64(1e5), utils.CalcPriceWMA(prices))
 	prices.Push(int64(2e5))
-	require.Equal(t, int64(1e5), utils.CalcPriceWMA(prices))
+	require.Equal(t, int64(166666), utils.CalcPriceWMA(prices))
 	prices.Push(int64(3e5)).Push(int64(4e5)).Push(int64(5e5)).Push(int64(6e5))
-	require.Equal(t, int64(4e5), utils.CalcPriceWMA(prices))
+	require.Equal(t, int64(433333), utils.CalcPriceWMA(prices))
 }
 
 func TestCalcPriceWMA_Real(t *testing.T) {
 	for k := 0; k < 2000; k++ {
 		prices := make([]int64, 2000)
 		for i := 0; i < 2000; i++ {
-			prices[i] = int64(9e6 * 1e8)
+			prices[i] = int64((i+1) * 1e8)
 		}
 		pricesRing := cmnutils.NewFixedSizedRing(2000)
 		for i := 0; i < 2000; i++ {
 			pricesRing.Push(prices[i])
 		}
-		require.Equal(t, int64(133366600000), utils.CalcPriceWMA(pricesRing))
+		require.Equal(t, int64(133366666666), utils.CalcPriceWMA(pricesRing))
 	}
 }
 
-// about 8800 ns/op for 2000 prices, including some FixedSizedRing ops.
-func BenchmarkCalcPriceWMA(b *testing.B) {
+// about 9000 ns/op for 2000 prices, including some FixedSizedRing ops.
+func BenchmarkCalcPriceWMA_SmallPrice(b *testing.B) {
+	prices := cmnutils.NewFixedSizedRing(2000)
+	for i := 0; i < 2000; i++ {
+		prices.Push(rand.Int63n(100e8))
+	}
+
+	for i := 0; i < b.N; i++ {
+		utils.CalcPriceWMA(prices)
+	}
+}
+
+// about 160000 ns/op for 2000 prices, including some FixedSizedRing ops.
+func BenchmarkCalcPriceWMA_BigPrice(b *testing.B) {
 	prices := cmnutils.NewFixedSizedRing(2000)
 	for i := 0; i < 2000; i++ {
 		prices.Push(rand.Int63())
