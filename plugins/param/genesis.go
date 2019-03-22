@@ -24,6 +24,10 @@ const (
 	BurnFee    = 1e8
 	FreezeFee  = 1e6
 
+	// stake fee
+	CreateValidatorFee = 10e8
+	RemoveValidatorFee = 1e8
+
 	// Transfer fee
 	TransferFee       = 125e3
 	MultiTransferFee  = 100e3 // discount 80%
@@ -52,8 +56,8 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{gov.MsgSubmitProposal{}.Type(), ProposeFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{gov.MsgDeposit{}.Type(), DepositFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{gov.MsgVote{}.Type(), sdk.ZeroFee, sdk.FeeFree},
-	&param.FixedFeeParams{stake.MsgCreateValidator{}.Type(), sdk.ZeroFee, sdk.FeeFree},
-	&param.FixedFeeParams{stake.MsgRemoveValidator{}.Type(), sdk.ZeroFee, sdk.FeeFree},
+	&param.FixedFeeParams{stake.MsgCreateValidator{}.Type(), CreateValidatorFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{stake.MsgRemoveValidator{}.Type(), RemoveValidatorFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{list.Route, ListingFee, sdk.FeeForAll},
 	&param.FixedFeeParams{order.RouteNewOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{order.RouteCancelOrder, sdk.ZeroFee, sdk.FeeFree},
