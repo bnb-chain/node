@@ -18,9 +18,9 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 		lotSize  int64
 		tickSize int64
 	}{
-		{-1, 1e8, 1},
-		{0, 1e8, 1},
-		{1e2, 1e8, 1},
+		{-1, 1e13, 1},
+		{0, 1e13, 1},
+		{1e2, 1e11, 1},
 		{1e8, 1e5, 1e3},
 		{1e17, 1, 1e12},
 	}
