@@ -157,6 +157,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
+	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
