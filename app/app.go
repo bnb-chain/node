@@ -492,8 +492,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 					if !found {
 						panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
 					}
-					// If the validator is new created, add account address for it
-					if _, err := app.ValAddrMapper.GetAccAddr(ctx, pubkey.Address()); err != nil {
+
+					accAddr, err := app.ValAddrMapper.GetAccAddr(ctx, pubkey.Address())
+					// the validator is new created or the saved accAddr doesn't equal to validator operator
+					if err != nil || !accAddr.Equals(sdk.AccAddress(validator.GetOperator())) {
 						app.ValAddrMapper.SetVal(ctx, pubkey.Address(), sdk.AccAddress(validator.GetOperator()))
 					}
 				} else {
