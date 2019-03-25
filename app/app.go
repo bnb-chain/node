@@ -79,6 +79,7 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
+	ValAddrCache  *ValAddrCache
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
 	// keeper to process param store and update
@@ -134,6 +135,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
+	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
 
 	app.govKeeper = gov.NewKeeper(
 		cdc,
@@ -444,7 +446,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
-	blockFee := distributeFee(ctx, app.AccountKeeper, app.stakeKeeper, app.publicationConfig.PublishBlockFee)
+	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
@@ -471,6 +473,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if isBreatheBlock || height == 1 || ctx.RouterCallRecord()["stake"] {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
+		app.ValAddrCache.ClearCache()
 	}
 
 	//match may end with transaction failure, which is better to save into
