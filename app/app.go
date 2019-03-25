@@ -479,6 +479,32 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if isBreatheBlock || height == 1 || stakeChange {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
+		if validatorUpdates.Len() > 0 {
+			for _, update := range validatorUpdates {
+				pubkey, err := tmtypes.PB2TM.PubKey(update.PubKey)
+				if err != nil {
+					panic(err)
+				}
+				// Add new validator
+				if update.Power > 0 {
+					consAddr := sdk.ConsAddress(pubkey.Address())
+					validator, found := app.stakeKeeper.GetValidatorByConsAddr(ctx, consAddr)
+					if !found {
+						panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
+					}
+					// If the validator is new created, add account address for it
+					if _, err := app.ValAddrMapper.GetAccAddr(ctx, pubkey.Address()); err != nil {
+						app.ValAddrMapper.SetVal(ctx, pubkey.Address(), sdk.AccAddress(validator.GetOperator()))
+					}
+				} else {
+					// If update.Power is zero, then the validator should have been kicked out.
+					// However, we can't just delete it from app.ValAddrMapper.
+					// Because validator updates will delay one block. In next block, the precommit of the removed validator might be included into block.
+					// Besides, it is also possible that the removed validator is the proposer of the next block.
+					// In conclusion, we might have to distribute reward to the removed validator in next block. So here we just do nothing on ValAddrMapper
+				}
+			}
+		}
 	}
 
 	//match may end with transaction failure, which is better to save into
