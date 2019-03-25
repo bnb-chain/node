@@ -56,7 +56,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 
 		// the query will return empty if there is no data for this account
 		if len(res) == 0 {
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
