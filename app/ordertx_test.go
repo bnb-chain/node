@@ -3004,16 +3004,16 @@ func Test_Overflow_1b(t *testing.T) {
 
 	/* sum of buy side overflowed as [10e18] > int64 max
 	sum    sell    price    buy    sum      exec    imbal
-	1e8   	       10*      1e18   1e18     1e8     the smallest abs
-	1e8   	       9        1e18   2e18     1e8     -
-	1e8            8        1e18   3e18     1e8     -
-	1e8            7        1e18   4e18     1e8     -
-	1e8            6        1e18   5e18     1e8     -
-	1e8            5        1e18   6e18     1e8     -
-	1e8            4        1e18   7e18     1e8     -
-	1e8            3        1e18   8e18     1e8     -
-	1e8            2        1e18   9e18     1e8     -
-	1e8    1e8     1        1e18   [10e18]  1e8     the largest abs
+	1e13   	       10*      1e18   1e18     1e13    the smallest abs
+	1e13   	       9        1e18   2e18     1e13    -
+	1e13           8        1e18   3e18     1e13    -
+	1e13           7        1e18   4e18     1e13    -
+	1e13           6        1e18   5e18     1e13    -
+	1e13           5        1e18   6e18     1e13    -
+	1e13           4        1e18   7e18     1e13    -
+	1e13           3        1e18   8e18     1e13    -
+	1e13           2        1e18   9e18     1e13    -
+	1e13   1e13    1        1e18   [10e18]  1e13    the largest abs
 	*/
 
 	// although sum of buy side overflowed, in this case, match and allocation of orders can still be completed properly
@@ -3025,10 +3025,11 @@ func Test_Overflow_1b(t *testing.T) {
 		assert.Equal(uint32(0), res.Code)
 	}
 
-	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", int64(1), 1e8)
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", int64(1), 1e13)
 	res, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
 	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
+	fmt.Println(res.Log)
 
 	buys, sells := getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
@@ -3036,9 +3037,9 @@ func Test_Overflow_1b(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
 	assert.Equal(int64(5500e8), GetLocked(ctx, add0, "BNB"))
-	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(0), GetAvail(ctx, add1, "BTC-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
-	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetLocked(ctx, add1, "BTC-000"))
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
@@ -3049,56 +3050,92 @@ func Test_Overflow_1b(t *testing.T) {
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(0, len(sells))
-	// for buy side: bnb is so cheap, so fee is charged using btc
-	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
-	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
-	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
-	// for sell side: no fee charged; TODO: fix required!!!
-	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
-	assert.Equal(int64(100000.00000010e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(200000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(94499.99999500e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(5499.9900e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.00999500e8), GetAvail(ctx, add1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
-	assert.True(false)
+}
 
-	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+// #1c: multiple buy orders (diff price levels) overflow int64 max
+func Test_Overflow_1c(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e4)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
 	})
 	testApp.DeliverState.Ctx = ctx
 
-	msgS2 := o.NewNewOrderMsg(add1, genOrderID(add1, 1, ctx, am), 2, "BTC-000_BNB", int64(10), 1e8)
-	res, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
+	/* sum of buy side overflowed as [10e18] > int64 max
+	sum    sell    price    buy    sum      exec    imbal
+	1e9   	       10*      1e18   1e18     1e9    the smallest abs
+	1e9   	       9        1e18   2e18     1e9    -
+	1e9            8        1e18   3e18     1e9    -
+	1e9            7        1e18   4e18     1e9    -
+	1e9            6        1e18   5e18     1e9    -
+	1e9            5        1e18   6e18     1e9    -
+	1e9            4        1e18   7e18     1e9    -
+	1e9            3        1e18   8e18     1e9    -
+	1e9            2        1e18   9e18     1e9    -
+	1e9    1e9     1        1e18   [10e18]  1e9    the largest abs
+	*/
+
+	// although sum of buy side overflowed, in this case, match and allocation of orders can still be completed properly
+
+	for i := 0; i < 10; i++ {
+		msg := o.NewNewOrderMsg(add0, genOrderID(add0, int64(i), ctx, am), 1, "BTC-000_BNB", int64(i+1), 1e18)
+		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
+		assert.NoError(err)
+		assert.Equal(uint32(0), res.Code)
+	}
+
+	msgS1 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 2, "BTC-000_BNB", int64(1), 1e9)
+	res, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
 	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
 	fmt.Println(res.Log)
 
-	buys, sells = getOrderBook("BTC-000_BNB")
+	buys, sells := getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(1, len(sells))
-	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
-	assert.Equal(int64(5499.99999990e8), GetLocked(ctx, add0, "BNB"))
-	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
-	assert.Equal(int64(100000.00000010e8), GetAvail(ctx, add1, "BNB"))
-	assert.Equal(int64(1e8), GetLocked(ctx, add1, "BTC-000"))
+	assert.Equal(int64(5500e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(99990e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(10e8), GetLocked(ctx, add1, "BTC-000"))
 
 	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
 
-	trades, lastPx = testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
 	assert.Equal(int64(10), lastPx)
 	assert.Equal(1, len(trades))
 
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(0, len(sells))
-	assert.Equal(int64(100001.9980e8), GetAvail(ctx, add0, "BTC-000"))
+	// fee charged from receiving token btc-000, as fee in bnb is < 1
+	assert.Equal(int64(100009.9900e8), GetAvail(ctx, add0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, add0, "BNB"))
-	assert.Equal(int64(5499.99999980e8), GetLocked(ctx, add0, "BNB"))
-	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BTC-000"))
-	assert.Equal(int64(100000.00000020e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(5499.99999900e8), GetLocked(ctx, add0, "BNB"))
+	// in this case, it is expected that no fee charged for sell side
+	assert.Equal(int64(99990e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(100000.00000100e8), GetAvail(ctx, add1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
 }
 
-// #1c: additional test case using very cheap bnb, not really overflow related
-func Test_Overflow_1c(t *testing.T) {
+// #1d: additional test case using very cheap bnb, not really overflow related
+func Test_Overflow_1d(t *testing.T) {
 	assert := assert.New(t)
 
 	ctx, valAddr := testSetup(1e18)
@@ -3254,7 +3291,7 @@ func Test_Overflow_3(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BNB"))
 }
 
-// #4: non bnb pair (with expansive bnb) leads to no fee (too small)
+// #4: non bnb pair (with expansive bnb)
 func Test_Overflow_4(t *testing.T) {
 	assert := assert.New(t)
 
@@ -3294,8 +3331,8 @@ func Test_Overflow_4(t *testing.T) {
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
 
-	assert.Equal(int64(99990e8), GetAvail(ctx, add0, "ETH-000"))
 	assert.Equal(int64(100000.9990e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99990e8), GetAvail(ctx, add0, "ETH-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BNB"))
 	assert.Equal(int64(100009.9900e8), GetAvail(ctx, add1, "ETH-000"))
 	assert.Equal(int64(99999e8), GetAvail(ctx, add1, "BTC-000"))
