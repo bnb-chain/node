@@ -2,20 +2,48 @@ package app
 
 import (
 	"bytes"
-
-	"github.com/tendermint/tendermint/crypto"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
+	"fmt"
 
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/app/val"
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
-func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper, publishBlockFee bool) (blockFee pub.BlockFee) {
+func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
+	return &ValAddrCache{
+		cache:       make(map[string]sdk.AccAddress),
+		stakeKeeper: stakeKeeper,
+	}
+}
+
+type ValAddrCache struct {
+	cache       map[string]sdk.AccAddress
+	stakeKeeper stake.Keeper
+}
+
+func (vac *ValAddrCache) ClearCache() {
+	vac.cache = make(map[string]sdk.AccAddress)
+}
+
+func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) sdk.AccAddress {
+	if value, ok := vac.cache[string(consAddr)]; ok {
+		return value
+	}
+	validator, found := vac.stakeKeeper.GetValidatorByConsAddr(ctx, consAddr)
+	if !found {
+		panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
+	}
+	accAddr := sdk.AccAddress(validator.GetOperator())
+	vac.cache[string(consAddr)] = accAddr
+	return accAddr
+}
+
+func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
 	defer fees.Pool.Clear()
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
@@ -25,7 +53,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 	}
 
 	proposerValAddr := ctx.BlockHeader().ProposerAddress
-	proposerAccAddr := getAccAddr(ctx, valMapper, proposerValAddr)
+	proposerAccAddr := valAddrCache.GetAccAddr(ctx, proposerValAddr)
 	voteInfos := ctx.VoteInfos()
 	valSize := int64(len(voteInfos))
 	var validators []string
@@ -66,7 +94,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 		} else {
 			for _, voteInfo := range voteInfos {
 				validator := voteInfo.Validator
-				accAddr := getAccAddr(ctx, valMapper, validator.Address)
+				accAddr := valAddrCache.GetAccAddr(ctx, validator.Address)
 				validatorAcc := am.GetAccount(ctx, accAddr)
 				if bytes.Equal(proposerValAddr, validator.Address) {
 					if !roundingTokens.IsZero() {
@@ -87,14 +115,4 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 	}
 
 	return
-}
-
-func getAccAddr(ctx sdk.Context, mapper val.Mapper, valAddr crypto.Address) sdk.AccAddress {
-	accAddr, err := mapper.GetAccAddr(ctx, valAddr)
-	if err != nil {
-		log.Error("get validator's AccAddress failed", "ValAddr", valAddr)
-		panic(err)
-	}
-
-	return accAddr
 }
