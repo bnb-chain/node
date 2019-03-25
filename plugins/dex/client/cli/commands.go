@@ -23,10 +23,10 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			listTradingPairCmd(cdc),
 			client.LineBreak,
 			newOrderCmd(cdc),
-			showOrderBookCmd(cdc),
 			cancelOrderCmd(cdc))...)
-	// dexCmd.AddCommand(
-	// 	client.GetCommands()...)
+	dexCmd.AddCommand(
+	 	client.GetCommands(
+	 		showOrderBookCmd(cdc))...)
 
 	dexCmd.AddCommand(client.LineBreak)
 	cmd.AddCommand(dexCmd)
