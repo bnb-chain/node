@@ -130,3 +130,11 @@ func (s *server) handleBalanceReq(cdc *wire.Codec, ctx context.CLIContext, token
 func (s *server) handleFeesParamReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return paramapi.GetFeesParamHandler(cdc, ctx)
 }
+
+func (s *server) handleValidatorsQueryReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return hnd.ValidatorQueryReqHandler(cdc, ctx)
+}
+
+func (s *server) handleDelegatorUnbondingDelegationsQueryReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return hnd.DelegatorUnbondindDelegationsQueryReqHandler(cdc, ctx)
+}
