@@ -2,20 +2,19 @@ package app
 
 import (
 	"bytes"
-
-	"github.com/tendermint/tendermint/crypto"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/app/val"
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 )
 
-func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper, publishBlockFee bool) (blockFee pub.BlockFee) {
+func distributeFee(ctx sdk.Context, am auth.AccountKeeper, stakeKeeper stake.Keeper, publishBlockFee bool) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
 	defer fees.Pool.Clear()
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
@@ -25,7 +24,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 	}
 
 	proposerValAddr := ctx.BlockHeader().ProposerAddress
-	proposerAccAddr := getAccAddr(ctx, valMapper, proposerValAddr)
+	proposerAccAddr := getAccAddr(ctx, stakeKeeper, proposerValAddr)
 	voteInfos := ctx.VoteInfos()
 	valSize := int64(len(voteInfos))
 	var validators []string
@@ -66,7 +65,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 		} else {
 			for _, voteInfo := range voteInfos {
 				validator := voteInfo.Validator
-				accAddr := getAccAddr(ctx, valMapper, validator.Address)
+				accAddr := getAccAddr(ctx, stakeKeeper, validator.Address)
 				validatorAcc := am.GetAccount(ctx, accAddr)
 				if bytes.Equal(proposerValAddr, validator.Address) {
 					if !roundingTokens.IsZero() {
@@ -89,12 +88,10 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valMapper val.Mapper,
 	return
 }
 
-func getAccAddr(ctx sdk.Context, mapper val.Mapper, valAddr crypto.Address) sdk.AccAddress {
-	accAddr, err := mapper.GetAccAddr(ctx, valAddr)
-	if err != nil {
-		log.Error("get validator's AccAddress failed", "ValAddr", valAddr)
-		panic(err)
+func getAccAddr(ctx sdk.Context, stakeKeeper stake.Keeper, consAddr sdk.ConsAddress) sdk.AccAddress {
+	validator, found := stakeKeeper.GetValidatorByConsAddr(ctx, consAddr)
+	if !found {
+		panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
 	}
-
-	return accAddr
+	return sdk.AccAddress(validator.GetOperator())
 }

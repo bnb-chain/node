@@ -29,7 +29,6 @@ import (
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/app/val"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
@@ -80,7 +79,6 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
-	ValAddrMapper val.Mapper
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
 	// keeper to process param store and update
@@ -126,7 +124,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
-	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
@@ -285,7 +282,6 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
 			validatorAddrs[i] = acc.Address
 		}
 		tokens.InitGenesis(ctx, app.TokenMapper, app.CoinKeeper, genesisState.Tokens,
@@ -448,7 +444,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
-	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
+	blockFee := distributeFee(ctx, app.AccountKeeper, app.stakeKeeper, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
@@ -479,34 +475,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if isBreatheBlock || height == 1 || stakeChange {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
-		if validatorUpdates.Len() > 0 {
-			for _, update := range validatorUpdates {
-				pubkey, err := tmtypes.PB2TM.PubKey(update.PubKey)
-				if err != nil {
-					panic(err)
-				}
-				// Add new validator
-				if update.Power > 0 {
-					consAddr := sdk.ConsAddress(pubkey.Address())
-					validator, found := app.stakeKeeper.GetValidatorByConsAddr(ctx, consAddr)
-					if !found {
-						panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
-					}
-
-					// the validator is new created or the saved accAddr doesn't equal to validator operator
-					if accAddr, err := app.ValAddrMapper.GetAccAddr(ctx, pubkey.Address()); err != nil ||
-						!accAddr.Equals(sdk.AccAddress(validator.GetOperator())) {
-						app.ValAddrMapper.SetVal(ctx, pubkey.Address(), sdk.AccAddress(validator.GetOperator()))
-					}
-				} else {
-					// If update.Power is zero, then the validator should have been kicked out.
-					// However, we can't just delete it from app.ValAddrMapper.
-					// Because validator updates will delay one block. In next block, the precommit of the removed validator might be included into block.
-					// Besides, it is also possible that the removed validator is the proposer of the next block.
-					// In conclusion, we might have to distribute reward to the removed validator in next block. So here we just do nothing on ValAddrMapper
-				}
-			}
-		}
 	}
 
 	//match may end with transaction failure, which is better to save into
