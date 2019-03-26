@@ -86,7 +86,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 			throw(w, http.StatusNotFound, err)
 			return
 		}
-		accbz, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
+		accbz, _, err := ctx.QueryStore(auth.AddressStoreKey(addr), accStoreName)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

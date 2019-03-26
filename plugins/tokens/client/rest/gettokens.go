@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,14 +17,14 @@ const maxTokensLimit = 1000
 const defaultTokensLimit = 100
 const defaultTokensOffset = 0
 
-func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit), nil)
+func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, int64, error) {
+	bz, height, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit), nil)
 	if err != nil {
-		return nil, err
+		return nil, height, err
 	}
 	tokens := make([]types.Token, 0)
 	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-	return tokens, nil
+	return tokens, height, nil
 }
 
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper
@@ -79,13 +80,17 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			params.limit = maxTokensLimit
 		}
 
-		tokens, err := listAllTokens(ctx, cdc, params.offset, params.limit)
+		tokens, height, err := listAllTokens(ctx, cdc, params.offset, params.limit)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
-
-		output, err := cdc.MarshalJSON(tokens)
+		tokensWrap := make([]TokenWrap, 0, len(tokens))
+		// It is redundant to keep height in each element, just for compatibility with downstream.
+		for _, token := range tokens {
+			tokensWrap = append(tokensWrap, TokenWrap{Token: &token, Height: height})
+		}
+		output, err := json.Marshal(tokensWrap)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

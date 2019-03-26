@@ -62,7 +62,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 
 func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
 	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, _, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return types.Token{}, err
 	}
@@ -92,7 +92,7 @@ func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
 
 func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, _, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return false
 	}

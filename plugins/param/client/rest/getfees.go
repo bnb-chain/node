@@ -26,7 +26,7 @@ func GetFeesParamHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		bz, err := ctx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
+		bz, _, err := ctx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

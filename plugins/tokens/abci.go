@@ -50,8 +50,9 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 		case "list": // args: ["tokens", "list", <offset>, <limit>]
 			if len(path) < 4 {
@@ -98,8 +99,9 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 		default:
 			return &abci.ResponseQuery{

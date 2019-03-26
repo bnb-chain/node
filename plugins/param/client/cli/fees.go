@@ -104,7 +104,7 @@ func ShowFeeParamsCmd(cdc *wire.Codec) *cobra.Command {
 				return fmt.Errorf("format %s is not supported, options [%s, %s] ", format, types.JSONFORMAT, types.AMINOFORMAT)
 			}
 
-			bz, err := cliCtx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
+			bz, _, err := cliCtx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
 			if err != nil {
 				return err
 			}

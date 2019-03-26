@@ -42,7 +42,8 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "=v0.25.0-binance.13"
+  #version = "=v0.25.0-binance.13"
+  branch = "abci_query"
 
 [[constraint]]
   name = "github.com/btcsuite/btcd"

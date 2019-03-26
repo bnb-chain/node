@@ -82,7 +82,7 @@ func decodeAccount(cdc *wire.Codec, bz *[]byte) (acc sdk.Account, err error) {
 
 func getAccount(cdc *wire.Codec, ctx context.CLIContext, addr sdk.AccAddress) (sdk.Account, error) {
 	key := auth.AddressStoreKey(addr)
-	bz, err := ctx.QueryStore(key, common.AccountStoreName)
+	bz, _, err := ctx.QueryStore(key, common.AccountStoreName)
 	if err != nil {
 		return nil, err
 	}

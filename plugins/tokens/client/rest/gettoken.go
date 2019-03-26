@@ -14,14 +14,14 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/info/%s", symbol), nil)
+func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*types.Token, int64, error) {
+	bz, height, err := ctx.Query(fmt.Sprintf("tokens/info/%s", symbol), nil)
 	if err != nil {
-		return nil, err
+		return nil, height, err
 	}
 	var token types.Token
 	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &token)
-	return &token, nil
+	return &token, height, nil
 }
 
 // GetTokenReqHandler creates an http request handler to get info for an individual token
@@ -55,7 +55,7 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 			return
 		}
 
-		token, err := getTokenInfo(ctx, cdc, params.symbol)
+		token, height, err := getTokenInfo(ctx, cdc, params.symbol)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
@@ -66,7 +66,7 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 		}
 
 		// no need to use cdc here because we do not want amino to inject a type attribute
-		output, err := json.Marshal(token)
+		output, err := json.Marshal(TokenWrap{Token: token, Height: height})
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

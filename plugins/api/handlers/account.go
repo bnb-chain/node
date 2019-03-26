@@ -47,7 +47,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 			return
 		}
 
-		res, err := ctx.Query(fmt.Sprintf("/account/%s", bech32addr), nil)
+		res, _, err := ctx.Query(fmt.Sprintf("/account/%s", bech32addr), nil)
 		if err != nil {
 			errMsg := fmt.Sprintf("couldn't query account. Error: %s", err.Error())
 			throw(w, http.StatusInternalServerError, errMsg)

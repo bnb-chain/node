@@ -27,8 +27,9 @@ func createAbciQueryHandler(paramHub *ParamHub) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 
 		default:

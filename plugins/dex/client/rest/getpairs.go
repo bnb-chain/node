@@ -17,7 +17,7 @@ const defaultPairsLimit = 100
 const defaultPairsOffset = 0
 
 func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.TradingPair, error) {
-	bz, err := ctx.Query(fmt.Sprintf("dex/pairs/%d/%d", offset, limit), nil)
+	bz, _, err := ctx.Query(fmt.Sprintf("dex/pairs/%d/%d", offset, limit), nil)
 	if err != nil {
 		return nil, err
 	}

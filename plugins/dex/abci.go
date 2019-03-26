@@ -76,11 +76,13 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
 			//TODO: sync lock, validate pair, level number
+			ctx := app.GetContextForCheckState()
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -102,8 +104,10 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				// Height info is already in OrderBook, still return Height to keep consistent.
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 		case "openorders": // args: ["dex", "openorders", <pair>, <bech32Str>]
 			if len(path) < 4 {
@@ -148,8 +152,9 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
+				Height: ctx.BlockHeight(),
+				Code:   uint32(sdk.ABCICodeOK),
+				Value:  bz,
 			}
 		default:
 			return &abci.ResponseQuery{

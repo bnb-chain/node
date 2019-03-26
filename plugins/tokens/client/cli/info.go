@@ -36,7 +36,7 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 
 	key := []byte(strings.ToUpper(symbol))
 
-	res, err := ctx.QueryStore(key, common.TokenStoreName)
+	res, _, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return err
 	}

@@ -56,7 +56,7 @@ func setModeCmd(cdc *wire.Codec) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				res, err := cliCtx.QueryWithData(fmt.Sprintf("/admin/mode/%s/%s", mode, nonce), sig)
+				res, _, err := cliCtx.QueryWithData(fmt.Sprintf("/admin/mode/%s/%s", mode, nonce), sig)
 				if err != nil {
 					return err
 				}
@@ -91,7 +91,7 @@ func getModeCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			res, err := cliCtx.QueryWithData(fmt.Sprintf("/admin/mode/%s", nonce), sig)
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("/admin/mode/%s", nonce), sig)
 			if err != nil {
 				return err
 			}
