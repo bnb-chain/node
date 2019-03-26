@@ -38,14 +38,19 @@ ci: get_vendor_deps build
 ########################################
 ### Build
 
+define buildwindows
+     go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
+     go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
+     go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
+     go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
+     go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
+     go build $(BUILD_FLAGS) -o build/lightd.exe ./cmd/lightd
+endef
+
+
 build: get_tools
 ifeq ($(OS),Windows_NT)
-	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
-	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
-	go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
-	go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
-	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
-	go build $(BUILD_FLAGS) -o build/lightd.exe ./cmd/lightd
+	$(call buildwindows)
 else
 	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
@@ -71,6 +76,9 @@ else
 	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd ./cmd/lightd
 endif
+
+build-windows:
+	$(call buildwindows)
 
 build-linux:
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
