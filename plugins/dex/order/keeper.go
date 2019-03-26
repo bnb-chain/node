@@ -460,7 +460,16 @@ func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
+
 	return res
+}
+
+func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Book.GetPriceLevel(price, side)
+	} else {
+		return nil
+	}
 }
 
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
@@ -555,6 +564,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 					fees = &sortedAsset{}
 					tradeInAsset[addrStr] = fees
 				}
+				// no possible to overflow, for tran.in == otherSide.tran.out <= TotalSupply(otherSide.tran.outAsset)
 				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}

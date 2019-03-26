@@ -10,8 +10,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
+	cmnUtils"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
@@ -81,10 +82,11 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
 	if inSymbol == types.NativeTokenSymbol {
-		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(inAmt, FeeByNativeToken))
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByNativeToken).Int64())
 	} else {
-		// price against native token
-		var amountOfNativeToken int64
+		// price against native token,
+		// both `amountOfNativeToken` and `feeByNativeToken` may overflow when it's a non-BNB pair like ABC_XYZ
+		var amountOfNativeToken *big.Int
 		if market, ok := engines[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			amountOfNativeToken = utils.CalBigNotional(market.LastTradePrice, inAmt)
@@ -95,17 +97,19 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 			amountOfNativeToken = amount.Div(
 				amount.Mul(
 					big.NewInt(inAmt),
-					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(market.LastTradePrice)).Int64()
+					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+				big.NewInt(market.LastTradePrice))
 		}
 		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
-		if balances.AmountOf(types.NativeTokenSymbol) >= feeByNativeToken {
-			// have sufficient native token to pay the fees
-			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken)
+		if feeByNativeToken.IsInt64() && feeByNativeToken.Int64() != 0 &&
+			feeByNativeToken.Int64() <= balances.AmountOf(types.NativeTokenSymbol) {
+			// 1. if the fee is too low and round to 0, we charge by inAsset
+			// 2. have sufficient native token to pay the fees
+			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken.Int64())
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(inAmt, FeeByTradeToken))
-			m.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
+			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByTradeToken).Int64())
+			m.logger.Debug("No enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
 
@@ -135,30 +139,36 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	var feeToken sdk.Coin
 	nativeTokenBalance := balances.AmountOf(types.NativeTokenSymbol)
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
-		feeToken = sdk.NewCoin(types.NativeTokenSymbol, utils.MinInt(feeAmountNative, nativeTokenBalance))
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, cmnUtils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
+		// the amount may overflow int64, so use big.Int instead.
+		var amount *big.Int
 		if market, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
-			var amount big.Int
-			feeAmount = amount.Div(
-				amount.Mul(
+			var tmp big.Int
+			amount = tmp.Div(tmp.Mul(
 					big.NewInt(feeAmount),
-					big.NewInt(utils.Fixed8One.ToInt64())),
-				big.NewInt(market.LastTradePrice)).Int64()
+					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+				big.NewInt(market.LastTradePrice))
 		} else {
 			// BNB_XYZ
 			market = engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
-			feeAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
+			amount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
 		}
 
-		feeAmount = utils.MinInt(feeAmount, balances.AmountOf(inAsset))
+		if amount.IsInt64() {
+			feeAmount = amount.Int64()
+		} else {
+			feeAmount = math.MaxInt64
+		}
+		feeAmount = cmnUtils.MinInt(feeAmount, balances.AmountOf(inAsset))
 		feeToken = sdk.NewCoin(inAsset, feeAmount)
 	}
 
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
+func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {
 	var feeRate int64
 	if feeType == FeeByNativeToken {
 		feeRate = m.FeeConfig.FeeRateNative
@@ -167,7 +177,7 @@ func (m *FeeManager) calcTradeFee(amount int64, feeType FeeType) int64 {
 	}
 
 	var fee big.Int
-	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
+	return fee.Div(fee.Mul(amount, big.NewInt(feeRate)), FeeRateMultiplier)
 }
 
 func (m *FeeManager) ExpireFees() (int64, int64) {

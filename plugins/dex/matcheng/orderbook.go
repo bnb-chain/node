@@ -21,6 +21,7 @@ type OrderBookInterface interface {
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrders(beforeTime int64, side int8, cb func(OrderPart)) error
 	UpdateForEachPriceLevel(side int8, updater func(*PriceLevel))
+	GetPriceLevel(price int64, side int8) *PriceLevel
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(maxLevels int, iterBuy LevelIter, iterSell LevelIter)
 	GetAllLevels() ([]PriceLevel, []PriceLevel)
@@ -149,6 +150,11 @@ func (ob *OrderBookOnULList) GetOrder(id string, side int8, price int64) (OrderP
 	}
 	op, err := pl.getOrder(id)
 	return op, err
+}
+
+func (ob *OrderBookOnULList) GetPriceLevel(price int64, side int8) *PriceLevel {
+	q := ob.getSideQueue(side)
+	return q.GetPriceLevel(price)
 }
 
 func (ob *OrderBookOnULList) RemovePriceLevel(price int64, side int8) int {
