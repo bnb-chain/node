@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/binance-chain/node/plugins/dex/store"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -17,6 +15,7 @@ import (
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"

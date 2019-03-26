@@ -2,6 +2,7 @@ package matcheng
 
 import (
 	"math"
+	"math/big"
 	"sort"
 
 	"github.com/binance-chain/node/common/upgrade"
@@ -180,9 +181,9 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 		}
 	}
 	// only buy side surplus exist, buying pressure
-	if buySurplus && !sellSurplus { // return hightest
-		i := leastSurplus.index[0]
-		return (*overlapped)[i].Price, i
+	if buySurplus && !sellSurplus { // return highest
+		return getTradePriceForMarketPressure(BUYSIDE, overlapped,
+			leastSurplus.index, float64(refPrice), priceLimitPct)
 	}
 	// only sell side surplus exist, selling pressure
 	if !buySurplus && sellSurplus { // return lowest
@@ -219,11 +220,11 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	if compareBuy(t, residual) > 0 { // not enough to allocate
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
-		nLot := math.Floor((residual + halfLot) / lotSize)
+		nLot := residual / lotSize
 		k := len(orders)
 		i := 0
 		for i = 0; i < k; i++ {
-			a := int64(math.Floor(nLot*float64(orders[i].nxtTrade)/totalF)) * lotSize // this is supposed to be the main portion
+			a := calcNumOfLot(nLot, orders[i].nxtTrade, t) * lotSize // this is supposed to be the main portion
 			if compareBuy(a, residual) >= 0 {
 				orders[i].nxtTrade = residual
 				residual = 0
@@ -255,5 +256,16 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	} else { // t <= *toAlloc
 		*toAlloc -= t
 		return true
+	}
+}
+
+// totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
+func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
+	if tmp, ok := utils.Mul64(totalLot, orderLeft); ok {
+		return tmp/totalLeft
+	} else {
+		var res big.Int
+		res.Quo(res.Mul(big.NewInt(totalLot), big.NewInt(orderLeft)), big.NewInt(totalLeft))
+		return res.Int64()
 	}
 }
