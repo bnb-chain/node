@@ -196,7 +196,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 
 	orderChange2 := keeper.OrderChanges[2]
 	assert.Equal("b-1", orderChange2.Id)
-	assert.Equal(orderPkg.IocNoFill, orderChange2.Tpe)
+	assert.Equal(orderPkg.IocExpire, orderChange2.Tpe)
 
 	assert.Equal("BNB:50000", keeper.RoundOrderFees[string(buyer.Bytes())].String())
 	assert.Equal("BNB:50000", keeper.RoundOrderFees[string(seller.Bytes())].String())

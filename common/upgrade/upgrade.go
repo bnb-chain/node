@@ -10,6 +10,11 @@ var Mgr = sdk.UpgradeMgr
 const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
 const FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
 
+func init() {
+	Mgr.AddUpgradeHeight(FixOrderSeqInPriceLevelName, 2855000)
+	Mgr.AddUpgradeHeight(FixDropFilledOrderSeqName, 2855000)
+}
+
 func Upgrade(name string, before func(), in func(), after func()) {
 	if sdk.IsUpgradeHeight(name) {
 		if in != nil {

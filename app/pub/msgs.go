@@ -248,7 +248,7 @@ func (msg *Order) effectQtyToOrderBook() int64 {
 		return msg.Qty
 	case orderPkg.FullyFill, orderPkg.PartialFill:
 		return -msg.LastExecutedQty
-	case orderPkg.Expired, orderPkg.IocNoFill, orderPkg.Canceled, orderPkg.FailedMatching:
+	case orderPkg.Expired, orderPkg.IocExpire, orderPkg.IocNoFill, orderPkg.Canceled, orderPkg.FailedMatching:
 		return msg.CumQty - msg.Qty // deliberated be negative value
 	case orderPkg.FailedBlocking:
 		return 0
