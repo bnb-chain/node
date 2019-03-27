@@ -134,10 +134,15 @@ func MatchAndAllocateAllForPublish(
 
 	tradesToPublish := make([]*Trade, 0)
 	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
-	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh, orderPkg.IocNoFill)
+	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid}
+			if tran.IsExpiredWithFee() {
+				// we only got expire of Ioc here, gte orders expire is handled in breathe block
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill}
+			} else {
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire}
+			}
 		} else {
 			tradeHolderCh <- orderPkg.TradeHolder{tran.Oid, tran.Trade, tran.Symbol}
 		}
@@ -158,10 +163,10 @@ func ExpireOrdersForPublish(
 	expireHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh, orderPkg.Expired)
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
 	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid}
+			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires)
@@ -213,12 +218,11 @@ func CollectProposalsForPublish(passed, failed []int64) Proposals {
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
-	tranHolderCh <-chan orderPkg.ExpireHolder,
-	reason orderPkg.ChangeType) {
+	tranHolderCh <-chan orderPkg.ExpireHolder) {
 	defer wg.Done()
 	for tranHolder := range tranHolderCh {
 		Logger.Debug("transfer collector for order", "orderId", tranHolder.OrderId)
-		change := orderPkg.OrderChange{tranHolder.OrderId, reason, nil}
+		change := orderPkg.OrderChange{tranHolder.OrderId, tranHolder.Reason, nil}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
 }
@@ -393,7 +397,7 @@ func collectOrdersToPublish(
 					fee := raw.SerializeForPub(numOfChargedCanceled, numOfExpiredCanceled)
 					feeToPublish[senderBytesStr] = fee
 					order.Fee = fee
-				} else {
+				} else if numOfChargedCanceled > 0 || numOfExpiredCanceled > 0 {
 					Logger.Error("cannot find fee for cancel/expire", "sender", order.Owner)
 				}
 			}
