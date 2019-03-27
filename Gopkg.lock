@@ -55,8 +55,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:a8717c218a5d09fe77c1e249f006ff0d55937b77c271445ed46aa8c7c4279aab"
+  branch = "haoyang/upgrade-validator-power-key"
+  digest = "1:134a36cb63edb8026c0d64428b6b12e14f60a21d2148ce63ca0dd94bdff208a8"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -103,7 +103,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "5fa1ec76b2c684c859441fe6fef2da43e02d3f73"
+  revision = "22e2d78bb43c6ba96a1c01409b33013b39e0be94"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]

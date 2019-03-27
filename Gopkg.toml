@@ -42,7 +42,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "develop"
+  branch = "haoyang/upgrade-validator-power-key"
 
 [[constraint]]
   name = "github.com/btcsuite/btcd"

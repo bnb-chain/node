@@ -465,7 +465,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
-
+	if sdk.IsUpgradeHeight(sdk.UpgradeChangeValidatorPowerKey) {
+		err := stake.RebuildPowerRankKeyForUpgrade(ctx, app.stakeKeeper)
+		if err != nil {
+			panic(err)
+		}
+	}
 	var validatorUpdates abci.ValidatorUpdates
 	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
 	//  otherwise, apphash fail
