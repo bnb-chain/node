@@ -9,7 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -36,6 +35,7 @@ import (
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
