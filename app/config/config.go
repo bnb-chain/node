@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/server"
 )
 
 var configTemplate *template.Template
@@ -42,6 +43,12 @@ startMode = {{ .BaseConfig.StartMode }}
 orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 # Days count back for breathe block
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
+
+[upgrade]
+# fixOrderSeqInPriceLevel height
+fixOrderSeqInPriceLevelHeight = {{ .UpgradeConfig.FixOrderSeqInPriceLevelHeight }}
+# fixDropFilledOrderSeq height
+fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -130,6 +137,7 @@ type BinanceChainConfig struct {
 	*PublicationConfig `mapstructure:"publication"`
 	*LogConfig         `mapstructure:"log"`
 	*BaseConfig        `mapstructure:"base"`
+	*UpgradeConfig     `mapstructure:"upgrade"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -138,6 +146,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		PublicationConfig: defaultPublicationConfig(),
 		LogConfig:         defaultLogConfig(),
 		BaseConfig:        defaultBaseConfig(),
+		UpgradeConfig:     defaultUpgradeConfig(),
 	}
 }
 
@@ -272,6 +281,18 @@ func defaultBaseConfig() *BaseConfig {
 		BreatheBlockInterval:      0,
 		OrderKeeperConcurrency:    2,
 		BreatheBlockDaysCountBack: 7,
+	}
+}
+
+type UpgradeConfig struct {
+	FixOrderSeqInPriceLevelHeight int64
+	FixDropFilledOrderSeqHeight   int64
+}
+
+func defaultUpgradeConfig() *UpgradeConfig {
+	return &UpgradeConfig{
+		FixDropFilledOrderSeqHeight:   2855000,
+		FixOrderSeqInPriceLevelHeight: 2855000,
 	}
 }
 
