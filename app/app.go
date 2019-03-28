@@ -291,15 +291,18 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			// return sdk.ErrGenesisParse("").TraceCause(err, "")
 		}
 
-		validatorAddrs := make([]sdk.AccAddress, len(genesisState.Accounts))
-		for i, gacc := range genesisState.Accounts {
+		selfDelegationAddrs := make([]sdk.AccAddress, 0, len(genesisState.Accounts))
+		for _, gacc := range genesisState.Accounts {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			validatorAddrs[i] = acc.Address
+			// this relies on that the non-operator addresses are all used for self-delegation
+			if gacc.ConsensusAddr == nil {
+				selfDelegationAddrs = append(selfDelegationAddrs, acc.Address)
+			}
 		}
 		tokens.InitGenesis(ctx, app.TokenMapper, app.CoinKeeper, genesisState.Tokens,
-			validatorAddrs, DefaultSelfDelegationToken.Amount)
+			selfDelegationAddrs, DefaultSelfDelegationToken.Amount)
 
 		app.ParamHub.InitGenesis(ctx, genesisState.ParamGenesis)
 		validators, err := stake.InitGenesis(ctx, app.stakeKeeper, genesisState.StakeData)

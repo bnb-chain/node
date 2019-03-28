@@ -41,6 +41,7 @@ func main() {
 	appInit := app.BinanceAppInit()
 	rootCmd.AddCommand(bnbInit.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	rootCmd.AddCommand(bnbInit.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
+	rootCmd.AddCommand(bnbInit.CollectGenTxsCmd(cdc, appInit))
 	rootCmd.AddCommand(version.VersionCmd)
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, exportAppStateAndTMValidators)
 	startCmd := server.StartCmd(ctx.ToCosmosServerCtx(), newApp)

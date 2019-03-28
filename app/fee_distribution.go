@@ -38,7 +38,7 @@ func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) s
 	if !found {
 		panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
 	}
-	accAddr := sdk.AccAddress(validator.GetOperator())
+	accAddr := validator.GetFeeAddr()
 	vac.cache[string(consAddr)] = accAddr
 	return accAddr
 }
