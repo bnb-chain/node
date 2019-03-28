@@ -25,10 +25,10 @@ import (
 )
 
 const (
-	defaultAmount                  = "100steak"
-	defaultCommissionRate          = "0.1"
-	defaultCommissionMaxRate       = "0.2"
-	defaultCommissionMaxChangeRate = "0.01"
+	defaultAmount                  = "100000000000:BNB"
+	defaultCommissionRate          = "0"
+	defaultCommissionMaxRate       = "0"
+	defaultCommissionMaxChangeRate = "0"
 )
 
 // GenTxCmd builds the gaiad gentx command.
