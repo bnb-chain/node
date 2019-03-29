@@ -47,16 +47,16 @@ func CalcPriceWMA(prices *utils.FixedSizeRing) int64 {
 	// assume 500<= n <= 2000, if we let diff < 10^6, then x <= 4
 
 	i, lenPrices := 0, len(elements)
-	for ; i<lenPrices; i++ {
+	for ; i < lenPrices; i++ {
 		weightedSum += int64(float64(i+1) * float64(elements[i].(int64)) / 1e4)
 		if weightedSum < 0 {
 			bigWeightedSum := big.NewInt(weightedSum)
-			for i++; i<lenPrices; i++ {
-				bigWeightedSum.Add(bigWeightedSum, big.NewInt(int64(float64(i+1) * float64(elements[i].(int64)) / 1e4)))
+			for i++; i < lenPrices; i++ {
+				bigWeightedSum.Add(bigWeightedSum, big.NewInt(int64(float64(i+1)*float64(elements[i].(int64))/1e4)))
 			}
 			// res won't overflow
 			var res big.Int
-			return res.Quo(res.Mul(bigWeightedSum,  big.NewInt(1e4)), big.NewInt(totalWeight)).Int64()
+			return res.Quo(res.Mul(bigWeightedSum, big.NewInt(1e4)), big.NewInt(totalWeight)).Int64()
 		}
 	}
 

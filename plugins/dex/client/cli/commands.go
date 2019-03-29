@@ -25,8 +25,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			newOrderCmd(cdc),
 			cancelOrderCmd(cdc))...)
 	dexCmd.AddCommand(
-	 	client.GetCommands(
-	 		showOrderBookCmd(cdc))...)
+		client.GetCommands(
+			showOrderBookCmd(cdc))...)
 
 	dexCmd.AddCommand(client.LineBreak)
 	cmd.AddCommand(dexCmd)

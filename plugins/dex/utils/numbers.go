@@ -20,4 +20,3 @@ func IsExceedMaxNotional(price, qty int64) bool {
 	var bi big.Int
 	return !bi.Div(bi.Mul(big.NewInt(qty), big.NewInt(price)), big.NewInt(1e8)).IsInt64()
 }
-
