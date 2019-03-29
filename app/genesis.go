@@ -49,17 +49,17 @@ type GenesisState struct {
 
 // GenesisAccount doesn't need pubkey or sequence
 type GenesisAccount struct {
-	Name    string         `json:"name"`
-	Address sdk.AccAddress `json:"address"`
-	ValAddr crypto.Address `json:"valaddr"`
+	Name          string         `json:"name"`
+	Address       sdk.AccAddress `json:"address"`
+	ConsensusAddr crypto.Address `json:"consensus_addr"` // only validator's account has this address
 }
 
 // NewGenesisAccount -
-func NewGenesisAccount(aa *types.AppAccount, valAddr crypto.Address) GenesisAccount {
+func NewGenesisAccount(aa *types.AppAccount, consensusAddr crypto.Address) GenesisAccount {
 	return GenesisAccount{
-		Name:    aa.Name,
-		Address: aa.GetAddress(),
-		ValAddr: valAddr,
+		Name:          aa.Name,
+		Address:       aa.GetAddress(),
+		ConsensusAddr: consensusAddr,
 	}
 }
 
@@ -87,7 +87,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		return
 	}
 
-	genAccounts := make([]GenesisAccount, len(appGenTxs))
+	genAccounts := make([]GenesisAccount, 0, len(appGenTxs) * 2)
 	for i, genTx := range appGenTxs {
 		var tx auth.StdTx
 		if err = cdc.UnmarshalJSON(genTx, &tx); err != nil {
@@ -104,16 +104,22 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 				"genesis transaction %v does not contain a MsgCreateValidator", i)
 			return
 		} else {
-			if _, desCheckErr := msg.Description.EnsureLength(); desCheckErr != nil {
-				err = fmt.Errorf("validator description length is too long: %s", desCheckErr.Error())
-				return
+			operAddr := sdk.AccAddress(msg.ValidatorAddr)
+			// add validator self-delegation account first
+			if !msg.DelegatorAddr.Equals(operAddr) {
+				delAcc := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(msg.DelegatorAddr)}
+				if len(msg.Description.Moniker) > 0 {
+					delAcc.SetName(msg.Description.Moniker)
+				}
+				genAccounts = append(genAccounts, NewGenesisAccount(&delAcc, nil))
 			}
-			appAccount := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(sdk.AccAddress(msg.ValidatorAddr))}
+
+			// add validator operator account
+			operAcc := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(operAddr)}
 			if len(msg.Description.Moniker) > 0 {
-				appAccount.SetName(msg.Description.Moniker)
+				operAcc.SetName(msg.Description.Moniker)
 			}
-			acc := NewGenesisAccount(&appAccount, msg.PubKey.Address())
-			genAccounts[i] = acc
+			genAccounts = append(genAccounts, NewGenesisAccount(&operAcc, msg.PubKey.Address()))
 		}
 	}
 
