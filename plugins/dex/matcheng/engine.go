@@ -45,7 +45,7 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	upgrade.FixOrderSeqInPriceLevel(func() {
 		sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
 		sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
-	}, nil,nil)
+	}, nil, nil)
 
 	bLength := len(buys)
 	sLength := len(sells)

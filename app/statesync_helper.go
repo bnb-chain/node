@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	//"github.com/cosmos/cosmos-sdk/server"
 	storePkg "github.com/cosmos/cosmos-sdk/store"
 
 	"github.com/tendermint/iavl"
@@ -21,6 +20,8 @@ import (
 )
 
 type StateSyncManager struct {
+	enabledStateSyncReactor bool // whether we enabledStateSyncReactor state sync reactor
+
 	stateSyncHeight     int64
 	stateSyncNumKeys    []int64
 	stateSyncStoreInfos []storePkg.StoreInfo
@@ -172,19 +173,24 @@ func (app BinanceChain) resetDexKeeper(height int64) {
 
 }
 
-func (app *BinanceChain) initStateSyncManager() {
-	height := app.getLastBreatheBlockHeight()
-	go app.reloadSnapshot(height, false)
+func (app *BinanceChain) initStateSyncManager(enabled bool) {
+	app.enabledStateSyncReactor = enabled
+	if enabled {
+		height := app.getLastBreatheBlockHeight()
+		go app.reloadSnapshot(height, false)
+	}
 }
 
 // the method might take quite a while (> 5 seconds), BETTER to be called concurrently
 // so we only do it once a day after breathe block
 // we will refactor it into split chunks into snapshot file soon
 func (app *BinanceChain) reloadSnapshot(height int64, retry bool) {
-	app.reloadingMtx.Lock()
-	defer app.reloadingMtx.Unlock()
+	if app.enabledStateSyncReactor {
+		app.reloadingMtx.Lock()
+		defer app.reloadingMtx.Unlock()
 
-	app.latestSnapshotImpl(height, retry)
+		app.latestSnapshotImpl(height, retry)
+	}
 }
 
 func (app *BinanceChain) getLastBreatheBlockHeight() int64 {

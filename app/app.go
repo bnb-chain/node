@@ -230,9 +230,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
 	app.initParams()
-	if ServerContext.Config.StateSyncReactor {
-		app.initStateSyncManager()
-	}
+	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
 	return app
 }
 
