@@ -79,7 +79,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 		stake.DefaultCodespace,
 	)
 	govKeeper = gov.NewKeeper(cdc, govKey,
-		paramsKeeper, paramsKeeper.Subspace(gov.DefaultParamspace),
+		paramsKeeper, paramsKeeper.Subspace(gov.DefaultParamSpace),
 		bankKeeper,
 		stakeKeeper,
 		gov.DefaultCodespace,
