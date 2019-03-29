@@ -297,7 +297,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
 			// this relies on that the non-operator addresses are all used for self-delegation
-			if gacc.ConsensusAddr == nil {
+			if len(gacc.ConsensusAddr) == 0 {
 				selfDelegationAddrs = append(selfDelegationAddrs, acc.Address)
 			}
 		}

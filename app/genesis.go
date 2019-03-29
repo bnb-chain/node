@@ -108,6 +108,9 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 			// add validator self-delegation account first
 			if !msg.DelegatorAddr.Equals(operAddr) {
 				delAcc := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(msg.DelegatorAddr)}
+				if len(msg.Description.Moniker) > 0 {
+					delAcc.SetName(msg.Description.Moniker)
+				}
 				genAccounts = append(genAccounts, NewGenesisAccount(&delAcc, nil))
 			}
 

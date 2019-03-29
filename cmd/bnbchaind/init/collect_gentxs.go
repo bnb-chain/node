@@ -7,16 +7,17 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
-	flagGenTxDir = "gentxs-dir"
+	flagGenTxDir          = "gentxs-dir"
 	flagGenesisOutputFile = "genesis-output-file"
 )
 
