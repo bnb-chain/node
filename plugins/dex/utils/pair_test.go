@@ -70,7 +70,7 @@ func TestCalcPriceWMA_Real(t *testing.T) {
 	for k := 0; k < 2000; k++ {
 		prices := make([]int64, 2000)
 		for i := 0; i < 2000; i++ {
-			prices[i] = int64((i+1) * 1e8)
+			prices[i] = int64((i + 1) * 1e8)
 		}
 		pricesRing := cmnutils.NewFixedSizedRing(2000)
 		for i := 0; i < 2000; i++ {

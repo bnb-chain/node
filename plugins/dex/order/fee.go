@@ -13,10 +13,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/common/types"
-	cmnUtils"github.com/binance-chain/node/common/utils"
+	cmnUtils "github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/utils"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
@@ -150,8 +150,8 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 			// XYZ_BNB
 			var tmp big.Int
 			amount = tmp.Div(tmp.Mul(
-					big.NewInt(feeAmount),
-					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+				big.NewInt(feeAmount),
+				big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 				big.NewInt(market.LastTradePrice))
 		} else {
 			// BNB_XYZ

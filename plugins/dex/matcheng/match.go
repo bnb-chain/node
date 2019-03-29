@@ -51,7 +51,7 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
 		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
-		if accum + l.SellTotal < 0 {
+		if accum+l.SellTotal < 0 {
 			// overflow
 			// actually, for sell orders, we would never reach here because of the limit of total supply
 			accum = math.MaxInt64
@@ -64,7 +64,7 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
-		if accum + l.BuyTotal < 0 {
+		if accum+l.BuyTotal < 0 {
 			// overflow, it's safe to use MaxInt64 because the final execution would never exceed the total supply of the base asset
 			accum = math.MaxInt64
 		} else {

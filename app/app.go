@@ -31,6 +31,7 @@ import (
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
@@ -84,6 +85,7 @@ type BinanceChain struct {
 	StateSyncManager
 
 	baseConfig        *config.BaseConfig
+	upgradeConfig     *config.UpgradeConfig
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
 
@@ -113,6 +115,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		baseConfig:        ServerContext.BaseConfig,
+		upgradeConfig:     ServerContext.UpgradeConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
 	app.SetPruning(viper.GetString("pruning"))
@@ -222,12 +225,21 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
+	// set upgrade config
+	app.setUpgradeConfig()
+
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
 	app.initParams()
 	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
 	return app
+}
+
+// setUpgradeConfig will overwrite default upgrade config
+func (app *BinanceChain) setUpgradeConfig() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {

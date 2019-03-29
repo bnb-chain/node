@@ -146,7 +146,7 @@ func handleNewOrder(
 
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
 	err := validateQtyAndLockBalance(ctx, keeper, acc, msg)
-	if err !=  nil {
+	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
 

@@ -104,7 +104,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 				"genesis transaction %v does not contain a MsgCreateValidator", i)
 			return
 		} else {
-			if _, desCheckErr := msg.Description.EnsureLength(); desCheckErr!= nil {
+			if _, desCheckErr := msg.Description.EnsureLength(); desCheckErr != nil {
 				err = fmt.Errorf("validator description length is too long: %s", desCheckErr.Error())
 				return
 			}
