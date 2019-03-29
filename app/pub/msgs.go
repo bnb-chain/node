@@ -3,6 +3,7 @@ package pub
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -43,6 +44,30 @@ type AvroOrJsonMsg interface {
 	String() string
 }
 
+// EssMsg is a type when AvroOrJsonMsg failed to publish
+// Not all AvroOrJsonMsg implemented Ess because:
+//
+// for transfer:
+//
+// 1. qs doesn't subscribe to its topic (risk control is relying on that)
+// 2. risk control can recover from explorer indexed transfers (pull mode)
+// 3. we don't have a unique representation of transfer like order-id (we didn't save txhash in message)
+//
+// for trade:
+// the problem is same with above point 3, (trade id is only generated during publication, not persisted anywhere).
+// If we keep qty, price, sid, bid for a trade, it would be too much,
+// in this case we should recover from local publisher
+type EssMsg interface {
+	AvroOrJsonMsg
+
+	// a string that carry essential msg used to make up downstream service on kafka issue
+	// this string would be persisted into file
+	EssentialMsg() string
+
+	// an empty message of original `AvroOrJsonMsg` to make downstream logic not broken
+	EmptyCopy() AvroOrJsonMsg
+}
+
 type ExecutionResults struct {
 	Height    int64
 	Timestamp int64 // milli seconds since Epoch
@@ -73,6 +98,25 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+func (msg *ExecutionResults) EssentialMsg() string {
+	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
+	orders := msg.Orders.EssentialMsg()
+	proposals := msg.Proposals.EssentialMsg()
+	return fmt.Sprintf("height:%d\norders:%s\nproposals:%s\n", msg.Height, orders, proposals)
+}
+
+func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
+	return &ExecutionResults{
+		msg.Height,
+		msg.Timestamp,
+		msg.NumOfMsgs,
+		trades{},
+		Orders{},
+		Proposals{},
+	}
+}
+
+// deliberated not implemented Ess
 type trades struct {
 	NumOfMsgs int
 	Trades    []*Trade
@@ -156,6 +200,21 @@ func (msg *Orders) ToNativeMap() map[string]interface{} {
 	}
 	native["orders"] = os
 	return native
+}
+
+func (msg *Orders) EssentialMsg() string {
+	stat := make(map[orderPkg.ChangeType]*strings.Builder, 0) // ChangeType -> OrderIds splited by EOL
+	for _, order := range msg.Orders {
+		if _, ok := stat[order.Status]; !ok {
+			stat[order.Status] = &strings.Builder{}
+		}
+		fmt.Fprintf(stat[order.Status], "\n%s", order.OrderId)
+	}
+	var result strings.Builder
+	for changeType, str := range stat {
+		fmt.Fprintf(&result, "%d:%s\n", changeType, str.String())
+	}
+	return result.String()
 }
 
 type Order struct {
@@ -250,6 +309,21 @@ func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+func (msg *Proposals) EssentialMsg() string {
+	stat := make(map[ProposalStatus]*strings.Builder, 0) // ProposalStatus -> OrderIds splited by EOL
+	for _, proposal := range msg.Proposals {
+		if _, ok := stat[proposal.Status]; !ok {
+			stat[proposal.Status] = &strings.Builder{}
+		}
+		fmt.Fprintf(stat[proposal.Status], "\n%d", proposal.Id)
+	}
+	var result strings.Builder
+	for proposalStatus, str := range stat {
+		fmt.Fprintf(&result, "%d:%s\n", proposalStatus, str.String())
+	}
+	return result.String()
+}
+
 type ProposalStatus uint8
 
 const (
@@ -326,6 +400,7 @@ func (msg *OrderBookDelta) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+// deliberated not implemented Ess
 type Books struct {
 	Height    int64
 	Timestamp int64
@@ -429,6 +504,24 @@ func (msg *Accounts) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+func (msg *Accounts) EssentialMsg() string {
+	builder := strings.Builder{}
+	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
+	for _, acc := range msg.Accounts {
+		fmt.Fprintf(&builder, "%s\n", sdk.AccAddress(acc.Owner).String())
+	}
+	return builder.String()
+}
+
+func (msg *Accounts) EmptyCopy() AvroOrJsonMsg {
+	return &Accounts{
+		msg.Height,
+		0,
+		[]Account{},
+	}
+}
+
+// deliberated not implemented Ess
 type BlockFee struct {
 	Height     int64
 	Fee        string
@@ -522,6 +615,7 @@ func (msg Transfer) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+// deliberated not implemented Ess
 type Transfers struct {
 	Height    int64
 	Num       int

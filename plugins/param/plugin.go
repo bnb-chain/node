@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
 	app "github.com/binance-chain/node/common/types"
@@ -37,16 +38,18 @@ func init() {
 	// CalculatorsGen is defined in a common package which can't import app package.
 	// Reasonable to init here, since fee param drive the calculator.
 	fees.CalculatorsGen = map[string]fees.FeeCalculatorGenerator{
-		gov.MsgSubmitProposal{}.Type(): fees.FixedFeeCalculatorGen,
-		gov.MsgDeposit{}.Type():        fees.FixedFeeCalculatorGen,
-		gov.MsgVote{}.Type():           fees.FixedFeeCalculatorGen,
-		list.Route:                     fees.FixedFeeCalculatorGen,
-		order.RouteNewOrder:            fees.FixedFeeCalculatorGen,
-		order.RouteCancelOrder:         fees.FixedFeeCalculatorGen,
-		issue.IssueMsgType:             fees.FixedFeeCalculatorGen,
-		issue.MintMsgType:              fees.FixedFeeCalculatorGen,
-		burn.BurnRoute:                 fees.FixedFeeCalculatorGen,
-		freeze.FreezeRoute:             fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():          tokens.TransferFeeCalculatorGen,
+		gov.MsgSubmitProposal{}.Type():    fees.FixedFeeCalculatorGen,
+		gov.MsgDeposit{}.Type():           fees.FixedFeeCalculatorGen,
+		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
+		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
+		stake.MsgRemoveValidator{}.Type(): fees.FixedFeeCalculatorGen,
+		list.Route:                        fees.FixedFeeCalculatorGen,
+		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
+		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
+		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
+		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
+		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
+		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
 	}
 }

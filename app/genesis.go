@@ -104,9 +104,13 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 				"genesis transaction %v does not contain a MsgCreateValidator", i)
 			return
 		} else {
+			if _, desCheckErr := msg.Description.EnsureLength(); desCheckErr != nil {
+				err = fmt.Errorf("validator description length is too long: %s", desCheckErr.Error())
+				return
+			}
 			appAccount := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(sdk.AccAddress(msg.ValidatorAddr))}
-			if len(msg.Moniker) > 0 {
-				appAccount.SetName(msg.Moniker)
+			if len(msg.Description.Moniker) > 0 {
+				appAccount.SetName(msg.Description.Moniker)
 			}
 			acc := NewGenesisAccount(&appAccount, msg.PubKey.Address())
 			genAccounts[i] = acc

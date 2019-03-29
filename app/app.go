@@ -29,13 +29,13 @@ import (
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/app/val"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
@@ -80,7 +80,7 @@ type BinanceChain struct {
 	DexKeeper     *dex.DexKeeper
 	AccountKeeper auth.AccountKeeper
 	TokenMapper   tkstore.Mapper
-	ValAddrMapper val.Mapper
+	ValAddrCache  *ValAddrCache
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
 	// keeper to process param store and update
@@ -89,6 +89,7 @@ type BinanceChain struct {
 	StateSyncManager
 
 	baseConfig        *config.BaseConfig
+	upgradeConfig     *config.UpgradeConfig
 	publicationConfig *config.PublicationConfig
 	publisher         pub.MarketDataPublisher
 
@@ -118,6 +119,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		Codec:             cdc,
 		queryHandlers:     make(map[string]types.AbciQueryHandler),
 		baseConfig:        ServerContext.BaseConfig,
+		upgradeConfig:     ServerContext.UpgradeConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
 	app.SetPruning(viper.GetString("pruning"))
@@ -126,7 +128,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
-	app.ValAddrMapper = val.NewMapper(common.ValAddrStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
@@ -137,6 +138,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
+	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
 
 	app.govKeeper = gov.NewKeeper(
 		cdc,
@@ -157,6 +159,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
+	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
@@ -171,7 +174,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
-			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger))
+			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir()))
 		}
 		if app.publicationConfig.PublishLocal {
 			publishers = append(publishers, pub.NewLocalMarketDataPublisher(ServerContext.Config.RootDir, app.Logger, app.publicationConfig))
@@ -226,11 +229,20 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
+	// set upgrade config
+	app.setUpgradeConfig()
+
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
 	app.initParams()
 	return app
+}
+
+// setUpgradeConfig will overwrite default upgrade config
+func (app *BinanceChain) setUpgradeConfig() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
@@ -284,7 +296,6 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			acc := gacc.ToAppAccount()
 			acc.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
 			app.AccountKeeper.SetAccount(ctx, acc)
-			app.ValAddrMapper.SetVal(ctx, gacc.ValAddr, gacc.Address)
 			validatorAddrs[i] = acc.Address
 		}
 		tokens.InitGenesis(ctx, app.TokenMapper, app.CoinKeeper, genesisState.Tokens,
@@ -447,7 +458,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
-	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrMapper, app.publicationConfig.PublishBlockFee)
+	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
@@ -459,7 +470,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.Unix())
+			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
@@ -471,9 +482,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
 	//  otherwise, apphash fail
 	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
-	if isBreatheBlock || height == 1 {
+	if isBreatheBlock || height == 1 || ctx.RouterCallRecord()["stake"] {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
+		app.ValAddrCache.ClearCache()
 	}
 
 	//match may end with transaction failure, which is better to save into

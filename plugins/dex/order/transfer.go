@@ -6,8 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 type transferEventType uint8
@@ -65,8 +65,8 @@ func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*Order
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
 	seller := orderMap[trade.Sid].Sender
 	buyer := orderMap[trade.Bid].Sender
-	quoteQty := utils.CalBigNotional(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotional(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
+	quoteQty := utils.CalBigNotionalInt64(trade.LastPx, trade.LastQty)
+	unlock := utils.CalBigNotionalInt64(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotionalInt64(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
 	return Transfer{
 			Oid:        trade.Sid,
 			eventType:  eventFilled,
@@ -136,7 +136,7 @@ func transferFromOrderRemoved(ord me.OrderPart, ordMsg OrderInfo, tranEventType 
 	var unlockAsset string
 	if ordMsg.Side == Side.BUY {
 		unlockAsset = quoteAsset
-		unlock = utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity) - utils.CalBigNotional(ordMsg.Price, ordMsg.Quantity-qty)
+		unlock = utils.CalBigNotionalInt64(ordMsg.Price, ordMsg.Quantity) - utils.CalBigNotionalInt64(ordMsg.Price, ordMsg.Quantity-qty)
 	} else {
 		unlockAsset = baseAsset
 		unlock = qty
