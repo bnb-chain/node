@@ -174,7 +174,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
-			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger))
+			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir()))
 		}
 		if app.publicationConfig.PublishLocal {
 			publishers = append(publishers, pub.NewLocalMarketDataPublisher(ServerContext.Config.RootDir, app.Logger, app.publicationConfig))
@@ -470,7 +470,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.Unix())
+			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
