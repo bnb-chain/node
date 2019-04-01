@@ -28,14 +28,14 @@ import (
 )
 
 var (
-	flagNodeDirPrefix     = "node-dir-prefix"
-	flagNumValidators     = "v"
-	flagOutputDir         = "output-dir"
-	flagNodeDaemonHome    = "node-daemon-home"
-	flagNodeCliHome       = "node-cli-home"
-	flagStartingIPAddress = "starting-ip-address"
-	flagMonikers          = "monikers"
-	flagNodeInfoOutputFile= "node-info-file"
+	flagNodeDirPrefix      = "node-dir-prefix"
+	flagNumValidators      = "v"
+	flagOutputDir          = "output-dir"
+	flagNodeDaemonHome     = "node-daemon-home"
+	flagNodeCliHome        = "node-cli-home"
+	flagStartingIPAddress  = "starting-ip-address"
+	flagMonikers           = "monikers"
+	flagNodeInfoOutputFile = "node-info-file"
 )
 
 type nodeInfo struct {
@@ -181,7 +181,7 @@ func prepareClientDir(clientDir string) {
 
 func prepareGenTx(cdc *codec.Codec, chainId, name, nodeId, ip, gentxsDir string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
-		memo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
+	memo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
 	txBytes := prepareCreateValidatorTx(cdc, chainId, name, memo, valOperAddr, valPubKey)
 	err := writeFile(fmt.Sprintf("%v.json", name), gentxsDir, txBytes)
 	if err != nil {
