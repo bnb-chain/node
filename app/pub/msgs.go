@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 type msgType int8
