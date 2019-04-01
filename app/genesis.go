@@ -34,7 +34,7 @@ var (
 	DefaultMaxValidators uint16 = 15
 
 	// min gov deposit
-	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2000e8)}
+	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1000e8)}
 )
 
 type GenesisState struct {
@@ -87,7 +87,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		return
 	}
 
-	genAccounts := make([]GenesisAccount, 0, len(appGenTxs) * 2)
+	genAccounts := make([]GenesisAccount, 0, len(appGenTxs)*2)
 	for i, genTx := range appGenTxs {
 		var tx auth.StdTx
 		if err = cdc.UnmarshalJSON(genTx, &tx); err != nil {

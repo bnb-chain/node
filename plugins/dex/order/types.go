@@ -12,14 +12,15 @@ import (
 type ChangeType uint8
 
 const (
-	Ack ChangeType = iota
-	Canceled
-	Expired
-	IocNoFill
-	PartialFill
-	FullyFill
-	FailedBlocking
-	FailedMatching
+	Ack            ChangeType = iota // new order tx
+	Canceled                         // cancel order tx
+	Expired                          // expired for gte order
+	IocNoFill                        // ioc order is not filled expire
+	IocExpire                        // ioc order is partial filled expire
+	PartialFill                      // order is partial filled, derived from trade
+	FullyFill                        // order is fully filled, derived from trade
+	FailedBlocking                   // order tx is failed blocking, we only publish essential message
+	FailedMatching                   // order failed matching
 )
 
 // True for should not remove order in these status from OrderInfoForPub
@@ -41,6 +42,8 @@ func (tpe ChangeType) String() string {
 		return "Expired"
 	case IocNoFill:
 		return "IocNoFill"
+	case IocExpire:
+		return "IocExpire"
 	case PartialFill:
 		return "PartialFill"
 	case FullyFill:
@@ -126,6 +129,7 @@ func (fh TradeHolder) String() string {
 
 type ExpireHolder struct {
 	OrderId string
+	Reason  ChangeType
 }
 
 type FeeHolder map[string]*types.Fee

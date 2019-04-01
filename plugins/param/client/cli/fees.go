@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -49,6 +50,7 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			feeParamFile := viper.GetString(flagFeeParamFile)
 			feeParam.Description = viper.GetString(flagDescription)
 			votingPeriodInSeconds := viper.GetInt64(flagVotingPeriod)
+
 			if feeParamFile != "" {
 				bz, err := ioutil.ReadFile(feeParamFile)
 				if err != nil {
@@ -76,8 +78,9 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			if votingPeriodInSeconds <= 0 {
-				return fmt.Errorf("voting period should be positive")
+				return errors.New("voting period should be positive")
 			}
 
 			votingPeriod := time.Duration(votingPeriodInSeconds) * time.Second

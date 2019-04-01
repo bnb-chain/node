@@ -70,7 +70,7 @@ func main() {
 		client.PostCommands(
 			bankcmd.SendTxCmd(cdc),
 			authcmd.GetSignCommand(cdc, types.GetAccountDecoder(cdc)),
-	)...)
+		)...)
 
 	// add proxy, version and key info
 	rootCmd.AddCommand(
