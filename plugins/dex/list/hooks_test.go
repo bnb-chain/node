@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/common/types"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
@@ -221,7 +222,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	err = hooks.OnProposalSubmitted(ctx, &proposal)
 	require.NotNil(t, err, "err should not be nil")
-	require.Contains(t, err.Error(), "Token BTC-ABC should be listed against BNB before against ETH-ABC")
+	require.Contains(t, err.Error(), "token BTC-ABC should be listed against BNB before against ETH-ABC")
 
 	pair := dexTypes.NewTradingPair(listParams.BaseAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
@@ -229,7 +230,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	err = hooks.OnProposalSubmitted(ctx, &proposal)
 	require.NotNil(t, err, "err should not be nil")
-	require.Contains(t, err.Error(), "Token ETH-ABC should be listed against BNB before listing BTC-ABC against ETH-ABC")
+	require.Contains(t, err.Error(), "token ETH-ABC should be listed against BNB before listing BTC-ABC against ETH-ABC")
 
 	pair = dexTypes.NewTradingPair(listParams.QuoteAssetSymbol, types.NativeTokenSymbol, listParams.InitPrice)
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)

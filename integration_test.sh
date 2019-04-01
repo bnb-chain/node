@@ -97,7 +97,7 @@ sleep 1s
 # propose list
 ((expire_time=$(date '+%s')+1000))
 lower_case_btc_symbol=$(echo ${btc_symbol} | tr 'A-Z' 'a-z')
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_btc_symbol} bnb 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time})
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_btc_symbol} bnb 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time} 5)
 check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s

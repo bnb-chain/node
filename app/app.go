@@ -139,7 +139,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.govKeeper = gov.NewKeeper(
 		cdc,
 		common.GovStoreKey,
-		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
+		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamSpace), app.CoinKeeper, app.stakeKeeper,
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)

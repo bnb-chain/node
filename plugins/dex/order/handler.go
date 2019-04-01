@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/binance-chain/node/plugins/dex/store"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -58,11 +59,11 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 	}
 
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()))
+		return fmt.Errorf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64())
 	}
 
 	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()))
+		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
 	}
 
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
