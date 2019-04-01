@@ -87,7 +87,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		return
 	}
 
-	genAccounts := make([]GenesisAccount, 0, len(appGenTxs) * 2)
+	genAccounts := make([]GenesisAccount, 0, len(appGenTxs)*2)
 	for i, genTx := range appGenTxs {
 		var tx auth.StdTx
 		if err = cdc.UnmarshalJSON(genTx, &tx); err != nil {
