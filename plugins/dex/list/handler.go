@@ -2,7 +2,6 @@ package list
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -34,42 +33,42 @@ func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.K
 func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	proposal := govKeeper.GetProposal(ctx, msg.ProposalId)
 	if proposal == nil {
-		return errors.New(fmt.Sprintf("proposal %d does not exist", msg.ProposalId))
+		return fmt.Errorf("proposal %d does not exist", msg.ProposalId)
 	}
 
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
-		return errors.New(fmt.Sprintf("proposal type(%s) should be %s",
-			proposal.GetProposalType(), gov.ProposalTypeListTradingPair))
+		return fmt.Errorf("proposal type(%s) should be %s",
+			proposal.GetProposalType(), gov.ProposalTypeListTradingPair)
 	}
 
 	if proposal.GetStatus() != gov.StatusPassed {
-		return errors.New(fmt.Sprintf("proposal status(%s) should be Passed before you can list your token",
-			proposal.GetStatus()))
+		return fmt.Errorf("proposal status(%s) should be Passed before you can list your token",
+			proposal.GetStatus())
 	}
 
 	listParams := gov.ListTradingPairParams{}
 	err := json.Unmarshal([]byte(proposal.GetDescription()), &listParams)
 	if err != nil {
-		return errors.New(fmt.Sprintf("illegal list params in proposal, params=%s", proposal.GetDescription()))
+		return fmt.Errorf("illegal list params in proposal, params=%s", proposal.GetDescription())
 	}
 
 	if ctx.BlockHeader().Time.After(listParams.ExpireTime) {
-		return errors.New(fmt.Sprintf("list time expired, expire_time=%s", listParams.ExpireTime.String()))
+		return fmt.Errorf("list time expired, expire_time=%s", listParams.ExpireTime.String())
 	}
 
 	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) {
-		return errors.New(fmt.Sprintf("base asset symbol(%s) is not identical to symbol in proposal(%s)",
-			msg.BaseAssetSymbol, listParams.BaseAssetSymbol))
+		return fmt.Errorf("base asset symbol(%s) is not identical to symbol in proposal(%s)",
+			msg.BaseAssetSymbol, listParams.BaseAssetSymbol)
 	}
 
 	if strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) {
-		return errors.New(fmt.Sprintf("quote asset symbol(%s) is not identical to symbol in proposal(%s)",
-			msg.QuoteAssetSymbol, listParams.QuoteAssetSymbol))
+		return fmt.Errorf("quote asset symbol(%s) is not identical to symbol in proposal(%s)",
+			msg.QuoteAssetSymbol, listParams.QuoteAssetSymbol)
 	}
 
 	if msg.InitPrice != listParams.InitPrice {
-		return errors.New(fmt.Sprintf("init price(%d) is not identical to price in proposal(%d)",
-			msg.InitPrice, listParams.InitPrice))
+		return fmt.Errorf("init price(%d) is not identical to price in proposal(%d)",
+			msg.InitPrice, listParams.InitPrice)
 	}
 
 	return nil
@@ -85,16 +84,14 @@ func checkPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairM
 
 		if !pairMapper.Exists(ctx, baseAssetSymbol, commonTypes.NativeTokenSymbol) &&
 			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, baseAssetSymbol) {
-			return errors.New(
-				fmt.Sprintf("Token %s should be listed against BNB before against %s",
-					baseAssetSymbol, quoteAssetSymbol))
+			return fmt.Errorf("token %s should be listed against BNB before against %s",
+				baseAssetSymbol, quoteAssetSymbol)
 		}
 
 		if !pairMapper.Exists(ctx, quoteAssetSymbol, commonTypes.NativeTokenSymbol) &&
 			!pairMapper.Exists(ctx, commonTypes.NativeTokenSymbol, quoteAssetSymbol) {
-			return errors.New(
-				fmt.Sprintf("Token %s should be listed against BNB before listing %s against %s",
-					quoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol))
+			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
+				quoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol)
 		}
 	}
 	return nil

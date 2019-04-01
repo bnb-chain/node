@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/types"
@@ -57,7 +58,7 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 		return m.decodeToken(bz), nil
 	}
 
-	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
+	return types.Token{}, fmt.Errorf("token(%v) not found", symbol)
 }
 
 func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
@@ -69,7 +70,7 @@ func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, 
 	if bz != nil {
 		return m.decodeToken(bz), nil
 	}
-	return types.Token{}, errors.New(fmt.Sprintf("token(%v) not found", symbol))
+	return types.Token{}, fmt.Errorf("token(%v) not found", symbol)
 }
 
 func (m mapper) GetTokenList(ctx sdk.Context) Tokens {

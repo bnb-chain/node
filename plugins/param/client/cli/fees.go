@@ -85,7 +85,7 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 
 			votingPeriod := time.Duration(votingPeriodInSeconds) * time.Second
 			if votingPeriod > gov.MaxVotingPeriod {
-				return errors.New(fmt.Sprintf("voting period should less than %d seconds", gov.MaxVotingPeriod/time.Second))
+				return fmt.Errorf("voting period should less than %d seconds", gov.MaxVotingPeriod/time.Second)
 			}
 
 			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount, votingPeriod)
