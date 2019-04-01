@@ -34,15 +34,19 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 	listParams := gov.ListTradingPairParams{}
 	err := json.Unmarshal([]byte(proposal.GetDescription()), &listParams)
 	if err != nil {
-		return errors.New(fmt.Sprintf("unmarshal list params error, err=%s", err.Error()))
+		return fmt.Errorf("unmarshal list params error, err=%s", err.Error())
 	}
 
 	if listParams.BaseAssetSymbol == "" {
-		return errors.New(fmt.Sprintf("base asset symbol should not be empty"))
+		return errors.New("base asset symbol should not be empty")
 	}
 
 	if listParams.QuoteAssetSymbol == "" {
-		return errors.New(fmt.Sprintf("quote asset symbol should not be empty"))
+		return errors.New("quote asset symbol should not be empty")
+	}
+
+	if listParams.BaseAssetSymbol == listParams.QuoteAssetSymbol {
+		return errors.New("base token and quote token should not be the same")
 	}
 
 	if listParams.InitPrice <= 0 {
@@ -54,16 +58,16 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 	}
 
 	if !hooks.tokenMapper.Exists(ctx, listParams.BaseAssetSymbol) {
-		return errors.New(fmt.Sprintf("base token does not exist"))
+		return errors.New("base token does not exist")
 	}
 
 	if !hooks.tokenMapper.Exists(ctx, listParams.QuoteAssetSymbol) {
-		return errors.New(fmt.Sprintf("quote token does not exist"))
+		return errors.New("quote token does not exist")
 	}
 
 	if hooks.pairMapper.Exists(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol) ||
 		hooks.pairMapper.Exists(ctx, listParams.QuoteAssetSymbol, listParams.BaseAssetSymbol) {
-		return errors.New(fmt.Sprintf("trading pair exists"))
+		return errors.New("trading pair exists")
 	}
 
 	if err := checkPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {

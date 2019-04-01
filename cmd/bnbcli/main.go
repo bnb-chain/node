@@ -69,6 +69,7 @@ func main() {
 	rootCmd.AddCommand(
 		client.PostCommands(
 			bankcmd.SendTxCmd(cdc),
+			authcmd.GetSignCommand(cdc, types.GetAccountDecoder(cdc)),
 		)...)
 
 	// add proxy, version and key info
@@ -89,6 +90,9 @@ func main() {
 
 		client.PostCommands(
 			stakecmd.GetCmdCreateValidator(cdc),
+			stakecmd.GetCmdRemoveValidator(cdc),
+			stakecmd.GetCmdQueryValidators("stake", cdc),
+			stakecmd.GetCmdQueryUnbondingDelegations("stake", cdc),
 		)...)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)

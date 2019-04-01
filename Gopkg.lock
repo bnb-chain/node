@@ -2,12 +2,20 @@
 
 
 [[projects]]
-  digest = "1:66b8ed452b31eb9075bc53295952487c333a9cb555de57ed61f5664c058d9050"
+  digest = "1:ed77032e4241e3b8329c9304d66452ed196e795876e14be677a546f36b94e67a"
+  name = "github.com/DataDog/zstd"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c7161f8c63c045cbc7ca051dcc969dd0e4054de2"
+  version = "v1.3.5"
+
+[[projects]]
+  digest = "1:82a18170c9c41e36939cb5d26da1546b2cfa786aa030a978d3bf183519849230"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = "UT"
-  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
-  version = "v1.17.0"
+  revision = "4602b5a8c6e826f9e0737865818dd43b2339a092"
+  version = "v1.21.0"
 
 [[projects]]
   branch = "master"
@@ -55,7 +63,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:387d663b97660c69f0bb47b9f9328954a7e3f38dc31a0aefb892a84c4ce58f85"
+  digest = "1:11e65d085dd48f2752bc3a49823f9973ab706be7c766ca2673d52a8beaa9616d"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -102,9 +110,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "ea7ec9a3c742063b1f516e327a81293402b2a7a7"
+  revision = "ca4e37ce7f5dd9ff5f8385e51ee862cd70fc2024"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.13"
+  version = "v0.25.0-binance.15"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -592,7 +600,7 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  digest = "1:31ef3fb8e56574e272cba6c65706ada00b6ee408d54287dbd0efb8ba2a3458c3"
+  digest = "1:ecb0b4a897ea8a52195e6df0aa3bc02bd1ce12a2d7bce13c10b506a70969395d"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -658,9 +666,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "65504720616b801366974329c7b564719b0a1d19"
+  revision = "14ae0f7facd020c391548dfa226b30cb9fecdfdb"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.1"
+  version = "v0.30.1-binance.2"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"

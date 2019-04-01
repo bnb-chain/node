@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -32,6 +33,10 @@ type PressureMakerConfig struct {
 }
 
 func main() {
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	Execute()
 }
 
@@ -77,8 +82,12 @@ var rootCmd = &cobra.Command{
 		// TODO: find an elegant way to exit
 		// The problem of shutdown is publication is async (we don't know when messages are
 		finishSignal := make(chan struct{})
-		publisher := pub.NewKafkaMarketDataPublisher(context.Logger)
-
+		pub.Logger = context.Logger.With("module", "pub")
+		pub.Cfg = &cfg.PublicationConfig
+		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, cfg.PublicationConfig.PublicationChannelSize)
+		publisher := pub.NewKafkaMarketDataPublisher(pub.Logger, "")
+		go pub.Publish(publisher, nil, pub.Logger, pub.Cfg, pub.ToPublishCh)
+		pub.IsLive = true
 		srv := &http.Server{
 			Addr: cfg.PrometheusAddr,
 			Handler: promhttp.InstrumentMetricHandler(

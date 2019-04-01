@@ -2,6 +2,7 @@ package matcheng
 
 import (
 	"math"
+	"math/big"
 	"sort"
 
 	"github.com/binance-chain/node/common/upgrade"
@@ -31,6 +32,7 @@ func (li *SurplusIndex) clear() {
 
 //sumOrdersTotalLeft() returns the total value left that can be traded in this block round.
 //reCalNxtTrade should be true at the beginning and false when nxtTrade is changed by allocation logic
+//note: the result would never overflow because we have checked when place order.
 func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
 	var s int64
 	k := len(orders)
@@ -50,14 +52,25 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
 		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
-		accum += l.SellTotal
+		if accum+l.SellTotal < 0 {
+			// overflow
+			// actually, for sell orders, we would never reach here because of the limit of total supply
+			accum = math.MaxInt64
+		} else {
+			accum += l.SellTotal
+		}
 		l.AccumulatedSell = accum
 	}
 	accum = 0
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
-		accum += l.BuyTotal
+		if accum+l.BuyTotal < 0 {
+			// overflow, it's safe to use MaxInt64 because the final execution would never exceed the total supply of the base asset
+			accum = math.MaxInt64
+		} else {
+			accum += l.BuyTotal
+		}
 		l.AccumulatedBuy = accum
 		l.AccumulatedExecutions = utils.MinInt(l.AccumulatedBuy, l.AccumulatedSell)
 		l.BuySellSurplus = l.AccumulatedBuy - l.AccumulatedSell
@@ -180,7 +193,7 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 		}
 	}
 	// only buy side surplus exist, buying pressure
-	if buySurplus && !sellSurplus { // return hightest
+	if buySurplus && !sellSurplus { // return highest
 		return getTradePriceForMarketPressure(BUYSIDE, overlapped,
 			leastSurplus.index, float64(refPrice), priceLimitPct)
 	}
@@ -218,12 +231,11 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	if compareBuy(t, residual) > 0 { // not enough to allocate
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
-		nLot := float64(residual / lotSize)
-		totalF := float64(t)
+		nLot := residual / lotSize
 		k := len(orders)
 		i := 0
 		for i = 0; i < k; i++ {
-			a := int64(math.Floor(nLot*float64(orders[i].nxtTrade)/totalF)) * lotSize // this is supposed to be the main portion
+			a := calcNumOfLot(nLot, orders[i].nxtTrade, t) * lotSize // this is supposed to be the main portion
 			if compareBuy(a, residual) >= 0 {
 				orders[i].nxtTrade = residual
 				residual = 0
@@ -255,5 +267,16 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	} else { // t <= *toAlloc
 		*toAlloc -= t
 		return true
+	}
+}
+
+// totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
+func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
+	if tmp, ok := utils.Mul64(totalLot, orderLeft); ok {
+		return tmp/totalLeft
+	} else {
+		var res big.Int
+		res.Quo(res.Mul(big.NewInt(totalLot), big.NewInt(orderLeft)), big.NewInt(totalLeft))
+		return res.Int64()
 	}
 }

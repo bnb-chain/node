@@ -34,7 +34,7 @@ var (
 	DefaultMaxValidators uint16 = 15
 
 	// min gov deposit
-	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2000e8)}
+	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1000e8)}
 )
 
 type GenesisState struct {
@@ -49,17 +49,17 @@ type GenesisState struct {
 
 // GenesisAccount doesn't need pubkey or sequence
 type GenesisAccount struct {
-	Name    string         `json:"name"`
-	Address sdk.AccAddress `json:"address"`
-	ValAddr crypto.Address `json:"valaddr"`
+	Name          string         `json:"name"`
+	Address       sdk.AccAddress `json:"address"`
+	ConsensusAddr crypto.Address `json:"consensus_addr"` // only validator's account has this address
 }
 
 // NewGenesisAccount -
-func NewGenesisAccount(aa *types.AppAccount, valAddr crypto.Address) GenesisAccount {
+func NewGenesisAccount(aa *types.AppAccount, consensusAddr crypto.Address) GenesisAccount {
 	return GenesisAccount{
-		Name:    aa.Name,
-		Address: aa.GetAddress(),
-		ValAddr: valAddr,
+		Name:          aa.Name,
+		Address:       aa.GetAddress(),
+		ConsensusAddr: consensusAddr,
 	}
 }
 
@@ -87,7 +87,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		return
 	}
 
-	genAccounts := make([]GenesisAccount, len(appGenTxs))
+	genAccounts := make([]GenesisAccount, 0, len(appGenTxs)*2)
 	for i, genTx := range appGenTxs {
 		var tx auth.StdTx
 		if err = cdc.UnmarshalJSON(genTx, &tx); err != nil {
@@ -104,12 +104,22 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 				"genesis transaction %v does not contain a MsgCreateValidator", i)
 			return
 		} else {
-			appAccount := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(sdk.AccAddress(msg.ValidatorAddr))}
-			if len(msg.Moniker) > 0 {
-				appAccount.SetName(msg.Moniker)
+			operAddr := sdk.AccAddress(msg.ValidatorAddr)
+			// add validator self-delegation account first
+			if !msg.DelegatorAddr.Equals(operAddr) {
+				delAcc := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(msg.DelegatorAddr)}
+				if len(msg.Description.Moniker) > 0 {
+					delAcc.SetName(msg.Description.Moniker)
+				}
+				genAccounts = append(genAccounts, NewGenesisAccount(&delAcc, nil))
 			}
-			acc := NewGenesisAccount(&appAccount, msg.PubKey.Address())
-			genAccounts[i] = acc
+
+			// add validator operator account
+			operAcc := types.AppAccount{BaseAccount: auth.NewBaseAccountWithAddress(operAddr)}
+			if len(msg.Description.Moniker) > 0 {
+				operAcc.SetName(msg.Description.Moniker)
+			}
+			genAccounts = append(genAccounts, NewGenesisAccount(&operAcc, msg.PubKey.Address()))
 		}
 	}
 
@@ -121,7 +131,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	stakeData.Params.MaxValidators = DefaultMaxValidators
 
 	govData := gov.DefaultGenesisState()
-	govData.DepositProcedure.MinDeposit = DefaultGovMinDesposit
+	govData.DepositParams.MinDeposit = DefaultGovMinDesposit
 
 	genesisState := GenesisState{
 		Tokens:       []tokens.GenesisToken{nativeToken},

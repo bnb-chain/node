@@ -4,12 +4,13 @@
 
 IMPROVEMENTS
 
+* [\#518](https://github.com/binance-chain/node/pull/518) [Gov] Adapt to changes in cosmos
+
 BUG FIXES
 
 * [\#502](https://github.com/binance-chain/node/pull/502) [MatchEngine] Fix order sequence in price level
 * [\#500](https://github.com/binance-chain/node/pull/500) [Publish] Failed blocking should not be regarded as closed order
-* [\#495](https://github.com/binance-chain/node/pull/500) [MatchEngine] Fully fill order might not be correctly removed in orderbook when two continuous orders fully filled.
-
+* [\#495](https://github.com/binance-chain/node/pull/495) [MatchEngine] Fully fill order might not be correctly removed in orderbook when two continuous orders fully filled.
 
 ## 0.5.1
 

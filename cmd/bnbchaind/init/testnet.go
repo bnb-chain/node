@@ -28,14 +28,22 @@ import (
 )
 
 var (
-	flagNodeDirPrefix     = "node-dir-prefix"
-	flagNumValidators     = "v"
-	flagOutputDir         = "output-dir"
-	flagNodeDaemonHome    = "node-daemon-home"
-	flagNodeCliHome       = "node-cli-home"
-	flagStartingIPAddress = "starting-ip-address"
-	flagMonikers          = "monikers"
+	flagNodeDirPrefix      = "node-dir-prefix"
+	flagNumValidators      = "v"
+	flagOutputDir          = "output-dir"
+	flagNodeDaemonHome     = "node-daemon-home"
+	flagNodeCliHome        = "node-cli-home"
+	flagStartingIPAddress  = "starting-ip-address"
+	flagMonikers           = "monikers"
+	flagNodeInfoOutputFile = "node-info-file"
 )
+
+type nodeInfo struct {
+	Moniker string `json:"moniker"`
+	PubKey  string `json:"pubkey"`
+	NodeId  string `json:"nodeId"`
+	IP      string `json:"ip"`
+}
 
 const nodeDirPerm = 0755
 
@@ -81,16 +89,14 @@ Example:
 	cmd.Flags().StringVar(&app.ServerContext.Bech32PrefixAccAddr, flagAccPrefix, "bnb", "bech32 prefix for AccAddress")
 	app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
 	cmd.Flags().StringSlice(flagMonikers, nil, "specify monikers for nodes if needed")
+	cmd.Flags().String(flagNodeInfoOutputFile, "", "the file containing all node info with json format, if not specified, will just print it")
 
 	return cmd
 }
 func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) error {
-	// func testnetWithConfig(config *cfg.Config, cdc *wire.Codec, appInit server.AppInit) error {
-	var chainID string
 	outDir := viper.GetString(flagOutputDir)
 	numValidators := viper.GetInt(flagNumValidators)
-
-	chainID = viper.GetString(client.FlagChainID)
+	chainID := viper.GetString(client.FlagChainID)
 	if chainID == "" {
 		chainID = "chain-" + cmn.RandStr(6)
 	}
@@ -105,10 +111,9 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		monikers = make([]string, numValidators)
 	}
 	nodeDirs := make([]string, numValidators)
-	peers := make(map[string]string, numValidators) // moniker -> peer
+	peers := make(map[string]nodeInfo, numValidators) // moniker -> peer
 	genTxsJson := make([]json.RawMessage, numValidators)
 	genFiles := make([]string, numValidators)
-	accs := make([]app.GenesisAccount, numValidators)
 
 	// Generate private key, node ID, initial transaction
 	for i := 0; i < numValidators; i++ {
@@ -132,16 +137,38 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		nodeId, valPubKey := InitializeNodeValidatorFiles(config)
 
 		addr, _ := createValOperAccount(clientDir, config.Moniker)
-		nodeInfo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
-		peers[config.Moniker] = nodeInfo
-		genTxsJson[i] = prepareGenTx(cdc, chainID, config.Moniker, nodeInfo, gentxsDir, addr, valPubKey)
+		if bech32ifyPubKey, err := sdk.Bech32ifyConsPub(valPubKey); err != nil {
+			return err
+		} else {
+			peers[config.Moniker] = nodeInfo{
+				Moniker: config.Moniker,
+				PubKey:  bech32ifyPubKey,
+				NodeId:  nodeId,
+				IP:      ip,
+			}
+		}
+
+		genTxsJson[i] = prepareGenTx(cdc, chainID, config.Moniker, nodeId, ip, gentxsDir, addr, valPubKey)
 		genFiles[i] = config.GenesisFile()
 	}
 
-	createGenesisFiles(cdc, chainID, genFiles, appInit, accs, genTxsJson)
+	createGenesisFiles(cdc, chainID, genFiles, appInit, genTxsJson)
 	createConfigFiles(config, monikers, nodeDirs, peers)
+	nodeInfoFile := viper.GetString(flagNodeInfoOutputFile)
+	nodeInfoBytes, err := genNodeInfo(monikers, peers)
+	if err != nil {
+		return err
+	}
 
-	fmt.Printf("Successfully initialized %v node directories\n", numValidators)
+	if len(nodeInfoFile) == 0 {
+		fmt.Printf("%s\n", string(nodeInfoBytes))
+	} else {
+		if err = writeFile(nodeInfoFile, outDir, nodeInfoBytes); err != nil {
+			return err
+		}
+		fmt.Printf("Successfully initialized %v node directories\n", numValidators)
+	}
+
 	return nil
 }
 
@@ -152,8 +179,9 @@ func prepareClientDir(clientDir string) {
 	}
 }
 
-func prepareGenTx(cdc *codec.Codec, chainId, name, memo, gentxsDir string,
+func prepareGenTx(cdc *codec.Codec, chainId, name, nodeId, ip, gentxsDir string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
+	memo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
 	txBytes := prepareCreateValidatorTx(cdc, chainId, name, memo, valOperAddr, valPubKey)
 	err := writeFile(fmt.Sprintf("%v.json", name), gentxsDir, txBytes)
 	if err != nil {
@@ -162,7 +190,7 @@ func prepareGenTx(cdc *codec.Codec, chainId, name, memo, gentxsDir string,
 	return txBytes
 }
 
-func createGenesisFiles(cdc *codec.Codec, chainId string, genFiles []string, appInit server.AppInit, accs []app.GenesisAccount, genTxsJson []json.RawMessage) {
+func createGenesisFiles(cdc *codec.Codec, chainId string, genFiles []string, appInit server.AppInit, genTxsJson []json.RawMessage) {
 	genTime := utils.Now()
 	appState, err := appInit.AppGenState(cdc, genTxsJson)
 	if err != nil {
@@ -174,7 +202,7 @@ func createGenesisFiles(cdc *codec.Codec, chainId string, genFiles []string, app
 	}
 }
 
-func createConfigFiles(config *cfg.Config, monikers []string, nodeDirs []string, peers map[string]string) {
+func createConfigFiles(config *cfg.Config, monikers []string, nodeDirs []string, peers map[string]nodeInfo) {
 	numValidators := len(monikers)
 	for i := 0; i < numValidators; i++ {
 		config.Moniker = monikers[i]
@@ -183,7 +211,7 @@ func createConfigFiles(config *cfg.Config, monikers []string, nodeDirs []string,
 		var addressIps []string
 		for moniker, peer := range peers {
 			if monikers[i] != moniker {
-				addressIps = append(addressIps, peer)
+				addressIps = append(addressIps, fmt.Sprintf("%s@%s:26656", peer.NodeId, peer.IP))
 			}
 		}
 		sort.Strings(addressIps)
@@ -238,4 +266,14 @@ func writeFile(name string, dir string, contents []byte) error {
 		return err
 	}
 	return nil
+}
+
+func genNodeInfo(monikers []string, peers map[string]nodeInfo) ([]byte, error) {
+	res := make([]nodeInfo, 0, len(peers))
+	// keep the node sequence same as the provided monikers
+	for _, moniker := range monikers {
+		res = append(res, peers[moniker])
+	}
+
+	return json.MarshalIndent(res, "", "    ")
 }
