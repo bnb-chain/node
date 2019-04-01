@@ -488,7 +488,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdatedAccounts, blockFee, ctx, height, blockTime.Unix())
+			app.publish(tradesToPublish, &proposals, &stakeUpdatedAccounts, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
