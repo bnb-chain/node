@@ -135,7 +135,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
-		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
+		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -143,7 +143,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.govKeeper = gov.NewKeeper(
 		cdc,
 		common.GovStoreKey,
-		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamspace), app.CoinKeeper, app.stakeKeeper,
+		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamSpace), app.CoinKeeper, app.stakeKeeper,
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
@@ -470,25 +470,30 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 
-	if app.publicationConfig.ShouldPublishAny() &&
-		pub.IsLive {
-		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.UnixNano())
-		}
-
-		// clean up intermediate cached data
-		app.DexKeeper.ClearOrderChanges()
-		app.DexKeeper.ClearRoundFee()
-	}
-
+	var stakeUpdatedAccounts pub.StakeUpdatedAccounts
 	var validatorUpdates abci.ValidatorUpdates
 	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
 	//  otherwise, apphash fail
 	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
 	if isBreatheBlock || height == 1 || ctx.RouterCallRecord()["stake"] {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
-		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
+		var completedUbd []stake.UnbondingDelegation
+		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 		app.ValAddrCache.ClearCache()
+		if app.publicationConfig.PublishOrderUpdates {
+			stakeUpdatedAccounts = pub.CollectStakeUpdateAccountsForPublish(completedUbd)
+		}
+	}
+
+	if app.publicationConfig.ShouldPublishAny() &&
+		pub.IsLive {
+		if height >= app.publicationConfig.FromHeightInclusive {
+			app.publish(tradesToPublish, &proposals, &stakeUpdatedAccounts, blockFee, ctx, height, blockTime.Unix())
+		}
+
+		// clean up intermediate cached data
+		app.DexKeeper.ClearOrderChanges()
+		app.DexKeeper.ClearRoundFee()
 	}
 
 	//match may end with transaction failure, which is better to save into
@@ -642,7 +647,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdatedAccounts *pub.StakeUpdatedAccounts, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -687,6 +692,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
+		stakeUpdatedAccounts,
 		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,

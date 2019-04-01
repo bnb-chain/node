@@ -131,7 +131,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 	stakeData.Params.MaxValidators = DefaultMaxValidators
 
 	govData := gov.DefaultGenesisState()
-	govData.DepositProcedure.MinDeposit = DefaultGovMinDesposit
+	govData.DepositParams.MinDeposit = DefaultGovMinDesposit
 
 	genesisState := GenesisState{
 		Tokens:       []tokens.GenesisToken{nativeToken},

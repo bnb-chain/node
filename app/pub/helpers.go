@@ -2,6 +2,7 @@ package pub
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 	"sync"
 	"time"
 
@@ -208,6 +209,15 @@ func CollectProposalsForPublish(passed, failed []int64) Proposals {
 		ps = append(ps, &Proposal{p, Failed})
 	}
 	return Proposals{totalProposals, ps}
+}
+
+func CollectStakeUpdateAccountsForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdatedAccounts {
+	totalUnbondingDelegations := len(unbondingDelegations)
+	updateAccounts := make([]*StakeUpdatedAccount, 0, totalUnbondingDelegations)
+	for _, ubd := range unbondingDelegations {
+		updateAccounts = append(updateAccounts, &StakeUpdatedAccount{ubd.ValidatorAddr, ubd.Balance})
+	}
+	return StakeUpdatedAccounts{totalUnbondingDelegations, updateAccounts}
 }
 
 func updateExpireFeeForPublish(

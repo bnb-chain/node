@@ -73,7 +73,7 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount)
+			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount, 10000)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
