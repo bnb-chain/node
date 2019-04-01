@@ -45,6 +45,10 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("quote asset symbol should not be empty")
 	}
 
+	if listParams.BaseAssetSymbol == listParams.QuoteAssetSymbol {
+		return errors.New("base token and quote token should not be the same")
+	}
+
 	if listParams.InitPrice <= 0 {
 		return errors.New("init price should larger than zero")
 	}

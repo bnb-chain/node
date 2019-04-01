@@ -84,6 +84,28 @@ func TestQuoteAssetEmpty(t *testing.T) {
 	require.Contains(t, err.Error(), "quote asset symbol should not be empty")
 }
 
+func TestEqualBaseAssetAndQuoteAsset(t *testing.T) {
+	hooks := NewListHooks(nil, nil)
+
+	listParams := gov.ListTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "BNB",
+	}
+
+	listParamsBz, err := json.Marshal(listParams)
+	require.Nil(t, err, "marshal list params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeListTradingPair,
+		Description:  string(listParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "base token and quote token should not be the same")
+}
+
 func TestWrongPrice(t *testing.T) {
 	hooks := NewListHooks(nil, nil)
 
