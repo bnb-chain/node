@@ -9,9 +9,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 // TODO: improve, should be configurable

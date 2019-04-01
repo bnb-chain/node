@@ -41,17 +41,11 @@ const (
 	flagAccPrefix    = "acc-prefix"
 )
 
-type initConfig struct {
-	ChainID   string
-	GenTxs    bool
-	GenTxsDir string
-	Overwrite bool
-}
-
 type printInfo struct {
 	Moniker    string          `json:"moniker"`
 	ChainID    string          `json:"chain_id"`
 	NodeID     string          `json:"node_id"`
+	PubKey     string          `json:"pub_key"`
 	AppMessage json.RawMessage `json:"app_message"`
 }
 
@@ -109,10 +103,15 @@ enabled, and the genesis file will not be generated.
 			ExportGenesisFileWithTime(genFile, chainID, nil, appState, utils.Now())
 			writeConfigFile(config)
 
+			bech32ifyPubKey, err := sdk.Bech32ifyConsPub(pubKey)
+			if err != nil {
+				return err
+			}
 			toPrint := printInfo{
 				ChainID:    chainID,
 				Moniker:    config.Moniker,
 				NodeID:     nodeID,
+				PubKey:     bech32ifyPubKey,
 				AppMessage: makeAppMessage(cdc, secret),
 			}
 			return displayInfo(cdc, toPrint)

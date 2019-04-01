@@ -57,6 +57,13 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc(prefix+"/fees", s.handleFeesParamReq(s.cdc, s.ctx)).
 		Methods("GET")
 
+	// stake query
+	r.HandleFunc(prefix+"/stake/validators", s.handleValidatorsQueryReq(s.cdc, s.ctx)).
+		Methods("GET")
+
+	r.HandleFunc(prefix+"/stake/unbonding_delegations/delegator/{delegatorAddr}", s.handleDelegatorUnbondingDelegationsQueryReq(s.cdc, s.ctx)).
+		Methods("GET")
+
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
 

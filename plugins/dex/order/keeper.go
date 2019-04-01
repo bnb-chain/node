@@ -98,7 +98,7 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.Price.ToInt64(), pair.LotSize.ToInt64())
+	eng := CreateMatchEng(pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
@@ -131,7 +131,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	symbol := strings.ToUpper(info.Symbol)
 	eng, ok := kp.engines[symbol]
 	if !ok {
-		err = errors.New(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
+		err = fmt.Errorf("match engine of symbol %s doesn't exist", symbol)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 }
 
 func orderNotFound(symbol, id string) error {
-	return errors.New(fmt.Sprintf("Failed to find order [%v] on symbol [%v]", id, symbol))
+	return fmt.Errorf("Failed to find order [%v] on symbol [%v]", id, symbol)
 }
 
 func (kp *Keeper) RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
@@ -460,7 +460,16 @@ func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
+
 	return res
+}
+
+func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel {
+	if eng, ok := kp.engines[pair]; ok {
+		return eng.Book.GetPriceLevel(price, side)
+	} else {
+		return nil
+	}
 }
 
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
@@ -486,14 +495,14 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	// these two non-negative check are to ensure the Transfer gen result is correct before we actually operate the acc.
 	// they should never happen, there would be a severe bug if happen and we have to cancel all orders when app restarts.
 	if !newLocked.IsNotNegative() {
-		panic(errors.New(fmt.Sprintf(
-			"No enough locked tokens to unlock, oid: %s, newLocked: %s, unlock: %d",
+		panic(fmt.Errorf(
+			"no enough locked tokens to unlock, oid: %s, newLocked: %s, unlock: %d",
 			tran.Oid,
 			newLocked.String(),
-			tran.unlock)))
+			tran.unlock))
 	}
 	if tran.unlock < tran.out {
-		panic(errors.New("Unlocked tokens cannot cover the expense"))
+		panic(errors.New("unlocked tokens cannot cover the expense"))
 	}
 	account.SetLockedCoins(newLocked)
 	account.SetCoins(account.GetCoins().
@@ -555,6 +564,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 					fees = &sortedAsset{}
 					tradeInAsset[addrStr] = fees
 				}
+				// no possible to overflow, for tran.in == otherSide.tran.out <= TotalSupply(otherSide.tran.outAsset)
 				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}
@@ -765,7 +775,7 @@ func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, days
 	day := t / utils.SecondsPerDay
 	bz := store.Get(utils.Int642Bytes(day))
 	if bz == nil {
-		return 0, errors.New(fmt.Sprintf("breathe block not found for day %v", day))
+		return 0, fmt.Errorf("breathe block not found for day %v", day)
 	}
 
 	var height int64

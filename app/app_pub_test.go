@@ -69,7 +69,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	_, proposerAcc := testutils.NewAccount(ctx, am, 100)
 	proposerPubKey := ed25519.GenPrivKey().PubKey()
 	proposerValAddr := proposerPubKey.Address()
-	app.ValAddrMapper.SetVal(ctx, proposerValAddr, proposerAcc.GetAddress())
+	app.ValAddrCache.cache[string(proposerValAddr)] = proposerAcc.GetAddress()
 	// set ante handler to nil to skip the sig verification. the side effect is that we also skip the tx fee collection.
 	chainId := "chain-pub"
 	genTx := prepareGenTx(app.Codec, chainId, sdk.ValAddress(proposerAcc.GetAddress()), proposerPubKey)

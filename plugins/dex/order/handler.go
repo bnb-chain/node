@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/binance-chain/node/plugins/dex/store"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -14,10 +16,9 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -58,11 +59,11 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 	}
 
 	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()))
+		return fmt.Errorf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64())
 	}
 
 	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
-		return errors.New(fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()))
+		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
 	}
 
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
@@ -72,9 +73,64 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 	return nil
 }
 
+func validateQtyAndLockBalance(ctx sdk.Context, keeper *Keeper, acc common.NamedAccount, msg NewOrderMsg) error {
+	symbol := strings.ToUpper(msg.Symbol)
+	baseAssetSymbol, quoteAssetSymbol := utils.TradingPair2AssetsSafe(symbol)
+	notional := utils.CalBigNotionalInt64(msg.Price, msg.Quantity)
+
+	// note: the check sequence is well designed.
+	freeBalance := acc.GetCoins()
+	var toLockCoins sdk.Coins
+	if msg.Side == Side.BUY {
+		// for buy orders,
+		// 1. total notional == ToLock(quoteAsset) <= FreeBalance(quoteAsset) <= TotalSupply(quoteAsset) < Max(int64)
+		// 2. check whether the qty on this price level will overflow.
+
+		if freeBalance.AmountOf(quoteAssetSymbol) < notional {
+			return errors.New("do not have enough token to lock")
+		}
+
+		pl := keeper.GetPriceLevel(symbol, msg.Side, msg.Price)
+		totalQty := msg.Quantity
+		if pl != nil {
+			totalQty += pl.TotalLeavesQty()
+		}
+		if totalQty < 0 {
+			// overflow, this is a implicit requirement from the match engine.
+			return errors.New("order quantity is too large to be placed on this price level")
+		}
+
+		toLockCoins = sdk.Coins{{Denom: quoteAssetSymbol, Amount: notional}}
+	} else {
+		// for sell orders,
+		// 1. total qty == ToLock(baseAsset) <= FreeBalance(baseAsset) <= TotalSupply(baseAsset) < Max(int64)
+		// 2. For a sell order, total notional on one price level is allowed to overflow.
+		// This order won't be fully filled as the buyer does not have such huge tokens to pay for it.
+
+		if freeBalance.AmountOf(baseAssetSymbol) < msg.Quantity {
+			return errors.New("do not have enough token to lock")
+		}
+
+		toLockCoins = sdk.Coins{{Denom: baseAssetSymbol, Amount: msg.Quantity}}
+	}
+
+	acc.SetCoins(freeBalance.Minus(toLockCoins))
+	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
+	keeper.am.SetAccount(ctx, acc)
+	return nil
+}
+
 func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
 ) sdk.Result {
+	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
+	log.With("module", "dex").Info("Incoming New Order", "order", msg)
+	// this check costs least.
+	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
+		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
+		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
+	}
+
 	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	if !ctx.IsReCheckTx() {
 		//for recheck:
@@ -89,42 +145,18 @@ func handleNewOrder(
 		}
 	}
 
-	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	log.With("module", "dex").Info("Incoming New Order", "order", msg)
-	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
-		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
-		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
-	}
-
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
-	var amountToLock int64
-	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(msg.Symbol)
-	var symbolToLock string
-	if msg.Side == Side.BUY {
-		// TODO: where is 10^8 stored?
-		amountToLock = utils.CalBigNotional(msg.Quantity, msg.Price)
-		symbolToLock = strings.ToUpper(quoteAsset)
-	} else {
-		amountToLock = msg.Quantity
-		symbolToLock = strings.ToUpper(baseAsset)
+	err := validateQtyAndLockBalance(ctx, keeper, acc, msg)
+	if err != nil {
+		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
-	freeBalance := acc.GetCoins()
-	if freeBalance.AmountOf(symbolToLock) < amountToLock {
-		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
-	}
-
-	toLockCoins := sdk.Coins{{Denom: symbolToLock, Amount: amountToLock}}
-	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
-	// TODO: perform reduce avail + increase locked + insert orderbook atomically
-	acc.SetCoins(freeBalance.Minus(toLockCoins))
-	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
-	keeper.am.SetAccount(ctx, acc)
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
-			height := ctx.BlockHeader().Height
-			timestamp := ctx.BlockHeader().Time.Unix()
+			blockHeader := ctx.BlockHeader()
+			height := blockHeader.Height
+			timestamp := blockHeader.Time.Unix()
 			msg := OrderInfo{
 				msg,
 				height, timestamp,

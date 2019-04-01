@@ -2,7 +2,9 @@ package pub
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,11 +15,13 @@ import (
 	"github.com/linkedin/goavro"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
-	KafkaBrokerSep = ";"
+	KafkaBrokerSep  = ";"
+	essentialLogDir = "essential"
 )
 
 type KafkaMarketDataPublisher struct {
@@ -27,7 +31,8 @@ type KafkaMarketDataPublisher struct {
 	blockFeeCodec         *goavro.Codec
 	transfersCodec        *goavro.Codec
 
-	producers map[string]sarama.SyncProducer // topic -> producer
+	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
+	producers        map[string]sarama.SyncProducer // topic -> producer
 }
 
 func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config, err error) {
@@ -119,7 +124,47 @@ func (publisher *KafkaMarketDataPublisher) prepareMessage(
 }
 
 func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tpe msgType, height, timestamp int64) {
-	var topic string
+	topic := publisher.resolveTopic(tpe)
+
+	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {
+		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
+		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
+			Logger.Info("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
+		} else {
+			Logger.Error("failed to publish, tring to log essential message", "topic", topic, "msg", avroMessage.String(), "err", err)
+			if essMsg, ok := avroMessage.(EssMsg); ok {
+				publisher.publishEssentialMsg(essMsg, topic, tpe, height, timestamp)
+			}
+		}
+	} else {
+		Logger.Error("failed to publish", "topic", topic, "msg", avroMessage.String(), "err", err)
+	}
+}
+
+func (publisher KafkaMarketDataPublisher) publishEssentialMsg(essMsg EssMsg, topic string, tpe msgType, height, timestamp int64) {
+	// First, publish an empty copy to make sure downstream service not hanging
+	if msg, err := publisher.marshal(essMsg.EmptyCopy(), tpe); err == nil {
+		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
+		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
+			Logger.Info("published empty msg", "topic", topic, "msg", essMsg.String(), "offset", offset, "partition", partition)
+		} else {
+			Logger.Error("failed to publish empty msg", "topic", topic, "msg", essMsg.String(), "err", err)
+		}
+	} else {
+		Logger.Error("failed to publish empty msg", "topic", topic, "msg", essMsg.String(), "err", err)
+	}
+
+	// Second, log essential content of message to hard disk
+	filePath := fmt.Sprintf("%s/%d_%s.log", publisher.essentialLogPath, height, tpe.String())
+	toWrite := []byte(essMsg.EssentialMsg())
+	if len(toWrite) != 0 {
+		if err := ioutil.WriteFile(filePath, toWrite, 0644); err != nil {
+			Logger.Error("failed to write essential log", "err", err)
+		}
+	}
+}
+
+func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic string) {
 	switch tpe {
 	case booksTpe:
 		topic = Cfg.OrderBookTopic
@@ -132,17 +177,7 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tp
 	case transferType:
 		topic = Cfg.TransferTopic
 	}
-
-	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {
-		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
-		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
-			Logger.Info("published", "topic", topic, "msg", avroMessage.String(), "offset", offset, "partition", partition)
-		} else {
-			Logger.Error("failed to publish", "topic", topic, "msg", avroMessage.String(), "err", err)
-		}
-	} else {
-		Logger.Error("failed to publish", "topic", topic, "msg", avroMessage.String(), "err", err)
-	}
+	return
 }
 
 func (publisher *KafkaMarketDataPublisher) Stop() {
@@ -194,7 +229,6 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 
 func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgType) ([]byte, error) {
 	native := msg.ToNativeMap()
-	Logger.Debug("msgDetail", "msg", native)
 	var codec *goavro.Codec
 	switch tpe {
 	case accountsTpe:
@@ -233,11 +267,12 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 }
 
 func NewKafkaMarketDataPublisher(
-	logger log.Logger) (publisher *KafkaMarketDataPublisher) {
+	logger log.Logger, dbDir string) (publisher *KafkaMarketDataPublisher) {
 
 	sarama.Logger = saramaLogger{}
 	publisher = &KafkaMarketDataPublisher{
-		producers: make(map[string]sarama.SyncProducer),
+		producers:        make(map[string]sarama.SyncProducer),
+		essentialLogPath: filepath.Join(dbDir, essentialLogDir),
 	}
 
 	if err := publisher.initAvroCodecs(); err != nil {
@@ -262,5 +297,10 @@ func NewKafkaMarketDataPublisher(
 		go pClient.UpdatePrometheusMetrics()
 	}
 
+	if err := common.EnsureDir(publisher.essentialLogPath, 0755); err != nil {
+		logger.Error("failed to create essential log path", "err", err)
+	}
+
+	logger.Info("created kafka publisher", "elpath", publisher.essentialLogPath)
 	return publisher
 }

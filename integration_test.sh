@@ -97,7 +97,7 @@ sleep 1s
 # propose list
 ((expire_time=$(date '+%s')+1000))
 lower_case_btc_symbol=$(echo ${btc_symbol} | tr 'A-Z' 'a-z')
-result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_btc_symbol} bnb 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time})
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_btc_symbol} bnb 100000000 "list BTC/BNB" "list BTC/BNB" ${cli_home} ${expire_time} 5)
 check_operation "Propose list" "${result}" "${chain_operation_words}"
 
 sleep 2s
@@ -128,14 +128,14 @@ result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${cha
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l ${btc_symbol}_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true
 
 sleep 1s
 # place Sell order
 result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
 
@@ -162,14 +162,14 @@ result=$(expect ./order.exp ${btc_symbol}_BNB 1 100000000 1000000000 alice ${cha
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 echo ""
-./bnbcli dex show -l ${btc_symbol}_BNB
+./bnbcli dex show -l ${btc_symbol}_BNB   --trust-node true
 
 sleep 1s
 # place Sell order
 result=$(expect ./order.exp ${btc_symbol}_BNB 2 100000000 2000000000 bob ${chain_id} gte ${cli_home})
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 
-result=$(./bnbcli dex show -l ${btc_symbol}_BNB)
+result=$(./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
 
