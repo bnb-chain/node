@@ -211,13 +211,13 @@ func CollectProposalsForPublish(passed, failed []int64) Proposals {
 	return Proposals{totalProposals, ps}
 }
 
-func CollectStakeUpdateAccountsForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdatedAccounts {
+func CollectStakeUpdatedAccountsForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdatedAccounts {
 	totalUnbondingDelegations := len(unbondingDelegations)
-	updateAccounts := make([]*StakeUpdatedAccount, 0, totalUnbondingDelegations)
+	updatedAccounts := make([]*StakeUpdatedAccount, 0, totalUnbondingDelegations)
 	for _, ubd := range unbondingDelegations {
-		updateAccounts = append(updateAccounts, &StakeUpdatedAccount{ubd.ValidatorAddr, ubd.Balance})
+		updatedAccounts = append(updatedAccounts, &StakeUpdatedAccount{ubd.ValidatorAddr, ubd.Balance})
 	}
-	return StakeUpdatedAccounts{totalUnbondingDelegations, updateAccounts}
+	return StakeUpdatedAccounts{totalUnbondingDelegations, updatedAccounts}
 }
 
 func updateExpireFeeForPublish(

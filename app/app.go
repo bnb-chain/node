@@ -480,9 +480,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var completedUbd []stake.UnbondingDelegation
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 		app.ValAddrCache.ClearCache()
-		if app.publicationConfig.PublishOrderUpdates {
-			stakeUpdatedAccounts = pub.CollectStakeUpdateAccountsForPublish(completedUbd)
-		}
+		stakeUpdatedAccounts = pub.CollectStakeUpdatedAccountsForPublish(completedUbd)
 	}
 
 	if app.publicationConfig.ShouldPublishAny() &&
