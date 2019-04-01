@@ -861,6 +861,207 @@ func Test_Cancel_7(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add0, "BTC-000"))
 }
 
+// #8: create a small GTE buy order in one block, cancel it in next block and check fee charged
+func Test_Cancel_8(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e12)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	// very low bnb balance
+	ResetAccounts(ctx, testApp, 1e2, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	// a small order
+	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e7, 10)
+	res, err := testClient.DeliverTxSync(msgB, testApp.Codec)
+	assert.NoError(err)
+	fmt.Println(res.Log)
+
+	buys, _ := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(1), GetLocked(ctx, add0, "BNB"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msgB.Id)
+	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
+	assert.NoError(err)
+
+	buys, _ = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	// cancel fee is 2e4, which is larger than 1e2, so balance becomes 0
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+}
+
+// #9: create a small IOC buy order in one block, expire in next block and check fee charged
+func Test_Cancel_9(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e12)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	// very low bnb balance
+	ResetAccounts(ctx, testApp, 1e2, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	// a small order
+	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e7, 10)
+	msgB.TimeInForce = 3
+	res, err := testClient.DeliverTxSync(msgB, testApp.Codec)
+	assert.NoError(err)
+	fmt.Println(res.Log)
+
+	buys, _ := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(1), GetLocked(ctx, add0, "BNB"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msgB.Id)
+	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
+	assert.NoError(err)
+
+	buys, _ = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	// expire fee is 1e4, which is larger than 1e2, so balance becomes 0
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+}
+
+// #10: create a small GTE buy order in one block, expire after three breath blocks and check fee charged
+func Test_Cancel_10(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e12)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	// very low bnb balance
+	ResetAccounts(ctx, testApp, 1e2, 100000e8, 100000e8)
+
+	tNow := time.Now()
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	// a small order
+	msgB := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 1e7, 10)
+	res, err := testClient.DeliverTxSync(msgB, testApp.Codec)
+	assert.NoError(err)
+	fmt.Println(res.Log)
+
+	buys, _ := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(buys[0].Orders))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(1), GetLocked(ctx, add0, "BNB"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2, Time: tNow.AddDate(0, 0, 1)}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 3, Time: tNow.AddDate(0, 0, 4)}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	buys, _ = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add0, "BTC-000"))
+	// expire fee is 2e4, which is larger than 1e2, so balance becomes 0
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+}
+
+// #11: create a small GTE sell order in one block, cancel it in next block and check fee charged
+func Test_Cancel_11(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	// very low bnb balance
+	ResetAccounts(ctx, testApp, 0, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	// a small order
+	msgS := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 2, "BTC-000_BNB", 1, 100000e8)
+	res, err := testClient.DeliverTxSync(msgS, testApp.Codec)
+	assert.NoError(err)
+	fmt.Println(res.Log)
+
+	_, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(sells[0].Orders))
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(100000e8), GetLocked(ctx, add0, "BTC-000"))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgC := o.NewCancelOrderMsg(add0, "BTC-000_BNB", msgS.Id)
+	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
+	assert.NoError(err)
+
+	_, sells = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(sells))
+	// cancel fee is 2e4 in bnb, no bnb, charged in btc-000
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(0), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BTC-000"))
+}
+
 // #1: one IOC order, (either buy or sell), no fill, expire in next block
 func Test_IOC_1(t *testing.T) {
 	assert := assert.New(t)
@@ -2544,8 +2745,8 @@ func Test_Expire_6(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, add1, "BTC-000"))
 }
 
-// #1: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block
-func Test_Special_1(t *testing.T) {
+// #1a: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block
+func Test_Special_1a(t *testing.T) {
 	assert := assert.New(t)
 
 	ctx, valAddr := testSetup()
@@ -2617,6 +2818,167 @@ func Test_Special_1(t *testing.T) {
 	assert.Equal(int64(3.3334e8), GetLocked(ctx, add2, "BNB"))
 	assert.Equal(int64(99990e8), GetAvail(ctx, add3, "BTC-000"))
 	assert.Equal(int64(100019.99e8), GetAvail(ctx, add3, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC-000"))
+}
+
+// #1b: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block, lot size is larger than remaining
+func Test_Special_1b(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e5)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	acc2 := Account(2)
+	add2 := acc2.GetAddress()
+	acc3 := Account(3)
+	add3 := acc3.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
+	_, err := testClient.DeliverTxSync(msgB1, testApp.Codec)
+	assert.NoError(err)
+
+	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
+	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
+	assert.NoError(err)
+
+	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
+	assert.NoError(err)
+
+	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgS, testApp.Codec)
+	assert.NoError(err)
+
+	buys, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(3, len(buys[0].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+	assert.True(getOrderExist("BTC-000_BNB", msgB1.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgB2.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgB3.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgS.Id))
+
+	upgrade.Mgr.SetHeight(int64(1))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(2e8), lastPx)
+	assert.Equal(3, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(3, len(buys[0].Orders))
+	assert.Equal(0, len(sells))
+	assert.False(getOrderExist("BTC-000_BNB", msgB1.Id))
+	assert.False(getOrderExist("BTC-000_BNB", msgB2.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgB3.Id))
+	assert.False(getOrderExist("BTC-000_BNB", msgS.Id))
+
+	assert.Equal(int64(100001e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99997.9990e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(100001e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(99997.9990e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add1, "BNB"))
+	assert.Equal(int64(100008e8), GetAvail(ctx, add2, "BTC-000"))
+	assert.Equal(int64(99979.9920e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(4e8), GetLocked(ctx, add2, "BNB"))
+	assert.Equal(int64(99990e8), GetAvail(ctx, add3, "BTC-000"))
+	assert.Equal(int64(100019.99e8), GetAvail(ctx, add3, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC-000"))
+}
+
+// #1c: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block, order qty is less than lot size, cannot split
+func Test_Special_1c(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx, valAddr := testSetup(1e7)
+
+	am := testApp.AccountKeeper
+	acc0 := Account(0)
+	add0 := acc0.GetAddress()
+	acc1 := Account(1)
+	add1 := acc1.GetAddress()
+	acc2 := Account(2)
+	add2 := acc2.GetAddress()
+	acc3 := Account(3)
+	add3 := acc3.GetAddress()
+	ResetAccounts(ctx, testApp, 100000e8, 100000e8, 100000e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 1}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgS := o.NewNewOrderMsg(add3, genOrderID(add3, 0, ctx, am), 2, "BTC-000_BNB", 2e8, 1e7)
+	_, err := testClient.DeliverTxSync(msgS, testApp.Codec)
+	assert.NoError(err)
+
+	_, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(1, len(sells[0].Orders))
+
+	upgrade.Mgr.SetHeight(int64(1))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	// change the lot size
+	testApp.DexKeeper.UpdateLotSize("BTC-000_BNB", 1e8)
+
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: valAddr, Height: 2}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: valAddr, Power: 10}, SignedLastBlock: true},
+	})
+	testApp.DeliverState.Ctx = ctx
+
+	msgB1 := o.NewNewOrderMsg(add0, genOrderID(add0, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
+	_, err = testClient.DeliverTxSync(msgB1, testApp.Codec)
+	assert.NoError(err)
+
+	msgB2 := o.NewNewOrderMsg(add1, genOrderID(add1, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 1e8)
+	_, err = testClient.DeliverTxSync(msgB2, testApp.Codec)
+	assert.NoError(err)
+
+	msgB3 := o.NewNewOrderMsg(add2, genOrderID(add2, 0, ctx, am), 1, "BTC-000_BNB", 2e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgB3, testApp.Codec)
+	assert.NoError(err)
+
+	buys, sells := getRawOrderBook("BTC-000_BNB")
+	assert.Equal(3, len(buys[0].Orders))
+	assert.Equal(1, len(sells[0].Orders))
+
+	testClient.cl.EndBlockSync(ty.RequestEndBlock{})
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(2e8), lastPx)
+	assert.Equal(1, len(trades))
+
+	buys, sells = getRawOrderBook("BTC-000_BNB")
+	assert.Equal(3, len(buys[0].Orders))
+	assert.Equal(0, len(sells))
+	assert.True(getOrderExist("BTC-000_BNB", msgB1.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgB2.Id))
+	assert.True(getOrderExist("BTC-000_BNB", msgB3.Id))
+	assert.False(getOrderExist("BTC-000_BNB", msgS.Id))
+
+	assert.Equal(int64(100000.1000e8), GetAvail(ctx, add0, "BTC-000"))
+	assert.Equal(int64(99997.9999e8), GetAvail(ctx, add0, "BNB"))
+	assert.Equal(int64(1.8000e8), GetLocked(ctx, add0, "BNB"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add1, "BTC-000"))
+	assert.Equal(int64(99998e8), GetAvail(ctx, add1, "BNB"))
+	assert.Equal(int64(2e8), GetLocked(ctx, add1, "BNB"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, add2, "BTC-000"))
+	assert.Equal(int64(99980e8), GetAvail(ctx, add2, "BNB"))
+	assert.Equal(int64(20e8), GetLocked(ctx, add2, "BNB"))
+	assert.Equal(int64(99999.9000e8), GetAvail(ctx, add3, "BTC-000"))
+	assert.Equal(int64(100000.1999e8), GetAvail(ctx, add3, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, add3, "BTC-000"))
 }
 
