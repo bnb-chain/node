@@ -63,7 +63,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "develop"
+  branch = "haoyang/add-cache-ante"
   digest = "1:11e65d085dd48f2752bc3a49823f9973ab706be7c766ca2673d52a8beaa9616d"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
@@ -111,7 +111,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "5f07f18e1ee10cfec560e4a303be31e8fe7aeacc"
+  revision = "edc34b88d283462401a1922bab7ca103f67792f6"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
