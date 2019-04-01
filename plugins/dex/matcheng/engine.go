@@ -194,7 +194,7 @@ func (me *MatchEng) Match() bool {
 			totalExec -= sellTotal
 			j--
 		case compareBuy(buyTotal, sellTotal) < 0: //fill all buy
-			if compareBuy(totalExec, sellTotal) >= 0 { // all buy would be filled later as well
+			if compareBuy(totalExec, sellTotal) >= 0 { // all sell would be filled later as well
 				me.fillOrders(i, j)
 			} else {
 				if !me.reserveQty(totalExec, me.overLappedLevel[j].SellOrders) {

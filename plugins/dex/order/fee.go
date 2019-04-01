@@ -142,6 +142,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 		feeToken = sdk.NewCoin(types.NativeTokenSymbol, cmnUtils.MinInt(feeAmountNative, nativeTokenBalance))
 	} else {
 		// the amount may overflow int64, so use big.Int instead.
+		// TODO: (perf) may remove the big.Int use to improve the performance
 		var amount *big.Int
 		if market, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
@@ -176,6 +177,7 @@ func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {
 		feeRate = m.FeeConfig.FeeRate
 	}
 
+	// TODO: (Perf) find a more efficient way to replace the big.Int solution.
 	var fee big.Int
 	return fee.Div(fee.Mul(amount, big.NewInt(feeRate)), FeeRateMultiplier)
 }
