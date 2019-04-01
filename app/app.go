@@ -470,7 +470,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 
-	var stakeUpdatedAccounts pub.StakeUpdatedAccounts
+	var stakeUpdates pub.StakeUpdates
 	var validatorUpdates abci.ValidatorUpdates
 	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
 	//  otherwise, apphash fail
@@ -480,13 +480,13 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var completedUbd []stake.UnbondingDelegation
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 		app.ValAddrCache.ClearCache()
-		stakeUpdatedAccounts = pub.CollectStakeUpdatedAccountsForPublish(completedUbd)
+		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 	}
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdatedAccounts, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
@@ -645,7 +645,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdatedAccounts *pub.StakeUpdatedAccounts, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -690,7 +690,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
-		stakeUpdatedAccounts,
+		stakeUpdates,
 		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,

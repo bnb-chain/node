@@ -69,13 +69,13 @@ type EssMsg interface {
 }
 
 type ExecutionResults struct {
-	Height               int64
-	Timestamp            int64 // milli seconds since Epoch
-	NumOfMsgs            int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
-	Trades               trades
-	Orders               Orders
-	Proposals            Proposals
-	StakeUpdatedAccounts StakeUpdatedAccounts
+	Height       int64
+	Timestamp    int64 // milli seconds since Epoch
+	NumOfMsgs    int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
+	Trades       trades
+	Orders       Orders
+	Proposals    Proposals
+	StakeUpdates StakeUpdates
 }
 
 func (msg *ExecutionResults) String() string {
@@ -96,8 +96,8 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	if msg.Proposals.NumOfMsgs > 0 {
 		native["proposals"] = map[string]interface{}{"org.binance.dex.model.avro.Proposals": msg.Proposals.ToNativeMap()}
 	}
-	if msg.StakeUpdatedAccounts.NumOfMsgs > 0 {
-		native["stake_updated_accounts"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdatedAccounts": msg.StakeUpdatedAccounts.ToNativeMap()}
+	if msg.StakeUpdates.NumOfMsgs > 0 {
+		native["stake_updates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
 	}
 	return native
 }
@@ -117,7 +117,7 @@ func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
 		trades{},
 		Orders{},
 		Proposals{},
-		StakeUpdatedAccounts{},
+		StakeUpdates{},
 	}
 }
 
@@ -363,38 +363,40 @@ func (msg *Proposal) toNativeMap() map[string]interface{} {
 	return native
 }
 
-type StakeUpdatedAccounts struct {
+type StakeUpdates struct {
 	NumOfMsgs           int
-	StakeUpdateAccounts []*StakeUpdatedAccount
+	CompletedUnbondingDelegations []*CompletedUnbondingDelegation
 }
 
-func (msg *StakeUpdatedAccounts) String() string {
+func (msg *StakeUpdates) String() string {
 	return fmt.Sprintf("Proposals numOfMsgs: %d", msg.NumOfMsgs)
 }
 
-func (msg *StakeUpdatedAccounts) ToNativeMap() map[string]interface{} {
+func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
-	ps := make([]map[string]interface{}, len(msg.StakeUpdateAccounts), len(msg.StakeUpdateAccounts))
-	for idx, p := range msg.StakeUpdateAccounts {
+	ps := make([]map[string]interface{}, len(msg.CompletedUnbondingDelegations), len(msg.CompletedUnbondingDelegations))
+	for idx, p := range msg.CompletedUnbondingDelegations {
 		ps[idx] = p.toNativeMap()
 	}
-	native["stake_updated_accounts"] = ps
+	native["completed_unbonding_delegations"] = ps
 	return native
 }
 
-type StakeUpdatedAccount struct {
+type CompletedUnbondingDelegation struct {
 	Validator sdk.ValAddress
+	Delegator sdk.AccAddress
 	Amount    sdk.Coin
 }
 
-func (msg *StakeUpdatedAccount) String() string {
-	return fmt.Sprintf("stake_updated_account: %v", msg.toNativeMap())
+func (msg *CompletedUnbondingDelegation) String() string {
+	return fmt.Sprintf("completed_unbonding_delegation: %v", msg.toNativeMap())
 }
 
-func (msg *StakeUpdatedAccount) toNativeMap() map[string]interface{} {
+func (msg *CompletedUnbondingDelegation) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["validator"] = msg.Validator.String()
+	native["delegator"] = msg.Delegator.String()
 	native["amount"] = msg.Amount.String()
 	return native
 }
