@@ -154,7 +154,8 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			}
 
 			if mode == sdk.RunTxModeDeliver ||
-				mode == sdk.RunTxModeCheck {
+				mode == sdk.RunTxModeCheck ||
+				mode == sdk.RunTxModeSimulate {
 				// check signature, return account with incremented nonce
 				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
 				res := processSig(txHash, sig, signerAcc.GetPubKey(), signBytes)
