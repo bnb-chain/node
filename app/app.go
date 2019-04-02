@@ -360,7 +360,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 		if admin.IsTxAllowed(tx) {
 			txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 			app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-			result = app.RunTx(sdk.RunTxModeCheckAfterPre, txBytes, tx, txHash)
+			result = app.RunTxWithAnteCache(sdk.RunTxModeCheckAfterPre, txBytes, tx, txHash)
 			if !result.IsOK() {
 				app.RemoveTxFromCache(txBytes)
 			}
@@ -375,7 +375,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 			if admin.IsTxAllowed(tx) {
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-				result = app.RunTx(sdk.RunTxModeCheck, txBytes, tx, txHash)
+				result = app.RunTxWithAnteCache(sdk.RunTxModeCheck, txBytes, tx, txHash)
 				if result.IsOK() {
 					app.AddTxToCache(txBytes, tx)
 				}
