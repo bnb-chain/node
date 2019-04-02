@@ -63,7 +63,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:11e65d085dd48f2752bc3a49823f9973ab706be7c766ca2673d52a8beaa9616d"
+  digest = "1:eea20e6923ebb1f69d251cd59283f14b21c9708041701fb4c15512be67520355"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -98,6 +98,7 @@
     "x/gov",
     "x/gov/client",
     "x/gov/client/cli",
+    "x/gov/client/rest",
     "x/gov/tags",
     "x/mock",
     "x/params",
@@ -834,6 +835,7 @@
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/gov",
     "github.com/cosmos/cosmos-sdk/x/gov/client/cli",
+    "github.com/cosmos/cosmos-sdk/x/gov/client/rest",
     "github.com/cosmos/cosmos-sdk/x/mock",
     "github.com/cosmos/cosmos-sdk/x/params",
     "github.com/cosmos/cosmos-sdk/x/stake",
