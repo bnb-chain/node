@@ -13,6 +13,7 @@ IMPROVEMENTS
 * [\#498](https://github.com/binance-chain/node/pull/498) [MatchEngine] Rename price of TradingPair to list_price
 * [\#497](https://github.com/binance-chain/node/pull/497) [Build] Support `build-windows`
 * [\#496](https://github.com/binance-chain/node/pull/476) [StateSync] Cache latest snapshot in memory
+* [\#526](https://github.com/binance-chain/node/pull/518) [ApiServer] Add gov queries in api server
 
 
 BUG FIXES
