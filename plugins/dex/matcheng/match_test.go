@@ -2,6 +2,7 @@ package matcheng
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,29 @@ func Test_prepareMatch(t *testing.T) {
 	}
 	execs := []int64{3000, 4000, 6000, 9000, 9000, 9000}
 	surpluses := []int64{-12000, -11000, -9000, -6000, -3500, -1000}
+	assert.Equal(6, prepareMatch(&overlap))
+	for i, e := range execs {
+		assert.Equal(e, overlap[i].AccumulatedExecutions, fmt.Sprintf("overlap number %d", i))
+	}
+	for i, e := range surpluses {
+		assert.Equal(e, overlap[i].BuySellSurplus, fmt.Sprintf("overlap number %d", i))
+	}
+}
+
+func Test_prepareMatch_overflow(t *testing.T) {
+	assert := assert.New(t)
+	overlap := []OverLappedLevel{
+		{Price: 1021, BuyOrders: []OrderPart{{"1.1", 100, 100e16, 0, 0}, {"1.2", 102, 200e16, 0, 0}}},
+		{Price: 1001, BuyOrders: []OrderPart{{"2.1", 100, 100e16, 0, 0}}},
+		{Price: 991, BuyOrders: []OrderPart{{"3.1", 100, 200e16, 0, 0}}},
+		{Price: 981,
+			SellOrders: []OrderPart{{"4.1", 100, 100e16, 0, 0}, {"4.2", 101, 200e16, 0, 0}, {"4.3", 101, 200e16, 0, 0}},
+			BuyOrders:  []OrderPart{{"4.4", 100, 400e16, 0, 0}}},
+		{Price: 971, SellOrders: []OrderPart{{"5.1", 100, 300e16, 0, 0}}},
+		{Price: 961, SellOrders: []OrderPart{{"6.1", 101, 400e16, 0, 0}}},
+	}
+	execs := []int64{300e16, 400e16, 600e16, math.MaxInt64, 700e16, 400e16}
+	surpluses := []int64{300e16 - math.MaxInt64, 400e16 - math.MaxInt64, 600e16 - math.MaxInt64, 0, math.MaxInt64-700e16, math.MaxInt64-400e16}
 	assert.Equal(6, prepareMatch(&overlap))
 	for i, e := range execs {
 		assert.Equal(e, overlap[i].AccumulatedExecutions, fmt.Sprintf("overlap number %d", i))

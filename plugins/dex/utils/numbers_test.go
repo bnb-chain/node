@@ -13,9 +13,14 @@ func TestIsExceedMaxNotional(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(true, utils.IsExceedMaxNotional(math.MaxInt64, math.MaxInt64))
 	assert.Equal(true, utils.IsExceedMaxNotional(math.MaxInt64/2, math.MaxInt64/2))
+	assert.Equal(false, utils.IsExceedMaxNotional(900e16, 1e6))
 	assert.Equal(false, utils.IsExceedMaxNotional(900e16, 1e8))
 	assert.Equal(true, utils.IsExceedMaxNotional(900e16, 2e8))
-	assert.Equal(false, utils.IsExceedMaxNotional(900e16, 9e7))
+	assert.Equal(false, utils.IsExceedMaxNotional(1e6, 900e16))
+	assert.Equal(true, utils.IsExceedMaxNotional(900e16, 2e8))
+	assert.Equal(true, utils.IsExceedMaxNotional(2e8, 900e16))
+	assert.Equal(true, utils.IsExceedMaxNotional(900e16, 1.5e8))
+	assert.Equal(true, utils.IsExceedMaxNotional(1.5e8, 900e16))
 	assert.Equal(false, utils.IsExceedMaxNotional(1, 1))
 }
 
@@ -31,6 +36,6 @@ func BenchmarkIsExceedMaxNotional_BigInt(b *testing.B) {
 
 func BenchmarkIsExceedMaxNotional(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		utils.IsExceedMaxNotional(900e16, 1e8)
+		utils.IsExceedMaxNotional(900e16, 1.5e8)
 	}
 }
