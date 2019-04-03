@@ -9,6 +9,7 @@ var Mgr = sdk.UpgradeMgr
 // improvement: (maybe bip ?)
 const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
 const FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
+const AddFeeTypeForStakeTxName = "addFeeTypeForStakeTx"
 
 func Upgrade(name string, before func(), in func(), after func()) {
 	if sdk.IsUpgradeHeight(name) {
@@ -32,4 +33,8 @@ func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
 
 func FixDropFilledOrderSeq(before func(), after func()) {
 	Upgrade(FixDropFilledOrderSeqName, before, nil, after)
+}
+
+func AddFeeTypeForStakeTx(in func())  {
+	Upgrade(AddFeeTypeForStakeTxName, nil, in, nil)
 }

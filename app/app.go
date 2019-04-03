@@ -245,6 +245,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
@@ -496,12 +497,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	// Share the same upgrade height with upgrade address length
-	if sdk.IsLimitAddressLengthUpgrade() {
+	upgrade.AddFeeTypeForStakeTx( func() {
 		feeParams := make([]paramtypes.FeeParam, 2, 2)
 		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
 		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
 		app.ParamHub.UpdateFeeParams(ctx, feeParams)
-	}
+	})
 
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
