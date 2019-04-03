@@ -47,6 +47,7 @@ sed -i -e "s/publishOrderUpdates = false/publishOrderUpdates = true/g" ${deamonh
 sed -i -e "s/publishAccountBalance = false/publishAccountBalance = true/g" ${deamonhome}/config/app.toml
 sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${deamonhome}/config/app.toml
 sed -i -e "s/publishBlockFee = false/publishBlockFee = true/g" ${deamonhome}/config/app.toml
+sed -i -e "s/publishTransfer = false/publishTransfer = true/g" ${deamonhome}/config/app.toml
 sed -i -e "s/publishLocal = false/publishLocal = true/g" ${deamonhome}/config/app.toml
 sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
