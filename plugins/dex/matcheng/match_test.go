@@ -58,7 +58,7 @@ func Test_prepareMatch_overflow(t *testing.T) {
 		{Price: 961, SellOrders: []OrderPart{{"6.1", 101, 400e16, 0, 0}}},
 	}
 	execs := []int64{300e16, 400e16, 600e16, math.MaxInt64, 700e16, 400e16}
-	surpluses := []int64{300e16 - math.MaxInt64, 400e16 - math.MaxInt64, 600e16 - math.MaxInt64, 0, math.MaxInt64-700e16, math.MaxInt64-400e16}
+	surpluses := []int64{300e16 - math.MaxInt64, 400e16 - math.MaxInt64, 600e16 - math.MaxInt64, 0, math.MaxInt64 - 700e16, math.MaxInt64 - 400e16}
 	assert.Equal(6, prepareMatch(&overlap))
 	for i, e := range execs {
 		assert.Equal(e, overlap[i].AccumulatedExecutions, fmt.Sprintf("overlap number %d", i))

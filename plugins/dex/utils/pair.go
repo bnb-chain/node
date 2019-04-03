@@ -40,7 +40,7 @@ func CalcPriceWMA(prices *utils.FixedSizeRing) int64 {
 
 	weightedSum := big.NewInt(0)
 	lenPrices := len(elements)
-	for i:=0; i < lenPrices; i++ {
+	for i := 0; i < lenPrices; i++ {
 		var weightedPrice big.Int
 		weightedPrice.Mul(big.NewInt(int64(i+1)), big.NewInt(elements[i].(int64)))
 		weightedSum.Add(weightedSum, &weightedPrice)

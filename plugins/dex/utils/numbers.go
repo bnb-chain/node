@@ -13,7 +13,7 @@ func CalBigNotionalInt64(price, qty int64) int64 {
 	res, ok := utils.Mul64(price, qty)
 	if ok {
 		// short cut
-		return res/1e8
+		return res / 1e8
 	}
 
 	var bi big.Int
