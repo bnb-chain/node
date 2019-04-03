@@ -43,6 +43,7 @@ import (
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	paramtypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
@@ -492,6 +493,14 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 		app.ValAddrCache.ClearCache()
+	}
+
+	// Share the same upgrade height with upgrade address length
+	if sdk.IsLimitAddressLengthUpgrade() {
+		feeParams := make([]paramtypes.FeeParam, 2, 2)
+		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
+		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
+		app.ParamHub.UpdateFeeParams(ctx, feeParams)
 	}
 
 	//match may end with transaction failure, which is better to save into
