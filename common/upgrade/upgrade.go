@@ -33,3 +33,11 @@ func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
 func FixDropFilledOrderSeq(before func(), after func()) {
 	Upgrade(FixDropFilledOrderSeqName, before, nil, after)
 }
+
+func ShouldRebuildGov() bool {
+	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeGovStrategy)
+	if Mgr.GetHeight() == (upgradeHeight - 1) {
+		return true
+	}
+	return false
+}

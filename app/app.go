@@ -494,6 +494,14 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.ValAddrCache.ClearCache()
 	}
 
+	if upgrade.ShouldRebuildGov() {
+		//REBUILD
+		err := app.govKeeper.Rebuild(ctx)
+		if err != nil {
+			panic("rebuild gov error")
+		}
+	}
+
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
