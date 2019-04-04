@@ -34,7 +34,3 @@ func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
 func FixDropFilledOrderSeq(before func(), after func()) {
 	Upgrade(FixDropFilledOrderSeqName, before, nil, after)
 }
-
-func AddFeeTypeForStakeTx(in func())  {
-	Upgrade(AddFeeTypeForStakeTxName, nil, in, nil)
-}
