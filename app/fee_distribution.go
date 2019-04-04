@@ -22,6 +22,7 @@ func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
 	}
 
 	upgrade.Mgr.RegisterBeginBlocker(sdk.UpgradeSeparateValAddrName, func(ctx sdk.Context) {
+		fmt.Println(sdk.UpgradeSeparateValAddrName, upgrade.Mgr.GetHeight())
 		cache.ClearCache()
 	})
 	return cache

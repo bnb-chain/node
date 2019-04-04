@@ -7,8 +7,12 @@ var Mgr = sdk.UpgradeMgr
 // prefix for the upgrade name
 // bugfix: fix
 // improvement: (maybe bip ?)
-const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
-const FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
+const (
+	FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
+	FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
+	FixLotSizeName = "fixLotSize"
+	FixOverflowsName = "fixOverflows"
+)
 
 func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
 	sdk.Upgrade(FixOrderSeqInPriceLevelName, before, in, after)
@@ -16,4 +20,12 @@ func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
 
 func FixDropFilledOrderSeq(before func(), after func()) {
 	sdk.Upgrade(FixDropFilledOrderSeqName, before, nil, after)
+}
+
+func FixLotSize(before func(), after func()) {
+	sdk.Upgrade(FixLotSizeName, before, nil, after)
+}
+
+func FixOverflows(before func(), after func()) {
+	sdk.Upgrade(FixOverflowsName, before, nil, after)
 }

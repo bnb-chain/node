@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	cmnUtils "github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/utils"
@@ -78,6 +79,10 @@ func (m *FeeManager) GetConfig() FeeConfig {
 // `engines` map would stay the same as no other function may change it in fee calculation stage,
 // so no race condition concern
 func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
+	if !sdk.IsUpgrade(upgrade.FixOverflowsName) {
+		return m.CalcOrderFeeDeprecated(balances, tradeIn, engines)
+	}
+
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
@@ -122,6 +127,10 @@ func (m *FeeManager) CalcOrderFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 // 2. call this method
 // 3. deduct the fee right away
 func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
+	if !sdk.IsUpgrade(upgrade.FixOverflowsName) {
+		return m.CalcFixedFeeDeprecated(balances, eventType, inAsset, engines)
+	}
+
 	var feeAmountNative int64
 	var feeAmount int64
 	if eventType == eventFullyExpire {
@@ -181,6 +190,104 @@ func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {
 	var fee big.Int
 	return fee.Div(fee.Mul(amount, big.NewInt(feeRate)), FeeRateMultiplier)
 }
+
+///////////////////DEPRECATED////////////////////////
+
+func (m *FeeManager) CalcOrderFeeDeprecated(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
+	var feeToken sdk.Coin
+	inSymbol := tradeIn.Denom
+	inAmt := tradeIn.Amount
+	if inSymbol == types.NativeTokenSymbol {
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFeeDeprecated(inAmt, FeeByNativeToken))
+	} else {
+		// price against native token
+		var amountOfNativeToken int64
+		if market, ok := engines[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
+			// XYZ_BNB
+			amountOfNativeToken = utils.CalBigNotional(market.LastTradePrice, inAmt).Int64()
+		} else {
+			// BNB_XYZ
+			market := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
+			var amount big.Int
+			amountOfNativeToken = amount.Div(
+				amount.Mul(
+					big.NewInt(inAmt),
+					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+				big.NewInt(market.LastTradePrice)).Int64()
+		}
+		feeByNativeToken := m.calcTradeFeeDeprecated(amountOfNativeToken, FeeByNativeToken)
+		if balances.AmountOf(types.NativeTokenSymbol) >= feeByNativeToken {
+			// have sufficient native token to pay the fees
+			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken)
+		} else {
+			// no enough NativeToken, use the received tokens as fee
+			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFeeDeprecated(inAmt, FeeByTradeToken))
+			m.logger.Debug("Not enough native token to pay trade fee", "feeToken", feeToken)
+		}
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+}
+
+// Note: the result of `CalcFixedFee` depends on the balances of the acc,
+// so the right way of allocation is:
+// 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
+// 2. call this method
+// 3. deduct the fee right away
+func (m *FeeManager) CalcFixedFeeDeprecated(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
+	var feeAmountNative int64
+	var feeAmount int64
+	if eventType == eventFullyExpire {
+		feeAmountNative, feeAmount = m.ExpireFees()
+	} else if eventType == eventIOCFullyExpire {
+		feeAmountNative, feeAmount = m.IOCExpireFees()
+	} else if eventType == eventFullyCancel {
+		feeAmountNative, feeAmount = m.CancelFees()
+	} else {
+		// should not be here
+		m.logger.Error("Invalid expire eventType", "eventType", eventType)
+		return types.Fee{}
+	}
+
+	var feeToken sdk.Coin
+	nativeTokenBalance := balances.AmountOf(types.NativeTokenSymbol)
+	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, cmnUtils.MinInt(feeAmountNative, nativeTokenBalance))
+	} else {
+		if market, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
+			// XYZ_BNB
+			var amount big.Int
+			feeAmount = amount.Div(
+				amount.Mul(
+					big.NewInt(feeAmount),
+					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+				big.NewInt(market.LastTradePrice)).Int64()
+		} else {
+			// BNB_XYZ
+			market = engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
+			feeAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount).Int64()
+		}
+
+		feeAmount = cmnUtils.MinInt(feeAmount, balances.AmountOf(inAsset))
+		feeToken = sdk.NewCoin(inAsset, feeAmount)
+	}
+
+	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+}
+
+func (m *FeeManager) calcTradeFeeDeprecated(amount int64, feeType FeeType) int64 {
+	var feeRate int64
+	if feeType == FeeByNativeToken {
+		feeRate = m.FeeConfig.FeeRateNative
+	} else if feeType == FeeByTradeToken {
+		feeRate = m.FeeConfig.FeeRate
+	}
+
+	var fee big.Int
+	return fee.Div(fee.Mul(big.NewInt(amount), big.NewInt(feeRate)), FeeRateMultiplier).Int64()
+}
+
+/////////////////////////////////////////////////////
 
 func (m *FeeManager) ExpireFees() (int64, int64) {
 	return m.FeeConfig.ExpireFeeNative, m.FeeConfig.ExpireFee

@@ -48,6 +48,8 @@ breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 fixOrderSeqInPriceLevelHeight = {{ .UpgradeConfig.FixOrderSeqInPriceLevelHeight }}
 # fixDropFilledOrderSeq height
 fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
+fixSeparateValAddrHeight = {{ .UpgradeConfig.FixSeparateValAddrHeight }}
+fixLotSizeAndOverflowsHeight = {{ .UpgradeConfig.FixLotSizeAndOverflowsHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -284,14 +286,18 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-	FixOrderSeqInPriceLevelHeight int64
-	FixDropFilledOrderSeqHeight   int64
+	FixOrderSeqInPriceLevelHeight int64 `mapstructure:"fixOrderSeqInPriceLevelHeight"`
+	FixDropFilledOrderSeqHeight   int64 `mapstructure:"fixDropFilledOrderSeqHeight"`
+	FixSeparateValAddrHeight      int64 `mapstructure:"fixSeparateValAddrHeight"`
+	FixLotSizeAndOverflowsHeight  int64 `mapstructure:"fixLotSizeAndOverflowsHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
 		FixDropFilledOrderSeqHeight:   2855000,
 		FixOrderSeqInPriceLevelHeight: 2855000,
+		FixSeparateValAddrHeight:      6090000,
+		FixLotSizeAndOverflowsHeight:  6090000,
 	}
 }
 

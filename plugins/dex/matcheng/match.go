@@ -52,25 +52,35 @@ func prepareMatch(overlapped *[]OverLappedLevel) int {
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
 		l.SellTotal = sumOrdersTotalLeft(l.SellOrders, true)
-		if accum+l.SellTotal < 0 {
-			// overflow
-			// actually, for sell orders, we would never reach here because of the limit of total supply
-			accum = math.MaxInt64
-		} else {
+		upgrade.FixOverflows(func() {
 			accum += l.SellTotal
-		}
+		}, func() {
+			if accum+l.SellTotal < 0 {
+				// overflow
+				// actually, for sell orders, we would never reach here because of the limit of total supply
+				accum = math.MaxInt64
+			} else {
+				accum += l.SellTotal
+			}
+		})
+
 		l.AccumulatedSell = accum
 	}
 	accum = 0
 	for i := 0; i < k; i++ {
 		l := &(*overlapped)[i]
 		l.BuyTotal = sumOrdersTotalLeft(l.BuyOrders, true)
-		if accum+l.BuyTotal < 0 {
-			// overflow, it's safe to use MaxInt64 because the final execution would never exceed the total supply of the base asset
-			accum = math.MaxInt64
-		} else {
+		upgrade.FixOverflows(func() {
 			accum += l.BuyTotal
-		}
+		}, func() {
+			if accum+l.BuyTotal < 0 {
+				// overflow, it's safe to use MaxInt64 because the final execution would never exceed the total supply of the base asset
+				accum = math.MaxInt64
+			} else {
+				accum += l.BuyTotal
+			}
+		})
+
 		l.AccumulatedBuy = accum
 		l.AccumulatedExecutions = utils.MinInt(l.AccumulatedBuy, l.AccumulatedSell)
 		l.BuySellSurplus = l.AccumulatedBuy - l.AccumulatedSell
@@ -231,20 +241,37 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	if compareBuy(t, residual) > 0 { // not enough to allocate
 		// It is assumed here toAlloc is lot size rounded, so that the below code
 		// should leave nothing not allocated
-		nLot := residual / lotSize
 		k := len(orders)
 		i := 0
-		for i = 0; i < k; i++ {
-			a := calcNumOfLot(nLot, orders[i].nxtTrade, t) * lotSize // this is supposed to be the main portion
-			if compareBuy(a, residual) >= 0 {
-				orders[i].nxtTrade = residual
-				residual = 0
-				break
-			} else {
-				orders[i].nxtTrade = a
-				residual -= a
+		upgrade.FixOverflows(func() {
+			nLot := float64(residual / lotSize)
+			totalF := float64(t)
+			for i = 0; i < k; i++ {
+				a := int64(math.Floor(nLot*float64(orders[i].nxtTrade)/totalF)) * lotSize // this is supposed to be the main portion
+				if compareBuy(a, residual) >= 0 {
+					orders[i].nxtTrade = residual
+					residual = 0
+					break
+				} else {
+					orders[i].nxtTrade = a
+					residual -= a
+				}
 			}
-		}
+		}, func() {
+			nLot := residual / lotSize
+			for i = 0; i < k; i++ {
+				a := calcNumOfLot(nLot, orders[i].nxtTrade, t) * lotSize // this is supposed to be the main portion
+				if compareBuy(a, residual) >= 0 {
+					orders[i].nxtTrade = residual
+					residual = 0
+					break
+				} else {
+					orders[i].nxtTrade = a
+					residual -= a
+				}
+			}
+		})
+
 		for j := i % k; j < k; j++ {
 			if residual > lotSize { // remainder distribution, every one can only get 1 lot or zero
 				orders[j].nxtTrade += lotSize
