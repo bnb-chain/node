@@ -10,26 +10,10 @@ var Mgr = sdk.UpgradeMgr
 const FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
 const FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
 
-func Upgrade(name string, before func(), in func(), after func()) {
-	if sdk.IsUpgradeHeight(name) {
-		if in != nil {
-			in()
-		}
-	} else if sdk.IsUpgrade(name) {
-		if after != nil {
-			after()
-		}
-	} else {
-		if before != nil {
-			before()
-		}
-	}
-}
-
 func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
-	Upgrade(FixOrderSeqInPriceLevelName, before, in, after)
+	sdk.Upgrade(FixOrderSeqInPriceLevelName, before, in, after)
 }
 
 func FixDropFilledOrderSeq(before func(), after func()) {
-	Upgrade(FixDropFilledOrderSeqName, before, nil, after)
+	sdk.Upgrade(FixDropFilledOrderSeqName, before, nil, after)
 }
