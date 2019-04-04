@@ -18,7 +18,7 @@ import (
 func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 
 	type ValidatorOutput struct {
-		AccoutAddr         sdk.AccAddress    `json:"account_address"`
+		AccountAddr        sdk.AccAddress    `json:"account_address"`
 		OperatorAddr       sdk.ValAddress    `json:"operator_address"`
 		ConsPubKey         crypto.PubKey     `json:"consensus_pubkey"`
 		ConsAddr           cmn.HexBytes      `json:"consensus_address"`
@@ -38,7 +38,7 @@ func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Hand
 	convertToValidatorOutputs := func(validators []stake.Validator) (validatorOutputs []ValidatorOutput) {
 		for _, val := range validators {
 			validatorOutputs = append(validatorOutputs, ValidatorOutput{
-				AccoutAddr:         sdk.AccAddress(val.OperatorAddr),
+				AccountAddr:        val.FeeAddr,
 				OperatorAddr:       val.OperatorAddr,
 				ConsPubKey:         val.ConsPubKey,
 				ConsAddr:           val.ConsPubKey.Address(),
