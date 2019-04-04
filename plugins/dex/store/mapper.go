@@ -9,6 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/common/upgrade"
 	cmn "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/types"
@@ -98,7 +99,12 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 }
 
 func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64) {
-	priceWMA := dexUtils.CalcPriceWMA(recentPrices)
+	var priceWMA int64
+	upgrade.FixOverflows(func() {
+		priceWMA = dexUtils.CalcPriceWMADeprecated(recentPrices)
+	}, func() {
+		priceWMA = dexUtils.CalcPriceWMA(recentPrices)
+	})
 	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(priceWMA)
 
 	if tickSize != pair.TickSize.ToInt64() ||
