@@ -52,6 +52,8 @@ fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
 addFeeTypeForStakeTx = {{ .UpgradeConfig.AddFeeTypeForStakeTx }}
 fixSeparateValAddrHeight = {{ .UpgradeConfig.FixSeparateValAddrHeight }}
 fixLotSizeAndOverflowsHeight = {{ .UpgradeConfig.FixLotSizeAndOverflowsHeight }}
+# fixOrderTimestamp height
+fixOrderTimestampHeight = {{ .UpgradeConfig.FixOrderTimestampHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -293,15 +295,17 @@ type UpgradeConfig struct {
 	FixSeparateValAddrHeight      int64 `mapstructure:"fixSeparateValAddrHeight"`
 	FixLotSizeAndOverflowsHeight  int64 `mapstructure:"fixLotSizeAndOverflowsHeight"`
 	AddFeeTypeForStakeTx          int64 `mapstructure:"addFeeTypeForStakeTx"`
+	FixOrderTimestampHeight       int64 `mapstructure:"fixOrderTimestampHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
 		FixDropFilledOrderSeqHeight:   2855000,
 		FixOrderSeqInPriceLevelHeight: 2855000,
-		AddFeeTypeForStakeTx:          6090000,
-		FixSeparateValAddrHeight:      6090000,
-		FixLotSizeAndOverflowsHeight:  6090000,
+		AddFeeTypeForStakeTx:          6885000,
+		FixSeparateValAddrHeight:      6885000,
+		FixLotSizeAndOverflowsHeight:  6885000,
+		FixOrderTimestampHeight:       6885000,
 	}
 }
 

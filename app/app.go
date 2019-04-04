@@ -252,6 +252,7 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixLotSizeName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOverflowsName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderTimestampName, app.upgradeConfig.FixOrderTimestampHeight)
 }
 
 // setUpgradeConfig will register upgrade callback function

@@ -47,7 +47,7 @@ func (mg *MessageGenerator) OneOnOneMessages(height int, timeNow time.Time) (tra
 	orderChanges = make(orderPkg.OrderChanges, mg.NumOfTradesPerBlock*2)
 
 	timeSeed := float64(timeNow.UnixNano()-mg.TimeStart.UnixNano()) / (float64(time.Hour) / 4)
-	timePub := timeNow.Unix()
+	timePub := timeNow.UnixNano()
 	pi2 := 2.0 * math.Pi
 	price := (30 + int64(20*math.Sin(float64(timeSeed)*pi2))) * 100000000
 	amount := int64(100000000 * rand.Intn(10))
@@ -78,7 +78,7 @@ func (mg *MessageGenerator) OneOnOneMessages(height int, timeNow time.Time) (tra
 
 // each big order eat two small orders
 func (mg *MessageGenerator) TwoOnOneMessages(height int, timeNow time.Time) (tradesToPublish []*pub.Trade, orderChanges orderPkg.OrderChanges, accounts map[string]pub.Account, transfers *pub.Transfers) {
-	timePub := timeNow.Unix()
+	timePub := timeNow.UnixNano()
 	if height%2 != 0 {
 		// place small buy orders
 		tradesToPublish = make([]*pub.Trade, 0)
@@ -126,7 +126,7 @@ func (mg *MessageGenerator) TwoOnOneMessages(height int, timeNow time.Time) (tra
 
 // simulate 1 million expire orders to publish at breathe block
 func (mg *MessageGenerator) ExpireMessages(height int, timeNow time.Time) (tradesToPublish []*pub.Trade, orderChanges orderPkg.OrderChanges, accounts map[string]pub.Account) {
-	timePub := timeNow.Unix()
+	timePub := timeNow.UnixNano()
 	tradesToPublish = make([]*pub.Trade, 0)
 	orderChanges = make(orderPkg.OrderChanges, 0, 100000)
 	accounts = make(map[string]pub.Account)
