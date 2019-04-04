@@ -1,10 +1,29 @@
 # Changelog
 
-## 0.5.4
+## 0.5.5
 
 IMPROVEMENTS
 
 * [\#518](https://github.com/binance-chain/node/pull/518) [Gov] Adapt to changes in cosmos
+* [\#521](https://github.com/binance-chain/node/pull/521) [List] Add check for list proposal hook.
+* [\#517](https://github.com/binance-chain/node/pull/517) [Validator] Split fee address and operator address
+* [\#516](https://github.com/binance-chain/node/pull/516) [Publish] IocNoFill semantic correct
+* [\#514](https://github.com/binance-chain/node/pull/514) [Upgrade] Support config for upgrade height
+* [\#509](https://github.com/binance-chain/node/pull/509) [MatchEngine] Make the lot size reasonable for low price
+* [\#498](https://github.com/binance-chain/node/pull/498) [MatchEngine] Rename price of TradingPair to list_price
+* [\#497](https://github.com/binance-chain/node/pull/497) [Build] Support `build-windows`
+* [\#496](https://github.com/binance-chain/node/pull/476) [StateSync] Cache latest snapshot in memory
+* [\#526](https://github.com/binance-chain/node/pull/518) [ApiServer] Add gov queries in api server
+
+
+BUG FIXES
+
+* [\#508](https://github.com/binance-chain/node/pull/508) [\#511](https://github.com/binance-chain/node/pull/511) [\#501](https://github.com/binance-chain/node/pull/501) [Dex] Fix all potential int64 overflows, remove all use of float64, and optimize some calculation
+* [\#478](https://github.com/binance-chain/node/pull/478) [Publish] Dump order ids for large expire message.
+
+## 0.5.4
+
+IMPROVEMENTS
 
 BUG FIXES
 
