@@ -197,6 +197,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
+	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(
 		common.MainStoreKey,
@@ -233,6 +234,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// set upgrade config
 	app.setUpgradeConfig()
 
+	app.registerUpgradeCallBack()
+
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
@@ -246,6 +249,16 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
+}
+
+// setUpgradeConfig will register upgrade callback function
+func (app *BinanceChain) registerUpgradeCallBack() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.AddFeeTypeForStakeTxName, func(ctx sdk.Context) {
+		feeParams := make([]paramtypes.FeeParam, 2, 2)
+		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
+		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
+		app.ParamHub.UpdateFeeParams(ctx, feeParams)
+	})
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
@@ -435,6 +448,11 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 	}
 }
 
+func (app *BinanceChain) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	upgrade.Mgr.BeginBlocker(ctx)
+	return abci.ResponseBeginBlock{}
+}
+
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
@@ -495,14 +513,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
 		app.ValAddrCache.ClearCache()
 	}
-
-	// Share the same upgrade height with upgrade address length
-	upgrade.AddFeeTypeForStakeTx( func() {
-		feeParams := make([]paramtypes.FeeParam, 2, 2)
-		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
-		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
-		app.ParamHub.UpdateFeeParams(ctx, feeParams)
-	})
 
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.

@@ -20,5 +20,6 @@ type ChainApp interface {
 	Query(req abci.RequestQuery) (res abci.ResponseQuery)
 	RegisterQueryHandler(prefix string, handler AbciQueryHandler)
 	ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error)
+	BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock
 	EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock
 }
