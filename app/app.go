@@ -43,6 +43,7 @@ import (
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	paramtypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
@@ -233,6 +234,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// set upgrade config
 	app.setUpgradeConfig()
 
+	app.registerUpgradeCallBack()
+
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
@@ -248,6 +251,17 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(sdk.UpgradeSeparateValAddrName, app.upgradeConfig.FixSeparateValAddrHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixLotSizeName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOverflowsName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
+}
+
+// setUpgradeConfig will register upgrade callback function
+func (app *BinanceChain) registerUpgradeCallBack() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.AddFeeTypeForStakeTxName, func(ctx sdk.Context) {
+		feeParams := make([]paramtypes.FeeParam, 2, 2)
+		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
+		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
+		app.ParamHub.UpdateFeeParams(ctx, feeParams)
+	})
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {

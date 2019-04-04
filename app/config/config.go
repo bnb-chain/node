@@ -48,6 +48,8 @@ breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 fixOrderSeqInPriceLevelHeight = {{ .UpgradeConfig.FixOrderSeqInPriceLevelHeight }}
 # fixDropFilledOrderSeq height
 fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
+# AddFeeTypeForStakeTx height
+addFeeTypeForStakeTx = {{ .UpgradeConfig.AddFeeTypeForStakeTx }}
 fixSeparateValAddrHeight = {{ .UpgradeConfig.FixSeparateValAddrHeight }}
 fixLotSizeAndOverflowsHeight = {{ .UpgradeConfig.FixLotSizeAndOverflowsHeight }}
 
@@ -290,12 +292,14 @@ type UpgradeConfig struct {
 	FixDropFilledOrderSeqHeight   int64 `mapstructure:"fixDropFilledOrderSeqHeight"`
 	FixSeparateValAddrHeight      int64 `mapstructure:"fixSeparateValAddrHeight"`
 	FixLotSizeAndOverflowsHeight  int64 `mapstructure:"fixLotSizeAndOverflowsHeight"`
+	AddFeeTypeForStakeTx          int64 `mapstructure:"addFeeTypeForStakeTx"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
 		FixDropFilledOrderSeqHeight:   2855000,
 		FixOrderSeqInPriceLevelHeight: 2855000,
+		AddFeeTypeForStakeTx:          6090000,
 		FixSeparateValAddrHeight:      6090000,
 		FixLotSizeAndOverflowsHeight:  6090000,
 	}
