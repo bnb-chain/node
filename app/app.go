@@ -192,6 +192,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
+	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(
 		common.MainStoreKey,
@@ -427,6 +428,11 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 	} else {
 		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
+}
+
+func (app *BinanceChain) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
+	upgrade.Mgr.BeginBlocker(ctx)
+	return
 }
 
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
