@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
@@ -19,15 +20,46 @@ import (
 //TickSize	1e4		1e5		1e6		1e7		1e8		1e9		1e10	1e11	1e12
 //LotSize	1e4		1e3		1e2		1e1		1		1		1		1		1
 func CalcTickSizeAndLotSize(price int64) (tickSize, lotSize int64) {
-	if price <= 0 {
-		return 1, 1e13
+	upgrade.FixLotSize(func() {
+		if price <= 0 {
+			lotSize, tickSize = 1, 1e8
+			return
+		}
+		priceDigits := int64(math.Floor(math.Log10(float64(price))))
+		tickSizeDigits := int64(math.Max(float64(priceDigits-5), 0))
+		lotSizeDigits := int64(math.Max(float64(8-tickSizeDigits), 0))
+
+		tickSize = int64(math.Pow(10, float64(tickSizeDigits)))
+		lotSize = int64(math.Pow(10, float64(lotSizeDigits)))
+	}, func() {
+		if price <= 0 {
+			lotSize, tickSize = 1, 1e13
+			return
+		}
+		priceDigits := int64(math.Floor(math.Log10(float64(price))))
+		tickSizeDigits := int64(math.Max(float64(priceDigits-5), 0))
+		lotSizeDigits := int64(math.Max(float64(13-priceDigits), 0))
+
+		tickSize = int64(math.Pow(10, float64(tickSizeDigits)))
+		lotSize = int64(math.Pow(10, float64(lotSizeDigits)))
+	})
+
+	return
+}
+
+func CalcPriceWMADeprecated(prices *utils.FixedSizeRing) int64 {
+	n := prices.Count()
+	if n == 0 {
+		return 0
 	}
-
-	priceDigits := int64(math.Floor(math.Log10(float64(price))))
-	tickSizeDigits := int64(math.Max(float64(priceDigits-5), 0))
-	lotSizeDigits := int64(math.Max(float64(13-priceDigits), 0))
-
-	return int64(math.Pow(10, float64(tickSizeDigits))), int64(math.Pow(10, float64(lotSizeDigits)))
+	elements := prices.Elements()
+	var weightedSum int64 = 0
+	// when calculate the sum, we ignore the last 5 digits as they have no impact on the tick_size calculation.
+	for i, element := range elements {
+		weightedSum += int64(i+1) * element.(int64) / 1e5
+	}
+	totalWeight := int64(n * (n + 1) / 2)
+	return weightedSum / totalWeight * 1e5
 }
 
 func CalcPriceWMA(prices *utils.FixedSizeRing) int64 {
@@ -40,7 +72,7 @@ func CalcPriceWMA(prices *utils.FixedSizeRing) int64 {
 
 	weightedSum := big.NewInt(0)
 	lenPrices := len(elements)
-	for i:=0; i < lenPrices; i++ {
+	for i := 0; i < lenPrices; i++ {
 		var weightedPrice big.Int
 		weightedPrice.Mul(big.NewInt(int64(i+1)), big.NewInt(elements[i].(int64)))
 		weightedSum.Add(weightedSum, &weightedPrice)

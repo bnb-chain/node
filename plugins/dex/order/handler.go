@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -30,7 +31,13 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Ha
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, msg)
+			var result sdk.Result
+			upgrade.FixOverflows(func() {
+				result = handleNewOrderDeprecated(ctx, cdc, k, msg)
+			}, func() {
+				result = handleNewOrder(ctx, cdc, k, msg)
+			})
+			return result
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, k, msg)
 		default:
@@ -156,6 +163,86 @@ func handleNewOrder(
 			blockHeader := ctx.BlockHeader()
 			height := blockHeader.Height
 			timestamp := blockHeader.Time.Unix()
+			msg := OrderInfo{
+				msg,
+				height, timestamp,
+				height, timestamp,
+				0, txHash}
+			err := keeper.AddOrder(msg, false)
+			if err != nil {
+				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
+			}
+		} else {
+			panic("cannot get txHash from ctx")
+		}
+	}
+
+	response := NewOrderResponse{
+		OrderID: msg.Id,
+	}
+	serialized, err := json.Marshal(&response)
+	if err != nil {
+		return sdk.ErrInternal(err.Error()).Result()
+	}
+
+	return sdk.Result{
+		Data: serialized,
+	}
+}
+
+func handleNewOrderDeprecated(
+	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
+) sdk.Result {
+	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
+	if !ctx.IsReCheckTx() {
+		//for recheck:
+		// 1. sequence is verified in anteHandler
+		// 2. since sequence is verified correct again, id should be ok too
+		// 3. trading pair is verified
+		// 4. price/qty may have odd tick size/lot size, but it can be handled as
+		//    other existing orders.
+		err := validateOrder(ctx, keeper.PairMapper, acc, msg)
+		if err != nil {
+			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
+		}
+	}
+
+	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
+	log.With("module", "dex").Info("Incoming New Order", "order", msg)
+	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
+		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
+		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
+	}
+
+	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
+	var amountToLock int64
+	baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(msg.Symbol)
+	var symbolToLock string
+	if msg.Side == Side.BUY {
+		// TODO: where is 10^8 stored?
+		amountToLock = utils.CalBigNotional(msg.Quantity, msg.Price).Int64()
+		symbolToLock = strings.ToUpper(quoteAsset)
+	} else {
+		amountToLock = msg.Quantity
+		symbolToLock = strings.ToUpper(baseAsset)
+	}
+	freeBalance := acc.GetCoins()
+	if freeBalance.AmountOf(symbolToLock) < amountToLock {
+		return sdk.ErrInsufficientCoins("do not have enough token to lock").Result()
+	}
+
+	toLockCoins := sdk.Coins{{Denom: symbolToLock, Amount: amountToLock}}
+	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
+	// TODO: perform reduce avail + increase locked + insert orderbook atomically
+	acc.SetCoins(freeBalance.Minus(toLockCoins))
+	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
+	keeper.am.SetAccount(ctx, acc)
+
+	// this is done in memory! we must not run this block in checktx or simulate!
+	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
+		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
+			height := ctx.BlockHeader().Height
+			timestamp := ctx.BlockHeader().Time.Unix()
 			msg := OrderInfo{
 				msg,
 				height, timestamp,

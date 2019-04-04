@@ -248,6 +248,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	upgrade.Mgr.AddUpgradeHeight(sdk.UpgradeSeparateValAddrName, app.upgradeConfig.FixSeparateValAddrHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixLotSizeName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOverflowsName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
 }
 
