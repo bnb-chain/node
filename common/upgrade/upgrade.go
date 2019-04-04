@@ -29,3 +29,11 @@ func FixLotSize(before func(), after func()) {
 func FixOverflows(before func(), after func()) {
 	sdk.Upgrade(FixOverflowsName, before, nil, after)
 }
+
+func ShouldRebuildGov() bool {
+	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeGovStrategy)
+	if Mgr.GetHeight() == (upgradeHeight - 1) {
+		return true
+	}
+	return false
+}
