@@ -241,6 +241,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderTimestampName, app.upgradeConfig.FixOrderTimestampHeight)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {

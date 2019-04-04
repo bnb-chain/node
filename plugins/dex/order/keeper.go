@@ -713,7 +713,13 @@ func (kp *Keeper) MatchAndAllocateAll(
 	postAlloTransHandler TransferHandler,
 ) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), ctx.BlockHeader().Time.Unix())
+	var timestamp int64
+	upgrade.FixOrderTimestamp(func() {
+		timestamp = ctx.BlockHeader().Time.Unix()
+	}, func() {
+		timestamp = ctx.BlockHeader().Time.UnixNano()
+	})
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return

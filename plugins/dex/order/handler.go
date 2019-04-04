@@ -14,6 +14,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
@@ -155,7 +156,12 @@ func handleNewOrder(
 		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
 			blockHeader := ctx.BlockHeader()
 			height := blockHeader.Height
-			timestamp := blockHeader.Time.Unix()
+			var timestamp int64
+			upgrade.FixOrderTimestamp(func() {
+				timestamp = blockHeader.Time.Unix()
+			}, func() {
+				timestamp = blockHeader.Time.UnixNano()
+			})
 			msg := OrderInfo{
 				msg,
 				height, timestamp,

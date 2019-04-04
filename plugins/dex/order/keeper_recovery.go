@@ -187,6 +187,13 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		logger.Error("No block is loaded. Ignore replay for orderbook")
 		return
 	}
+	// the time we replay should be consistent with ctx.BlockHeader().Time
+	var t int64
+	upgrade.FixOrderTimestamp(func() {
+		t = timestamp.Unix()
+	}, func() {
+		t = timestamp.UnixNano()
+	})
 	for _, txBytes := range block.Txs {
 		txHash := cmn.HexBytes(tmhash.Sum(txBytes))
 		skipTxResultCheck := false
@@ -220,9 +227,6 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
-				// the time we replay should be consistent with ctx.BlockHeader().Time
-				// TODO(#118): after upgrade to tendermint 0.24 we should have better and more consistent time representation
-				t := timestamp.Unix()
 				orderInfo := OrderInfo{
 					msg,
 					height, t,
@@ -245,8 +249,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	// TODO(#118): after upgrade to tendermint 0.24 we should have better and more consistent time representation
-	kp.MatchAll(height, timestamp.Unix()) //no need to check result
+	kp.MatchAll(height, t) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB dbm.DB, lastHeight, breatheHeight int64,
