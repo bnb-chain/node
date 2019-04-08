@@ -122,6 +122,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:     ServerContext.UpgradeConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
+	// set upgrade config
+	app.setUpgradeConfig()
 	app.SetPruning(viper.GetString("pruning"))
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -229,10 +231,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-
-	// set upgrade config
-	app.setUpgradeConfig()
-
+	
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
