@@ -112,7 +112,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "66938107ebd9339b51f3aaf7d235d9280fd7bac5"
+  revision = "cd11938ac61bbad08dfd4f1515d5fcd5023c7bab"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]

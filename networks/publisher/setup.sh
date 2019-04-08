@@ -49,7 +49,6 @@ sed -i -e "s/publishOrderBook = false/publishOrderBook = true/g" ${deamonhome}/c
 sed -i -e "s/publishBlockFee = false/publishBlockFee = true/g" ${deamonhome}/config/app.toml
 sed -i -e "s/publishTransfer = false/publishTransfer = true/g" ${deamonhome}/config/app.toml
 sed -i -e "s/publishLocal = false/publishLocal = true/g" ${deamonhome}/config/app.toml
-sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' ${deamonhome}/config/genesis.json
 
 # config witness node
 cp ${deamonhome}/config/genesis.json ${witnesshome}/config/
@@ -86,7 +85,8 @@ result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB -
 nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
 echo ${nnb_symbol}
 sleep 5
-${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400 --json
+((expire_time=$(date '+%s')+1000))
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time ${expire_time} --voting-period 5 --json
 sleep 2
 ${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 1 --option Yes --json
 sleep 6
@@ -96,7 +96,8 @@ result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --tota
 zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "ZCB-[0-9A-Z]*")
 echo ${zcb_symbol}
 sleep 5
-${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time 1644486400 --json
+((expire_time=$(date '+%s')+1000))
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time ${expire_time} --voting-period 5 --json
 sleep 2
 ${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 2 --option Yes --json
 sleep 6
