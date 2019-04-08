@@ -247,7 +247,12 @@ func handleNewOrderDeprecated(
 	if ctx.IsDeliverTx() { // only subtract coins & insert into OB during DeliverTx
 		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
 			height := ctx.BlockHeader().Height
-			timestamp := ctx.BlockHeader().Time.Unix()
+			var timestamp int64
+			upgrade.FixOrderTimestamp(func() {
+				timestamp = ctx.BlockHeader().Time.Unix()
+			}, func() {
+				timestamp = ctx.BlockHeader().Time.UnixNano()
+			})
 			msg := OrderInfo{
 				msg,
 				height, timestamp,
