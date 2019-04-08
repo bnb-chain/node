@@ -10,11 +10,12 @@ var Mgr = sdk.UpgradeMgr
 
 const (
 	FixOrderSeqInPriceLevelName = "fixOrderSeqInPriceLevel"
-	FixDropFilledOrderSeqName = "fixDropFilledOrderSeq"
-	FixLotSizeName = "fixLotSize"
-	FixOverflowsName = "fixOverflows"
-	AddFeeTypeForStakeTxName = "addFeeTypeForStakeTx"
-	FixOrderTimestampName = "fixOrderTimestamp"
+	FixDropFilledOrderSeqName   = "fixDropFilledOrderSeq"
+	FixLotSizeName              = "fixLotSize"
+	FixOverflowsName            = "fixOverflows"
+	AddFeeTypeForStakeTxName    = "addFeeTypeForStakeTx"
+	FixOrderTimestampName       = "fixOrderTimestamp"
+	UpgradeGovStrategy          = "UpgradeGovStrategy"
 )
 
 func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
@@ -38,7 +39,6 @@ func FixOrderTimestamp(before func(), after func()) {
 	// and update their timestamps
 	sdk.Upgrade(FixOrderTimestampName, before, nil, after)
 }
-
 
 func ShouldRebuildGov() bool {
 	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeGovStrategy)

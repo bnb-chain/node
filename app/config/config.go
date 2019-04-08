@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/server"
 )
 
 var configTemplate *template.Template
@@ -54,6 +55,8 @@ fixSeparateValAddrHeight = {{ .UpgradeConfig.FixSeparateValAddrHeight }}
 fixLotSizeAndOverflowsHeight = {{ .UpgradeConfig.FixLotSizeAndOverflowsHeight }}
 # fixOrderTimestamp height
 fixOrderTimestampHeight = {{ .UpgradeConfig.FixOrderTimestampHeight }}
+# fixOrderTimestamp height
+upgradeGovStrategy = {{ .UpgradeConfig.UpgradeGovStrategy }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -296,6 +299,7 @@ type UpgradeConfig struct {
 	FixLotSizeAndOverflowsHeight  int64 `mapstructure:"fixLotSizeAndOverflowsHeight"`
 	AddFeeTypeForStakeTx          int64 `mapstructure:"addFeeTypeForStakeTx"`
 	FixOrderTimestampHeight       int64 `mapstructure:"fixOrderTimestampHeight"`
+	UpgradeGovStrategy            int64 `mapstructure:"upgradeGovStrategy"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -306,6 +310,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		FixSeparateValAddrHeight:      6885000,
 		FixLotSizeAndOverflowsHeight:  6885000,
 		FixOrderTimestampHeight:       6885000,
+		UpgradeGovStrategy:            6885000,
 	}
 }
 

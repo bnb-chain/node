@@ -253,14 +253,15 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOverflowsName, app.upgradeConfig.FixLotSizeAndOverflowsHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderTimestampName, app.upgradeConfig.FixOrderTimestampHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.UpgradeGovStrategy, app.upgradeConfig.UpgradeGovStrategy)
 }
 
 // setUpgradeConfig will register upgrade callback function
 func (app *BinanceChain) registerUpgradeCallBack() {
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.AddFeeTypeForStakeTxName, func(ctx sdk.Context) {
 		feeParams := make([]paramtypes.FeeParam, 2, 2)
-		feeParams[0] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgCreateValidator{}.Type(), Fee:param.CreateValidatorFee, FeeFor:types.FeeForProposer}
-		feeParams[1] = &paramtypes.FixedFeeParams{ MsgType:stake.MsgRemoveValidator{}.Type(), Fee:param.RemoveValidatorFee, FeeFor:types.FeeForProposer}
+		feeParams[0] = &paramtypes.FixedFeeParams{MsgType: stake.MsgCreateValidator{}.Type(), Fee: param.CreateValidatorFee, FeeFor: types.FeeForProposer}
+		feeParams[1] = &paramtypes.FixedFeeParams{MsgType: stake.MsgRemoveValidator{}.Type(), Fee: param.RemoveValidatorFee, FeeFor: types.FeeForProposer}
 		app.ParamHub.UpdateFeeParams(ctx, feeParams)
 	})
 }
