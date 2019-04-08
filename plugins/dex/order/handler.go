@@ -155,7 +155,7 @@ func handleNewOrder(
 		if txHash, ok := ctx.Value(baseapp.TxHashKey).(string); ok {
 			blockHeader := ctx.BlockHeader()
 			height := blockHeader.Height
-			timestamp := blockHeader.Time.Unix()
+			timestamp := blockHeader.Time.UnixNano()
 			msg := OrderInfo{
 				msg,
 				height, timestamp,
