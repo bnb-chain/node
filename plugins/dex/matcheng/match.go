@@ -300,7 +300,7 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 // totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
 func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
 	if tmp, ok := utils.Mul64(totalLot, orderLeft); ok {
-		return tmp/totalLeft
+		return tmp / totalLeft
 	} else {
 		var res big.Int
 		res.Quo(res.Mul(big.NewInt(totalLot), big.NewInt(orderLeft)), big.NewInt(totalLeft))

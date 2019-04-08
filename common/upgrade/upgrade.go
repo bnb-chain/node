@@ -14,6 +14,7 @@ const (
 	FixLotSizeName = "fixLotSize"
 	FixOverflowsName = "fixOverflows"
 	AddFeeTypeForStakeTxName = "addFeeTypeForStakeTx"
+	FixOrderTimestampName = "fixOrderTimestamp"
 )
 
 func FixOrderSeqInPriceLevel(before func(), in func(), after func()) {
@@ -31,6 +32,13 @@ func FixLotSize(before func(), after func()) {
 func FixOverflows(before func(), after func()) {
 	sdk.Upgrade(FixOverflowsName, before, nil, after)
 }
+
+func FixOrderTimestamp(before func(), after func()) {
+	// deliberately not rebuild data here because rebuild means we need iterate all open orders
+	// and update their timestamps
+	sdk.Upgrade(FixOrderTimestampName, before, nil, after)
+}
+
 
 func ShouldRebuildGov() bool {
 	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeGovStrategy)

@@ -216,7 +216,8 @@ const (
 						"name": "Transfer",
 						"namespace": "com.company",
 						"fields": [
-							{ "name": "from", "type": "string"},
+							{ "name": "txhash", "type": "string" },
+							{ "name": "from", "type": "string" },
 							{ "name": "to", 
                   				"type": {
  									"type": "array",
