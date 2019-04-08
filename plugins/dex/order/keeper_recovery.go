@@ -188,12 +188,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		return
 	}
 	// the time we replay should be consistent with ctx.BlockHeader().Time
-	var t int64
-	upgrade.FixOrderTimestamp(func() {
-		t = timestamp.Unix()
-	}, func() {
-		t = timestamp.UnixNano()
-	})
+	t := timestamp.UnixNano()
 	for _, txBytes := range block.Txs {
 		txHash := cmn.HexBytes(tmhash.Sum(txBytes))
 		skipTxResultCheck := false
