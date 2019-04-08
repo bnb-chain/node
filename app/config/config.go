@@ -45,10 +45,6 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
-# fixOrderSeqInPriceLevel height
-fixOrderSeqInPriceLevelHeight = {{ .UpgradeConfig.FixOrderSeqInPriceLevelHeight }}
-# fixDropFilledOrderSeq height
-fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -285,14 +281,12 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-	FixOrderSeqInPriceLevelHeight int64 `mapstructure:"fixOrderSeqInPriceLevelHeight"`
-	FixDropFilledOrderSeqHeight   int64 `mapstructure:"fixDropFilledOrderSeqHeight"`
+	// example
+	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
-		FixDropFilledOrderSeqHeight:   2855000,
-		FixOrderSeqInPriceLevelHeight: 2855000,
 	}
 }
 

@@ -394,16 +394,16 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.LastTradePrice = 999
 	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 1000,
 		BuyOrders: []OrderPart{
-			OrderPart{"2", 100, 80, 0, 0},
 			OrderPart{"1", 100, 70, 0, 0},
-			OrderPart{"4", 100, 50, 0, 0},
+			OrderPart{"2", 100, 80, 0, 0},
 			OrderPart{"3", 100, 100, 0, 0},
+			OrderPart{"4", 100, 50, 0, 0},
 		},
 		SellOrders: []OrderPart{
-			OrderPart{"9", 100, 60, 0, 0},
-			OrderPart{"8", 100, 70, 0, 0},
-			OrderPart{"7", 100, 50, 0, 0},
 			OrderPart{"6", 100, 100, 0, 0},
+			OrderPart{"7", 100, 50, 0, 0},
+			OrderPart{"8", 100, 70, 0, 0},
+			OrderPart{"9", 100, 60, 0, 0},
 		},
 	}}
 	prepareMatch(&me.overLappedLevel)
@@ -426,19 +426,19 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.overLappedLevel = []OverLappedLevel{
 		OverLappedLevel{Price: 1000,
 			BuyOrders: []OrderPart{
-				OrderPart{"2", 100, 80, 0, 0},
 				OrderPart{"1", 100, 70, 0, 0},
-				OrderPart{"4", 100, 50, 0, 0},
+				OrderPart{"2", 100, 80, 0, 0},
 				OrderPart{"3", 100, 100, 0, 0},
+				OrderPart{"4", 100, 50, 0, 0},
 			},
 			SellOrders: []OrderPart{}},
 		OverLappedLevel{Price: 1000,
 			BuyOrders: []OrderPart{},
 			SellOrders: []OrderPart{
-				OrderPart{"9", 100, 60, 0, 0},
-				OrderPart{"8", 100, 70, 0, 0},
-				OrderPart{"7", 100, 50, 0, 0},
 				OrderPart{"6", 100, 100, 0, 0},
+				OrderPart{"7", 100, 50, 0, 0},
+				OrderPart{"8", 100, 70, 0, 0},
+				OrderPart{"9", 100, 60, 0, 0},
 			}},
 	}
 	prepareMatch(&me.overLappedLevel)
@@ -469,9 +469,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(0.0, toAlloc)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"3", 100, 60, 0, 60},
-		OrderPart{"2", 100, 30, 0, 30},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 600
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -483,9 +483,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"3", 100, 60, 0, 60},
-		OrderPart{"2", 100, 30, 0, 30},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 500
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -497,9 +497,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"3", 100, 60, 0, 60},
-		OrderPart{"2", 100, 30, 0, 30},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 25
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -511,9 +511,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"3", 100, 60, 0, 60},
-		OrderPart{"2", 100, 30, 0, 30},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 35
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -525,9 +525,9 @@ func Test_allocateResidual(t *testing.T) {
 	assert.Equal(int64(0), toAlloc)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"3", 100, 90, 0, 90},
-		OrderPart{"2", 100, 90, 0, 90},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 900, 0, 900},
+		OrderPart{"3", 100, 900, 0, 900},
 	}
 	toAlloc = 700
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -558,9 +558,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	var toAlloc int64 = 605
 	orders := []OrderPart{
+		OrderPart{"1", 100, 300, 0, 300},
 		OrderPart{"2", 100, 900, 0, 900},
 		OrderPart{"3", 100, 600, 0, 600},
-		OrderPart{"1", 100, 300, 0, 300},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(105), orders[0].nxtTrade)
@@ -572,9 +572,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	toAlloc = 5
 	orders = []OrderPart{
+		OrderPart{"1", 100, 300, 0, 300},
 		OrderPart{"2", 100, 900, 0, 900},
 		OrderPart{"3", 100, 600, 0, 600},
-		OrderPart{"1", 100, 300, 0, 300},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(5), orders[0].nxtTrade)
@@ -583,9 +583,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	toAlloc = 15
 	orders = []OrderPart{
+		OrderPart{"1", 100, 25, 0, 25},
 		OrderPart{"2", 100, 25, 0, 25},
 		OrderPart{"3", 100, 25, 0, 25},
-		OrderPart{"1", 100, 25, 0, 25},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(10), orders[0].nxtTrade)
@@ -637,13 +637,13 @@ func TestMatchEng_reserveQty(t *testing.T) {
 	assert.Equal(0.0, orders[2].nxtTrade)
 
 	orders = []OrderPart{
-		OrderPart{"1", 100, 90, 0, 90},
-		OrderPart{"2", 100, 90, 0, 90},
-		OrderPart{"3", 101, 90, 0, 90},
-		OrderPart{"6", 101, 90, 0, 90},
-		OrderPart{"5", 102, 90, 0, 90},
-		OrderPart{"4", 102, 90, 0, 90},
-		OrderPart{"7", 102, 90, 0, 90},
+		OrderPart{"1", 100, 900, 0, 900},
+		OrderPart{"2", 100, 900, 0, 900},
+		OrderPart{"3", 101, 900, 0, 900},
+		OrderPart{"6", 101, 900, 0, 900},
+		OrderPart{"4", 102, 900, 0, 900},
+		OrderPart{"5", 102, 900, 0, 900},
+		OrderPart{"7", 102, 900, 0, 900},
 	}
 
 	assert.True(me.reserveQty(4300, orders))
