@@ -242,8 +242,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	// upgrade.Mgr.AddUpgradeHeight(,)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
