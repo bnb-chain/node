@@ -99,6 +99,7 @@
     "x/gov",
     "x/gov/client",
     "x/gov/client/cli",
+    "x/gov/client/rest",
     "x/gov/tags",
     "x/mock",
     "x/params",
@@ -111,7 +112,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "bbde4549893e33f96c2fbf84e3f5cd793b2c87af"
+  revision = "a074200df9fc328e973dfd46d1995e2cd76a2d74"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -600,7 +601,7 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  digest = "1:ecb0b4a897ea8a52195e6df0aa3bc02bd1ce12a2d7bce13c10b506a70969395d"
+  digest = "1:81aaebcf0e2a2fd210e4aeb7ce6eed5ea03c3dbd896fd06c4442fd3a8e460004"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -666,9 +667,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "14ae0f7facd020c391548dfa226b30cb9fecdfdb"
+  revision = "685fb83f78da0214d9c5f87ea3187032add95729"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.2"
+  version = "v0.30.1-binance.3"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
@@ -842,6 +843,7 @@
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/gov",
     "github.com/cosmos/cosmos-sdk/x/gov/client/cli",
+    "github.com/cosmos/cosmos-sdk/x/gov/client/rest",
     "github.com/cosmos/cosmos-sdk/x/mock",
     "github.com/cosmos/cosmos-sdk/x/params",
     "github.com/cosmos/cosmos-sdk/x/stake",

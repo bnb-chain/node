@@ -30,42 +30,25 @@ func CalcTickSizeAndLotSize(price int64) (tickSize, lotSize int64) {
 	return int64(math.Pow(10, float64(tickSizeDigits))), int64(math.Pow(10, float64(lotSizeDigits)))
 }
 
-// Warning! this wma is not so accurate and can only be used for calculating tick_size/lot_size
-// assume the len(prices) is between 500 and 2000
 func CalcPriceWMA(prices *utils.FixedSizeRing) int64 {
 	n := prices.Count()
 	if n == 0 {
 		return 0
 	}
 	elements := prices.Elements()
-	var weightedSum int64 = 0
 	totalWeight := int64(n * (n + 1) / 2)
 
-	// when calculate the sum, the last 5 digits of price has no impact on the tick_size calculation.
-	// so when calc the PWA, we can ignore the last x digits so that in most cases we can use int64 intermediately.
-	// diff <= (10^x-1) * n * 10^x / ((n+1)*n/2),
-	// assume 500<= n <= 2000, if we let diff < 10^6, then x <= 4
-
-	i, lenPrices := 0, len(elements)
-	for ; i < lenPrices; i++ {
-		weightedSum += int64(float64(i+1) * float64(elements[i].(int64)) / 1e4)
-		if weightedSum < 0 {
-			bigWeightedSum := big.NewInt(weightedSum)
-			for i++; i < lenPrices; i++ {
-				bigWeightedSum.Add(bigWeightedSum, big.NewInt(int64(float64(i+1)*float64(elements[i].(int64))/1e4)))
-			}
-			// res won't overflow
-			var res big.Int
-			return res.Quo(res.Mul(bigWeightedSum, big.NewInt(1e4)), big.NewInt(totalWeight)).Int64()
-		}
+	weightedSum := big.NewInt(0)
+	lenPrices := len(elements)
+	for i := 0; i < lenPrices; i++ {
+		var weightedPrice big.Int
+		weightedPrice.Mul(big.NewInt(int64(i+1)), big.NewInt(elements[i].(int64)))
+		weightedSum.Add(weightedSum, &weightedPrice)
 	}
 
-	if weightedSum > 9e14 {
-		// res won't overflow
-		var res big.Int
-		return res.Quo(res.Mul(big.NewInt(weightedSum), big.NewInt(1e4)), big.NewInt(totalWeight)).Int64()
-	}
-	return weightedSum * 1e4 / totalWeight
+	// res won't overflow
+	var res big.Int
+	return res.Quo(weightedSum, big.NewInt(totalWeight)).Int64()
 }
 
 const DELIMITER = "_"

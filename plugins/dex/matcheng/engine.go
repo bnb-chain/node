@@ -2,9 +2,6 @@ package matcheng
 
 import (
 	"math"
-	"sort"
-
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 type MatchEng struct {
@@ -41,11 +38,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
 	origBuyPx := me.overLappedLevel[i].Price
-
-	upgrade.FixOrderSeqInPriceLevel(func() {
-		sort.Slice(buys, func(i, j int) bool { return buys[i].Id < buys[j].Id })
-		sort.Slice(sells, func(i, j int) bool { return sells[i].Id < sells[j].Id })
-	}, nil, nil)
 
 	bLength := len(buys)
 	sLength := len(sells)
@@ -194,7 +186,7 @@ func (me *MatchEng) Match() bool {
 			totalExec -= sellTotal
 			j--
 		case compareBuy(buyTotal, sellTotal) < 0: //fill all buy
-			if compareBuy(totalExec, sellTotal) >= 0 { // all buy would be filled later as well
+			if compareBuy(totalExec, sellTotal) >= 0 { // all sell would be filled later as well
 				me.fillOrders(i, j)
 			} else {
 				if !me.reserveQty(totalExec, me.overLappedLevel[j].SellOrders) {
@@ -233,17 +225,9 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 			if p.BuyTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
-				upgrade.FixDropFilledOrderSeq(func() {
-					for _, o := range p.BuyOrders {
-						if o.nxtTrade == 0 {
-							me.Book.RemoveOrder(o.Id, BUYSIDE, p.Price)
-						}
-					}
-				}, func() {
-					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-						me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
-					}
-				})
+				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+					me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+				}
 			}
 		}
 		toRemoveStartIdx = toRemoveEndIdx
@@ -258,17 +242,9 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 			if p.SellTotal == 0 {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
-				upgrade.FixDropFilledOrderSeq(func() {
-					for _, o := range p.SellOrders {
-						if o.nxtTrade == 0 {
-							me.Book.RemoveOrder(o.Id, SELLSIDE, p.Price)
-						}
-					}
-				}, func() {
-					for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-						me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
-					}
-				})
+				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
+					me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+				}
 			}
 		}
 	}

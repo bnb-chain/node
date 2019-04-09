@@ -2,6 +2,7 @@ package matcheng
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,29 @@ func Test_prepareMatch(t *testing.T) {
 	}
 	execs := []int64{3000, 4000, 6000, 9000, 9000, 9000}
 	surpluses := []int64{-12000, -11000, -9000, -6000, -3500, -1000}
+	assert.Equal(6, prepareMatch(&overlap))
+	for i, e := range execs {
+		assert.Equal(e, overlap[i].AccumulatedExecutions, fmt.Sprintf("overlap number %d", i))
+	}
+	for i, e := range surpluses {
+		assert.Equal(e, overlap[i].BuySellSurplus, fmt.Sprintf("overlap number %d", i))
+	}
+}
+
+func Test_prepareMatch_overflow(t *testing.T) {
+	assert := assert.New(t)
+	overlap := []OverLappedLevel{
+		{Price: 1021, BuyOrders: []OrderPart{{"1.1", 100, 100e16, 0, 0}, {"1.2", 102, 200e16, 0, 0}}},
+		{Price: 1001, BuyOrders: []OrderPart{{"2.1", 100, 100e16, 0, 0}}},
+		{Price: 991, BuyOrders: []OrderPart{{"3.1", 100, 200e16, 0, 0}}},
+		{Price: 981,
+			SellOrders: []OrderPart{{"4.1", 100, 100e16, 0, 0}, {"4.2", 101, 200e16, 0, 0}, {"4.3", 101, 200e16, 0, 0}},
+			BuyOrders:  []OrderPart{{"4.4", 100, 400e16, 0, 0}}},
+		{Price: 971, SellOrders: []OrderPart{{"5.1", 100, 300e16, 0, 0}}},
+		{Price: 961, SellOrders: []OrderPart{{"6.1", 101, 400e16, 0, 0}}},
+	}
+	execs := []int64{300e16, 400e16, 600e16, math.MaxInt64, 700e16, 400e16}
+	surpluses := []int64{300e16 - math.MaxInt64, 400e16 - math.MaxInt64, 600e16 - math.MaxInt64, 0, math.MaxInt64 - 700e16, math.MaxInt64 - 400e16}
 	assert.Equal(6, prepareMatch(&overlap))
 	for i, e := range execs {
 		assert.Equal(e, overlap[i].AccumulatedExecutions, fmt.Sprintf("overlap number %d", i))
@@ -449,16 +473,16 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.LastTradePrice = 999
 	me.overLappedLevel = []OverLappedLevel{OverLappedLevel{Price: 1000,
 		BuyOrders: []OrderPart{
-			OrderPart{"2", 100, 80, 0, 0},
 			OrderPart{"1", 100, 70, 0, 0},
-			OrderPart{"4", 100, 50, 0, 0},
+			OrderPart{"2", 100, 80, 0, 0},
 			OrderPart{"3", 100, 100, 0, 0},
+			OrderPart{"4", 100, 50, 0, 0},
 		},
 		SellOrders: []OrderPart{
-			OrderPart{"9", 100, 60, 0, 0},
-			OrderPart{"8", 100, 70, 0, 0},
-			OrderPart{"7", 100, 50, 0, 0},
 			OrderPart{"6", 100, 100, 0, 0},
+			OrderPart{"7", 100, 50, 0, 0},
+			OrderPart{"8", 100, 70, 0, 0},
+			OrderPart{"9", 100, 60, 0, 0},
 		},
 	}}
 	prepareMatch(&me.overLappedLevel)
@@ -481,19 +505,19 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	me.overLappedLevel = []OverLappedLevel{
 		OverLappedLevel{Price: 1000,
 			BuyOrders: []OrderPart{
-				OrderPart{"2", 100, 80, 0, 0},
 				OrderPart{"1", 100, 70, 0, 0},
-				OrderPart{"4", 100, 50, 0, 0},
+				OrderPart{"2", 100, 80, 0, 0},
 				OrderPart{"3", 100, 100, 0, 0},
+				OrderPart{"4", 100, 50, 0, 0},
 			},
 			SellOrders: []OrderPart{}},
 		OverLappedLevel{Price: 1000,
 			BuyOrders: []OrderPart{},
 			SellOrders: []OrderPart{
-				OrderPart{"9", 100, 60, 0, 0},
-				OrderPart{"8", 100, 70, 0, 0},
-				OrderPart{"7", 100, 50, 0, 0},
 				OrderPart{"6", 100, 100, 0, 0},
+				OrderPart{"7", 100, 50, 0, 0},
+				OrderPart{"8", 100, 70, 0, 0},
+				OrderPart{"9", 100, 60, 0, 0},
 			}},
 	}
 	prepareMatch(&me.overLappedLevel)
@@ -525,8 +549,8 @@ func Test_allocateResidual(t *testing.T) {
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
-		OrderPart{"3", 100, 600, 0, 600},
 		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 600
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -539,8 +563,8 @@ func Test_allocateResidual(t *testing.T) {
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
-		OrderPart{"3", 100, 600, 0, 600},
 		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 500
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -553,8 +577,8 @@ func Test_allocateResidual(t *testing.T) {
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
-		OrderPart{"3", 100, 600, 0, 600},
 		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 25
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -567,8 +591,8 @@ func Test_allocateResidual(t *testing.T) {
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
-		OrderPart{"3", 100, 600, 0, 600},
 		OrderPart{"2", 100, 300, 0, 300},
+		OrderPart{"3", 100, 600, 0, 600},
 	}
 	toAlloc = 35
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -581,8 +605,8 @@ func Test_allocateResidual(t *testing.T) {
 
 	orders = []OrderPart{
 		OrderPart{"1", 100, 900, 0, 900},
-		OrderPart{"3", 100, 900, 0, 900},
 		OrderPart{"2", 100, 900, 0, 900},
+		OrderPart{"3", 100, 900, 0, 900},
 	}
 	toAlloc = 700
 	assert.True(allocateResidual(&toAlloc, orders, 5))
@@ -613,9 +637,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	var toAlloc int64 = 605
 	orders := []OrderPart{
+		OrderPart{"1", 100, 300, 0, 300},
 		OrderPart{"2", 100, 900, 0, 900},
 		OrderPart{"3", 100, 600, 0, 600},
-		OrderPart{"1", 100, 300, 0, 300},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(105), orders[0].nxtTrade)
@@ -627,9 +651,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	toAlloc = 5
 	orders = []OrderPart{
+		OrderPart{"1", 100, 300, 0, 300},
 		OrderPart{"2", 100, 900, 0, 900},
 		OrderPart{"3", 100, 600, 0, 600},
-		OrderPart{"1", 100, 300, 0, 300},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(5), orders[0].nxtTrade)
@@ -638,9 +662,9 @@ func Test_allocateResidualOddLot(t *testing.T) {
 
 	toAlloc = 15
 	orders = []OrderPart{
+		OrderPart{"1", 100, 25, 0, 25},
 		OrderPart{"2", 100, 25, 0, 25},
 		OrderPart{"3", 100, 25, 0, 25},
-		OrderPart{"1", 100, 25, 0, 25},
 	}
 	assert.True(allocateResidual(&toAlloc, orders, 10))
 	assert.Equal(int64(10), orders[0].nxtTrade)
@@ -696,8 +720,8 @@ func TestMatchEng_reserveQty(t *testing.T) {
 		OrderPart{"2", 100, 900, 0, 900},
 		OrderPart{"3", 101, 900, 0, 900},
 		OrderPart{"6", 101, 900, 0, 900},
-		OrderPart{"5", 102, 900, 0, 900},
 		OrderPart{"4", 102, 900, 0, 900},
+		OrderPart{"5", 102, 900, 0, 900},
 		OrderPart{"7", 102, 900, 0, 900},
 	}
 

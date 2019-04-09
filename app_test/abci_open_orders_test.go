@@ -42,7 +42,7 @@ func Test_Success(t *testing.T) {
 
 	openOrders = issueMustSuccessQuery(pair, buyer, assert)
 	require.Len(openOrders, 1)
-	expected = store.OpenOrder{"b-1", pair, 102000, 3000000, 1000000, 100, 0, 101, 1}
+	expected = store.OpenOrder{"b-1", pair, 102000, 3000000, 1000000, 100, 0, 101, 1000000000}
 	assert.Equal(expected, openOrders[0])
 
 	openOrders = issueMustSuccessQuery(pair, seller, assert)

@@ -46,6 +46,7 @@ func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
 	transferToPublish := make([]Transfer, 0, 0)
 	txs := pool.GetTxs()
 	txs.Range(func(key, value interface{}) bool {
+		txhash := key.(string)
 		t := value.(sdk.Tx)
 		msgs := t.GetMsgs()
 		for _, m := range msgs {
@@ -61,7 +62,7 @@ func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
 				}
 				receivers = append(receivers, Receiver{Addr: o.Address.String(), Coins: coins})
 			}
-			transferToPublish = append(transferToPublish, Transfer{From: msg.Inputs[0].Address.String(), To: receivers})
+			transferToPublish = append(transferToPublish, Transfer{TxHash: txhash, From: msg.Inputs[0].Address.String(), To: receivers})
 		}
 		return true
 	})

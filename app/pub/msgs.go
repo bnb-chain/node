@@ -639,8 +639,9 @@ func (msg Receiver) ToNativeMap() map[string]interface{} {
 }
 
 type Transfer struct {
-	From string
-	To   []Receiver
+	TxHash string
+	From   string
+	To     []Receiver
 }
 
 func (msg Transfer) String() string {
@@ -649,6 +650,7 @@ func (msg Transfer) String() string {
 
 func (msg Transfer) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
+	native["txhash"] = msg.TxHash
 	native["from"] = msg.From
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {

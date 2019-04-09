@@ -122,6 +122,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:     ServerContext.UpgradeConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
+	// set upgrade config
+	app.setUpgradeConfig()
 	app.SetPruning(viper.GetString("pruning"))
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -196,6 +198,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
+	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(
 		common.MainStoreKey,
@@ -228,10 +231,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-
-	// set upgrade config
-	app.setUpgradeConfig()
-
+	
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
@@ -242,8 +242,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	// upgrade.Mgr.AddUpgradeHeight(,)
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
@@ -431,6 +430,11 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 	} else {
 		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
+}
+
+func (app *BinanceChain) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
+	upgrade.Mgr.BeginBlocker(ctx)
+	return
 }
 
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {

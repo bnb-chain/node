@@ -8,17 +8,18 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
-	return &ValAddrCache{
+	cache := &ValAddrCache{
 		cache:       make(map[string]sdk.AccAddress),
 		stakeKeeper: stakeKeeper,
 	}
+
+	return cache
 }
 
 type ValAddrCache struct {
