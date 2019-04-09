@@ -41,7 +41,7 @@ func FixOrderTimestamp(before func(), after func()) {
 }
 
 func ShouldRebuildGov() bool {
-	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeGovStrategy)
+	upgradeHeight := Mgr.GetUpgradeHeight(sdk.UpgradeRestoreGovStorage)
 	if Mgr.GetHeight() == (upgradeHeight - 1) {
 		return true
 	}

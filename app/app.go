@@ -254,6 +254,7 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AddFeeTypeForStakeTxName, app.upgradeConfig.AddFeeTypeForStakeTx)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderTimestampName, app.upgradeConfig.FixOrderTimestampHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.UpgradeGovStrategy, app.upgradeConfig.UpgradeGovStrategy)
+	upgrade.Mgr.AddUpgradeHeight(sdk.UpgradeRestoreGovStorage, app.upgradeConfig.UpgradeRestoreGovStorage)
 }
 
 // setUpgradeConfig will register upgrade callback function

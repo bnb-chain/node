@@ -57,6 +57,8 @@ fixLotSizeAndOverflowsHeight = {{ .UpgradeConfig.FixLotSizeAndOverflowsHeight }}
 fixOrderTimestampHeight = {{ .UpgradeConfig.FixOrderTimestampHeight }}
 # fixOrderTimestamp height
 upgradeGovStrategy = {{ .UpgradeConfig.UpgradeGovStrategy }}
+# upgradeRestoreGovStorage height
+upgradeRestoreGovStorage = {{ .UpgradeConfig.UpgradeRestoreGovStorage }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -300,6 +302,7 @@ type UpgradeConfig struct {
 	AddFeeTypeForStakeTx          int64 `mapstructure:"addFeeTypeForStakeTx"`
 	FixOrderTimestampHeight       int64 `mapstructure:"fixOrderTimestampHeight"`
 	UpgradeGovStrategy            int64 `mapstructure:"upgradeGovStrategy"`
+	UpgradeRestoreGovStorage      int64 `mapstructure:"upgradeRestoreGovStorage"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -311,6 +314,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		FixLotSizeAndOverflowsHeight:  6885000,
 		FixOrderTimestampHeight:       6885000,
 		UpgradeGovStrategy:            6885000,
+		UpgradeRestoreGovStorage:      6885000,
 	}
 }
 
