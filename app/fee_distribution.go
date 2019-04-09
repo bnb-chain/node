@@ -8,8 +8,6 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
@@ -21,9 +19,6 @@ func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
 		stakeKeeper: stakeKeeper,
 	}
 
-	upgrade.Mgr.RegisterBeginBlocker(sdk.UpgradeSeparateValAddrName, func(ctx sdk.Context) {
-		cache.ClearCache()
-	})
 	return cache
 }
 
