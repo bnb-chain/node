@@ -18,8 +18,8 @@ const (
 	// Operate fee
 	ProposeFee = 10e8
 	DepositFee = 125e3
-	ListingFee = 10000e8
-	IssueFee   = 2000e8
+	ListingFee = 800e8
+	IssueFee   = 400e8
 	MintFee    = 200e8
 	BurnFee    = 1e8
 	FreezeFee  = 1e6
@@ -29,19 +29,19 @@ const (
 	RemoveValidatorFee = 1e8
 
 	// Transfer fee
-	TransferFee       = 125e3
-	MultiTransferFee  = 100e3 // discount 80%
+	TransferFee       = 62500
+	MultiTransferFee  = 50000 // discount 80%
 	LowerLimitAsMulti = 2
 
 	// Dex fee
-	ExpireFee          = 1e5
-	ExpireFeeNative    = 2e4
-	CancelFee          = 1e5
-	CancelFeeNative    = 2e4
+	ExpireFee          = 5e4
+	ExpireFeeNative    = 1e4
+	CancelFee          = 5e4
+	CancelFeeNative    = 1e4
 	FeeRate            = 1000
 	FeeRateNative      = 400
-	IOCExpireFee       = 5e4
-	IOCExpireFeeNative = 1e4
+	IOCExpireFee       = 25e3
+	IOCExpireFeeNative = 5e3
 )
 
 var DefaultGenesisState = param.GenesisState{
