@@ -18,8 +18,8 @@ const (
 	// Operate fee
 	ProposeFee = 10e8
 	DepositFee = 125e3
-	ListingFee = 800e8
-	IssueFee   = 400e8
+	ListingFee = 2000e8
+	IssueFee   = 1000e8
 	MintFee    = 200e8
 	BurnFee    = 1e8
 	FreezeFee  = 1e6
