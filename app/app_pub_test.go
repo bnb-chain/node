@@ -76,7 +76,6 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	appState, _ := BinanceAppGenState(app.Codec, []json.RawMessage{genTx})
 	appGenState, _ := wire.MarshalJSONIndent(app.Codec, appState)
 	app.InitChain(abci.RequestInitChain{AppStateBytes: appGenState})
-	app.Pool.Clear()
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr}})
 	app.SetCheckState(abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr})
 
