@@ -9,9 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -85,8 +84,6 @@ type BinanceChain struct {
 	govKeeper     gov.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
-	// manage state sync related status
-	StateSyncManager
 
 	baseConfig        *config.BaseConfig
 	upgradeConfig     *config.UpgradeConfig
@@ -98,7 +95,7 @@ type BinanceChain struct {
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	metrics *pub.Metrics
 
-	blockStore *blockchain.BlockStore
+	takeSnapshotHeight int64 // whether to take snapshot of current height, set at endblock(), reset at commit()
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -119,7 +116,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 	// set upgrade config
 	app.setUpgradeConfig()
-	app.SetPruning(viper.GetString("pruning"))
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -230,7 +226,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
-	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
+	if ServerContext.Config.StateSyncReactor {
+		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
+		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
+		app.StateSyncHelper.Init(lastBreatheBlockHeight)
+	}
 	return app
 }
 
@@ -257,12 +257,18 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 		return
 	}
 	// count back to days in config.
+	blockDB := baseapp.LoadBlockDB()
+	defer blockDB.Close()
+	blockStore := blockchain.NewBlockStore(blockDB)
+	txDB := baseapp.LoadTxDB()
+	defer txDB.Close()
+
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
-		baseapp.LoadBlockDB(),
-		baseapp.LoadTxDB(),
+		blockStore,
+		txDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
 }
@@ -468,13 +474,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// breathe block
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
+		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone
-		// fire and forget reload snapshot
-		go app.reloadSnapshot(height, true)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
@@ -515,6 +520,26 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		ValidatorUpdates: validatorUpdates,
 		Tags:             tags,
 	}
+}
+
+func (app *BinanceChain) Commit() (res abci.ResponseCommit) {
+	res = app.BaseApp.Commit()
+	if ServerContext.Config.StateSyncReactor && app.takeSnapshotHeight > 0 {
+		app.StateSyncHelper.SnapshotHeights <- app.takeSnapshotHeight
+		app.takeSnapshotHeight = 0
+	}
+	return
+}
+
+func (app *BinanceChain) WriteRecoveryChunk(hash abci.SHA256Sum, chunk *abci.AppStateChunk, isComplete bool) (err error) {
+	err = app.BaseApp.WriteRecoveryChunk(hash, chunk, isComplete)
+	if err != nil {
+		return err
+	}
+	if isComplete {
+		err = app.reInitChain()
+	}
+	return err
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.
@@ -722,28 +747,4 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)
-}
-
-// SetPruning sets a pruning option on the multistore associated with the app
-func (app *BinanceChain) SetPruning(pruning string) {
-	var pruningStrategy sdk.PruningStrategy
-	switch pruning {
-	case "nothing":
-		pruningStrategy = sdk.PruneNothing{}
-	case "everything":
-		pruningStrategy = sdk.PruneEverything{}
-	case "syncable":
-		// TODO: make these parameters configurable
-		pruningStrategy = sdk.PruneSyncable{NumRecent: 100, StoreEvery: 10000}
-	case "breathe":
-		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
-	default:
-		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
-		app.Logger.Error("failed to load pruning, set to breathe", "strategy", pruning)
-	}
-	app.BaseApp.SetPruning(pruningStrategy)
-}
-
-func (app *BinanceChain) SetBlockStore(store *blockchain.BlockStore) {
-	app.blockStore = store
 }

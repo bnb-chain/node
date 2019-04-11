@@ -32,20 +32,26 @@
 [[override]]
   name = "github.com/tendermint/iavl"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "=v0.12.0-binance.0"
+  branch = "state_sync_warp"
+#  version = "=v0.12.0-binance.0"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  branch = "develop"
+  branch = "state_sync_warp"
+#  version = "=v0.30.1-binance.3"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "develop"
+  branch = "state_sync_warp"
   [[prune.project]]
       name = "github.com/zondax/hid"
       unused-packages = false
+
+[[constraint]]
+  name = "github.com/btcsuite/btcd"
+  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
 
 [[constraint]]
   name = "github.com/pkg/errors"

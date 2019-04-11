@@ -591,17 +591,17 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  digest = "1:c317eec9047bdcd14dff925f34e07d22c6886faf22bf7c9286ea56ad962bcc22"
+  branch = "state_sync_warp"
+  digest = "1:d059e9aff696313113cafc12955cfdf41fae32a7f183334929b846c9fbb3e4b9"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "65e487d3a8d4d6624d8779c1f42cff31d61a9146"
+  revision = "e602bf1c9f6ea6acc6e5d93ddb5bbc27d025e2d1"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "v0.12.0-binance.0"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:32214aa8210aac34a1a8a23af458c628f7931b17d500940af5ccb0b9afaf89f7"
+  branch = "state_sync_warp"
+  digest = "1:04d3a35cd2a2e4a6366ecd3b6909ef1a2a67da54e017f1248cab52746dc29e97"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -660,6 +660,7 @@
     "rpc/lib/client",
     "rpc/lib/server",
     "rpc/lib/types",
+    "snapshot",
     "state",
     "state/blockindex",
     "state/blockindex/kv",
@@ -672,7 +673,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "ef181dd2019f342be39436c2265910e816e66172"
+  revision = "2033864390f4958cc0d13ca9cf61a4ba3de1cd6a"
   source = "github.com/binance-chain/bnc-tendermint"
 
 [[projects]]
@@ -913,6 +914,7 @@
     "github.com/tendermint/tendermint/rpc/client",
     "github.com/tendermint/tendermint/rpc/core/types",
     "github.com/tendermint/tendermint/rpc/lib/server",
+    "github.com/tendermint/tendermint/snapshot",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "go.uber.org/ratelimit",

@@ -43,10 +43,10 @@ do
     pause=$(random 5 7)
     symbolNum=$(random 1 10)
 
-    symbol="NNB-3DE_BNB"
+    symbol="NNB-A43_BNB"
     if [ $symbolNum -lt 4 ]
     then
-        symbol="NNB-3DE_BNB"
+        symbol="NNB-A43_BNB"
     fi
 
     from="zc"
