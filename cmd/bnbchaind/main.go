@@ -46,8 +46,6 @@ func main() {
 	server.AddCommands(ctx.ToCosmosServerCtx(), cdc, rootCmd, exportAppStateAndTMValidators)
 	startCmd := server.StartCmd(ctx.ToCosmosServerCtx(), newApp)
 	startCmd.Flags().Int64VarP(&ctx.PublicationConfig.FromHeightInclusive, "fromHeight", "f", 1, "from which height (inclusive) we want publish market data")
-	startCmd.Flags().Uint8Var(&ctx.BaseConfig.StartMode, "mode", uint8(0), "running mode when start up")
-	ctx.Viper.BindPFlag("base.startMode", startCmd.Flags().Lookup("mode"))
 	rootCmd.AddCommand(startCmd)
 
 	// prepare and add flags

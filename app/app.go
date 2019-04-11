@@ -99,11 +99,6 @@ type BinanceChain struct {
 
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BinanceChain {
-	// set running mode from cmd parameter or config
-	err := runtime.SetRunningMode(runtime.Mode(ServerContext.StartMode))
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
 	// create app-level codec for txs and accounts
 	var cdc = Codec
 	// create composed tx decoder
@@ -121,6 +116,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// set upgrade config
 	app.setUpgradeConfig()
 	app.SetPruning(viper.GetString("pruning"))
+	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
 	// mappers
@@ -212,7 +208,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
-	err = app.LoadCMSLatestVersion()
+	err := app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
@@ -239,6 +235,13 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
 	// upgrade.Mgr.AddUpgradeHeight(,)
+}
+
+func (app *BinanceChain) initRunningMode() {
+	err := runtime.RecoverFromFile(ServerContext.Config.RootDir, runtime.Mode(ServerContext.StartMode))
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
