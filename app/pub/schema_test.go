@@ -61,7 +61,7 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 	msg := ExecutionResults{
 		Height:    42,
 		Timestamp: 100,
-		NumOfMsgs: 4,
+		NumOfMsgs: 8,
 		Trades:    trades,
 		Orders:    orders,
 		Proposals: proposals,
