@@ -34,7 +34,7 @@ func GetHandler(config *config.Config) types.AbciQueryHandler {
 			}
 			res := abci.ResponseQuery{
 				Code:  uint32(sdk.ABCICodeOK),
-				Value: []byte{uint8(runtime.RunningMode)},
+				Value: []byte{uint8(runtime.GetRunningMode())},
 			}
 			return &res
 		}
@@ -47,20 +47,26 @@ func GetHandler(config *config.Config) types.AbciQueryHandler {
 			return &res
 		}
 
+		var runningMode runtime.Mode
 		if mode == "0" {
-			runtime.RunningMode = runtime.NormalMode
+			runningMode = runtime.NormalMode
 		} else if mode == "1" {
-			runtime.RunningMode = runtime.TransferOnlyMode
+			runningMode = runtime.TransferOnlyMode
 		} else if mode == "2" {
-			runtime.RunningMode = runtime.RecoverOnlyMode
+			runningMode = runtime.RecoverOnlyMode
 		} else {
 			res := sdk.ErrUnknownRequest("invalid mode").QueryResult()
+			return &res
+		}
+		err = runtime.UpdateRunningMode(config, runningMode)
+		if err != nil {
+			res := sdk.ErrUnknownRequest(err.Error()).QueryResult()
 			return &res
 		}
 
 		res := abci.ResponseQuery{
 			Code:  uint32(sdk.ABCICodeOK),
-			Value: []byte{uint8(runtime.RunningMode)},
+			Value: []byte{uint8(runtime.GetRunningMode())},
 		}
 		return &res
 	}

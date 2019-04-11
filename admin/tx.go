@@ -29,24 +29,25 @@ var TxBlackList = map[runtime.Mode][]string{
 }
 
 func TxNotAllowedError() sdk.Error {
-	return sdk.ErrInternal(fmt.Sprintf("The tx is not allowed, RunningMode: %v", runtime.RunningMode))
+	return sdk.ErrInternal(fmt.Sprintf("The tx is not allowed, RunningMode: %v", runtime.GetRunningMode()))
 }
 
 func IsTxAllowed(tx sdk.Tx) bool {
-	if runtime.RunningMode == runtime.NormalMode {
+	mode := runtime.GetRunningMode()
+	if mode == runtime.NormalMode {
 		return true
 	}
 
 	for _, msg := range tx.GetMsgs() {
-		if !isMsgAllowed(msg) {
+		if !isMsgAllowed(msg, mode) {
 			return false
 		}
 	}
 	return true
 }
 
-func isMsgAllowed(msg sdk.Msg) bool {
-	for _, msgType := range TxBlackList[runtime.RunningMode] {
+func isMsgAllowed(msg sdk.Msg, mode runtime.Mode) bool {
+	for _, msgType := range TxBlackList[mode] {
 		if msgType == msg.Type() {
 			return false
 		}
