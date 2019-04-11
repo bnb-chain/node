@@ -97,7 +97,7 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 		native["proposals"] = map[string]interface{}{"org.binance.dex.model.avro.Proposals": msg.Proposals.ToNativeMap()}
 	}
 	if msg.StakeUpdates.NumOfMsgs > 0 {
-		native["stake_updates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
+		native["stakeUpdates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
 	}
 	return native
 }
@@ -369,7 +369,7 @@ type StakeUpdates struct {
 }
 
 func (msg *StakeUpdates) String() string {
-	return fmt.Sprintf("Proposals numOfMsgs: %d", msg.NumOfMsgs)
+	return fmt.Sprintf("StakeUpdates numOfMsgs: %d", msg.NumOfMsgs)
 }
 
 func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
@@ -379,25 +379,25 @@ func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
 	for idx, p := range msg.CompletedUnbondingDelegations {
 		ps[idx] = p.toNativeMap()
 	}
-	native["completed_unbonding_delegations"] = ps
+	native["completedUnbondingDelegations"] = ps
 	return native
 }
 
 type CompletedUnbondingDelegation struct {
 	Validator sdk.ValAddress
 	Delegator sdk.AccAddress
-	Amount    sdk.Coin
+	Amount    Coin
 }
 
 func (msg *CompletedUnbondingDelegation) String() string {
-	return fmt.Sprintf("completed_unbonding_delegation: %v", msg.toNativeMap())
+	return fmt.Sprintf("CompletedUnbondingDelegation: %v", msg.toNativeMap())
 }
 
 func (msg *CompletedUnbondingDelegation) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["validator"] = msg.Validator.String()
 	native["delegator"] = msg.Delegator.String()
-	native["amount"] = msg.Amount.String()
+	native["amount"] = msg.Amount.ToNativeMap()
 	return native
 }
 
