@@ -69,12 +69,13 @@ type EssMsg interface {
 }
 
 type ExecutionResults struct {
-	Height    int64
-	Timestamp int64 // milli seconds since Epoch
-	NumOfMsgs int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
-	Trades    trades
-	Orders    Orders
-	Proposals Proposals
+	Height       int64
+	Timestamp    int64 // milli seconds since Epoch
+	NumOfMsgs    int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
+	Trades       trades
+	Orders       Orders
+	Proposals    Proposals
+	StakeUpdates StakeUpdates
 }
 
 func (msg *ExecutionResults) String() string {
@@ -95,6 +96,9 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	if msg.Proposals.NumOfMsgs > 0 {
 		native["proposals"] = map[string]interface{}{"org.binance.dex.model.avro.Proposals": msg.Proposals.ToNativeMap()}
 	}
+	if msg.StakeUpdates.NumOfMsgs > 0 {
+		native["stakeUpdates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
+	}
 	return native
 }
 
@@ -113,6 +117,7 @@ func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
 		trades{},
 		Orders{},
 		Proposals{},
+		StakeUpdates{},
 	}
 }
 
@@ -358,6 +363,44 @@ func (msg *Proposal) toNativeMap() map[string]interface{} {
 	return native
 }
 
+type StakeUpdates struct {
+	NumOfMsgs           int
+	CompletedUnbondingDelegations []*CompletedUnbondingDelegation
+}
+
+func (msg *StakeUpdates) String() string {
+	return fmt.Sprintf("StakeUpdates numOfMsgs: %d", msg.NumOfMsgs)
+}
+
+func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	ps := make([]map[string]interface{}, len(msg.CompletedUnbondingDelegations), len(msg.CompletedUnbondingDelegations))
+	for idx, p := range msg.CompletedUnbondingDelegations {
+		ps[idx] = p.toNativeMap()
+	}
+	native["completedUnbondingDelegations"] = ps
+	return native
+}
+
+type CompletedUnbondingDelegation struct {
+	Validator sdk.ValAddress
+	Delegator sdk.AccAddress
+	Amount    Coin
+}
+
+func (msg *CompletedUnbondingDelegation) String() string {
+	return fmt.Sprintf("CompletedUnbondingDelegation: %v", msg.toNativeMap())
+}
+
+func (msg *CompletedUnbondingDelegation) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["validator"] = msg.Validator.String()
+	native["delegator"] = msg.Delegator.String()
+	native["amount"] = msg.Amount.ToNativeMap()
+	return native
+}
+
 type PriceLevel struct {
 	Price   int64
 	LastQty int64
@@ -596,8 +639,9 @@ func (msg Receiver) ToNativeMap() map[string]interface{} {
 }
 
 type Transfer struct {
-	From string
-	To   []Receiver
+	TxHash string
+	From   string
+	To     []Receiver
 }
 
 func (msg Transfer) String() string {
@@ -606,6 +650,7 @@ func (msg Transfer) String() string {
 
 func (msg Transfer) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
+	native["txhash"] = msg.TxHash
 	native["from"] = msg.From
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {

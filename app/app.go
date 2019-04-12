@@ -103,11 +103,6 @@ type BinanceChain struct {
 
 // NewBinanceChain creates a new instance of the BinanceChain.
 func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BinanceChain {
-	// set running mode from cmd parameter or config
-	err := runtime.SetRunningMode(runtime.Mode(ServerContext.StartMode))
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
 	// create app-level codec for txs and accounts
 	var cdc = Codec
 	// create composed tx decoder
@@ -122,7 +117,10 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:     ServerContext.UpgradeConfig,
 		publicationConfig: ServerContext.PublicationConfig,
 	}
+	// set upgrade config
+	app.setUpgradeConfig()
 	app.SetPruning(viper.GetString("pruning"))
+	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
 	// mappers
@@ -135,7 +133,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
-		app.CoinKeeper, app.ParamHub.Subspace(stake.DefaultParamspace),
+		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -196,6 +194,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// finish app initialization
 	app.SetInitChainer(app.initChainerFn())
+	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.MountStoresIAVL(
 		common.MainStoreKey,
@@ -213,7 +212,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
-	err = app.LoadCMSLatestVersion()
+	err := app.LoadCMSLatestVersion()
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
@@ -228,10 +227,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-
-	// set upgrade config
-	app.setUpgradeConfig()
-
+	
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()
@@ -242,8 +238,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixOrderSeqInPriceLevelName, app.upgradeConfig.FixOrderSeqInPriceLevelHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDropFilledOrderSeqName, app.upgradeConfig.FixDropFilledOrderSeqHeight)
+	// upgrade.Mgr.AddUpgradeHeight(,)
+}
+
+func (app *BinanceChain) initRunningMode() {
+	err := runtime.RecoverFromFile(ServerContext.Config.RootDir, runtime.Mode(ServerContext.StartMode))
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
@@ -433,6 +435,11 @@ func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, b
 	}
 }
 
+func (app *BinanceChain) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
+	upgrade.Mgr.BeginBlocker(ctx)
+	return
+}
+
 func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	// lastBlockTime would be 0 if this is the first block.
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
@@ -473,25 +480,25 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 
+	var completedUbd []stake.UnbondingDelegation
+	var validatorUpdates abci.ValidatorUpdates
+	if isBreatheBlock || ctx.RouterCallRecord()["stake"] {
+		// some endblockers without fees will execute after publish to make publication run as early as possible.
+		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
+		app.ValAddrCache.ClearCache()
+	}
+
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
+		var stakeUpdates pub.StakeUpdates
+		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
-	}
-
-	var validatorUpdates abci.ValidatorUpdates
-	// TODO: confirm with zz height == 1 is only to keep consistent with testnet (Binance Chain Commit: d1f295b; Cosmos Release: =v0.25.0-binance.5; Tendermint Release: =v0.29.1-binance.2;),
-	//  otherwise, apphash fail
-	// I think we don't need it after next reset because at height = 1 validatorUpdates is nil
-	if isBreatheBlock || height == 1 || ctx.RouterCallRecord()["stake"] {
-		// some endblockers without fees will execute after publish to make publication run as early as possible.
-		validatorUpdates = stake.EndBlocker(ctx, app.stakeKeeper)
-		app.ValAddrCache.ClearCache()
 	}
 
 	//match may end with transaction failure, which is better to save into
@@ -645,7 +652,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -690,6 +697,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
+		stakeUpdates,
 		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,

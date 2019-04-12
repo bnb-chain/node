@@ -83,7 +83,8 @@ func Publish(
 						marketData.timestamp,
 						ordersToPublish,
 						marketData.tradesToPublish,
-						marketData.proposalsToPublish)
+						marketData.proposalsToPublish,
+						marketData.stakeUpdates)
 				})
 
 				if metrics != nil {
@@ -178,11 +179,12 @@ func Stop(publisher MarketDataPublisher) {
 	publisher.Stop()
 }
 
-func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals) {
+func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals, stakeUpdates *StakeUpdates) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	numOfProposals := proposalsToPublish.NumOfMsgs
-	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals}
+	numOfStakeUpdatedAccounts := stakeUpdates.NumOfMsgs
+	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals + numOfStakeUpdatedAccounts}
 	if numOfOrders > 0 {
 		executionResultsMsg.Orders = Orders{numOfOrders, os}
 	}
@@ -191,6 +193,9 @@ func publishExecutionResult(publisher MarketDataPublisher, height int64, timesta
 	}
 	if numOfProposals > 0 {
 		executionResultsMsg.Proposals = *proposalsToPublish
+	}
+	if numOfStakeUpdatedAccounts > 0 {
+		executionResultsMsg.StakeUpdates = *stakeUpdates
 	}
 
 	publisher.publish(&executionResultsMsg, executionResultTpe, height, timestamp)

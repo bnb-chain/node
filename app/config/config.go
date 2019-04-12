@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/server"
 )
 
 var configTemplate *template.Template
@@ -44,10 +45,6 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
-# fixOrderSeqInPriceLevel height
-fixOrderSeqInPriceLevelHeight = {{ .UpgradeConfig.FixOrderSeqInPriceLevelHeight }}
-# fixDropFilledOrderSeq height
-fixDropFilledOrderSeqHeight = {{ .UpgradeConfig.FixDropFilledOrderSeqHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -284,14 +281,12 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-	FixOrderSeqInPriceLevelHeight int64
-	FixDropFilledOrderSeqHeight   int64
+	// example
+	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
-		FixDropFilledOrderSeqHeight:   2855000,
-		FixOrderSeqInPriceLevelHeight: 2855000,
 	}
 }
 

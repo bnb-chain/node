@@ -3,9 +3,7 @@ package matcheng
 import (
 	"math"
 	"math/big"
-	"sort"
 
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
@@ -221,11 +219,6 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	}
 
 	t := sumOrdersTotalLeft(orders, false)
-
-	upgrade.FixOrderSeqInPriceLevel(func() {
-		sort.Slice(orders, func(i, j int) bool { return orders[i].Id < orders[j].Id })
-	}, nil, nil)
-
 	residual := *toAlloc
 
 	if compareBuy(t, residual) > 0 { // not enough to allocate
@@ -273,7 +266,7 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 // totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
 func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
 	if tmp, ok := utils.Mul64(totalLot, orderLeft); ok {
-		return tmp/totalLeft
+		return tmp / totalLeft
 	} else {
 		var res big.Int
 		res.Quo(res.Mul(big.NewInt(totalLot), big.NewInt(orderLeft)), big.NewInt(totalLeft))

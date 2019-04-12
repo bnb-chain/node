@@ -24,14 +24,14 @@ import (
 const DefaultKeyPass = "12345678"
 
 var (
-	// each genesis validators will self delegate 1000e8 native tokens to become a validator
-	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeTokenSymbol, 1000e8)
+	// each genesis validators will self delegate 10000e8 native tokens to become a validator
+	DefaultSelfDelegationToken = sdk.NewCoin(types.NativeTokenSymbol, 10000e8)
 	// we put 20% of the total supply to the stake pool
-	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply / 5
+	DefaultMaxBondedTokenAmount int64 = types.NativeTokenTotalSupply
 	// set default unbonding duration to 7 days
 	DefaultUnbondingTime = 60 * 60 * 24 * 7 * time.Second
-	// default max validators to 15
-	DefaultMaxValidators uint16 = 15
+	// default max validators to 21
+	DefaultMaxValidators uint16 = 21
 
 	// min gov deposit
 	DefaultGovMinDesposit = sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1000e8)}

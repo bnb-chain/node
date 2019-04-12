@@ -99,6 +99,38 @@ const (
 						   }
 						}
 					]
+				}], "default": null },
+				{ "name": "stakeUpdates", "type": ["null", {
+					"type": "record",
+					"name": "StakeUpdates",
+					"namespace": "org.binance.dex.model.avro",
+					"fields": [
+						{ "name": "numOfMsgs", "type": "int" },
+						{ "name": "completedUnbondingDelegations", "type": {
+							"type": "array",
+							"items":
+							{
+								"type": "record",
+								"name": "CompletedUnbondingDelegation",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{ "name": "validator", "type": "string" },
+									{ "name": "delegator", "type": "string" },
+									{ "name": "amount", "type": {
+											"type": "record",
+											"name": "Coin",
+											"namespace": "org.binance.dex.model.avro",
+											"fields": [
+												{ "name": "denom", "type": "string" },
+												{ "name": "amount", "type": "long" }
+											]
+										}
+									}
+								]
+							 }
+						   }
+						}
+					]
 				}], "default": null }
 			]
 		}
@@ -216,7 +248,8 @@ const (
 						"name": "Transfer",
 						"namespace": "com.company",
 						"fields": [
-							{ "name": "from", "type": "string"},
+							{ "name": "txhash", "type": "string" },
+							{ "name": "from", "type": "string" },
 							{ "name": "to", 
                   				"type": {
  									"type": "array",
