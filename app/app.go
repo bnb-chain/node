@@ -238,7 +238,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
-	// upgrade.Mgr.AddUpgradeHeight(,)
+	upgrade.Mgr.AddUpgradeHeight(sdk.AddCreateValidatorMsgValidate, app.upgradeConfig.FixCreateValidatorMsgValidateHeight)
+	upgrade.Mgr.AddUpgradeHeight(sdk.AddDelegationAccountAddr, app.upgradeConfig.FixDelegationAccountAddrHeight)
+	upgrade.Mgr.AddUpgradeHeight(sdk.AddAnteCache, app.upgradeConfig.FixAnteCacheHeight)
 }
 
 func (app *BinanceChain) initRunningMode() {
