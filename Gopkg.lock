@@ -63,8 +63,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:a8717c218a5d09fe77c1e249f006ff0d55937b77c271445ed46aa8c7c4279aab"
+  digest = "1:f88cbfa75c235b4508c766d23936344eb3c60249c23579ae74a5372d1057e19f"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -112,8 +111,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "958faaa90c478261a7f492e148a0772770a1a999"
+  revision = "2fbc5aa00f18996e54238236642c437a7a6bc82b"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
+  version = "v0.25.0-binance.16"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -601,7 +601,7 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  digest = "1:81aaebcf0e2a2fd210e4aeb7ce6eed5ea03c3dbd896fd06c4442fd3a8e460004"
+  digest = "1:829d92f88ac59b927dbea5249fc130131200f2f84b2b3a534a2db8f662726247"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -667,9 +667,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "685fb83f78da0214d9c5f87ea3187032add95729"
+  revision = "eec92053e38f4e2ca99daf07a88da16d1db6c8d9"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.3"
+  version = "v0.30.1-binance.4"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
