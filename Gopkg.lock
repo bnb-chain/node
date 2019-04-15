@@ -601,7 +601,7 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  digest = "1:ca722647157e3232ddc83d75e3abd96a9178fd09fc131bc582020e11af105e66"
+  digest = "1:271f30cf87f970498f8619cc70fbb6e86b56a89f287b6252ee705fabc78dffa0"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -659,6 +659,9 @@
     "rpc/lib/server",
     "rpc/lib/types",
     "state",
+    "state/blockindex",
+    "state/blockindex/kv",
+    "state/blockindex/null",
     "state/txindex",
     "state/txindex/kv",
     "state/txindex/null",
@@ -667,9 +670,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "f9a2c2b01539492023a110f1cce5cf74aee54f62"
+  revision = "332351ca5acf6d7892e990c85a947b9071814bb6"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.5"
+  version = "v0.30.1-binance.6"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"

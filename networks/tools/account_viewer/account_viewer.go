@@ -197,7 +197,7 @@ func analysisAcc(height int64, home, addr string) {
 }
 
 func analysis(currAccState, prevAccState types.AppAccount, height int64) {
-	printAccState(prevAccState, height -1)
+	printAccState(prevAccState, height-1)
 	printAccState(currAccState, height)
 
 	if prevAccState.Address == nil && currAccState.Address != nil {
