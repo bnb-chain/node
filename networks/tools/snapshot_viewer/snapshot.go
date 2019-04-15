@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 )
 
@@ -121,7 +121,7 @@ func analyseSnapshot(height int64, home string) {
 	for symbol, ob := range obs {
 		for _, p := range append(ob.Buys, ob.Sells...) {
 			bug := false
-			for i:=1; i<len(p.Orders); i++ {
+			for i := 1; i < len(p.Orders); i++ {
 				if p.Orders[i].Time < p.Orders[i-1].Time {
 					bug = true
 					break
