@@ -286,8 +286,7 @@ type UpgradeConfig struct {
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
-	return &UpgradeConfig{
-	}
+	return &UpgradeConfig{}
 }
 
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {
