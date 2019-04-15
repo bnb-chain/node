@@ -41,8 +41,9 @@ var (
 type nodeInfo struct {
 	Moniker string `json:"moniker"`
 	PubKey  string `json:"pubkey"`
-	NodeId  string `json:"nodeId"`
-	IP      string `json:"ip"`
+	NodeId  string `json:"-"`
+	IP      string `json:"-"`
+	Amount  string `json:"amount"`
 }
 
 const nodeDirPerm = 0755
@@ -145,6 +146,7 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 				PubKey:  bech32ifyPubKey,
 				NodeId:  nodeId,
 				IP:      ip,
+				Amount:  fmt.Sprintf("%d:%s", app.DefaultSelfDelegationToken.Amount, app.DefaultSelfDelegationToken.Denom),
 			}
 		}
 
@@ -155,7 +157,7 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 	createGenesisFiles(cdc, chainID, genFiles, appInit, genTxsJson)
 	createConfigFiles(config, monikers, nodeDirs, peers)
 	nodeInfoFile := viper.GetString(flagNodeInfoOutputFile)
-	nodeInfoBytes, err := genNodeInfo(monikers, peers)
+	nodeInfoBytes, err := genNodeInfo(chainID, monikers, peers)
 	if err != nil {
 		return err
 	}
@@ -268,12 +270,19 @@ func writeFile(name string, dir string, contents []byte) error {
 	return nil
 }
 
-func genNodeInfo(monikers []string, peers map[string]nodeInfo) ([]byte, error) {
-	res := make([]nodeInfo, 0, len(peers))
+func genNodeInfo(chainId string, monikers []string, peers map[string]nodeInfo) ([]byte, error) {
+	nodesInfo := make([]nodeInfo, 0, len(peers))
 	// keep the node sequence same as the provided monikers
 	for _, moniker := range monikers {
-		res = append(res, peers[moniker])
+		nodesInfo = append(nodesInfo, peers[moniker])
 	}
 
+	res := struct {
+		ChainId  string     `json:"chainId"`
+		NodeInfo []nodeInfo `json:"nodeInfo"`
+	}{
+		ChainId:  chainId,
+		NodeInfo: nodesInfo,
+	}
 	return json.MarshalIndent(res, "", "    ")
 }
