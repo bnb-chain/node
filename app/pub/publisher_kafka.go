@@ -146,7 +146,8 @@ func (publisher KafkaMarketDataPublisher) publishEssentialMsg(essMsg EssMsg, top
 	if msg, err := publisher.marshal(essMsg.EmptyCopy(), tpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
 		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {
-			Logger.Info("published empty msg", "topic", topic, "msg", essMsg.String(), "offset", offset, "partition", partition)
+			// deliberately be Error level to trigger logging service elastic search alert
+			Logger.Error("published empty msg", "topic", topic, "msg", essMsg.String(), "offset", offset, "partition", partition)
 		} else {
 			Logger.Error("failed to publish empty msg", "topic", topic, "msg", essMsg.String(), "err", err)
 		}

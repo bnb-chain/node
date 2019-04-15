@@ -364,7 +364,7 @@ func (msg *Proposal) toNativeMap() map[string]interface{} {
 }
 
 type StakeUpdates struct {
-	NumOfMsgs           int
+	NumOfMsgs                     int
 	CompletedUnbondingDelegations []*CompletedUnbondingDelegation
 }
 

@@ -49,7 +49,7 @@ func UpdateRunningMode(cfg *config.Config, mode Mode) error {
 	path := filepath.Join(cfg.RootDir, "config", fileName)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Debug("path does not exist", "path", path)
-		params = &runtimeParams{Mode:mode}
+		params = &runtimeParams{Mode: mode}
 	} else {
 		params = mustReadFromFile(path)
 		params.Mode = mode
