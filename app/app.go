@@ -223,7 +223,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
-	
+
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
 	app.initPlugins()

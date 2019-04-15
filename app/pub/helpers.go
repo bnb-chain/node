@@ -222,7 +222,7 @@ func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegat
 	completedUnbondingDelegations := make([]*CompletedUnbondingDelegation, 0, length)
 	for _, ubd := range unbondingDelegations {
 		amount := Coin{ubd.Balance.Denom, ubd.Balance.Amount}
-		completedUnbondingDelegations = append(completedUnbondingDelegations, &CompletedUnbondingDelegation{ubd.ValidatorAddr, ubd.DelegatorAddr,amount})
+		completedUnbondingDelegations = append(completedUnbondingDelegations, &CompletedUnbondingDelegation{ubd.ValidatorAddr, ubd.DelegatorAddr, amount})
 	}
 	return StakeUpdates{length, completedUnbondingDelegations}
 }
