@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/cosmos/cosmos-sdk/server"
 )
 
 var configTemplate *template.Template
@@ -50,6 +51,8 @@ fixCreateValidatorMsgValidateHeight = {{ .UpgradeConfig.FixCreateValidatorMsgVal
 fixDelegationAccountAddrHeight = {{ .UpgradeConfig.FixDelegationAccountAddrHeight }}
 # fixAnteCache height
 fixAnteCacheHeight = {{ .UpgradeConfig.FixAnteCacheHeight }}
+# fixGovFeeAddress height
+fixGovFeeAddress = {{ .UpgradeConfig.FixGovFeeAddress }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -290,6 +293,7 @@ type UpgradeConfig struct {
 	FixCreateValidatorMsgValidateHeight int64 `mapstructure:"fixCreateValidatorMsgValidateHeight"`
 	FixDelegationAccountAddrHeight      int64 `mapstructure:"fixDelegationAccountAddrHeight"`
 	FixAnteCacheHeight                  int64 `mapstructure:"fixAnteCacheHeight"`
+	FixGovFeeAddress                    int64 `mapstructure:"fixGovFeeAddress"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -297,6 +301,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		FixCreateValidatorMsgValidateHeight: 1000000,
 		FixDelegationAccountAddrHeight:      1000000,
 		FixAnteCacheHeight:                  1000000,
+		FixGovFeeAddress:                    1000000,
 	}
 }
 

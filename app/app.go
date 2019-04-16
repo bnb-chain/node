@@ -241,6 +241,7 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(sdk.AddCreateValidatorMsgValidate, app.upgradeConfig.FixCreateValidatorMsgValidateHeight)
 	upgrade.Mgr.AddUpgradeHeight(sdk.AddDelegationAccountAddr, app.upgradeConfig.FixDelegationAccountAddrHeight)
 	upgrade.Mgr.AddUpgradeHeight(sdk.AddAnteCache, app.upgradeConfig.FixAnteCacheHeight)
+	upgrade.Mgr.AddUpgradeHeight(sdk.ChangeGovFeeAddress, app.upgradeConfig.FixGovFeeAddress)
 }
 
 func (app *BinanceChain) initRunningMode() {
