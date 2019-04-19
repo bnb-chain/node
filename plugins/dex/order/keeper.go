@@ -1,6 +1,7 @@
 package order
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -413,7 +414,7 @@ func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOr
 	openOrders := make([]store.OpenOrder, 0)
 
 	for _, order := range kp.allOrders[pair] {
-		if string(order.Sender.Bytes()) == string(addr.Bytes()) {
+		if bytes.Equal(order.Sender.Bytes(), addr.Bytes()) {
 			openOrders = append(
 				openOrders,
 				store.OpenOrder{
