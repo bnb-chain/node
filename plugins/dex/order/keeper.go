@@ -342,12 +342,12 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 }
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) ([]chan Transfer, map[string]int64) {
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
 		kp.logger.Info("No new orders for any pair, give up matching")
-		return nil
+		return nil, nil
 	}
 
 	concurrency := 1 << kp.poolSize
@@ -376,16 +376,20 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		}
 	}
 
+	combinations := make(map[string]int64, len(kp.engines))
 	if distributeTrade {
 		utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
 			for _, tradeOut := range tradeOuts {
 				close(tradeOut)
 			}
+			for symbol, engine := range kp.engines {
+				combinations[symbol] = engine.Surplus
+			}
 		})
 	} else {
 		utils.ConcurrentExecuteSync(concurrency, producer, matchWorker)
 	}
-	return tradeOuts
+	return tradeOuts, combinations
 }
 
 func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
@@ -640,12 +644,13 @@ func (kp *Keeper) allocateAndCalcFee(
 }
 
 // MatchAll will only concurrently match but do not allocate into accounts
-func (kp *Keeper) MatchAll(height, timestamp int64) {
-	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp) //only match
+func (kp *Keeper) MatchAll(height, timestamp int64) map[string]int64 {
+	tradeOuts, combinations := kp.matchAndDistributeTrades(false, height, timestamp) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
 	kp.clearAfterMatch()
+	return combinations
 }
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
@@ -656,7 +661,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 ) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
+	tradeOuts, _ := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return

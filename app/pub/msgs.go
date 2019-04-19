@@ -187,6 +187,42 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	return native
 }
 
+type Combinations struct {
+	NumOfMsgs	 int
+	Combinations []*Combination
+}
+
+func (msg *Combinations) String() string {
+	return fmt.Sprintf("Combination : %d", msg.toNativeMap())
+}
+
+func (msg *Combinations) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	os := make([]map[string]interface{}, len(msg.Combinations), len(msg.Combinations))
+	for idx, o := range msg.Combinations {
+		os[idx] = o.toNativeMap()
+	}
+	native["combinations"] = os
+	return native
+}
+
+type Combination struct {
+	Symbol  string
+	Surplus int64
+}
+
+func (msg *Combination) String() string {
+	return fmt.Sprintf("Combination : %d", msg.toNativeMap())
+}
+
+func (msg *Combination) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["symbol"] = msg.Symbol
+	native["surplus"] = msg.Surplus
+	return native
+}
+
 type Orders struct {
 	NumOfMsgs int
 	Orders    []*Order

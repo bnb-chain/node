@@ -447,13 +447,13 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	height := ctx.BlockHeader().Height
 
 	var tradesToPublish []*pub.Trade
-
+	var combinations []*pub.Combination
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	if !isBreatheBlock {
 		// only match in the normal block
 		app.Logger.Debug("normal block", "height", height)
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish, combinations  = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
@@ -469,6 +469,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// fire and forget reload snapshot
 		go app.reloadSnapshot(height, true)
 	}
+	_=combinations
 
 	app.DexKeeper.StoreTradePrices(ctx)
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)

@@ -20,6 +20,7 @@ type MatchEng struct {
 	maxExec         LevelIndex
 	leastSurplus    SurplusIndex
 	Trades          []Trade
+	Surplus         int64
 	LastTradePrice  int64
 }
 
@@ -28,7 +29,7 @@ func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
 	return &MatchEng{Book: NewOrderBookOnULList(10000, 16), LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
 		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
 		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
-		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
+		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice, Surplus: 0}
 }
 
 // fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
@@ -163,6 +164,7 @@ func (me *MatchEng) Match() bool {
 	if index < 0 {
 		return false
 	}
+	me.Surplus = me.overLappedLevel[index].BuySellSurplus
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
 	me.Trades = me.Trades[:0]
 	me.LastTradePrice = lastPx

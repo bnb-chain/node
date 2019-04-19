@@ -124,7 +124,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
-	ctx sdk.Context) []*Trade {
+	ctx sdk.Context) ([]*Trade, []*Combination) {
 	// These two channels are used for protect not update `tradesToPublish` and `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to feeCollectorForTrades in several goroutine (well-designed)
 	// while tradesToPublish and dexKeeper.OrderChanges are not separated by concurrent factor (users here), so we have
@@ -134,6 +134,7 @@ func MatchAndAllocateAllForPublish(
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
+	combinations := make(map[string]int64)
 	tradesToPublish := make([]*Trade, 0)
 	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
@@ -150,7 +151,7 @@ func MatchAndAllocateAllForPublish(
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades)
+	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, &combinations)
 	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
