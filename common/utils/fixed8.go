@@ -61,21 +61,21 @@ func NewFixed8(val int64) Fixed8 {
 // with precision up to 10^-8
 func Fixed8DecodeString(s string) (Fixed8, error) {
 	parts := strings.SplitN(s, ".", 2)
-	ip, err := strconv.Atoi(parts[0])
+	ip, err := strconv.ParseInt(parts[0], 10, 0)
 	if err != nil {
 		return 0, errInvalidString
 	} else if len(parts) == 1 {
 		return NewFixed8(int64(ip)), nil
 	}
 
-	fp, err := strconv.Atoi(parts[1])
-	if err != nil || fp >= Fixed8Decimals {
+	fp, err := strconv.ParseInt(parts[1], 10, 0)
+	if err != nil || fp >= int64(Fixed8Decimals) {
 		return 0, errInvalidString
 	}
 	for i := len(parts[1]); i < precision; i++ {
 		fp *= 10
 	}
-	return Fixed8(ip*Fixed8Decimals + fp), nil
+	return Fixed8(ip*int64(Fixed8Decimals) + fp), nil
 }
 
 // UnmarshalJSON implements the json unmarshaller interface
