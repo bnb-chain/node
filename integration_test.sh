@@ -78,6 +78,7 @@ sleep 10s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
+sleep 2
 # multi send
 echo ${bob_addr}
 result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"100000000000000:BNB\"},{\"to\":\"${alice_addr}\",\"amount\":\"100000000000000:BNB\"}]")
@@ -89,6 +90,7 @@ result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${
 btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
 check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
+sleep 2s
 # mint token
 result=$(expect ./mint.exp ${btc_symbol} 1000000000000000 bob ${chain_id} ${cli_home})
 check_operation "Mint Token" "${result}" "${chain_operation_words}"
