@@ -46,10 +46,10 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 			}
 		}
 
-		limit, _ := strconv.ParseInt(defaultLimit, 10, 0)
+		limit, _ := strconv.ParseInt(defaultLimit, 10, 64)
 		if len(limitStrOk) > 0 {
 			var err error
-			limit, err = strconv.ParseInt(limitStrOk, 10, 0)
+			limit, err = strconv.ParseInt(limitStrOk, 10, 64)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return

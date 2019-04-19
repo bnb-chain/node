@@ -49,7 +49,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 		// validate and use limit param
 		limit := defaultTokensLimit
 		if limitStr != "" && len(limitStr) < 100 {
-			parsed, err := strconv.ParseInt(limitStr, 10, 0)
+			parsed, err := strconv.ParseInt(limitStr, 10, 64)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return
@@ -60,7 +60,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 		// validate and use offset param
 		offset := defaultTokensOffset
 		if offsetStr != "" && len(offsetStr) < 100 {
-			parsed, err := strconv.ParseInt(offsetStr, 10, 0)
+			parsed, err := strconv.ParseInt(offsetStr, 10, 64)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid offset"))
 				return

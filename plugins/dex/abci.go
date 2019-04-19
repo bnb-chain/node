@@ -41,14 +41,14 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				pairs = make([]types.TradingPair, 0)
 				goto respond
 			}
-			offset, err = strconv.ParseInt(path[2], 10, 0)
+			offset, err = strconv.ParseInt(path[2], 10, 64)
 			if err != nil || offset < 0 || offset > int64(len(pairs)-1) {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse offset",
 				}
 			}
-			limit, err = strconv.ParseInt(path[3], 10, 0)
+			limit, err = strconv.ParseInt(path[3], 10, 64)
 			if err != nil || limit <= 0 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
