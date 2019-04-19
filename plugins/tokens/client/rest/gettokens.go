@@ -12,11 +12,11 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-const maxTokensLimit = 1000
-const defaultTokensLimit = 100
-const defaultTokensOffset = 0
+const maxTokensLimit = int64(1000)
+const defaultTokensLimit = int64(100)
+const defaultTokensOffset = int64(0)
 
-func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, error) {
+func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int64, limit int64) ([]types.Token, error) {
 	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit), nil)
 	if err != nil {
 		return nil, err
@@ -29,8 +29,8 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper
 func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
-		limit  int
-		offset int
+		limit  int64
+		offset int64
 	}
 
 	responseType := "application/json"
@@ -49,7 +49,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 		// validate and use limit param
 		limit := defaultTokensLimit
 		if limitStr != "" && len(limitStr) < 100 {
-			parsed, err := strconv.Atoi(limitStr)
+			parsed, err := strconv.ParseInt(limitStr, 10, 0)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return
@@ -60,7 +60,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 		// validate and use offset param
 		offset := defaultTokensOffset
 		if offsetStr != "" && len(offsetStr) < 100 {
-			parsed, err := strconv.Atoi(offsetStr)
+			parsed, err := strconv.ParseInt(offsetStr, 10, 0)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid offset"))
 				return

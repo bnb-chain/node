@@ -64,14 +64,14 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 			}
 			ctx := app.GetContextForCheckState()
 			tokens := mapper.GetTokenList(ctx)
-			offset, err := strconv.Atoi(path[2])
-			if err != nil || offset < 0 || offset >= len(tokens) {
+			offset, err := strconv.ParseInt(path[2], 10, 0)
+			if err != nil || offset < 0 || offset >= int64(len(tokens)) {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "unable to parse offset",
 				}
 			}
-			limit, err := strconv.Atoi(path[3])
+			limit, err := strconv.ParseInt(path[3], 10, 0)
 			if err != nil || limit <= 0 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -79,8 +79,8 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				}
 			}
 			end := offset + limit
-			if end > len(tokens) {
-				end = len(tokens)
+			if end > int64(len(tokens)) {
+				end = int64(len(tokens))
 			}
 			if end <= 0 || end <= offset {
 				return &abci.ResponseQuery{

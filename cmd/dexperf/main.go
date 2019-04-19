@@ -261,7 +261,7 @@ func lookupAccounts() {
 		sortKeys = append(sortKeys, key)
 	}
 	sort.Strings(sortKeys)
-	n, err := strconv.Atoi((*userPrefix)[4:5])
+	n, err := strconv.ParseInt((*userPrefix)[4:5], 10, 0)
 	if err != nil {
 		panic(err)
 	}

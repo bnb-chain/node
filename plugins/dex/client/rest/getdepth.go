@@ -22,7 +22,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 
 	type params struct {
 		symbol string
-		limit  int
+		limit  int64
 	}
 
 	responseType := "application/json"
@@ -46,10 +46,10 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 			}
 		}
 
-		limit, _ := strconv.Atoi(defaultLimit)
+		limit, _ := strconv.ParseInt(defaultLimit, 10, 0)
 		if len(limitStrOk) > 0 {
 			var err error
-			limit, err = strconv.Atoi(limitStrOk)
+			limit, err = strconv.ParseInt(limitStrOk, 10, 0)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return
@@ -79,7 +79,7 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
 
-		err = rutils.StreamDepthResponse(w, ob, limit)
+		err = rutils.StreamDepthResponse(w, ob, int(limit))
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

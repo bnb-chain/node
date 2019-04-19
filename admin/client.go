@@ -51,7 +51,7 @@ func setModeCmd(cdc *wire.Codec) *cobra.Command {
 			if mode == "0" || mode == "1" || mode == "2" {
 				cliCtx := context.NewCLIContext().WithCodec(cdc)
 				rand.Seed(time.Now().UnixNano())
-				nonce := strconv.Itoa(rand.Int())
+				nonce := strconv.FormatInt(int64(rand.Int()), 10)
 				sig, err := privKey.Sign([]byte(nonce))
 				if err != nil {
 					return err
@@ -86,7 +86,7 @@ func getModeCmd(cdc *wire.Codec) *cobra.Command {
 
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			rand.Seed(time.Now().UnixNano())
-			nonce := strconv.Itoa(rand.Int())
+			nonce := strconv.FormatInt(int64(rand.Int()), 10)
 			sig, err := privKey.Sign([]byte(nonce))
 			if err != nil {
 				return err

@@ -12,11 +12,11 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-const maxPairsLimit = 1000
-const defaultPairsLimit = 100
-const defaultPairsOffset = 0
+const maxPairsLimit = int64(1000)
+const defaultPairsLimit = int64(100)
+const defaultPairsOffset = int64(0)
 
-func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.TradingPair, error) {
+func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int64, limit int64) ([]types.TradingPair, error) {
 	bz, err := ctx.Query(fmt.Sprintf("dex/pairs/%d/%d", offset, limit), nil)
 	if err != nil {
 		return nil, err
@@ -29,8 +29,8 @@ func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, offset int, li
 // GetPairsReqHandler creates an http request handler to list
 func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
-		limit  int
-		offset int
+		limit  int64
+		offset int64
 	}
 
 	responseType := "application/json"
@@ -49,7 +49,7 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 		// validate and use limit param
 		limit := defaultPairsLimit
 		if limitStr != "" && len(limitStr) < 100 {
-			parsed, err := strconv.Atoi(limitStr)
+			parsed, err := strconv.ParseInt(limitStr, 10, 0)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
 				return
@@ -60,7 +60,7 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 		// validate and use offset param
 		offset := defaultPairsOffset
 		if offsetStr != "" && len(offsetStr) < 100 {
-			parsed, err := strconv.Atoi(offsetStr)
+			parsed, err := strconv.ParseInt(offsetStr, 10, 0)
 			if err != nil {
 				throw(w, http.StatusExpectationFailed, errors.New("invalid offset"))
 				return
