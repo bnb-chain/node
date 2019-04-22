@@ -48,10 +48,6 @@
       unused-packages = false
 
 [[constraint]]
-  name = "github.com/btcsuite/btcd"
-  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
-
-[[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
 
