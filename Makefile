@@ -121,9 +121,9 @@ build-alpine_c:
     LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(MAKE) build_c
 
 install:
-	$(BUILD_CGOFLAGS) go install $(BUILD_FLAGS) ./cmd/bnbchaind
-	$(BUILD_CGOFLAGS) go install $(BUILD_FLAGS) ./cmd/bnbcli
-	$(BUILD_CGOFLAGS) go install $(BUILD_FLAGS) ./cmd/bnbsentry
+	go install $(BUILD_FLAGS) ./cmd/bnbchaind
+	go install $(BUILD_FLAGS) ./cmd/bnbcli
+	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 
 install_c:
 	$(BUILD_CGOFLAGS) go install $(BUILD_CFLAGS) ./cmd/bnbchaind
