@@ -55,8 +55,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "ledger-cli"
-  digest = "1:b787c5c7959c4a19685b1b38ffc856f089e98ef6e2ec1fc4e755b42678bcc02f"
+  branch = "develop"
+  digest = "1:039a47bcf6947d8b51ea5a6d4621bdf498786ccf432e5be1e49e016400f87873"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -104,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "744d37faa90b42bf2f4c2118749f58b8fba7ee65"
+  revision = "d8721e546e74d4e4efc5ef804af3ecca5d9b7b7d"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -682,20 +682,21 @@
   version = "v0.9.0"
 
 [[projects]]
-  digest = "1:fca24169988a61ea725d1326de30910d8049fe68bcbc194d28803f9a76dda380"
+  digest = "1:c95f97a7ebc86127478375e2f8e8b49f096e92b79e49e70a570862eda4b18f5e"
   name = "github.com/zondax/ledger-cosmos-go"
-  source = "https://github.com/HaoyangLiu/ledger-cosmos-go"
   packages = ["."]
   pruneopts = "UT"
   revision = "fee2574758229322031b8b8d5c5f8197d121b952"
+  source = "https://github.com/binance-chain/ledger-cosmos-go"
+  version = "v0.9.9-binance.1"
 
 [[projects]]
-  digest = "1:f8e4c0b959174a1fa5946b12f1f2ac7ea5651bef20a9e4a8dac55dbffcaa6cd6"
+  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
   name = "github.com/zondax/ledger-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "69c15f1333a9b6866e5f66096561c7d138894bc5"
-  version = "v0.8.0"
+  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
+  version = "v0.9.0"
 
 [[projects]]
   branch = "master"
