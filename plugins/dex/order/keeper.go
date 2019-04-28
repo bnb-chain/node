@@ -326,7 +326,7 @@ func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
 				if feeConfig != nil {
 					kp.FeeManager.UpdateConfig(*feeConfig)
 				} else {
-					panic("Genesis with no dex fee config ")
+					panic("Load with no dex fee config ")
 				}
 			default:
 				kp.logger.Debug("Receive param load that not interested.")
@@ -712,7 +712,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 	symbolCh := make(chan string, concurrency)
 	utils.ConcurrentExecuteAsync(concurrency,
 		func() {
-			for symbol, _ := range kp.allOrders {
+			for symbol := range kp.allOrders {
 				symbolCh <- symbol
 			}
 			close(symbolCh)
