@@ -74,7 +74,7 @@ func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	return nil
 }
 
-func checkPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairMapper, baseAssetSymbol, quoteAssetSymbol string) error {
+func checkListPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairMapper, baseAssetSymbol, quoteAssetSymbol string) error {
 	// trading pair against native token should exist if quote token is not native token
 	baseAssetSymbol = strings.ToUpper(baseAssetSymbol)
 	quoteAssetSymbol = strings.ToUpper(quoteAssetSymbol)
@@ -97,6 +97,34 @@ func checkPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairM
 	return nil
 }
 
+func checkDelistPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.TradingPairMapper, baseAssetSymbol, quoteAssetSymbol string) error {
+	// trading pair against native token should not be delisted if there is any other trading pair exist
+	baseAssetSymbol = strings.ToUpper(baseAssetSymbol)
+	quoteAssetSymbol = strings.ToUpper(quoteAssetSymbol)
+
+	if baseAssetSymbol != commonTypes.NativeTokenSymbol && quoteAssetSymbol != commonTypes.NativeTokenSymbol {
+		return nil
+	}
+
+	var symbolToCheck string
+	if baseAssetSymbol != commonTypes.NativeTokenSymbol {
+		symbolToCheck = baseAssetSymbol
+	} else {
+		symbolToCheck = quoteAssetSymbol
+	}
+
+	tradingPairs := pairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != commonTypes.NativeTokenSymbol) ||
+			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != commonTypes.NativeTokenSymbol) {
+			return fmt.Errorf("trading pair %s_%s should not exist befor delisting %s_%s",
+				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol)
+		}
+	}
+
+	return nil
+}
+
 func handleList(
 	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper, msg ListMsg,
 ) sdk.Result {
@@ -109,7 +137,7 @@ func handleList(
 		return sdk.ErrInvalidCoins("trading pair exists").Result()
 	}
 
-	if err := checkPrerequisiteTradingPair(ctx, keeper.PairMapper, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+	if err := checkListPrerequisiteTradingPair(ctx, keeper.PairMapper, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 

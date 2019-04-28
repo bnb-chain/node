@@ -70,7 +70,64 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("trading pair exists")
 	}
 
-	if err := checkPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+	if err := checkListPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type DelistHooks struct {
+	pairMapper  store.TradingPairMapper
+	tokenMapper tokens.Mapper
+}
+
+func NewDelistHooks(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) ListHooks {
+	return ListHooks{
+		pairMapper:  pairMapper,
+		tokenMapper: tokenMapper,
+	}
+}
+
+var _ gov.GovHooks = DelistHooks{}
+
+func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
+	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
+		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
+	}
+
+	delistParams := gov.DelistTradingPairParams{}
+	err := json.Unmarshal([]byte(proposal.GetDescription()), &delistParams)
+	if err != nil {
+		return fmt.Errorf("unmarshal list params error, err=%s", err.Error())
+	}
+
+	if delistParams.BaseAssetSymbol == "" {
+		return errors.New("base asset symbol should not be empty")
+	}
+
+	if delistParams.QuoteAssetSymbol == "" {
+		return errors.New("quote asset symbol should not be empty")
+	}
+
+	if delistParams.BaseAssetSymbol == delistParams.QuoteAssetSymbol {
+		return errors.New("base token and quote token should not be the same")
+	}
+
+	if !hooks.tokenMapper.Exists(ctx, delistParams.BaseAssetSymbol) {
+		return errors.New("base token does not exist")
+	}
+
+	if !hooks.tokenMapper.Exists(ctx, delistParams.QuoteAssetSymbol) {
+		return errors.New("quote token does not exist")
+	}
+
+	if hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) ||
+		hooks.pairMapper.Exists(ctx, delistParams.QuoteAssetSymbol, delistParams.BaseAssetSymbol) {
+		return errors.New("trading pair exists")
+	}
+
+	if err := checkDelistPrerequisiteTradingPair(ctx, hooks.pairMapper, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 
