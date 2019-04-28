@@ -131,11 +131,12 @@ func (keeper *Keeper) getLastFeeChangeParam(ctx sdk.Context) []types.FeeParam {
 		if err != nil {
 			panic(fmt.Sprintf("Get broken data when unmarshal FeeChangeParams msg. %v", err))
 		}
+		// setLastFeeProposal first. If invalid, the proposal before it will not been processed too.
+		keeper.setLastFeeChangeProposalId(ctx, types.LastProposalID{(*latestProposal).GetProposalID()})
 		if err := changeParam.Check(); err != nil {
-			keeper.logger.Error("The latest fee param change proposal is invalid.", "proposalId", (*latestProposal).GetProposalID(), "param", changeParam)
+			keeper.logger.Error("The latest fee param change proposal is invalid.", "proposalId", (*latestProposal).GetProposalID(), "param", changeParam, "err", err)
 			return nil
 		}
-		keeper.setLastFeeChangeProposalId(ctx, types.LastProposalID{(*latestProposal).GetProposalID()})
 		return changeParam.FeeParams
 	}
 	return nil
