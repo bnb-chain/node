@@ -90,7 +90,7 @@ func NewDelistHooks(pairMapper store.TradingPairMapper) DelistHooks {
 var _ gov.GovHooks = DelistHooks{}
 
 func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
-	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
+	if proposal.GetProposalType() != gov.ProposalTypeDelistTradingPair {
 		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
 	}
 

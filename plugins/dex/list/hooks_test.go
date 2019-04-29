@@ -385,3 +385,211 @@ func TestRightProposal(t *testing.T) {
 	err = hooks.OnProposalSubmitted(ctx, &proposal)
 	require.Nil(t, err, "err should be nil")
 }
+
+func TestDelistWrongTypeOfProposal(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeCreateValidator,
+		Description:  "nonsense",
+	}
+
+	require.Panics(t, func() {
+		hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	}, "should panic here")
+}
+
+func TestDelistBaseAssetEmpty(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol: "",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "base asset symbol should not be empty")
+}
+
+func TestDelistQuoteAssetEmpty(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "quote asset symbol should not be empty")
+}
+
+func TestDelistEqualBaseAssetAndQuoteAsset(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "BNB",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "base asset symbol and quote asset symbol should not be the same")
+}
+
+func TestDelistEmptyJustification(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "BTC-2BD",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "justification should not be empty")
+}
+
+func TestDelistTradingPairDoesNotExist(t *testing.T) {
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "BTC-2BD",
+		Justification:    "you deserve it",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	cdc := MakeCodec()
+	ms, orderKeeper, _, _ := MakeKeepers(cdc)
+	hooks := NewDelistHooks(orderKeeper.PairMapper)
+
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "trading pair BNB_BTC-2BD does not exist")
+}
+
+func TestDelistPrerequisiteTradingPair(t *testing.T) {
+	ethSymbol := "ETH-2CD"
+	btcSymbol := "BTC-2BD"
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  ethSymbol,
+		QuoteAssetSymbol: types.NativeTokenSymbol,
+		Justification:    "you deserve it",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	cdc := MakeCodec()
+	ms, orderKeeper, _, _ := MakeKeepers(cdc)
+	hooks := NewDelistHooks(orderKeeper.PairMapper)
+
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	pair := dexTypes.NewTradingPair(ethSymbol, btcSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	pair = dexTypes.NewTradingPair(ethSymbol, types.NativeTokenSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	pair = dexTypes.NewTradingPair(btcSymbol, types.NativeTokenSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "trading pair ETH-2CD_BTC-2BD should not exist before delisting ETH-2CD_BNB")
+}
+
+func TestDelistProperTradingPair(t *testing.T) {
+	ethSymbol := "ETH-2CD"
+	btcSymbol := "BTC-2BD"
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  ethSymbol,
+		QuoteAssetSymbol: btcSymbol,
+		Justification:    "you deserve it",
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	cdc := MakeCodec()
+	ms, orderKeeper, _, _ := MakeKeepers(cdc)
+	hooks := NewDelistHooks(orderKeeper.PairMapper)
+
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+
+	pair := dexTypes.NewTradingPair(ethSymbol, btcSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	pair = dexTypes.NewTradingPair(ethSymbol, types.NativeTokenSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	pair = dexTypes.NewTradingPair(btcSymbol, types.NativeTokenSymbol, 1000)
+	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	require.Nil(t, err, "add trading pair error")
+
+	err = hooks.OnProposalSubmitted(ctx, &proposal)
+	require.Nil(t, err, "err should not be nil")
+}

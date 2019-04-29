@@ -117,7 +117,7 @@ func checkDelistPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.Tradin
 	for _, pair := range tradingPairs {
 		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != commonTypes.NativeTokenSymbol) ||
 			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != commonTypes.NativeTokenSymbol) {
-			return fmt.Errorf("trading pair %s_%s should not exist befor delisting %s_%s",
+			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
 				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAssetSymbol, quoteAssetSymbol)
 		}
 	}
