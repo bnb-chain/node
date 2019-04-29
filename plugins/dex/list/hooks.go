@@ -78,14 +78,12 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 }
 
 type DelistHooks struct {
-	pairMapper  store.TradingPairMapper
-	tokenMapper tokens.Mapper
+	pairMapper store.TradingPairMapper
 }
 
-func NewDelistHooks(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) ListHooks {
-	return ListHooks{
-		pairMapper:  pairMapper,
-		tokenMapper: tokenMapper,
+func NewDelistHooks(pairMapper store.TradingPairMapper) DelistHooks {
+	return DelistHooks{
+		pairMapper: pairMapper,
 	}
 }
 
@@ -111,20 +109,15 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 	}
 
 	if delistParams.BaseAssetSymbol == delistParams.QuoteAssetSymbol {
-		return errors.New("base token and quote token should not be the same")
+		return errors.New("base asset symbol and quote asset symbol should not be the same")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, delistParams.BaseAssetSymbol) {
-		return errors.New("base token does not exist")
+	if delistParams.Justification == "" {
+		return errors.New("justification should not be empty")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, delistParams.QuoteAssetSymbol) {
-		return errors.New("quote token does not exist")
-	}
-
-	if hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) ||
-		hooks.pairMapper.Exists(ctx, delistParams.QuoteAssetSymbol, delistParams.BaseAssetSymbol) {
-		return errors.New("trading pair exists")
+	if !hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) {
+		return fmt.Errorf("trading pair %s_%s does not exist", delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol)
 	}
 
 	if err := checkDelistPrerequisiteTradingPair(ctx, hooks.pairMapper, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {

@@ -30,7 +30,7 @@ func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.K
 	}
 }
 
-func checkProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
+func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
 	proposal := govKeeper.GetProposal(ctx, msg.ProposalId)
 	if proposal == nil {
 		return fmt.Errorf("proposal %d does not exist", msg.ProposalId)
@@ -128,7 +128,7 @@ func checkDelistPrerequisiteTradingPair(ctx sdk.Context, pairMapper store.Tradin
 func handleList(
 	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper, msg ListMsg,
 ) sdk.Result {
-	if err := checkProposal(ctx, govKeeper, msg); err != nil {
+	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()
 	}
 

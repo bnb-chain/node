@@ -145,10 +145,13 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
+
 	listHooks := list.NewListHooks(tradingPairMapper, app.TokenMapper)
 	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	delistHooks := list.NewDelistHooks(tradingPairMapper)
 	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 

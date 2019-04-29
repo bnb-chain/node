@@ -10,12 +10,15 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -824,4 +827,61 @@ func (kp *Keeper) ClearOrders() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
+}
+
+func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string) {
+	engine, ok := kp.engines[symbol]
+	if !ok {
+		// TODO should we panic here, for there may be duplicate proposals delisting same trading pair
+		//panic(fmt.Errorf("trading pair %s does not exist in match engine", symbol))
+		return
+	}
+
+	allLevels, sellLevels := engine.Book.GetAllLevels()
+	allLevels = append(allLevels, sellLevels...)
+
+	totalFee := types.Fee{}
+	for _, priceLevel := range allLevels {
+		for _, orderPart := range priceLevel.Orders {
+			originOrder, ok := kp.OrderExists(symbol, orderPart.Id)
+			if !ok {
+				panic(fmt.Errorf("order %s does not exist", orderPart.Id))
+			}
+
+			transfer := TransferFromExpired(orderPart, originOrder)
+			_ = kp.doTransfer(ctx, &transfer) // this method will never return error
+
+			fee := common.Fee{}
+			if !transfer.FeeFree() {
+				acc := kp.am.GetAccount(ctx, transfer.accAddress)
+				fee = kp.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, kp.engines)
+				_ = acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
+				kp.am.SetAccount(ctx, acc)
+			}
+			totalFee.AddFee(fee)
+
+			err := kp.RemoveOrder(originOrder.Id, originOrder.Symbol, func(ord me.OrderPart) {
+				if kp.CollectOrderInfoForPublish {
+					change := OrderChange{originOrder.Id, Expired, nil}
+					kp.OrderChanges = append(kp.OrderChanges, change)
+					kp.updateRoundOrderFee(string(originOrder.Sender), fee)
+				}
+			})
+			if err != nil {
+				panic(fmt.Errorf("remove order error, err=%s", err.Error()))
+			}
+		}
+	}
+
+	fees.Pool.AddAndCommitFee("DELIST", totalFee)
+
+	delete(kp.engines, symbol)
+	delete(kp.allOrders, symbol)
+	delete(kp.recentPrices, symbol)
+
+	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
+	err := kp.PairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
+	if err != nil {
+		panic(fmt.Errorf("delete trading pair error, err=%s", err.Error()))
+	}
 }
