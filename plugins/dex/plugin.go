@@ -41,7 +41,7 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockTime time.Time) {
+func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper, height int64, blockTime time.Time) {
 	logger := bnclog.With("module", "dex")
 	logger.Info("Update tick size / lot size")
 	dexKeeper.UpdateTickSizeAndLotSize(ctx)
@@ -57,14 +57,13 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, height int64, blockT
 	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
+	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
+	logger.Info("Delist trading pairs", "blockHeight", height)
 	return
 }
 
 func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {
 	symbolsToDelist := getSymbolsToDelist(ctx, govKeeper, blockTime)
-	if len(symbolsToDelist) == 0 {
-		return
-	}
 
 	for _, symbol := range symbolsToDelist {
 		dexKeeper.DelistTradingPair(ctx, symbol)
@@ -74,6 +73,7 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time) []string {
 	symbols := make([]string, 0)
 	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
+		// TODO: Improve performance here, do not iterate all trading pairs
 		if proposal.GetProposalType() == gov.ProposalTypeDelistTradingPair {
 			passedTime := proposal.GetVotingStartTime().Add(proposal.GetVotingPeriod())
 			if passedTime.Add((DelistDelayedDays-1)*24*time.Hour).Before(blockTime) &&
