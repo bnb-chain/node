@@ -535,6 +535,7 @@ func TestDelistTradingPairDoesNotExist(t *testing.T) {
 		BaseAssetSymbol:  "BNB",
 		QuoteAssetSymbol: "BTC-2BD",
 		Justification:    "you deserve it",
+		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -565,6 +566,7 @@ func TestDelistPrerequisiteTradingPair(t *testing.T) {
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		Justification:    "you deserve it",
+		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -607,6 +609,7 @@ func TestDelistProperTradingPair(t *testing.T) {
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: btcSymbol,
 		Justification:    "you deserve it",
+		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
