@@ -116,6 +116,14 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 		return errors.New("justification should not be empty")
 	}
 
+	if delistParams.DelayedDays <= 0 {
+		return errors.New("delayed days should be positive")
+	}
+
+	if delistParams.DelayedDays > gov.MaxDelayedDays {
+		return fmt.Errorf("delayed days should not be larger than %d", gov.MaxDelayedDays)
+	}
+
 	if !hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) {
 		return fmt.Errorf("trading pair %s_%s does not exist", delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol)
 	}

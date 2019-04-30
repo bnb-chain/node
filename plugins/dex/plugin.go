@@ -18,7 +18,7 @@ import (
 )
 
 const AbciQueryPrefix = "dex"
-const DelistDelayedDays = 7
+const DaysToSearchForDelist = 60 // it is a approximate number to search for proposal, for the precise number is stored in db
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
@@ -63,9 +63,11 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 }
 
 func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {
+	logger := bnclog.With("module", "dex")
 	symbolsToDelist := getSymbolsToDelist(ctx, govKeeper, blockTime)
 
 	for _, symbol := range symbolsToDelist {
+		logger.Info("Delist trading pair", "symbol", symbol)
 		dexKeeper.DelistTradingPair(ctx, symbol)
 	}
 }
@@ -73,16 +75,21 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time) []string {
 	symbols := make([]string, 0)
 	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
-		// TODO: Improve performance here, do not iterate all trading pairs
+		// we do not need to search for all proposals
+		if proposal.GetSubmitTime().Add(DaysToSearchForDelist * 24 * time.Hour).Before(blockTime) {
+			return true
+		}
+
 		if proposal.GetProposalType() == gov.ProposalTypeDelistTradingPair {
+			var delistParam gov.DelistTradingPairParams
+			err := json.Unmarshal([]byte(proposal.GetDescription()), &delistParam)
+			if err != nil {
+				panic(fmt.Errorf("illegal delist params in proposal, params=%s", proposal.GetDescription()))
+			}
+
 			passedTime := proposal.GetVotingStartTime().Add(proposal.GetVotingPeriod())
-			if passedTime.Add((DelistDelayedDays-1)*24*time.Hour).Before(blockTime) &&
-				passedTime.Add(DelistDelayedDays*24*time.Hour).After(blockTime) {
-				var delistParam gov.DelistTradingPairParams
-				err := json.Unmarshal([]byte(proposal.GetDescription()), &delistParam)
-				if err != nil {
-					panic(fmt.Errorf("illegal delist params in proposal, params=%s", proposal.GetDescription()))
-				}
+			timeToCompare := passedTime.Add(time.Duration(delistParam.DelayedDays) * 24 * time.Hour)
+			if timeToCompare.Before(blockTime) && timeToCompare.Add(24*time.Hour).After(blockTime) {
 				symbol := utils.Assets2TradingPair(strings.ToUpper(delistParam.BaseAssetSymbol), strings.ToUpper(delistParam.QuoteAssetSymbol))
 				symbols = append(symbols, symbol)
 			}
