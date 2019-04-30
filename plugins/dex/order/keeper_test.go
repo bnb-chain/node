@@ -483,8 +483,9 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	wire.RegisterCrypto(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
+	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
@@ -626,4 +627,62 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(0, len(res))
 	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(0, len(res))
+}
+
+func TestKeeper_DelistTradingPair(t *testing.T) {
+	assert := assert.New(t)
+	ctx, am, keeper := setup()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	addr := acc.GetAddress()
+
+	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
+		sdk.NewCoin("BNB", 10e4),
+		sdk.NewCoin("XYZ-000", 3e4),
+	}.Sort())
+
+	acc.(types.NamedAccount).SetCoins(sdk.Coins{
+		sdk.NewCoin("XYZ-000", 2e5),
+	}.Sort())
+
+	am.SetAccount(ctx, acc)
+
+	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000_BNB", 3e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000_BNB", 5e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 746, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	ac := am.GetAccount(ctx, addr)
+	println(ac.GetCoins().String())
+
+	keeper.DelistTradingPair(ctx, "XYZ-000_BNB")
+	assert.Equal(0, len(keeper.allOrders))
+	//assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(0, len(keeper.engines))
+	ac = am.GetAccount(ctx, addr)
+	println(ac.GetCoins().String())
+	println(ac.(types.NamedAccount).GetLockedCoins().String())
+
+	expectFees := types.NewFee(sdk.Coins{
+		sdk.NewCoin("BNB", 10e4),
+		sdk.NewCoin("XYZ-000", 2e5),
+	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
+	println(fees.Pool.BlockFees().String())
 }
