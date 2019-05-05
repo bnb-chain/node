@@ -10,8 +10,6 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
@@ -23,6 +21,7 @@ import (
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"

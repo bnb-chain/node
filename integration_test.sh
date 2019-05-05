@@ -30,7 +30,6 @@ function prepare_node() {
 	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
-	$(cd "./${home}/config" && sed -i -e "s/breatheBlockInterval = 0/breatheBlockInterval = 100/g" app.toml)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
@@ -138,8 +137,6 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 result=$(./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
-
-exit
 
 ## ROUND 2 ##
 
