@@ -18,7 +18,14 @@ import (
 )
 
 const AbciQueryPrefix = "dex"
-const DaysToSearchForDelist = 60 // it is a approximate number to search for proposal, for the precise number is stored in db
+const DelayedDaysForDelist = 3
+
+// it is a approximate number to search for proposal, for the precise number is stored in db
+// for now, params are:
+// deposit period: 1 day
+// voting period: 14 day
+// delayed days: 3 day
+const DaysToSearchForDelist = 20
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
@@ -57,8 +64,8 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
-	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
 	logger.Info("Delist trading pairs", "blockHeight", height)
+	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
 	return
 }
 
@@ -88,8 +95,8 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 			}
 
 			passedTime := proposal.GetVotingStartTime().Add(proposal.GetVotingPeriod())
-			timeToCompare := passedTime.Add(time.Duration(delistParam.DelayedDays) * 24 * time.Hour)
-			if timeToCompare.Before(blockTime) && timeToCompare.Add(24*time.Hour).After(blockTime) {
+			timeToDelist := passedTime.Add(DelayedDaysForDelist * 24 * time.Hour)
+			if timeToDelist.Before(blockTime) && timeToDelist.Add(24*time.Hour).After(blockTime) {
 				symbol := utils.Assets2TradingPair(strings.ToUpper(delistParam.BaseAssetSymbol), strings.ToUpper(delistParam.QuoteAssetSymbol))
 				symbols = append(symbols, symbol)
 			}

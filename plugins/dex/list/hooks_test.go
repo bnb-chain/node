@@ -2,7 +2,6 @@ package list
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -486,56 +485,11 @@ func TestDelistEmptyJustification(t *testing.T) {
 	require.Contains(t, err.Error(), "justification should not be empty")
 }
 
-func TestDelistWrongDelayedDays(t *testing.T) {
-	hooks := NewDelistHooks(nil)
-
-	delistParams := gov.DelistTradingPairParams{
-		BaseAssetSymbol:  "BNB",
-		QuoteAssetSymbol: "BTC-2BD",
-		Justification:    "reason",
-		DelayedDays:      0,
-	}
-
-	delistParamsBz, err := json.Marshal(delistParams)
-	require.Nil(t, err, "marshal delist params error")
-
-	proposal := gov.TextProposal{
-		ProposalType: gov.ProposalTypeDelistTradingPair,
-		Description:  string(delistParamsBz),
-	}
-
-	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
-	require.NotNil(t, err, "err should not be nil")
-
-	require.Contains(t, err.Error(), "delayed days should be positive")
-
-	delistParams = gov.DelistTradingPairParams{
-		BaseAssetSymbol:  "BNB",
-		QuoteAssetSymbol: "BTC-2BD",
-		Justification:    "reason",
-		DelayedDays:      gov.MaxDelayedDays + 1,
-	}
-
-	delistParamsBz, err = json.Marshal(delistParams)
-	require.Nil(t, err, "marshal delist params error")
-
-	proposal = gov.TextProposal{
-		ProposalType: gov.ProposalTypeDelistTradingPair,
-		Description:  string(delistParamsBz),
-	}
-
-	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
-	require.NotNil(t, err, "err should not be nil")
-
-	require.Contains(t, err.Error(), fmt.Sprintf("delayed days should not be larger than %d", gov.MaxDelayedDays))
-}
-
 func TestDelistTradingPairDoesNotExist(t *testing.T) {
 	delistParams := gov.DelistTradingPairParams{
 		BaseAssetSymbol:  "BNB",
 		QuoteAssetSymbol: "BTC-2BD",
 		Justification:    "you deserve it",
-		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -566,7 +520,6 @@ func TestDelistPrerequisiteTradingPair(t *testing.T) {
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: types.NativeTokenSymbol,
 		Justification:    "you deserve it",
-		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -609,7 +562,6 @@ func TestDelistProperTradingPair(t *testing.T) {
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: btcSymbol,
 		Justification:    "you deserve it",
-		DelayedDays:      1,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
