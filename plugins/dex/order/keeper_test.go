@@ -668,21 +668,13 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
-	ac := am.GetAccount(ctx, addr)
-	println(ac.GetCoins().String())
-
 	keeper.DelistTradingPair(ctx, "XYZ-000_BNB")
 	assert.Equal(0, len(keeper.allOrders))
-	//assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(0, len(keeper.engines))
-	ac = am.GetAccount(ctx, addr)
-	println(ac.GetCoins().String())
-	println(ac.(types.NamedAccount).GetLockedCoins().String())
 
 	expectFees := types.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),
 		sdk.NewCoin("XYZ-000", 2e5),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
-	println(fees.Pool.BlockFees().String())
 }

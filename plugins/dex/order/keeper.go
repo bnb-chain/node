@@ -831,46 +831,49 @@ func (kp *Keeper) ClearOrders() {
 func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string) {
 	engine, ok := kp.engines[symbol]
 	if !ok {
-		// TODO should we panic here, for there may be duplicate proposals delisting same trading pair
-		//panic(fmt.Errorf("trading pair %s does not exist in match engine", symbol))
+		kp.logger.Info("delist symbol does not exist", "symbol", symbol)
 		return
 	}
 
-	allLevels, sellLevels := engine.Book.GetAllLevels()
-	allLevels = append(allLevels, sellLevels...)
-
+	buyLevels, sellLevels := engine.Book.GetAllLevels()
 	totalFee := types.Fee{}
-	for _, priceLevel := range allLevels {
-		for _, orderPart := range priceLevel.Orders {
-			originOrder, ok := kp.OrderExists(symbol, orderPart.Id)
-			if !ok {
-				panic(fmt.Errorf("order %s does not exist", orderPart.Id))
-			}
 
-			transfer := TransferFromExpired(orderPart, originOrder)
-			_ = kp.doTransfer(ctx, &transfer) // this method will never return error
-
-			fee := common.Fee{}
-			if !transfer.FeeFree() {
-				acc := kp.am.GetAccount(ctx, transfer.accAddress)
-				fee = kp.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, kp.engines)
-				_ = acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-				kp.am.SetAccount(ctx, acc)
-			}
-			totalFee.AddFee(fee)
-
-			err := kp.RemoveOrder(originOrder.Id, originOrder.Symbol, func(ord me.OrderPart) {
-				if kp.CollectOrderInfoForPublish {
-					change := OrderChange{originOrder.Id, Expired, nil}
-					kp.OrderChanges = append(kp.OrderChanges, change)
-					kp.updateRoundOrderFee(string(originOrder.Sender), fee)
+	deleteOrders := func(priceLevels []me.PriceLevel) {
+		for _, priceLevel := range priceLevels {
+			for _, orderPart := range priceLevel.Orders {
+				originOrder, ok := kp.OrderExists(symbol, orderPart.Id)
+				if !ok {
+					panic(fmt.Errorf("order %s does not exist", orderPart.Id))
 				}
-			})
-			if err != nil {
-				panic(fmt.Errorf("remove order error, err=%s", err.Error()))
+
+				transfer := TransferFromExpired(orderPart, originOrder)
+				_ = kp.doTransfer(ctx, &transfer) // this method will never return error
+
+				fee := common.Fee{}
+				if !transfer.FeeFree() {
+					acc := kp.am.GetAccount(ctx, transfer.accAddress)
+					fee = kp.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, kp.engines)
+					_ = acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
+					kp.am.SetAccount(ctx, acc)
+				}
+				totalFee.AddFee(fee)
+
+				err := kp.RemoveOrder(originOrder.Id, originOrder.Symbol, func(ord me.OrderPart) {
+					if kp.CollectOrderInfoForPublish {
+						change := OrderChange{originOrder.Id, Expired, nil}
+						kp.OrderChanges = append(kp.OrderChanges, change)
+						kp.updateRoundOrderFee(string(originOrder.Sender), fee)
+					}
+				})
+				if err != nil {
+					panic(fmt.Errorf("remove order error, err=%s", err.Error()))
+				}
 			}
 		}
 	}
+
+	deleteOrders(buyLevels)
+	deleteOrders(sellLevels)
 
 	fees.Pool.AddAndCommitFee("DELIST", totalFee)
 
