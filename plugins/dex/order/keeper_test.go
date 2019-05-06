@@ -632,6 +632,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 func TestKeeper_DelistTradingPair(t *testing.T) {
 	assert := assert.New(t)
 	ctx, am, keeper := setup()
+	fees.Pool.Clear()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
@@ -639,18 +640,21 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
+
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
-		sdk.NewCoin("BNB", 10e4),
-		sdk.NewCoin("XYZ-000", 3e4),
+		sdk.NewCoin("BNB", 11e4),
+		sdk.NewCoin("XYZ-000", 4e4),
 	}.Sort())
 
 	acc.(types.NamedAccount).SetCoins(sdk.Coins{
-		sdk.NewCoin("XYZ-000", 2e5),
+		sdk.NewCoin("XYZ-000", 4e5),
 	}.Sort())
 
 	am.SetAccount(ctx, acc)
 
 	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
 	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
@@ -660,21 +664,46 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
 	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
-	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 746, 1e4)
+	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 7e6, 1e4)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
 	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
 	assert.Equal(1, len(keeper.allOrders))
-	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
-	keeper.DelistTradingPair(ctx, "XYZ-000_BNB")
+	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
 	assert.Equal(0, len(keeper.allOrders))
 	assert.Equal(0, len(keeper.engines))
 
 	expectFees := types.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),
-		sdk.NewCoin("XYZ-000", 2e5),
+		sdk.NewCoin("XYZ-000", 4e5),
 	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
+}
+
+//
+func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+	fees.Pool.Clear()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+
+	tradingPair := dextypes.NewTradingPair("XYZ-001", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.allOrders["XYZ-001_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.DelistTradingPair(ctx, "XYZ-001_BNB", nil)
+	assert.Equal(0, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.engines))
+
+	expectFees := types.NewFee(sdk.Coins(nil), types.ZeroFee)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 }

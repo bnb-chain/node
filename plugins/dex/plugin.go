@@ -75,7 +75,11 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 
 	for _, symbol := range symbolsToDelist {
 		logger.Info("Delist trading pair", "symbol", symbol)
-		dexKeeper.DelistTradingPair(ctx, symbol)
+		if dexKeeper.CollectOrderInfoForPublish {
+			pub.DelistTradingPairForPublish(ctx, dexKeeper, symbol)
+		} else {
+			dexKeeper.DelistTradingPair(ctx, symbol, nil)
+		}
 	}
 }
 

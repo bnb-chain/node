@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -828,54 +828,18 @@ func (kp *Keeper) ClearOrders() {
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
 }
 
-func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string) {
-	engine, ok := kp.engines[symbol]
+func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler) {
+	_, ok := kp.engines[symbol]
 	if !ok {
-		kp.logger.Info("delist symbol does not exist", "symbol", symbol)
+		kp.logger.Error("delist symbol does not exist", "symbol", symbol)
 		return
 	}
 
-	buyLevels, sellLevels := engine.Book.GetAllLevels()
-	totalFee := types.Fee{}
-
-	deleteOrders := func(priceLevels []me.PriceLevel) {
-		for _, priceLevel := range priceLevels {
-			for _, orderPart := range priceLevel.Orders {
-				originOrder, ok := kp.OrderExists(symbol, orderPart.Id)
-				if !ok {
-					panic(fmt.Errorf("order %s does not exist", orderPart.Id))
-				}
-
-				transfer := TransferFromExpired(orderPart, originOrder)
-				_ = kp.doTransfer(ctx, &transfer) // this method will never return error
-
-				fee := common.Fee{}
-				if !transfer.FeeFree() {
-					acc := kp.am.GetAccount(ctx, transfer.accAddress)
-					fee = kp.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, kp.engines)
-					_ = acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-					kp.am.SetAccount(ctx, acc)
-				}
-				totalFee.AddFee(fee)
-
-				err := kp.RemoveOrder(originOrder.Id, originOrder.Symbol, func(ord me.OrderPart) {
-					if kp.CollectOrderInfoForPublish {
-						change := OrderChange{originOrder.Id, Expired, nil}
-						kp.OrderChanges = append(kp.OrderChanges, change)
-						kp.updateRoundOrderFee(string(originOrder.Sender), fee)
-					}
-				})
-				if err != nil {
-					panic(fmt.Errorf("remove order error, err=%s", err.Error()))
-				}
-			}
-		}
+	transferChs := kp.expireAllOrders(ctx, symbol)
+	if transferChs != nil {
+		totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAllocTransHandler)
+		fees.Pool.AddAndCommitFee(fmt.Sprintf("DELIST_%s", symbol), totalFee)
 	}
-
-	deleteOrders(buyLevels)
-	deleteOrders(sellLevels)
-
-	fees.Pool.AddAndCommitFee("DELIST", totalFee)
 
 	delete(kp.engines, symbol)
 	delete(kp.allOrders, symbol)
@@ -884,6 +848,54 @@ func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string) {
 	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
 	err := kp.PairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
 	if err != nil {
-		panic(fmt.Errorf("delete trading pair error, err=%s", err.Error()))
+		kp.logger.Error("delete trading pair error", "err", err.Error())
 	}
+}
+
+func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
+	orderNum := len(kp.allOrders[symbol])
+	if orderNum == 0 {
+		kp.logger.Info("no orders to expire", "symbol", symbol)
+		return nil
+	}
+
+	concurrency := 1 << kp.poolSize
+	channelSize := orderNum / concurrency
+
+	transferChs := make([]chan Transfer, concurrency)
+	for i := range transferChs {
+		transferChs[i] = make(chan Transfer, channelSize)
+	}
+
+	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
+		_ = engine.Book.RemoveOrders(math.MaxInt64, side, func(ord me.OrderPart) {
+			// gen transfer
+			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
+				h := channelHash(ordMsg.Sender, concurrency)
+				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
+			} else {
+				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
+			}
+		})
+	}
+
+	sideCh := make(chan int8, 2)
+	utils.ConcurrentExecuteAsync(2,
+		func() {
+			sideCh <- me.BUYSIDE
+			sideCh <- me.SELLSIDE
+			close(sideCh)
+		}, func() {
+			for side := range sideCh {
+				engine := kp.engines[symbol]
+				orders := kp.allOrders[symbol]
+				expire(orders, engine, side)
+			}
+		}, func() {
+			for _, transferCh := range transferChs {
+				close(transferCh)
+			}
+		})
+
+	return transferChs
 }
