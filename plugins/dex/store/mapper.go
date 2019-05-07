@@ -27,6 +27,8 @@ type TradingPairMapper interface {
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64)
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
+	CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
+	CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
 }
 
 var _ TradingPairMapper = mapper{}
@@ -128,6 +130,65 @@ func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair
 		m.AddTradingPair(ctx, pair)
 	}
 	return tickSize, lotSize
+}
+
+func (m mapper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should exist if quote token is not native token
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if baseAsset != cmn.NativeTokenSymbol &&
+		quoteAsset != cmn.NativeTokenSymbol {
+
+		if !m.Exists(ctx, baseAsset, cmn.NativeTokenSymbol) &&
+			!m.Exists(ctx, cmn.NativeTokenSymbol, baseAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before against %s",
+				baseAsset, quoteAsset)
+		}
+
+		if !m.Exists(ctx, quoteAsset, cmn.NativeTokenSymbol) &&
+			!m.Exists(ctx, cmn.NativeTokenSymbol, quoteAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
+				quoteAsset, baseAsset, quoteAsset)
+		}
+	}
+	return nil
+}
+
+func (m mapper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should not be delisted if there is any other trading pair exist
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if baseAsset != cmn.NativeTokenSymbol && quoteAsset != cmn.NativeTokenSymbol {
+		return nil
+	}
+
+	var symbolToCheck string
+	if baseAsset != cmn.NativeTokenSymbol {
+		symbolToCheck = baseAsset
+	} else {
+		symbolToCheck = quoteAsset
+	}
+
+	tradingPairs := m.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != cmn.NativeTokenSymbol) ||
+			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != cmn.NativeTokenSymbol) {
+			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
+				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAsset, quoteAsset)
+		}
+	}
+
+	return nil
 }
 
 func (m mapper) getRecentPricesSeq(height, pricesStoreEvery, numPricesStored int64) int64 {

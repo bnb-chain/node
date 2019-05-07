@@ -58,14 +58,16 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	} else {
 		dexKeeper.ExpireOrders(ctx, blockTime, nil)
 	}
+
+	logger.Info("Delist trading pairs", "blockHeight", height)
+	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
+
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	logger.Info("Save Orderbook snapshot", "blockHeight", height)
 	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
-	logger.Info("Delist trading pairs", "blockHeight", height)
-	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
 	return
 }
 
@@ -75,6 +77,13 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 
 	for _, symbol := range symbolsToDelist {
 		logger.Info("Delist trading pair", "symbol", symbol)
+		baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(symbol)
+		err := dexKeeper.PairMapper.CanDelistTradingPair(ctx, baseAsset, quoteAsset)
+		if err != nil {
+			logger.Error("can not delist trading pair", "symbol", symbol, "err", err.Error())
+			continue
+		}
+
 		if dexKeeper.CollectOrderInfoForPublish {
 			pub.DelistTradingPairForPublish(ctx, dexKeeper, symbol)
 		} else {

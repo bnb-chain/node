@@ -123,3 +123,53 @@ func TestMapper_UpdateRecentPrices(t *testing.T) {
 	require.Equal(t, int64(5), allRecentPrices["ABC"].Count())
 	require.Equal(t, []interface{}{int64(10), int64(10), int64(10), int64(10), int64(10)}, allRecentPrices["ABC"].Elements())
 }
+
+func TestMapper_CanListTradingPair_Normal(t *testing.T) {
+	pairMapper, ctx := setup()
+
+	err := pairMapper.CanListTradingPair(ctx, "AAA-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = pairMapper.CanListTradingPair(ctx, types.NativeTokenSymbol, "AAA-000")
+	require.Nil(t, err)
+}
+
+func TestMapper_CanListTradingPair_Abnormal(t *testing.T) {
+	pairMapper, ctx := setup()
+
+	err := pairMapper.CanListTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = pairMapper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token BBB-000 should be listed against BNB before against AAA-000")
+
+	err = pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
+	require.Nil(t, err)
+
+	err = pairMapper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before listing BBB-000 against AAA-000")
+}
+
+func TestMapper_CanDelistTradingPair(t *testing.T) {
+	pairMapper, ctx := setup()
+
+	err := pairMapper.CanDelistTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = pairMapper.CanDelistTradingPair(ctx, "BBB-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = pairMapper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.Nil(t, err)
+
+	err = pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", "AAA-000", 1e8))
+	require.Nil(t, err)
+
+	err = pairMapper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
+}

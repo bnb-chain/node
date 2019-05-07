@@ -70,7 +70,7 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("trading pair exists")
 	}
 
-	if err := checkListPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+	if err := hooks.pairMapper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 		return fmt.Errorf("trading pair %s_%s does not exist", delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol)
 	}
 
-	if err := checkDelistPrerequisiteTradingPair(ctx, hooks.pairMapper, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
+	if err := hooks.pairMapper.CanDelistTradingPair(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 
