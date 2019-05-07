@@ -5,14 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/binance-chain/node/common/types"
+	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
-	"github.com/binance-chain/node/common/types"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
 func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Trade) []string {
@@ -134,7 +133,7 @@ func MatchAndAllocateAllForPublish(
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	combinations := make(map[string]int64)
+	engineSurplus := make(map[string]int64)
 	tradesToPublish := make([]*Trade, 0)
 	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
@@ -151,12 +150,19 @@ func MatchAndAllocateAllForPublish(
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, &combinations)
+	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, engineSurplus)
 	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
+	var combinations []*Combination
+	for symbol, surplus := range engineSurplus {
+		combinations = append(combinations, &Combination{
+			Symbol:  symbol,
+			Surplus: surplus,
+		})
+	}
 
-	return tradesToPublish
+	return tradesToPublish, combinations
 }
 
 func ExpireOrdersForPublish(
@@ -219,6 +225,16 @@ func CollectProposalsForPublish(passed, failed []int64) Proposals {
 }
 
 func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdates {
+	length := len(unbondingDelegations)
+	completedUnbondingDelegations := make([]*CompletedUnbondingDelegation, 0, length)
+	for _, ubd := range unbondingDelegations {
+		amount := Coin{ubd.Balance.Denom, ubd.Balance.Amount}
+		completedUnbondingDelegations = append(completedUnbondingDelegations, &CompletedUnbondingDelegation{ubd.ValidatorAddr, ubd.DelegatorAddr, amount})
+	}
+	return StakeUpdates{length, completedUnbondingDelegations}
+}
+
+func CollectCombinationForPublish(combinations []Combination) StakeUpdates {
 	length := len(unbondingDelegations)
 	completedUnbondingDelegations := make([]*CompletedUnbondingDelegation, 0, length)
 	for _, ubd := range unbondingDelegations {

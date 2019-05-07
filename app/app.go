@@ -455,7 +455,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			tradesToPublish, combinations  = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
-			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			app.DexKeeper.MatchAndAllocateAll(ctx, nil, nil)
 		}
 	} else {
 		// breathe block
@@ -653,7 +653,7 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, combinationsSurplus *pub.CombinationsSurplus, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -699,6 +699,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		tradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
+		combinationsSurplus,
 		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,

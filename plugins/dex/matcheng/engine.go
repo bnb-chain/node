@@ -20,7 +20,7 @@ type MatchEng struct {
 	maxExec         LevelIndex
 	leastSurplus    SurplusIndex
 	Trades          []Trade
-	Surplus         int64
+	Surplus         CombinationSurplus
 	LastTradePrice  int64
 }
 
@@ -154,6 +154,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
 func (me *MatchEng) Match() bool {
+	me.Surplus.HasOverlapped = false
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
@@ -164,7 +165,8 @@ func (me *MatchEng) Match() bool {
 	if index < 0 {
 		return false
 	}
-	me.Surplus = me.overLappedLevel[index].BuySellSurplus
+	me.Surplus.HasOverlapped = true
+	me.Surplus.Surplus = me.overLappedLevel[index].BuySellSurplus
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
 	me.Trades = me.Trades[:0]
 	me.LastTradePrice = lastPx

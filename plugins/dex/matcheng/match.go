@@ -22,6 +22,11 @@ type SurplusIndex struct {
 	surplus []int64
 }
 
+type CombinationSurplus struct {
+	HasOverlapped bool
+	Surplus       int64
+}
+
 func (li *SurplusIndex) clear() {
 	li.value = math.MaxInt64
 	li.index = li.index[:0]

@@ -26,6 +26,7 @@ func NewBlockInfoToPublish(
 	tradesToPublish []*Trade,
 	proposalsToPublish *Proposals,
 	stakeUpdates *StakeUpdates,
+	combinations *CombinationsSurplus,
 	orderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
