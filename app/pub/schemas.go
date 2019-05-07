@@ -131,6 +131,28 @@ const (
 						   }
 						}
 					]
+				}], "default": null },
+				{ "name": "combinationsSurplus", "type": ["null", {
+					"type": "record",
+					"name": "CombinationsSurplus",
+					"namespace": "org.binance.dex.model.avro",
+					"fields": [
+						{ "name": "numOfMsgs", "type": "int" },
+						{ "name": "combinations", "type": {
+							"type": "array",
+							"items":
+							{
+								"type": "record",
+								"name": "Combination",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{ "name": "symbol", "type": "string" },
+									{ "name": "surplus", "type": "long" }
+								]
+							 }
+						   }
+						}
+					]
 				}], "default": null }
 			]
 		}

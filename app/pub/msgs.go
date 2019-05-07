@@ -197,7 +197,7 @@ type CombinationsSurplus struct {
 }
 
 func (msg *CombinationsSurplus) String() string {
-	return fmt.Sprintf("Combinations : %v", msg.ToNativeMap())
+	return fmt.Sprintf("CombinationsSurplus : %v", msg.ToNativeMap())
 }
 
 func (msg *CombinationsSurplus) ToNativeMap() map[string]interface{} {
