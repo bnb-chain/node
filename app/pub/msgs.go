@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type msgType int8
@@ -69,13 +68,14 @@ type EssMsg interface {
 }
 
 type ExecutionResults struct {
-	Height       int64
-	Timestamp    int64 // milli seconds since Epoch
-	NumOfMsgs    int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
-	Trades       trades
-	Orders       Orders
-	Proposals    Proposals
-	StakeUpdates StakeUpdates
+	Height              int64
+	Timestamp           int64 // milli seconds since Epoch
+	NumOfMsgs           int   // number of individual messages we published, consumer can verify messages they received against this field to make sure they does not miss messages
+	Trades              trades
+	Orders              Orders
+	Proposals           Proposals
+	StakeUpdates        StakeUpdates
+	CombinationsSurplus CombinationsSurplus
 }
 
 func (msg *ExecutionResults) String() string {
@@ -99,6 +99,9 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	if msg.StakeUpdates.NumOfMsgs > 0 {
 		native["stakeUpdates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
 	}
+	if msg.CombinationsSurplus.NumOfMsgs > 0 {
+		native["combinationsSurplus"] = map[string]interface{}{"org.binance.dex.model.avro.CombinationsSurplus": msg.CombinationsSurplus.ToNativeMap()}
+	}
 	return native
 }
 
@@ -118,6 +121,7 @@ func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
 		Orders{},
 		Proposals{},
 		StakeUpdates{},
+		CombinationsSurplus{},
 	}
 }
 
@@ -188,20 +192,20 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 }
 
 type CombinationsSurplus struct {
-	NumOfMsgs	 int
+	NumOfMsgs    int
 	Combinations []*Combination
 }
 
 func (msg *CombinationsSurplus) String() string {
-	return fmt.Sprintf("Combinations : %v", msg.toNativeMap())
+	return fmt.Sprintf("Combinations : %v", msg.ToNativeMap())
 }
 
-func (msg *CombinationsSurplus) toNativeMap() map[string]interface{} {
+func (msg *CombinationsSurplus) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
 	os := make([]map[string]interface{}, len(msg.Combinations), len(msg.Combinations))
 	for idx, o := range msg.Combinations {
-		os[idx] = o.toNativeMap()
+		os[idx] = o.ToNativeMap()
 	}
 	native["combinations"] = os
 	return native
@@ -213,10 +217,10 @@ type Combination struct {
 }
 
 func (msg *Combination) String() string {
-	return fmt.Sprintf("Combination : %v", msg.toNativeMap())
+	return fmt.Sprintf("Combination : %v", msg.ToNativeMap())
 }
 
-func (msg *Combination) toNativeMap() map[string]interface{} {
+func (msg *Combination) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["symbol"] = msg.Symbol
 	native["surplus"] = msg.Surplus

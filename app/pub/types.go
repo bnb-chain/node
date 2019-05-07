@@ -6,18 +6,19 @@ import (
 
 // intermediate data structures to deal with concurrent publication between main thread and publisher thread
 type BlockInfoToPublish struct {
-	height             int64
-	timestamp          int64
-	tradesToPublish    []*Trade
-	proposalsToPublish *Proposals
-	stakeUpdates       *StakeUpdates
-	orderChanges       orderPkg.OrderChanges
-	orderInfos         orderPkg.OrderInfoForPublish
-	accounts           map[string]Account
-	latestPricesLevels orderPkg.ChangedPriceLevelsMap
-	blockFee           BlockFee
-	feeHolder          orderPkg.FeeHolder
-	transfers          *Transfers
+	height              int64
+	timestamp           int64
+	tradesToPublish     []*Trade
+	proposalsToPublish  *Proposals
+	stakeUpdates        *StakeUpdates
+	combinationsSurplus *CombinationsSurplus
+	orderChanges        orderPkg.OrderChanges
+	orderInfos          orderPkg.OrderInfoForPublish
+	accounts            map[string]Account
+	latestPricesLevels  orderPkg.ChangedPriceLevelsMap
+	blockFee            BlockFee
+	feeHolder           orderPkg.FeeHolder
+	transfers           *Transfers
 }
 
 func NewBlockInfoToPublish(
@@ -26,7 +27,7 @@ func NewBlockInfoToPublish(
 	tradesToPublish []*Trade,
 	proposalsToPublish *Proposals,
 	stakeUpdates *StakeUpdates,
-	combinations *CombinationsSurplus,
+	combinationsSurplus *CombinationsSurplus,
 	orderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
@@ -39,6 +40,7 @@ func NewBlockInfoToPublish(
 		tradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
+		combinationsSurplus,
 		orderChanges,
 		orderInfos,
 		accounts,

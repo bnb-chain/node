@@ -234,14 +234,9 @@ func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegat
 	return StakeUpdates{length, completedUnbondingDelegations}
 }
 
-func CollectCombinationForPublish(combinations []Combination) StakeUpdates {
-	length := len(unbondingDelegations)
-	completedUnbondingDelegations := make([]*CompletedUnbondingDelegation, 0, length)
-	for _, ubd := range unbondingDelegations {
-		amount := Coin{ubd.Balance.Denom, ubd.Balance.Amount}
-		completedUnbondingDelegations = append(completedUnbondingDelegations, &CompletedUnbondingDelegation{ubd.ValidatorAddr, ubd.DelegatorAddr, amount})
-	}
-	return StakeUpdates{length, completedUnbondingDelegations}
+func CollectCombinationsSurplusForPublish(combinations []*Combination) CombinationsSurplus {
+	length := len(combinations)
+	return CombinationsSurplus{length, combinations}
 }
 
 func updateExpireFeeForPublish(

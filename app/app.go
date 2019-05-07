@@ -491,10 +491,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
-		var stakeUpdates pub.StakeUpdates
-		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
+		stakeUpdates := pub.CollectStakeUpdatesForPublish(completedUbd)
+		combinationsSurplus := pub.CollectCombinationsSurplusForPublish(combinations)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &stakeUpdates, &combinationsSurplus, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
