@@ -23,6 +23,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 )
 
 const (
@@ -32,6 +33,7 @@ const (
 )
 
 type FeeHandler func(map[string]*types.Fee)
+type TransferHandler func(Transfer)
 type TransferHandler func(Transfer)
 
 // in the future, this may be distributed via Sharding
@@ -342,16 +344,17 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 }
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64, engineSurplus map[string]int64) []chan Transfer {
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) ([]chan Transfer, chan matcheng.CombinationSurplus) {
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
-		kp.logger.Info("No new orders for any pair, give up matching")
-		return nil
+		kp.logger.Info("Nsurpluso new orders for any pair, give up matching")
+		return nil, nil
 	}
 
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
+	engineSurplus := make(chan matcheng.CombinationSurplus, len(kp.engines))
 	if distributeTrade {
 		ordNum := 0
 		for _, perSymbol := range kp.roundOrders {
@@ -381,18 +384,19 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 			for _, tradeOut := range tradeOuts {
 				close(tradeOut)
 			}
-			if engineSurplus != nil {
-				for symbol, engine := range kp.engines {
-					if engine.Surplus.HasOverlapped {
-						engineSurplus[symbol] = engine.Surplus.Surplus
-					}
+			for symbol, engine := range kp.engines {
+				combinationSurplus := matcheng.CombinationSurplus{
+					HasOverlapped: engine.Surplus.HasOverlapped,
+					Symbol:symbol,
+					Surplus: engine.Surplus.Surplus,
 				}
+				engineSurplus <- combinationSurplus
 			}
 		})
 	} else {
 		utils.ConcurrentExecuteSync(concurrency, producer, matchWorker)
 	}
-	return tradeOuts
+	return tradeOuts, engineSurplus
 }
 
 func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
@@ -648,7 +652,7 @@ func (kp *Keeper) allocateAndCalcFee(
 
 // MatchAll will only concurrently match but do not allocate into accounts
 func (kp *Keeper) MatchAll(height, timestamp int64) {
-	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp, nil) //only match
+	tradeOuts,_ := kp.matchAndDistributeTrades(false, height, timestamp) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
@@ -661,19 +665,19 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
-	engineSurplus map[string]int64,
-) {
+) chan matcheng.CombinationSurplus {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp, engineSurplus)
+	tradeOuts, engineSurplus := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return
+		return nil
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	fees.Pool.AddAndCommitFee("MATCH", totalFee)
 	kp.clearAfterMatch()
+	return engineSurplus
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {

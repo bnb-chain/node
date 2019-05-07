@@ -133,8 +133,8 @@ func MatchAndAllocateAllForPublish(
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	engineSurplus := make(map[string]int64)
 	tradesToPublish := make([]*Trade, 0)
+	var combinations []*Combination
 	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
 	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
@@ -150,18 +150,18 @@ func MatchAndAllocateAllForPublish(
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades, engineSurplus)
+	engineSurplus := dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades)
 	close(tradeHolderCh)
 	close(iocExpireFeeHolderCh)
 	wg.Wait()
-	var combinations []*Combination
-	for symbol, surplus := range engineSurplus {
-		combinations = append(combinations, &Combination{
-			Symbol:  symbol,
-			Surplus: surplus,
-		})
+	for combinationSurplus := range engineSurplus {
+		if combinationSurplus.HasOverlapped {
+			combinations = append(combinations, &Combination{
+				Symbol:  combinationSurplus.Symbol,
+				Surplus: combinationSurplus.Surplus,
+			})
+		}
 	}
-
 	return tradesToPublish, combinations
 }
 

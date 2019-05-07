@@ -24,6 +24,7 @@ type SurplusIndex struct {
 
 type CombinationSurplus struct {
 	HasOverlapped bool
+	Symbol        string
 	Surplus       int64
 }
 
