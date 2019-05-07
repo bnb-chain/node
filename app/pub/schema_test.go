@@ -58,6 +58,15 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 			},
 		},
 	}
+	combinationsSurplus := CombinationsSurplus{
+		NumOfMsgs: 1,
+		Combinations: []*Combination{
+			{
+				Surplus: -100,
+				Symbol: "NNB_BNB",
+			},
+		},
+	}
 	msg := ExecutionResults{
 		Height:       42,
 		Timestamp:    100,
@@ -66,6 +75,7 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 		Orders:       orders,
 		Proposals:    proposals,
 		StakeUpdates: stakeUpdates,
+		CombinationsSurplus: combinationsSurplus,
 	}
 	_, err := publisher.marshal(&msg, executionResultTpe)
 	if err != nil {

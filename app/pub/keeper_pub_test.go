@@ -120,7 +120,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	require.Len(keeper.OrderChanges, 1)
 	require.Len(keeper.OrderInfosForPub, 1)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx)
 
 	require.Len(keeper.OrderChanges, 2)
 	require.Len(keeper.OrderInfosForPub, 1)
@@ -181,7 +181,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx)
 
 	require.Len(keeper.OrderChanges, 3)
 	require.Len(keeper.OrderInfosForPub, 2)
@@ -221,7 +221,7 @@ func Test_GTEPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -272,7 +272,7 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("s-2", orderChange2.Id)
 	assert.Equal(orderPkg.Ack, orderChange2.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx)
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
