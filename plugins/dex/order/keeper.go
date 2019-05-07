@@ -7,23 +7,21 @@ import (
 	"sync"
 	"time"
 
-	dbm "github.com/tendermint/tendermint/libs/db"
-	tmlog "github.com/tendermint/tendermint/libs/log"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -33,7 +31,6 @@ const (
 )
 
 type FeeHandler func(map[string]*types.Fee)
-type TransferHandler func(Transfer)
 type TransferHandler func(Transfer)
 
 // in the future, this may be distributed via Sharding
@@ -387,11 +384,12 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 			for symbol, engine := range kp.engines {
 				combinationSurplus := matcheng.CombinationSurplus{
 					HasOverlapped: engine.Surplus.HasOverlapped,
-					Symbol:symbol,
-					Surplus: engine.Surplus.Surplus,
+					Symbol:        symbol,
+					Surplus:       engine.Surplus.Surplus,
 				}
 				engineSurplus <- combinationSurplus
 			}
+			close(engineSurplus)
 		})
 	} else {
 		utils.ConcurrentExecuteSync(concurrency, producer, matchWorker)
@@ -652,7 +650,7 @@ func (kp *Keeper) allocateAndCalcFee(
 
 // MatchAll will only concurrently match but do not allocate into accounts
 func (kp *Keeper) MatchAll(height, timestamp int64) {
-	tradeOuts,_ := kp.matchAndDistributeTrades(false, height, timestamp) //only match
+	tradeOuts, _ := kp.matchAndDistributeTrades(false, height, timestamp) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}

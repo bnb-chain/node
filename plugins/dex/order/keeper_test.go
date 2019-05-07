@@ -104,7 +104,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 99000, 15000000)
 	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
 	keeper.AddOrder(ord, false)
-	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0, nil)
+	tradeOuts,_  := keeper.matchAndDistributeTrades(true, 42, 0)
 	c := channelHash(accAdd, 4)
 	i := 0
 	for tr := range tradeOuts[c] {

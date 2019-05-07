@@ -150,6 +150,7 @@ func (mg MessageGenerator) Publish(height, timePub int64, tradesToPublish []*pub
 		tradesToPublish,
 		new(pub.Proposals),
 		new(pub.StakeUpdates),
+		new(pub.CombinationsSurplus),
 		orderChanges,
 		orderChangesCopy,
 		accounts,
