@@ -2,7 +2,6 @@ package dex
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -18,11 +17,11 @@ import (
 )
 
 const AbciQueryPrefix = "dex"
-const DelayedDaysForDelist = 3
+const DelayedDaysForDelist = 0
 
 // it is a approximate number to search for proposal, for the precise number is stored in db
 // for now, params are:
-// deposit period: 1 day
+// deposit period: 2 day
 // voting period: 14 day
 // delayed days: 3 day
 const DaysToSearchForDelist = 20
@@ -93,6 +92,8 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 }
 
 func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time) []string {
+	logger := bnclog.With("module", "dex")
+
 	symbols := make([]string, 0)
 	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
 		// we do not need to search for all proposals
@@ -104,7 +105,8 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 			var delistParam gov.DelistTradingPairParams
 			err := json.Unmarshal([]byte(proposal.GetDescription()), &delistParam)
 			if err != nil {
-				panic(fmt.Errorf("illegal delist params in proposal, params=%s", proposal.GetDescription()))
+				logger.Error("illegal delist params in proposal", "params", proposal.GetDescription())
+				return false
 			}
 
 			passedTime := proposal.GetVotingStartTime().Add(proposal.GetVotingPeriod())
