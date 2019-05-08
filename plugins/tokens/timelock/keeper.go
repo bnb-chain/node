@@ -97,7 +97,7 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress, re
 	return records
 }
 
-func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) error {
+func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) sdk.Error {
 	_, err := keeper.ck.SendCoins(ctx, from, TimeLockCoinsAccAddr, amount)
 	if err != nil {
 		return err
@@ -111,13 +111,23 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 		LockTime:    lockTime,
 	}
 	keeper.setTimeLockRecord(ctx, from, record)
+
+	if ctx.IsDeliverTx() {
+		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
+	}
+
 	return nil
 }
 
-func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64) error {
+func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64) sdk.Error {
 	record, found := keeper.GetTimeLockRecord(ctx, from, recordId)
 	if !found {
-		return fmt.Errorf("time lock record does not exist, addr=%s, recordId=%d", from.String(), recordId)
+		return ErrTimeLockRecordDoesNotExist(DefaultCodespace, from, recordId)
+	}
+
+	if ctx.BlockHeader().Time.Before(record.LockTime) {
+		return ErrCanNotUnlock(DefaultCodespace, fmt.Sprintf("lock time(%s) is after now(%s)",
+			record.LockTime.String(), ctx.BlockHeader().Time.String()))
 	}
 
 	_, err := keeper.ck.SendCoins(ctx, TimeLockCoinsAccAddr, from, record.Amount)
@@ -126,13 +136,17 @@ func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId i
 	}
 
 	keeper.deleteTimeLockRecord(ctx, from, recordId)
+
+	if ctx.IsDeliverTx() {
+		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
+	}
 	return nil
 }
 
-func (keeper Keeper) TimeRelock(ctx sdk.Context, from sdk.AccAddress, recordId int64, newRecord TimeLockRecord) error {
+func (keeper Keeper) TimeRelock(ctx sdk.Context, from sdk.AccAddress, recordId int64, newRecord TimeLockRecord) sdk.Error {
 	record, found := keeper.GetTimeLockRecord(ctx, from, recordId)
 	if !found {
-		return fmt.Errorf("time lock record does not exist, addr=%s, recordId=%d", from.String(), recordId)
+		return ErrTimeLockRecordDoesNotExist(DefaultCodespace, from, recordId)
 	}
 
 	if newRecord.Description != "" {
@@ -141,21 +155,34 @@ func (keeper Keeper) TimeRelock(ctx sdk.Context, from sdk.AccAddress, recordId i
 
 	if !newRecord.Amount.IsZero() {
 		if newRecord.Amount.IsEqual(record.Amount) || newRecord.Amount.IsLT(record.Amount) {
-			return fmt.Errorf("new locked coins(%s) should be more than original locked coins(%s)",
-				newRecord.Amount.String(), record.Amount.String())
+			return ErrInvalidLockAmount(DefaultCodespace,
+				fmt.Sprintf("new locked coins(%s) should be more than original locked coins(%s)",
+					newRecord.Amount.String(), record.Amount.String()))
 		}
+
+		amountToIncrease := newRecord.Amount.Minus(record.Amount)
+		_, err := keeper.ck.SendCoins(ctx, from, TimeLockCoinsAccAddr, amountToIncrease)
+		if err != nil {
+			return err
+		}
+
 		record.Amount = newRecord.Amount
 	}
 
-	if !newRecord.LockTime.IsZero() {
+	if !newRecord.LockTime.Equal(time.Unix(0, 0)) {
 		if !newRecord.LockTime.After(record.LockTime) {
-			return fmt.Errorf("new lock time(%s) should after original lock time(%s)",
-				newRecord.LockTime.String(), record.LockTime.String())
+			return ErrInvalidLockTime(DefaultCodespace,
+				fmt.Sprintf("new lock time(%s) should after original lock time(%s)",
+					newRecord.LockTime.String(), record.LockTime.String()))
 		}
 		record.LockTime = newRecord.LockTime
 	}
 
 	keeper.setTimeLockRecord(ctx, from, record)
+
+	if ctx.IsDeliverTx() && !newRecord.Amount.IsZero() {
+		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
+	}
 
 	return nil
 }
