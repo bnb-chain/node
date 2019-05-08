@@ -16,10 +16,10 @@ const (
 var _ sdk.Msg = TimeLockMsg{}
 
 type TimeLockMsg struct {
-	From        sdk.AccAddress
-	Description string
-	Amount      sdk.Coins
-	LockTime    int64
+	From        sdk.AccAddress `json:"from"`
+	Description string         `json:"description"`
+	Amount      sdk.Coins      `json:"amount"`
+	LockTime    int64          `json:"lock_time"`
 }
 
 func (msg TimeLockMsg) Route() string { return MsgRoute }
@@ -67,11 +67,11 @@ func (msg TimeLockMsg) GetSignBytes() []byte {
 var _ sdk.Msg = TimeRelockMsg{}
 
 type TimeRelockMsg struct {
-	From        sdk.AccAddress
-	Id          int64
-	Description string
-	Amount      sdk.Coins
-	LockTime    int64
+	From        sdk.AccAddress `json:"from"`
+	Id          int64          `json:"id"`
+	Description string         `json:"description"`
+	Amount      sdk.Coins      `json:"amount"`
+	LockTime    int64          `json:"lock_time"`
 }
 
 func (msg TimeRelockMsg) Route() string { return MsgRoute }
@@ -127,8 +127,8 @@ func (msg TimeRelockMsg) GetSignBytes() []byte {
 }
 
 type TimeUnlockMsg struct {
-	From sdk.AccAddress
-	Id   int64
+	From sdk.AccAddress `json:"from"`
+	Id   int64          `json:"id"`
 }
 
 func (msg TimeUnlockMsg) Route() string { return MsgRoute }

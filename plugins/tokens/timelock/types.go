@@ -7,8 +7,8 @@ import (
 )
 
 type TimeLockRecord struct {
-	Id          int64
-	Description string
-	Amount      sdk.Coins
-	LockTime    time.Time
+	Id          int64     `json:"id"`
+	Description string    `json:"description"`
+	Amount      sdk.Coins `json:"amount"`
+	LockTime    time.Time `json:"lock_time"`
 }
