@@ -67,6 +67,11 @@ func (keeper Keeper) deleteTimeLockRecord(ctx sdk.Context, addr sdk.AccAddress, 
 	store.Delete(KeyRecord(addr, recordId))
 }
 
+func (keeper Keeper) getTimeLockRecordsIterator(ctx sdk.Context, addr sdk.AccAddress) sdk.Iterator {
+	store := ctx.KVStore(keeper.storeKey)
+	return sdk.KVStorePrefixIterator(store, KeyRecordSubSpace(addr))
+}
+
 func (keeper Keeper) GetTimeLockRecord(ctx sdk.Context, addr sdk.AccAddress, recordId int64) (TimeLockRecord, bool) {
 	store := ctx.KVStore(keeper.storeKey)
 	bz := store.Get(KeyRecord(addr, recordId))
@@ -77,6 +82,19 @@ func (keeper Keeper) GetTimeLockRecord(ctx sdk.Context, addr sdk.AccAddress, rec
 	var record TimeLockRecord
 	keeper.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &record)
 	return record, true
+}
+
+func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress, recordId int64) []TimeLockRecord {
+	var records []TimeLockRecord
+	iterator := keeper.getTimeLockRecordsIterator(ctx, addr)
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		record := TimeLockRecord{}
+		keeper.cdc.MustUnmarshalBinaryLengthPrefixed(iterator.Value(), &record)
+		records = append(records, record)
+	}
+	// TODO need to ensure they are sorted
+	return records
 }
 
 func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) error {
