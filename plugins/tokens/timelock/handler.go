@@ -7,14 +7,24 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result {
-	lockTime := time.Unix(msg.LockTime, 0)
-	if lockTime.Before(ctx.BlockHeader().Time) {
-		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%s) should after now(%s)",
-			lockTime.String(), ctx.BlockHeader().Time.String())).Result()
+func NewHandler(keeper Keeper) sdk.Handler {
+	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+		switch msg := msg.(type) {
+		case TimeLockMsg:
+			return handleTimeLock(ctx, keeper, msg)
+		case TimeUnlockMsg:
+			return handleTimeUnlock(ctx, keeper, msg)
+		case TimeRelockMsg:
+			return handleTimeRelock(ctx, keeper, msg)
+		default:
+			errMsg := fmt.Sprintf("unrecognized time lock message type: %T", msg)
+			return sdk.ErrUnknownRequest(errMsg).Result()
+		}
 	}
+}
 
-	err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, lockTime)
+func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result {
+	_, err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, time.Unix(msg.LockTime, 0))
 	if err != nil {
 		return err.Result()
 	}
@@ -23,14 +33,6 @@ func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result 
 }
 
 func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Result {
-	if msg.LockTime != 0 {
-		lockTime := time.Unix(msg.LockTime, 0)
-		if lockTime.Before(ctx.BlockHeader().Time) {
-			return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%s) should after now(%s)",
-				lockTime.String(), ctx.BlockHeader().Time.String())).Result()
-		}
-	}
-
 	newRecord := TimeLockRecord{
 		Description: msg.Description,
 		Amount:      msg.Amount,

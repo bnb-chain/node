@@ -39,7 +39,7 @@ func ErrInvalidTimeLockId(codespace sdk.CodespaceType, msg string) sdk.Error {
 
 func ErrTimeLockRecordDoesNotExist(codespace sdk.CodespaceType, addr sdk.AccAddress, id int64) sdk.Error {
 	return sdk.NewError(codespace, CodeTimeLockRecordDoesNotExist,
-		fmt.Sprintf("Invalid time lock does not exist, address=%s, id=%d", addr.String(), id))
+		fmt.Sprintf("Time lock does not exist, address=%s, id=%d", addr.String(), id))
 }
 
 func ErrInvalidLockAmount(codespace sdk.CodespaceType, msg string) sdk.Error {

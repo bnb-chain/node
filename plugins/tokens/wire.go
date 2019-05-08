@@ -4,6 +4,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -14,4 +15,7 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(burn.BurnMsg{}, "tokens/BurnMsg", nil)
 	cdc.RegisterConcrete(freeze.FreezeMsg{}, "tokens/FreezeMsg", nil)
 	cdc.RegisterConcrete(freeze.UnfreezeMsg{}, "tokens/UnfreezeMsg", nil)
+	cdc.RegisterConcrete(timelock.TimeLockMsg{}, "tokens/TimeLockMsg", nil)
+	cdc.RegisterConcrete(timelock.TimeUnlockMsg{}, "tokens/TimeUnlockMsg", nil)
+	cdc.RegisterConcrete(timelock.TimeRelockMsg{}, "tokens/TimeRelockMsg", nil)
 }

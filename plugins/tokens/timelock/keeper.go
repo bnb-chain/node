@@ -97,10 +97,15 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress, re
 	return records
 }
 
-func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) sdk.Error {
+func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) (TimeLockRecord, sdk.Error) {
+	if !lockTime.After(ctx.BlockHeader().Time) {
+		return TimeLockRecord{}, ErrInvalidLockTime(DefaultCodespace,
+			fmt.Sprintf("lock time(%s) should be after now(%s)", lockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
+	}
+
 	_, err := keeper.ck.SendCoins(ctx, from, TimeLockCoinsAccAddr, amount)
 	if err != nil {
-		return err
+		return TimeLockRecord{}, err
 	}
 
 	recordId := keeper.getNextRecordId(ctx, from)
@@ -116,7 +121,7 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
 	}
 
-	return nil
+	return record, nil
 }
 
 func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64) sdk.Error {
@@ -127,7 +132,7 @@ func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId i
 
 	if ctx.BlockHeader().Time.Before(record.LockTime) {
 		return ErrCanNotUnlock(DefaultCodespace, fmt.Sprintf("lock time(%s) is after now(%s)",
-			record.LockTime.String(), ctx.BlockHeader().Time.String()))
+			record.LockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
 	}
 
 	_, err := keeper.ck.SendCoins(ctx, TimeLockCoinsAccAddr, from, record.Amount)
@@ -173,8 +178,15 @@ func (keeper Keeper) TimeRelock(ctx sdk.Context, from sdk.AccAddress, recordId i
 		if !newRecord.LockTime.After(record.LockTime) {
 			return ErrInvalidLockTime(DefaultCodespace,
 				fmt.Sprintf("new lock time(%s) should after original lock time(%s)",
-					newRecord.LockTime.String(), record.LockTime.String()))
+					newRecord.LockTime.UTC().String(), record.LockTime.UTC().String()))
 		}
+
+		if !newRecord.LockTime.After(ctx.BlockHeader().Time) {
+			return ErrInvalidLockTime(DefaultCodespace,
+				fmt.Sprintf("new lock time(%s) should be after now(%s)",
+					newRecord.LockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
+		}
+
 		record.LockTime = newRecord.LockTime
 	}
 

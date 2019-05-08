@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	MsgRoute = "timelock"
+	MsgRoute = "timeLock"
 
 	MaxDescriptionLength = 128
 )
