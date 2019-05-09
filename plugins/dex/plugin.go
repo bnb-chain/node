@@ -17,7 +17,7 @@ import (
 )
 
 const AbciQueryPrefix = "dex"
-const DelayedDaysForDelist = 0
+const DelayedDaysForDelist = 3
 
 // it is a approximate number to search for proposal, for the precise number is stored in db
 // for now, params are:
