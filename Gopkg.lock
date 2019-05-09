@@ -63,7 +63,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:5e16e6e0a9e93882e794665f07979535da456e1bb6e27bfc9b7d5a5b542627ad"
+  branch = "upgrade_tender_0315"
+  digest = "1:738c00a82a1a38506bd0939d8873fc14c3fd38a048735c9525871d25b2a11ef5"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -111,9 +112,8 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "7b2491f5a363b9315f107c1263f85f2f10153ced"
+  revision = "9ac92cf7aa37f740fc2364fc3243b2f6c024e7ec"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.17"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -163,14 +163,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:1530d06761f464b62ab3dfc2fa5b16303901d87ff219100a1447ba216d2e52be"
-  name = "github.com/ethereum/go-ethereum"
-  packages = ["crypto/secp256k1"]
-  pruneopts = "T"
-  revision = "c942700427557e3ff6de3aaf6b916e2f056c1ec2"
-  version = "v1.8.23"
-
-[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -211,7 +203,7 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:35621fe20f140f05a0c4ef662c26c0ab4ee50bca78aa30fe87d33120bd28165e"
+  digest = "1:95e1006e41c641abd2f365dfa0f1213c04da294e7cd5f0bf983af234b775db64"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -222,8 +214,8 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
-  version = "v1.1.1"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
@@ -234,7 +226,7 @@
   revision = "efd229238aceefdee6a00ea28b61c924c2b5f1a5"
 
 [[projects]]
-  digest = "1:17fe264ee908afc795734e8c4e63db2accabaf57326dbf21763a7d6b86096260"
+  digest = "1:239c4c7fd2159585454003d9be7207167970194216193a8a210b8d29576f19c9"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -244,8 +236,8 @@
     "ptypes/timestamp",
   ]
   pruneopts = "UT"
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -325,12 +317,12 @@
   version = "v1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:39b27d1381a30421f9813967a5866fba35dc1d4df43a6eefe3b7a5444cb07214"
+  digest = "1:a74b5a8e34ee5843cd6e65f698f3e75614f812ff170c2243425d75bc091e9af2"
   name = "github.com/jmhodges/levigo"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c42d9e0ca023e2198120196f842701bb4c55d7b9"
+  revision = "853d788c5c416eaaee5b044570784a96c7a26975"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -601,7 +593,8 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  digest = "1:271f30cf87f970498f8619cc70fbb6e86b56a89f287b6252ee705fabc78dffa0"
+  branch = "upgrade_from_0301_to_0315"
+  digest = "1:beb5319cdffa4643009049d90259287c683e1f824e52d267f7354b2f9c66db22"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -623,6 +616,7 @@
     "crypto/multisig",
     "crypto/multisig/bitarray",
     "crypto/secp256k1",
+    "crypto/secp256k1/internal/secp256k1",
     "crypto/tmhash",
     "crypto/xsalsa20symmetric",
     "evidence",
@@ -636,6 +630,7 @@
     "libs/events",
     "libs/fail",
     "libs/flowrate",
+    "libs/gopool",
     "libs/log",
     "libs/pubsub",
     "libs/pubsub/query",
@@ -670,9 +665,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "332351ca5acf6d7892e990c85a947b9071814bb6"
+  revision = "9e40207ceefb39e1e6ee1a4fa7dd768a472ceba8"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.6"
 
 [[projects]]
   digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
