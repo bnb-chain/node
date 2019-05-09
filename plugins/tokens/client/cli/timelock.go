@@ -69,6 +69,64 @@ func (c Commander) timeLock(cmd *cobra.Command, args []string) error {
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
+func timeRelockCmd(cmdr Commander) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "time-relock",
+		Short: "time relock tokens",
+		RunE:  cmdr.timeRelock,
+	}
+
+	cmd.Flags().String(flagAmount, "", "amount of tokens to lock")
+	cmd.Flags().Int64(flagLockTime, 0, "timestamp of lock time(second)")
+	cmd.Flags().String(flagDescription, "", "description of time lock")
+	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
+
+	return cmd
+}
+
+func (c Commander) timeRelock(cmd *cobra.Command, args []string) error {
+	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
+	from, err := cliCtx.GetFromAddress()
+	if err != nil {
+		return err
+	}
+
+	timeLockId := viper.GetInt64(flagTimeLockId)
+	if timeLockId < timelock.InitialRecordId {
+		return fmt.Errorf("lock time should not less than %d", timelock.InitialRecordId)
+	}
+
+	description := viper.GetString(flagDescription)
+
+	if len(description) > timelock.MaxDescriptionLength {
+		return fmt.Errorf("length of description should be less than %d", timelock.MaxDescriptionLength)
+	}
+
+	amount, err := sdk.ParseCoins(viper.GetString(flagAmount))
+	if err != nil {
+		return err
+	}
+
+	lockTime := viper.GetInt64(flagLockTime)
+	if lockTime < 0 {
+		return fmt.Errorf("lock time should be positive")
+	}
+
+	if lockTime != 0 && time.Unix(lockTime, 0).Before(time.Now()) {
+		return fmt.Errorf("lock time(%s) should be after now", time.Unix(lockTime, 0).UTC().String())
+	}
+
+	if len(description) == 0 &&
+		amount.IsZero() &&
+		lockTime == 0 {
+		return fmt.Errorf("no thing specified to update on original time lock")
+	}
+
+	// build message
+	msg := timelock.NewTimeRelockMsg(from, timeLockId, description, amount, lockTime)
+	return client.SendOrPrintTx(cliCtx, txBldr, msg)
+}
+
 func timeUnlockCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "time-unlock",
@@ -76,7 +134,7 @@ func timeUnlockCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.timeUnlock,
 	}
 
-	cmd.Flags().String(flagTimeLockId, "", "time lock id")
+	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
 
 	return cmd
 }
@@ -146,7 +204,7 @@ func queryTimeLockCmd(cmdr Commander) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagAccount, "", "account to query")
-	cmd.Flags().String(flagTimeLockId, "", "time lock id")
+	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
 
 	return cmd
 }

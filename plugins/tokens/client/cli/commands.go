@@ -30,7 +30,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			freezeTokenCmd(cmdr),
 			unfreezeTokenCmd(cmdr),
 			timeLockCmd(cmdr),
-			timeUnlockCmd(cmdr))...)
+			timeUnlockCmd(cmdr),
+			timeRelockCmd(cmdr))...)
 
 	tokenCmd.AddCommand(
 		client.GetCommands(

@@ -93,7 +93,6 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress) []
 		keeper.cdc.MustUnmarshalBinaryLengthPrefixed(iterator.Value(), &record)
 		records = append(records, record)
 	}
-	// TODO need to ensure they are sorted
 	return records
 }
 
