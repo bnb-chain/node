@@ -16,6 +16,7 @@ const (
 	CodeTimeLockRecordDoesNotExist sdk.CodeType = 5
 	CodeInvalidLockAmount          sdk.CodeType = 6
 	CodeCanNotUnlock               sdk.CodeType = 7
+	CodeUnknownTimeLock            sdk.CodeType = 8
 )
 
 //----------------------------------------
@@ -48,4 +49,8 @@ func ErrInvalidLockAmount(codespace sdk.CodespaceType, msg string) sdk.Error {
 
 func ErrCanNotUnlock(codespace sdk.CodespaceType, msg string) sdk.Error {
 	return sdk.NewError(codespace, CodeCanNotUnlock, fmt.Sprintf("Can not unlock: %s", msg))
+}
+
+func ErrUnknownTimeLock(codespace sdk.CodespaceType, addr sdk.AccAddress, id int64) sdk.Error {
+	return sdk.NewError(codespace, CodeUnknownTimeLock, fmt.Sprintf("Unknown time lock of %s with id %d", addr.String(), id))
 }

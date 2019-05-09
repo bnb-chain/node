@@ -44,6 +44,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -75,13 +76,14 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper    bank.Keeper
-	DexKeeper     *dex.DexKeeper
-	AccountKeeper auth.AccountKeeper
-	TokenMapper   tkstore.Mapper
-	ValAddrCache  *ValAddrCache
-	stakeKeeper   stake.Keeper
-	govKeeper     gov.Keeper
+	CoinKeeper     bank.Keeper
+	DexKeeper      *dex.DexKeeper
+	AccountKeeper  auth.AccountKeeper
+	TokenMapper    tkstore.Mapper
+	ValAddrCache   *ValAddrCache
+	stakeKeeper    stake.Keeper
+	govKeeper      gov.Keeper
+	timeLockKeeper timelock.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -143,14 +145,19 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	)
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
+	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, timelock.DefaultCodespace, app.Pool)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper))
+		AddRoute("gov", gov.NewHandler(app.govKeeper)).
+		AddRoute("timelock", timelock.NewHandler(app.timeLockKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
+	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
+
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
@@ -199,6 +206,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
 		common.GovStoreKey,
+		common.TimeLockStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())

@@ -15,6 +15,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
 
 const AbciQueryPrefix = "param"
@@ -50,6 +51,9 @@ func init() {
 		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
 		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
 		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
 		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
 	}
 }

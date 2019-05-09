@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	MsgRoute = "timeLock"
+	MsgRoute = "timelock"
 
 	MaxDescriptionLength = 128
 )
@@ -20,6 +20,15 @@ type TimeLockMsg struct {
 	Description string         `json:"description"`
 	Amount      sdk.Coins      `json:"amount"`
 	LockTime    int64          `json:"lock_time"`
+}
+
+func NewTimeLockMsg(from sdk.AccAddress, description string, amount sdk.Coins, lockTime int64) TimeLockMsg {
+	return TimeLockMsg{
+		From:        from,
+		Description: description,
+		Amount:      amount,
+		LockTime:    lockTime,
+	}
 }
 
 func (msg TimeLockMsg) Route() string { return MsgRoute }
@@ -72,6 +81,16 @@ type TimeRelockMsg struct {
 	Description string         `json:"description"`
 	Amount      sdk.Coins      `json:"amount"`
 	LockTime    int64          `json:"lock_time"`
+}
+
+func NewTimeRelockMsg(from sdk.AccAddress, id int64, description string, amount sdk.Coins, lockTime int64) TimeRelockMsg {
+	return TimeRelockMsg{
+		From:        from,
+		Id:          id,
+		Description: description,
+		Amount:      amount,
+		LockTime:    lockTime,
+	}
 }
 
 func (msg TimeRelockMsg) Route() string { return MsgRoute }
@@ -129,6 +148,13 @@ func (msg TimeRelockMsg) GetSignBytes() []byte {
 type TimeUnlockMsg struct {
 	From sdk.AccAddress `json:"from"`
 	Id   int64          `json:"id"`
+}
+
+func NewTimeUnlockMsg(from sdk.AccAddress, id int64) TimeUnlockMsg {
+	return TimeUnlockMsg{
+		From: from,
+		Id:   id,
+	}
 }
 
 func (msg TimeUnlockMsg) Route() string { return MsgRoute }

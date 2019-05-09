@@ -84,7 +84,7 @@ func (keeper Keeper) GetTimeLockRecord(ctx sdk.Context, addr sdk.AccAddress, rec
 	return record, true
 }
 
-func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress, recordId int64) []TimeLockRecord {
+func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress) []TimeLockRecord {
 	var records []TimeLockRecord
 	iterator := keeper.getTimeLockRecordsIterator(ctx, addr)
 	defer iterator.Close()
