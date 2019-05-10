@@ -1,4 +1,17 @@
 # Changelog
+## 0.5.7
+* [\#560](https://github.com/binance-chain/node/pull/560) [Publish] Change published empty msg to error level
+* [\#559](https://github.com/binance-chain/node/pull/559) [Tool] Add Snapshot tool
+* [\#558](https://github.com/binance-chain/node/pull/558) [Testnet] Fix the output from testnet cmd 
+## 0.5.6
+IMPROVEMENTS
+* [\#466](https://github.com/binance-chain/node/pull/466)  Recover from last running mode when restarts 
+* [\#546](https://github.com/binance-chain/node/pull/546)[Upgrade] Set UpgradeConfig before all other initializations
+* [\#545](https://github.com/binance-chain/node/pull/545)[Publish] Change order creatation time and lastupdate time to nanosecond
+* [\#540](https://github.com/binance-chain/node/pull/540)[Validator] Modify validator query interface
+* [\#535](https://github.com/binance-chain/node/pull/535) [Validator] Upgrade logic for splitting validator address
+* [\#533](https://github.com/binance-chain/node/pull/533) [Publish] Include txhash in published transfers
+
 
 ## 0.5.5
 
