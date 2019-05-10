@@ -234,23 +234,23 @@ func TestKeeper_TimeRelock_Error(t *testing.T) {
 		sdk.NewCoin("BNB", 900e8),
 	}.Sort()
 
-	_, err := keeper.TimeLock(ctx, acc.GetAddress(), "Test", lockCoins, time.Now().Add(1000*time.Second))
+	record, err := keeper.TimeLock(ctx, acc.GetAddress(), "Test", lockCoins, time.Now().Add(1000*time.Second))
 	require.Nil(t, err)
 
 	errAmount := sdk.Coins{
 		sdk.NewCoin("BNB", 800e8),
 	}.Sort()
 
-	err = keeper.TimeRelock(ctx, acc.GetAddress(), 1, TimeLockRecord{Amount: errAmount})
+	err = keeper.TimeRelock(ctx, acc.GetAddress(), record.Id, TimeLockRecord{Amount: errAmount})
 	require.NotNil(t, err)
 	require.Equal(t, err.Code(), CodeInvalidLockAmount)
 
-	err = keeper.TimeRelock(ctx, acc.GetAddress(), 1, TimeLockRecord{LockTime: time.Now().Add(500 * time.Second)})
+	err = keeper.TimeRelock(ctx, acc.GetAddress(), record.Id, TimeLockRecord{LockTime: time.Now().Add(500 * time.Second)})
 	require.NotNil(t, err)
 	require.Equal(t, err.Code(), CodeInvalidLockTime)
 
 	ctx = ctx.WithBlockTime(time.Now().Add(2000 * time.Second))
-	err = keeper.TimeRelock(ctx, acc.GetAddress(), 1, TimeLockRecord{LockTime: time.Now().Add(1500 * time.Second)})
+	err = keeper.TimeRelock(ctx, acc.GetAddress(), record.Id, TimeLockRecord{LockTime: time.Now().Add(1500 * time.Second)})
 	require.NotNil(t, err)
 	require.Equal(t, err.Code(), CodeInvalidLockTime)
 }

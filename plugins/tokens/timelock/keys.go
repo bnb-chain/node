@@ -13,7 +13,3 @@ func KeyRecord(addr sdk.AccAddress, id int64) []byte {
 func KeyRecordSubSpace(addr sdk.AccAddress) []byte {
 	return []byte(fmt.Sprintf("record:%d", addr))
 }
-
-func KeyNextRecordId(addr sdk.AccAddress) []byte {
-	return []byte(fmt.Sprintf("newRecordId:%d", addr))
-}

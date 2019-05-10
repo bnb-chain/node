@@ -17,7 +17,7 @@ const (
 	flagLockTime    = "lock-time"
 	flagDescription = "description"
 	flagTimeLockId  = "time-lock-id"
-	flagAccount     = "account"
+	flagAddress     = "address"
 )
 
 func timeLockCmd(cmdr Commander) *cobra.Command {
@@ -164,7 +164,7 @@ func queryTimeLocksCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.queryTimeLocks,
 	}
 
-	cmd.Flags().String(flagAccount, "", "account to query")
+	cmd.Flags().String(flagAddress, "", "address to query")
 
 	return cmd
 }
@@ -172,14 +172,14 @@ func queryTimeLocksCmd(cmdr Commander) *cobra.Command {
 func (c Commander) queryTimeLocks(cmd *cobra.Command, args []string) error {
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	accountStr := viper.GetString(flagAccount)
-	account, err := sdk.AccAddressFromBech32(accountStr)
+	addressStr := viper.GetString(flagAddress)
+	address, err := sdk.AccAddressFromBech32(addressStr)
 	if err != nil {
 		return err
 	}
 
 	params := timelock.QueryTimeLocksParams{
-		Account: account,
+		Account: address,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -203,7 +203,7 @@ func queryTimeLockCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.queryTimeLock,
 	}
 
-	cmd.Flags().String(flagAccount, "", "account to query")
+	cmd.Flags().String(flagAddress, "", "address to query")
 	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
 
 	return cmd
@@ -212,8 +212,8 @@ func queryTimeLockCmd(cmdr Commander) *cobra.Command {
 func (c Commander) queryTimeLock(cmd *cobra.Command, args []string) error {
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	accountStr := viper.GetString(flagAccount)
-	account, err := sdk.AccAddressFromBech32(accountStr)
+	addressStr := viper.GetString(flagAddress)
+	address, err := sdk.AccAddressFromBech32(addressStr)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (c Commander) queryTimeLock(cmd *cobra.Command, args []string) error {
 	}
 
 	params := timelock.QueryTimeLockParams{
-		Account: account,
+		Account: address,
 		Id:      timeLockId,
 	}
 

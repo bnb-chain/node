@@ -40,22 +40,6 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, codespace sdk
 	}
 }
 
-func (keeper Keeper) getNextRecordId(ctx sdk.Context, addr sdk.AccAddress) (recordId int64) {
-	store := ctx.KVStore(keeper.storeKey)
-	key := KeyNextRecordId(addr)
-	bz := store.Get(key)
-	if bz == nil {
-		recordId = InitialRecordId
-	} else {
-		keeper.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &recordId)
-	}
-
-	bz = keeper.cdc.MustMarshalBinaryLengthPrefixed(recordId + 1)
-	store.Set(key, bz)
-
-	return recordId
-}
-
 func (keeper Keeper) setTimeLockRecord(ctx sdk.Context, addr sdk.AccAddress, record TimeLockRecord) {
 	store := ctx.KVStore(keeper.storeKey)
 	bz := keeper.cdc.MustMarshalBinaryLengthPrefixed(record)
@@ -107,7 +91,13 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 		return TimeLockRecord{}, err
 	}
 
-	recordId := keeper.getNextRecordId(ctx, from)
+	recordId := ctx.BlockHeader().Time.Unix() // recordId will use timestamp of block header to be deterministic.
+	_, found := keeper.GetTimeLockRecord(ctx, from, recordId)
+	if found {
+		// this case should be very rare, we can just reject it
+		return TimeLockRecord{}, ErrTimeLockRecordAlreadyExist(DefaultCodespace, from, recordId)
+	}
+
 	record := TimeLockRecord{
 		Id:          recordId,
 		Description: description,

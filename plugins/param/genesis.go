@@ -5,8 +5,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/plugins/tokens/timelock"
-
 	sdk "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -70,9 +68,6 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{issue.MintMsgType, MintFee, sdk.FeeForAll},
 	&param.FixedFeeParams{burn.BurnRoute, BurnFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{freeze.FreezeRoute, FreezeFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{timelock.TimeLockMsg{}.Type(), TimeLockFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{timelock.TimeUnlockMsg{}.Type(), TimeUnlockFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{timelock.TimeRelockMsg{}.Type(), TimeRelockFee, sdk.FeeForProposer},
 
 	// Transfer
 	&param.TransferFeeParam{
@@ -97,12 +92,6 @@ var FeeGenesisState = []param.FeeParam{
 			{order.IOCExpireFeeNative, IOCExpireFeeNative},
 		},
 	},
-}
-
-var UpdateFee = []param.FeeParam{
-	&param.FixedFeeParams{timelock.TimeLockMsg{}.Type(), TimeLockFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{timelock.TimeUnlockMsg{}.Type(), TimeUnlockFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{timelock.TimeRelockMsg{}.Type(), TimeRelockFee, sdk.FeeForProposer},
 }
 
 //----------  End definition about fee param ---------------- //
