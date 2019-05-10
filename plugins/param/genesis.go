@@ -99,4 +99,10 @@ var FeeGenesisState = []param.FeeParam{
 	},
 }
 
+var UpdateFee = []param.FeeParam{
+	&param.FixedFeeParams{timelock.TimeLockMsg{}.Type(), TimeLockFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{timelock.TimeUnlockMsg{}.Type(), TimeUnlockFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{timelock.TimeRelockMsg{}.Type(), TimeRelockFee, sdk.FeeForProposer},
+}
+
 //----------  End definition about fee param ---------------- //
