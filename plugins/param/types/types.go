@@ -18,23 +18,23 @@ const (
 
 var (
 	// To avoid cycle import , use literal key. Please update here when new type message is introduced.
-	ValidFixedFeeMsgTypes = map[string]bool{
-		"submit_proposal":  true,
-		"deposit":          true,
-		"vote":             true,
-		"dexList":          true,
-		"orderNew":         true,
-		"orderCancel":      true,
-		"issueMsg":         true,
-		"mintMsg":          true,
-		"tokensBurn":       true,
-		"tokensFreeze":     true,
-		"create_validator": true,
-		"remove_validator": true,
+	ValidFixedFeeMsgTypes = map[string]struct{}{
+		"submit_proposal":  {},
+		"deposit":          {},
+		"vote":             {},
+		"dexList":          {},
+		"orderNew":         {},
+		"orderCancel":      {},
+		"issueMsg":         {},
+		"mintMsg":          {},
+		"tokensBurn":       {},
+		"tokensFreeze":     {},
+		"create_validator": {},
+		"remove_validator": {},
 	}
 
-	ValidTransferFeeMsgTypes = map[string]bool{
-		"send": true,
+	ValidTransferFeeMsgTypes = map[string]struct{}{
+		"send": {},
 	}
 )
 
@@ -88,7 +88,7 @@ func (p *FixedFeeParams) Check() error {
 	if p.Fee < 0 {
 		return fmt.Errorf("fee(%d) should not be negative", p.Fee)
 	}
-	if !ValidFixedFeeMsgTypes[p.GetMsgType()] {
+	if _, ok := ValidFixedFeeMsgTypes[p.GetMsgType()]; !ok {
 		return fmt.Errorf("msg type %s can't be fixedFeeParams", p.GetMsgType())
 	}
 	return nil
@@ -122,7 +122,7 @@ func (p *TransferFeeParam) Check() error {
 	if p.LowerLimitAsMulti <= 1 {
 		return fmt.Errorf("lower_limit_as_multi should > 1")
 	}
-	if !ValidTransferFeeMsgTypes[p.GetMsgType()] {
+	if _, ok := ValidTransferFeeMsgTypes[p.GetMsgType()]; !ok {
 		return fmt.Errorf("msg type %s can't be transferFeeParam", p.GetMsgType())
 	}
 	return nil
