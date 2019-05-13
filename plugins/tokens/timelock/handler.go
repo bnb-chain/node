@@ -30,12 +30,15 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result {
-	_, err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, time.Unix(msg.LockTime, 0))
+	record, err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, time.Unix(msg.LockTime, 0))
 	if err != nil {
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	timeLockId := []byte(fmt.Sprintf("%d", record.Id))
+	return sdk.Result{
+		Data: timeLockId,
+	}
 }
 
 func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Result {
@@ -50,7 +53,10 @@ func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Res
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	timeLockId := []byte(fmt.Sprintf("%d", msg.Id))
+	return sdk.Result{
+		Data: timeLockId,
+	}
 }
 
 func handleTimeUnlock(ctx sdk.Context, keeper Keeper, msg TimeUnlockMsg) sdk.Result {
@@ -58,5 +64,9 @@ func handleTimeUnlock(ctx sdk.Context, keeper Keeper, msg TimeUnlockMsg) sdk.Res
 	if err != nil {
 		return err.Result()
 	}
-	return sdk.Result{}
+
+	timeLockId := []byte(fmt.Sprintf("%d", msg.Id))
+	return sdk.Result{
+		Data: timeLockId,
+	}
 }
