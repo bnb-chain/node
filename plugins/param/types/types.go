@@ -110,9 +110,6 @@ func (p *TransferFeeParam) Check() error {
 	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
 		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
 	}
-	if p.Fee < 0 {
-		return fmt.Errorf("fee(%d) should not be negative", p.Fee)
-	}
 	if p.Fee <= 0 || p.MultiTransferFee <= 0 {
 		return fmt.Errorf("both fee(%d) and multi_transfer_fee(%d) should be positive", p.Fee, p.MultiTransferFee)
 	}
