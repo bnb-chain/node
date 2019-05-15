@@ -187,20 +187,6 @@ func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
 }
 
 func (app *BinanceChain) reInitChain() error {
-
-	// load into memory from db
-	if err := app.LoadCMSLatestVersion(); err != nil {
-		return err
-	}
-	stores := app.GetCommitMultiStore()
-	commitId := stores.LastCommitID()
-	hashHex := fmt.Sprintf("%X", commitId.Hash)
-	app.Logger.Info("commit by state reactor", "version", commitId.Version, "hash", hashHex)
-
-	// simulate we just "Commit()" :P
-	app.SetCheckState(abci.Header{Height: snapshot.Manager().RestorationManifest.Height})
-	app.DeliverState = nil
-
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
@@ -211,6 +197,7 @@ func (app *BinanceChain) reInitChain() error {
 		app.TxDecoder)
 
 	// init app cache
+	stores := app.GetCommitMultiStore()
 	accountStore := stores.GetKVStore(common.AccountStoreKey)
 	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
 

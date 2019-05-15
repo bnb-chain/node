@@ -104,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "47d940941901e9ee7d32fb28f99f02d00fe3b101"
+  revision = "8df6e8b6dc1398502de922027e2f621c98dcfe9e"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -673,7 +673,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "6c8a1b57f9846c34ca07050a485cd608d359e1f1"
+  revision = "dd82029e6cfa5a92fc74cfe1df485184d59e78e0"
   source = "github.com/binance-chain/bnc-tendermint"
 
 [[projects]]
