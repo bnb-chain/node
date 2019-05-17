@@ -16,6 +16,8 @@ import (
 const InitialRecordId = 1
 
 var (
+	// bnb prefix address:  bnb1hn8ym9xht925jkncjpf7lhjnax6z8nv24fv2yq
+	// tbnb prefix address: tbnb1hn8ym9xht925jkncjpf7lhjnax6z8nv2mu9wy3
 	TimeLockCoinsAccAddr = sdk.AccAddress(crypto.AddressHash([]byte("BinanceChainTimeLockCoins")))
 )
 

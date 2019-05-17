@@ -12,7 +12,8 @@ import (
 func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		if !upgrade.IsBEP7Upgrade() {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported", msg)).Result()
+			return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported before height %d", msg,
+				upgrade.Mgr.GetUpgradeHeight(upgrade.BEP7))).Result()
 		}
 
 		switch msg := msg.(type) {

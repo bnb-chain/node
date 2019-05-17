@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/golang/go/src/strconv"
 	"github.com/gorilla/mux"
 
 	"github.com/binance-chain/node/plugins/tokens/timelock"
