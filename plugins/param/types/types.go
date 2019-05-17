@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/binance-chain/node/common/types"
 )
@@ -15,6 +14,28 @@ const (
 
 	JSONFORMAT  = "json"
 	AMINOFORMAT = "amino"
+)
+
+var (
+	// To avoid cycle import , use literal key. Please update here when new type message is introduced.
+	ValidFixedFeeMsgTypes = map[string]struct{}{
+		"submit_proposal":  {},
+		"deposit":          {},
+		"vote":             {},
+		"dexList":          {},
+		"orderNew":         {},
+		"orderCancel":      {},
+		"issueMsg":         {},
+		"mintMsg":          {},
+		"tokensBurn":       {},
+		"tokensFreeze":     {},
+		"create_validator": {},
+		"remove_validator": {},
+	}
+
+	ValidTransferFeeMsgTypes = map[string]struct{}{
+		"send": {},
+	}
 )
 
 type LastProposalID struct {
@@ -64,9 +85,11 @@ func (p *FixedFeeParams) Check() error {
 	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
 		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
 	}
-
 	if p.Fee < 0 {
 		return fmt.Errorf("fee(%d) should not be negative", p.Fee)
+	}
+	if _, ok := ValidFixedFeeMsgTypes[p.GetMsgType()]; !ok {
+		return fmt.Errorf("msg type %s can't be fixedFeeParams", p.GetMsgType())
 	}
 	return nil
 }
@@ -84,9 +107,8 @@ func (p *TransferFeeParam) GetParamType() string {
 }
 
 func (p *TransferFeeParam) Check() error {
-	err := p.FixedFeeParams.Check()
-	if err != nil {
-		return err
+	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
+		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
 	}
 	if p.Fee <= 0 || p.MultiTransferFee <= 0 {
 		return fmt.Errorf("both fee(%d) and multi_transfer_fee(%d) should be positive", p.Fee, p.MultiTransferFee)
@@ -96,6 +118,9 @@ func (p *TransferFeeParam) Check() error {
 	}
 	if p.LowerLimitAsMulti <= 1 {
 		return fmt.Errorf("lower_limit_as_multi should > 1")
+	}
+	if _, ok := ValidTransferFeeMsgTypes[p.GetMsgType()]; !ok {
+		return fmt.Errorf("msg type %s can't be transferFeeParam", p.GetMsgType())
 	}
 	return nil
 }
@@ -130,17 +155,7 @@ func (p *DexFeeParam) Check() error {
 }
 
 func (f *FeeChangeParams) Check() error {
-	for _, c := range f.FeeParams {
-		err := c.Check()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (f *FeeChangeParams) Type() string {
-	return "fee change param"
+	return checkFeeParams(f.FeeParams)
 }
 
 func (f *FeeChangeParams) String() string {
@@ -151,43 +166,19 @@ func (f *FeeChangeParams) String() string {
 	return string(bz)
 }
 
-func NewFeeParam(paramType string, params string) (FeeParam, error) {
-	if paramType == OperateFeeType {
-		var fixedFeeParam FixedFeeParams
-		err := json.Unmarshal([]byte(params), &fixedFeeParam)
+func checkFeeParams(fees []FeeParam) error {
+	numDexFeeParams := 0
+	for _, c := range fees {
+		err := c.Check()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return &fixedFeeParam, nil
-	} else if paramType == DexFeeType {
-		var dexFeeParam DexFeeParam
-		err := json.Unmarshal([]byte(params), &dexFeeParam)
-		if err != nil {
-			return nil, err
+		if _, ok := c.(*DexFeeParam); ok {
+			numDexFeeParams++
 		}
-		return &dexFeeParam, nil
 	}
-	// extend other param type here
-	return nil, fmt.Errorf("operate fee type is not found")
-}
-
-func (f *FeeChangeParams) Set(value string) error {
-	values := strings.Split(value, "/")
-	if len(values) != 2 {
-		return fmt.Errorf("The fee({param type}/{param map}) is invalid. Length operate-fee is not equal to 2. ")
+	if numDexFeeParams > 1 {
+		return fmt.Errorf("have more than one DexFeeParam, actural %d", numDexFeeParams)
 	}
-	paramType := values[0]
-	params := values[1]
-	feeParam, err := NewFeeParam(paramType, params)
-	if err != nil {
-		return err
-	}
-	err = feeParam.Check()
-	if err != nil {
-		return err
-	}
-	f.FeeParams = append(f.FeeParams, feeParam)
 	return nil
 }
-
-// Other params
