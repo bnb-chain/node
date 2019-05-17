@@ -21,10 +21,10 @@ const DelayedDaysForDelist = 3
 
 // it is a approximate number to search for proposal, for the precise number is stored in db
 // for now, params are:
-// deposit period: 2 day
+// deposit period: 2 day(mainnet) 14days(testnet)
 // voting period: 14 day
 // delayed days: 3 day
-const DaysToSearchForDelist = 20
+const DaysToSearchForDelist = 40
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
