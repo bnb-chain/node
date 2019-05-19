@@ -207,7 +207,7 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 	return math.MaxInt64, -1
 }
 
-// allocateResidual() assumes toAlloc is less than sum of quantity in orders.
+// allocateResidualDeprecated() assumes toAlloc is less than sum of quantity in orders.
 // It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
 // Due to lotsize change, it is possible the order would not be allocated with a full lot.
 func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
@@ -262,6 +262,7 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 	}
 	return true
 }
+
 
 // totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
 func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
