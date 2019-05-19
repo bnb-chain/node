@@ -59,8 +59,8 @@ type Keeper struct {
 	logger                     tmlog.Logger
 }
 
-func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(basePrice, lotSize, 0.05)
+func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(pairSymbol, basePrice, lotSize, 0.05)
 }
 
 // NewKeeper - Returns the Keeper
@@ -99,8 +99,8 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
+	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
@@ -232,7 +232,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	concurrency := len(tradeOuts)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
-	if engine.Match() {
+	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for _, t := range engine.Trades {
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
@@ -258,6 +258,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
+		engine.Dump()
 		thisRoundIds := kp.roundOrders[symbol]
 		for _, id := range thisRoundIds {
 			msg := orders[id]

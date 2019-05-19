@@ -1,7 +1,11 @@
 package matcheng
 
 import (
+	"encoding/json"
 	"math"
+
+	"github.com/binance-chain/node/common/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 type MatchEng struct {
@@ -21,14 +25,24 @@ type MatchEng struct {
 	leastSurplus    SurplusIndex
 	Trades          []Trade
 	LastTradePrice  int64
+	logger          tmlog.Logger
 }
 
 // NewMatchEng constructs a new MatchEng.
-func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
-	return &MatchEng{Book: NewOrderBookOnULList(10000, 16), LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
-		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
-		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
-		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
+func NewMatchEng(pairSymbol string, basePrice, lotSize int64, priceLimit float64) *MatchEng {
+	return &MatchEng{
+		Book:            NewOrderBookOnULList(10000, 16),
+		LotSize:         lotSize,
+		PriceLimitPct:   priceLimit,
+		overLappedLevel: make([]OverLappedLevel, 0, 16),
+		buyBuf:          make([]PriceLevel, 16),
+		sellBuf:         make([]PriceLevel, 16),
+		maxExec:         LevelIndex{0, make([]int, 8)},
+		leastSurplus:    SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
+		Trades:          make([]Trade, 0, 64),
+		LastTradePrice:  basePrice,
+		logger:          log.With("module", "matcheng", "pair", pairSymbol),
+	}
 }
 
 // fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
@@ -37,7 +51,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	var k, h int
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
-	origBuyPx := me.overLappedLevel[i].Price
 
 	bLength := len(buys)
 	sLength := len(sells)
@@ -64,7 +77,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 					sells[h].Id,
 					me.LastTradePrice,
 					trade,
-					origBuyPx,
 					buys[k].CumQty,
 					sells[h].CumQty,
 					buys[k].Id})
@@ -81,7 +93,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 					sells[h].Id,
 					me.LastTradePrice,
 					trade,
-					origBuyPx,
 					buys[k].CumQty,
 					sells[h].CumQty,
 					buys[k].Id})
@@ -96,7 +107,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 				sells[h].Id,
 				me.LastTradePrice,
 				trade,
-				origBuyPx,
 				buys[k].CumQty,
 				sells[h].CumQty,
 				buys[k].Id})
@@ -152,7 +162,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
-func (me *MatchEng) Match() bool {
+func (me *MatchEng) MatchDeprecated() bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
@@ -207,6 +217,8 @@ func (me *MatchEng) Match() bool {
 	return true
 }
 
+
+
 //DropFilledOrder() would clear the order to remove
 func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 	droppedIds = make([]string, 0, len(me.overLappedLevel)<<1)
@@ -249,4 +261,23 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 		}
 	}
 	return
+}
+
+// TODO: make it better so we can reconstruct the match engine quickly.
+func (me *MatchEng) Dump() {
+	me.logger.Info("engine status", "LotSize", me.LotSize, "PriceLimitPct", me.PriceLimitPct,
+		"LastTradePrice", me.LastTradePrice)
+	buys, sells := me.Book.GetAllLevels()
+
+	if sellsBz, err:= json.MarshalIndent(sells, "", "    "); err != nil {
+		me.logger.Error("marshal sells failed")
+	} else {
+		me.logger.Info(string(sellsBz))
+	}
+
+	if buysBz, err:= json.MarshalIndent(buys, "", "    "); err != nil {
+		me.logger.Error("marshal buys failed")
+	} else {
+		me.logger.Info(string(buysBz))
+	}
 }

@@ -24,7 +24,6 @@ type Trade struct {
 	Sid        string // sell order id
 	LastPx     int64  // execution price
 	LastQty    int64  // execution quantity
-	OrigBuyPx  int64  // original intended price for the trade
 	BuyCumQty  int64  // cumulative executed quantity for the buy order
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
@@ -155,3 +154,38 @@ type OverLappedLevel struct {
 }
 
 type LevelIter func(*PriceLevel)
+
+type MergedPriceLevel struct {
+	price    int64
+	orders   []*OrderPart
+	totalQty int64
+}
+
+func NewMergedPriceLevel(price int64) *MergedPriceLevel {
+	return &MergedPriceLevel{
+		price: price,
+		orders: make([]*OrderPart, 0),
+		totalQty: 0,
+	}
+}
+
+func (l *MergedPriceLevel) AddOrder(order *OrderPart) {
+	l.orders = append(l.orders, order)
+	l.totalQty += order.nxtTrade
+}
+
+func (l *MergedPriceLevel) AddOrders(orders []*OrderPart) {
+	l.orders = append(l.orders, orders...)
+	for _, order := range orders {
+		l.totalQty += order.nxtTrade
+	}
+}
+
+type MakerSideOrders struct {
+	priceLevels []*MergedPriceLevel
+}
+
+type TakerSideOrders struct {
+	*MergedPriceLevel
+}
+
