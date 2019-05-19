@@ -64,9 +64,12 @@ func (tran *Transfer) String() string {
 func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*OrderInfo) (Transfer, Transfer) {
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
 	seller := orderMap[trade.Sid].Sender
-	buyer := orderMap[trade.Bid].Sender
+	buyOrder:= orderMap[trade.Bid]
+	buyer := buyOrder.Sender
+	origBuyPx := buyOrder.Price
+
 	quoteQty := utils.CalBigNotionalInt64(trade.LastPx, trade.LastQty)
-	unlock := utils.CalBigNotionalInt64(trade.OrigBuyPx, trade.BuyCumQty) - utils.CalBigNotionalInt64(trade.OrigBuyPx, trade.BuyCumQty-trade.LastQty)
+	unlock := utils.CalBigNotionalInt64(origBuyPx, trade.BuyCumQty) - utils.CalBigNotionalInt64(origBuyPx, trade.BuyCumQty-trade.LastQty)
 	return Transfer{
 			Oid:        trade.Sid,
 			eventType:  eventFilled,

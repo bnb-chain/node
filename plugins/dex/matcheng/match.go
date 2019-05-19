@@ -44,8 +44,8 @@ func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
 	return s
 }
 
-func prepareMatch(overlapped *[]OverLappedLevel) int {
-	var accu float64
+func prepareMatch( overlapped *[]OverLappedLevel) int {
+	var accum int64
 	k := len(*overlapped)
 	for i := k - 1; i >= 0; i-- {
 		l := &(*overlapped)[i]
@@ -199,58 +199,58 @@ func getTradePrice(overlapped *[]OverLappedLevel, maxExec *LevelIndex,
 // It would try best to evenly allocate toAlloc among orders in proportion of order qty meanwhile by whole lot
 // Due to lotsize change, it is possible the order would not be allocated with a full lot.
 func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
-	if len(orders) == 1 {
-		qty := math.Min(*toAlloc, orders[0].nxtTrade)
+	n := len(orders)
+	if n == 1 {
+		qty := utils.MinInt(*toAlloc, orders[0].nxtTrade)
 		orders[0].nxtTrade = qty
 		*toAlloc -= qty
 		return true
 	}
 
 	t := sumOrdersTotalLeft(orders, false)
-	residual := *toAlloc
-	halfLot := lotSize / 2
-
-	if compareBuy(t, residual) > 0 { // not enough to allocate
-		// It is assumed here toAlloc is lot size rounded, so that the below code
-		// should leave nothing not allocated
-		nLot := residual / lotSize
-		k := len(orders)
-		i := 0
-		for i = 0; i < k; i++ {
-			a := calcNumOfLot(nLot, orders[i].nxtTrade, t) * lotSize // this is supposed to be the main portion
-			if compareBuy(a, residual) >= 0 {
-				orders[i].nxtTrade = residual
-				residual = 0
-				break
-			} else {
-				orders[i].nxtTrade = a
-				residual -= a
-			}
-		}
-		for j := i % k; j < k; j++ {
-			if residual > lotSize { // remainder distribution, every one can only get 1 lot or zero
-				orders[j].nxtTrade += lotSize
-				residual -= lotSize
-				if j == k-1 { //restart from the beginning
-					i = 0
-				}
-			} else { // residual may has odd lot remainder
-				orders[j].nxtTrade += residual
-				residual = 0
-				break
-			}
-		}
-		*toAlloc = residual
-		//assert *toAlloc == 0
-		if compareBuy(*toAlloc, 0) != 0 {
-			return false
-		}
-		return true
-	} else { // t <= *toAlloc
+	if compareBuy(*toAlloc, t) >= 0 {
+		// no need to change order.nxtTrade
 		*toAlloc -= t
 		return true
 	}
+
+	// lot size should never be negative, this is only for some test case use.
+	if lotSize <= 0 {
+		return false
+	}
+
+	residual := *toAlloc
+	// It is assumed here toAlloc is lot size rounded, so that the below code
+	// should leave nothing not allocated
+	nLot := residual / lotSize
+	for i := range orders {
+		nxtTrade := lotSize * calcNumOfLot(nLot, orders[i].nxtTrade, t)
+		// here we already have (here all `residual` refer to the original residual):
+		// 1. residual < totalQty
+		// 2. n >= 2, i.e: order.nxtTrade < totalQty
+		// so we can easily prove:
+		// 1. nxtTrade < residual
+		// 2. sum(nxtTrade) <= residual
+		// 3. nxtTrade < order.nxtTrade
+		orders[i].nxtTrade = nxtTrade
+		residual -= nxtTrade
+	}
+
+	for i := 0; residual > 0; i = (i + 1) % n {
+		order := &orders[i]
+		toAdd := utils.MinInt(order.LeavesQty()-order.nxtTrade, utils.MinInt(residual, lotSize))
+		residual -= toAdd
+		order.nxtTrade += toAdd
+	}
+
+	*toAlloc = residual
+	//assert *toAlloc == 0
+	if compareBuy(*toAlloc, 0) != 0 {
+		return false
+	}
+	return true
 }
+
 
 // totalLot * orderLeft / totalLeft, orderLeft <= totalLeft
 func calcNumOfLot(totalLot, orderLeft, totalLeft int64) int64 {
