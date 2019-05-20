@@ -182,6 +182,8 @@ type OrderInfo struct {
 	LastUpdatedTimestamp int64
 	CumQty               int64
 	TxHash               string
+
+	TxSource int64 // this field is imported as a hard fork (#581), has to be last field to provide storage compatibility
 }
 
 var _ sdk.Msg = CancelOrderMsg{}

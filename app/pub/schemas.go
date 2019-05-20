@@ -33,7 +33,9 @@ const (
 										{ "name": "sfee", "type": "string" },
 										{ "name": "bfee", "type": "string" },
 										{ "name": "saddr", "type": "string" },
-										{ "name": "baddr", "type": "string" }
+										{ "name": "baddr", "type": "string" },
+										{ "name": "ssrc", "type": "long" },
+										{ "name": "bsrc", "type": "long" }
 									]
 								}
 							}

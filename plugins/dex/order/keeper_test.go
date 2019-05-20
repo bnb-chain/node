@@ -85,25 +85,25 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 99000, 3000000)
-	ord := OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord := OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ-000_BNB", 99000, 1000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 99000, 15000000)
-	ord = OrderInfo{msg, 42, 0, 42, 0, 0, ""}
+	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
 	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0)
 	c := channelHash(accAdd, 4)
@@ -202,19 +202,19 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 3000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ-000_BNB", 101000, 1000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
@@ -262,13 +262,13 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg123456 := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 3000000)
-	info123456 := OrderInfo{msg123456, 42, 0, 42, 0, 0, ""}
+	info123456 := OrderInfo{msg123456, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(info123456, false)
 	msg123457 := NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ-000_BNB", 10000, 1000000)
-	info123457 := OrderInfo{msg123457, 42, 0, 42, 0, 0, ""}
+	info123457 := OrderInfo{msg123457, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(info123457, false)
 	msg := NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ-000_BNB", 100000, 2000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}, false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(3, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
@@ -311,7 +311,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 300000)
-	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}, false)
 	keeper.RemoveOrder(msg.Id, msg.Symbol, nil)
 	buys, sells := keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
@@ -498,12 +498,12 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC-000", "BNB", 1e6))
 	keeper.AddEngine(dextypes.NewTradingPair("XYZ-000", "BNB", 1e6))
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC-000_BNB", 1e6, 1e6), 10000, 0, 10000, 0, 0, ""}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC-000_BNB", 2e6, 2e6), 10000, 0, 10000, 0, 0, ""}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "3", Side.BUY, "XYZ-000_BNB", 1e6, 2e6), 10000, 0, 10000, 0, 0, ""}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.SELL, "ABC-000_BNB", 1e6, 1e8), 10000, 0, 10000, 0, 0, ""}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC-000_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, ""}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ-000_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC-000_BNB", 1e6, 1e6), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC-000_BNB", 2e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "3", Side.BUY, "XYZ-000_BNB", 1e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.SELL, "ABC-000_BNB", 1e6, 1e8), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC-000_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ-000_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, "", 0}, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
 		sdk.NewCoin("ABC-000", 3e8),
 		sdk.NewCoin("BNB", 11e4),
@@ -566,7 +566,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 
 	// add an original buy order, waiting to be filled
 	msg := NewNewOrderMsg(zc, ZcAddr+"-0", Side.BUY, "NNB_BNB", 1000000000, 1000000000)
-	orderInfo := OrderInfo{msg, 42, 84, 42, 84, 0, ""}
+	orderInfo := OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
 	res := keeper.GetOpenOrders("NNB_BNB", zc)
 	assert.Equal(1, len(res))
@@ -582,7 +582,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 
 	// add a sell order, partialled fill the buy order
 	msg = NewNewOrderMsg(zz, ZzAddr+"-0", Side.SELL, "NNB_BNB", 900000000, 300000000)
-	orderInfo = OrderInfo{msg, 43, 86, 43, 86, 0, ""}
+	orderInfo = OrderInfo{msg, 43, 86, 43, 86, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
 	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(1, len(res))
@@ -608,7 +608,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 
 	// add another sell order to fully fill original buy order
 	msg = NewNewOrderMsg(zz, ZzAddr+"-1", Side.SELL, "NNB_BNB", 1000000000, 700000000)
-	orderInfo = OrderInfo{msg, 44, 88, 44, 88, 0, ""}
+	orderInfo = OrderInfo{msg, 44, 88, 44, 88, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
 	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(1, len(res))
@@ -657,23 +657,23 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	am.SetAccount(ctx, acc)
 
 	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000_BNB", 3e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000_BNB", 5e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 7e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))

@@ -121,7 +121,7 @@ func TestAppPub_AddOrder(t *testing.T) {
 	assert, require, app, buyerAcc, _ := setupAppTest(t)
 
 	msg := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), "1", orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 3000000)
-	app.DexKeeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, ""}, false)
+	app.DexKeeper.AddOrder(orderPkg.OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}, false)
 	app.EndBlocker(app.DeliverState.Ctx, abci.RequestEndBlock{Height: 42})
 
 	publisher := app.publisher.(*pub.MockMarketDataPublisher)
