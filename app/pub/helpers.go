@@ -352,9 +352,11 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 	if o.Side == orderPkg.Side.BUY {
 		t.BAddr = string(owner.Bytes())
 		t.Bfee = fee
+		t.BSrc = o.TxSource
 	} else {
 		t.SAddr = string(owner.Bytes())
 		t.Sfee = fee
+		t.SSrc = o.TxSource
 	}
 	return res
 }
