@@ -111,9 +111,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "7b2491f5a363b9315f107c1263f85f2f10153ced"
+  revision = "7299e23b11710d77f2e6104ba2095126a79aee7a"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.17"
+  branch = "add-offine-option"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
