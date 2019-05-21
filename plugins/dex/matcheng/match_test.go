@@ -546,25 +546,11 @@ func Test_allocateResidual(t *testing.T) {
 		OrderPart{"3", 100, 6, 0, 6},
 	}
 	toAlloc = 15
-	allocateResidual(&toAlloc, orders, 5)
+	assert.True(allocateResidual(&toAlloc, orders, 5))
 	assert.Equal(int64(1), orders[0].nxtTrade)
 	assert.Equal(int64(9), orders[1].nxtTrade)
 	assert.Equal("2", orders[1].Id)
 	assert.Equal(int64(5), orders[2].nxtTrade)
-	assert.Equal("3", orders[2].Id)
-	assert.Equal(int64(0), toAlloc)
-
-	orders = []OrderPart{
-		OrderPart{"1", 100, 10, 0, 10},
-		OrderPart{"2", 100, 5, 0, 5},
-		OrderPart{"3", 100, 50, 0, 50},
-	}
-	toAlloc = 35
-	allocateResidual(&toAlloc, orders, 5)
-	assert.Equal(int64(10), orders[0].nxtTrade)
-	assert.Equal(int64(0), orders[1].nxtTrade)
-	assert.Equal("2", orders[1].Id)
-	assert.Equal(int64(25), orders[2].nxtTrade)
 	assert.Equal("3", orders[2].Id)
 	assert.Equal(int64(0), toAlloc)
 }
