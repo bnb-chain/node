@@ -36,13 +36,14 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "apiserv")
 			maxOpen := viper.GetInt(flagMaxOpenConnections)
 
-			listener, err := tmserver.Listen(listenAddr, tmserver.Config{MaxOpenConnections: maxOpen})
+			cfg := &tmserver.Config{MaxOpenConnections: maxOpen}
+			listener, err := tmserver.Listen(listenAddr, cfg)
 			if err != nil {
 				return err
 			}
 			go func() {
 				// wrap to handle the error
-				err := tmserver.StartHTTPServer(listener, handler, logger)
+				err := tmserver.StartHTTPServer(listener, handler, logger, cfg)
 				if err != nil {
 					panic(err)
 				}
@@ -51,14 +52,13 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 			logger.Info("REST server started")
 
 			// wait forever and cleanup
-			cmn.TrapSignal(func() {
+			cmn.TrapSignal(logger, func() {
 				err := listener.Close()
 				if err != nil {
 					logger.Error("error closing listener", "err", err)
 				}
 			})
-
-			return nil
+			select {}
 		},
 	}
 

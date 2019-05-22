@@ -15,8 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	"github.com/tendermint/tendermint/abci/server"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/blockchain"
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmcfg "github.com/tendermint/tendermint/config"
@@ -31,31 +29,6 @@ import (
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
-
-// RunForever - BasecoinApp execution and cleanup
-func RunForever(app abci.Application) {
-
-	// Start the ABCI server
-	srv, err := server.NewServer("0.0.0.0:26658", "socket", app)
-	if err != nil {
-		cmn.Exit(err.Error())
-		return
-	}
-	err = srv.Start()
-	if err != nil {
-		cmn.Exit(err.Error())
-		return
-	}
-
-	// Wait forever
-	cmn.TrapSignal(func() {
-		// Cleanup
-		err := srv.Stop()
-		if err != nil {
-			cmn.Exit(err.Error())
-		}
-	})
-}
 
 // If a new config is created, change some of the default tendermint settings
 func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error) {
