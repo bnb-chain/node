@@ -37,12 +37,12 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  branch = "upgrade_from_0301_to_0315"
+  branch = "develop"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "upgrade_tender_0315"
+  branch = "develop"
 
 [[constraint]]
   name = "github.com/btcsuite/btcd"
@@ -88,3 +88,7 @@
 [[constraint]]
   name = "github.com/natefinch/lumberjack"
   version = "2.1.0"
+
+[[prune.project]]
+    name = "github.com/zondax/hid"
+    unused-packages = false

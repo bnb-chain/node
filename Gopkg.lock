@@ -18,14 +18,6 @@
   version = "v1.21.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7736fc6da04620727f8f3aa2ced8d77be8e074a302820937aa5993848c769b27"
-  name = "github.com/ZondaX/hid-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "48b08affede2cea076a3cf13b2e3f72ed262b743"
-
-[[projects]]
   digest = "1:09a7f74eb6bb3c0f14d8926610c87f569c5cff68e978d30e9a3540aeb626fdf0"
   name = "github.com/bartekn/go-bip39"
   packages = ["."]
@@ -63,8 +55,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "upgrade_tender_0315"
-  digest = "1:738c00a82a1a38506bd0939d8873fc14c3fd38a048735c9525871d25b2a11ef5"
+  branch = "develop"
+  digest = "1:509c87a36e9124c759b2e577e40fcbb67903a9dd1d4b3713e72bf4065d2d2181"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -112,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "9ac92cf7aa37f740fc2364fc3243b2f6c024e7ec"
+  revision = "563cb140f00795edd1db86f3956353161c1013cc"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -575,6 +567,14 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  digest = "1:83f5e189eea2baad419a6a410984514266ff690075759c87e9ede596809bd0b8"
+  name = "github.com/tendermint/btcd"
+  packages = ["btcec"]
+  pruneopts = "UT"
+  revision = "80daadac05d1cd29571fccf27002d79667a88b58"
+  version = "v0.1.1"
+
+[[projects]]
   digest = "1:a2318b27cf0fb75eb19db3a31039accaae12ab39786b609ed9d2f79ecbf4367d"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
@@ -593,8 +593,8 @@
   version = "v0.12.0-binance.0"
 
 [[projects]]
-  branch = "upgrade_from_0301_to_0315"
-  digest = "1:beb5319cdffa4643009049d90259287c683e1f824e52d267f7354b2f9c66db22"
+  branch = "develop"
+  digest = "1:2b400bdb8f3290f0e660edfbd316e007839a9f23a59e10f6a31d0de28995e105"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -665,16 +665,33 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "9e40207ceefb39e1e6ee1a4fa7dd768a472ceba8"
+  revision = "500b85f7fa5b745c9c98879314d8ee046815e082"
   source = "github.com/binance-chain/bnc-tendermint"
 
 [[projects]]
-  digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
-  name = "github.com/zondax/ledger-goclient"
+  digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"
+  name = "github.com/zondax/hid"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "302fd402163c34626286195dfa9adac758334acc"
+  version = "v0.9.0"
+
+[[projects]]
+  digest = "1:c14bdb83fff0655bd6d3958aacb8a5cb147c9081761d86023ba936dae7014458"
+  name = "github.com/zondax/ledger-cosmos-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "58598458c11bc0ad1c1b8dac3dc3e11eaf270b79"
-  version = "v0.1.0"
+  revision = "af771e468374cca2f6b3309ecc548ee8c70efb17"
+  source = "https://github.com/binance-chain/ledger-cosmos-go"
+  version = "v0.9.9"
+
+[[projects]]
+  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
+  name = "github.com/zondax/ledger-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
+  version = "v0.9.0"
 
 [[projects]]
   branch = "master"
