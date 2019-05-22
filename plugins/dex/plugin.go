@@ -19,13 +19,6 @@ import (
 const AbciQueryPrefix = "dex"
 const DelayedDaysForDelist = 3
 
-// it is a approximate number to search for proposal, for the precise number is stored in db
-// for now, params are:
-// deposit period: 2 day(mainnet) 14days(testnet)
-// voting period: 14 day
-// delayed days: 3 day
-const DaysToSearchForDelist = 40
-
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
 	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
@@ -95,9 +88,11 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 	logger := bnclog.With("module", "dex")
 
 	symbols := make([]string, 0)
+	periodToSearch := getPeriodToSearch(ctx, govKeeper)
+
 	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
 		// we do not need to search for all proposals
-		if proposal.GetSubmitTime().Add(DaysToSearchForDelist * 24 * time.Hour).Before(blockTime) {
+		if proposal.GetSubmitTime().Add(periodToSearch).Before(blockTime) {
 			return true
 		}
 
@@ -133,4 +128,12 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 		return false
 	})
 	return symbols
+}
+
+func getPeriodToSearch(ctx sdk.Context, govKeeper gov.Keeper) time.Duration {
+	depositParams := govKeeper.GetDepositParams(ctx)
+	govMaxPeriod := depositParams.MaxDepositPeriod + gov.MaxVotingPeriod
+
+	//add 2 days here for we search in breathe block, and the interval of breathe blocks is not exactly one day
+	return govMaxPeriod + ((DelayedDaysForDelist + 2) * 24 * time.Hour)
 }
