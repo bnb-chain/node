@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -485,11 +486,36 @@ func TestDelistEmptyJustification(t *testing.T) {
 	require.Contains(t, err.Error(), "justification should not be empty")
 }
 
+func TestDelistTrueIsDelisted(t *testing.T) {
+	hooks := NewDelistHooks(nil)
+
+	delistParams := gov.DelistTradingPairParams{
+		BaseAssetSymbol:  "BNB",
+		QuoteAssetSymbol: "BTC-2BD",
+		Justification:    "the reason to delist",
+		IsExecuted:       true,
+	}
+
+	delistParamsBz, err := json.Marshal(delistParams)
+	require.Nil(t, err, "marshal delist params error")
+
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  string(delistParamsBz),
+	}
+
+	err = hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "is_executed should be false")
+}
+
 func TestDelistTradingPairDoesNotExist(t *testing.T) {
 	delistParams := gov.DelistTradingPairParams{
 		BaseAssetSymbol:  "BNB",
 		QuoteAssetSymbol: "BTC-2BD",
-		Justification:    "you deserve it",
+		Justification:    "the reason to delist",
+		IsExecuted:       false,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -519,7 +545,8 @@ func TestDelistPrerequisiteTradingPair(t *testing.T) {
 	delistParams := gov.DelistTradingPairParams{
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: types.NativeTokenSymbol,
-		Justification:    "you deserve it",
+		Justification:    "the reason to delist",
+		IsExecuted:       false,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)
@@ -561,7 +588,8 @@ func TestDelistProperTradingPair(t *testing.T) {
 	delistParams := gov.DelistTradingPairParams{
 		BaseAssetSymbol:  ethSymbol,
 		QuoteAssetSymbol: btcSymbol,
-		Justification:    "you deserve it",
+		Justification:    "the reason to delist",
+		IsExecuted:       false,
 	}
 
 	delistParamsBz, err := json.Marshal(delistParams)

@@ -116,6 +116,10 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 		return errors.New("justification should not be empty")
 	}
 
+	if delistParams.IsExecuted {
+		return errors.New("is_executed should be false")
+	}
+
 	if !hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) {
 		return fmt.Errorf("trading pair %s_%s does not exist", delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol)
 	}

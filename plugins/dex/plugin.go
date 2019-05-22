@@ -109,11 +109,25 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 				return false
 			}
 
+			if delistParam.IsExecuted {
+				return false
+			}
+
 			passedTime := proposal.GetVotingStartTime().Add(proposal.GetVotingPeriod())
 			timeToDelist := passedTime.Add(DelayedDaysForDelist * 24 * time.Hour)
-			if timeToDelist.Before(blockTime) && timeToDelist.Add(24*time.Hour).After(blockTime) {
+			if timeToDelist.Before(blockTime) {
 				symbol := utils.Assets2TradingPair(strings.ToUpper(delistParam.BaseAssetSymbol), strings.ToUpper(delistParam.QuoteAssetSymbol))
 				symbols = append(symbols, symbol)
+
+				// update proposal delisted status
+				delistParam.IsExecuted = true
+				bz, err := json.Marshal(delistParam)
+				if err != nil {
+					logger.Error("marshal delist params error", "err", err.Error())
+					return false
+				}
+				proposal.SetDescription(string(bz))
+				govKeeper.SetProposal(ctx, proposal)
 			}
 		}
 		return false
