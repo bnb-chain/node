@@ -105,19 +105,25 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	proposals := msg.Proposals.EssentialMsg()
-	return fmt.Sprintf("height:%d\norders:%s\nproposals:%s\n", msg.Height, orders, proposals)
+	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\n", msg.Height, msg.Timestamp, orders)
 }
 
 func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
+	var nonExpiredOrders []*Order
+	for _, order := range msg.Orders.Orders {
+		if order.Status != orderPkg.Expired {
+			nonExpiredOrders = append(nonExpiredOrders, order)
+		}
+	}
+
 	return &ExecutionResults{
 		msg.Height,
 		msg.Timestamp,
-		msg.NumOfMsgs,
-		trades{},
-		Orders{},
-		Proposals{},
-		StakeUpdates{},
+		msg.Proposals.NumOfMsgs + msg.StakeUpdates.NumOfMsgs + len(nonExpiredOrders),
+		trades{}, // no trades on breathe block
+		Orders{len(nonExpiredOrders), nonExpiredOrders},
+		msg.Proposals,
+		msg.StakeUpdates,
 	}
 }
 
@@ -208,18 +214,15 @@ func (msg *Orders) ToNativeMap() map[string]interface{} {
 }
 
 func (msg *Orders) EssentialMsg() string {
-	stat := make(map[orderPkg.ChangeType]*strings.Builder, 0) // ChangeType -> OrderIds splited by EOL
+	expiredOrders := &strings.Builder{}
 	for _, order := range msg.Orders {
-		if _, ok := stat[order.Status]; !ok {
-			stat[order.Status] = &strings.Builder{}
+		// we only log expired orders in essential file
+		// and publish other types of message via kafka
+		if order.Status == orderPkg.Expired {
+			fmt.Fprintf(expiredOrders, "%s %s %s\n", order.OrderId, order.Owner, order.Fee)
 		}
-		fmt.Fprintf(stat[order.Status], "\n%s", order.OrderId)
 	}
-	var result strings.Builder
-	for changeType, str := range stat {
-		fmt.Fprintf(&result, "%d:%s\n", changeType, str.String())
-	}
-	return result.String()
+	return expiredOrders.String()
 }
 
 type Order struct {
@@ -312,21 +315,6 @@ func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	}
 	native["proposals"] = ps
 	return native
-}
-
-func (msg *Proposals) EssentialMsg() string {
-	stat := make(map[ProposalStatus]*strings.Builder, 0) // ProposalStatus -> OrderIds splited by EOL
-	for _, proposal := range msg.Proposals {
-		if _, ok := stat[proposal.Status]; !ok {
-			stat[proposal.Status] = &strings.Builder{}
-		}
-		fmt.Fprintf(stat[proposal.Status], "\n%d", proposal.Id)
-	}
-	var result strings.Builder
-	for proposalStatus, str := range stat {
-		fmt.Fprintf(&result, "%d:%s\n", proposalStatus, str.String())
-	}
-	return result.String()
 }
 
 type ProposalStatus uint8
