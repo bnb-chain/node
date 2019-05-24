@@ -94,6 +94,9 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cliCtx.GenerateOnly {
+				return utils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
+			}
 			cliCtx.PrintResponse = true
 			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
