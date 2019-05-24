@@ -245,6 +245,18 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
+}
+
+func (app *BinanceChain) registerUpgradeCallBack() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP9, func(ctx sdk.Context) {
+		timeLockFeeParams := []paramtypes.FeeParam{
+			&paramtypes.FixedFeeParams{MsgType: timelock.TimeLockMsg{}.Type(), Fee: param.TimeLockFee, FeeFor: types.FeeForProposer},
+			&paramtypes.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: param.TimeUnlockFee, FeeFor: types.FeeForProposer},
+			&paramtypes.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: param.TimeRelockFee, FeeFor: types.FeeForProposer},
+		}
+		app.ParamHub.UpdateFeeParams(ctx, timeLockFeeParams)
+	})
 }
 
 func (app *BinanceChain) initRunningMode() {

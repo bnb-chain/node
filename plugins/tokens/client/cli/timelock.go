@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	flagLockTime    = "lock-time"
-	flagDescription = "description"
-	flagTimeLockId  = "time-lock-id"
-	flagAddress     = "address"
+	flagLockTime         = "lock-time"
+	flagDescription      = "description"
+	flagTimeLockId       = "time-lock-id"
+	flagAddress          = "address"
+	flagIncreaseAmountTo = "increase-amount-to"
+	flagExtendedLockTime = "extended-lock-time"
 )
 
 func timeLockCmd(cmdr Commander) *cobra.Command {
@@ -76,8 +78,8 @@ func timeRelockCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.timeRelock,
 	}
 
-	cmd.Flags().String(flagAmount, "", "amount of tokens to lock")
-	cmd.Flags().Int64(flagLockTime, 0, "timestamp of lock time(second)")
+	cmd.Flags().String(flagIncreaseAmountTo, "", "amount of tokens to lock")
+	cmd.Flags().Int64(flagExtendedLockTime, 0, "timestamp of lock time(second)")
 	cmd.Flags().String(flagDescription, "", "description of time lock")
 	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
 
@@ -93,7 +95,7 @@ func (c Commander) timeRelock(cmd *cobra.Command, args []string) error {
 
 	timeLockId := viper.GetInt64(flagTimeLockId)
 	if timeLockId < timelock.InitialRecordId {
-		return fmt.Errorf("lock time should not less than %d", timelock.InitialRecordId)
+		return fmt.Errorf("time lock id should not less than %d", timelock.InitialRecordId)
 	}
 
 	description := viper.GetString(flagDescription)
@@ -102,12 +104,12 @@ func (c Commander) timeRelock(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("length of description should be less than %d", timelock.MaxDescriptionLength)
 	}
 
-	amount, err := sdk.ParseCoins(viper.GetString(flagAmount))
+	amount, err := sdk.ParseCoins(viper.GetString(flagIncreaseAmountTo))
 	if err != nil {
 		return err
 	}
 
-	lockTime := viper.GetInt64(flagLockTime)
+	lockTime := viper.GetInt64(flagExtendedLockTime)
 	if lockTime < 0 {
 		return fmt.Errorf("lock time should be positive")
 	}
@@ -149,7 +151,7 @@ func (c Commander) timeUnlock(cmd *cobra.Command, args []string) error {
 
 	timeLockId := viper.GetInt64(flagTimeLockId)
 	if timeLockId < timelock.InitialRecordId {
-		return fmt.Errorf("lock time should not less than %d", timelock.InitialRecordId)
+		return fmt.Errorf("time lock id should not less than %d", timelock.InitialRecordId)
 	}
 
 	// build message
