@@ -687,6 +687,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		len(app.DexKeeper.OrderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
+		"numOfStakeUpdates",
+		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
 		len(accountsToPublish))
 	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
