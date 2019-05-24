@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 )
 
@@ -388,6 +389,9 @@ func TestRightProposal(t *testing.T) {
 }
 
 func TestDelistWrongTypeOfProposal(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 	proposal := gov.TextProposal{
 		ProposalType: gov.ProposalTypeCreateValidator,
@@ -399,7 +403,26 @@ func TestDelistWrongTypeOfProposal(t *testing.T) {
 	}, "should panic here")
 }
 
+func TestDelistBeforeUpgrade(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 2)
+	sdk.UpgradeMgr.SetHeight(1)
+
+	hooks := NewDelistHooks(nil)
+	proposal := gov.TextProposal{
+		ProposalType: gov.ProposalTypeDelistTradingPair,
+		Description:  "nonsense",
+	}
+
+	err := hooks.OnProposalSubmitted(sdk.Context{}, &proposal)
+	require.NotNil(t, err, "err should not be nil")
+
+	require.Contains(t, err.Error(), "proposal type DelistTradingPair is not supported")
+}
+
 func TestDelistBaseAssetEmpty(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 
 	delistParams := gov.DelistTradingPairParams{
@@ -421,6 +444,9 @@ func TestDelistBaseAssetEmpty(t *testing.T) {
 }
 
 func TestDelistQuoteAssetEmpty(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 
 	delistParams := gov.DelistTradingPairParams{
@@ -443,6 +469,9 @@ func TestDelistQuoteAssetEmpty(t *testing.T) {
 }
 
 func TestDelistEqualBaseAssetAndQuoteAsset(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 
 	delistParams := gov.DelistTradingPairParams{
@@ -465,6 +494,9 @@ func TestDelistEqualBaseAssetAndQuoteAsset(t *testing.T) {
 }
 
 func TestDelistEmptyJustification(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 
 	delistParams := gov.DelistTradingPairParams{
@@ -487,6 +519,9 @@ func TestDelistEmptyJustification(t *testing.T) {
 }
 
 func TestDelistTrueIsDelisted(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	hooks := NewDelistHooks(nil)
 
 	delistParams := gov.DelistTradingPairParams{
@@ -511,6 +546,9 @@ func TestDelistTrueIsDelisted(t *testing.T) {
 }
 
 func TestDelistTradingPairDoesNotExist(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	delistParams := gov.DelistTradingPairParams{
 		BaseAssetSymbol:  "BNB",
 		QuoteAssetSymbol: "BTC-2BD",
@@ -539,6 +577,9 @@ func TestDelistTradingPairDoesNotExist(t *testing.T) {
 }
 
 func TestDelistPrerequisiteTradingPair(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	ethSymbol := "ETH-2CD"
 	btcSymbol := "BTC-2BD"
 
@@ -582,6 +623,9 @@ func TestDelistPrerequisiteTradingPair(t *testing.T) {
 }
 
 func TestDelistProperTradingPair(t *testing.T) {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP6, 1)
+	sdk.UpgradeMgr.SetHeight(2)
+
 	ethSymbol := "ETH-2CD"
 	btcSymbol := "BTC-2BD"
 

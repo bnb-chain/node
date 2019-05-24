@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/spf13/viper"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
@@ -45,6 +46,8 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
+# Block height of BEP6 upgrade
+BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -283,10 +286,13 @@ func defaultBaseConfig() *BaseConfig {
 type UpgradeConfig struct {
 	// example
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
+	BEP6Height int64 `mapstructure:"BEP6Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
-	return &UpgradeConfig{}
+	return &UpgradeConfig{
+		BEP6Height: 1,
+	}
 }
 
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {

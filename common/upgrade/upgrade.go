@@ -7,3 +7,5 @@ var Mgr = sdk.UpgradeMgr
 // prefix for the upgrade name
 // bugfix: fix
 // improvement: (maybe bep ?)
+
+const BEP6 = "BEP6"

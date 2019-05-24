@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/tokens"
 )
@@ -92,6 +93,10 @@ var _ gov.GovHooks = DelistHooks{}
 func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
 	if proposal.GetProposalType() != gov.ProposalTypeDelistTradingPair {
 		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
+	}
+
+	if !sdk.IsUpgrade(upgrade.BEP6) {
+		return fmt.Errorf("proposal type %s is not supported", gov.ProposalTypeDelistTradingPair)
 	}
 
 	delistParams := gov.DelistTradingPairParams{}
