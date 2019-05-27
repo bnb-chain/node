@@ -319,8 +319,8 @@ func Test_Split_3(t *testing.T) {
 	fmt.Println(res)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(utils.Fixed8(32e8), buys[0].qty)
-	assert.Equal(utils.Fixed8(10e8), sells[0].qty)
+	assert.Equal(utils.Fixed8(10e8), buys[0].qty)
+	assert.Equal(utils.Fixed8(34e8), sells[0].qty)
 
 	testApp.DexKeeper.UpdateLotSize("BTC-000_BNB", 1e9)
 
@@ -329,6 +329,27 @@ func Test_Split_3(t *testing.T) {
 	// panic: no enough locked tokens to unlock,
 	// oid: 7E4FF4423F1CDF142E915A7A08247381280E78DB-0,
 	// newLocked: -800000000BTC-000, unlock: 1000000000
+
+	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
+	assert.Equal(int64(1e4), lastPx)
+	assert.Equal(2, len(trades))
+
+	buys, sells = GetOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(utils.Fixed8(24e8), sells[0].qty)
+
+	assert.Equal(int64(99998e8), GetAvail(ctx, addr0, "BTC-000"))
+	assert.Equal(int64(100000.00019990e8), GetAvail(ctx, addr0, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
+	assert.Equal(int64(99980e8), GetAvail(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(100000.00079960e8), GetAvail(ctx, addr1, "BNB"))
+	assert.Equal(int64(12e8), GetLocked(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(99988e8), GetAvail(ctx, addr2, "BTC-000"))
+	assert.Equal(int64(100000e8), GetAvail(ctx, addr2, "BNB"))
+	assert.Equal(int64(12e8), GetLocked(ctx, addr2, "BTC-000"))
+	assert.Equal(int64(100010e8), GetAvail(ctx, addr3, "BTC-000"))
+	assert.Equal(int64(99999.99899950e8), GetAvail(ctx, addr3, "BNB"))
+	assert.Equal(int64(0), GetLocked(ctx, addr3, "BTC-000"))
 }
 
 func Test_Split_4(t *testing.T) {
@@ -383,15 +404,12 @@ func Test_Split_4(t *testing.T) {
 	assert.Equal(int64(11000000000000), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(9999999989995), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
-
 	assert.Equal(int64(9000000000000), GetAvail(ctx, addr1, "BTC-000"))
 	assert.Equal(int64(10000000009995), GetAvail(ctx, addr1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr1, "BTC-000"))
-
 	assert.Equal(int64(9000000000000), GetAvail(ctx, addr2, "BTC-000"))
 	assert.Equal(int64(10000000000000), GetAvail(ctx, addr2, "BNB"))
 	assert.Equal(int64(1000000000000), GetLocked(ctx, addr2, "BTC-000"))
-
 	assert.Equal(int64(9000000000000), GetAvail(ctx, addr3, "BTC-000"))
 	assert.Equal(int64(10000000000000), GetAvail(ctx, addr3, "BNB"))
 	assert.Equal(int64(1000000000000), GetLocked(ctx, addr3, "BTC-000"))
