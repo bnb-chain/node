@@ -162,6 +162,31 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 	assert.Equal(orderPkg.Expired, orderChange1.Tpe)
 }
 
+func TestKeeper_DelistWithFee(t *testing.T) {
+	assert, require := setupKeeperTest(t)
+
+	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTE}
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
+
+	require.Len(keeper.OrderChanges, 1)
+	require.Len(keeper.OrderInfosForPub, 1)
+
+	DelistTradingPairForPublish(ctx, keeper, "XYZ-000_BNB")
+
+	require.Len(keeper.OrderChanges, 2)
+	require.Len(keeper.OrderInfosForPub, 1)
+
+	orderChange0 := keeper.OrderChanges[0]
+	orderChange1 := keeper.OrderChanges[1]
+
+	// verify orderChange0 - Ack
+	assert.Equal("1", orderChange0.Id)
+	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
+	// verify orderChange1 - ExpireNoFill
+	assert.Equal("1", orderChange1.Id)
+	assert.Equal(orderPkg.Expired, orderChange1.Tpe)
+}
+
 func Test_IOCPartialExpire(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
