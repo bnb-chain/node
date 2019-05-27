@@ -4,7 +4,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/param/types"
 )
 
@@ -91,7 +90,6 @@ func (keeper *Keeper) registerFeeParamCallBack() {
 }
 
 func (keeper *Keeper) updateFeeCalculator(updates []types.FeeParam) {
-	println("update_calculator ", upgrade.Mgr.GetHeight())
 	fees.UnsetAllCalculators()
 	for _, u := range updates {
 		if u, ok := u.(types.MsgFeeParams); ok {
