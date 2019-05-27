@@ -2,11 +2,15 @@ package timelock
 
 import (
 	"fmt"
+	"sort"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
 	"github.com/tendermint/tendermint/crypto"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -23,6 +27,7 @@ var (
 
 type Keeper struct {
 	ck        bank.Keeper
+	ak        auth.AccountKeeper
 	storeKey  sdk.StoreKey // The key used to access the store from the Context.
 	codespace sdk.CodespaceType
 	cdc       *codec.Codec
@@ -30,10 +35,11 @@ type Keeper struct {
 	pool      *sdk.Pool
 }
 
-func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, codespace sdk.CodespaceType, pool *sdk.Pool) Keeper {
+func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, ak auth.AccountKeeper, codespace sdk.CodespaceType, pool *sdk.Pool) Keeper {
 	logger := bnclog.With("module", "timelock")
 	return Keeper{
 		ck:        ck,
+		ak:        ak,
 		storeKey:  key,
 		codespace: codespace,
 		cdc:       cdc,
@@ -79,7 +85,15 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress) []
 		keeper.cdc.MustUnmarshalBinaryLengthPrefixed(iterator.Value(), &record)
 		records = append(records, record)
 	}
+
+	sort.Sort(TimeLockRecords(records))
+
 	return records
+}
+
+func (keeper Keeper) getTimeLockId(ctx sdk.Context, from sdk.AccAddress) int64 {
+	acc := keeper.ak.GetAccount(ctx, from)
+	return acc.GetSequence()
 }
 
 func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) (TimeLockRecord, sdk.Error) {
@@ -93,10 +107,9 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 		return TimeLockRecord{}, err
 	}
 
-	recordId := ctx.BlockHeader().Time.Unix() // recordId will use timestamp of block header to be deterministic.
+	recordId := keeper.getTimeLockId(ctx, from)
 	_, found := keeper.GetTimeLockRecord(ctx, from, recordId)
 	if found {
-		// this case should be very rare, we can just reject it
 		return TimeLockRecord{}, ErrTimeLockRecordAlreadyExist(DefaultCodespace, from, recordId)
 	}
 

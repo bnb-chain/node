@@ -42,6 +42,7 @@ import (
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	paramtypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -118,6 +119,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 	// set upgrade config
 	app.setUpgradeConfig()
+	app.registerUpgradeCallBack()
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -145,7 +147,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	)
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
-	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, timelock.DefaultCodespace, app.Pool)
+	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
+		timelock.DefaultCodespace, app.Pool)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().

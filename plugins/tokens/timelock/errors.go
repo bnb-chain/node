@@ -58,5 +58,5 @@ func ErrUnknownTimeLock(codespace sdk.CodespaceType, addr sdk.AccAddress, id int
 
 func ErrTimeLockRecordAlreadyExist(codespace sdk.CodespaceType, addr sdk.AccAddress, id int64) sdk.Error {
 	return sdk.NewError(codespace, CodeTimeLockRecordAlreadyExist,
-		fmt.Sprintf("Time lock already exists, address=%s, id=%d, please try again", addr.String(), id))
+		fmt.Sprintf("Time lock already exists, address=%s, id=%d", addr.String(), id))
 }

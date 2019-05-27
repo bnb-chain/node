@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -54,7 +55,8 @@ func MakeKeeper(cdc *wire.Codec) (auth.AccountKeeper, Keeper) {
 	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	ck := bank.NewBaseKeeper(accKeeper)
 	codespacer := sdk.NewCodespacer()
-	keeper := NewKeeper(cdc, common.TimeLockStoreKey, ck, codespacer.RegisterNext(DefaultCodespace), &sdk.Pool{})
+	keeper := NewKeeper(cdc, common.TimeLockStoreKey, ck, accKeeper,
+		codespacer.RegisterNext(DefaultCodespace), &sdk.Pool{})
 	return accKeeper, keeper
 }
 
