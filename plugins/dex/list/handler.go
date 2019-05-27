@@ -79,12 +79,7 @@ func handleList(
 		return types.ErrInvalidProposal(err.Error()).Result()
 	}
 
-	if keeper.PairMapper.Exists(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol) ||
-		keeper.PairMapper.Exists(ctx, msg.QuoteAssetSymbol, msg.BaseAssetSymbol) {
-		return sdk.ErrInvalidCoins("trading pair exists").Result()
-	}
-
-	if err := keeper.PairMapper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+	if err := keeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 

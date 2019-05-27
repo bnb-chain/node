@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/binance-chain/node/plugins/dex/list"
+
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -38,7 +40,6 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
@@ -145,14 +146,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-
-	listHooks := list.NewListHooks(tradingPairMapper, app.TokenMapper)
-	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
-	delistHooks := list.NewDelistHooks(tradingPairMapper)
-	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
-	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
-	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
-
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	// legacy bank route (others moved to plugin init funcs)
@@ -235,6 +228,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
+	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
 	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
@@ -278,6 +272,15 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
+}
+
+func (app *BinanceChain) initGovHooks() {
+	listHooks := list.NewListHooks(app.DexKeeper, app.TokenMapper)
+	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	delistHooks := list.NewDelistHooks(app.DexKeeper)
+	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 }
 
 func (app *BinanceChain) initParams() {

@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
@@ -706,4 +707,57 @@ func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
 
 	expectFees := types.NewFee(sdk.Coins(nil), types.ZeroFee)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
+}
+
+func TestKeeper_CanListTradingPair_Normal(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanListTradingPair(ctx, "AAA-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, types.NativeTokenSymbol, "AAA-000")
+	require.Nil(t, err)
+}
+
+func TestKeeper_CanListTradingPair_Abnormal(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanListTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = keeper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token BBB-000 should be listed against BNB before against AAA-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before listing BBB-000 against AAA-000")
+}
+
+func TestKeeper_CanDelistTradingPair(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanDelistTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "BBB-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "BBB-000", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "BBB-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", "AAA-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
 }

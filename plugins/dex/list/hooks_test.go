@@ -173,7 +173,7 @@ func TestTradingPairExists(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -222,7 +222,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -299,7 +299,7 @@ func TestBaseTokenDoesNotExist(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -326,7 +326,7 @@ func TestQuoteTokenDoesNotExist(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -362,7 +362,7 @@ func TestRightProposal(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
-	hooks := NewListHooks(orderKeeper.PairMapper, tokenMapper)
+	hooks := NewListHooks(orderKeeper, tokenMapper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -566,7 +566,7 @@ func TestDelistTradingPairDoesNotExist(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, _, _ := MakeKeepers(cdc)
-	hooks := NewDelistHooks(orderKeeper.PairMapper)
+	hooks := NewDelistHooks(orderKeeper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -600,7 +600,7 @@ func TestDelistPrerequisiteTradingPair(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, _, _ := MakeKeepers(cdc)
-	hooks := NewDelistHooks(orderKeeper.PairMapper)
+	hooks := NewDelistHooks(orderKeeper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
@@ -646,7 +646,7 @@ func TestDelistProperTradingPair(t *testing.T) {
 
 	cdc := MakeCodec()
 	ms, orderKeeper, _, _ := MakeKeepers(cdc)
-	hooks := NewDelistHooks(orderKeeper.PairMapper)
+	hooks := NewDelistHooks(orderKeeper)
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 

@@ -899,3 +899,70 @@ func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfe
 
 	return transferChs
 }
+
+func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should exist if quote token is not native token
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+		return errors.New("trading pair exists")
+	}
+
+	if baseAsset != types.NativeTokenSymbol &&
+		quoteAsset != types.NativeTokenSymbol {
+
+		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before against %s",
+				baseAsset, quoteAsset)
+		}
+
+		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
+				quoteAsset, baseAsset, quoteAsset)
+		}
+	}
+	return nil
+}
+
+func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should not be delisted if there is any other trading pair exist
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if !kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
+		return fmt.Errorf("trading pair %s_%s does not exist", baseAsset, quoteAsset)
+	}
+
+	if baseAsset != types.NativeTokenSymbol && quoteAsset != types.NativeTokenSymbol {
+		return nil
+	}
+
+	var symbolToCheck string
+	if baseAsset != types.NativeTokenSymbol {
+		symbolToCheck = baseAsset
+	} else {
+		symbolToCheck = quoteAsset
+	}
+
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
+			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
+			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
+				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAsset, quoteAsset)
+		}
+	}
+
+	return nil
+}

@@ -9,18 +9,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
 type ListHooks struct {
-	pairMapper  store.TradingPairMapper
+	orderKeeper *order.Keeper
 	tokenMapper tokens.Mapper
 }
 
-func NewListHooks(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) ListHooks {
+func NewListHooks(orderKeeper *order.Keeper, tokenMapper tokens.Mapper) ListHooks {
 	return ListHooks{
-		pairMapper:  pairMapper,
+		orderKeeper: orderKeeper,
 		tokenMapper: tokenMapper,
 	}
 }
@@ -66,12 +66,7 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("quote token does not exist")
 	}
 
-	if hooks.pairMapper.Exists(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol) ||
-		hooks.pairMapper.Exists(ctx, listParams.QuoteAssetSymbol, listParams.BaseAssetSymbol) {
-		return errors.New("trading pair exists")
-	}
-
-	if err := hooks.pairMapper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+	if err := hooks.orderKeeper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 
@@ -79,12 +74,12 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 }
 
 type DelistHooks struct {
-	pairMapper store.TradingPairMapper
+	orderKeeper *order.Keeper
 }
 
-func NewDelistHooks(pairMapper store.TradingPairMapper) DelistHooks {
+func NewDelistHooks(orderKeeper *order.Keeper) DelistHooks {
 	return DelistHooks{
-		pairMapper: pairMapper,
+		orderKeeper: orderKeeper,
 	}
 }
 
@@ -125,11 +120,7 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 		return errors.New("is_executed should be false")
 	}
 
-	if !hooks.pairMapper.Exists(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol) {
-		return fmt.Errorf("trading pair %s_%s does not exist", delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol)
-	}
-
-	if err := hooks.pairMapper.CanDelistTradingPair(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
+	if err := hooks.orderKeeper.CanDelistTradingPair(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 

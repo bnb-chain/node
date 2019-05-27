@@ -72,7 +72,7 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 	for _, symbol := range symbolsToDelist {
 		logger.Info("Delist trading pair", "symbol", symbol)
 		baseAsset, quoteAsset := utils.TradingPair2AssetsSafe(symbol)
-		err := dexKeeper.PairMapper.CanDelistTradingPair(ctx, baseAsset, quoteAsset)
+		err := dexKeeper.CanDelistTradingPair(ctx, baseAsset, quoteAsset)
 		if err != nil {
 			logger.Error("can not delist trading pair", "symbol", symbol, "err", err.Error())
 			continue
