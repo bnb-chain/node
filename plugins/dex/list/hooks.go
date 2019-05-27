@@ -8,18 +8,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/binance-chain/node/common/upgrade"
+	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
 type ListHooks struct {
-	pairMapper  store.TradingPairMapper
+	orderKeeper *order.Keeper
 	tokenMapper tokens.Mapper
 }
 
-func NewListHooks(pairMapper store.TradingPairMapper, tokenMapper tokens.Mapper) ListHooks {
+func NewListHooks(orderKeeper *order.Keeper, tokenMapper tokens.Mapper) ListHooks {
 	return ListHooks{
-		pairMapper:  pairMapper,
+		orderKeeper: orderKeeper,
 		tokenMapper: tokenMapper,
 	}
 }
@@ -65,12 +66,61 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("quote token does not exist")
 	}
 
-	if hooks.pairMapper.Exists(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol) ||
-		hooks.pairMapper.Exists(ctx, listParams.QuoteAssetSymbol, listParams.BaseAssetSymbol) {
-		return errors.New("trading pair exists")
+	if err := hooks.orderKeeper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+		return err
 	}
 
-	if err := checkPrerequisiteTradingPair(ctx, hooks.pairMapper, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+	return nil
+}
+
+type DelistHooks struct {
+	orderKeeper *order.Keeper
+}
+
+func NewDelistHooks(orderKeeper *order.Keeper) DelistHooks {
+	return DelistHooks{
+		orderKeeper: orderKeeper,
+	}
+}
+
+var _ gov.GovHooks = DelistHooks{}
+
+func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
+	if proposal.GetProposalType() != gov.ProposalTypeDelistTradingPair {
+		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
+	}
+
+	if !sdk.IsUpgrade(upgrade.BEP6) {
+		return fmt.Errorf("proposal type %s is not supported", gov.ProposalTypeDelistTradingPair)
+	}
+
+	delistParams := gov.DelistTradingPairParams{}
+	err := json.Unmarshal([]byte(proposal.GetDescription()), &delistParams)
+	if err != nil {
+		return fmt.Errorf("unmarshal list params error, err=%s", err.Error())
+	}
+
+	if delistParams.BaseAssetSymbol == "" {
+		return errors.New("base asset symbol should not be empty")
+	}
+
+	if delistParams.QuoteAssetSymbol == "" {
+		return errors.New("quote asset symbol should not be empty")
+	}
+
+	if delistParams.BaseAssetSymbol == delistParams.QuoteAssetSymbol {
+		return errors.New("base asset symbol and quote asset symbol should not be the same")
+	}
+
+	if delistParams.Justification == "" {
+		return errors.New("justification should not be empty")
+	}
+
+	if delistParams.IsExecuted {
+		return errors.New("is_executed should be false")
+	}
+
+	if err := hooks.orderKeeper.CanDelistTradingPair(ctx, delistParams.BaseAssetSymbol, delistParams.QuoteAssetSymbol); err != nil {
 		return err
 	}
 

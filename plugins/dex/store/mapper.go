@@ -22,6 +22,7 @@ type TradingPairMapper interface {
 	AddTradingPair(ctx sdk.Context, pair types.TradingPair) error
 	Exists(ctx sdk.Context, baseAsset, quoteAsset string) bool
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
+	DeleteTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64)
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
@@ -58,6 +59,21 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	value := m.encodeTradingPair(pair)
 	store.Set(key, value)
 	ctx.Logger().Info("Added trading pair", "pair", tradeSymbol)
+	return nil
+}
+
+func (m mapper) DeleteTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	symbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	key := []byte(symbol)
+	store := ctx.KVStore(m.key)
+
+	bz := store.Get(key)
+	if bz == nil {
+		return fmt.Errorf("trading pair %s does not exist", symbol)
+	}
+
+	store.Delete(key)
+	ctx.Logger().Info("delete trading pair", "pair", symbol)
 	return nil
 }
 

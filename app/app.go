@@ -141,11 +141,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-	listHooks := list.NewListHooks(tradingPairMapper, app.TokenMapper)
-	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
-	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
-	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
-
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	// legacy bank route (others moved to plugin init funcs)
@@ -228,6 +223,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
+	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
 	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
@@ -236,7 +232,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
-	// upgrade.Mgr.AddUpgradeHeight(,)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -271,6 +267,15 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
+}
+
+func (app *BinanceChain) initGovHooks() {
+	listHooks := list.NewListHooks(app.DexKeeper, app.TokenMapper)
+	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	delistHooks := list.NewDelistHooks(app.DexKeeper)
+	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 }
 
 func (app *BinanceChain) initParams() {
@@ -460,7 +465,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		bnclog.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone

@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ import (
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
@@ -869,4 +871,143 @@ func (kp *Keeper) ClearOrders() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
+}
+
+func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler) {
+	_, ok := kp.engines[symbol]
+	if !ok {
+		kp.logger.Error("delist symbol does not exist", "symbol", symbol)
+		return
+	}
+
+	transferChs := kp.expireAllOrders(ctx, symbol)
+	if transferChs != nil {
+		totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAllocTransHandler)
+		fees.Pool.AddAndCommitFee(fmt.Sprintf("DELIST_%s", symbol), totalFee)
+	}
+
+	delete(kp.engines, symbol)
+	delete(kp.allOrders, symbol)
+	delete(kp.recentPrices, symbol)
+
+	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
+	err := kp.PairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
+	if err != nil {
+		kp.logger.Error("delete trading pair error", "err", err.Error())
+	}
+}
+
+func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
+	orderNum := len(kp.allOrders[symbol])
+	if orderNum == 0 {
+		kp.logger.Info("no orders to expire", "symbol", symbol)
+		return nil
+	}
+
+	concurrency := 1 << kp.poolSize
+	channelSize := orderNum / concurrency
+
+	transferChs := make([]chan Transfer, concurrency)
+	for i := range transferChs {
+		transferChs[i] = make(chan Transfer, channelSize)
+	}
+
+	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
+		_ = engine.Book.RemoveOrders(math.MaxInt64, side, func(ord me.OrderPart) {
+			// gen transfer
+			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
+				h := channelHash(ordMsg.Sender, concurrency)
+				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
+			} else {
+				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
+			}
+		})
+	}
+
+	sideCh := make(chan int8, 2)
+	utils.ConcurrentExecuteAsync(2,
+		func() {
+			sideCh <- me.BUYSIDE
+			sideCh <- me.SELLSIDE
+			close(sideCh)
+		}, func() {
+			for side := range sideCh {
+				engine := kp.engines[symbol]
+				orders := kp.allOrders[symbol]
+				expire(orders, engine, side)
+			}
+		}, func() {
+			for _, transferCh := range transferChs {
+				close(transferCh)
+			}
+		})
+
+	return transferChs
+}
+
+func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should exist if quote token is not native token
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+		return errors.New("trading pair exists")
+	}
+
+	if baseAsset != types.NativeTokenSymbol &&
+		quoteAsset != types.NativeTokenSymbol {
+
+		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before against %s",
+				baseAsset, quoteAsset)
+		}
+
+		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
+				quoteAsset, baseAsset, quoteAsset)
+		}
+	}
+	return nil
+}
+
+func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should not be delisted if there is any other trading pair exist
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if !kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
+		return fmt.Errorf("trading pair %s_%s does not exist", baseAsset, quoteAsset)
+	}
+
+	if baseAsset != types.NativeTokenSymbol && quoteAsset != types.NativeTokenSymbol {
+		return nil
+	}
+
+	var symbolToCheck string
+	if baseAsset != types.NativeTokenSymbol {
+		symbolToCheck = baseAsset
+	} else {
+		symbolToCheck = quoteAsset
+	}
+
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
+			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
+			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
+				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAsset, quoteAsset)
+		}
+	}
+
+	return nil
 }

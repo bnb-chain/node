@@ -2,6 +2,7 @@ package param
 
 import (
 	"fmt"
+
 	"github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 

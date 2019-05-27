@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
@@ -483,8 +484,9 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	wire.RegisterCrypto(cdc)
 	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
+	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, nil, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
@@ -628,4 +630,136 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(0, len(res))
 	res = keeper.GetOpenOrders("NNB_BNB", zz)
 	assert.Equal(0, len(res))
+}
+
+func TestKeeper_DelistTradingPair(t *testing.T) {
+	assert := assert.New(t)
+	ctx, am, keeper := setup()
+	fees.Pool.Clear()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	addr := acc.GetAddress()
+
+	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
+		sdk.NewCoin("BNB", 11e4),
+		sdk.NewCoin("XYZ-000", 4e4),
+	}.Sort())
+
+	acc.(types.NamedAccount).SetCoins(sdk.Coins{
+		sdk.NewCoin("XYZ-000", 4e5),
+	}.Sort())
+
+	am.SetAccount(ctx, acc)
+
+	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000_BNB", 3e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000_BNB", 5e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 7e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, ""}, false)
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
+	assert.Equal(0, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.engines))
+
+	expectFees := types.NewFee(sdk.Coins{
+		sdk.NewCoin("BNB", 10e4),
+		sdk.NewCoin("XYZ-000", 4e5),
+	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
+}
+
+//
+func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+	fees.Pool.Clear()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+
+	tradingPair := dextypes.NewTradingPair("XYZ-001", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.allOrders["XYZ-001_BNB"]))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.DelistTradingPair(ctx, "XYZ-001_BNB", nil)
+	assert.Equal(0, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.engines))
+
+	expectFees := types.NewFee(sdk.Coins(nil), types.ZeroFee)
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
+}
+
+func TestKeeper_CanListTradingPair_Normal(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanListTradingPair(ctx, "AAA-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, types.NativeTokenSymbol, "AAA-000")
+	require.Nil(t, err)
+}
+
+func TestKeeper_CanListTradingPair_Abnormal(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanListTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = keeper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token BBB-000 should be listed against BNB before against AAA-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "BBB-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before listing BBB-000 against AAA-000")
+}
+
+func TestKeeper_CanDelistTradingPair(t *testing.T) {
+	ctx, _, keeper := setup()
+
+	err := keeper.CanDelistTradingPair(ctx, "AAA-000", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "base asset symbol should not be identical to quote asset symbol")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", types.NativeTokenSymbol, 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "BBB-000", types.NativeTokenSymbol)
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "BBB-000", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "BBB-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BBB-000", "AAA-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
 }
