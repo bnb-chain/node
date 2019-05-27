@@ -9,8 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/binance-chain/node/plugins/dex/list"
-
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -40,6 +38,7 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
