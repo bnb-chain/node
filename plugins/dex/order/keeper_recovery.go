@@ -225,7 +225,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 			switch msg := m.(type) {
 			case NewOrderMsg:
 				var txSource int64
-				upgrade.FixTxSourceInOrder(nil, func() {
+				upgrade.UpgradeBEP10(nil, func() {
 					if stdTx, ok := tx.(auth.StdTx); ok {
 						txSource = stdTx.GetSource()
 					} else {

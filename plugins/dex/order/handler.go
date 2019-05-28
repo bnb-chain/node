@@ -158,7 +158,7 @@ func handleNewOrder(
 			height := blockHeader.Height
 			timestamp := blockHeader.Time.UnixNano()
 			var txSource int64
-			upgrade.FixTxSourceInOrder(func() {
+			upgrade.UpgradeBEP10(func() {
 				txSource = 0
 			}, func() {
 				if txSrc, ok := ctx.Value(baseapp.TxSourceKey).(int64); ok {

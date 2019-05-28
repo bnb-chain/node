@@ -291,9 +291,9 @@ func defaultBaseConfig() *BaseConfig {
 type UpgradeConfig struct {
 	// example
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
-	BEP6Height int64 `mapstructure:"BEP6Height"`
+	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height int64 `mapstructure:"BEP9Height"`
-	BEP10Height int64 `mapstructure:"fixTxSourceInOrderHeight"`
+	BEP10Height int64 `mapstructure:"BEP10Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
