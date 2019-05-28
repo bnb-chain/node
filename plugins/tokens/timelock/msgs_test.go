@@ -20,16 +20,6 @@ func TestTimeLockMsg(t *testing.T) {
 		errorCode   sdk.CodeType
 	}{
 		{
-			from:        []byte("abc"),
-			description: "desription",
-			amount: sdk.Coins{
-				sdk.NewCoin("BNB", 2000e8),
-			},
-			lockTime:  1000,
-			pass:      false,
-			errorCode: sdk.CodeInvalidAddress,
-		},
-		{
 			from:        addrs[0],
 			description: "",
 			amount: sdk.Coins{
@@ -122,17 +112,6 @@ func TestTimeRelockMsg(t *testing.T) {
 			lockTime:  1000,
 			pass:      false,
 			errorCode: CodeInvalidTimeLockId,
-		},
-		{
-			from:        []byte("abc"),
-			id:          1,
-			description: "desription",
-			amount: sdk.Coins{
-				sdk.NewCoin("BNB", 2000e8),
-			},
-			lockTime:  1000,
-			pass:      false,
-			errorCode: sdk.CodeInvalidAddress,
 		},
 		{
 			from:        addrs[0],
@@ -235,12 +214,6 @@ func TestTimeUnlockMsg(t *testing.T) {
 			id:        0,
 			pass:      false,
 			errorCode: CodeInvalidTimeLockId,
-		},
-		{
-			from:      []byte("abc"),
-			id:        1,
-			pass:      false,
-			errorCode: sdk.CodeInvalidAddress,
 		},
 		{
 			from:      addrs[0],

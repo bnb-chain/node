@@ -40,10 +40,6 @@ func (msg TimeLockMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetS
 func (msg TimeLockMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeLockMsg) ValidateBasic() sdk.Error {
-	if len(msg.From) != sdk.AddrLen {
-		return sdk.ErrInvalidAddress(msg.From.String())
-	}
-
 	if len(msg.Description) == 0 || len(msg.Description) > MaxDescriptionLength {
 		return ErrInvalidDescription(DefaultCodespace,
 			fmt.Sprintf("length of description(%d) should be larger than 0 and be less than or equal to %d",
@@ -106,10 +102,6 @@ func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidTimeLockId(DefaultCodespace, fmt.Sprintf("time lock id should not be less than %d", InitialRecordId))
 	}
 
-	if len(msg.From) != sdk.AddrLen {
-		return sdk.ErrInvalidAddress(msg.From.String())
-	}
-
 	if len(msg.Description) > MaxDescriptionLength {
 		return ErrInvalidDescription(DefaultCodespace,
 			fmt.Sprintf("length of description(%d) should be less than or equal to %d",
@@ -168,10 +160,6 @@ func (msg TimeUnlockMsg) GetSigners() []sdk.AccAddress           { return []sdk.
 func (msg TimeUnlockMsg) ValidateBasic() sdk.Error {
 	if msg.Id < InitialRecordId {
 		return ErrInvalidTimeLockId(DefaultCodespace, fmt.Sprintf("time lock id should not be less than %d", InitialRecordId))
-	}
-
-	if len(msg.From) != sdk.AddrLen {
-		return sdk.ErrInvalidAddress(msg.From.String())
 	}
 	return nil
 }
