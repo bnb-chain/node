@@ -1,5 +1,15 @@
 # Changelog
 
+
+## 0.5.9
+
+IMPROVEMENTS
+* [rpc] Updated tendermint to make process of websocket request async.
+
+BUG FIXES
+
+* [\#584](https://github.com/binance-chain/node/pull/584) [MatchEngine] Fix minor issues in allocation
+
 ## 0.5.5
 
 IMPROVEMENTS
