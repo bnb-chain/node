@@ -1,5 +1,3 @@
-// +build !race
-
 package app
 
 import (

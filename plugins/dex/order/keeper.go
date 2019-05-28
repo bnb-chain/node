@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	bc "github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -88,8 +89,8 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
-func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	kp.initOrderBook(ctx, blockInterval, daysBack, blockDB, txDB, lastHeight, txDecoder)
+func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *bc.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kp.initOrderBook(ctx, blockInterval, daysBack, blockStore, txDB, lastHeight, txDecoder)
 	kp.InitRecentPrices(ctx)
 }
 
