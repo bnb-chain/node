@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
@@ -16,8 +17,8 @@ const maxTokensLimit = 1000
 const defaultTokensLimit = 100
 const defaultTokensOffset = 0
 
-func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int) ([]types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d", offset, limit), nil)
+func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int, filterOutZeroSupplyToken bool) ([]types.Token, error) {
+	bz, err := ctx.Query(fmt.Sprintf("tokens/list/%d/%d/%s", offset, limit, strconv.FormatBool(filterOutZeroSupplyToken)), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +30,9 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper
 func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type params struct {
-		limit  int
-		offset int
+		limit                    int
+		offset                   int
+		filterOutZeroSupplyToken bool
 	}
 
 	responseType := "application/json"
@@ -45,6 +47,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 	return func(w http.ResponseWriter, r *http.Request) {
 		limitStr := r.FormValue("limit")
 		offsetStr := r.FormValue("offset")
+		filterOutZeroSupplyTokenStr := r.FormValue("filterOutZeroSupplyToken")
 
 		// validate and use limit param
 		limit := defaultTokensLimit
@@ -68,10 +71,16 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			offset = parsed
 		}
 
+		filterOutZeroSupplyToken := true
+		if strings.ToLower(filterOutZeroSupplyTokenStr) == "false" {
+			filterOutZeroSupplyToken = false
+		}
+
 		// collect params
 		params := params{
-			limit:  limit,
-			offset: offset,
+			limit:                    limit,
+			offset:                   offset,
+			filterOutZeroSupplyToken: filterOutZeroSupplyToken,
 		}
 
 		// apply max tokens limit
@@ -79,7 +88,7 @@ func GetTokensReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFu
 			params.limit = maxTokensLimit
 		}
 
-		tokens, err := listAllTokens(ctx, cdc, params.offset, params.limit)
+		tokens, err := listAllTokens(ctx, cdc, params.offset, params.limit, params.filterOutZeroSupplyToken)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

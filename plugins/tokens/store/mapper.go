@@ -28,7 +28,7 @@ type Mapper interface {
 	NewToken(ctx sdk.Context, token types.Token) error
 	Exists(ctx sdk.Context, symbol string) bool
 	ExistsCC(ctx context.CLIContext, symbol string) bool
-	GetTokenList(ctx sdk.Context) Tokens
+	GetTokenList(ctx sdk.Context, filterOutZeroSupplyToken bool) Tokens
 	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
 	// we do not provide the updateToken method
 	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
@@ -72,13 +72,16 @@ func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, 
 	return types.Token{}, fmt.Errorf("token(%v) not found", symbol)
 }
 
-func (m mapper) GetTokenList(ctx sdk.Context) Tokens {
+func (m mapper) GetTokenList(ctx sdk.Context, filterOutZeroSupplyToken bool) Tokens {
 	var res Tokens
 	store := ctx.KVStore(m.key)
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		token := m.decodeToken(iter.Value())
+		if filterOutZeroSupplyToken && token.TotalSupply.ToInt64() == 0 {
+			continue
+		}
 		res = append(res, token)
 	}
 	return res
