@@ -166,7 +166,7 @@ func TestKeeper_DelistWithFee(t *testing.T) {
 	assert, require := setupKeeperTest(t)
 
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTE}
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE"}, false)
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE", 0}, false)
 
 	require.Len(keeper.OrderChanges, 1)
 	require.Len(keeper.OrderInfosForPub, 1)

@@ -15,4 +15,3 @@ const BEP10 = "BEP10"
 func FixTxSourceInOrder(before func(), after func()) {
 	sdk.Upgrade(BEP10, before, nil, after)
 }
-

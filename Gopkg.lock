@@ -56,7 +56,7 @@
 
 [[projects]]
   branch = "release/v0.25.0-binance.18"
-  digest = "1:dcf0dd82d24effc14335caeb94e8d0f13dd51e62e686d0f0f0d85784c4a281e5"
+  digest = "1:165a81aad268efe4db80f60865cbc5dfb83421a88e5011feaa75968bb22f4c80"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -153,6 +153,14 @@
   pruneopts = "UT"
   revision = "44cc805cf13205b55f69e14bcb69867d1ae92f98"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:56058c72bf5072f955ec109a1765aeed9a30f5ec254cfeaea6c4c6861f7c0d2f"
+  name = "github.com/ethereum/go-ethereum"
+  packages = ["common/math"]
+  pruneopts = "T"
+  revision = "4bcc0a37ab70cb79b16893556cffdaad6974e7d8"
+  version = "v1.8.27"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -592,7 +600,7 @@
 
 [[projects]]
   branch = "release/v0.12.0-binance.1"
-  digest = "1:d059e9aff696313113cafc12955cfdf41fae32a7f183334929b846c9fbb3e4b9"
+  digest = "1:08d91456d5668be8a44ae49b376271303c40c02cb169ad1b58ac9dc9359c0dab"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
@@ -601,7 +609,7 @@
 
 [[projects]]
   branch = "release/v0.31.5-binance.0"
-  digest = "1:04d3a35cd2a2e4a6366ecd3b6909ef1a2a67da54e017f1248cab52746dc29e97"
+  digest = "1:dc2205db501620ad7c2be28dec030e1c953ecb05b0010c26271e4f832c171a2e"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -872,6 +880,7 @@
     "github.com/cosmos/cosmos-sdk/x/stake/client/cli",
     "github.com/deathowl/go-metrics-prometheus",
     "github.com/eapache/go-resiliency/breaker",
+    "github.com/ethereum/go-ethereum/common/math",
     "github.com/go-kit/kit/metrics",
     "github.com/go-kit/kit/metrics/prometheus",
     "github.com/golang/go/src/io/ioutil",

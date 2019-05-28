@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"math"
 	"path/filepath"
 	"text/template"
 
@@ -292,6 +293,7 @@ type UpgradeConfig struct {
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
 	BEP6Height int64 `mapstructure:"BEP6Height"`
 	BEP9Height int64 `mapstructure:"BEP9Height"`
+	BEP10Height int64 `mapstructure:"fixTxSourceInOrderHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
