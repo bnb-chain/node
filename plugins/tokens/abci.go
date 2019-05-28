@@ -63,12 +63,12 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 						abciQueryPrefix, path[1]),
 				}
 			}
-			filterOutZeroSupplyToken := true
-			if len(path) == 5 && strings.ToLower(path[4]) == "false" {
-				filterOutZeroSupplyToken = false
+			showZeroSupplyTokens := false
+			if len(path) == 5 && strings.ToLower(path[4]) == "true" {
+				showZeroSupplyTokens = true
 			}
 			ctx := app.GetContextForCheckState()
-			tokens := mapper.GetTokenList(ctx, filterOutZeroSupplyToken)
+			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens)
 			offset, err := strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{
