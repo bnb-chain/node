@@ -59,7 +59,7 @@ func BuildUnsignedTx(builder txbuilder.TxBuilder, acc sdk.Account, msgs []sdk.Ms
 
 func SendOrPrintTx(ctx context.CLIContext, builder txbuilder.TxBuilder, msg sdk.Msg) error {
 	if ctx.GenerateOnly {
-		return txutils.PrintUnsignedStdTx(builder, ctx, []sdk.Msg{msg}, false)
+		return txutils.PrintUnsignedStdTx(builder, ctx, []sdk.Msg{msg})
 	}
 
 	return txutils.CompleteAndBroadcastTxCli(builder, ctx, []sdk.Msg{msg})
