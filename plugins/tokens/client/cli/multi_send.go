@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -99,18 +100,22 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 				return errors.Errorf("The number of coins you want to send(%s) should be positive!", fromCoins.String())
 			}
 
-			// ensure account has enough toCoins
-			account, err := ctx.GetAccount(from)
-			if err != nil {
-				return err
+			if !viper.GetBool(client.FlagOffline) {
+				// ensure account has enough toCoins
+				account, err := ctx.GetAccount(from)
+				if err != nil {
+					return err
+				}
+				if !account.GetCoins().IsGTE(fromCoins) {
+					return errors.Errorf("Address %s doesn't have enough toCoins to pay for this transaction.", from)
+				}
 			}
-
-			if !account.GetCoins().IsGTE(fromCoins) {
-				return errors.Errorf("Address %s doesn't have enough toCoins to pay for this transaction.", from)
-			}
-
 			// build and sign the transaction, then broadcast to Tendermint
 			msg := BuildMultiSendMsg(from, fromCoins, toAddrs, toCoins)
+
+			if ctx.GenerateOnly {
+				return utils.PrintUnsignedStdTx(txBldr, ctx, []sdk.Msg{msg})
+			}
 			return utils.CompleteAndBroadcastTxCli(txBldr, ctx, []sdk.Msg{msg})
 		},
 	}

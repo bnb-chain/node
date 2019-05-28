@@ -183,7 +183,7 @@ func cancelOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			msg := order.NewCancelOrderMsg(from, symbol, refId)
 			if cliCtx.GenerateOnly {
-				return txutils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg}, false)
+				return txutils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
 			}
 
 			err = txutils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
