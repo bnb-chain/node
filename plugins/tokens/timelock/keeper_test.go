@@ -55,7 +55,7 @@ func MakeKeeper(cdc *wire.Codec) (auth.AccountKeeper, Keeper) {
 	ck := bank.NewBaseKeeper(accKeeper)
 	codespacer := sdk.NewCodespacer()
 	keeper := NewKeeper(cdc, common.TimeLockStoreKey, ck, accKeeper,
-		codespacer.RegisterNext(DefaultCodespace), &sdk.Pool{})
+		codespacer.RegisterNext(DefaultCodespace))
 	return accKeeper, keeper
 }
 

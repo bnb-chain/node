@@ -42,7 +42,6 @@ import (
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
-	paramtypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -119,7 +118,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 	// set upgrade config
 	app.setUpgradeConfig()
-	app.registerUpgradeCallBack()
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -148,7 +146,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
-		timelock.DefaultCodespace, app.Pool)
+		timelock.DefaultCodespace)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -249,17 +247,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
-}
-
-func (app *BinanceChain) registerUpgradeCallBack() {
-	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP9, func(ctx sdk.Context) {
-		timeLockFeeParams := []paramtypes.FeeParam{
-			&paramtypes.FixedFeeParams{MsgType: timelock.TimeLockMsg{}.Type(), Fee: param.TimeLockFee, FeeFor: types.FeeForProposer},
-			&paramtypes.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: param.TimeUnlockFee, FeeFor: types.FeeForProposer},
-			&paramtypes.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: param.TimeRelockFee, FeeFor: types.FeeForProposer},
-		}
-		app.ParamHub.UpdateFeeParams(ctx, timeLockFeeParams)
-	})
 }
 
 func (app *BinanceChain) initRunningMode() {

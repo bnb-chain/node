@@ -31,10 +31,9 @@ type Keeper struct {
 	codespace sdk.CodespaceType
 	cdc       *codec.Codec
 	logger    tmlog.Logger
-	pool      *sdk.Pool
 }
 
-func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, ak auth.AccountKeeper, codespace sdk.CodespaceType, pool *sdk.Pool) Keeper {
+func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, ak auth.AccountKeeper, codespace sdk.CodespaceType) Keeper {
 	logger := bnclog.With("module", "timelock")
 	return Keeper{
 		ck:        ck,
@@ -43,7 +42,6 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, ak auth.Accou
 		codespace: codespace,
 		cdc:       cdc,
 		logger:    logger,
-		pool:      pool,
 	}
 }
 
@@ -96,9 +94,10 @@ func (keeper Keeper) getTimeLockId(ctx sdk.Context, from sdk.AccAddress) int64 {
 }
 
 func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description string, amount sdk.Coins, lockTime time.Time) (TimeLockRecord, sdk.Error) {
-	if !lockTime.After(ctx.BlockHeader().Time) {
+	if !lockTime.After(ctx.BlockHeader().Time.Add(MinLockTime)) {
 		return TimeLockRecord{}, ErrInvalidLockTime(DefaultCodespace,
-			fmt.Sprintf("lock time(%s) should be after now(%s)", lockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
+			fmt.Sprintf("lock time(%s) should be %d minute(s) after now(%s)", lockTime.UTC().String(),
+				MinLockTime/time.Minute, ctx.BlockHeader().Time.Add(MinLockTime).UTC().String()))
 	}
 
 	_, err := keeper.ck.SendCoins(ctx, from, TimeLockCoinsAccAddr, amount)
@@ -119,11 +118,6 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 		LockTime:    lockTime,
 	}
 	keeper.setTimeLockRecord(ctx, from, record)
-
-	if ctx.IsDeliverTx() {
-		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
-	}
-
 	return record, nil
 }
 
@@ -144,10 +138,6 @@ func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId i
 	}
 
 	keeper.deleteTimeLockRecord(ctx, from, recordId)
-
-	if ctx.IsDeliverTx() {
-		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
-	}
 	return nil
 }
 
@@ -184,20 +174,15 @@ func (keeper Keeper) TimeRelock(ctx sdk.Context, from sdk.AccAddress, recordId i
 					newRecord.LockTime.UTC().String(), record.LockTime.UTC().String()))
 		}
 
-		if !newRecord.LockTime.After(ctx.BlockHeader().Time) {
+		if !newRecord.LockTime.After(ctx.BlockHeader().Time.Add(MinLockTime)) {
 			return ErrInvalidLockTime(DefaultCodespace,
-				fmt.Sprintf("new lock time(%s) should be after now(%s)",
-					newRecord.LockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
+				fmt.Sprintf("new lock time(%s) should be %d minute(s) after now(%s)",
+					newRecord.LockTime.UTC().String(), MinLockTime/time.Minute, ctx.BlockHeader().Time.Add(MinLockTime).UTC().String()))
 		}
 
 		record.LockTime = newRecord.LockTime
 	}
 
 	keeper.setTimeLockRecord(ctx, from, record)
-
-	if ctx.IsDeliverTx() && !newRecord.Amount.IsZero() {
-		keeper.pool.AddAddrs([]sdk.AccAddress{TimeLockCoinsAccAddr, from})
-	}
-
 	return nil
 }

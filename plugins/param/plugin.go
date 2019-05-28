@@ -7,10 +7,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
@@ -24,10 +27,22 @@ const AbciQueryPrefix = "param"
 func InitPlugin(app app.ChainApp, hub *paramhub.Keeper) {
 	handler := createQueryHandler(hub)
 	app.RegisterQueryHandler(AbciQueryPrefix, handler)
+	RegisterUpgradeBeginBlocker(hub)
 }
 
 func createQueryHandler(keeper *paramhub.Keeper) app.AbciQueryHandler {
 	return createAbciQueryHandler(keeper)
+}
+
+func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP9, func(ctx sdk.Context) {
+		timeLockFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: timelock.TimeLockMsg{}.Type(), Fee: TimeLockFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: TimeUnlockFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: TimeRelockFee, FeeFor: types.FeeForProposer},
+		}
+		paramHub.UpdateFeeParams(ctx, timeLockFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {

@@ -3,6 +3,7 @@ package timelock
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -11,6 +12,7 @@ const (
 	MsgRoute = "timelock"
 
 	MaxDescriptionLength = 128
+	MinLockTime          = 60 * time.Second
 )
 
 var _ sdk.Msg = TimeLockMsg{}
@@ -36,8 +38,10 @@ func (msg TimeLockMsg) Type() string  { return "timeLock" }
 func (msg TimeLockMsg) String() string {
 	return fmt.Sprintf("TimeLock{%s#%v#%v#%v}", msg.From, msg.Description, msg.Amount, msg.LockTime)
 }
-func (msg TimeLockMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
-func (msg TimeLockMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
+func (msg TimeLockMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.From, TimeLockCoinsAccAddr}
+}
+func (msg TimeLockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeLockMsg) ValidateBasic() sdk.Error {
 	if len(msg.Description) == 0 || len(msg.Description) > MaxDescriptionLength {
@@ -94,8 +98,10 @@ func (msg TimeRelockMsg) Type() string  { return "timeRelock" }
 func (msg TimeRelockMsg) String() string {
 	return fmt.Sprintf("TimeRelock{%v#%s#%v#%v#%v}", msg.Id, msg.From, msg.Description, msg.Amount, msg.LockTime)
 }
-func (msg TimeRelockMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
-func (msg TimeRelockMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
+func (msg TimeRelockMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.From, TimeLockCoinsAccAddr}
+}
+func (msg TimeRelockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
 	if msg.Id < InitialRecordId {
@@ -154,8 +160,10 @@ func (msg TimeUnlockMsg) Type() string  { return "timeUnlock" }
 func (msg TimeUnlockMsg) String() string {
 	return fmt.Sprintf("TimeUnlock{%s#%v}", msg.From, msg.Id)
 }
-func (msg TimeUnlockMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
-func (msg TimeUnlockMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
+func (msg TimeUnlockMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.From, TimeLockCoinsAccAddr}
+}
+func (msg TimeUnlockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeUnlockMsg) ValidateBasic() sdk.Error {
 	if msg.Id < InitialRecordId {
