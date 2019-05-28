@@ -54,7 +54,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
-		case "list": // args: ["tokens", "list", <offset>, <limit>, <filterOutZeroSupplyToken>]
+		case "list": // args: ["tokens", "list", <offset>, <limit>, <showZeroSupplyTokens>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
