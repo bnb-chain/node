@@ -1,43 +1,5 @@
 # Changelog
 
-## 0.6.1
-FEATURES
-* [\#605](https://github.com/binance-chain/node/pull/605) [Account] accounts can set flags to turn on memo validation
-
-## 0.6.0
-FEATURES
-* [\#598](https://github.com/binance-chain/node/pull/598) [CLI] don't broadcast time lock related txs to blockchain by default
-* [\#595](https://github.com/binance-chain/node/pull/595) [Pub] publish trade status
-* [\#588](https://github.com/binance-chain/node/pull/588) [CLI] add offline option to all commands which are used to send transactions
-* [\#577](https://github.com/binance-chain/node/pull/577) [Token] add time lock feature
-* [\#575](https://github.com/binance-chain/node/pull/575) [Gov] add delist feature
-* [\#580](https://github.com/binance-chain/node/pull/580) [\#606](https://github.com/binance-chain/node/pull/580) [Match] match engine revision
-
-IMPROVEMENTS
-* [\#611](https://github.com/binance-chain/node/pull/611) [Match] add LastMatchHeight in match engine
-* [\#610](https://github.com/binance-chain/node/pull/610) [Tools] add timelock store in tools
-* [\#607](https://github.com/binance-chain/node/pull/607) [Pub] publish trade and single order update fee for match engine revise
-* [\#600](https://github.com/binance-chain/node/pull/600) [Match] fee calculation change for revised match engine
-* [\#593](https://github.com/binance-chain/node/pull/593) [Config] add store and msg types upgrade config
-* [\#586](https://github.com/binance-chain/node/pull/586) [Deps] upgrade tendermint
-* [\#576](https://github.com/binance-chain/node/pull/576) [Param] apply strict feeparam change proposal check
-* [\#574](https://github.com/binance-chain/node/pull/574) [Deps] remove ledger tags from bnbchaind
-* [\#573](https://github.com/binance-chain/node/pull/573) [Deps] remove indirect dependency btcd in gopkg.toml
-* [\#571](https://github.com/binance-chain/node/pull/571) [CLI] make bnbcli to support ledger
-* [\#568](https://github.com/binance-chain/node/pull/568) [StateSync] parity warp-like state sync
-
-BUG FIXES
-* [\#609](https://github.com/binance-chain/node/pull/609) [StateSync] fix for state sync snapshot command
-* [\#603](https://github.com/binance-chain/node/pull/603) [Dex] hotfix statesync for paramhub change in breathe block is not loaded
-
-DEPENDENCIES
-
-* [\#87](https://github.com/binance-chain/bnc-tendermint/pull/87) [tendermint] upgrade from v0.30.1 to 0.31.5
-
-## 0.5.10
-BUG FIXES
-
-* [\#602](https://github.com/binance-chain/node/pull/602) [StateSync] Fix paramhub change in breathe block is not loaded
 
 ## 0.5.9
 
@@ -47,23 +9,6 @@ IMPROVEMENTS
 BUG FIXES
 
 * [\#584](https://github.com/binance-chain/node/pull/584) [MatchEngine] Fix minor issues in allocation
-
-## 0.5.7
-
-* [\#560](https://github.com/binance-chain/node/pull/560) [Publish] Change published empty msg to error level
-* [\#559](https://github.com/binance-chain/node/pull/559) [Tool] Add Snapshot tool
-* [\#558](https://github.com/binance-chain/node/pull/558) [Testnet] Fix the output from testnet cmd 
-
-## 0.5.6
-
-IMPROVEMENTS
-* [\#466](https://github.com/binance-chain/node/pull/466)  Recover from last running mode when restarts 
-* [\#546](https://github.com/binance-chain/node/pull/546)[Upgrade] Set UpgradeConfig before all other initializations
-* [\#545](https://github.com/binance-chain/node/pull/545)[Publish] Change order creatation time and lastupdate time to nanosecond
-* [\#540](https://github.com/binance-chain/node/pull/540)[Validator] Modify validator query interface
-* [\#535](https://github.com/binance-chain/node/pull/535) [Validator] Upgrade logic for splitting validator address
-* [\#533](https://github.com/binance-chain/node/pull/533) [Publish] Include txhash in published transfers
-
 
 ## 0.5.5
 
