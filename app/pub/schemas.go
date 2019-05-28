@@ -34,8 +34,8 @@ const (
 										{ "name": "bfee", "type": "string" },
 										{ "name": "saddr", "type": "string" },
 										{ "name": "baddr", "type": "string" },
-										{ "name": "ssrc", "type", "long" },
-										{ "name": "bsrc", "type", "long" }
+										{ "name": "ssrc", "type": "long" },
+										{ "name": "bsrc", "type": "long" }
 									]
 								}
 							}

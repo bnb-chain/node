@@ -247,6 +247,7 @@ func (app *BinanceChain) setUpgradeConfig() {
 	// upgrade.Mgr.AddUpgradeHeight(,)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, app.upgradeConfig.BEP10Height)
 }
 
 func (app *BinanceChain) initRunningMode() {
