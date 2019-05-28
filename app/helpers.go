@@ -6,12 +6,12 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
-	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	cosmossrv "github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
@@ -23,8 +23,10 @@ import (
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/snapshot"
 
 	"github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/common"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -160,56 +162,44 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	}
 }
 
-// binance-chain implementation of PruningStrategy
-type KeepRecentAndBreatheBlock struct {
-	breatheBlockInterval int64
-
-	// Keep recent number blocks in case of rollback
-	numRecent int64
-
-	blockStore *blockchain.BlockStore
-
-	blockStoreInitializer sync.Once
-}
-
-func NewKeepRecentAndBreatheBlock(breatheBlockInterval, numRecent int64, config *tmcfg.Config) *KeepRecentAndBreatheBlock {
-	return &KeepRecentAndBreatheBlock{
-		breatheBlockInterval: breatheBlockInterval,
-		numRecent:            numRecent,
-	}
-}
-
-// TODO: must enhance performance!
-func (strategy KeepRecentAndBreatheBlock) ShouldPrune(version, latestVersion int64) bool {
-	// we are replay the possible 1 block diff between state and blockstore db
-	// save this block anyway and don't init strategy's blockStore
-	if cosmossrv.BlockStore == nil {
-		return false
-	}
-
-	// only at this time block store is initialized!
-	// block store has been opened after the start of tendermint node, we have to share same instance of block store
-	strategy.blockStoreInitializer.Do(func() {
-		strategy.blockStore = cosmossrv.BlockStore
-	})
-
-	if version == 1 {
-		return false
-	} else if latestVersion-version < strategy.numRecent {
-		return false
+func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
+	// we should only sync to breathe block height
+	latestBlockHeight := app.LastBlockHeight()
+	var timeOfLatestBlock time.Time
+	if latestBlockHeight == 0 {
+		timeOfLatestBlock = utils.Now()
 	} else {
-		if strategy.breatheBlockInterval > 0 {
-			return version%strategy.breatheBlockInterval != 0
-		} else {
-			lastBlock := strategy.blockStore.LoadBlock(version - 1)
-			block := strategy.blockStore.LoadBlock(version)
-
-			if lastBlock == nil {
-				// this node is a state_synced node, previously block is not synced
-				// so we cannot tell whether this (first) block is breathe block or not
-				return false
-			}
-			return utils.SameDayInUTC(lastBlock.Time, block.Time)
-		}
+		blockDB := baseapp.LoadBlockDB()
+		defer blockDB.Close()
+		blockStore := blockchain.NewBlockStore(blockDB)
+		block := blockStore.LoadBlock(latestBlockHeight)
+		timeOfLatestBlock = block.Time
 	}
+
+	height := app.DexKeeper.GetLastBreatheBlockHeight(
+		app.CheckState.Ctx,
+		latestBlockHeight,
+		timeOfLatestBlock,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack)
+	app.Logger.Info("get last breathe block height", "height", height)
+	return height
+}
+
+func (app *BinanceChain) reInitChain() error {
+	app.DexKeeper.Init(
+		app.CheckState.Ctx,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack,
+		snapshot.Manager().GetBlockStore(),
+		snapshot.Manager().GetTxDB(),
+		app.LastBlockHeight(),
+		app.TxDecoder)
+
+	// init app cache
+	stores := app.GetCommitMultiStore()
+	accountStore := stores.GetKVStore(common.AccountStoreKey)
+	app.SetAccountStoreCache(app.Codec, accountStore, app.baseConfig.AccountCacheSize)
+
+	return nil
 }
