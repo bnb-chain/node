@@ -177,6 +177,22 @@ func ExpireOrdersForPublish(
 	return
 }
 
+func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.Keeper, symbol string) {
+	expireHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
+	var collectorForExpires = func(tran orderPkg.Transfer) {
+		if tran.IsExpire() {
+			expireHolderCh <- orderPkg.ExpireHolder{OrderId: tran.Oid, Reason: orderPkg.Expired}
+		}
+	}
+	dexKeeper.DelistTradingPair(ctx, symbol, collectorForExpires)
+	close(expireHolderCh)
+	wg.Wait()
+	return
+}
+
 // for partial and fully filled order fee
 func collectTradeForPublish(
 	tradesToPublish *[]*Trade,
