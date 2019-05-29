@@ -65,6 +65,10 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc(prefix+"/stake/unbonding_delegations/delegator/{delegatorAddr}", s.handleDelegatorUnbondingDelegationsQueryReq(s.cdc, s.ctx)).
 		Methods("GET")
 
+	// time locks query
+	r.HandleFunc(prefix+"/timelock/timelocks/{address}", s.handleTimeLocksReq(s.cdc, s.ctx)).Methods("GET")
+	r.HandleFunc(prefix+"/timelock/timelock/{address}/{id}", s.handleTimeLockReq(s.cdc, s.ctx)).Methods("GET")
+
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
 

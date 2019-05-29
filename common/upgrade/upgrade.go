@@ -9,3 +9,4 @@ var Mgr = sdk.UpgradeMgr
 // improvement: (maybe bep ?)
 
 const BEP6 = "BEP6"
+const BEP9 = "BEP9"

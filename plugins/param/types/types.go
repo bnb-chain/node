@@ -31,6 +31,9 @@ var (
 		"tokensFreeze":     {},
 		"create_validator": {},
 		"remove_validator": {},
+		"timeLock":         {},
+		"timeUnlock":       {},
+		"timeRelock":       {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
