@@ -5,17 +5,10 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		if !sdk.IsUpgrade(upgrade.BEP9) {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported before height %d", msg,
-				upgrade.Mgr.GetUpgradeHeight(upgrade.BEP9))).Result()
-		}
-
 		switch msg := msg.(type) {
 		case TimeLockMsg:
 			return handleTimeLock(ctx, keeper, msg)
