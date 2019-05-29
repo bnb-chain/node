@@ -292,14 +292,14 @@ type UpgradeConfig struct {
 	// example
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
-	BEP9Height int64 `mapstructure:"BEP9Height"`
+	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
-		BEP6Height: 1,
-		BEP9Height: 1, //TODO change default when update
+		BEP6Height:  1,
+		BEP9Height:  1, //TODO change default when update
 		BEP10Height: math.MaxInt64,
 	}
 }

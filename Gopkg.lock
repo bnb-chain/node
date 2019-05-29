@@ -155,14 +155,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:56058c72bf5072f955ec109a1765aeed9a30f5ec254cfeaea6c4c6861f7c0d2f"
-  name = "github.com/ethereum/go-ethereum"
-  packages = ["common/math"]
-  pruneopts = "T"
-  revision = "4bcc0a37ab70cb79b16893556cffdaad6974e7d8"
-  version = "v1.8.27"
-
-[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -880,7 +872,6 @@
     "github.com/cosmos/cosmos-sdk/x/stake/client/cli",
     "github.com/deathowl/go-metrics-prometheus",
     "github.com/eapache/go-resiliency/breaker",
-    "github.com/ethereum/go-ethereum/common/math",
     "github.com/go-kit/kit/metrics",
     "github.com/go-kit/kit/metrics/prometheus",
     "github.com/golang/go/src/io/ioutil",
