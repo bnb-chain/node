@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 func TestTimeLockMsg(t *testing.T) {
