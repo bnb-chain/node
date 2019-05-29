@@ -270,7 +270,7 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 func NewKafkaMarketDataPublisher(
 	logger log.Logger, dbDir string) (publisher *KafkaMarketDataPublisher) {
 
-	sarama.Logger = saramaLogger{}
+	sarama.Logger = saramaLogger{logger.With("module", "sarama")}
 	publisher = &KafkaMarketDataPublisher{
 		producers:        make(map[string]sarama.SyncProducer),
 		essentialLogPath: filepath.Join(dbDir, essentialLogDir),

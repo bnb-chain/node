@@ -21,7 +21,7 @@ func Test_Success(t *testing.T) {
 	assert, require, pair := setup(t)
 
 	msg := orderPkg.NewNewOrderMsg(buyer, "b-1", orderPkg.Side.BUY, pair, 102000, 3000000)
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, "", 0}, false)
 
 	openOrders := issueMustSuccessQuery(pair, buyer, assert)
 	require.Len(openOrders, 1)
@@ -29,7 +29,7 @@ func Test_Success(t *testing.T) {
 	assert.Equal(expected, openOrders[0])
 
 	msg = orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 1000000)
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 101, 1, 101, 1, 0, ""}, false)
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 101, 1, 101, 1, 0, "", 0}, false)
 
 	openOrders = issueMustSuccessQuery(pair, seller, assert)
 	require.Len(openOrders, 1)
@@ -49,7 +49,7 @@ func Test_Success(t *testing.T) {
 	require.Len(openOrders, 0)
 
 	msg = orderPkg.NewNewOrderMsg(buyer, "b-2", orderPkg.Side.BUY, pair, 104000, 6000000)
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 102, 2, 102, 2, 0, ""}, false)
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 102, 2, 102, 2, 0, "", 0}, false)
 
 	openOrders = issueMustSuccessQuery(pair, buyer, assert)
 	require.Len(openOrders, 2)
@@ -86,7 +86,7 @@ func Test_NonExistAddr(t *testing.T) {
 	assert, _, pair := setup(t)
 
 	msg := orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 3000000)
-	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, ""}, false)
+	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, "", 0}, false)
 
 	openOrders := issueMustSuccessQuery(pair, buyer, assert)
 	assert.Empty(openOrders)
