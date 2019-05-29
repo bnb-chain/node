@@ -3,15 +3,16 @@ package common
 import sdk "github.com/cosmos/cosmos-sdk/types"
 
 const (
-	MainStoreName    = "main"
-	AccountStoreName = "acc"
-	ValAddrStoreName = "val"
-	TokenStoreName   = "tokens"
-	DexStoreName     = "dex"
-	PairStoreName    = "pairs"
-	StakeStoreName   = "stake"
-	ParamsStoreName  = "params"
-	GovStoreName     = "gov"
+	MainStoreName     = "main"
+	AccountStoreName  = "acc"
+	ValAddrStoreName  = "val"
+	TokenStoreName    = "tokens"
+	DexStoreName      = "dex"
+	PairStoreName     = "pairs"
+	StakeStoreName    = "stake"
+	ParamsStoreName   = "params"
+	GovStoreName      = "gov"
+	TimeLockStoreName = "time_lock"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -19,15 +20,16 @@ const (
 
 var (
 	// keys to access the substores
-	MainStoreKey    = sdk.NewKVStoreKey(MainStoreName)
-	AccountStoreKey = sdk.NewKVStoreKey(AccountStoreName)
-	ValAddrStoreKey = sdk.NewKVStoreKey(ValAddrStoreName)
-	TokenStoreKey   = sdk.NewKVStoreKey(TokenStoreName)
-	DexStoreKey     = sdk.NewKVStoreKey(DexStoreName)
-	PairStoreKey    = sdk.NewKVStoreKey(PairStoreName)
-	StakeStoreKey   = sdk.NewKVStoreKey(StakeStoreName)
-	ParamsStoreKey  = sdk.NewKVStoreKey(ParamsStoreName)
-	GovStoreKey     = sdk.NewKVStoreKey(GovStoreName)
+	MainStoreKey     = sdk.NewKVStoreKey(MainStoreName)
+	AccountStoreKey  = sdk.NewKVStoreKey(AccountStoreName)
+	ValAddrStoreKey  = sdk.NewKVStoreKey(ValAddrStoreName)
+	TokenStoreKey    = sdk.NewKVStoreKey(TokenStoreName)
+	DexStoreKey      = sdk.NewKVStoreKey(DexStoreName)
+	PairStoreKey     = sdk.NewKVStoreKey(PairStoreName)
+	StakeStoreKey    = sdk.NewKVStoreKey(StakeStoreName)
+	ParamsStoreKey   = sdk.NewKVStoreKey(ParamsStoreName)
+	GovStoreKey      = sdk.NewKVStoreKey(GovStoreName)
+	TimeLockStoreKey = sdk.NewKVStoreKey(TimeLockStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
@@ -42,6 +44,7 @@ var (
 		StakeStoreName:           StakeStoreKey,
 		ParamsStoreName:          ParamsStoreKey,
 		GovStoreName:             GovStoreKey,
+		TimeLockStoreName:        TimeLockStoreKey,
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 	}
@@ -56,5 +59,6 @@ var (
 		StakeStoreName,
 		ParamsStoreName,
 		GovStoreName,
+		TimeLockStoreName,
 	}
 )

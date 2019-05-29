@@ -48,6 +48,8 @@ breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 [upgrade]
 # Block height of BEP6 upgrade
 BEP6Height = {{ .UpgradeConfig.BEP6Height }}
+# Block height of BEP9 upgrade
+BEP9Height = {{ .UpgradeConfig.BEP9Height }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -287,11 +289,13 @@ type UpgradeConfig struct {
 	// example
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
 	BEP6Height int64 `mapstructure:"BEP6Height"`
+	BEP9Height int64 `mapstructure:"BEP9Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
 		BEP6Height: 1,
+		BEP9Height: 1, //TODO change default when update
 	}
 }
 

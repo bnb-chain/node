@@ -42,6 +42,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -73,13 +74,14 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper    bank.Keeper
-	DexKeeper     *dex.DexKeeper
-	AccountKeeper auth.AccountKeeper
-	TokenMapper   tkstore.Mapper
-	ValAddrCache  *ValAddrCache
-	stakeKeeper   stake.Keeper
-	govKeeper     gov.Keeper
+	CoinKeeper     bank.Keeper
+	DexKeeper      *dex.DexKeeper
+	AccountKeeper  auth.AccountKeeper
+	TokenMapper    tkstore.Mapper
+	ValAddrCache   *ValAddrCache
+	stakeKeeper    stake.Keeper
+	govKeeper      gov.Keeper
+	timeLockKeeper timelock.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -141,6 +143,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	)
 	app.ParamHub.SetGovKeeper(app.govKeeper)
 
+	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
+		timelock.DefaultCodespace)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -149,6 +154,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
+	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
+
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
@@ -197,6 +204,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
 		common.GovStoreKey,
+		common.TimeLockStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -235,6 +243,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -272,7 +281,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 }
