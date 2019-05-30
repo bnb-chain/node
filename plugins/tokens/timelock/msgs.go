@@ -6,6 +6,8 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 const (
@@ -44,6 +46,11 @@ func (msg TimeLockMsg) GetInvolvedAddresses() []sdk.AccAddress {
 func (msg TimeLockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeLockMsg) ValidateBasic() sdk.Error {
+	if !sdk.IsUpgrade(upgrade.BEP9) {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported before height %d",
+			msg, upgrade.Mgr.GetUpgradeHeight(upgrade.BEP9)))
+	}
+
 	if len(msg.Description) == 0 || len(msg.Description) > MaxDescriptionLength {
 		return ErrInvalidDescription(DefaultCodespace,
 			fmt.Sprintf("length of description(%d) should be larger than 0 and be less than or equal to %d",
@@ -104,6 +111,11 @@ func (msg TimeRelockMsg) GetInvolvedAddresses() []sdk.AccAddress {
 func (msg TimeRelockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
+	if !sdk.IsUpgrade(upgrade.BEP9) {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported before height %d",
+			msg, upgrade.Mgr.GetUpgradeHeight(upgrade.BEP9)))
+	}
+
 	if msg.Id < InitialRecordId {
 		return ErrInvalidTimeLockId(DefaultCodespace, fmt.Sprintf("time lock id should not be less than %d", InitialRecordId))
 	}
@@ -166,6 +178,11 @@ func (msg TimeUnlockMsg) GetInvolvedAddresses() []sdk.AccAddress {
 func (msg TimeUnlockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
 func (msg TimeUnlockMsg) ValidateBasic() sdk.Error {
+	if !sdk.IsUpgrade(upgrade.BEP9) {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("msg type %T is not supported before height %d",
+			msg, upgrade.Mgr.GetUpgradeHeight(upgrade.BEP9)))
+	}
+
 	if msg.Id < InitialRecordId {
 		return ErrInvalidTimeLockId(DefaultCodespace, fmt.Sprintf("time lock id should not be less than %d", InitialRecordId))
 	}

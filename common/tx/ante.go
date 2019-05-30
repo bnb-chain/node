@@ -316,7 +316,8 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 
 	fee, err := calculateFees(msg)
 	if err != nil {
-		panic(err)
+		ctx.Logger().Error("calculate fees error", "err", err.Error())
+		return sdk.ErrInternal("calculate fees error").Result()
 	}
 
 	if fee.Type != types.FeeFree && !fee.Tokens.IsZero() {
