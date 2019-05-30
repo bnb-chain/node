@@ -299,7 +299,7 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
 		BEP6Height:  1,
-		BEP9Height:  10000000, //TODO change default when update
+		BEP9Height:  1, //TODO change default when update
 		BEP10Height: math.MaxInt64,
 	}
 }
