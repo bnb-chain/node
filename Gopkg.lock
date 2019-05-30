@@ -56,7 +56,7 @@
 
 [[projects]]
   branch = "add_store_config"
-  digest = "1:12bcd0857bcc5bccabcfac9a1eafdf9a95d52c494bbf36e154e3dd2cc6099f80"
+  digest = "1:46dfefee17a2187911663eb9d069c35ae53afe05d1e37b1e635cc543a7c92475"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -104,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "44ad7f1128b448972617abc4edec1cf85012abb1"
+  revision = "be4c0eb7f96a581f351c13342cf6c1daa086f00a"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
