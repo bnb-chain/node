@@ -7,14 +7,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 func TestTimeLockMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 1)
-	sdk.UpgradeMgr.SetHeight(2)
 
 	tests := []struct {
 		from        sdk.AccAddress
@@ -96,54 +92,7 @@ func TestTimeLockMsg(t *testing.T) {
 	}
 }
 
-func TestTimeLockMsgUnsupported(t *testing.T) {
-	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 2)
-	sdk.UpgradeMgr.SetHeight(1)
-
-	tests := []struct {
-		from        sdk.AccAddress
-		description string
-		amount      sdk.Coins
-		lockTime    int64
-		pass        bool
-		errorCode   sdk.CodeType
-	}{
-		{
-			from:        addrs[0],
-			description: strings.Repeat("d", 120),
-			amount: sdk.Coins{
-				sdk.NewCoin("ANB", 2000e8),
-				sdk.NewCoin("BNB", 2000e8),
-			},
-			lockTime:  1000,
-			pass:      false,
-			errorCode: sdk.CodeUnknownRequest,
-		},
-	}
-
-	for i, tc := range tests {
-		msg := TimeLockMsg{
-			From:        tc.from,
-			Description: tc.description,
-			Amount:      tc.amount,
-			LockTime:    tc.lockTime,
-		}
-
-		err := msg.ValidateBasic()
-		if tc.pass {
-			require.Nil(t, err, "test: %v", i)
-		} else {
-			require.NotNil(t, err, "test: %v", i)
-			require.Equal(t, err.Code(), tc.errorCode)
-		}
-	}
-}
-
 func TestTimeRelockMsg(t *testing.T) {
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 1)
-	sdk.UpgradeMgr.SetHeight(2)
-
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 	tests := []struct {
 		from        sdk.AccAddress
@@ -253,57 +202,7 @@ func TestTimeRelockMsg(t *testing.T) {
 	}
 }
 
-func TestTimeRelockMsgUnsupported(t *testing.T) {
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 2)
-	sdk.UpgradeMgr.SetHeight(1)
-
-	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
-	tests := []struct {
-		from        sdk.AccAddress
-		id          int64
-		description string
-		amount      sdk.Coins
-		lockTime    int64
-		pass        bool
-		errorCode   sdk.CodeType
-	}{
-		{
-			from:        addrs[0],
-			id:          1,
-			description: strings.Repeat("d", 120),
-			amount: sdk.Coins{
-				sdk.NewCoin("ANB", 2000e8),
-				sdk.NewCoin("BNB", 2000e8),
-			},
-			lockTime:  1000,
-			pass:      false,
-			errorCode: sdk.CodeUnknownRequest,
-		},
-	}
-
-	for i, tc := range tests {
-		msg := TimeRelockMsg{
-			From:        tc.from,
-			Id:          tc.id,
-			Description: tc.description,
-			Amount:      tc.amount,
-			LockTime:    tc.lockTime,
-		}
-
-		err := msg.ValidateBasic()
-		if tc.pass {
-			require.Nil(t, err, "test: %v", i)
-		} else {
-			require.NotNil(t, err, "test: %v", i)
-			require.Equal(t, err.Code(), tc.errorCode)
-		}
-	}
-}
-
 func TestTimeUnlockMsg(t *testing.T) {
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 1)
-	sdk.UpgradeMgr.SetHeight(2)
-
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 	tests := []struct {
 		from      sdk.AccAddress
@@ -322,41 +221,6 @@ func TestTimeUnlockMsg(t *testing.T) {
 			id:        1,
 			pass:      true,
 			errorCode: sdk.CodeType(0),
-		},
-	}
-
-	for i, tc := range tests {
-		msg := TimeUnlockMsg{
-			From: tc.from,
-			Id:   tc.id,
-		}
-
-		err := msg.ValidateBasic()
-		if tc.pass {
-			require.Nil(t, err, "test: %v", i)
-		} else {
-			require.NotNil(t, err, "test: %v", i)
-			require.Equal(t, err.Code(), tc.errorCode)
-		}
-	}
-}
-
-func TestTimeUnlockMsgUnsupported(t *testing.T) {
-	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.BEP9, 2)
-	sdk.UpgradeMgr.SetHeight(1)
-
-	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
-	tests := []struct {
-		from      sdk.AccAddress
-		id        int64
-		pass      bool
-		errorCode sdk.CodeType
-	}{
-		{
-			from:      addrs[0],
-			id:        1,
-			pass:      false,
-			errorCode: sdk.CodeUnknownRequest,
 		},
 	}
 

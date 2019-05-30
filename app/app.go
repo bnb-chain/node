@@ -250,6 +250,10 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, app.upgradeConfig.BEP10Height)
 
 	upgrade.Mgr.RegisterStoreKey(upgrade.BEP9, common.TimeLockStoreKey.Name())
+
+	upgrade.Mgr.RegisterMsgType(upgrade.BEP9, timelock.TimeLockMsg{}.Type())
+	upgrade.Mgr.RegisterMsgType(upgrade.BEP9, timelock.TimeRelockMsg{}.Type())
+	upgrade.Mgr.RegisterMsgType(upgrade.BEP9, timelock.TimeUnlockMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {
