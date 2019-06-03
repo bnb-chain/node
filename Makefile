@@ -14,7 +14,7 @@ TENDER_RELEASE := $(shell grep 'github.com/tendermint/tendermint' Gopkg.toml -n2
 
 BUILD_TAGS = netgo
 BUILD_CLI_TAGS = netgo
-BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-w -s -X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 BUILD_CLI_FLAGS = -tags "${BUILD_CLI_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 # Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
 BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
