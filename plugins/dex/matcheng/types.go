@@ -15,6 +15,16 @@ const (
 // PRECISION is the last effective decimal digit of the price of currency pair
 const PRECISION = 1
 
+// Trade status
+const (
+	Unknown = iota
+	SellTaker
+	BuyTaker
+	BuySurplus
+	SellSurplus
+	Neutral
+)
+
 //Trade stores an execution between 2 orders on a *currency pair*.
 //3 things needs attention:
 // - srcId and oid are just different names; actually no concept of source or destination;
@@ -27,6 +37,7 @@ type Trade struct {
 	BuyCumQty  int64  // cumulative executed quantity for the buy order
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
+	Status     int8
 }
 
 type OrderPart struct {
@@ -163,8 +174,8 @@ type MergedPriceLevel struct {
 
 func NewMergedPriceLevel(price int64) *MergedPriceLevel {
 	return &MergedPriceLevel{
-		price: price,
-		orders: make([]*OrderPart, 0),
+		price:    price,
+		orders:   make([]*OrderPart, 0),
 		totalQty: 0,
 	}
 }
@@ -188,4 +199,3 @@ type MakerSideOrders struct {
 type TakerSideOrders struct {
 	*MergedPriceLevel
 }
-

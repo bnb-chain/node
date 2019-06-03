@@ -79,7 +79,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 					trade,
 					buys[k].CumQty,
 					sells[h].CumQty,
-					buys[k].Id})
+					buys[k].Id,
+					Unknown})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -95,7 +96,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 					trade,
 					buys[k].CumQty,
 					sells[h].CumQty,
-					buys[k].Id})
+					buys[k].Id,
+					Unknown})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -109,7 +111,8 @@ func (me *MatchEng) fillOrders(i int, j int) {
 				trade,
 				buys[k].CumQty,
 				sells[h].CumQty,
-				buys[k].Id})
+				buys[k].Id,
+				Unknown})
 			h++
 			k++
 		}
@@ -217,8 +220,6 @@ func (me *MatchEng) MatchDeprecated() bool {
 	return true
 }
 
-
-
 //DropFilledOrder() would clear the order to remove
 func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 	droppedIds = make([]string, 0, len(me.overLappedLevel)<<1)
@@ -269,13 +270,13 @@ func (me *MatchEng) Dump() {
 		"LastTradePrice", me.LastTradePrice)
 	buys, sells := me.Book.GetAllLevels()
 
-	if sellsBz, err:= json.MarshalIndent(sells, "", "    "); err != nil {
+	if sellsBz, err := json.MarshalIndent(sells, "", "    "); err != nil {
 		me.logger.Error("marshal sells failed")
 	} else {
 		me.logger.Info(string(sellsBz))
 	}
 
-	if buysBz, err:= json.MarshalIndent(buys, "", "    "); err != nil {
+	if buysBz, err := json.MarshalIndent(buys, "", "    "); err != nil {
 		me.logger.Error("marshal buys failed")
 	} else {
 		me.logger.Info(string(buysBz))

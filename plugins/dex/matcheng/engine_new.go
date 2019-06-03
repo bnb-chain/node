@@ -26,6 +26,7 @@ func (me *MatchEng) Match(height int64) bool {
 		return false
 	}
 	me.LastTradePrice = tradePrice
+	surplus := me.overLappedLevel[index].BuySellSurplus
 
 	// 1. drop redundant qty
 	// 2. rearrange the orders by their trade price and time.
@@ -39,7 +40,7 @@ func (me *MatchEng) Match(height int64) bool {
 		me.logger.Error("create MakerTakerOrders failed", "error", err)
 		return false
 	}
-	me.fillOrdersNew(makerTakerOrders)
+	me.fillOrdersNew(makerTakerOrders, surplus)
 	return true
 }
 
@@ -224,7 +225,7 @@ func mergeOnePriceLevel(side int8, height int64, priceLevel *OverLappedLevel,
 	}
 }
 
-func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders) {
+func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus int64) {
 	takers := makerTakerOrders.takerSide.orders
 	totalTakerQty := makerTakerOrders.takerSide.totalQty
 	nTakers := len(takers)
@@ -260,12 +261,25 @@ func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders) {
 				LastPx:  makerLevel.price,
 				LastQty: filledQty,
 			}
+			if surplus < 0 {
+				trade.Status = SellSurplus
+			} else if surplus > 0 {
+				trade.Status = BuySurplus
+			} else {
+				trade.Status = Neutral
+			}
 			if makerTakerOrders.isBuySideMaker {
 				trade.Sid, trade.Bid = taker.Id, maker.Id
 				trade.SellCumQty, trade.BuyCumQty = taker.CumQty, maker.CumQty
+				if maker.Time < taker.Time {
+					trade.Status = SellTaker
+				}
 			} else {
 				trade.Sid, trade.Bid = maker.Id, taker.Id
 				trade.SellCumQty, trade.BuyCumQty = maker.CumQty, taker.CumQty
+				if maker.Time < taker.Time {
+					trade.Status = BuyTaker
+				}
 			}
 			me.Trades = append(me.Trades, trade)
 		}
