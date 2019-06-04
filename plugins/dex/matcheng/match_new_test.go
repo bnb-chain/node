@@ -383,7 +383,8 @@ func Test_calcFillQty(t *testing.T) {
 	takers := []*OrderPart{
 		{"1", 100, 1800, 900, 900},
 	}
-	toFillQty := calcFillQty(600, takers, []int64{900}, 900, 5)
+	toFillQty := make([]int64, len(takers))
+	calcFillQty(toFillQty, 600, takers, []int64{900}, 900, 5)
 	assert.Equal(int64(900), takers[0].nxtTrade)
 	assert.Equal([]int64{600}, toFillQty)
 
@@ -393,7 +394,8 @@ func Test_calcFillQty(t *testing.T) {
 		{"2", 100, 300, 0, 300},
 		{"3", 100, 600, 0, 600},
 	}
-	toFillQty = calcFillQty(600, takers, []int64{900, 300, 600}, 1800, 5)
+	toFillQty = make([]int64, len(takers))
+	calcFillQty(toFillQty, 600, takers, []int64{900, 300, 600}, 1800, 5)
 	assert.Equal("1", takers[0].Id)
 	assert.Equal(int64(900), takers[0].nxtTrade)
 	assert.Equal("2", takers[1].Id)
@@ -401,13 +403,13 @@ func Test_calcFillQty(t *testing.T) {
 	assert.Equal(int64(600), takers[2].nxtTrade)
 	assert.Equal([]int64{300, 100, 200}, toFillQty)
 
-	toFillQty = calcFillQty(500, takers, []int64{900, 300, 600}, 1800, 5)
+	calcFillQty(toFillQty, 500, takers, []int64{900, 300, 600}, 1800, 5)
 	assert.Equal([]int64{255, 80, 165}, toFillQty)
 
-	toFillQty = calcFillQty(25, takers, []int64{900, 300, 600}, 1800, 5)
+	calcFillQty(toFillQty, 25, takers, []int64{900, 300, 600}, 1800, 5)
 	assert.Equal([]int64{15, 5, 5}, toFillQty)
 
-	toFillQty = calcFillQty(35, takers, []int64{900, 300, 600}, 1800, 5)
+	calcFillQty(toFillQty, 35, takers, []int64{900, 300, 600}, 1800, 5)
 	assert.Equal([]int64{20, 5, 10}, toFillQty)
 
 	takers = []*OrderPart{
@@ -415,7 +417,7 @@ func Test_calcFillQty(t *testing.T) {
 		{"2", 100, 900, 0, 900},
 		{"3", 100, 900, 0, 900},
 	}
-	toFillQty = calcFillQty(700, takers, []int64{900, 900, 900}, 2700, 5)
+	calcFillQty(toFillQty, 700, takers, []int64{900, 900, 900}, 2700, 5)
 	assert.Equal([]int64{235, 235, 230}, toFillQty)
 
 	takers = []*OrderPart{
@@ -423,7 +425,7 @@ func Test_calcFillQty(t *testing.T) {
 		{"2", 100, 10, 0, 10},
 		{"3", 100, 6, 0, 6},
 	}
-	toFillQty = calcFillQty(15, takers, []int64{1, 10, 6}, 17, 5)
+	calcFillQty(toFillQty, 15, takers, []int64{1, 10, 6}, 17, 5)
 	assert.Equal([]int64{1, 9, 5}, toFillQty)
 
 	takers = []*OrderPart{
@@ -431,561 +433,293 @@ func Test_calcFillQty(t *testing.T) {
 		{"2", 100, 5, 0, 5},
 		{"3", 100, 50, 0, 50},
 	}
-	toFillQty = calcFillQty(35, takers, []int64{10, 5, 50}, 65, 5)
+	calcFillQty(toFillQty, 35, takers, []int64{10, 5, 50}, 65, 5)
 	assert.Equal([]int64{10, 0, 25}, toFillQty)
 }
 
-func Test_mergeOnePriceLevel(t *testing.T) {
+func TestMatchEng_determineTakerSide(t *testing.T) {
+	assert := assert.New(t)
+	me := NewMatchEng(DefaultPairSymbol, 100, 5, 0.05)
+	me.overLappedLevel = []OverLappedLevel{{
+		Price: 1200,
+		BuyOrders: []OrderPart{
+			{"1", 100, 100, 0, 100},
+			{"3", 100, 100, 0, 100},
+		},
+		SellOrders: []OrderPart{
+			{"2", 99, 100, 0, 100},
+			{"4", 99, 100, 0, 100},
+			{"6", 100, 100, 0, 100},
+		},
+	}, {
+		Price: 1100,
+		// BuyOrders is empty
+		BuyOrders: []OrderPart{},
+		SellOrders: []OrderPart{
+			{"8", 99, 100, 0, 100},
+		},
+	}, {
+		Price: 1000,
+		BuyOrders: []OrderPart{
+			{"5", 99, 100, 0, 100},
+			{"7", 99, 100, 0, 100},
+			{"9", 100, 100, 0, 100},
+		},
+		// SellOrders is nil
+	}, {
+		Price: 900,
+		BuyOrders: []OrderPart{
+			{"11", 99, 100, 0, 100},
+		},
+		SellOrders: []OrderPart{
+			{"10", 100, 100, 0, 100},
+		},
+	}}
+
+	checkAndClear := func(l *OverLappedLevel, buyTakerStartIdx int, buyMakerTotal int64, sellTakerStartIdx int, sellMakerTotal int64) {
+		assert.Equal(buyTakerStartIdx, l.BuyTakerStartIdx)
+		assert.Equal(buyMakerTotal, l.BuyMakerTotal)
+		assert.Equal(sellTakerStartIdx, l.SellTakerStartIdx)
+		assert.Equal(sellMakerTotal, l.SellMakerTotal)
+		l.BuyTakerStartIdx, l.BuyMakerTotal, l.SellTakerStartIdx, l.SellMakerTotal = 0, 0, 0, 0
+	}
+
+	takerSide, err := me.determineTakerSide(100, 0)
+	assert.NoError(err)
+	assert.Equal(BUYSIDE, takerSide)
+	checkAndClear(&me.overLappedLevel[0], 0, 0, 2, 200)
+	checkAndClear(&me.overLappedLevel[1], 0, 0, 1, 100)
+	checkAndClear(&me.overLappedLevel[2], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
+
+	takerSide, err = me.determineTakerSide(100, 1)
+	assert.NoError(err)
+	assert.Equal(BUYSIDE, takerSide)
+	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[1], 0, 0, 1, 100)
+	checkAndClear(&me.overLappedLevel[2], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
+
+	takerSide, err = me.determineTakerSide(100, 2)
+	assert.NoError(err)
+	assert.Equal(SELLSIDE, takerSide)
+	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[1], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[2], 2, 200, 0, 0)
+	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
+
+	takerSide, err = me.determineTakerSide(100, 3)
+	assert.NoError(err)
+	assert.Equal(SELLSIDE, takerSide)
+	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[1], 0, 0, 0, 0)
+	checkAndClear(&me.overLappedLevel[2], 2, 200, 0, 0)
+	checkAndClear(&me.overLappedLevel[3], 1, 100, 0, 0)
+
+	me.overLappedLevel = []OverLappedLevel{{
+		Price: 1200,
+		BuyOrders: []OrderPart{
+			{"1", 100, 100, 0, 100},
+		},
+		SellOrders: []OrderPart{
+			{"2", 100, 100, 0, 100},
+		},
+	}}
+	takerSide, err = me.determineTakerSide(100, 0)
+	assert.NoError(err)
+	assert.Equal(BUYSIDE, takerSide)
+	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
+
+	me.overLappedLevel = []OverLappedLevel{{
+		Price: 1200,
+		BuyOrders: []OrderPart{
+			{"1", 99, 100, 0, 100},
+		},
+		SellOrders: []OrderPart{
+			{"2", 99, 100, 0, 100},
+		},
+	}}
+	takerSide, err = me.determineTakerSide(100, 0)
+	assert.EqualError(err, "both buy side and sell side have maker orders.")
+	assert.Equal(UNKNOWN, takerSide)
+}
+
+func Test_mergeOneTakerLevel(t *testing.T) {
 	assert := assert.New(t)
 
 	//
-	makerLevels := make([]*MergedPriceLevel, 0)
-	concludedPriceLevel := NewMergedPriceLevel(100)
+	merged := NewMergedPriceLevel(100)
 	overlapped := OverLappedLevel{
-		Price:      110,
-		BuyOrders:  []OrderPart{},
-		SellOrders: []OrderPart{}}
-	mergeOnePriceLevel(BUYSIDE, 100, &overlapped, &makerLevels, concludedPriceLevel)
-	assert.Equal(0, len(makerLevels))
-	assert.Equal(0, len(concludedPriceLevel.orders))
-	mergeOnePriceLevel(SELLSIDE, 100, &overlapped, &makerLevels, concludedPriceLevel)
-	assert.Equal(0, len(makerLevels))
-	assert.Equal(0, len(concludedPriceLevel.orders))
+		Price:             110,
+		BuyOrders:         []OrderPart{},
+		SellOrders:        []OrderPart{},
+		BuyTakerStartIdx:  0,
+		SellTakerStartIdx: 0,
+	}
+	mergeOneTakerLevel(BUYSIDE, &overlapped, merged)
+	assert.Equal(0, len(merged.orders))
+	assert.Equal(int64(0), merged.totalQty)
+	mergeOneTakerLevel(SELLSIDE, &overlapped, merged)
+	assert.Equal(0, len(merged.orders))
+	assert.Equal(int64(0), merged.totalQty)
 
 	//
 	overlapped = OverLappedLevel{
 		Price: 110,
 		BuyOrders: []OrderPart{
 			{"1", 100, 1000, 0, 0},
-		}}
-	mergeOnePriceLevel(BUYSIDE, 100, &overlapped, &makerLevels, concludedPriceLevel)
-	assert.Equal(0, len(makerLevels))
-	assert.Equal(0, len(concludedPriceLevel.orders))
+		},
+		BuyTakerStartIdx: 0,
+	}
+	mergeOneTakerLevel(BUYSIDE, &overlapped, merged)
+	assert.Equal(0, len(merged.orders))
+	assert.Equal(int64(0), merged.totalQty)
 
 	//
 	overlapped = OverLappedLevel{
 		Price: 110,
 		BuyOrders: []OrderPart{
-			{"1", 99, 1000, 0, 200},
-			{"2", 99, 1000, 0, 500},
-			{"3", 100, 1000, 0, 0},
-		}}
-	mergeOnePriceLevel(BUYSIDE, 100, &overlapped, &makerLevels, concludedPriceLevel)
-	assert.Equal(1, len(makerLevels))
+			{"1", 99, 200, 0, 200},
+			{"2", 100, 500, 0, 500},
+			{"3", 100, 1000, 0, 1000},
+		},
+		BuyTakerStartIdx: 1,
+	}
+	mergeOneTakerLevel(BUYSIDE, &overlapped, merged)
 	assert.EqualValues([]*OrderPart{
-		{"2", 99, 1000, 0, 500},
-		{"1", 99, 1000, 0, 200},
-	}, makerLevels[0].orders)
-	assert.Equal(0, len(concludedPriceLevel.orders))
+		{"3", 100, 1000, 0, 1000},
+		{"2", 100, 500, 0, 500},
+	}, merged.orders)
+	assert.Equal(int64(1500), merged.totalQty)
 
 	//
-	makerLevels = make([]*MergedPriceLevel, 0)
-	concludedPriceLevel = NewMergedPriceLevel(100)
+	merged = NewMergedPriceLevel(100)
 	overlapped = OverLappedLevel{
 		Price: 110,
 		BuyOrders: []OrderPart{
 			{"1", 99, 1000, 0, 200},
 			{"2", 99, 1000, 0, 0},
-			{"3", 99, 1000, 0, 500},
-			{"4", 100, 1000, 0, 100},
-			{"5", 100, 1000, 0, 200},
-		}}
-	mergeOnePriceLevel(BUYSIDE, 100, &overlapped, &makerLevels, concludedPriceLevel)
-	assert.Equal(1, len(makerLevels))
-	assert.EqualValues([]*OrderPart{
-		{"3", 99, 1000, 0, 500},
-		{"1", 99, 1000, 0, 200},
-	}, makerLevels[0].orders)
+			{"3", 100, 300, 0, 300},
+			{"4", 100, 100, 0, 0},
+			{"5", 100, 400, 0, 300},
+		},
+		BuyTakerStartIdx: 2,
+	}
+	mergeOneTakerLevel(BUYSIDE, &overlapped, merged)
 	assert.Equal([]*OrderPart{
-		{"5", 100, 1000, 0, 200},
-		{"4", 100, 1000, 0, 100},
-	}, concludedPriceLevel.orders)
+		{"5", 100, 400, 0, 300},
+		{"3", 100, 300, 0, 300},
+	}, merged.orders)
+	assert.Equal(int64(600), merged.totalQty)
 }
 
-func Test_mergeSidePriceLevels(t *testing.T) {
+func Test_mergeTakerSideOrders(t *testing.T) {
 	type args struct {
-		side               int8
-		height             int64
-		concludedPrice     int64
-		tradePriceLevelIdx int
-		levels             []OverLappedLevel
+		side           int8
+		concludedPrice int64
+		overlapped     []OverLappedLevel
+		tradePriceIdx  int
 	}
-
 	tests := []struct {
-		name             string
-		args             args
-		wantIsMakerSide  bool
-		wantMergedLevels []*MergedPriceLevel
+		name string
+		args args
+		want TakerSideOrders
 	}{{
-		"buySide_oneLevel_notMaker",
-		args{
-			side:               BUYSIDE,
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 0,
-			levels: []OverLappedLevel{{
+		name: "buySideIsTakerSide",
+		args: args{
+			side:           BUYSIDE,
+			concludedPrice: 100,
+			overlapped: []OverLappedLevel{{
 				Price: 110,
 				BuyOrders: []OrderPart{
-					{"1", 100, 1000, 0, 100},
-				}},
-			},
-		},
-		false,
-		[]*MergedPriceLevel{{
-			price: 100,
-			orders: []*OrderPart{
-				{"1", 100, 1000, 0, 100},
-			},
-			totalQty: 100,
-		}},
-	}, {
-		"buySide_multiLevels_notMaker",
-		args{
-			side:               BUYSIDE,
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 2,
-			levels: []OverLappedLevel{{
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"1", 100, 1000, 0, 100},
-					{"2", 100, 1000, 0, 200},
-				}}, {
+					{"1", 99, 200, 100, 100},
+					{"3", 100, 100, 0, 100},
+					{"5", 100, 500, 0, 500},
+				},
+				BuyTakerStartIdx: 1,
+				SellOrders: []OrderPart{
+					{"2", 100, 1000, 0, 1000},
+				},
+				SellTakerStartIdx: 0,
+			}, {
 				Price: 105,
 				BuyOrders: []OrderPart{
-					{"3", 100, 1000, 0, 300},
-					{"4", 100, 1000, 0, 400},
-				}}, {
+					{"7", 99, 200, 100, 100},
+				},
+				BuyTakerStartIdx:  1,
+				SellTakerStartIdx: 0,
+			}, {
 				Price: 100,
 				BuyOrders: []OrderPart{
-					{"5", 100, 1000, 0, 500},
-					{"6", 100, 1000, 0, 600},
-				}},
+					{"9", 100, 200, 0, 200},
+					{"11", 100, 100, 0, 100},
+				},
+				BuyTakerStartIdx:  0,
+				SellTakerStartIdx: 0,
+			}},
+			tradePriceIdx: 2,
+		},
+		want: TakerSideOrders{
+			&MergedPriceLevel{
+				price: 100,
+				orders: []*OrderPart{
+					{"5", 100, 500, 0, 500},
+					{"3", 100, 100, 0, 100},
+					{"9", 100, 200, 0, 200},
+					{"11", 100, 100, 0, 100},
+				},
+				totalQty: 900,
 			},
 		},
-		false,
-		[]*MergedPriceLevel{{
-			price: 100,
-			orders: []*OrderPart{
-				{"2", 100, 1000, 0, 200},
-				{"1", 100, 1000, 0, 100},
-				{"4", 100, 1000, 0, 400},
-				{"3", 100, 1000, 0, 300},
-				{"6", 100, 1000, 0, 600},
-				{"5", 100, 1000, 0, 500},
-			},
-			totalQty: 2100,
-		}},
 	}, {
-		"sellSide_maker_onlyMakerOrders",
-		args{
-			side:               SELLSIDE,
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 0,
-			levels: []OverLappedLevel{{
+		name: "sellSideIsTakerSide",
+		args: args{
+			side:           SELLSIDE,
+			concludedPrice: 110,
+			overlapped: []OverLappedLevel{{
+				Price: 110,
+				BuyOrders: []OrderPart{
+					{"1", 99, 200, 100, 100},
+				},
+				BuyTakerStartIdx: 1,
+				SellOrders: []OrderPart{
+					{"2", 99, 1000, 0, 1000},
+				},
+				SellTakerStartIdx: 1,
+			}, {
+				Price:            105,
+				BuyTakerStartIdx: 0,
+				SellOrders: []OrderPart{
+					{"4", 99, 200, 0, 200},
+					{"6", 100, 1000, 0, 1000},
+				},
+				SellTakerStartIdx: 1,
+			}, {
 				Price: 100,
 				SellOrders: []OrderPart{
-					{"1", 99, 1000, 0, 100},
-				}}, {
-				Price: 90,
-				SellOrders: []OrderPart{
-					{"2", 99, 1000, 0, 200},
-					{"3", 99, 1000, 0, 300},
-				}},
+					{"8", 100, 200, 0, 200},
+					{"10", 100, 300, 0, 300},
+				},
+				BuyTakerStartIdx:  0,
+				SellTakerStartIdx: 0,
+			}},
+			tradePriceIdx: 0,
+		},
+		want: TakerSideOrders{
+			&MergedPriceLevel{
+				price: 110,
+				orders: []*OrderPart{
+					{"10", 100, 300, 0, 300},
+					{"8", 100, 200, 0, 200},
+					{"6", 100, 1000, 0, 1000},
+				},
+				totalQty: 1500,
 			},
 		},
-		true,
-		[]*MergedPriceLevel{{
-			price: 90,
-			orders: []*OrderPart{
-				{"3", 99, 1000, 0, 300},
-				{"2", 99, 1000, 0, 200},
-			},
-			totalQty: 500,
-		}, {
-			price: 100,
-			orders: []*OrderPart{
-				{"1", 99, 1000, 0, 100},
-			},
-			totalQty: 100,
-		}},
-	}, {"buySide_maker_concludedLevelContainsMakerOrders",
-		args{
-			side:               BUYSIDE,
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 2,
-			levels: []OverLappedLevel{{
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"1", 99, 1000, 0, 100},
-					{"2", 100, 1000, 0, 200},
-				}}, {
-				Price: 105,
-				BuyOrders: []OrderPart{
-					{"3", 99, 1000, 0, 300},
-					{"4", 100, 1000, 0, 400},
-					{"5", 100, 1000, 0, 500},
-				}}, {
-				Price: 100,
-				BuyOrders: []OrderPart{
-					{"6", 99, 1000, 0, 600},
-					{"7", 100, 1000, 0, 700},
-					{"8", 100, 1000, 0, 800},
-				}},
-			},
-		},
-		true,
-		[]*MergedPriceLevel{{
-			price: 110,
-			orders: []*OrderPart{
-				{"1", 99, 1000, 0, 100},
-			},
-			totalQty: 100,
-		}, {
-			price: 105,
-			orders: []*OrderPart{
-				{"3", 99, 1000, 0, 300},
-			},
-			totalQty: 300,
-		}, {
-			price: 100,
-			orders: []*OrderPart{
-				{"6", 99, 1000, 0, 600},
-				{"2", 100, 1000, 0, 200},
-				{"5", 100, 1000, 0, 500},
-				{"4", 100, 1000, 0, 400},
-				{"8", 100, 1000, 0, 800},
-				{"7", 100, 1000, 0, 700},
-			},
-			totalQty: 3200,
-		}},
-	}, {"buySide_maker_appendConcludedLevel",
-		args{
-			side:               BUYSIDE,
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 2,
-			levels: []OverLappedLevel{{
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"1", 99, 1000, 0, 100},
-					{"2", 100, 1000, 0, 200},
-				}}, {
-				Price: 105,
-				BuyOrders: []OrderPart{
-					{"3", 99, 1000, 0, 300},
-					{"4", 100, 1000, 0, 400},
-					{"5", 100, 1000, 0, 500},
-				}}, {
-				Price: 100,
-				BuyOrders: []OrderPart{
-					{"6", 100, 1000, 0, 600},
-					{"7", 100, 1000, 0, 700},
-					{"8", 100, 1000, 0, 800},
-				}},
-			},
-		},
-		true,
-		[]*MergedPriceLevel{{
-			price: 110,
-			orders: []*OrderPart{
-				{"1", 99, 1000, 0, 100},
-			},
-			totalQty: 100,
-		}, {
-			price: 105,
-			orders: []*OrderPart{
-				{"3", 99, 1000, 0, 300},
-			},
-			totalQty: 300,
-		}, {
-			price: 100,
-			orders: []*OrderPart{
-				{"2", 100, 1000, 0, 200},
-				{"5", 100, 1000, 0, 500},
-				{"4", 100, 1000, 0, 400},
-				{"8", 100, 1000, 0, 800},
-				{"7", 100, 1000, 0, 700},
-				{"6", 100, 1000, 0, 600},
-			},
-			totalQty: 3200,
-		}},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotIsMakerSide, gotMergedLevels := mergeSidePriceLevels(tt.args.side, tt.args.height, tt.args.concludedPrice, tt.args.tradePriceLevelIdx, tt.args.levels)
-			if gotIsMakerSide != tt.wantIsMakerSide {
-				t.Errorf("mergeSidePriceLevels() gotIsMakerSide = %v, want %v", gotIsMakerSide, tt.wantIsMakerSide)
-			}
-			assert.EqualValues(t, tt.wantMergedLevels, gotMergedLevels)
-		})
-	}
-}
-
-func Test_createMakerTakerOrders(t *testing.T) {
-	type args struct {
-		height             int64
-		overlapped         []OverLappedLevel
-		concludedPrice     int64
-		tradePriceLevelIdx int
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *MakerTakerOrders
-		wantErr bool
-	}{{
-		name: "buySideIsMakerSide",
-		args: args{
-			height:             100,
-			concludedPrice:     100,
-			tradePriceLevelIdx: 2,
-			overlapped: []OverLappedLevel{{
-				Price: 120,
-				BuyOrders: []OrderPart{
-					{"1", 100, 1000, 0, 100},
-				},
-				SellOrders: []OrderPart{
-					{"2", 99, 1000, 0, 200},
-					{"4", 100, 1000, 0, 400},
-				},
-			}, {
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"3", 99, 1000, 0, 300},
-					{"5", 100, 1000, 0, 500},
-					{"7", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"6", 99, 1000, 0, 600},
-					{"8", 100, 1000, 0, 800},
-				},
-			}, {
-				Price: 100,
-				BuyOrders: []OrderPart{
-					{"9", 98, 1000, 0, 300},
-					{"11", 99, 1000, 0, 0},
-					{"13", 100, 1000, 0, 300},
-				},
-				SellOrders: []OrderPart{
-					{"10", 100, 1000, 0, 1000},
-					{"12", 100, 1000, 0, 200},
-				},
-			}, {
-				Price: 90,
-				BuyOrders: []OrderPart{
-					{"15", 99, 1000, 0, 500},
-					{"17", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"14", 100, 1000, 0, 400},
-					{"16", 100, 1000, 0, 600},
-				},
-			}},
-		},
-		want: &MakerTakerOrders{
-			isBuySideMaker: true,
-			makerSide: MakerSideOrders{
-				priceLevels: []*MergedPriceLevel{{
-					price: 110,
-					orders: []*OrderPart{
-						{"3", 99, 1000, 0, 300},
-					},
-					totalQty: 300,
-				}, {
-					price: 100,
-					orders: []*OrderPart{
-						{"9", 98, 1000, 0, 300},
-						{"1", 100, 1000, 0, 100},
-						{"7", 100, 1000, 0, 700},
-						{"5", 100, 1000, 0, 500},
-						{"13", 100, 1000, 0, 300},
-					},
-					totalQty: 1900,
-				}},
-			},
-			takerSide: TakerSideOrders{
-				&MergedPriceLevel{
-					price: 100,
-					orders: []*OrderPart{
-						{"16", 100, 1000, 0, 600},
-						{"14", 100, 1000, 0, 400},
-						{"10", 100, 1000, 0, 1000},
-						{"12", 100, 1000, 0, 200},
-					},
-					totalQty: 2200,
-				},
-			},
-		},
-		wantErr: false,
-	}, {
-		name: "sellSideIsMakerSide",
-		args: args{
-			height:             100,
-			concludedPrice:     110,
-			tradePriceLevelIdx: 1,
-			overlapped: []OverLappedLevel{{
-				Price: 120,
-				BuyOrders: []OrderPart{
-					{"1", 100, 1000, 0, 2000},
-				},
-				SellOrders: []OrderPart{
-					{"2", 99, 1000, 0, 200},
-					{"4", 100, 1000, 0, 400},
-				},
-			}, {
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"3", 100, 1000, 0, 300},
-					{"5", 100, 1000, 0, 500},
-					{"7", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"6", 98, 1000, 0, 600},
-					{"8", 99, 1000, 0, 700},
-				},
-			}, {
-				Price: 100,
-				BuyOrders: []OrderPart{
-					{"9", 98, 1000, 0, 300},
-					{"11", 99, 1000, 0, 0},
-					{"13", 100, 1000, 0, 300},
-				},
-				SellOrders: []OrderPart{
-					{"10", 100, 1000, 0, 1000},
-					{"12", 100, 1000, 0, 200},
-				},
-			}, {
-				Price: 90,
-				BuyOrders: []OrderPart{
-					{"15", 99, 1000, 0, 500},
-					{"17", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"14", 100, 1000, 0, 400},
-					{"16", 100, 1000, 0, 600},
-				},
-			}},
-		},
-		want: &MakerTakerOrders{
-			isBuySideMaker: false,
-			makerSide: MakerSideOrders{
-				priceLevels: []*MergedPriceLevel{{
-					price: 110,
-					orders: []*OrderPart{
-						{"8", 99, 1000, 0, 700},
-						{"6", 98, 1000, 0, 600},
-						{"16", 100, 1000, 0, 600},
-						{"14", 100, 1000, 0, 400},
-						{"10", 100, 1000, 0, 1000},
-						{"12", 100, 1000, 0, 200},
-					},
-					totalQty: 3500,
-				}},
-			},
-			takerSide: TakerSideOrders{
-				&MergedPriceLevel{
-					price: 110,
-					orders: []*OrderPart{
-						{"1", 100, 1000, 0, 2000},
-						{"7", 100, 1000, 0, 700},
-						{"5", 100, 1000, 0, 500},
-						{"3", 100, 1000, 0, 300},
-					},
-					totalQty: 3500,
-				},
-			},
-		},
-		wantErr: false,
-	}, {
-		name: "noMakerOrders",
-		args: args{
-			height:             100,
-			concludedPrice:     110,
-			tradePriceLevelIdx: 1,
-			overlapped: []OverLappedLevel{{
-				Price: 120,
-				BuyOrders: []OrderPart{
-					{"1", 100, 1000, 0, 2000},
-				},
-				SellOrders: []OrderPart{
-					{"2", 100, 1000, 0, 200},
-					{"4", 100, 1000, 0, 400},
-				},
-			}, {
-				Price: 110,
-				BuyOrders: []OrderPart{
-					{"3", 100, 1000, 0, 300},
-					{"5", 100, 1000, 0, 500},
-					{"7", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"6", 100, 1000, 0, 600},
-					{"8", 100, 1000, 0, 700},
-				},
-			}, {
-				Price: 100,
-				BuyOrders: []OrderPart{
-					{"9", 100, 1000, 0, 300},
-					{"11", 100, 1000, 0, 0},
-					{"13", 100, 1000, 0, 300},
-				},
-				SellOrders: []OrderPart{
-					{"10", 100, 1000, 0, 1000},
-					{"12", 100, 1000, 0, 200},
-				},
-			}, {
-				Price: 90,
-				BuyOrders: []OrderPart{
-					{"15", 100, 1000, 0, 500},
-					{"17", 100, 1000, 0, 700},
-				},
-				SellOrders: []OrderPart{
-					{"14", 100, 1000, 0, 400},
-					{"16", 100, 1000, 0, 600},
-				},
-			}},
-		},
-		want: &MakerTakerOrders{
-			isBuySideMaker: false,
-			makerSide: MakerSideOrders{
-				priceLevels: []*MergedPriceLevel{{
-					price: 110,
-					orders: []*OrderPart{
-						{"16", 100, 1000, 0, 600},
-						{"14", 100, 1000, 0, 400},
-						{"10", 100, 1000, 0, 1000},
-						{"12", 100, 1000, 0, 200},
-						{"8", 100, 1000, 0, 700},
-						{"6", 100, 1000, 0, 600},
-					},
-					totalQty: 3500,
-				}},
-			},
-			takerSide: TakerSideOrders{
-				&MergedPriceLevel{
-					price: 110,
-					orders: []*OrderPart{
-						{"1", 100, 1000, 0, 2000},
-						{"7", 100, 1000, 0, 700},
-						{"5", 100, 1000, 0, 500},
-						{"3", 100, 1000, 0, 300},
-					},
-					totalQty: 3500,
-				},
-			},
-		},
-		wantErr: false,
-	}}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := createMakerTakerOrders(tt.args.height, tt.args.overlapped, tt.args.concludedPrice, tt.args.tradePriceLevelIdx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("createMakerTakerOrders() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := mergeTakerSideOrders(tt.args.side, tt.args.concludedPrice, tt.args.overlapped, tt.args.tradePriceIdx)
 			assert.EqualValues(t, tt.want, got)
 		})
 	}
@@ -995,190 +729,174 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 	assert := assert.New(t)
 	// 1. buy side is maker side
 	me := NewMatchEng("AAA_BNB", 100, 5, 0.05)
-	makerSideOrders := []*OrderPart{
+	makerSideOrders := []OrderPart{
 		{"1", 99, 1000, 700, 300},
-		{"2", 99, 1000, 900, 100},
-		{"3", 99, 1000, 800, 200},
-		{"4", 100, 1000, 700, 300},
-		{"5", 100, 1000, 200, 100},
+		{"3", 99, 1000, 900, 100},
+		{"5", 100, 1000, 700, 300},
+		{"7", 99, 1000, 800, 200},
+		{"9", 100, 1000, 200, 100},
 	}
-	takerSideOrders := []*OrderPart{
-		{"6", 100, 1000, 600, 400},
-		{"7", 100, 1000, 900, 100},
-		{"8", 100, 1000, 700, 300},
-		{"9", 100, 1000, 800, 200},
-	}
-	makerTakerOrders := &MakerTakerOrders{
-		isBuySideMaker: true,
-		makerSide: MakerSideOrders{
-			priceLevels: []*MergedPriceLevel{{
-				price:    110,
-				orders:   makerSideOrders[:2],
-				totalQty: 400,
-			}, {
-				price:    100,
-				orders:   makerSideOrders[2:],
-				totalQty: 600,
-			}},
-		},
-		takerSide: TakerSideOrders{
-			&MergedPriceLevel{
-				price:    100,
-				orders:   takerSideOrders,
-				totalQty: 1000,
+	me.overLappedLevel = []OverLappedLevel{{
+		Price:            110,
+		BuyOrders:        makerSideOrders[:3],
+		BuyTakerStartIdx: 2,
+		BuyMakerTotal:    400,
+	}, {
+		Price:            100,
+		BuyOrders:        makerSideOrders[3:],
+		BuyTakerStartIdx: 1,
+		BuyMakerTotal:    200,
+	}}
+	takerSideOrders := TakerSideOrders{
+		&MergedPriceLevel{
+			price: 100,
+			orders: []*OrderPart{
+				{"8", 100, 1000, 800, 200},
+				{"6", 100, 800, 500, 300},
+				{"2", 100, 600, 200, 400},
+				{"4", 100, 400, 300, 100},
 			},
+			totalQty: 1000,
 		},
 	}
-	me.fillOrdersNew(makerTakerOrders, 100)
-	assert.Equal([]Trade{
-		{"6", 110, 160, 860, 760, "1", SellTaker},
-		{"7", 110, 40, 900, 940, "1", SellTaker},
-		{"8", 110, 100, 1000, 800, "1", SellTaker},
-		{"8", 110, 20, 920, 820, "2", SellTaker},
-		{"9", 110, 80, 1000, 880, "2", SellTaker},
 
-		{"6", 100, 200, 1000, 960, "3", SellTaker},
-		{"6", 100, 40, 740, 1000, "4", BuySurplus},
-		{"7", 100, 60, 800, 1000, "4", BuySurplus},
-		{"8", 100, 180, 980, 1000, "4", BuySurplus},
-		{"9", 100, 20, 1000, 900, "4", BuySurplus},
-		{"9", 100, 100, 300, 1000, "5", BuySurplus},
+	me.fillOrdersNew(SELLSIDE, takerSideOrders, 1, 100, 10)
+	assert.Equal([]Trade{
+		{"8", 110, 80, 780, 880, "1", SellTaker},
+		{"6", 110, 120, 900, 620, "1", SellTaker},
+		{"2", 110, 100, 1000, 300, "1", SellTaker},
+		{"2", 110, 60, 960, 360, "3", SellTaker},
+		{"4", 110, 40, 1000, 340, "3", SellTaker},
+
+		{"8", 100, 120, 820, 1000, "5", BuySurplus},
+		{"6", 100, 180, 1000, 800, "5", BuySurplus},
+		{"2", 100, 200, 1000, 560, "7", SellTaker},
+		{"2", 100, 40, 240, 600, "9", BuySurplus},
+		{"4", 100, 60, 300, 400, "9", BuySurplus},
 	}, me.Trades)
-	assert.Equal([]*OrderPart{
+	assert.Equal([]OrderPart{
 		{"1", 99, 1000, 1000, 0},
-		{"2", 99, 1000, 1000, 0},
 		{"3", 99, 1000, 1000, 0},
-		{"4", 100, 1000, 1000, 0},
-		{"5", 100, 1000, 300, 0},
+		{"5", 100, 1000, 1000, 0},
+		{"7", 99, 1000, 1000, 0},
+		{"9", 100, 1000, 300, 0},
 	}, makerSideOrders)
 	assert.Equal([]*OrderPart{
-		{"6", 100, 1000, 1000, 0},
-		{"7", 100, 1000, 1000, 0},
 		{"8", 100, 1000, 1000, 0},
-		{"9", 100, 1000, 1000, 0},
-	}, takerSideOrders)
+		{"6", 100, 800, 800, 0},
+		{"2", 100, 600, 600, 0},
+		{"4", 100, 400, 400, 0},
+	}, takerSideOrders.orders)
 
 	// 2. sell side is maker side
 	me = NewMatchEng("AAA_BNB", 100, 5, 0.05)
-	makerSideOrders = []*OrderPart{
-		{"6", 99, 1000, 600, 400},
-		{"7", 99, 1000, 900, 100},
-		{"8", 99, 1000, 700, 300},
-		{"9", 100, 1000, 800, 200},
+	makerSideOrders = []OrderPart{
+		{"2", 99, 1000, 700, 300},
+		{"4", 99, 1000, 800, 200},
+		{"6", 99, 1000, 900, 100},
+		{"8", 99, 1000, 900, 100},
+		{"10", 99, 1000, 900, 100},
+		{"12", 100, 1000, 800, 200},
 	}
-	takerSideOrders = []*OrderPart{
-		{"1", 100, 1000, 700, 300},
-		{"2", 100, 1000, 900, 100},
-		{"3", 100, 1000, 800, 200},
-		{"4", 100, 1000, 700, 300},
-		{"5", 100, 1000, 200, 100},
-	}
-	makerTakerOrders = &MakerTakerOrders{
-		isBuySideMaker: false,
-		makerSide: MakerSideOrders{
-			priceLevels: []*MergedPriceLevel{{
-				price:    100,
-				orders:   makerSideOrders[:2],
-				totalQty: 500,
-			}, {
-				price:    90,
-				orders:   makerSideOrders[2:],
-				totalQty: 500,
-			}},
-		},
-		takerSide: TakerSideOrders{
-			&MergedPriceLevel{
-				price:    100,
-				orders:   takerSideOrders,
-				totalQty: 1000,
+	me.overLappedLevel = []OverLappedLevel{{
+		Price:             100,
+		SellOrders:        makerSideOrders[3:],
+		SellTakerStartIdx: 2,
+		SellMakerTotal:    200,
+	}, {
+		Price:             95,
+		SellOrders:        makerSideOrders[1:3],
+		SellTakerStartIdx: 2,
+		SellMakerTotal:    300,
+	}, {
+		Price:             90,
+		SellOrders:        makerSideOrders[:1],
+		SellTakerStartIdx: 1,
+		SellMakerTotal:    300,
+	}}
+	takerSideOrders = TakerSideOrders{
+		&MergedPriceLevel{
+			price: 100,
+			orders: []*OrderPart{
+				{"1", 100, 600, 0, 600},
+				{"3", 100, 300, 0, 300},
+				{"5", 100, 100, 0, 100},
 			},
+			totalQty: 1000,
 		},
 	}
-	me.fillOrdersNew(makerTakerOrders, -100)
+	me.fillOrdersNew(BUYSIDE, takerSideOrders, 0, 100, -100)
 	assert.Equal([]Trade{
-		{"6", 100, 150, 850, 750, "1", BuyTaker},
-		{"6", 100, 50, 950, 800, "2", BuyTaker},
-		{"6", 100, 100, 900, 900, "3", BuyTaker},
-		{"6", 100, 100, 800, 1000, "4", BuyTaker},
-		{"7", 100, 50, 850, 950, "4", BuyTaker},
-		{"7", 100, 50, 250, 1000, "5", BuyTaker},
+		{"2", 90, 180, 180, 880, "1", BuyTaker},
+		{"2", 90, 90, 90, 970, "3", BuyTaker},
+		{"2", 90, 30, 30, 1000, "5", BuyTaker},
 
-		{"8", 90, 150, 1000, 850, "1", BuyTaker},
-		{"8", 90, 50, 1000, 900, "2", BuyTaker},
-		{"8", 90, 100, 1000, 1000, "3", BuyTaker},
-		{"9", 90, 150, 1000, 950, "4", SellSurplus},
-		{"9", 90, 50, 300, 1000, "5", SellSurplus},
+		{"4", 95, 180, 360, 980, "1", BuyTaker},
+		{"4", 95, 20, 110, 1000, "3", BuyTaker},
+		{"6", 95, 70, 180, 970, "3", BuyTaker},
+		{"6", 95, 30, 60, 1000, "5", BuyTaker},
+
+		{"8", 100, 100, 460, 1000, "1", BuyTaker},
+		{"10", 100, 100, 560, 1000, "1", BuyTaker},
+		{"12", 100, 40, 600, 840, "1", SellSurplus},
+		{"12", 100, 120, 300, 960, "3", SellSurplus},
+		{"12", 100, 40, 100, 1000, "5", SellSurplus},
 	}, me.Trades)
-	assert.Equal([]*OrderPart{
+	assert.Equal([]OrderPart{
+		{"2", 99, 1000, 1000, 0},
+		{"4", 99, 1000, 1000, 0},
 		{"6", 99, 1000, 1000, 0},
-		{"7", 99, 1000, 1000, 0},
 		{"8", 99, 1000, 1000, 0},
-		{"9", 100, 1000, 1000, 0},
+		{"10", 99, 1000, 1000, 0},
+		{"12", 100, 1000, 1000, 0},
 	}, makerSideOrders)
 	assert.Equal([]*OrderPart{
-		{"1", 100, 1000, 1000, 0},
-		{"2", 100, 1000, 1000, 0},
-		{"3", 100, 1000, 1000, 0},
-		{"4", 100, 1000, 1000, 0},
-		{"5", 100, 1000, 300, 0},
-	}, takerSideOrders)
+		{"1", 100, 600, 600, 0},
+		{"3", 100, 300, 300, 0},
+		{"5", 100, 100, 100, 0},
+	}, takerSideOrders.orders)
 
 	// 3. no maker orders
 	me = NewMatchEng("AAA_BNB", 100, 5, 0.05)
-	makerSideOrders = []*OrderPart{
-		{"1", 100, 1000, 700, 300},
-		{"2", 100, 1000, 900, 100},
-		{"3", 100, 1000, 800, 200},
-		{"4", 100, 1000, 700, 300},
-		{"5", 100, 1000, 200, 100},
+	makerSideOrders = []OrderPart{
+		{"2", 100, 1000, 700, 300},
+		{"4", 100, 1000, 900, 100},
 	}
-	takerSideOrders = []*OrderPart{
-		{"6", 100, 1000, 600, 400},
-		{"7", 100, 1000, 900, 100},
-		{"8", 100, 1000, 700, 300},
-		{"9", 100, 1000, 800, 200},
-	}
-	makerTakerOrders = &MakerTakerOrders{
-		isBuySideMaker: false,
-		makerSide: MakerSideOrders{
-			priceLevels: []*MergedPriceLevel{{
-				price:    100,
-				orders:   makerSideOrders,
-				totalQty: 1000,
-			}},
-		},
-		takerSide: TakerSideOrders{
-			&MergedPriceLevel{
-				price:    100,
-				orders:   takerSideOrders,
-				totalQty: 1000,
+	me.overLappedLevel = []OverLappedLevel{{
+		Price:             100,
+		SellOrders:        makerSideOrders[:1],
+		SellTakerStartIdx: 1,
+		SellMakerTotal:    0,
+	},{
+		Price:             90,
+		SellOrders:        makerSideOrders[1:],
+		SellTakerStartIdx: 1,
+		SellMakerTotal:    0,
+	}}
+	takerSideOrders = TakerSideOrders{
+		&MergedPriceLevel{
+			price: 100,
+			orders: []*OrderPart{
+				{"1", 100, 1000, 700, 300},
+				{"3", 100, 1000, 900, 100},
 			},
+			totalQty: 400,
 		},
 	}
-	me.fillOrdersNew(makerTakerOrders, 0)
+	me.fillOrdersNew(BUYSIDE, takerSideOrders, 0, 100, 0)
 	assert.Equal([]Trade{
-		{"1", 100, 300, 900, 1000, "6", Neutral},
-		{"2", 100, 100, 1000, 1000, "6", Neutral},
-		{"3", 100, 100, 1000, 900, "7", Neutral},
-		{"3", 100, 100, 800, 1000, "8", Neutral},
-		{"4", 100, 200, 1000, 900, "8", Neutral},
-		{"4", 100, 100, 900, 1000, "9", Neutral},
-		{"5", 100, 100, 1000, 300, "9", Neutral},
+		{"4", 100, 100, 800, 1000, "1", Neutral},
+		{"2", 100, 200, 1000, 900, "1", Neutral},
+		{"2", 100, 100, 1000, 1000, "3", Neutral},
 	}, me.Trades)
-	assert.Equal([]*OrderPart{
-		{"1", 100, 1000, 1000, 0},
+	assert.Equal([]OrderPart{
 		{"2", 100, 1000, 1000, 0},
-		{"3", 100, 1000, 1000, 0},
 		{"4", 100, 1000, 1000, 0},
-		{"5", 100, 1000, 300, 0},
 	}, makerSideOrders)
 	assert.Equal([]*OrderPart{
-		{"6", 100, 1000, 1000, 0},
-		{"7", 100, 1000, 1000, 0},
-		{"8", 100, 1000, 1000, 0},
-		{"9", 100, 1000, 1000, 0},
-	}, takerSideOrders)
-
+		{"1", 100, 1000, 1000, 0},
+		{"3", 100, 1000, 1000, 0},
+	}, takerSideOrders.orders)
 }
 
 func TestMatchEng_Match(t *testing.T) {
@@ -1204,14 +922,15 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
 	assert.Equal([]Trade{
-		{"7", 100, 25, 25, 25, "12", BuyTaker},
-		{"3", 100, 10, 35, 10, "12", BuyTaker},
-		{"1", 100, 5, 40, 5, "12", BuyTaker},
-		{"15", 100, 40, 80, 40, "12", SellSurplus},
-		{"17", 100, 20, 100, 20, "12", SellSurplus},
-		{"13", 100, 10, 110, 10, "12", SellSurplus},
-		{"11", 100, 20, 20, 20, "16", SellSurplus},
-		{"11", 100, 10, 10, 30, "14", SellSurplus},
+		{"13", 100, 10, 10, 10, "12", SellSurplus},
+		{"15", 100, 40, 50, 40, "12", SellSurplus},
+		{"17", 100, 20, 70, 20, "12", SellSurplus},
+		{"11", 100, 30, 100, 30, "12", SellSurplus},
+		{"1", 100, 5, 105, 5, "12", BuyTaker},
+		{"3", 100, 5, 110, 5, "12", BuyTaker},
+		{"3", 100, 5, 5, 10, "16", BuyTaker},
+		{"7", 100, 15, 20, 15, "16", BuyTaker},
+		{"7", 100, 10, 10, 25, "14", BuyTaker},
 	}, me.Trades)
 	me.DropFilledOrder()
 	buys, sells := me.Book.GetAllLevels()
@@ -1239,52 +958,54 @@ func TestMatchEng_Match(t *testing.T) {
 		},
 	}}, sells)
 
-
 	//
 	me = NewMatchEng(DefaultPairSymbol, 110, 10, 0.05)
 	me.Book = NewOrderBookOnULList(4, 2)
-	me.Book.InsertOrder("1", SELLSIDE, 90, 100, 25)
-	me.Book.InsertOrder("3", SELLSIDE, 90, 100, 25)
-	me.Book.InsertOrder("5", SELLSIDE, 90, 100, 25)
-	me.Book.InsertOrder("2", BUYSIDE, 92, 90, 5)
-	me.Book.InsertOrder("4", BUYSIDE, 93, 80, 30)
-	me.Book.InsertOrder("11", SELLSIDE, 100, 90, 30)
-	me.Book.InsertOrder("13", SELLSIDE, 100, 80, 10)
-	me.Book.InsertOrder("15", SELLSIDE, 100, 80, 40)
-	me.Book.InsertOrder("17", SELLSIDE, 100, 80, 20)
-	me.Book.InsertOrder("12", BUYSIDE, 100, 110, 140)
+	me.Book.InsertOrder("1", SELLSIDE, 90, 100, 10)
+	me.Book.InsertOrder("3", SELLSIDE, 90, 100, 10)
+	me.Book.InsertOrder("2", BUYSIDE, 92, 70, 5)
+	me.Book.InsertOrder("4", BUYSIDE, 93, 70, 30)
+	me.Book.InsertOrder("5", SELLSIDE, 99, 90, 30)
+	me.Book.InsertOrder("7", SELLSIDE, 99, 80, 10)
+	me.Book.InsertOrder("9", SELLSIDE, 99, 80, 40)
+	me.Book.InsertOrder("11", SELLSIDE, 100, 80, 20)
+	me.Book.InsertOrder("13", SELLSIDE, 100, 100, 20)
+	me.Book.InsertOrder("15", SELLSIDE, 100, 100, 30)
+	me.Book.InsertOrder("6", BUYSIDE, 100, 110, 40)
+	me.Book.InsertOrder("8", BUYSIDE, 100, 110, 100)
 
 	assert.True(me.Match(100))
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(104), me.LastTradePrice)
 	assert.Equal([]Trade{
-		{"1", 100, 20, 20, 20, "12", BuyTaker},
-		{"3", 100, 10, 30, 10, "12", BuyTaker},
-		{"5", 100, 10, 40, 10, "12", BuyTaker},
-		{"15", 104, 40, 80, 40, "12", SellSurplus},
-		{"17", 104, 20, 100, 20, "12", SellSurplus},
-		{"13", 104, 10, 110, 10, "12", SellSurplus},
-		{"11", 104, 30, 140, 30, "12", SellSurplus},
+		{"7", 80, 10, 10, 10, "8", BuyTaker},
+		{"9", 80, 30, 40, 30, "8", BuyTaker},
+		{"9", 80, 10, 10, 40, "6", BuyTaker},
+
+		{"5", 90, 30, 70, 30, "8", BuyTaker},
+
+		{"1", 100, 10, 80, 10, "8", BuyTaker},
+		{"3", 100, 10, 90, 10, "8", BuyTaker},
+
+		{"11", 104, 10, 100, 10, "8", SellSurplus},
+		{"11", 104, 10, 20, 20, "6", SellSurplus},
+		{"13", 104, 10, 30, 10, "6", SellSurplus},
+		{"15", 104, 10, 40, 10, "6", SellSurplus},
 	}, me.Trades)
 	me.DropFilledOrder()
 	buys, sells = me.Book.GetAllLevels()
 	assert.Equal([]PriceLevel{{
-		Price: 90,
+		Price: 70,
 		Orders: []OrderPart{
-			{"2", 92, 5, 0, 5},
-		},
-	}, {
-		Price: 80,
-		Orders: []OrderPart{
-			{"4", 93, 30, 0, 30},
+			{"2", 92, 5, 0, 0},
+			{"4", 93, 30, 0, 0},
 		},
 	}}, buys)
 	assert.Equal([]PriceLevel{{
 		Price: 100,
 		Orders: []OrderPart{
-			{"1", 90, 25, 20, 5},
-			{"3", 90, 25, 10, 15},
-			{"5", 90, 25, 10, 15},
+			{"13", 100, 20, 10, 10},
+			{"15", 100, 30, 10, 20},
 		},
 	}}, sells)
 }

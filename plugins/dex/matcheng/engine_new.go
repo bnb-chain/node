@@ -2,8 +2,9 @@ package matcheng
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	"github.com/binance-chain/node/common/utils"
 )
@@ -25,22 +26,20 @@ func (me *MatchEng) Match(height int64) bool {
 	if index < 0 {
 		return false
 	}
-	me.LastTradePrice = tradePrice
-	surplus := me.overLappedLevel[index].BuySellSurplus
 
-	// 1. drop redundant qty
-	// 2. rearrange the orders by their trade price and time.
-	// 3. fill orders and generate trades
 	if err := me.dropRedundantQty(index); err != nil {
 		me.logger.Error("dropRedundantQty failed", "error", err)
 		return false
 	}
-	makerTakerOrders, err := createMakerTakerOrders(height, me.overLappedLevel, tradePrice, index)
+	takerSide, err := me.determineTakerSide(height, index)
 	if err != nil {
-		me.logger.Error("create MakerTakerOrders failed", "error", err)
+		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
 	}
-	me.fillOrdersNew(makerTakerOrders, surplus)
+	takerSideOrders := mergeTakerSideOrders(takerSide, tradePrice, me.overLappedLevel, index)
+	surplus := me.overLappedLevel[index].BuySellSurplus
+	me.fillOrdersNew(takerSide, takerSideOrders, index, tradePrice, surplus)
+	me.LastTradePrice = tradePrice
 	return true
 }
 
@@ -55,7 +54,7 @@ func (me *MatchEng) dropRedundantQty(tradePriceLevelIdx int) error {
 
 	if compareBuy(qBuy, totalExec) > 0 {
 		for i := tradePriceLevelIdx; i >= 0; i-- {
-			// it can be proved that redundant qty only exists in the last line of the overlapped buy price level
+			// it can be proved that redundant qty only exists in the last non-empty line of the overlapped buy price level
 			if me.overLappedLevel[i].BuyTotal != 0 {
 				return dropRedundantQty(me.overLappedLevel[i].BuyOrders, qBuy-totalExec, me.LotSize)
 			}
@@ -63,13 +62,14 @@ func (me *MatchEng) dropRedundantQty(tradePriceLevelIdx int) error {
 	} else if compareBuy(qSell, totalExec) > 0 {
 		length := len(me.overLappedLevel)
 		for i := tradePriceLevelIdx; i < length; i++ {
-			// it can be proved that redundant qty only exists in the first line of the overlapped sell price level
+			// it can be proved that redundant qty only exists in the first non-empty line of the overlapped sell price level
 			if me.overLappedLevel[i].SellTotal != 0 {
 				return dropRedundantQty(me.overLappedLevel[i].SellOrders, qSell-totalExec, me.LotSize)
 			}
 		}
 	}
-	return nil
+	return fmt.Errorf("internal error! invalud AccumulatedExecutions found, "+
+		"AccumulatedBuy=%v, AccumulatedSell=%v, AccumulatedExecutions=%v", qBuy, qSell, totalExec)
 }
 
 // assume the `orders` are sorted by time
@@ -113,80 +113,68 @@ func dropRedundantQty(orders []OrderPart, toDropQty, lotSize int64) error {
 	return nil
 }
 
-type MakerTakerOrders struct {
-	isBuySideMaker bool
-	makerSide      MakerSideOrders
-	takerSide      TakerSideOrders
-}
-
-func createMakerTakerOrders(height int64, overlapped []OverLappedLevel, concludedPrice int64, tradePriceLevelIdx int) (*MakerTakerOrders, error) {
-	//makerSide := SELLSIDE // if no maker orders, use SELLSIDE as the maker side. No impact on the final result.
-
-	var makerTakerOrders MakerTakerOrders
-	buySideIsMakerSide, mergedBuyLevels := mergeSidePriceLevels(BUYSIDE, height, concludedPrice, tradePriceLevelIdx, overlapped)
-	sellSideIsMakerSide, mergedSellLevels := mergeSidePriceLevels(SELLSIDE, height, concludedPrice, tradePriceLevelIdx, overlapped)
-
-	if buySideIsMakerSide && sellSideIsMakerSide {
-		// impossible, never reach here
-		return nil, errors.New("both buy side and sell side have maker orders.")
-	} else if buySideIsMakerSide && !sellSideIsMakerSide {
-		makerTakerOrders.isBuySideMaker = true
-		makerTakerOrders.makerSide = MakerSideOrders{mergedBuyLevels}
-		makerTakerOrders.takerSide = TakerSideOrders{mergedSellLevels[0]}
-	} else {
-		makerTakerOrders.isBuySideMaker = false
-		// buySideIsMakerSide == false
-		makerTakerOrders.makerSide = MakerSideOrders{mergedSellLevels}
-		makerTakerOrders.takerSide = TakerSideOrders{mergedBuyLevels[0]}
-		// note if both buy side and sell side are taker side, that means no leftover orders would be matched in this round.
-		// choosing whichever side to be the maker side is fine, since all of orders will be applied with the same price(concluded price).
-	}
-
-	return &makerTakerOrders, nil
-}
-
-func mergeSidePriceLevels(side int8, height int64, concludedPrice int64, tradePriceLevelIdx int, levels []OverLappedLevel) (isMakerSide bool, mergedLevels []*MergedPriceLevel) {
-	makerLevels := make([]*MergedPriceLevel, 0)
-	// concludedPriceLevel is mixed with taker orders and some maker orders whose price is equal to the concludedPrice
-	concludedPriceLevel := NewMergedPriceLevel(concludedPrice)
-	levelsLength := len(levels)
-	// merge from the better price to worse
-	if side == BUYSIDE {
-		for i := 0; i <= tradePriceLevelIdx; i++ {
-			mergeOnePriceLevel(side, height, &levels[i], &makerLevels, concludedPriceLevel)
-		}
-	} else {
-		for i := levelsLength - 1; i >= tradePriceLevelIdx; i-- {
-			mergeOnePriceLevel(side, height, &levels[i], &makerLevels, concludedPriceLevel)
-		}
-	}
-
-	if len(makerLevels) == 0 {
-		// it's taker side
-		return false, []*MergedPriceLevel{concludedPriceLevel}
-	}
-
-	// it's maker side
-	if concludedPriceLevel.totalQty != 0 {
-		// it's an optimization to merge concludedPriceLevel into the worst maker level if possible
-		// last maker level has the worst price
-		lastMakerLevel := makerLevels[len(makerLevels)-1]
-		if compareBuy(lastMakerLevel.price, concludedPrice) == 0 {
-			lastMakerLevel.AddOrders(concludedPriceLevel.orders)
+func findTakerStartIdx(height int64, orders []OrderPart) (idx int, makerTotal int64) {
+	i, k := 0, len(orders)
+	for ; i < k; i++ {
+		if orders[i].Time >= height {
+			return i, makerTotal
 		} else {
-			makerLevels = append(makerLevels, concludedPriceLevel)
+			makerTotal += orders[i].nxtTrade
 		}
 	}
-	return true, makerLevels
+	return i, makerTotal
 }
 
-func mergeOnePriceLevel(side int8, height int64, priceLevel *OverLappedLevel,
-	makerLevels *[]*MergedPriceLevel, concludedPriceLevel *MergedPriceLevel) {
+func (me *MatchEng) determineTakerSide(height int64, tradePriceIdx int) (int8, error) {
+	makerSide := UNKNOWN
+	for i := 0; i <= tradePriceIdx; i++ {
+		l := &me.overLappedLevel[i]
+		l.BuyTakerStartIdx, l.BuyMakerTotal = findTakerStartIdx(height, l.BuyOrders)
+		if l.HasBuyMaker() {
+			makerSide = BUYSIDE
+		}
+	}
+
+	for i := len(me.overLappedLevel) - 1; i >= tradePriceIdx; i-- {
+		l := &me.overLappedLevel[i]
+		l.SellTakerStartIdx, l.SellMakerTotal = findTakerStartIdx(height, l.SellOrders)
+		if l.HasSellMaker() {
+			if makerSide == BUYSIDE {
+				return UNKNOWN, errors.New("both buy side and sell side have maker orders.")
+			}
+			makerSide = SELLSIDE
+		}
+	}
+
+	if makerSide == BUYSIDE {
+		return SELLSIDE, nil
+	} else {
+		// UNKNOWN or SELLSIDE
+		// if no maker orders, choose SELLSIDE as the maker side. No impact on the final result.
+		return BUYSIDE, nil
+	}
+}
+
+func mergeTakerSideOrders(side int8, concludedPrice int64, overlapped []OverLappedLevel, tradePriceIdx int) TakerSideOrders {
+	merged := NewMergedPriceLevel(concludedPrice)
+	if side == BUYSIDE {
+		for i := 0; i <= tradePriceIdx; i++ {
+			mergeOneTakerLevel(side, &overlapped[i], merged)
+		}
+	} else {
+		for i := len(overlapped) - 1; i >= tradePriceIdx; i-- {
+			mergeOneTakerLevel(side, &overlapped[i], merged)
+		}
+	}
+	return TakerSideOrders{merged}
+}
+
+func mergeOneTakerLevel(side int8, priceLevel *OverLappedLevel, merged *MergedPriceLevel) {
 	var orders []OrderPart
 	if side == BUYSIDE {
-		orders = priceLevel.BuyOrders
+		orders = priceLevel.BuyOrders[priceLevel.BuyTakerStartIdx:]
 	} else {
-		orders = priceLevel.SellOrders
+		orders = priceLevel.SellOrders[priceLevel.SellTakerStartIdx:]
 	}
 	if len(orders) == 0 {
 		return
@@ -194,40 +182,27 @@ func mergeOnePriceLevel(side int8, height int64, priceLevel *OverLappedLevel,
 
 	sortOrders := func(o []*OrderPart) {
 		sort.SliceStable(o, func(i, j int) bool {
-			return o[i].nxtTrade > o[j].nxtTrade
+			return o[i].Qty > o[j].Qty
 		})
 	}
 
 	takerOrders := make([]*OrderPart, 0)
-	makerOrders := make([]*OrderPart, 0)
 	for i, order := range orders {
-		if order.nxtTrade <= 0 {
-			// cannot "break". In some edge cases, we may have such nxtTrade sequence: 2, 0, 5
-			continue
-		}
-		if order.Time < height {
-			makerOrders = append(makerOrders, &orders[i])
-		} else {
+		if order.nxtTrade > 0 {
 			takerOrders = append(takerOrders, &orders[i])
 		}
-	}
-
-	if len(makerOrders) != 0 {
-		makerLevel := NewMergedPriceLevel(priceLevel.Price)
-		sortOrders(makerOrders)
-		makerLevel.AddOrders(makerOrders)
-		*makerLevels = append(*makerLevels, makerLevel)
+		// else cannot "break". In some edge cases, we may have such nxtTrade sequence: 2, 0, 5
 	}
 
 	if len(takerOrders) != 0 {
 		sortOrders(takerOrders)
-		concludedPriceLevel.AddOrders(takerOrders)
+		merged.AddOrders(takerOrders)
 	}
 }
 
-func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus int64) {
-	takers := makerTakerOrders.takerSide.orders
-	totalTakerQty := makerTakerOrders.takerSide.totalQty
+func (me *MatchEng) fillOrdersNew(takerSide int8, takerSideOrders TakerSideOrders, tradePriceIdx int, concludedPrice, surplus int64) {
+	takers := takerSideOrders.orders
+	totalTakerQty := takerSideOrders.totalQty
 	nTakers := len(takers)
 	// we need to keep a copy of original nxtTrade as order.nxtTrade would be changed when filled
 	proportion := make([]int64, nTakers)
@@ -235,22 +210,19 @@ func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus in
 		proportion[i] = takers[i].nxtTrade
 	}
 
-	for _, makerLevel := range makerTakerOrders.makerSide.priceLevels {
-		toFillQty := calcFillQty(makerLevel.totalQty, takers, proportion, totalTakerQty, me.LotSize)
-		makers := makerLevel.orders
+	genTrades := func(makers []OrderPart, makerPrice int64, toFillQty []int64) {
 		nMakers := len(makers)
 		for mIndex, tIndex := 0, 0; mIndex < nMakers && tIndex < nTakers; {
-			maker := makers[mIndex]
-			taker := takers[tIndex]
+			maker := &makers[mIndex]
 			if compareBuy(maker.nxtTrade, 0) == 0 {
 				mIndex++
 				continue
 			}
+			taker := takers[tIndex]
 			if compareBuy(toFillQty[tIndex], 0) == 0 {
 				tIndex++
 				continue
 			}
-
 			filledQty := utils.MinInt(maker.nxtTrade, toFillQty[tIndex])
 			toFillQty[tIndex] -= filledQty
 			taker.nxtTrade -= filledQty
@@ -258,7 +230,7 @@ func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus in
 			maker.nxtTrade -= filledQty
 			maker.CumQty += filledQty
 			trade := Trade{
-				LastPx:  makerLevel.price,
+				LastPx:  makerPrice,
 				LastQty: filledQty,
 			}
 			if surplus < 0 {
@@ -268,7 +240,8 @@ func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus in
 			} else {
 				trade.Status = Neutral
 			}
-			if makerTakerOrders.isBuySideMaker {
+
+			if takerSide == SELLSIDE {
 				trade.Sid, trade.Bid = taker.Id, maker.Id
 				trade.SellCumQty, trade.BuyCumQty = taker.CumQty, maker.CumQty
 				if maker.Time < taker.Time {
@@ -284,27 +257,65 @@ func (me *MatchEng) fillOrdersNew(makerTakerOrders *MakerTakerOrders, surplus in
 			me.Trades = append(me.Trades, trade)
 		}
 	}
+
+	// always reuse this slice to avoid malloc
+	toFillQty := make([]int64, nTakers)
+	if takerSide == SELLSIDE {
+		// first round is for maker orders
+		for i := 0; i <= tradePriceIdx; i++ {
+			overlapped := &me.overLappedLevel[i]
+			if !overlapped.HasBuyMaker() || overlapped.Price == concludedPrice {
+				continue
+			}
+			calcFillQty(toFillQty, overlapped.BuyMakerTotal, takers, proportion, totalTakerQty, me.LotSize)
+			genTrades(overlapped.BuyOrders[:overlapped.BuyTakerStartIdx], overlapped.Price, toFillQty)
+		}
+		// second round for taker orders
+		for j := 0; j < nTakers; j++ {
+			toFillQty[j] = takers[j].nxtTrade
+		}
+		for i := 0; i <= tradePriceIdx; i++ {
+			overlapped := &me.overLappedLevel[i]
+			genTrades(overlapped.BuyOrders, concludedPrice, toFillQty)
+		}
+	} else {
+		// first round is for maker orders
+		for i := len(me.overLappedLevel) - 1; i >= tradePriceIdx; i-- {
+			overlapped := me.overLappedLevel[i]
+			if !overlapped.HasSellMaker() || overlapped.Price == concludedPrice {
+				continue
+			}
+			calcFillQty(toFillQty, overlapped.SellMakerTotal, takers, proportion, totalTakerQty, me.LotSize)
+			genTrades(overlapped.SellOrders[:overlapped.SellTakerStartIdx], overlapped.Price, toFillQty)
+		}
+		// second round for taker orders
+		for j := 0; j < nTakers; j++ {
+			toFillQty[j] = takers[j].nxtTrade
+		}
+		for i := len(me.overLappedLevel) - 1; i >= tradePriceIdx; i-- {
+			overlapped := &me.overLappedLevel[i]
+			genTrades(overlapped.SellOrders, concludedPrice, toFillQty)
+		}
+	}
 }
 
 // the logic is similar to `allocateResidual`.
-func calcFillQty(makerQty int64, takers []*OrderPart, proportion []int64, totalTakerQty int64, lotSize int64) []int64 {
+func calcFillQty(toFillQty []int64, makerQty int64, takers []*OrderPart, proportion []int64, totalTakerQty int64, lotSize int64) {
 	residual := makerQty
 	nLot := residual / lotSize
 	n := len(takers)
-	fillQty := make([]int64, n)
 	for i := 0; i < n; i++ {
 		nxtTrade := lotSize * calcNumOfLot(nLot, proportion[i], totalTakerQty)
 		nxtTrade = utils.MinInt(nxtTrade, takers[i].nxtTrade)
 		// we must have nxtTrade < residual
 		residual -= nxtTrade
-		fillQty[i] = nxtTrade
+		toFillQty[i] = nxtTrade
 	}
 
 	for i := 0; residual > 0; i = (i + 1) % n {
 		order := takers[i]
-		toAdd := utils.MinInt(order.nxtTrade-fillQty[i], utils.MinInt(residual, lotSize))
+		toAdd := utils.MinInt(order.nxtTrade-toFillQty[i], utils.MinInt(residual, lotSize))
 		residual -= toAdd
-		fillQty[i] += toAdd
+		toFillQty[i] += toAdd
 	}
-	return fillQty
 }

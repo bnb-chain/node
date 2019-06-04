@@ -147,7 +147,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
+		kp.logger.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
 		kp.OrderInfosForPub[info.Id] = &info
 	}
 
@@ -161,7 +161,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	bnclog.Debug("Added orders", "symbol", symbol, "id", info.Id)
+	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
 
@@ -375,7 +375,9 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		close(symbolCh)
 	}
 	matchWorker := func() {
+		i := 0
 		for symbol := range symbolCh {
+			i++
 			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
@@ -658,7 +660,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
 ) {
-	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
+	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
 	if tradeOuts == nil {
@@ -757,7 +759,7 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time
 	if err != nil {
 		panic(err)
 	}
-	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
+	kp.logger.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
 	store.Set([]byte(key), bz)
 }
 

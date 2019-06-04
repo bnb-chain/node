@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	UNKNOWN  int8 = 0
 	BUYSIDE  int8 = 1
 	SELLSIDE int8 = 2
 )
@@ -162,6 +163,27 @@ type OverLappedLevel struct {
 	AccumulatedBuy        int64
 	AccumulatedExecutions int64
 	BuySellSurplus        int64
+
+	BuyTakerStartIdx      int
+	SellTakerStartIdx     int
+	BuyMakerTotal         int64
+	SellMakerTotal		  int64
+}
+
+func (overlapped *OverLappedLevel) HasBuyMaker() bool {
+	return overlapped.BuyTakerStartIdx > 0 && overlapped.BuyMakerTotal > 0
+}
+
+func (overlapped *OverLappedLevel) HasBuyTaker() bool {
+	return overlapped.BuyTakerStartIdx < len(overlapped.BuyOrders)
+}
+
+func (overlapped *OverLappedLevel) HasSellMaker() bool {
+	return overlapped.SellTakerStartIdx > 0 && overlapped.SellMakerTotal > 0
+}
+
+func (overlapped *OverLappedLevel) HasSellTaker() bool {
+	return overlapped.SellTakerStartIdx < len(overlapped.SellOrders)
 }
 
 type LevelIter func(*PriceLevel)
@@ -192,10 +214,10 @@ func (l *MergedPriceLevel) AddOrders(orders []*OrderPart) {
 	}
 }
 
-type MakerSideOrders struct {
-	priceLevels []*MergedPriceLevel
-}
-
 type TakerSideOrders struct {
 	*MergedPriceLevel
+}
+
+func (m TakerSideOrders) length() int {
+	return len(m.orders)
 }

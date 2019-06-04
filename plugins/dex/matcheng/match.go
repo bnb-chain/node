@@ -44,7 +44,7 @@ func sumOrdersTotalLeft(orders []OrderPart, reCalNxtTrade bool) int64 {
 	return s
 }
 
-func prepareMatch(overlapped *[]OverLappedLevel) int {
+func prepareMatch( overlapped *[]OverLappedLevel) int {
 	var accum int64
 	k := len(*overlapped)
 	for i := k - 1; i >= 0; i-- {
