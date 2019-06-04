@@ -44,7 +44,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "add_store_config"
+  branch = "develop"
   [[prune.project]]
       name = "github.com/zondax/hid"
       unused-packages = false
