@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,18 +21,31 @@ const (
 	flagAddress          = "address"
 	flagIncreaseAmountTo = "increase-amount-to"
 	flagExtendedLockTime = "extended-lock-time"
+	flagBroadcast        = "broadcast"
 )
 
 func timeLockCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "time-lock",
 		Short: "time lock tokens",
-		RunE:  cmdr.timeLock,
+		Long: strings.TrimSpace(`
+Time lock is to lock an amount of tokens to a given time before when these tokens will not be able to claim back.
+
+$ CLI token time-lock --amount 100:BNB --from alice --description "time lock for some reason" --lock-time 1559805558
+
+this command will output the tx to broadcast, but will not broadcast to any node. you can double check the tx msg before send it to blockchain.
+
+if you want to broadcast the tx to blockchain, you need to specify --broadcast manually.
+
+$ CLI token time-lock --amount 100:BNB --from alice --description "time lock for some reason" --lock-time 1559805558 --broadcast
+`),
+		RunE: cmdr.timeLock,
 	}
 
 	cmd.Flags().String(flagAmount, "", "amount of tokens to lock")
 	cmd.Flags().Int64(flagLockTime, 0, "timestamp of lock time(second)")
 	cmd.Flags().String(flagDescription, "", "description of time lock")
+	cmd.Flags().Bool(flagBroadcast, false, "broadcast tx")
 
 	return cmd
 }
@@ -68,6 +82,10 @@ func (c Commander) timeLock(cmd *cobra.Command, args []string) error {
 
 	// build message
 	msg := timelock.NewTimeLockMsg(from, description, amount, lockTime)
+	broadcast := viper.GetBool(flagBroadcast)
+	if !broadcast {
+		cliCtx.GenerateOnly = true
+	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
@@ -75,13 +93,33 @@ func timeRelockCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "time-relock",
 		Short: "time relock tokens",
-		RunE:  cmdr.timeRelock,
+		Long: strings.TrimSpace(`
+Time relock is used to extend the lock time, increase amount of locked tokens or modify the description of a given time lock record.
+
+$ CLI token time-lock --from alice --description "time lock for some reason" --extended-lock-time 1559805558 --increase-amount-to 1000:BNB --time-lock-id 1
+
+this command will output the tx to broadcast, but will not broadcast to any node. you can double check the tx msg before send it to blockchain.
+
+you may just want to change description, extend lock time or increase locked amount, so you just need to specify one flag one time(but at least one).
+
+for example:
+
+$ CLI token time-lock --from alice --extended-lock-time 1559805558 --time-lock-id 1
+
+this command will just extend the lock time of this time lock record.
+
+if you want to broadcast the tx to blockchain, you need to specify --broadcast manually.
+
+$ CLI token time-lock --from alice --description "time lock for some reason" --extended-lock-time 1559805558 --increase-amount-to 1000:BNB --time-lock-id 1 --broadcast
+`),
+		RunE: cmdr.timeRelock,
 	}
 
 	cmd.Flags().String(flagIncreaseAmountTo, "", "amount of tokens to lock")
 	cmd.Flags().Int64(flagExtendedLockTime, 0, "timestamp of lock time(second)")
 	cmd.Flags().String(flagDescription, "", "description of time lock")
 	cmd.Flags().Int64(flagTimeLockId, 0, "time lock id")
+	cmd.Flags().Bool(flagBroadcast, false, "broadcast tx")
 
 	return cmd
 }
@@ -126,6 +164,10 @@ func (c Commander) timeRelock(cmd *cobra.Command, args []string) error {
 
 	// build message
 	msg := timelock.NewTimeRelockMsg(from, timeLockId, description, amount, lockTime)
+	broadcast := viper.GetBool(flagBroadcast)
+	if !broadcast {
+		cliCtx.GenerateOnly = true
+	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
