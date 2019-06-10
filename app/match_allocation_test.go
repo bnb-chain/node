@@ -92,7 +92,7 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 		sdk.NewCoin("BTC-000", 100000e8),
 		sdk.NewCoin("ETH-000", 100000e8)}
 	var accs []sdk.Account
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		privKey := ed25519.GenPrivKey()
 		pubKey := privKey.PubKey()
 		addr := sdk.AccAddress(pubKey.Address())
