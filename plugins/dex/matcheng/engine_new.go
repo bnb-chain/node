@@ -6,17 +6,17 @@ import (
 
 	"github.com/pkg/errors"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
-// TODO: add upgrade config in a separate PR.
-const upgradeHeight = 1
-
 func (me *MatchEng) Match(height int64) bool {
-	if height < upgradeHeight {
+	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return me.MatchBeforeGalileo()
 	}
-
+	me.logger.Debug("match starts...", "height", height)
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {

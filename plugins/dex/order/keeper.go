@@ -18,6 +18,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -530,8 +531,7 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
-	// TODO: add upgrade config in a separate PR
-	if ctx.BlockHeader().Height < 1 {
+	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
 
