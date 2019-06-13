@@ -153,6 +153,7 @@ func (app *BinanceChain) EndRecovery(height int64) error {
 
 	// TODO: sync the breathe block on state sync and just call app.DexKeeper.Init() to recover order book and recentPrices to memory
 	app.resetDexKeeper(height)
+	app.initParams()
 
 	// init app cache
 	accountStore := stores.GetKVStore(common.AccountStoreKey)
