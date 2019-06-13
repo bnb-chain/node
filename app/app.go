@@ -42,6 +42,7 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/plugins/tokens/account"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
@@ -247,6 +248,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP12, upgradeConfig.BEP12Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
 
 	// register store keys of upgrade
@@ -258,6 +260,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		timelock.TimeRelockMsg{}.Type(),
 		timelock.TimeUnlockMsg{}.Type(),
 	)
+
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {

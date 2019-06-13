@@ -5,6 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/binance-chain/node/plugins/tokens/account"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
@@ -17,6 +18,7 @@ func Routes(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.
 	routes := make(map[string]sdk.Handler)
 	routes[issue.Route] = issue.NewHandler(tokenMapper, keeper)
 	routes[burn.BurnRoute] = burn.NewHandler(tokenMapper, keeper)
+	routes[account.AccountFlagsRoute] = account.NewHandler(accKeeper)
 	routes[freeze.FreezeRoute] = freeze.NewHandler(tokenMapper, accKeeper, keeper)
 	routes[timelock.MsgRoute] = timelock.NewHandler(timeLockKeeper)
 	return routes
