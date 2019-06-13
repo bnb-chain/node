@@ -1,9 +1,27 @@
 # Changelog
+
+## 0.5.10
+BUG FIXES
+
+* [\#602](https://github.com/binance-chain/node/pull/602) [StateSync] Fix paramhub change in breathe block is not loaded
+
+## 0.5.9
+
+IMPROVEMENTS
+* [rpc] Updated tendermint to make process of websocket request async.
+
+BUG FIXES
+
+* [\#584](https://github.com/binance-chain/node/pull/584) [MatchEngine] Fix minor issues in allocation
+
 ## 0.5.7
+
 * [\#560](https://github.com/binance-chain/node/pull/560) [Publish] Change published empty msg to error level
 * [\#559](https://github.com/binance-chain/node/pull/559) [Tool] Add Snapshot tool
 * [\#558](https://github.com/binance-chain/node/pull/558) [Testnet] Fix the output from testnet cmd 
+
 ## 0.5.6
+
 IMPROVEMENTS
 * [\#466](https://github.com/binance-chain/node/pull/466)  Recover from last running mode when restarts 
 * [\#546](https://github.com/binance-chain/node/pull/546)[Upgrade] Set UpgradeConfig before all other initializations

@@ -193,6 +193,7 @@ func (app *BinanceChain) reInitChain() error {
 		snapshot.Manager().GetTxDB(),
 		app.LastBlockHeight(),
 		app.TxDecoder)
+	app.initParams()
 
 	// init app cache
 	stores := app.GetCommitMultiStore()
