@@ -56,6 +56,7 @@
 
 [[projects]]
   digest = "1:6ed2234b494c14b2a4ef5111401d514ad015eb780f1068038baa28aaf3bc4011"
+  branch = "feature/add-new-error-type"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -103,9 +104,8 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "8e2ea76b93193a9d6bfaca99808c7d5f7e06c8e9"
+  revision = ""
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.18"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"

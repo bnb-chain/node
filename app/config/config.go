@@ -52,9 +52,11 @@ BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 # Block height of BEP9 upgrade
 BEP9Height = {{ .UpgradeConfig.BEP9Height }}
 # Block height of BEP10 upgrade
-BEP10Height = {{ .UpgradeConfig.BEP10Height }} 
-# Block height of UpgradeMatchEngineHeight upgrade
+BEP10Height = {{ .UpgradeConfig.BEP10Height }}
+# Block height of BEP19Height upgrade
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
+# Block height of BEP12 upgrade
+BEP12Height = {{ .UpgradeConfig.BEP12Height }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -296,6 +298,7 @@ type UpgradeConfig struct {
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
+	BEP12Height int64 `mapstructure:"BEP12Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
 }
 
@@ -305,6 +308,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP9Height:  math.MaxInt64, //TODO change default when update
 		BEP10Height: math.MaxInt64,
 		BEP19Height: math.MaxInt64,
+		BEP12Height: math.MaxInt64,
 	}
 }
 
