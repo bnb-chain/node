@@ -880,23 +880,16 @@ func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfe
 		})
 	}
 
-	sideCh := make(chan int8, 2)
-	utils.ConcurrentExecuteAsync(2,
-		func() {
-			sideCh <- me.BUYSIDE
-			sideCh <- me.SELLSIDE
-			close(sideCh)
-		}, func() {
-			for side := range sideCh {
-				engine := kp.engines[symbol]
-				orders := kp.allOrders[symbol]
-				expire(orders, engine, side)
-			}
-		}, func() {
-			for _, transferCh := range transferChs {
-				close(transferCh)
-			}
-		})
+	go func() {
+		engine := kp.engines[symbol]
+		orders := kp.allOrders[symbol]
+		expire(orders, engine, me.BUYSIDE)
+		expire(orders, engine, me.SELLSIDE)
+
+		for _, transferCh := range transferChs {
+			close(transferCh)
+		}
+	}()
 
 	return transferChs
 }
