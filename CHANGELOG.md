@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.10
+BUG FIXES
+
+* [\#602](https://github.com/binance-chain/node/pull/602) [StateSync] Fix paramhub change in breathe block is not loaded
 
 ## 0.5.9
 
