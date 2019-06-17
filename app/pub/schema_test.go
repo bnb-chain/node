@@ -25,7 +25,7 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 		NumOfMsgs: 1,
 		Trades: []*Trade{{
 			Id: "42-0", Symbol: "NNB_BNB", Price: 100, Qty: 100,
-			Sid: "s-1", Bid: "b-1",
+			Sid: "s-1", Bid: "b-1", TickType: 1,
 			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1",
 			SAddr: "s", BAddr: "b", SSrc: 0, BSrc: 0}},
 	}
