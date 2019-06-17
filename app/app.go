@@ -246,6 +246,7 @@ func (app *BinanceChain) setUpgradeConfig() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, app.upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, app.upgradeConfig.BEP10Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())

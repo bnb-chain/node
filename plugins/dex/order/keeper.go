@@ -18,6 +18,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -575,6 +576,79 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
+	if !sdk.IsUpgrade(upgrade.BEP19) {
+		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
+	}
+
+	// use string of the addr as the key since map makes a fast path for string key.
+	// Also, making the key have same length is also an optimization.
+	tradeTransfers := make(map[string]TradeTransfers)
+	// expire fee is fixed, so we count by numbers.
+	expireTransfers := make(map[string]ExpireTransfers)
+	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
+	var expireEventType transferEventType
+	var totalFee types.Fee
+	for tran := range tranCh {
+		kp.doTransfer(ctx, &tran)
+		if !tran.FeeFree() {
+			addrStr := string(tran.accAddress.Bytes())
+			// need a copy of tran as it is reused
+			tranCp := tran
+			if tran.IsExpiredWithFee() {
+				expireEventType = tran.eventType
+				if _, ok := expireTransfers[addrStr]; !ok {
+					expireTransfers[addrStr] = ExpireTransfers{&tranCp}
+				} else {
+					expireTransfers[addrStr] = append(expireTransfers[addrStr], &tranCp)
+				}
+			} else if tran.eventType == eventFilled {
+				if _, ok := tradeTransfers[addrStr]; !ok {
+					tradeTransfers[addrStr] = TradeTransfers{&tranCp}
+				} else {
+					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], &tranCp)
+				}
+			}
+		}
+		if postAllocateHandler != nil {
+			postAllocateHandler(tran)
+		}
+	}
+
+	feesPerAcc := make(map[string]*types.Fee)
+	for addrStr, trans := range tradeTransfers {
+		addr := sdk.AccAddress(addrStr)
+		acc := kp.am.GetAccount(ctx, addr)
+		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines)
+		if !fees.IsEmpty() {
+			feesPerAcc[addrStr] = &fees
+			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
+			kp.am.SetAccount(ctx, acc)
+			totalFee.AddFee(fees)
+		}
+	}
+
+	for addrStr, trans := range expireTransfers {
+		addr := sdk.AccAddress(addrStr)
+		acc := kp.am.GetAccount(ctx, addr)
+
+		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines)
+		if !fees.IsEmpty() {
+			if _, ok := feesPerAcc[addrStr]; ok {
+				feesPerAcc[addrStr].AddFee(fees)
+			} else {
+				feesPerAcc[addrStr] = &fees
+			}
+			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
+			kp.am.SetAccount(ctx, acc)
+			totalFee.AddFee(fees)
+		}
+	}
+	return totalFee, feesPerAcc
+}
+
+// DEPRECATED
+func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
@@ -637,7 +711,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		}
 	}
 	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
-		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.engines)
+		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
@@ -706,7 +780,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 ) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return
