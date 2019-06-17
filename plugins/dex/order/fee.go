@@ -75,7 +75,7 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	}
 	tradeTransfers.Sort()
 	for _, tran := range tradeTransfers {
-		fee := m.calcTradeFeeForSingleTransfer(balances, &tran, engines)
+		fee := m.calcTradeFeeForSingleTransfer(balances, tran, engines)
 		fees.AddFee(fee)
 		balances = balances.Minus(fee.Tokens)
 	}
@@ -149,7 +149,7 @@ func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[str
 	if nativeFee.IsInt64() {
 		return nativeFee.Int64(), false
 	}
-	return math.MaxInt64, true
+	return 0, true
 }
 
 // DEPRECATED

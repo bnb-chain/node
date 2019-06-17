@@ -526,11 +526,11 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 	}
 }
 
-func (kp *Keeper) allocateGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	// TODO: add upgrade config in a separate PR
 	if ctx.BlockHeader().Height < 1 {
-		return kp.allocate(ctx, tranCh, postAllocateHandler)
+		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
 
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -545,18 +545,19 @@ func (kp *Keeper) allocateGalileo(ctx sdk.Context, tranCh <-chan Transfer, postA
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
 			addrStr := string(tran.accAddress.Bytes())
+			tranPtr := &tran
 			if tran.IsExpiredWithFee() {
 				expireEventType = tran.eventType
 				if _, ok := expireTransfers[addrStr]; !ok {
-					expireTransfers[addrStr] = ExpireTransfers{tran}
+					expireTransfers[addrStr] = ExpireTransfers{tranPtr}
 				} else {
-					expireTransfers[addrStr] = append(expireTransfers[addrStr], tran)
+					expireTransfers[addrStr] = append(expireTransfers[addrStr], tranPtr)
 				}
 			} else if tran.eventType == eventFilled {
 				if _, ok := tradeTransfers[addrStr]; !ok {
-					tradeTransfers[addrStr] = TradeTransfers{tran}
+					tradeTransfers[addrStr] = TradeTransfers{tranPtr}
 				} else {
-					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], tran)
+					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], tranPtr)
 				}
 			}
 		}
@@ -598,7 +599,7 @@ func (kp *Keeper) allocateGalileo(ctx sdk.Context, tranCh <-chan Transfer, postA
 }
 
 // DEPRECATED
-func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
@@ -691,7 +692,7 @@ func (kp *Keeper) allocateAndCalcFee(
 	feesPerAcc := make([]map[string]*types.Fee, concurrency)
 	allocatePerCh := func(index int, tranCh <-chan Transfer) {
 		defer wg.Done()
-		fee, feeByAcc := kp.allocateGalileo(ctx, tranCh, postAlloTransHandler)
+		fee, feeByAcc := kp.allocate(ctx, tranCh, postAlloTransHandler)
 		feesPerCh[index].AddFee(fee)
 		feesPerAcc[index] = feeByAcc
 	}
@@ -731,7 +732,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 ) {
 	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 		return
