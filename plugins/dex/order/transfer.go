@@ -2,6 +2,7 @@ package order
 
 import (
 	"fmt"
+	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -54,6 +55,14 @@ func (tran Transfer) IsExpire() bool {
 
 func (tran Transfer) IsExpiredWithFee() bool {
 	return tran.eventType == eventFullyExpire || tran.eventType == eventIOCFullyExpire
+}
+
+func (tran Transfer) IsNativeIn() bool {
+	return tran.inAsset == types.NativeTokenSymbol
+}
+
+func (tran Transfer) IsNativeOut() bool {
+	return tran.outAsset == types.NativeTokenSymbol
 }
 
 func (tran *Transfer) String() string {
@@ -154,6 +163,7 @@ func transferFromOrderRemoved(ord me.OrderPart, ordMsg OrderInfo, tranEventType 
 	}
 }
 
+// DEPRECATED
 type sortedAsset struct {
 	native int64
 	// coins are sorted.
@@ -171,3 +181,44 @@ func (s *sortedAsset) addAsset(asset string, amt int64) {
 		s.tokens = s.tokens.Plus(sdk.Coins{{Denom: asset, Amount: amt}})
 	}
 }
+
+var _ sort.Interface = TradeTransfers{}
+
+type TradeTransfers []Transfer
+func (trans TradeTransfers) Len() int           { return len(trans) }
+func (trans TradeTransfers) Swap(i, j int)      { trans[i], trans[j] = trans[j], trans[i] }
+func (trans TradeTransfers) Less(i, j int) bool {
+	in1, in2 := trans[i].inAsset, trans[j].inAsset
+	if in1 != in2 {
+		if in1 == types.NativeTokenSymbol {
+			return true
+		} else if in2 == types.NativeTokenSymbol {
+			return false
+		} else {
+			return in1 < in2
+		}
+	}
+	out1, out2 := trans[i].outAsset, trans[j].outAsset
+	if out1 != out2 {
+		if out1 == types.NativeTokenSymbol {
+			return true
+		} else if out2 == types.NativeTokenSymbol {
+			return false
+		} else {
+			return out1 < out2
+		}
+	}
+	// we keep the sequence of trades that from the same trading pair.
+	return true
+}
+
+func (trans *TradeTransfers) Sort() { sort.Stable(trans) }
+
+type ExpireTransfers []Transfer
+func (trans ExpireTransfers) Len() int           { return len(trans) }
+func (trans ExpireTransfers) Swap(i, j int)      { trans[i], trans[j] = trans[j], trans[i] }
+func (trans ExpireTransfers) Less(i, j int) bool {
+	// first come, first expire
+	return trans[i].Oid <= trans[j].Oid
+}
+func (trans *ExpireTransfers) Sort() { sort.Stable(trans) }
