@@ -25,7 +25,7 @@ func NewTestFeeConfig() FeeConfig {
 	return feeConfig
 }
 
-func TestFeeManager_CalcOrderFees(t *testing.T) {
+func TestFeeManager_CalcTradeFee(t *testing.T) {
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
@@ -33,11 +33,11 @@ func TestFeeManager_CalcOrderFees(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	// the tradeIn amount is large enough to make the fee > 0
 	tradeIn := sdk.NewCoin(types.NativeTokenSymbol, 100e8)
-	fee := keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee := keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e6)}, fee.Tokens)
 	// small tradeIn amount
 	tradeIn = sdk.NewCoin(types.NativeTokenSymbol, 100)
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 0)}, fee.Tokens)
 
 	// !BNB
@@ -45,11 +45,11 @@ func TestFeeManager_CalcOrderFees(t *testing.T) {
 	// has enough bnb
 	tradeIn = sdk.NewCoin("ABC-000", 1000e8)
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e8)})
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e6)}, fee.Tokens)
 	// no enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e6)})
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e8)}, fee.Tokens)
 
 	// very high price to produce int64 overflow
@@ -57,15 +57,15 @@ func TestFeeManager_CalcOrderFees(t *testing.T) {
 	// has enough bnb
 	tradeIn = sdk.NewCoin("ABC-000", 1000e8)
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e16)})
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e15)}, fee.Tokens)
 	// no enough bnb, fee is within int64
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e15)})
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e8)}, fee.Tokens)
 	// no enough bnb, even the fee overflows
 	tradeIn = sdk.NewCoin("ABC-000", 1e16)
-	fee = keeper.FeeManager.CalcOrderFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e13)}, fee.Tokens)
 }
 
