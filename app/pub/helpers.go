@@ -214,7 +214,7 @@ func collectTradeForPublish(
 				Bid:      tradeHolder.Trade.Bid,
 				Price:    tradeHolder.Trade.LastPx,
 				Qty:      tradeHolder.Trade.LastQty,
-				TickType: int(tradeHolder.Trade.Status)}
+				TickType: int(tradeHolder.Trade.TickType)}
 			trades[tradeHolder.Trade] = t
 			tradeIdx += 1
 			*tradesToPublish = append(*tradesToPublish, t)
