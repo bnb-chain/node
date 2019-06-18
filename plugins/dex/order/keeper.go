@@ -539,10 +539,10 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 	}
 }
 
-func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, expireTransferHandler func(tran Transfer)) (
+func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
-		return kp.allocateBeforeGalileo(ctx, tranCh, expireTransferHandler)
+		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
 
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -580,7 +580,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, expireTransf
 	for addrStr, trans := range tradeTransfers {
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
-		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines, expireTransferHandler != nil)
+		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines)
 		if !fees.IsEmpty() {
 			feesPerAcc[addrStr] = &fees
 			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
@@ -593,7 +593,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, expireTransf
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
 
-		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines, expireTransferHandler)
+		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines, postAllocateHandler)
 		if !fees.IsEmpty() {
 			if _, ok := feesPerAcc[addrStr]; ok {
 				feesPerAcc[addrStr].AddFee(fees)
@@ -641,7 +641,7 @@ func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer,
 				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}
-		if postAllocateHandler != nil && tran.eventType != eventFilled {
+		if postAllocateHandler != nil {
 			postAllocateHandler(tran)
 		}
 	}

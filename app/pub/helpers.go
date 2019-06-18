@@ -153,6 +153,17 @@ func MatchAndAllocateAllForPublish(
 			symbol := pair.GetSymbol()
 			matchEngTrades, _ := dexKeeper.GetLastTradesForPair(symbol)
 			for _, trade := range matchEngTrades {
+				var ssinglefee string
+				var bsinglefee string
+				// nilness check is for before Galileo upgrade the trade fee is nil
+				if trade.SellerFee != nil {
+					ssinglefee = trade.SellerFee.String()
+				}
+				// nilness check is for before Galileo upgrade the trade fee is nil
+				if trade.BuyerFee != nil {
+					bsinglefee = trade.BuyerFee.String()
+				}
+
 				t := &Trade{
 					Id:         fmt.Sprintf("%d-%d", ctx.BlockHeight(), tradeIdx),
 					Symbol:     symbol,
@@ -161,8 +172,8 @@ func MatchAndAllocateAllForPublish(
 					Price:      trade.LastPx,
 					Qty:        trade.LastQty,
 					TickType:   int(trade.TickType),
-					SSingleFee: trade.SellerFee,
-					BSingleFee: trade.BuyerFee,
+					SSingleFee: ssinglefee,
+					BSingleFee: bsinglefee,
 				}
 				tradeIdx += 1
 				tradesToPublish = append(tradesToPublish, t)

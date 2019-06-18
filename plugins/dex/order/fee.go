@@ -68,7 +68,7 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
 }
 
-func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng, updateTradeFeeForPub bool) types.Fee {
+func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) types.Fee {
 	var fees types.Fee
 	if tradeTransfers == nil {
 		return fees
@@ -76,12 +76,10 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	tradeTransfers.Sort()
 	for _, tran := range tradeTransfers {
 		fee := m.calcTradeFeeForSingleTransfer(balances, tran, engines)
-		if updateTradeFeeForPub {
-			if tran.IsBuyer() {
-				tran.Trade.BuyerFee = fee.String()
-			} else {
-				tran.Trade.SellerFee = fee.String()
-			}
+		if tran.IsBuyer() {
+			tran.Trade.BuyerFee = &fee
+		} else {
+			tran.Trade.SellerFee = &fee
 		}
 		fees.AddFee(fee)
 		balances = balances.Minus(fee.Tokens)

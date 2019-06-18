@@ -764,17 +764,17 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 
 	me.fillOrdersNew(SELLSIDE, takerSideOrders, 1, 100, 10)
 	assert.Equal([]Trade{
-		{"8", 110, 80, 780, 880, "1", SellTaker, "", ""},
-		{"6", 110, 120, 900, 620, "1", SellTaker, "", ""},
-		{"2", 110, 100, 1000, 300, "1", SellTaker, "", ""},
-		{"2", 110, 60, 960, 360, "3", SellTaker, "", ""},
-		{"4", 110, 40, 1000, 340, "3", SellTaker, "", ""},
+		{"8", 110, 80, 780, 880, "1", SellTaker, nil, nil},
+		{"6", 110, 120, 900, 620, "1", SellTaker, nil, nil},
+		{"2", 110, 100, 1000, 300, "1", SellTaker, nil, nil},
+		{"2", 110, 60, 960, 360, "3", SellTaker, nil, nil},
+		{"4", 110, 40, 1000, 340, "3", SellTaker, nil, nil},
 
-		{"8", 100, 120, 820, 1000, "5", BuySurplus, "", ""},
-		{"6", 100, 180, 1000, 800, "5", BuySurplus, "", ""},
-		{"2", 100, 200, 1000, 560, "7", SellTaker, "", ""},
-		{"2", 100, 40, 240, 600, "9", BuySurplus, "", ""},
-		{"4", 100, 60, 300, 400, "9", BuySurplus, "", ""},
+		{"8", 100, 120, 820, 1000, "5", BuySurplus, nil, nil},
+		{"6", 100, 180, 1000, 800, "5", BuySurplus, nil, nil},
+		{"2", 100, 200, 1000, 560, "7", SellTaker, nil, nil},
+		{"2", 100, 40, 240, 600, "9", BuySurplus, nil, nil},
+		{"4", 100, 60, 300, 400, "9", BuySurplus, nil, nil},
 	}, me.Trades)
 	assert.Equal([]OrderPart{
 		{"1", 99, 1000, 1000, 0},
@@ -829,20 +829,20 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 	}
 	me.fillOrdersNew(BUYSIDE, takerSideOrders, 0, 100, -100)
 	assert.Equal([]Trade{
-		{"2", 90, 180, 180, 880, "1", BuyTaker, "", ""},
-		{"2", 90, 90, 90, 970, "3", BuyTaker, "", ""},
-		{"2", 90, 30, 30, 1000, "5", BuyTaker, "", ""},
+		{"2", 90, 180, 180, 880, "1", BuyTaker, nil, nil},
+		{"2", 90, 90, 90, 970, "3", BuyTaker, nil, nil},
+		{"2", 90, 30, 30, 1000, "5", BuyTaker, nil, nil},
 
-		{"4", 95, 180, 360, 980, "1", BuyTaker, "", ""},
-		{"4", 95, 20, 110, 1000, "3", BuyTaker, "", ""},
-		{"6", 95, 70, 180, 970, "3", BuyTaker, "", ""},
-		{"6", 95, 30, 60, 1000, "5", BuyTaker, "", ""},
+		{"4", 95, 180, 360, 980, "1", BuyTaker, nil, nil},
+		{"4", 95, 20, 110, 1000, "3", BuyTaker, nil, nil},
+		{"6", 95, 70, 180, 970, "3", BuyTaker, nil, nil},
+		{"6", 95, 30, 60, 1000, "5", BuyTaker, nil, nil},
 
-		{"8", 100, 100, 460, 1000, "1", BuyTaker, "", ""},
-		{"10", 100, 100, 560, 1000, "1", BuyTaker, "", ""},
-		{"12", 100, 40, 600, 840, "1", SellSurplus, "", ""},
-		{"12", 100, 120, 300, 960, "3", SellSurplus, "", ""},
-		{"12", 100, 40, 100, 1000, "5", SellSurplus, "", ""},
+		{"8", 100, 100, 460, 1000, "1", BuyTaker, nil, nil},
+		{"10", 100, 100, 560, 1000, "1", BuyTaker, nil, nil},
+		{"12", 100, 40, 600, 840, "1", SellSurplus, nil, nil},
+		{"12", 100, 120, 300, 960, "3", SellSurplus, nil, nil},
+		{"12", 100, 40, 100, 1000, "5", SellSurplus, nil, nil},
 	}, me.Trades)
 	assert.Equal([]OrderPart{
 		{"2", 99, 1000, 1000, 0},
@@ -887,9 +887,9 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 	}
 	me.fillOrdersNew(BUYSIDE, takerSideOrders, 0, 100, 0)
 	assert.Equal([]Trade{
-		{"4", 100, 100, 800, 1000, "1", Neutral, "", ""},
-		{"2", 100, 200, 1000, 900, "1", Neutral, "", ""},
-		{"2", 100, 100, 1000, 1000, "3", Neutral, "", ""},
+		{"4", 100, 100, 800, 1000, "1", Neutral, nil, nil},
+		{"2", 100, 200, 1000, 900, "1", Neutral, nil, nil},
+		{"2", 100, 100, 1000, 1000, "3", Neutral, nil, nil},
 	}, me.Trades)
 	assert.Equal([]OrderPart{
 		{"2", 100, 1000, 1000, 0},
@@ -927,15 +927,15 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
 	assert.Equal([]Trade{
-		{"13", 100, 10, 10, 10, "12", SellSurplus, "", ""},
-		{"15", 100, 40, 50, 40, "12", SellSurplus, "", ""},
-		{"17", 100, 20, 70, 20, "12", SellSurplus, "", ""},
-		{"11", 100, 30, 100, 30, "12", SellSurplus, "", ""},
-		{"1", 100, 5, 105, 5, "12", BuyTaker, "", ""},
-		{"3", 100, 5, 110, 5, "12", BuyTaker, "", ""},
-		{"3", 100, 5, 5, 10, "16", BuyTaker, "", ""},
-		{"7", 100, 15, 20, 15, "16", BuyTaker, "", ""},
-		{"7", 100, 10, 10, 25, "14", BuyTaker, "", ""},
+		{"13", 100, 10, 10, 10, "12", SellSurplus, nil, nil},
+		{"15", 100, 40, 50, 40, "12", SellSurplus, nil, nil},
+		{"17", 100, 20, 70, 20, "12", SellSurplus, nil, nil},
+		{"11", 100, 30, 100, 30, "12", SellSurplus, nil, nil},
+		{"1", 100, 5, 105, 5, "12", BuyTaker, nil, nil},
+		{"3", 100, 5, 110, 5, "12", BuyTaker, nil, nil},
+		{"3", 100, 5, 5, 10, "16", BuyTaker, nil, nil},
+		{"7", 100, 15, 20, 15, "16", BuyTaker, nil, nil},
+		{"7", 100, 10, 10, 25, "14", BuyTaker, nil, nil},
 	}, me.Trades)
 	me.DropFilledOrder()
 	buys, sells := me.Book.GetAllLevels()
@@ -983,19 +983,19 @@ func TestMatchEng_Match(t *testing.T) {
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(104), me.LastTradePrice)
 	assert.Equal([]Trade{
-		{"7", 80, 10, 10, 10, "8", BuyTaker, "", ""},
-		{"9", 80, 30, 40, 30, "8", BuyTaker, "", ""},
-		{"9", 80, 10, 10, 40, "6", BuyTaker, "", ""},
+		{"7", 80, 10, 10, 10, "8", BuyTaker, nil, nil},
+		{"9", 80, 30, 40, 30, "8", BuyTaker, nil, nil},
+		{"9", 80, 10, 10, 40, "6", BuyTaker, nil, nil},
 
-		{"5", 90, 30, 70, 30, "8", BuyTaker, "", ""},
+		{"5", 90, 30, 70, 30, "8", BuyTaker, nil, nil},
 
-		{"1", 100, 10, 80, 10, "8", BuyTaker, "", ""},
-		{"3", 100, 10, 90, 10, "8", BuyTaker, "", ""},
+		{"1", 100, 10, 80, 10, "8", BuyTaker, nil, nil},
+		{"3", 100, 10, 90, 10, "8", BuyTaker, nil, nil},
 
-		{"11", 104, 10, 100, 10, "8", SellSurplus, "", ""},
-		{"11", 104, 10, 20, 20, "6", SellSurplus, "", ""},
-		{"13", 104, 10, 30, 10, "6", SellSurplus, "", ""},
-		{"15", 104, 10, 40, 10, "6", SellSurplus, "", ""},
+		{"11", 104, 10, 100, 10, "8", SellSurplus, nil, nil},
+		{"11", 104, 10, 20, 20, "6", SellSurplus, nil, nil},
+		{"13", 104, 10, 30, 10, "6", SellSurplus, nil, nil},
+		{"15", 104, 10, 40, 10, "6", SellSurplus, nil, nil},
 	}, me.Trades)
 	me.DropFilledOrder()
 	buys, sells = me.Book.GetAllLevels()
