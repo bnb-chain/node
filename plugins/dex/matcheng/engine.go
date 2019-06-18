@@ -1,7 +1,6 @@
 package matcheng
 
 import (
-	"encoding/json"
 	"math"
 
 	"github.com/binance-chain/node/common/log"
@@ -165,7 +164,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
-func (me *MatchEng) MatchDeprecated() bool {
+func (me *MatchEng) MatchBeforeGalileo() bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
@@ -262,23 +261,4 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 		}
 	}
 	return
-}
-
-// TODO: make it better so we can reconstruct the match engine quickly.
-func (me *MatchEng) Dump() {
-	me.logger.Info("engine status", "LotSize", me.LotSize, "PriceLimitPct", me.PriceLimitPct,
-		"LastTradePrice", me.LastTradePrice)
-	buys, sells := me.Book.GetAllLevels()
-
-	if sellsBz, err := json.MarshalIndent(sells, "", "    "); err != nil {
-		me.logger.Error("marshal sells failed")
-	} else {
-		me.logger.Info(string(sellsBz))
-	}
-
-	if buysBz, err := json.MarshalIndent(buys, "", "    "); err != nil {
-		me.logger.Error("marshal buys failed")
-	} else {
-		me.logger.Info(string(buysBz))
-	}
 }

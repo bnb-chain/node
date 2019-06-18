@@ -258,7 +258,6 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
-		engine.Dump()
 		thisRoundIds := kp.roundOrders[symbol]
 		for _, id := range thisRoundIds {
 			msg := orders[id]
