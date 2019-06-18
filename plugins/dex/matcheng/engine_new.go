@@ -9,11 +9,12 @@ import (
 	"github.com/binance-chain/node/common/utils"
 )
 
+// TODO: add upgrade config in a separate PR.
 const upgradeHeight = 1
 
 func (me *MatchEng) Match(height int64) bool {
 	if height < upgradeHeight {
-		return me.MatchDeprecated()
+		return me.MatchBeforeGalileo()
 	}
 
 	me.Trades = me.Trades[:0]
@@ -234,24 +235,24 @@ func (me *MatchEng) fillOrdersNew(takerSide int8, takerSideOrders TakerSideOrder
 				LastQty: filledQty,
 			}
 			if surplus < 0 {
-				trade.Status = SellSurplus
+				trade.TickType = SellSurplus
 			} else if surplus > 0 {
-				trade.Status = BuySurplus
+				trade.TickType = BuySurplus
 			} else {
-				trade.Status = Neutral
+				trade.TickType = Neutral
 			}
 
 			if takerSide == SELLSIDE {
 				trade.Sid, trade.Bid = taker.Id, maker.Id
 				trade.SellCumQty, trade.BuyCumQty = taker.CumQty, maker.CumQty
 				if maker.Time < taker.Time {
-					trade.Status = SellTaker
+					trade.TickType = SellTaker
 				}
 			} else {
 				trade.Sid, trade.Bid = maker.Id, taker.Id
 				trade.SellCumQty, trade.BuyCumQty = maker.CumQty, taker.CumQty
 				if maker.Time < taker.Time {
-					trade.Status = BuyTaker
+					trade.TickType = BuyTaker
 				}
 			}
 			me.Trades = append(me.Trades, trade)

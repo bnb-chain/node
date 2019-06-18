@@ -38,7 +38,7 @@ type Trade struct {
 	BuyCumQty  int64  // cumulative executed quantity for the buy order
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
-	Status     int8
+	TickType   int8
 }
 
 type OrderPart struct {
