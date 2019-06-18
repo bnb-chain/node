@@ -547,19 +547,20 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
 			addrStr := string(tran.accAddress.Bytes())
-			tranPtr := &tran
+			// need a copy of tran as it is reused
+			tranCp := tran
 			if tran.IsExpiredWithFee() {
 				expireEventType = tran.eventType
 				if _, ok := expireTransfers[addrStr]; !ok {
-					expireTransfers[addrStr] = ExpireTransfers{tranPtr}
+					expireTransfers[addrStr] = ExpireTransfers{&tranCp}
 				} else {
-					expireTransfers[addrStr] = append(expireTransfers[addrStr], tranPtr)
+					expireTransfers[addrStr] = append(expireTransfers[addrStr], &tranCp)
 				}
 			} else if tran.eventType == eventFilled {
 				if _, ok := tradeTransfers[addrStr]; !ok {
-					tradeTransfers[addrStr] = TradeTransfers{tranPtr}
+					tradeTransfers[addrStr] = TradeTransfers{&tranCp}
 				} else {
-					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], tranPtr)
+					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], &tranCp)
 				}
 			}
 		}
