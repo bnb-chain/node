@@ -143,7 +143,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack, nil}
+		change := OrderChange{info.Id, Ack, "", nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
@@ -277,7 +277,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, nil})
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, "", nil})
 				kp.OrderChangesMtx.Unlock()
 			}
 		}
@@ -539,10 +539,10 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 	}
 }
 
-func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, expireTransferHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
-		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
+		return kp.allocateBeforeGalileo(ctx, tranCh, expireTransferHandler)
 	}
 
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -574,16 +574,13 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 				}
 			}
 		}
-		if postAllocateHandler != nil {
-			postAllocateHandler(tran)
-		}
 	}
 
 	feesPerAcc := make(map[string]*types.Fee)
 	for addrStr, trans := range tradeTransfers {
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
-		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines)
+		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines, expireTransferHandler != nil)
 		if !fees.IsEmpty() {
 			feesPerAcc[addrStr] = &fees
 			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
@@ -596,7 +593,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
 
-		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines)
+		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines, expireTransferHandler)
 		if !fees.IsEmpty() {
 			if _, ok := feesPerAcc[addrStr]; ok {
 				feesPerAcc[addrStr].AddFee(fees)
@@ -644,7 +641,7 @@ func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer,
 				fees.addAsset(tran.inAsset, tran.in)
 			}
 		}
-		if postAllocateHandler != nil {
+		if postAllocateHandler != nil && tran.eventType != eventFilled {
 			postAllocateHandler(tran)
 		}
 	}
@@ -739,21 +736,23 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
+// Return whether match has been done in this height
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
-) {
+) bool {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return
+		return false
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	fees.Pool.AddAndCommitFee("MATCH", totalFee)
 	kp.clearAfterMatch()
+	return true
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {

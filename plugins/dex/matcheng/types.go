@@ -39,6 +39,8 @@ type Trade struct {
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
 	TickType   int8
+	SellerFee  string // seller's fee
+	BuyerFee   string // buyer's fee
 }
 
 type OrderPart struct {
@@ -164,10 +166,10 @@ type OverLappedLevel struct {
 	AccumulatedExecutions int64
 	BuySellSurplus        int64
 
-	BuyTakerStartIdx      int
-	SellTakerStartIdx     int
-	BuyMakerTotal         int64
-	SellMakerTotal		  int64
+	BuyTakerStartIdx  int
+	SellTakerStartIdx int
+	BuyMakerTotal     int64
+	SellMakerTotal    int64
 }
 
 func (overlapped *OverLappedLevel) HasBuyMaker() bool {

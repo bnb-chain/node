@@ -149,19 +149,21 @@ func (msg *trades) ToNativeMap() map[string]interface{} {
 }
 
 type Trade struct {
-	Id       string
-	Symbol   string
-	Price    int64
-	Qty      int64
-	Sid      string
-	Bid      string
-	TickType int
-	Sfee     string
-	Bfee     string
-	SAddr    string // string representation of AccAddress
-	BAddr    string // string representation of AccAddress
-	SSrc     int64  // sell order source
-	BSrc     int64  // buy order source
+	Id         string
+	Symbol     string
+	Price      int64
+	Qty        int64
+	Sid        string
+	Bid        string
+	Sfee       string // DEPRECATING: seller's total fee in this block, in future we should use SSingleFee which is more precise
+	Bfee       string // DEPRECATING: buyer's total fee in this block, in future we should use BSingleFee which is more precise
+	SSingleFee string // seller's fee for this trade
+	BSingleFee string // buyer's fee for this trade
+	TickType   int
+	SAddr      string // string representation of AccAddress
+	BAddr      string // string representation of AccAddress
+	SSrc       int64  // sell order source
+	BSrc       int64  // buy order source
 }
 
 func (msg *Trade) MarshalJSON() ([]byte, error) {
@@ -191,6 +193,8 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
+	native["ssinglefee"] = msg.SSingleFee
+	native["bsinglefee"] = msg.BSingleFee
 	native["tickType"] = msg.TickType
 	native["saddr"] = sdk.AccAddress(msg.SAddr).String()
 	native["baddr"] = sdk.AccAddress(msg.BAddr).String()
@@ -244,7 +248,8 @@ type Order struct {
 	LastExecutedPrice    int64
 	LastExecutedQty      int64
 	CumQty               int64
-	Fee                  string
+	Fee                  string // DEPRECATING(Galileo): total fee for Owner in this block, should use SingleFee in future
+	SingleFee            string // fee for this order update
 	OrderCreationTime    int64
 	TransactionTime      int64
 	TimeInForce          int8
@@ -287,6 +292,7 @@ func (msg *Order) toNativeMap() map[string]interface{} {
 	native["lastExecutedQty"] = msg.LastExecutedQty
 	native["cumQty"] = msg.CumQty
 	native["fee"] = msg.Fee
+	native["singlefee"] = msg.SingleFee
 	native["orderCreationTime"] = msg.OrderCreationTime
 	native["transactionTime"] = msg.TransactionTime
 	native["timeInForce"] = int(msg.TimeInForce)

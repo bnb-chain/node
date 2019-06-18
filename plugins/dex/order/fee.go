@@ -68,7 +68,7 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
 }
 
-func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng, updateTradeFeeForPub bool) types.Fee {
 	var fees types.Fee
 	if tradeTransfers == nil {
 		return fees
@@ -76,13 +76,20 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	tradeTransfers.Sort()
 	for _, tran := range tradeTransfers {
 		fee := m.calcTradeFeeForSingleTransfer(balances, tran, engines)
+		if updateTradeFeeForPub {
+			if tran.IsBuyer() {
+				tran.Trade.BuyerFee = fee.String()
+			} else {
+				tran.Trade.SellerFee = fee.String()
+			}
+		}
 		fees.AddFee(fee)
 		balances = balances.Minus(fee.Tokens)
 	}
 	return fees
 }
 
-func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng, expireTransferHandler func(tran Transfer)) types.Fee {
 	var fees types.Fee
 	if expireTransfers == nil {
 		return fees
@@ -90,6 +97,10 @@ func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEvent
 	expireTransfers.Sort()
 	for _, tran := range expireTransfers {
 		fee := m.CalcFixedFee(balances, expireType, tran.inAsset, engines)
+		if expireTransferHandler != nil {
+			tran.Fee = fee
+			expireTransferHandler(*tran)
+		}
 		fees.AddFee(fee)
 		balances = balances.Minus(fee.Tokens)
 	}
