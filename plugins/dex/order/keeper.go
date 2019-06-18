@@ -59,8 +59,8 @@ type Keeper struct {
 	logger                     tmlog.Logger
 }
 
-func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(basePrice, lotSize, 0.05)
+func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(pairSymbol, basePrice, lotSize, 0.05)
 }
 
 // NewKeeper - Returns the Keeper
@@ -99,8 +99,8 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
+	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
@@ -147,7 +147,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
+		kp.logger.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
 		kp.OrderInfosForPub[info.Id] = &info
 	}
 
@@ -161,7 +161,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	bnclog.Debug("Added orders", "symbol", symbol, "id", info.Id)
+	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
 
@@ -232,7 +232,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	concurrency := len(tradeOuts)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
-	if engine.Match() {
+	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for _, t := range engine.Trades {
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
@@ -374,7 +374,9 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		close(symbolCh)
 	}
 	matchWorker := func() {
+		i := 0
 		for symbol := range symbolCh {
+			i++
 			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
@@ -657,7 +659,7 @@ func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
 ) {
-	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
+	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
 	if tradeOuts == nil {
@@ -756,7 +758,7 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time
 	if err != nil {
 		panic(err)
 	}
-	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
+	kp.logger.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
 	store.Set([]byte(key), bz)
 }
 
