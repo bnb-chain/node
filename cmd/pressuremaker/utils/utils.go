@@ -188,6 +188,7 @@ func makeTradeToPub(id, sid, bid, saddr, baddr string, price, qty int64) *pub.Tr
 		qty,
 		sid,
 		bid,
+		1,
 		"",
 		"",
 		saddr,
