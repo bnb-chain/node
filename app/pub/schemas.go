@@ -32,13 +32,13 @@ const (
 										{ "name": "bid", "type": "string" },
 										{ "name": "sfee", "type": "string" },
 										{ "name": "bfee", "type": "string" },
-										{ "name": "ssinglefee", "type": "string" },
-										{ "name": "bsinglefee", "type": "string" },
-										{ "name": "tickType", "type": "int" },
 										{ "name": "saddr", "type": "string" },
 										{ "name": "baddr", "type": "string" },
 										{ "name": "ssrc", "type": "long" },
-										{ "name": "bsrc", "type": "long" }
+										{ "name": "bsrc", "type": "long" },
+										{ "name": "ssinglefee", "type": "string" },
+										{ "name": "bsinglefee", "type": "string" },
+										{ "name": "tickType", "type": "int" }
 									]
 								}
 							}
@@ -72,12 +72,12 @@ const (
 									{ "name": "lastExecutedQty", "type": "long" },
 									{ "name": "cumQty", "type": "long" },
 									{ "name": "fee", "type": "string" }, 
-									{ "name": "singlefee", "type": "string" },
 									{ "name": "orderCreationTime", "type": "long" },
 									{ "name": "transactionTime", "type": "long" },
 									{ "name": "timeInForce", "type": "int" },
 									{ "name": "currentExecutionType", "type": "string" },
-									{ "name": "txHash", "type": "string" }
+									{ "name": "txHash", "type": "string" },
+									{ "name": "singlefee", "type": "string" }
 								]
 							}
 						   }

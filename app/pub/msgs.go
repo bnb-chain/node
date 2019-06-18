@@ -155,15 +155,15 @@ type Trade struct {
 	Qty        int64
 	Sid        string
 	Bid        string
-	Sfee       string // DEPRECATING: seller's total fee in this block, in future we should use SSingleFee which is more precise
-	Bfee       string // DEPRECATING: buyer's total fee in this block, in future we should use BSingleFee which is more precise
-	SSingleFee string // seller's fee for this trade
-	BSingleFee string // buyer's fee for this trade
-	TickType   int
+	Sfee       string // DEPRECATING(Galileo): seller's total fee in this block, in future we should use SSingleFee which is more precise
+	Bfee       string // DEPRECATING(Galileo): buyer's total fee in this block, in future we should use BSingleFee which is more precise
 	SAddr      string // string representation of AccAddress
 	BAddr      string // string representation of AccAddress
-	SSrc       int64  // sell order source
-	BSrc       int64  // buy order source
+	SSrc       int64  // sell order source - ADDED Galileo
+	BSrc       int64  // buy order source - ADDED Galileo
+	SSingleFee string // seller's fee for this trade - ADDED Galileo
+	BSingleFee string // buyer's fee for this trade - ADDED Galileo
+	TickType   int    // ADDED Galileo
 }
 
 func (msg *Trade) MarshalJSON() ([]byte, error) {
@@ -193,13 +193,13 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
-	native["ssinglefee"] = msg.SSingleFee
-	native["bsinglefee"] = msg.BSingleFee
-	native["tickType"] = msg.TickType
 	native["saddr"] = sdk.AccAddress(msg.SAddr).String()
 	native["baddr"] = sdk.AccAddress(msg.BAddr).String()
 	native["ssrc"] = msg.SSrc
 	native["bsrc"] = msg.BSrc
+	native["ssinglefee"] = msg.SSingleFee
+	native["bsinglefee"] = msg.BSingleFee
+	native["tickType"] = msg.TickType
 	return native
 }
 
@@ -249,12 +249,12 @@ type Order struct {
 	LastExecutedQty      int64
 	CumQty               int64
 	Fee                  string // DEPRECATING(Galileo): total fee for Owner in this block, should use SingleFee in future
-	SingleFee            string // fee for this order update
 	OrderCreationTime    int64
 	TransactionTime      int64
 	TimeInForce          int8
 	CurrentExecutionType orderPkg.ExecutionType
 	TxHash               string
+	SingleFee            string // fee for this order update - ADDED Galileo
 }
 
 func (msg *Order) String() string {
@@ -292,12 +292,12 @@ func (msg *Order) toNativeMap() map[string]interface{} {
 	native["lastExecutedQty"] = msg.LastExecutedQty
 	native["cumQty"] = msg.CumQty
 	native["fee"] = msg.Fee
-	native["singlefee"] = msg.SingleFee
 	native["orderCreationTime"] = msg.OrderCreationTime
 	native["transactionTime"] = msg.TransactionTime
 	native["timeInForce"] = int(msg.TimeInForce)
 	native["currentExecutionType"] = msg.CurrentExecutionType.String()
 	native["txHash"] = msg.TxHash
+	native["singlefee"] = msg.SingleFee
 	return native
 }
 

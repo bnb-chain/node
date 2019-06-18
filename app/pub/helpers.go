@@ -171,9 +171,9 @@ func MatchAndAllocateAllForPublish(
 					Bid:        trade.Bid,
 					Price:      trade.LastPx,
 					Qty:        trade.LastQty,
-					TickType:   int(trade.TickType),
 					SSingleFee: ssinglefee,
 					BSingleFee: bsinglefee,
+					TickType:   int(trade.TickType),
 				}
 				tradeIdx += 1
 				tradesToPublish = append(tradesToPublish, t)
@@ -342,12 +342,12 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		t.Qty,
 		o.CumQty,
 		fee,
-		"",
 		o.CreatedTimestamp,
 		timestamp,
 		o.TimeInForce,
 		orderPkg.NEW,
 		o.TxHash,
+		"",
 	}
 	if o.Side == orderPkg.Side.BUY {
 		res.SingleFee = t.BSingleFee
@@ -388,10 +388,9 @@ func collectOrdersToPublish(
 				orderInfo.Symbol, o.Tpe, o.Id,
 				"", orderInfo.Sender.String(), orderInfo.Side,
 				orderPkg.OrderType.LIMIT, orderInfo.Price, orderInfo.Quantity,
-				0, 0, orderInfo.CumQty,
-				"", o.SingleFee,
+				0, 0, orderInfo.CumQty, "",
 				orderInfo.CreatedTimestamp, timestamp, orderInfo.TimeInForce,
-				orderPkg.NEW, orderInfo.TxHash,
+				orderPkg.NEW, orderInfo.TxHash, o.SingleFee,
 			}
 
 			if o.Tpe.IsOpen() {

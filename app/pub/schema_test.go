@@ -32,9 +32,9 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 	orders := Orders{
 		NumOfMsgs: 3,
 		Orders: []*Order{
-			{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, "", "", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
-			{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:10;BTC:1", "BNB:10;BTC:1", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
-			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:8;ETH:1", "BNB:8;ETH:1", 99, 99, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
+			{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, "", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", ""},
+			{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:10;BTC:1", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", "BNB:10;BTC:1"},
+			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:8;ETH:1", 99, 99, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", "BNB:8;ETH:1"},
 		},
 	}
 	proposals := Proposals{
