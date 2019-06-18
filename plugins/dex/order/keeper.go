@@ -235,7 +235,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	// from the exchange's order book stream.
 	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
-		for _, t := range engine.Trades {
+		for i := range engine.Trades {
+			t := &engine.Trades[i]
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
 			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 			if distributeTrade {

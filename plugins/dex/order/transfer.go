@@ -74,7 +74,7 @@ func (tran *Transfer) String() string {
 		tran.eventType, tran.Oid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.Fee)
 }
 
-func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*OrderInfo) (Transfer, Transfer) {
+func TransferFromTrade(trade *me.Trade, symbol string, orderMap map[string]*OrderInfo) (Transfer, Transfer) {
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
 	seller := orderMap[trade.Sid].Sender
 	buyOrder := orderMap[trade.Bid]
@@ -93,7 +93,7 @@ func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*Order
 			out:        trade.LastQty,
 			unlock:     trade.LastQty,
 			Fee:        types.Fee{},
-			Trade:      &trade,
+			Trade:      trade,
 			Symbol:     symbol,
 		}, Transfer{
 			Oid:        trade.Bid,
@@ -105,7 +105,7 @@ func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*Order
 			out:        quoteQty,
 			unlock:     unlock,
 			Fee:        types.Fee{},
-			Trade:      &trade,
+			Trade:      trade,
 			Symbol:     symbol,
 		}
 }
