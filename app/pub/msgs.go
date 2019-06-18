@@ -149,18 +149,19 @@ func (msg *trades) ToNativeMap() map[string]interface{} {
 }
 
 type Trade struct {
-	Id     string
-	Symbol string
-	Price  int64
-	Qty    int64
-	Sid    string
-	Bid    string
-	Sfee   string
-	Bfee   string
-	SAddr  string // string representation of AccAddress
-	BAddr  string // string representation of AccAddress
-	SSrc   int64  // sell order source
-	BSrc   int64  // buy order source
+	Id       string
+	Symbol   string
+	Price    int64
+	Qty      int64
+	Sid      string
+	Bid      string
+	TickType int
+	Sfee     string
+	Bfee     string
+	SAddr    string // string representation of AccAddress
+	BAddr    string // string representation of AccAddress
+	SSrc     int64  // sell order source
+	BSrc     int64  // buy order source
 }
 
 func (msg *Trade) MarshalJSON() ([]byte, error) {
@@ -190,6 +191,7 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bid"] = msg.Bid
 	native["sfee"] = msg.Sfee
 	native["bfee"] = msg.Bfee
+	native["tickType"] = msg.TickType
 	native["saddr"] = sdk.AccAddress(msg.SAddr).String()
 	native["baddr"] = sdk.AccAddress(msg.BAddr).String()
 	native["ssrc"] = msg.SSrc

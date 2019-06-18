@@ -208,12 +208,13 @@ func collectTradeForPublish(
 		// one trade has two transfer, we can skip the second
 		if _, ok := trades[tradeHolder.Trade]; !ok {
 			t := &Trade{
-				Id:     fmt.Sprintf("%d-%d", height, tradeIdx),
-				Symbol: tradeHolder.Symbol,
-				Sid:    tradeHolder.Trade.Sid,
-				Bid:    tradeHolder.Trade.Bid,
-				Price:  tradeHolder.Trade.LastPx,
-				Qty:    tradeHolder.Trade.LastQty}
+				Id:       fmt.Sprintf("%d-%d", height, tradeIdx),
+				Symbol:   tradeHolder.Symbol,
+				Sid:      tradeHolder.Trade.Sid,
+				Bid:      tradeHolder.Trade.Bid,
+				Price:    tradeHolder.Trade.LastPx,
+				Qty:      tradeHolder.Trade.LastQty,
+				TickType: int(tradeHolder.Trade.TickType)}
 			trades[tradeHolder.Trade] = t
 			tradeIdx += 1
 			*tradesToPublish = append(*tradesToPublish, t)

@@ -32,6 +32,7 @@ const (
 										{ "name": "bid", "type": "string" },
 										{ "name": "sfee", "type": "string" },
 										{ "name": "bfee", "type": "string" },
+										{ "name": "tickType", "type": "int" },
 										{ "name": "saddr", "type": "string" },
 										{ "name": "baddr", "type": "string" },
 										{ "name": "ssrc", "type": "long" },
