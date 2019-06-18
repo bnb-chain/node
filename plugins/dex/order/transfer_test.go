@@ -1,14 +1,10 @@
 package order
 
 import (
-	"fmt"
-	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
-
-
 
 func TestTradeTransfers_Sort(t *testing.T) {
 	e := TradeTransfers {

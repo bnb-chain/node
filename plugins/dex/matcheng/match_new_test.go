@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 func Test_dropRedundantQty(t *testing.T) {
@@ -867,7 +869,7 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 		SellOrders:        makerSideOrders[:1],
 		SellTakerStartIdx: 1,
 		SellMakerTotal:    0,
-	},{
+	}, {
 		Price:             90,
 		SellOrders:        makerSideOrders[1:],
 		SellTakerStartIdx: 1,
@@ -900,6 +902,8 @@ func TestMatchEng_fillOrdersNew(t *testing.T) {
 }
 
 func TestMatchEng_Match(t *testing.T) {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, 1)
+
 	assert := assert.New(t)
 	me := NewMatchEng(DefaultPairSymbol, 100, 5, 0.05)
 	me.Book = NewOrderBookOnULList(4, 2)
@@ -918,6 +922,7 @@ func TestMatchEng_Match(t *testing.T) {
 	me.Book.InsertOrder("14", BUYSIDE, 100, 100, 10)
 	me.Book.InsertOrder("16", BUYSIDE, 100, 100, 20)
 
+	upgrade.Mgr.SetHeight(100)
 	assert.True(me.Match(100))
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
