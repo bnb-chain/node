@@ -416,12 +416,12 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	assert.Equal(int64(0), me.overLappedLevel[0].SellTotal)
 	t.Log(me.Trades)
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, 70, 70, "1", Unknown},
-		Trade{"6", 999, 30, 30, 100, "2", Unknown},
-		Trade{"7", 999, 50, 80, 50, "2", Unknown},
-		Trade{"8", 999, 70, 70, 70, "3", Unknown},
-		Trade{"9", 999, 30, 100, 30, "3", Unknown},
-		Trade{"9", 999, 30, 30, 60, "4", Unknown},
+		Trade{"6", 999, 70, 70, 70, "1", Unknown, nil, nil},
+		Trade{"6", 999, 30, 30, 100, "2", Unknown, nil, nil},
+		Trade{"7", 999, 50, 80, 50, "2", Unknown, nil, nil},
+		Trade{"8", 999, 70, 70, 70, "3", Unknown, nil, nil},
+		Trade{"9", 999, 30, 100, 30, "3", Unknown, nil, nil},
+		Trade{"9", 999, 30, 30, 60, "4", Unknown, nil, nil},
 	}, me.Trades)
 
 	me.Trades = me.Trades[:0]
@@ -451,12 +451,12 @@ func TestMatchEng_fillOrders(t *testing.T) {
 	assert.Equal(int64(0), me.overLappedLevel[1].SellTotal)
 	t.Log(me.Trades) //
 	assert.Equal([]Trade{
-		Trade{"6", 999, 70, 70, 70, "1", Unknown},
-		Trade{"6", 999, 30, 30, 100, "2", Unknown},
-		Trade{"7", 999, 50, 80, 50, "2", Unknown},
-		Trade{"8", 999, 70, 70, 70, "3", Unknown},
-		Trade{"9", 999, 30, 100, 30, "3", Unknown},
-		Trade{"9", 999, 30, 30, 60, "4", Unknown},
+		Trade{"6", 999, 70, 70, 70, "1", Unknown, nil, nil},
+		Trade{"6", 999, 30, 30, 100, "2", Unknown, nil, nil},
+		Trade{"7", 999, 50, 80, 50, "2", Unknown, nil, nil},
+		Trade{"8", 999, 70, 70, 70, "3", Unknown, nil, nil},
+		Trade{"9", 999, 30, 100, 30, "3", Unknown, nil, nil},
+		Trade{"9", 999, 30, 30, 60, "4", Unknown, nil, nil},
 	}, me.Trades)
 }
 
@@ -697,7 +697,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal(int64(98), me.LastTradePrice)
-	assert.Equal("[{92 98 50 50 50 1 0} {3 98 80 80 80 2 0} {3 98 20 20 100 4 0} {5 98 50 50 50 6 0} {5 98 50 50 100 91 0} {9 98 50 50 50 8 0}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 50 50 1 0 <nil> <nil>} {3 98 80 80 80 2 0 <nil> <nil>} {3 98 20 20 100 4 0 <nil> <nil>} {5 98 50 50 50 6 0 <nil> <nil>} {5 98 50 50 100 91 0 <nil> <nil>} {9 98 50 50 50 8 0 <nil> <nil>}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 101, 100)
@@ -722,7 +722,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 
 	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{3 99 100 100 100 1 0} {5 99 100 100 100 8 0}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{3 99 100 100 100 1 0 <nil> <nil>} {5 99 100 100 100 8 0 <nil> <nil>}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 98.0, 100)
@@ -738,7 +738,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 
 	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
-	assert.Equal("[{92 98 50 50 50 1 0} {3 98 80 80 80 2 0} {3 98 20 20 100 4 0} {5 98 50 50 50 6 0} {5 98 50 50 100 91 0}]", fmt.Sprint(me.Trades))
+	assert.Equal("[{92 98 50 50 50 1 0 <nil> <nil>} {3 98 80 80 80 2 0 <nil> <nil>} {3 98 20 20 100 4 0 <nil> <nil>} {5 98 50 50 50 6 0 <nil> <nil>} {5 98 50 50 100 91 0 <nil> <nil>}]", fmt.Sprint(me.Trades))
 
 	me.Book = NewOrderBookOnULList(4, 2)
 	me.Book.InsertOrder("3", SELLSIDE, 100, 96, 300)

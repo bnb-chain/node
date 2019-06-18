@@ -143,14 +143,14 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 				app.Logger.Info("failed to process NewOrderMsg", "oid", msg.Id)
 				// The error on deliver should be rare and only impact witness publisher's performance
 				app.DexKeeper.OrderChangesMtx.Lock()
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking, msg})
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.Id, order.FailedBlocking, "", msg})
 				app.DexKeeper.OrderChangesMtx.Unlock()
 			case order.CancelOrderMsg:
 				app.Logger.Info("failed to process CancelOrderMsg", "oid", msg.RefId)
 				// The error on deliver should be rare and only impact witness publisher's performance
 				app.DexKeeper.OrderChangesMtx.Lock()
 				// OrderInfo must has been in keeper.OrderInfosForPub
-				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking, msg})
+				app.DexKeeper.OrderChanges = append(app.DexKeeper.OrderChanges, order.OrderChange{msg.RefId, order.FailedBlocking, "", msg})
 				app.DexKeeper.OrderChangesMtx.Unlock()
 			default:
 				// deliberately do nothing for message other than NewOrderMsg

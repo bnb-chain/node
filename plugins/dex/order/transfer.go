@@ -65,15 +65,19 @@ func (tran Transfer) IsNativeOut() bool {
 	return tran.outAsset == types.NativeTokenSymbol
 }
 
+func (tran *Transfer) IsBuyer() bool {
+	return tran.Oid == tran.Trade.Bid
+}
+
 func (tran *Transfer) String() string {
 	return fmt.Sprintf("Transfer[eventType:%v, oid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
 		tran.eventType, tran.Oid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.Fee)
 }
 
-func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*OrderInfo) (Transfer, Transfer) {
+func TransferFromTrade(trade *me.Trade, symbol string, orderMap map[string]*OrderInfo) (Transfer, Transfer) {
 	baseAsset, quoteAsset, _ := utils.TradingPair2Assets(symbol)
 	seller := orderMap[trade.Sid].Sender
-	buyOrder:= orderMap[trade.Bid]
+	buyOrder := orderMap[trade.Bid]
 	buyer := buyOrder.Sender
 	origBuyPx := buyOrder.Price
 
@@ -89,7 +93,7 @@ func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*Order
 			out:        trade.LastQty,
 			unlock:     trade.LastQty,
 			Fee:        types.Fee{},
-			Trade:      &trade,
+			Trade:      trade,
 			Symbol:     symbol,
 		}, Transfer{
 			Oid:        trade.Bid,
@@ -101,7 +105,7 @@ func TransferFromTrade(trade me.Trade, symbol string, orderMap map[string]*Order
 			out:        quoteQty,
 			unlock:     unlock,
 			Fee:        types.Fee{},
-			Trade:      &trade,
+			Trade:      trade,
 			Symbol:     symbol,
 		}
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/binance-chain/node/common/types"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
 )
 
 // The types here are shared between order and pub package
@@ -75,6 +74,7 @@ func (this ExecutionType) String() string {
 type OrderChange struct {
 	Id             string
 	Tpe            ChangeType
+	SingleFee      string
 	MsgForFailedTx interface{} // pointer to NewOrderMsg or CancelOrderMsg
 }
 
@@ -117,19 +117,10 @@ type ChangedPriceLevelsPerSymbol struct {
 	Sells map[int64]int64
 }
 
-type TradeHolder struct {
-	OId    string
-	Trade  *me.Trade
-	Symbol string
-}
-
-func (fh TradeHolder) String() string {
-	return fmt.Sprintf("oid: %s, bid: %s, sid: %s", fh.OId, fh.Trade.Bid, fh.Trade.Sid)
-}
-
 type ExpireHolder struct {
 	OrderId string
 	Reason  ChangeType
+	Fee     string
 }
 
 type FeeHolder map[string]*types.Fee
