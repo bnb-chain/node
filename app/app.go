@@ -117,7 +117,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		publicationConfig: ServerContext.PublicationConfig,
 	}
 	// set upgrade config
-	app.setUpgradeConfig()
+	SetUpgradeConfig(app.upgradeConfig)
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -243,12 +243,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 }
 
 // setUpgradeConfig will overwrite default upgrade config
-func (app *BinanceChain) setUpgradeConfig() {
+func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, app.upgradeConfig.BEP6Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, app.upgradeConfig.BEP9Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, app.upgradeConfig.BEP10Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, app.upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())

@@ -17,6 +17,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/app"
+	configPkg "github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/common"
 )
 
@@ -30,8 +32,12 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 		Short: "Take a snapshot for state sync",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+
 			config := ctx.Config
 			config.SetRoot(viper.GetString(cli.HomeFlag))
+			appCtx := configPkg.NewDefaultContext()
+			appCtx.ParseAppConfigInPlace()
+			app.SetUpgradeConfig(appCtx.BinanceChainConfig.UpgradeConfig)
 
 			logger.Info("setup block db")
 			blockDB, err := node.DefaultDBProvider(&node.DBContext{"blockstore", config})
@@ -79,8 +85,11 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 
 			helper := store.NewStateSyncHelper(logger, appDB, cms, cdc)
 
-			logger.Info("start take snapshot")
-			helper.ReloadSnapshotRoutine(viper.GetInt64(flagHeight), 0)
+			height := viper.GetInt64(flagHeight)
+			logger.Info("start take snapshot", "height", height)
+
+			sdk.UpgradeMgr.SetHeight(height)
+			helper.ReloadSnapshotRoutine(height, 0)
 
 			return nil
 		},
