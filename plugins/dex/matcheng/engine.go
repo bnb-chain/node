@@ -8,7 +8,8 @@ import (
 )
 
 type MatchEng struct {
-	Book OrderBookInterface
+	LastMatchHeight int64
+	Book            OrderBookInterface
 	// LotSize may be based on price level, which can be set
 	// before any match() call
 	LotSize int64
@@ -30,6 +31,7 @@ type MatchEng struct {
 // NewMatchEng constructs a new MatchEng.
 func NewMatchEng(pairSymbol string, basePrice, lotSize int64, priceLimit float64) *MatchEng {
 	return &MatchEng{
+		LastMatchHeight: 0,
 		Book:            NewOrderBookOnULList(10000, 16),
 		LotSize:         lotSize,
 		PriceLimitPct:   priceLimit,
@@ -164,7 +166,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
-func (me *MatchEng) MatchBeforeGalileo() bool {
+func (me *MatchEng) MatchBeforeGalileo(height int64) bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
@@ -178,6 +180,7 @@ func (me *MatchEng) MatchBeforeGalileo() bool {
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
 	me.Trades = me.Trades[:0]
 	me.LastTradePrice = lastPx
+	me.LastMatchHeight = height
 	i, j := 0, len(me.overLappedLevel)-1
 	//sell below the price at index or buy above the price would not get filled
 	for i <= index && j >= index && compareBuy(totalExec, 0) > 0 {

@@ -694,7 +694,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	me.Book.InsertOrder("91", BUYSIDE, 107, 100.0, 50)
 	me.Book.InsertOrder("92", SELLSIDE, 108, 97.0, 50)
 
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal(int64(98), me.LastTradePrice)
 	assert.Equal("[{92 98 50 50 50 1 0} {3 98 80 80 80 2 0} {3 98 20 20 100 4 0} {5 98 50 50 50 6 0} {5 98 50 50 100 91 0} {9 98 50 50 50 8 0}]", fmt.Sprint(me.Trades))
@@ -710,7 +710,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	me.Book.InsertOrder("9", SELLSIDE, 106, 101, 50)
 	me.Book.InsertOrder("91", BUYSIDE, 107, 100, 50)
 	me.Book.InsertOrder("92", SELLSIDE, 108, 102, 50)
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(0, len(me.overLappedLevel))
 	assert.Equal(0, len(me.Trades))
 
@@ -720,7 +720,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	me.Book.InsertOrder("1", BUYSIDE, 102, 100.0, 100)
 	me.Book.InsertOrder("8", BUYSIDE, 103, 99.0, 100)
 
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal("[{3 99 100 100 100 1 0} {5 99 100 100 100 8 0}]", fmt.Sprint(me.Trades))
 
@@ -736,7 +736,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	me.Book.InsertOrder("91", BUYSIDE, 107, 100.0, 50)
 	me.Book.InsertOrder("92", SELLSIDE, 108, 97.0, 50)
 
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	assert.Equal(3, len(me.overLappedLevel))
 	assert.Equal("[{92 98 50 50 50 1 0} {3 98 80 80 80 2 0} {3 98 20 20 100 4 0} {5 98 50 50 50 6 0} {5 98 50 50 100 91 0}]", fmt.Sprint(me.Trades))
 
@@ -754,7 +754,7 @@ func TestMatchEng_MatchDeprecated(t *testing.T) {
 	me.Book.InsertOrder("92", SELLSIDE, 105, 100, 100)
 	me.Book.InsertOrder("93", BUYSIDE, 105, 100, 300)
 
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	t.Log(me.overLappedLevel)
 	assert.Equal(6, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
@@ -790,7 +790,7 @@ func TestMatchEng_DropFilledOrder(t *testing.T) {
 	me.Book.InsertOrder("92", SELLSIDE, 105, 100, 100)
 	me.Book.InsertOrder("93", BUYSIDE, 105, 100, 300)
 
-	assert.True(me.MatchBeforeGalileo())
+	assert.True(me.MatchBeforeGalileo(1))
 	t.Log(me.overLappedLevel)
 	assert.Equal(6, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
