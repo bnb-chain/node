@@ -12,10 +12,6 @@ import (
 	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/cosmos/cosmos-sdk/server"
-
-	commonPkg "github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
 
 var configTemplate *template.Template
@@ -310,25 +306,6 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP10Height: math.MaxInt64,
 		BEP19Height: math.MaxInt64,
 	}
-}
-
-// setUpgradeConfig will overwrite default upgrade config
-func (upgradeConfig UpgradeConfig) SetUpgradeConfig() {
-	// register upgrade height
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
-
-	// register store keys of upgrade
-	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, commonPkg.TimeLockStoreKey.Name())
-
-	// register msg types of upgrade
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
-		timelock.TimeLockMsg{}.Type(),
-		timelock.TimeRelockMsg{}.Type(),
-		timelock.TimeUnlockMsg{}.Type(),
-	)
 }
 
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {
