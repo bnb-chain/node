@@ -465,6 +465,16 @@ func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLe
 	}
 }
 
+func (kp *Keeper) GetLastTrades(height int64, pair string) ([]me.Trade, int64) {
+	if eng, ok := kp.engines[pair]; ok {
+		if eng.LastMatchHeight == height {
+			return eng.Trades, eng.LastTradePrice
+		}
+	}
+	return nil, 0
+}
+
+// !!! FOR TEST USE ONLY
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
 	if eng, ok := kp.engines[pair]; ok {
 		return eng.Trades, eng.LastTradePrice
