@@ -143,41 +143,40 @@ func MatchAndAllocateAllForPublish(
 		}
 	}
 
-	matched := dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler)
+	dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler)
 	close(iocExpireFeeHolderCh)
 
 	tradeIdx := 0
 	tradesToPublish := make([]*Trade, 0)
-	if matched {
-		for _, pair := range dexKeeper.PairMapper.ListAllTradingPairs(ctx) {
-			symbol := pair.GetSymbol()
-			matchEngTrades, _ := dexKeeper.GetLastTradesForPair(symbol)
-			for _, trade := range matchEngTrades {
-				var ssinglefee string
-				var bsinglefee string
-				// nilness check is for before Galileo upgrade the trade fee is nil
-				if trade.SellerFee != nil {
-					ssinglefee = trade.SellerFee.String()
-				}
-				// nilness check is for before Galileo upgrade the trade fee is nil
-				if trade.BuyerFee != nil {
-					bsinglefee = trade.BuyerFee.String()
-				}
-
-				t := &Trade{
-					Id:         fmt.Sprintf("%d-%d", ctx.BlockHeight(), tradeIdx),
-					Symbol:     symbol,
-					Sid:        trade.Sid,
-					Bid:        trade.Bid,
-					Price:      trade.LastPx,
-					Qty:        trade.LastQty,
-					SSingleFee: ssinglefee,
-					BSingleFee: bsinglefee,
-					TickType:   int(trade.TickType),
-				}
-				tradeIdx += 1
-				tradesToPublish = append(tradesToPublish, t)
+	tradeHeight := ctx.BlockHeight()
+	for _, pair := range dexKeeper.PairMapper.ListAllTradingPairs(ctx) {
+		symbol := pair.GetSymbol()
+		matchEngTrades, _ := dexKeeper.GetLastTrades(tradeHeight, symbol)
+		for _, trade := range matchEngTrades {
+			var ssinglefee string
+			var bsinglefee string
+			// nilness check is for before Galileo upgrade the trade fee is nil
+			if trade.SellerFee != nil {
+				ssinglefee = trade.SellerFee.String()
 			}
+			// nilness check is for before Galileo upgrade the trade fee is nil
+			if trade.BuyerFee != nil {
+				bsinglefee = trade.BuyerFee.String()
+			}
+
+			t := &Trade{
+				Id:         fmt.Sprintf("%d-%d", tradeHeight, tradeIdx),
+				Symbol:     symbol,
+				Sid:        trade.Sid,
+				Bid:        trade.Bid,
+				Price:      trade.LastPx,
+				Qty:        trade.LastQty,
+				SSingleFee: ssinglefee,
+				BSingleFee: bsinglefee,
+				TickType:   int(trade.TickType),
+			}
+			tradeIdx += 1
+			tradesToPublish = append(tradesToPublish, t)
 		}
 	}
 

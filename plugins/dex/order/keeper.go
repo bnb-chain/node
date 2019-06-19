@@ -741,19 +741,17 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
-) bool {
+) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return false
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
 	fees.Pool.AddAndCommitFee("MATCH", totalFee)
 	kp.clearAfterMatch()
-	return true
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {
