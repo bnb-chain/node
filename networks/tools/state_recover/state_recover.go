@@ -224,12 +224,17 @@ func deleteOrphans(dbIns *db.GoLevelDB, storeKey store.StoreKey, height int64) {
 // 	Reset node to a specific height and continue block from this height
 //
 // Usage:
-// 	1. go build reset.go
-// 	2. ./reset height_to_reset home_path1 home_path2 ...
+// 	1. go build state_recover.go
+// 	2. ./state_recover height_to_reset home_path1 home_path2 ...
+
+func printUsage() {
+	fmt.Printf("usage: ./state_recover height home_path1 home_path2 ...")
+}
+
 func main() {
 	args := os.Args
 	if len(args) < 3 {
-		fmt.Printf("usage: ./reset height home_path1 home_path2 ...")
+		printUsage()
 		return
 	}
 
