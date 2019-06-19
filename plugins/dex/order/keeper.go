@@ -143,7 +143,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack, nil}
+		change := OrderChange{info.Id, Ack, "", nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
@@ -235,7 +235,8 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	// from the exchange's order book stream.
 	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
-		for _, t := range engine.Trades {
+		for i := range engine.Trades {
+			t := &engine.Trades[i]
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
 			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 			if distributeTrade {
@@ -277,7 +278,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, nil})
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, "", nil})
 				kp.OrderChangesMtx.Unlock()
 			}
 		}
@@ -574,9 +575,6 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 				}
 			}
 		}
-		if postAllocateHandler != nil {
-			postAllocateHandler(tran)
-		}
 	}
 
 	feesPerAcc := make(map[string]*types.Fee)
@@ -596,7 +594,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
 
-		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines)
+		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines, postAllocateHandler)
 		if !fees.IsEmpty() {
 			if _, ok := feesPerAcc[addrStr]; ok {
 				feesPerAcc[addrStr].AddFee(fees)
@@ -739,6 +737,7 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
+// Return whether match has been done in this height
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
@@ -748,7 +747,6 @@ func (kp *Keeper) MatchAndAllocateAll(
 	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
