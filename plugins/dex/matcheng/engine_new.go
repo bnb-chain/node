@@ -14,7 +14,7 @@ import (
 
 func (me *MatchEng) Match(height int64) bool {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
-		return me.MatchBeforeGalileo()
+		return me.MatchBeforeGalileo(height)
 	}
 	me.logger.Debug("match starts...", "height", height)
 	me.Trades = me.Trades[:0]
@@ -41,6 +41,7 @@ func (me *MatchEng) Match(height int64) bool {
 	surplus := me.overLappedLevel[index].BuySellSurplus
 	me.fillOrdersNew(takerSide, takerSideOrders, index, tradePrice, surplus)
 	me.LastTradePrice = tradePrice
+	me.LastMatchHeight = height
 	return true
 }
 
