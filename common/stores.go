@@ -49,7 +49,7 @@ var (
 		ParamsTransientStoreName: TParamsStoreKey,
 	}
 
-	StoreKeyNames = []string{
+	NonTransientStoreKeyNames = []string{
 		MainStoreName,
 		AccountStoreName,
 		ValAddrStoreName,
@@ -62,3 +62,11 @@ var (
 		TimeLockStoreName,
 	}
 )
+
+func GetNonTransientStoreKeys() []sdk.StoreKey {
+	storeKeys := make([]sdk.StoreKey, 0, len(StoreKeyNameMap))
+	for _, name := range NonTransientStoreKeyNames {
+		storeKeys = append(storeKeys, StoreKeyNameMap[name])
+	}
+	return storeKeys
+}

@@ -59,7 +59,7 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 
 			logger.Info("build cms")
 			cms := store.NewCommitMultiStore(appDB)
-			for _, name := range common.StoreKeyNames {
+			for _, name := range common.NonTransientStoreKeyNames {
 				cms.MountStoreWithDB(common.StoreKeyNameMap[name], sdk.StoreTypeIAVL, nil)
 			}
 			cms.MountStoreWithDB(common.TParamsStoreKey, sdk.StoreTypeTransient, nil)

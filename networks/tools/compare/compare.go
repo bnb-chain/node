@@ -7,8 +7,6 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -17,6 +15,9 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
+
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
 )
 
 var codec = amino.NewCodec()
@@ -86,11 +87,7 @@ func compare(height int64, root1, root2 string) {
 	defer db1.Close()
 	db2 := openAppDB(root2)
 	defer db2.Close()
-	keys := []store.StoreKey{
-		common.MainStoreKey, common.TokenStoreKey, common.DexStoreKey,
-		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey,
-		common.ParamsStoreKey, common.ValAddrStoreKey, common.AccountStoreKey}
-
+	keys := common.GetNonTransientStoreKeys()
 	cms1 := prepareCms(root1, db1, keys, height)
 	cms2 := prepareCms(root2, db2, keys, height)
 
@@ -175,10 +172,7 @@ func compareAccount(height int64, root1, root2, addr string) {
 	defer db1.Close()
 	db2 := openAppDB(root2)
 	defer db2.Close()
-	keys := []store.StoreKey{
-		common.MainStoreKey, common.TokenStoreKey, common.DexStoreKey,
-		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey,
-		common.ParamsStoreKey, common.ValAddrStoreKey, common.AccountStoreKey}
+	keys := common.GetNonTransientStoreKeys()
 
 	cms1 := prepareCms(root1, db1, keys, height)
 	cms2 := prepareCms(root2, db2, keys, height)
