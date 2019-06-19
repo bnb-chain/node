@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/app"
 	configPkg "github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/common"
 )
@@ -36,7 +37,7 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 			config.SetRoot(viper.GetString(cli.HomeFlag))
 			appCtx := configPkg.NewDefaultContext()
 			appCtx.ParseAppConfigInPlace()
-			appCtx.BinanceChainConfig.UpgradeConfig.SetUpgradeConfig()
+			app.SetUpgradeConfig(appCtx.BinanceChainConfig.UpgradeConfig)
 
 			logger.Info("setup block db")
 			blockDB, err := node.DefaultDBProvider(&node.DBContext{"blockstore", config})
