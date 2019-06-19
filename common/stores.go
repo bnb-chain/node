@@ -64,7 +64,7 @@ var (
 )
 
 func GetNonTransientStoreKeys() []sdk.StoreKey {
-	storeKeys := make([]sdk.StoreKey, 0, len(StoreKeyNameMap))
+	storeKeys := make([]sdk.StoreKey, 0, len(NonTransientStoreKeyNames))
 	for _, name := range NonTransientStoreKeyNames {
 		storeKeys = append(storeKeys, StoreKeyNameMap[name])
 	}
