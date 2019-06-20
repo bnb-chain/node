@@ -28,7 +28,6 @@ import (
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/fees"
-	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
@@ -479,20 +478,20 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeader().Height
 
+	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	var tradesToPublish []*pub.Trade
 
-	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-	if !isBreatheBlock {
-		// only match in the normal block
-		app.Logger.Debug("normal block", "height", height)
+	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
-	} else {
+	}
+
+	if isBreatheBlock {
 		// breathe block
-		bnclog.Info("Start Breathe Block Handling",
+		app.Logger.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
@@ -500,6 +499,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone
+	} else {
+		app.Logger.Debug("normal block", "height", height)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
