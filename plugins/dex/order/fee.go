@@ -76,6 +76,7 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	tradeTransfers.Sort()
 	for _, tran := range tradeTransfers {
 		fee := m.calcTradeFeeForSingleTransfer(balances, tran, engines)
+		tran.Fee = fee
 		if tran.IsBuyer() {
 			tran.Trade.BuyerFee = &fee
 		} else {
@@ -95,8 +96,8 @@ func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEvent
 	expireTransfers.Sort()
 	for _, tran := range expireTransfers {
 		fee := m.CalcFixedFee(balances, expireType, tran.inAsset, engines)
+		tran.Fee = fee
 		if expireTransferHandler != nil {
-			tran.Fee = fee
 			expireTransferHandler(*tran)
 		}
 		fees.AddFee(fee)
