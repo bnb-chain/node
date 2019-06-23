@@ -17,7 +17,7 @@ const (
 	booksTpe
 	executionResultTpe
 	blockFeeTpe
-	transferType
+	transferTpe
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
@@ -32,11 +32,23 @@ func (this msgType) String() string {
 		return "ExecutionResults"
 	case blockFeeTpe:
 		return "BlockFee"
-	case transferType:
+	case transferTpe:
 		return "Transfers"
 	default:
 		return "Unknown"
 	}
+}
+
+// Versions of schemas
+// This field is used to generate last component of key in kafka message and helps consumers
+// figure out which version of writer schema to use.
+// This allows consumers be deployed independently (in advance) with publisher
+var latestSchemaVersions = map[msgType]int{
+	accountsTpe:        0,
+	booksTpe:           0,
+	executionResultTpe: 1,
+	blockFeeTpe:        0,
+	transferTpe:        0,
 }
 
 type AvroOrJsonMsg interface {
