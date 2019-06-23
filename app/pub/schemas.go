@@ -1,5 +1,14 @@
 package pub
 
+// !!!!!NOTE!!!!!
+// consumers should aware of changes in this file
+// update app/pub/msgs.go `latestSchemaVersions`
+// put old version into pub/schemas with version suffixed to filename for tracking historical version
+
+// Backward compatibility:
+// 1. publisher add field, consumer should initialize two decoder with two publisher schema, choose which decoded should be used by `lastestSchemaVersion` component in kafka message Key
+// 2. consumer add field, consumer should initialize one decode with publisher schema and consumer schema. In which, consumer schema should define default value for added field
+
 const (
 	executionResultSchema = `
 		{

@@ -107,6 +107,11 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	return
 }
 
+// Key of kafka message contains following fields separated by underscore:
+// 1. message_id
+// 2. timestamp of message
+// 3. type of value (multiple types of messages can be published for one kafka topic)
+// 4. value's encoding schema version.
 func (publisher *KafkaMarketDataPublisher) prepareMessage(
 	topic string,
 	msgId string,
@@ -116,7 +121,7 @@ func (publisher *KafkaMarketDataPublisher) prepareMessage(
 	msg := &sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: -1,
-		Key:       sarama.StringEncoder(fmt.Sprintf("%s_%d_%s", msgId, timeStamp, msgTpe.String())),
+		Key:       sarama.StringEncoder(fmt.Sprintf("%s_%d_%s_%d", msgId, timeStamp, msgTpe.String(), latestSchemaVersions[msgTpe])),
 		Value:     sarama.ByteEncoder(message),
 	}
 
@@ -175,7 +180,7 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.OrderUpdatesTopic
 	case blockFeeTpe:
 		topic = Cfg.BlockFeeTopic
-	case transferType:
+	case transferTpe:
 		topic = Cfg.TransferTopic
 	}
 	return
@@ -240,7 +245,7 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.executionResultsCodec
 	case blockFeeTpe:
 		codec = publisher.blockFeeCodec
-	case transferType:
+	case transferTpe:
 		codec = publisher.transfersCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
