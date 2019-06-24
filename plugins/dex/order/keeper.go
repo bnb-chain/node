@@ -396,11 +396,10 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 }
 
 func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, maxLevels)
-
-	i, j := 0, 0
-
 	if eng, ok := kp.engines[pair]; ok {
+		orderbook := make([]store.OrderBookLevel, maxLevels)
+
+		i, j := 0, 0
 		// TODO: check considered bucket splitting?
 		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
@@ -412,8 +411,10 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
+		return orderbook
+	}else{
+		return nil
 	}
-	return orderbook
 }
 
 func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {

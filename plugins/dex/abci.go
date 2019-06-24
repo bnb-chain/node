@@ -90,6 +90,12 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 			pair := path[2]
 			height := app.GetContextForCheckState().BlockHeight()
 			levels := keeper.GetOrderBookLevels(pair, MaxDepthLevels)
+			if levels == nil{
+				return &abci.ResponseQuery{
+					Code:  uint32(sdk.CodeInternal),
+					Log:  "market pair do not exist",
+				}
+			}
 			book := store.OrderBook{
 				Height: height,
 				Levels: levels,
