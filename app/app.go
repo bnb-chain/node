@@ -119,6 +119,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	SetUpgradeConfig(app.upgradeConfig)
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
+	app.registerBeginBlockerForCosmosUpgrade()
 
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
@@ -258,6 +259,17 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		timelock.TimeRelockMsg{}.Type(),
 		timelock.TimeUnlockMsg{}.Type(),
 	)
+
+	upgrade.Mgr.AddUpgradeHeight(upgrade.UpgradeValidatorPowerKey, upgradeConfig.UpgradeValidatorPowerKeyHeight)
+}
+
+func (app *BinanceChain) registerBeginBlockerForCosmosUpgrade() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.UpgradeValidatorPowerKey, func(ctx sdk.Context) {
+		err := stake.RebuildPowerRankKeyForUpgrade(ctx, app.stakeKeeper)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func (app *BinanceChain) initRunningMode() {

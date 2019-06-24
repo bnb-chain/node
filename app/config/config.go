@@ -55,6 +55,8 @@ BEP9Height = {{ .UpgradeConfig.BEP9Height }}
 BEP10Height = {{ .UpgradeConfig.BEP10Height }} 
 # Block height of UpgradeMatchEngineHeight upgrade
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
+# Block height of upgrade validator power key
+UpgradeValidatorPowerKeyHeight = {{ .UpgradeConfig.UpgradeValidatorPowerKeyHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -297,6 +299,8 @@ type UpgradeConfig struct {
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
+
+	UpgradeValidatorPowerKeyHeight int64 `mapstructure:"UpgradeValidatorPowerKeyHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -305,6 +309,8 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP9Height:  math.MaxInt64, //TODO change default when update
 		BEP10Height: math.MaxInt64,
 		BEP19Height: math.MaxInt64,
+
+		UpgradeValidatorPowerKeyHeight: math.MaxInt64,
 	}
 }
 

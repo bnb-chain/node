@@ -103,9 +103,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "8e2ea76b93193a9d6bfaca99808c7d5f7e06c8e9"
+  revision = ""
+  branch = "change-validator-power-key"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.18"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
