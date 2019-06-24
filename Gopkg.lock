@@ -698,8 +698,9 @@
   name = "github.com/zondax/ledger-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
-  version = "v0.9.0"
+  revision = "6d4c92579518a79bb50589cc1c35995f610832f5"
+  source = "https://github.com/binance-chain/ledger-go"
+  version = "v0.9.1"
 
 [[projects]]
   branch = "master"
