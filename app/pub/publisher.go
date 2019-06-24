@@ -247,7 +247,7 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 
 func publishTransfers(publisher MarketDataPublisher, height, timestamp int64, transfers *Transfers) {
 	if transfers != nil {
-		publisher.publish(transfers, transferType, height, timestamp)
+		publisher.publish(transfers, transferTpe, height, timestamp)
 	}
 }
 
