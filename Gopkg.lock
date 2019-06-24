@@ -694,12 +694,13 @@
   version = "v0.9.9-binance.1"
 
 [[projects]]
-  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
+  digest = "1:11b3a00fab978e4edbad3322b9e024ea9031c7714f41dd9e92ac70f27d9adbe7"
   name = "github.com/zondax/ledger-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
-  version = "v0.9.0"
+  revision = "6d4c92579518a79bb50589cc1c35995f610832f5"
+  source = "https://github.com/binance-chain/ledger-go"
+  version = "v0.9.1"
 
 [[projects]]
   branch = "master"
