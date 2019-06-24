@@ -72,6 +72,11 @@
   source = "https://github.com/tendermint/crypto"
   revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
 
+[[override]]
+  name = "github.com/zondax/ledger-go"
+  source = "https://github.com/binance-chain/ledger-go"
+  version = "v0.9.1"
+
 # we use the secp256k1 implementation:
 [[override]]
   name = "github.com/ethereum/go-ethereum"

@@ -694,7 +694,7 @@
   version = "v0.9.9-binance.1"
 
 [[projects]]
-  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
+  digest = "1:11b3a00fab978e4edbad3322b9e024ea9031c7714f41dd9e92ac70f27d9adbe7"
   name = "github.com/zondax/ledger-go"
   packages = ["."]
   pruneopts = "UT"
