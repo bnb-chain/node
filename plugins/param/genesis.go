@@ -16,13 +16,16 @@ import (
 
 const (
 	// Operate fee
-	ProposeFee = 10e8
-	DepositFee = 125e3
-	ListingFee = 2000e8
-	IssueFee   = 1000e8
-	MintFee    = 200e8
-	BurnFee    = 1e8
-	FreezeFee  = 1e6
+	ProposeFee    = 10e8
+	DepositFee    = 125e3
+	ListingFee    = 2000e8
+	IssueFee      = 1000e8
+	MintFee       = 200e8
+	BurnFee       = 1e8
+	FreezeFee     = 1e6
+	TimeLockFee   = 1e6
+	TimeUnlockFee = 1e6
+	TimeRelockFee = 1e6
 
 	// stake fee
 	CreateValidatorFee = 10e8

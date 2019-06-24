@@ -2,10 +2,14 @@ package matcheng
 
 import (
 	"math"
+
+	"github.com/binance-chain/node/common/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 type MatchEng struct {
-	Book OrderBookInterface
+	LastMatchHeight int64
+	Book            OrderBookInterface
 	// LotSize may be based on price level, which can be set
 	// before any match() call
 	LotSize int64
@@ -21,14 +25,25 @@ type MatchEng struct {
 	leastSurplus    SurplusIndex
 	Trades          []Trade
 	LastTradePrice  int64
+	logger          tmlog.Logger
 }
 
 // NewMatchEng constructs a new MatchEng.
-func NewMatchEng(basePrice, lotSize int64, priceLimit float64) *MatchEng {
-	return &MatchEng{Book: NewOrderBookOnULList(10000, 16), LotSize: lotSize, PriceLimitPct: priceLimit, overLappedLevel: make([]OverLappedLevel, 0, 16),
-		buyBuf: make([]PriceLevel, 16), sellBuf: make([]PriceLevel, 16),
-		maxExec: LevelIndex{0, make([]int, 8)}, leastSurplus: SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
-		Trades: make([]Trade, 0, 64), LastTradePrice: basePrice}
+func NewMatchEng(pairSymbol string, basePrice, lotSize int64, priceLimit float64) *MatchEng {
+	return &MatchEng{
+		LastMatchHeight: 0,
+		Book:            NewOrderBookOnULList(10000, 16),
+		LotSize:         lotSize,
+		PriceLimitPct:   priceLimit,
+		overLappedLevel: make([]OverLappedLevel, 0, 16),
+		buyBuf:          make([]PriceLevel, 16),
+		sellBuf:         make([]PriceLevel, 16),
+		maxExec:         LevelIndex{0, make([]int, 8)},
+		leastSurplus:    SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
+		Trades:          make([]Trade, 0, 64),
+		LastTradePrice:  basePrice,
+		logger:          log.With("module", "matcheng", "pair", pairSymbol),
+	}
 }
 
 // fillOrders would fill the orders at BuyOrders[i] and SellOrders[j] against each other.
@@ -37,7 +52,6 @@ func (me *MatchEng) fillOrders(i int, j int) {
 	var k, h int
 	buys := me.overLappedLevel[i].BuyOrders
 	sells := me.overLappedLevel[j].SellOrders
-	origBuyPx := me.overLappedLevel[i].Price
 
 	bLength := len(buys)
 	sLength := len(sells)
@@ -61,13 +75,13 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			me.Trades = append(
 				me.Trades,
 				Trade{
-					sells[h].Id,
-					me.LastTradePrice,
-					trade,
-					origBuyPx,
-					buys[k].CumQty,
-					sells[h].CumQty,
-					buys[k].Id})
+					Sid:        sells[h].Id,
+					LastPx:     me.LastTradePrice,
+					LastQty:    trade,
+					BuyCumQty:  buys[k].CumQty,
+					SellCumQty: sells[h].CumQty,
+					Bid:        buys[k].Id,
+					TickType:   Unknown})
 			h++
 		case r < 0:
 			trade := buys[k].nxtTrade
@@ -78,13 +92,13 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			me.Trades = append(
 				me.Trades,
 				Trade{
-					sells[h].Id,
-					me.LastTradePrice,
-					trade,
-					origBuyPx,
-					buys[k].CumQty,
-					sells[h].CumQty,
-					buys[k].Id})
+					Sid:        sells[h].Id,
+					LastPx:     me.LastTradePrice,
+					LastQty:    trade,
+					BuyCumQty:  buys[k].CumQty,
+					SellCumQty: sells[h].CumQty,
+					Bid:        buys[k].Id,
+					TickType:   Unknown})
 			k++
 		case r == 0:
 			trade := sells[h].nxtTrade
@@ -93,13 +107,13 @@ func (me *MatchEng) fillOrders(i int, j int) {
 			buys[k].CumQty += trade
 			sells[h].CumQty += trade
 			me.Trades = append(me.Trades, Trade{
-				sells[h].Id,
-				me.LastTradePrice,
-				trade,
-				origBuyPx,
-				buys[k].CumQty,
-				sells[h].CumQty,
-				buys[k].Id})
+				Sid:        sells[h].Id,
+				LastPx:     me.LastTradePrice,
+				LastQty:    trade,
+				BuyCumQty:  buys[k].CumQty,
+				SellCumQty: sells[h].CumQty,
+				Bid:        buys[k].Id,
+				TickType:   Unknown})
 			h++
 			k++
 		}
@@ -152,7 +166,7 @@ func (me *MatchEng) reserveQty(residual int64, orders []OrderPart) bool {
 // in such case, there should be alerts and all the new orders in this round should be rejected and dropped from order books
 // cancel order should be handled 1st before calling Match().
 // IOC orders should be handled after Match()
-func (me *MatchEng) Match() bool {
+func (me *MatchEng) MatchBeforeGalileo(height int64) bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
@@ -166,6 +180,7 @@ func (me *MatchEng) Match() bool {
 	totalExec := me.overLappedLevel[index].AccumulatedExecutions
 	me.Trades = me.Trades[:0]
 	me.LastTradePrice = lastPx
+	me.LastMatchHeight = height
 	i, j := 0, len(me.overLappedLevel)-1
 	//sell below the price at index or buy above the price would not get filled
 	for i <= index && j >= index && compareBuy(totalExec, 0) > 0 {

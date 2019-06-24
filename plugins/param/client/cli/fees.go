@@ -50,18 +50,19 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			feeParamFile := viper.GetString(flagFeeParamFile)
 			feeParam.Description = viper.GetString(flagDescription)
 			votingPeriodInSeconds := viper.GetInt64(flagVotingPeriod)
-
-			if feeParamFile != "" {
-				bz, err := ioutil.ReadFile(feeParamFile)
-				if err != nil {
-					return err
-				}
-				err = cdc.UnmarshalJSON(bz, &(feeParam.FeeParams))
-				if err != nil {
-					return err
-				}
+			if feeParamFile == "" {
+				return errors.New("fee-param-file is missing")
 			}
-			err := feeParam.Check()
+
+			bz, err := ioutil.ReadFile(feeParamFile)
+			if err != nil {
+				return err
+			}
+			err = cdc.UnmarshalJSON(bz, &(feeParam.FeeParams))
+			if err != nil {
+				return err
+			}
+			err = feeParam.Check()
 			if err != nil {
 				return err
 			}
@@ -93,6 +94,9 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cliCtx.GenerateOnly {
+				return utils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
+			}
 			cliCtx.PrintResponse = true
 			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
@@ -102,7 +106,6 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int64(flagVotingPeriod, 7*24*60*60, "voting period in seconds")
 	cmd.Flags().String(flagDescription, "", "description of proposal")
 	cmd.Flags().String(flagDeposit, "", "deposit of proposal")
-	cmd.Flags().Var(&feeParam, "fee-param", "Set the operate fee, '{param type}/{param map}'. e.g: 'operate/{\"send\": \"\",\"fee\":100000,\"fee_for\":1}'")
 	return cmd
 }
 

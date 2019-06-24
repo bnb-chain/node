@@ -8,8 +8,6 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -18,6 +16,9 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
+
+	"github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/types"
 )
 
 var codec = amino.NewCodec()
@@ -50,10 +51,7 @@ func getState(root string) state.State {
 }
 
 func prepareCms(root string, appDB *db.GoLevelDB, height int64) sdk.CommitMultiStore {
-	keys := []store.StoreKey{
-		common.MainStoreKey, common.TokenStoreKey, common.DexStoreKey,
-		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey,
-		common.ParamsStoreKey, common.ValAddrStoreKey, common.AccountStoreKey}
+	keys := common.GetNonTransientStoreKeys()
 
 	cms := store.NewCommitMultiStore(appDB)
 	for _, key := range keys {

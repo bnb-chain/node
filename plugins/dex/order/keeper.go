@@ -3,10 +3,12 @@ package order
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
 
+	bc "github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -16,10 +18,12 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
@@ -56,8 +60,8 @@ type Keeper struct {
 	logger                     tmlog.Logger
 }
 
-func CreateMatchEng(basePrice, lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(basePrice, lotSize, 0.05)
+func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
+	return me.NewMatchEng(pairSymbol, basePrice, lotSize, 0.05)
 }
 
 // NewKeeper - Returns the Keeper
@@ -86,8 +90,8 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
-func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	kp.initOrderBook(ctx, blockInterval, daysBack, blockDB, txDB, lastHeight, txDecoder)
+func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *bc.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kp.initOrderBook(ctx, blockInterval, daysBack, blockStore, txDB, lastHeight, txDecoder)
 	kp.InitRecentPrices(ctx)
 }
 
@@ -96,8 +100,8 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := CreateMatchEng(pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	symbol := strings.ToUpper(pair.GetSymbol())
+	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	return eng
@@ -139,12 +143,12 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	if kp.CollectOrderInfoForPublish {
-		change := OrderChange{info.Id, Ack, nil}
+		change := OrderChange{info.Id, Ack, "", nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
 			kp.OrderChanges = append(kp.OrderChanges, change)
 		}
-		bnclog.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
+		kp.logger.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
 		kp.OrderInfosForPub[info.Id] = &info
 	}
 
@@ -158,7 +162,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	bnclog.Debug("Added orders", "symbol", symbol, "id", info.Id)
+	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
 
@@ -229,9 +233,10 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	concurrency := len(tradeOuts)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
-	if engine.Match() {
+	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
-		for _, t := range engine.Trades {
+		for i := range engine.Trades {
+			t := &engine.Trades[i]
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
 			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 			if distributeTrade {
@@ -273,7 +278,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
 				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, nil})
+				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, "", nil})
 				kp.OrderChangesMtx.Unlock()
 			}
 		}
@@ -326,7 +331,7 @@ func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
 				if feeConfig != nil {
 					kp.FeeManager.UpdateConfig(*feeConfig)
 				} else {
-					panic("Genesis with no dex fee config ")
+					panic("Load with no dex fee config ")
 				}
 			default:
 				kp.logger.Debug("Receive param load that not interested.")
@@ -371,7 +376,9 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		close(symbolCh)
 	}
 	matchWorker := func() {
+		i := 0
 		for symbol := range symbolCh {
+			i++
 			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
@@ -459,6 +466,16 @@ func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLe
 	}
 }
 
+func (kp *Keeper) GetLastTrades(height int64, pair string) ([]me.Trade, int64) {
+	if eng, ok := kp.engines[pair]; ok {
+		if eng.LastMatchHeight == height {
+			return eng.Trades, eng.LastTradePrice
+		}
+	}
+	return nil, 0
+}
+
+// !!! FOR TEST USE ONLY
 func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
 	if eng, ok := kp.engines[pair]; ok {
 		return eng.Trades, eng.LastTradePrice
@@ -525,6 +542,76 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
+	if !sdk.IsUpgrade(upgrade.BEP19) {
+		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
+	}
+
+	// use string of the addr as the key since map makes a fast path for string key.
+	// Also, making the key have same length is also an optimization.
+	tradeTransfers := make(map[string]TradeTransfers)
+	// expire fee is fixed, so we count by numbers.
+	expireTransfers := make(map[string]ExpireTransfers)
+	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
+	var expireEventType transferEventType
+	var totalFee types.Fee
+	for tran := range tranCh {
+		kp.doTransfer(ctx, &tran)
+		if !tran.FeeFree() {
+			addrStr := string(tran.accAddress.Bytes())
+			// need a copy of tran as it is reused
+			tranCp := tran
+			if tran.IsExpiredWithFee() {
+				expireEventType = tran.eventType
+				if _, ok := expireTransfers[addrStr]; !ok {
+					expireTransfers[addrStr] = ExpireTransfers{&tranCp}
+				} else {
+					expireTransfers[addrStr] = append(expireTransfers[addrStr], &tranCp)
+				}
+			} else if tran.eventType == eventFilled {
+				if _, ok := tradeTransfers[addrStr]; !ok {
+					tradeTransfers[addrStr] = TradeTransfers{&tranCp}
+				} else {
+					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], &tranCp)
+				}
+			}
+		}
+	}
+
+	feesPerAcc := make(map[string]*types.Fee)
+	for addrStr, trans := range tradeTransfers {
+		addr := sdk.AccAddress(addrStr)
+		acc := kp.am.GetAccount(ctx, addr)
+		fees := kp.FeeManager.CalcTradesFee(acc.GetCoins(), trans, kp.engines)
+		if !fees.IsEmpty() {
+			feesPerAcc[addrStr] = &fees
+			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
+			kp.am.SetAccount(ctx, acc)
+			totalFee.AddFee(fees)
+		}
+	}
+
+	for addrStr, trans := range expireTransfers {
+		addr := sdk.AccAddress(addrStr)
+		acc := kp.am.GetAccount(ctx, addr)
+
+		fees := kp.FeeManager.CalcExpiresFee(acc.GetCoins(), expireEventType, trans, kp.engines, postAllocateHandler)
+		if !fees.IsEmpty() {
+			if _, ok := feesPerAcc[addrStr]; ok {
+				feesPerAcc[addrStr].AddFee(fees)
+			} else {
+				feesPerAcc[addrStr] = &fees
+			}
+			acc.SetCoins(acc.GetCoins().Minus(fees.Tokens))
+			kp.am.SetAccount(ctx, acc)
+			totalFee.AddFee(fees)
+		}
+	}
+	return totalFee, feesPerAcc
+}
+
+// DEPRECATED
+func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
@@ -587,7 +674,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		}
 	}
 	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
-		fee := kp.FeeManager.CalcOrderFee(acc.GetCoins(), in, kp.engines)
+		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
@@ -650,16 +737,16 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
+// Return whether match has been done in this height
 func (kp *Keeper) MatchAndAllocateAll(
 	ctx sdk.Context,
 	postAlloTransHandler TransferHandler,
 ) {
-	bnclog.Debug("Start Matching for all...", "symbolNum", len(kp.roundOrders))
+	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeight(), timestamp)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
-		return
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
@@ -712,7 +799,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Tran
 	symbolCh := make(chan string, concurrency)
 	utils.ConcurrentExecuteAsync(concurrency,
 		func() {
-			for symbol, _ := range kp.allOrders {
+			for symbol := range kp.allOrders {
 				symbolCh <- symbol
 			}
 			close(symbolCh)
@@ -753,7 +840,7 @@ func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time
 	if err != nil {
 		panic(err)
 	}
-	bnclog.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
+	kp.logger.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
 	store.Set([]byte(key), bz)
 }
 
@@ -824,4 +911,136 @@ func (kp *Keeper) ClearOrders() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
+}
+
+func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler) {
+	_, ok := kp.engines[symbol]
+	if !ok {
+		kp.logger.Error("delist symbol does not exist", "symbol", symbol)
+		return
+	}
+
+	transferChs := kp.expireAllOrders(ctx, symbol)
+	if transferChs != nil {
+		totalFee := kp.allocateAndCalcFee(ctx, transferChs, postAllocTransHandler)
+		fees.Pool.AddAndCommitFee(fmt.Sprintf("DELIST_%s", symbol), totalFee)
+	}
+
+	delete(kp.engines, symbol)
+	delete(kp.allOrders, symbol)
+	delete(kp.recentPrices, symbol)
+
+	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
+	err := kp.PairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
+	if err != nil {
+		kp.logger.Error("delete trading pair error", "err", err.Error())
+	}
+}
+
+func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
+	orderNum := len(kp.allOrders[symbol])
+	if orderNum == 0 {
+		kp.logger.Info("no orders to expire", "symbol", symbol)
+		return nil
+	}
+
+	concurrency := 1 << kp.poolSize
+	channelSize := orderNum / concurrency
+
+	transferChs := make([]chan Transfer, concurrency)
+	for i := range transferChs {
+		transferChs[i] = make(chan Transfer, channelSize)
+	}
+
+	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
+		_ = engine.Book.RemoveOrders(math.MaxInt64, side, func(ord me.OrderPart) {
+			// gen transfer
+			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
+				h := channelHash(ordMsg.Sender, concurrency)
+				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
+			} else {
+				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
+			}
+		})
+	}
+
+	go func() {
+		engine := kp.engines[symbol]
+		orders := kp.allOrders[symbol]
+		expire(orders, engine, me.BUYSIDE)
+		expire(orders, engine, me.SELLSIDE)
+
+		for _, transferCh := range transferChs {
+			close(transferCh)
+		}
+	}()
+
+	return transferChs
+}
+
+func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should exist if quote token is not native token
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+		return errors.New("trading pair exists")
+	}
+
+	if baseAsset != types.NativeTokenSymbol &&
+		quoteAsset != types.NativeTokenSymbol {
+
+		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before against %s",
+				baseAsset, quoteAsset)
+		}
+
+		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
+			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
+				quoteAsset, baseAsset, quoteAsset)
+		}
+	}
+	return nil
+}
+
+func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
+	// trading pair against native token should not be delisted if there is any other trading pair exist
+	baseAsset = strings.ToUpper(baseAsset)
+	quoteAsset = strings.ToUpper(quoteAsset)
+
+	if baseAsset == quoteAsset {
+		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+	}
+
+	if !kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
+		return fmt.Errorf("trading pair %s_%s does not exist", baseAsset, quoteAsset)
+	}
+
+	if baseAsset != types.NativeTokenSymbol && quoteAsset != types.NativeTokenSymbol {
+		return nil
+	}
+
+	var symbolToCheck string
+	if baseAsset != types.NativeTokenSymbol {
+		symbolToCheck = baseAsset
+	} else {
+		symbolToCheck = quoteAsset
+	}
+
+	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
+	for _, pair := range tradingPairs {
+		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
+			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
+			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
+				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAsset, quoteAsset)
+		}
+	}
+
+	return nil
 }

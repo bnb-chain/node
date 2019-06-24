@@ -14,6 +14,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
@@ -156,11 +157,21 @@ func handleNewOrder(
 			blockHeader := ctx.BlockHeader()
 			height := blockHeader.Height
 			timestamp := blockHeader.Time.UnixNano()
+			var txSource int64
+			upgrade.UpgradeBEP10(func() {
+				txSource = 0
+			}, func() {
+				if txSrc, ok := ctx.Value(baseapp.TxSourceKey).(int64); ok {
+					txSource = txSrc
+				} else {
+					keeper.logger.Error("cannot get txSource from ctx")
+				}
+			})
 			msg := OrderInfo{
 				msg,
 				height, timestamp,
 				height, timestamp,
-				0, txHash}
+				0, txHash, txSource}
 			err := keeper.AddOrder(msg, false)
 			if err != nil {
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
@@ -230,7 +241,7 @@ func handleCancelOrder(
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
 			if keeper.CollectOrderInfoForPublish {
-				change := OrderChange{msg.RefId, Canceled, nil}
+				change := OrderChange{msg.RefId, Canceled, fee.String(), nil}
 				keeper.OrderChanges = append(keeper.OrderChanges, change)
 				keeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}

@@ -47,6 +47,7 @@ func main() {
 	startCmd := server.StartCmd(ctx.ToCosmosServerCtx(), newApp)
 	startCmd.Flags().Int64VarP(&ctx.PublicationConfig.FromHeightInclusive, "fromHeight", "f", 1, "from which height (inclusive) we want publish market data")
 	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(bnbInit.SnapshotCmd(ctx.ToCosmosServerCtx(), cdc))
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)

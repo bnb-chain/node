@@ -13,11 +13,13 @@ COSMOS_RELEASE := $(shell grep 'github.com/binance-chain/bnc-cosmos-sdk' Gopkg.t
 TENDER_RELEASE := $(shell grep 'github.com/tendermint/tendermint' Gopkg.toml -n2|grep version|awk '{print $$4}'| sed 's/\"//g')
 
 BUILD_TAGS = netgo
+BUILD_CLI_TAGS = netgo
 BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+BUILD_CLI_FLAGS = -tags "${BUILD_CLI_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 # Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
 BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
 BUILD_CFLAGS = ${BUILD_FLAGS} -tags "gcc libsecp256k1"
-BUILD_TESTNET_FLAGS = ${BUILD_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
+BUILD_TESTNET_FLAGS = ${BUILD_CLI_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -30,6 +32,34 @@ endif
 
 all: get_vendor_deps format build
 
+LEDGER_ENABLED ?= true
+
+########################################
+### Build/Install
+
+ifeq ($(LEDGER_ENABLED),true)
+  ifeq ($(OS),Windows_NT)
+    GCCEXE = $(shell where gcc.exe 2> NUL)
+    ifeq ($(GCCEXE),)
+      $(error gcc.exe not installed for ledger support, please install or set LEDGER_ENABLED=false)
+    else
+      BUILD_CLI_TAGS += ledger
+    endif
+  else
+    UNAME_S = $(shell uname -s)
+    ifeq ($(UNAME_S),OpenBSD)
+      $(warning OpenBSD detected, disabling ledger support (https://github.com/cosmos/cosmos-sdk/issues/1988))
+    else
+      GCC = $(shell command -v gcc 2> /dev/null)
+      ifeq ($(GCC),)
+        $(error gcc not installed for ledger support, please install or set LEDGER_ENABLED=false)
+      else
+        BUILD_CLI_TAGS += ledger
+      endif
+    endif
+  endif
+endif
+
 ########################################
 ### CI
 
@@ -39,7 +69,7 @@ ci: get_vendor_deps build
 ### Build
 
 define buildwindows
-     go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
+     go build $(BUILD_CLI_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
      go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
      go build $(BUILD_FLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
      go build $(BUILD_FLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
@@ -52,7 +82,7 @@ build: get_tools
 ifeq ($(OS),Windows_NT)
 	$(call buildwindows)
 else
-	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
+	go build $(BUILD_CLI_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
 	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
@@ -62,14 +92,14 @@ endif
 
 build_c:
 ifeq ($(OS),Windows_NT)
-	go build $(BUILD_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
+	go build $(BUILD_CLI_FLAGS) -o build/bnbcli.exe ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli.exe ./cmd/bnbcli
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbchaind.exe ./cmd/bnbchaind
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
 	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd.exe ./cmd/lightd
 else
-	go build $(BUILD_FLAGS) -o build/bnbcli ./cmd/bnbcli
+	go build $(BUILD_CLI_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbchaind ./cmd/bnbchaind
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry ./cmd/bnbsentry
@@ -94,12 +124,12 @@ build-alpine_c:
 
 install:
 	go install $(BUILD_FLAGS) ./cmd/bnbchaind
-	go install $(BUILD_FLAGS) ./cmd/bnbcli
+	go install $(BUILD_CLI_FLAGS) ./cmd/bnbcli
 	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 
 install_c:
 	$(BUILD_CGOFLAGS) go install $(BUILD_CFLAGS) ./cmd/bnbchaind
-	go install $(BUILD_FLAGS) ./cmd/bnbcli
+	go install $(BUILD_CLI_FLAGS) ./cmd/bnbcli
 	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 
 ########################################

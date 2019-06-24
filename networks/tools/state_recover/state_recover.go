@@ -145,8 +145,7 @@ func resetAppVersionedTree(height int64, rootDir string) {
 	}
 	defer dbIns.Close()
 
-	keys := []store.StoreKey{common.MainStoreKey, common.AccountStoreKey, common.TokenStoreKey, common.DexStoreKey,
-		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey, common.ParamsStoreKey, common.ValAddrStoreKey}
+	keys := common.GetNonTransientStoreKeys()
 
 	for _, key := range keys {
 		dbAccount := db.NewPrefixDB(dbIns, []byte("s/k:"+key.Name()+"/"))
@@ -163,7 +162,7 @@ func resetAppVersionedTree(height int64, rootDir string) {
 			if version > height {
 				rootPrefixFmt := iavl.NewKeyFormat('r', 8)
 				dbAccount.Delete(rootPrefixFmt.Key(version))
-				fmt.Println("delete root version ", version, key.Name())
+				//fmt.Println("delete root version ", version, key.Name())
 			}
 		}
 	}
@@ -216,7 +215,7 @@ func deleteOrphans(dbIns *db.GoLevelDB, storeKey store.StoreKey, height int64) {
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
-		fmt.Printf("delete orphan %v %x\n", height, itr.Value())
+		//fmt.Printf("delete orphan %v %x\n", height, itr.Value())
 		dbAccount.Delete(itr.Key())
 	}
 }
@@ -225,12 +224,17 @@ func deleteOrphans(dbIns *db.GoLevelDB, storeKey store.StoreKey, height int64) {
 // 	Reset node to a specific height and continue block from this height
 //
 // Usage:
-// 	1. go build reset.go
-// 	2. ./reset height_to_reset home_path1 home_path2 ...
+// 	1. go build state_recover.go
+// 	2. ./state_recover height_to_reset home_path1 home_path2 ...
+
+func printUsage() {
+	fmt.Printf("usage: ./state_recover height home_path1 home_path2 ...\n")
+}
+
 func main() {
 	args := os.Args
 	if len(args) < 3 {
-		fmt.Printf("usage: ./reset height home_path1 home_path2 ...")
+		printUsage()
 		return
 	}
 
@@ -243,7 +247,8 @@ func main() {
 
 	rootDirs := os.Args[2:]
 	for _, dir := range rootDirs {
-		fmt.Printf("rest home_path[%s] to height[%d]\n", dir, height)
+		fmt.Printf("recover home_path[%s] to height[%d]\n", dir, height)
 		restartNodeAtHeight(height, dir)
+		fmt.Printf("recover success\n")
 	}
 }

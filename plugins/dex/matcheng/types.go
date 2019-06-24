@@ -5,15 +5,28 @@ import (
 	"sort"
 
 	bt "github.com/google/btree"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
+	UNKNOWN  int8 = 0
 	BUYSIDE  int8 = 1
 	SELLSIDE int8 = 2
 )
 
 // PRECISION is the last effective decimal digit of the price of currency pair
 const PRECISION = 1
+
+// Trade status
+const (
+	Unknown = iota
+	SellTaker
+	BuyTaker
+	BuySurplus
+	SellSurplus
+	Neutral
+)
 
 //Trade stores an execution between 2 orders on a *currency pair*.
 //3 things needs attention:
@@ -24,10 +37,12 @@ type Trade struct {
 	Sid        string // sell order id
 	LastPx     int64  // execution price
 	LastQty    int64  // execution quantity
-	OrigBuyPx  int64  // original intended price for the trade
 	BuyCumQty  int64  // cumulative executed quantity for the buy order
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
+	TickType   int8
+	SellerFee  *types.Fee // seller's fee
+	BuyerFee   *types.Fee // buyer's fee
 }
 
 type OrderPart struct {
@@ -152,6 +167,61 @@ type OverLappedLevel struct {
 	AccumulatedBuy        int64
 	AccumulatedExecutions int64
 	BuySellSurplus        int64
+
+	BuyTakerStartIdx  int
+	SellTakerStartIdx int
+	BuyMakerTotal     int64
+	SellMakerTotal    int64
+}
+
+func (overlapped *OverLappedLevel) HasBuyMaker() bool {
+	return overlapped.BuyTakerStartIdx > 0 && overlapped.BuyMakerTotal > 0
+}
+
+func (overlapped *OverLappedLevel) HasBuyTaker() bool {
+	return overlapped.BuyTakerStartIdx < len(overlapped.BuyOrders)
+}
+
+func (overlapped *OverLappedLevel) HasSellMaker() bool {
+	return overlapped.SellTakerStartIdx > 0 && overlapped.SellMakerTotal > 0
+}
+
+func (overlapped *OverLappedLevel) HasSellTaker() bool {
+	return overlapped.SellTakerStartIdx < len(overlapped.SellOrders)
 }
 
 type LevelIter func(*PriceLevel)
+
+type MergedPriceLevel struct {
+	price    int64
+	orders   []*OrderPart
+	totalQty int64
+}
+
+func NewMergedPriceLevel(price int64) *MergedPriceLevel {
+	return &MergedPriceLevel{
+		price:    price,
+		orders:   make([]*OrderPart, 0),
+		totalQty: 0,
+	}
+}
+
+func (l *MergedPriceLevel) AddOrder(order *OrderPart) {
+	l.orders = append(l.orders, order)
+	l.totalQty += order.nxtTrade
+}
+
+func (l *MergedPriceLevel) AddOrders(orders []*OrderPart) {
+	l.orders = append(l.orders, orders...)
+	for _, order := range orders {
+		l.totalQty += order.nxtTrade
+	}
+}
+
+type TakerSideOrders struct {
+	*MergedPriceLevel
+}
+
+func (m TakerSideOrders) length() int {
+	return len(m.orders)
+}

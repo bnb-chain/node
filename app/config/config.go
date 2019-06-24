@@ -2,10 +2,12 @@ package config
 
 import (
 	"bytes"
+	"math"
 	"path/filepath"
 	"text/template"
 
 	"github.com/spf13/viper"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
@@ -45,6 +47,14 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
+# Block height of BEP6 upgrade
+BEP6Height = {{ .UpgradeConfig.BEP6Height }}
+# Block height of BEP9 upgrade
+BEP9Height = {{ .UpgradeConfig.BEP9Height }}
+# Block height of BEP10 upgrade
+BEP10Height = {{ .UpgradeConfig.BEP10Height }} 
+# Block height of UpgradeMatchEngineHeight upgrade
+BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -283,10 +293,19 @@ func defaultBaseConfig() *BaseConfig {
 type UpgradeConfig struct {
 	// example
 	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
+	BEP6Height  int64 `mapstructure:"BEP6Height"`
+	BEP9Height  int64 `mapstructure:"BEP9Height"`
+	BEP10Height int64 `mapstructure:"BEP10Height"`
+	BEP19Height int64 `mapstructure:"BEP19Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
-	return &UpgradeConfig{}
+	return &UpgradeConfig{
+		BEP6Height:  math.MaxInt64,
+		BEP9Height:  math.MaxInt64, //TODO change default when update
+		BEP10Height: math.MaxInt64,
+		BEP19Height: math.MaxInt64,
+	}
 }
 
 func (context *BinanceChainContext) ParseAppConfigInPlace() error {

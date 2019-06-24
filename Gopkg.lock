@@ -18,14 +18,6 @@
   version = "v1.21.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7736fc6da04620727f8f3aa2ced8d77be8e074a302820937aa5993848c769b27"
-  name = "github.com/ZondaX/hid-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "48b08affede2cea076a3cf13b2e3f72ed262b743"
-
-[[projects]]
   digest = "1:09a7f74eb6bb3c0f14d8926610c87f569c5cff68e978d30e9a3540aeb626fdf0"
   name = "github.com/bartekn/go-bip39"
   packages = ["."]
@@ -63,7 +55,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:5e16e6e0a9e93882e794665f07979535da456e1bb6e27bfc9b7d5a5b542627ad"
+  digest = "1:6ed2234b494c14b2a4ef5111401d514ad015eb780f1068038baa28aaf3bc4011"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -111,9 +103,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "7b2491f5a363b9315f107c1263f85f2f10153ced"
+  revision = "8e2ea76b93193a9d6bfaca99808c7d5f7e06c8e9"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.17"
+  version = "v0.25.0-binance.18"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -163,14 +155,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:1530d06761f464b62ab3dfc2fa5b16303901d87ff219100a1447ba216d2e52be"
-  name = "github.com/ethereum/go-ethereum"
-  packages = ["crypto/secp256k1"]
-  pruneopts = "T"
-  revision = "c942700427557e3ff6de3aaf6b916e2f056c1ec2"
-  version = "v1.8.23"
-
-[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -211,7 +195,7 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:35621fe20f140f05a0c4ef662c26c0ab4ee50bca78aa30fe87d33120bd28165e"
+  digest = "1:95e1006e41c641abd2f365dfa0f1213c04da294e7cd5f0bf983af234b775db64"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -222,8 +206,8 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
-  version = "v1.1.1"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
@@ -234,7 +218,7 @@
   revision = "efd229238aceefdee6a00ea28b61c924c2b5f1a5"
 
 [[projects]]
-  digest = "1:17fe264ee908afc795734e8c4e63db2accabaf57326dbf21763a7d6b86096260"
+  digest = "1:239c4c7fd2159585454003d9be7207167970194216193a8a210b8d29576f19c9"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -244,8 +228,8 @@
     "ptypes/timestamp",
   ]
   pruneopts = "UT"
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -325,12 +309,12 @@
   version = "v1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:39b27d1381a30421f9813967a5866fba35dc1d4df43a6eefe3b7a5444cb07214"
+  digest = "1:a74b5a8e34ee5843cd6e65f698f3e75614f812ff170c2243425d75bc091e9af2"
   name = "github.com/jmhodges/levigo"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c42d9e0ca023e2198120196f842701bb4c55d7b9"
+  revision = "853d788c5c416eaaee5b044570784a96c7a26975"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -339,6 +323,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
+
+[[projects]]
+  digest = "1:b18a269f11ff51135d6f82987dbb53288f4d66098a6639b429f4f494a910155b"
+  name = "github.com/libp2p/go-buffer-pool"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c4a5988a1e475884367015e1a2d0bd5fa4c491f4"
+  version = "v0.0.2"
 
 [[projects]]
   digest = "1:9d18f9aaff17b735aae72ace5ab8b39e80dc8e9c3b07a58372681cf724aca540"
@@ -583,6 +575,13 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  digest = "1:605b6546f3f43745695298ec2d342d3e952b6d91cdf9f349bea9315f677d759f"
+  name = "github.com/tendermint/btcd"
+  packages = ["btcec"]
+  pruneopts = "UT"
+  revision = "e5840949ff4fff0c56f9b6a541e22b63581ea9df"
+
+[[projects]]
   digest = "1:a2318b27cf0fb75eb19db3a31039accaae12ab39786b609ed9d2f79ecbf4367d"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
@@ -592,16 +591,16 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  digest = "1:c317eec9047bdcd14dff925f34e07d22c6886faf22bf7c9286ea56ad962bcc22"
+  digest = "1:1ac12d8dc0930588ad4082b0c186c4a602a17dee5e74869c0237b212ed4e5fee"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "65e487d3a8d4d6624d8779c1f42cff31d61a9146"
+  revision = "b84252441ae02d158b54f62138a929365fd1d4ee"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "v0.12.0-binance.0"
+  version = "v0.12.0-binance.1"
 
 [[projects]]
-  digest = "1:31fd9256d36ed8b0f53286583638e89f5b5e39eab53ced37cd6c71a733a1f5b0"
+  digest = "1:dc2205db501620ad7c2be28dec030e1c953ecb05b0010c26271e4f832c171a2e"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -623,6 +622,7 @@
     "crypto/multisig",
     "crypto/multisig/bitarray",
     "crypto/secp256k1",
+    "crypto/secp256k1/internal/secp256k1",
     "crypto/tmhash",
     "crypto/xsalsa20symmetric",
     "evidence",
@@ -659,6 +659,7 @@
     "rpc/lib/client",
     "rpc/lib/server",
     "rpc/lib/types",
+    "snapshot",
     "state",
     "state/blockindex",
     "state/blockindex/kv",
@@ -671,17 +672,34 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "ee4d6f731a22cce0088c1366f6cf5df2ec9e45bf"
+  revision = "9e594f505df07ce1d4067918dbe90d4df7bae8bc"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.30.1-binance.7"
+  version = "v0.31.5-binance.0"
 
 [[projects]]
-  digest = "1:7886f86064faff6f8d08a3eb0e8c773648ff5a2e27730831e2bfbf07467f6666"
-  name = "github.com/zondax/ledger-goclient"
+  digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"
+  name = "github.com/zondax/hid"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "302fd402163c34626286195dfa9adac758334acc"
+  version = "v0.9.0"
+
+[[projects]]
+  digest = "1:c95f97a7ebc86127478375e2f8e8b49f096e92b79e49e70a570862eda4b18f5e"
+  name = "github.com/zondax/ledger-cosmos-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "58598458c11bc0ad1c1b8dac3dc3e11eaf270b79"
-  version = "v0.1.0"
+  revision = "fee2574758229322031b8b8d5c5f8197d121b952"
+  source = "https://github.com/binance-chain/ledger-cosmos-go"
+  version = "v0.9.9-binance.1"
+
+[[projects]]
+  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
+  name = "github.com/zondax/ledger-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
+  version = "v0.9.0"
 
 [[projects]]
   branch = "master"
@@ -896,6 +914,7 @@
     "github.com/tendermint/tendermint/rpc/client",
     "github.com/tendermint/tendermint/rpc/core/types",
     "github.com/tendermint/tendermint/rpc/lib/server",
+    "github.com/tendermint/tendermint/snapshot",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "go.uber.org/ratelimit",

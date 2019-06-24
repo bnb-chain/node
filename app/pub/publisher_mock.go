@@ -30,7 +30,7 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroOrJsonMsg, tpe msgType
 		publisher.ExecutionResultsPublished = append(publisher.ExecutionResultsPublished, msg.(*ExecutionResults))
 	case blockFeeTpe:
 		publisher.BlockFeePublished = append(publisher.BlockFeePublished, msg.(BlockFee))
-	case transferType:
+	case transferTpe:
 		publisher.TransferPublished = append(publisher.TransferPublished, msg.(Transfers))
 	default:
 		panic(fmt.Errorf("does not support type %s", tpe.String()))

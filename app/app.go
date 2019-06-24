@@ -9,9 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -31,7 +30,6 @@ import (
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/fees"
-	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
@@ -45,6 +43,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -76,17 +75,16 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper    bank.Keeper
-	DexKeeper     *dex.DexKeeper
-	AccountKeeper auth.AccountKeeper
-	TokenMapper   tkstore.Mapper
-	ValAddrCache  *ValAddrCache
-	stakeKeeper   stake.Keeper
-	govKeeper     gov.Keeper
+	CoinKeeper     bank.Keeper
+	DexKeeper      *dex.DexKeeper
+	AccountKeeper  auth.AccountKeeper
+	TokenMapper    tkstore.Mapper
+	ValAddrCache   *ValAddrCache
+	stakeKeeper    stake.Keeper
+	govKeeper      gov.Keeper
+	timeLockKeeper timelock.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
-	// manage state sync related status
-	StateSyncManager
 
 	baseConfig        *config.BaseConfig
 	upgradeConfig     *config.UpgradeConfig
@@ -98,7 +96,7 @@ type BinanceChain struct {
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	metrics *pub.Metrics
 
-	blockStore *blockchain.BlockStore
+	takeSnapshotHeight int64 // whether to take snapshot of current height, set at endblock(), reset at commit()
 }
 
 // NewBinanceChain creates a new instance of the BinanceChain.
@@ -118,8 +116,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		publicationConfig: ServerContext.PublicationConfig,
 	}
 	// set upgrade config
-	app.setUpgradeConfig()
-	app.SetPruning(viper.GetString("pruning"))
+	SetUpgradeConfig(app.upgradeConfig)
 	app.initRunningMode()
 	app.SetCommitMultiStoreTracer(traceStore)
 
@@ -145,10 +142,10 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-	listHooks := list.NewListHooks(tradingPairMapper, app.TokenMapper)
-	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
-
 	app.ParamHub.SetGovKeeper(app.govKeeper)
+
+	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
+		timelock.DefaultCodespace)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -158,6 +155,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
+	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
+
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
@@ -206,6 +205,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
 		common.GovStoreKey,
+		common.TimeLockStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -230,15 +230,34 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// remaining plugin init
 	app.initDex(tradingPairMapper)
+	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
-	app.initStateSyncManager(ServerContext.Config.StateSyncReactor)
+	if ServerContext.Config.StateSyncReactor {
+		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
+		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
+		app.StateSyncHelper.Init(lastBreatheBlockHeight)
+	}
 	return app
 }
 
 // setUpgradeConfig will overwrite default upgrade config
-func (app *BinanceChain) setUpgradeConfig() {
-	// upgrade.Mgr.AddUpgradeHeight(,)
+func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
+	// register upgrade height
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
+
+	// register store keys of upgrade
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
+
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
+		timelock.TimeLockMsg{}.Type(),
+		timelock.TimeRelockMsg{}.Type(),
+		timelock.TimeUnlockMsg{}.Type(),
+	)
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -259,20 +278,35 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 		return
 	}
 	// count back to days in config.
+	blockDB := baseapp.LoadBlockDB()
+	defer blockDB.Close()
+	blockStore := blockchain.NewBlockStore(blockDB)
+	txDB := baseapp.LoadTxDB()
+	defer txDB.Close()
+
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
-		baseapp.LoadBlockDB(),
-		baseapp.LoadTxDB(),
+		blockStore,
+		txDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
+}
+
+func (app *BinanceChain) initGovHooks() {
+	listHooks := list.NewListHooks(app.DexKeeper, app.TokenMapper)
+	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	delistHooks := list.NewDelistHooks(app.DexKeeper)
+	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 }
 
 func (app *BinanceChain) initParams() {
@@ -446,28 +480,29 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeader().Height
 
+	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	var tradesToPublish []*pub.Trade
 
-	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-	if !isBreatheBlock {
-		// only match in the normal block
-		app.Logger.Debug("normal block", "height", height)
+	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
 		} else {
 			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
 		}
-	} else {
+	}
+
+	if isBreatheBlock {
 		// breathe block
-		bnclog.Info("Start Breathe Block Handling",
+		app.Logger.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
+		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.DexKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		// other end blockers
 		<-icoDone
-		// fire and forget reload snapshot
-		go app.reloadSnapshot(height, true)
+	} else {
+		app.Logger.Debug("normal block", "height", height)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
@@ -508,6 +543,26 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		ValidatorUpdates: validatorUpdates,
 		Tags:             tags,
 	}
+}
+
+func (app *BinanceChain) Commit() (res abci.ResponseCommit) {
+	res = app.BaseApp.Commit()
+	if ServerContext.Config.StateSyncReactor && app.takeSnapshotHeight > 0 {
+		app.StateSyncHelper.SnapshotHeights <- app.takeSnapshotHeight
+		app.takeSnapshotHeight = 0
+	}
+	return
+}
+
+func (app *BinanceChain) WriteRecoveryChunk(hash abci.SHA256Sum, chunk *abci.AppStateChunk, isComplete bool) (err error) {
+	err = app.BaseApp.WriteRecoveryChunk(hash, chunk, isComplete)
+	if err != nil {
+		return err
+	}
+	if isComplete {
+		err = app.reInitChain()
+	}
+	return err
 }
 
 // ExportAppStateAndValidators exports blockchain world state to json.
@@ -689,6 +744,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		len(app.DexKeeper.OrderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
+		"numOfStakeUpdates",
+		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
 		len(accountsToPublish))
 	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
@@ -713,28 +770,4 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)
-}
-
-// SetPruning sets a pruning option on the multistore associated with the app
-func (app *BinanceChain) SetPruning(pruning string) {
-	var pruningStrategy sdk.PruningStrategy
-	switch pruning {
-	case "nothing":
-		pruningStrategy = sdk.PruneNothing{}
-	case "everything":
-		pruningStrategy = sdk.PruneEverything{}
-	case "syncable":
-		// TODO: make these parameters configurable
-		pruningStrategy = sdk.PruneSyncable{NumRecent: 100, StoreEvery: 10000}
-	case "breathe":
-		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
-	default:
-		pruningStrategy = NewKeepRecentAndBreatheBlock(int64(app.baseConfig.BreatheBlockInterval), 10000, ServerContext.Config)
-		app.Logger.Error("failed to load pruning, set to breathe", "strategy", pruning)
-	}
-	app.BaseApp.SetPruning(pruningStrategy)
-}
-
-func (app *BinanceChain) SetBlockStore(store *blockchain.BlockStore) {
-	app.blockStore = store
 }

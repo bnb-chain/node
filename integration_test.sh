@@ -138,7 +138,6 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 result=$(./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
-
 ## ROUND 2 ##
 
 round="2"

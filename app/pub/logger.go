@@ -3,21 +3,23 @@ package pub
 import (
 	"fmt"
 
-	"github.com/binance-chain/node/common/log"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 // this delegate sarama.StdLogger to common/log.logger
 // the concrete implementation of this type is borrowed from same name methods of go std Logger
-type saramaLogger struct{}
+type saramaLogger struct {
+	tmlog.Logger
+}
 
 func (slogger saramaLogger) Print(v ...interface{}) {
-	log.Debug(fmt.Sprint(v...), "module", "sarama")
+	slogger.Debug(fmt.Sprint(v...))
 }
 
 func (slogger saramaLogger) Printf(format string, v ...interface{}) {
-	log.Debug(fmt.Sprintf(format, v...), "module", "sarama")
+	slogger.Debug(fmt.Sprintf(format, v...))
 }
 
 func (slogger saramaLogger) Println(v ...interface{}) {
-	log.Debug(fmt.Sprintln(v...), "module", "sarama")
+	slogger.Debug(fmt.Sprintln(v...))
 }
