@@ -16,6 +16,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/upgrade"
@@ -223,11 +224,19 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		for _, m := range msgs {
 			switch msg := m.(type) {
 			case NewOrderMsg:
+				var txSource int64
+				upgrade.UpgradeBEP10(nil, func() {
+					if stdTx, ok := tx.(auth.StdTx); ok {
+						txSource = stdTx.GetSource()
+					} else {
+						logger.Error("tx is not an auth.StdTx", "txhash", txHash.String())
+					}
+				})
 				orderInfo := OrderInfo{
 					msg,
 					height, t,
 					height, t,
-					0, txHash.String()}
+					0, txHash.String(), txSource}
 				kp.AddOrder(orderInfo, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
@@ -259,10 +268,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB
 	return nil
 }
 
-func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockDB dbm.DB, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	defer blockDB.Close()
-	defer txDB.Close()
-	blockStore := bc.NewBlockStore(blockDB)
+func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *bc.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	var timeOfLatestBlock time.Time
 	if lastHeight == 0 {
 		timeOfLatestBlock = utils.Now()

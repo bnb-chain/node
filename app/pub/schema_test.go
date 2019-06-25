@@ -25,16 +25,16 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 		NumOfMsgs: 1,
 		Trades: []*Trade{{
 			Id: "42-0", Symbol: "NNB_BNB", Price: 100, Qty: 100,
-			Sid: "s-1", Bid: "b-1",
-			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1",
-			SAddr: "s", BAddr: "b"}},
+			Sid: "s-1", Bid: "b-1", TickType: 1,
+			Sfee: "BNB:8;ETH:1", Bfee: "BNB:10;BTC:1", SSingleFee: "BNB:8;ETH:1", BSingleFee: "BNB:10;BTC:1",
+			SAddr: "s", BAddr: "b", SSrc: 0, BSrc: 0}},
 	}
 	orders := Orders{
 		NumOfMsgs: 3,
 		Orders: []*Order{
-			{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, "", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
-			{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:10;BTC:1", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
-			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:8;ETH:1", 99, 99, orderPkg.TimeInForce.GTE, orderPkg.NEW, ""},
+			{"NNB_BNB", orderPkg.Ack, "b-1", "", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 0, 0, 0, "", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", ""},
+			{"NNB_BNB", orderPkg.FullyFill, "b-1", "42-0", "b", orderPkg.Side.BUY, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:10;BTC:1", 100, 100, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", "BNB:10;BTC:1"},
+			{"NNB_BNB", orderPkg.FullyFill, "s-1", "42-0", "s", orderPkg.Side.SELL, orderPkg.OrderType.LIMIT, 100, 100, 100, 100, 100, "BNB:8;ETH:1", 99, 99, orderPkg.TimeInForce.GTE, orderPkg.NEW, "", "BNB:8;ETH:1"},
 		},
 	}
 	proposals := Proposals{
@@ -105,7 +105,7 @@ func TestBlockFeeMarshaling(t *testing.T) {
 func TestTransferMarshaling(t *testing.T) {
 	publisher := NewKafkaMarketDataPublisher(Logger, "")
 	msg := Transfers{42, 20, 1000, []Transfer{{TxHash: "123456ABCDE", From: "", To: []Receiver{Receiver{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, Receiver{"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
-	_, err := publisher.marshal(&msg, transferType)
+	_, err := publisher.marshal(&msg, transferTpe)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -74,6 +74,26 @@ func TestMapper_Exists(t *testing.T) {
 	require.True(t, exists)
 }
 
+func TestMapper_DeleteTradingPair_Failed(t *testing.T) {
+	pairMapper, ctx := setup()
+
+	baseAsset := "XYZ-000"
+	quoteAsset := types.NativeTokenSymbol
+	err := pairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
+	require.Error(t, err)
+}
+
+func TestMapper_DeleteTradingPair_Succeed(t *testing.T) {
+	pairMapper, ctx := setup()
+
+	baseAsset := "XYZ-000"
+	quoteAsset := types.NativeTokenSymbol
+	err := pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(baseAsset, quoteAsset, 1e8))
+	require.NoError(t, err)
+	err = pairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
+	require.NoError(t, err)
+}
+
 func TestMapper_ListAllTradingPairs(t *testing.T) {
 	pairMapper, ctx := setup()
 	err := pairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "BNB", 1e8))

@@ -17,7 +17,7 @@ const (
 	booksTpe
 	executionResultTpe
 	blockFeeTpe
-	transferType
+	transferTpe
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
@@ -32,11 +32,23 @@ func (this msgType) String() string {
 		return "ExecutionResults"
 	case blockFeeTpe:
 		return "BlockFee"
-	case transferType:
+	case transferTpe:
 		return "Transfers"
 	default:
 		return "Unknown"
 	}
+}
+
+// Versions of schemas
+// This field is used to generate last component of key in kafka message and helps consumers
+// figure out which version of writer schema to use.
+// This allows consumers be deployed independently (in advance) with publisher
+var latestSchemaVersions = map[msgType]int{
+	accountsTpe:        0,
+	booksTpe:           0,
+	executionResultTpe: 1,
+	blockFeeTpe:        0,
+	transferTpe:        0,
 }
 
 type AvroOrJsonMsg interface {
@@ -105,19 +117,25 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	proposals := msg.Proposals.EssentialMsg()
-	return fmt.Sprintf("height:%d\norders:%s\nproposals:%s\n", msg.Height, orders, proposals)
+	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\n", msg.Height, msg.Timestamp, orders)
 }
 
 func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
+	var nonExpiredOrders []*Order
+	for _, order := range msg.Orders.Orders {
+		if order.Status != orderPkg.Expired {
+			nonExpiredOrders = append(nonExpiredOrders, order)
+		}
+	}
+
 	return &ExecutionResults{
 		msg.Height,
 		msg.Timestamp,
-		msg.NumOfMsgs,
-		trades{},
-		Orders{},
-		Proposals{},
-		StakeUpdates{},
+		msg.Proposals.NumOfMsgs + msg.StakeUpdates.NumOfMsgs + len(nonExpiredOrders),
+		trades{}, // no trades on breathe block
+		Orders{len(nonExpiredOrders), nonExpiredOrders},
+		msg.Proposals,
+		msg.StakeUpdates,
 	}
 }
 
@@ -143,16 +161,21 @@ func (msg *trades) ToNativeMap() map[string]interface{} {
 }
 
 type Trade struct {
-	Id     string
-	Symbol string
-	Price  int64
-	Qty    int64
-	Sid    string
-	Bid    string
-	Sfee   string
-	Bfee   string
-	SAddr  string // string representation of AccAddress
-	BAddr  string // string representation of AccAddress
+	Id         string
+	Symbol     string
+	Price      int64
+	Qty        int64
+	Sid        string
+	Bid        string
+	Sfee       string // DEPRECATING(Galileo): seller's total fee in this block, in future we should use SSingleFee which is more precise
+	Bfee       string // DEPRECATING(Galileo): buyer's total fee in this block, in future we should use BSingleFee which is more precise
+	SAddr      string // string representation of AccAddress
+	BAddr      string // string representation of AccAddress
+	SSrc       int64  // sell order source - ADDED Galileo
+	BSrc       int64  // buy order source - ADDED Galileo
+	SSingleFee string // seller's fee for this trade - ADDED Galileo
+	BSingleFee string // buyer's fee for this trade - ADDED Galileo
+	TickType   int    // ADDED Galileo
 }
 
 func (msg *Trade) MarshalJSON() ([]byte, error) {
@@ -184,6 +207,11 @@ func (msg *Trade) toNativeMap() map[string]interface{} {
 	native["bfee"] = msg.Bfee
 	native["saddr"] = sdk.AccAddress(msg.SAddr).String()
 	native["baddr"] = sdk.AccAddress(msg.BAddr).String()
+	native["ssrc"] = msg.SSrc
+	native["bsrc"] = msg.BSrc
+	native["ssinglefee"] = msg.SSingleFee
+	native["bsinglefee"] = msg.BSingleFee
+	native["tickType"] = msg.TickType
 	return native
 }
 
@@ -208,18 +236,15 @@ func (msg *Orders) ToNativeMap() map[string]interface{} {
 }
 
 func (msg *Orders) EssentialMsg() string {
-	stat := make(map[orderPkg.ChangeType]*strings.Builder, 0) // ChangeType -> OrderIds splited by EOL
+	expiredOrders := &strings.Builder{}
 	for _, order := range msg.Orders {
-		if _, ok := stat[order.Status]; !ok {
-			stat[order.Status] = &strings.Builder{}
+		// we only log expired orders in essential file
+		// and publish other types of message via kafka
+		if order.Status == orderPkg.Expired {
+			fmt.Fprintf(expiredOrders, "%s %s %s\n", order.OrderId, order.Owner, order.Fee)
 		}
-		fmt.Fprintf(stat[order.Status], "\n%s", order.OrderId)
 	}
-	var result strings.Builder
-	for changeType, str := range stat {
-		fmt.Fprintf(&result, "%d:%s\n", changeType, str.String())
-	}
-	return result.String()
+	return expiredOrders.String()
 }
 
 type Order struct {
@@ -235,12 +260,13 @@ type Order struct {
 	LastExecutedPrice    int64
 	LastExecutedQty      int64
 	CumQty               int64
-	Fee                  string
+	Fee                  string // DEPRECATING(Galileo): total fee for Owner in this block, should use SingleFee in future
 	OrderCreationTime    int64
 	TransactionTime      int64
 	TimeInForce          int8
 	CurrentExecutionType orderPkg.ExecutionType
 	TxHash               string
+	SingleFee            string // fee for this order update - ADDED Galileo
 }
 
 func (msg *Order) String() string {
@@ -283,6 +309,7 @@ func (msg *Order) toNativeMap() map[string]interface{} {
 	native["timeInForce"] = int(msg.TimeInForce)
 	native["currentExecutionType"] = msg.CurrentExecutionType.String()
 	native["txHash"] = msg.TxHash
+	native["singlefee"] = msg.SingleFee
 	return native
 }
 
@@ -312,21 +339,6 @@ func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	}
 	native["proposals"] = ps
 	return native
-}
-
-func (msg *Proposals) EssentialMsg() string {
-	stat := make(map[ProposalStatus]*strings.Builder, 0) // ProposalStatus -> OrderIds splited by EOL
-	for _, proposal := range msg.Proposals {
-		if _, ok := stat[proposal.Status]; !ok {
-			stat[proposal.Status] = &strings.Builder{}
-		}
-		fmt.Fprintf(stat[proposal.Status], "\n%d", proposal.Id)
-	}
-	var result strings.Builder
-	for proposalStatus, str := range stat {
-		fmt.Fprintf(&result, "%d:%s\n", proposalStatus, str.String())
-	}
-	return result.String()
 }
 
 type ProposalStatus uint8

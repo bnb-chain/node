@@ -3,6 +3,7 @@ package tokens
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -53,7 +54,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				Code:  uint32(sdk.ABCICodeOK),
 				Value: bz,
 			}
-		case "list": // args: ["tokens", "list", <offset>, <limit>]
+		case "list": // args: ["tokens", "list", <offset>, <limit>, <showZeroSupplyTokens>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -62,8 +63,12 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 						abciQueryPrefix, path[1]),
 				}
 			}
+			showZeroSupplyTokens := false
+			if len(path) == 5 && strings.ToLower(path[4]) == "true" {
+				showZeroSupplyTokens = true
+			}
 			ctx := app.GetContextForCheckState()
-			tokens := mapper.GetTokenList(ctx)
+			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens)
 			offset, err := strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{

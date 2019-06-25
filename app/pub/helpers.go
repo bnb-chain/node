@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/types"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -125,36 +124,63 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 func MatchAndAllocateAllForPublish(
 	dexKeeper *orderPkg.Keeper,
 	ctx sdk.Context) []*Trade {
-	// These two channels are used for protect not update `tradesToPublish` and `dexKeeper.OrderChanges` concurrently
-	// matcher would send item to feeCollectorForTrades in several goroutine (well-designed)
-	// while tradesToPublish and dexKeeper.OrderChanges are not separated by concurrent factor (users here), so we have
-	// to organized transfer holders into 2 channels
-	tradeHolderCh := make(chan orderPkg.TradeHolder, TransferCollectionChannelSize)
+	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
+	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
+	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 
-	tradesToPublish := make([]*Trade, 0)
-	go collectTradeForPublish(&tradesToPublish, &wg, ctx.BlockHeader().Height, tradeHolderCh)
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
-	var feeCollectorForTrades = func(tran orderPkg.Transfer) {
+	var postAlloTransHandler = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
 			if tran.IsExpiredWithFee() {
 				// we only got expire of Ioc here, gte orders expire is handled in breathe block
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill, tran.Fee.String()}
 			} else {
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire, tran.Fee.String()}
 			}
-		} else {
-			tradeHolderCh <- orderPkg.TradeHolder{tran.Oid, tran.Trade, tran.Symbol}
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, feeCollectorForTrades)
-	close(tradeHolderCh)
+	dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler)
 	close(iocExpireFeeHolderCh)
-	wg.Wait()
 
+	tradeIdx := 0
+	tradesToPublish := make([]*Trade, 0)
+	tradeHeight := ctx.BlockHeight()
+	for _, pair := range dexKeeper.PairMapper.ListAllTradingPairs(ctx) {
+		symbol := pair.GetSymbol()
+		matchEngTrades, _ := dexKeeper.GetLastTrades(tradeHeight, symbol)
+		for _, trade := range matchEngTrades {
+			var ssinglefee string
+			var bsinglefee string
+			// nilness check is for before Galileo upgrade the trade fee is nil
+			if trade.SellerFee != nil {
+				ssinglefee = trade.SellerFee.String()
+			}
+			// nilness check is for before Galileo upgrade the trade fee is nil
+			if trade.BuyerFee != nil {
+				bsinglefee = trade.BuyerFee.String()
+			}
+
+			t := &Trade{
+				Id:         fmt.Sprintf("%d-%d", tradeHeight, tradeIdx),
+				Symbol:     symbol,
+				Sid:        trade.Sid,
+				Bid:        trade.Bid,
+				Price:      trade.LastPx,
+				Qty:        trade.LastQty,
+				SSingleFee: ssinglefee,
+				BSingleFee: bsinglefee,
+				TickType:   int(trade.TickType),
+			}
+			tradeIdx += 1
+			tradesToPublish = append(tradesToPublish, t)
+		}
+	}
+
+	wg.Wait()
 	return tradesToPublish
 }
 
@@ -168,7 +194,7 @@ func ExpireOrdersForPublish(
 	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
 	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired}
+			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired, tran.Fee.String()}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires)
@@ -177,32 +203,20 @@ func ExpireOrdersForPublish(
 	return
 }
 
-// for partial and fully filled order fee
-func collectTradeForPublish(
-	tradesToPublish *[]*Trade,
-	wg *sync.WaitGroup,
-	height int64,
-	tradeHolderCh <-chan orderPkg.TradeHolder) {
-
-	defer wg.Done()
-	tradeIdx := 0
-	trades := make(map[*me.Trade]*Trade)
-	for tradeHolder := range tradeHolderCh {
-		Logger.Debug("processing TradeHolder", "holder", tradeHolder.String())
-		// one trade has two transfer, we can skip the second
-		if _, ok := trades[tradeHolder.Trade]; !ok {
-			t := &Trade{
-				Id:     fmt.Sprintf("%d-%d", height, tradeIdx),
-				Symbol: tradeHolder.Symbol,
-				Sid:    tradeHolder.Trade.Sid,
-				Bid:    tradeHolder.Trade.Bid,
-				Price:  tradeHolder.Trade.LastPx,
-				Qty:    tradeHolder.Trade.LastQty}
-			trades[tradeHolder.Trade] = t
-			tradeIdx += 1
-			*tradesToPublish = append(*tradesToPublish, t)
+func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.Keeper, symbol string) {
+	expireHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
+	var collectorForExpires = func(tran orderPkg.Transfer) {
+		if tran.IsExpire() {
+			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired, tran.Fee.String()}
 		}
 	}
+	dexKeeper.DelistTradingPair(ctx, symbol, collectorForExpires)
+	close(expireHolderCh)
+	wg.Wait()
+	return
 }
 
 func CollectProposalsForPublish(passed, failed []int64) Proposals {
@@ -230,11 +244,11 @@ func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegat
 func updateExpireFeeForPublish(
 	dexKeeper *orderPkg.Keeper,
 	wg *sync.WaitGroup,
-	tranHolderCh <-chan orderPkg.ExpireHolder) {
+	expHolderCh <-chan orderPkg.ExpireHolder) {
 	defer wg.Done()
-	for tranHolder := range tranHolderCh {
-		Logger.Debug("transfer collector for order", "orderId", tranHolder.OrderId)
-		change := orderPkg.OrderChange{tranHolder.OrderId, tranHolder.Reason, nil}
+	for expHolder := range expHolderCh {
+		Logger.Debug("transfer collector for order", "orderId", expHolder.OrderId)
+		change := orderPkg.OrderChange{expHolder.OrderId, expHolder.Reason, expHolder.Fee, nil}
 		dexKeeper.OrderChanges = append(dexKeeper.OrderChanges, change)
 	}
 }
@@ -332,13 +346,18 @@ func tradeToOrder(t *Trade, o *orderPkg.OrderInfo, timestamp int64, feeHolder or
 		o.TimeInForce,
 		orderPkg.NEW,
 		o.TxHash,
+		"",
 	}
 	if o.Side == orderPkg.Side.BUY {
+		res.SingleFee = t.BSingleFee
 		t.BAddr = string(owner.Bytes())
 		t.Bfee = fee
+		t.BSrc = o.TxSource
 	} else {
+		res.SingleFee = t.SSingleFee
 		t.SAddr = string(owner.Bytes())
 		t.Sfee = fee
+		t.SSrc = o.TxSource
 	}
 	return res
 }
@@ -370,7 +389,7 @@ func collectOrdersToPublish(
 				orderPkg.OrderType.LIMIT, orderInfo.Price, orderInfo.Quantity,
 				0, 0, orderInfo.CumQty, "",
 				orderInfo.CreatedTimestamp, timestamp, orderInfo.TimeInForce,
-				orderPkg.NEW, orderInfo.TxHash,
+				orderPkg.NEW, orderInfo.TxHash, o.SingleFee,
 			}
 
 			if o.Tpe.IsOpen() {

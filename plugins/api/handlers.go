@@ -138,3 +138,11 @@ func (s *server) handleValidatorsQueryReq(cdc *wire.Codec, ctx context.CLIContex
 func (s *server) handleDelegatorUnbondingDelegationsQueryReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return hnd.DelegatorUnbondindDelegationsQueryReqHandler(cdc, ctx)
 }
+
+func (s *server) handleTimeLocksReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.GetTimeLocksReqHandler(cdc, ctx)
+}
+
+func (s *server) handleTimeLockReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.GetTimeLockReqHandler(cdc, ctx)
+}
