@@ -574,6 +574,10 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 					tradeTransfers[addrStr] = append(tradeTransfers[addrStr], &tranCp)
 				}
 			}
+		} else if tran.IsExpire() {
+			if postAllocateHandler != nil {
+				postAllocateHandler(tran)
+			}
 		}
 	}
 
