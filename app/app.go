@@ -32,6 +32,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
+	"github.com/binance-chain/node/common/scripts"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
@@ -234,6 +235,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
+	app.initCustomizedScripts()
 	if ServerContext.Config.StateSyncReactor {
 		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
@@ -263,6 +265,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
+}
+
+func (app *BinanceChain) initCustomizedScripts() {
+	//BEP12
+	scripts.AddTransferMemoCheckScript(app.AccountKeeper, app.TxDecoder)
 }
 
 func (app *BinanceChain) initRunningMode() {

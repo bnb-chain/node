@@ -1,11 +1,12 @@
 package account
 
 import (
-	"reflect"
+	"fmt"
 
-	common "github.com/binance-chain/node/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
+	common "github.com/binance-chain/node/common/types"
 )
 
 // NewHandler creates a set account flags handler
@@ -15,7 +16,7 @@ func NewHandler(accKeeper auth.AccountKeeper) sdk.Handler {
 		case SetAccountFlagsMsg:
 			return handleSetAccountFlags(ctx, accKeeper, msg)
 		default:
-			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
+			errMsg := fmt.Sprintf("unrecognized message type: %T", msg)
 			return sdk.ErrUnknownRequest(errMsg).Result()
 		}
 	}
@@ -25,6 +26,9 @@ func handleSetAccountFlags(ctx sdk.Context, accKeeper auth.AccountKeeper, msg Se
 	account, ok := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
 	if !ok {
 		return sdk.ErrInternal("unexpected account type").Result()
+	}
+	if account.GetFlags() == msg.Flags {
+		return sdk.ErrInvalidAccountFlags("try to set the same flags").Result()
 	}
 	account.SetFlags(msg.Flags)
 	accKeeper.SetAccount(ctx, account)

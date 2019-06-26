@@ -8,17 +8,18 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/validation"
-	"github.com/binance-chain/node/plugins/tokens/account"
+	clientFlags "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+
+	"github.com/binance-chain/node/common/client"
+	"github.com/binance-chain/node/common/scripts"
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/account"
 )
 
 const (
-	flags       = "flags"
-	flagOffline = "offline"
+	accountFlags = "account-flags"
 )
 
 func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
@@ -32,12 +33,12 @@ func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
 				return err
 			}
 
-			flagsHexStr := viper.GetString(flags)
+			flagsHexStr := viper.GetString(accountFlags)
 			if !strings.HasPrefix(flagsHexStr, "0x") {
 				return fmt.Errorf("flags must be hex string and start with 0x")
 			}
 
-			flagsHexStr = strings.ReplaceAll(flagsHexStr, "0x", "")
+			flagsHexStr = flagsHexStr[2:]
 			accountFlags, err := strconv.ParseUint(flagsHexStr, 16, 64)
 			if err != nil {
 				return err
@@ -52,7 +53,7 @@ func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
 			return client.SendOrPrintTx(cliCtx, txBldr, msg)
 		},
 	}
-	cmd.Flags().String(flags, "", "account flags, hex encoding string")
+	cmd.Flags().String(accountFlags, "", "account flags, hex encoding string with prefix 0x")
 	return cmd
 }
 
@@ -67,9 +68,9 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				return err
 			}
 
-			var accountFlags uint64
-			if viper.GetBool(flagOffline) {
-				flagsHexStr := viper.GetString(flags)
+			var flags uint64
+			if viper.GetBool(clientFlags.FlagOffline) {
+				flagsHexStr := viper.GetString(accountFlags)
 				if len(flagsHexStr) == 0 {
 					return fmt.Errorf("on offline mode, you must specify current account flags")
 				}
@@ -77,8 +78,8 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 					return fmt.Errorf("flags must be hex string and start with 0x")
 				}
 
-				flagsHexStr = strings.ReplaceAll(flagsHexStr, "0x", "")
-				accountFlags, err = strconv.ParseUint(flagsHexStr, 16, 64)
+				flagsHexStr = flagsHexStr[2:]
+				flags, err = strconv.ParseUint(flagsHexStr, 16, 64)
 				if err != nil {
 					return err
 				}
@@ -95,11 +96,11 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 					return err
 				}
 				appAccount := acc.(types.NamedAccount)
-				accountFlags = appAccount.GetFlags()
+				flags = appAccount.GetFlags()
 			}
-			accountFlags = accountFlags | validation.TransferMemoCheckerFlag
+			flags = flags | scripts.TransferMemoCheckerFlag
 			// build message
-			msg := account.NewSetAccountFlagsMsg(from, accountFlags)
+			msg := account.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -108,7 +109,7 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 			return client.SendOrPrintTx(cliCtx, txBldr, msg)
 		},
 	}
-	cmd.Flags().String(flags, "", "account flags, hex encoding string")
+	cmd.Flags().String(accountFlags, "", "account flags, hex encoding string with prefix 0x")
 	return cmd
 }
 
@@ -123,9 +124,9 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				return err
 			}
 
-			var accountFlags uint64
-			if viper.GetBool(flagOffline) {
-				flagsHexStr := viper.GetString(flags)
+			var flags uint64
+			if viper.GetBool(clientFlags.FlagOffline) {
+				flagsHexStr := viper.GetString(accountFlags)
 				if len(flagsHexStr) == 0 {
 					return fmt.Errorf("on offline mode, you must specify current account flags")
 				}
@@ -133,8 +134,8 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 					return fmt.Errorf("flags must be hex string and start with 0x")
 				}
 
-				flagsHexStr = strings.ReplaceAll(flagsHexStr, "0x", "")
-				accountFlags, err = strconv.ParseUint(flagsHexStr, 16, 64)
+				flagsHexStr = flagsHexStr[2:]
+				flags, err = strconv.ParseUint(flagsHexStr, 16, 64)
 				if err != nil {
 					return err
 				}
@@ -151,12 +152,12 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 					return err
 				}
 				appAccount := acc.(types.NamedAccount)
-				accountFlags = appAccount.GetFlags()
+				flags = appAccount.GetFlags()
 			}
-			invMemoCheck := ^uint64(validation.TransferMemoCheckerFlag)
-			accountFlags = accountFlags & invMemoCheck
+			invMemoCheck := ^uint64(scripts.TransferMemoCheckerFlag)
+			flags = flags & invMemoCheck
 			// build message
-			msg := account.NewSetAccountFlagsMsg(from, accountFlags)
+			msg := account.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -165,6 +166,6 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 			return client.SendOrPrintTx(cliCtx, txBldr, msg)
 		},
 	}
-	cmd.Flags().String(flags, "", "account flags, hex encoding string")
+	cmd.Flags().String(accountFlags, "", "account flags, hex encoding string with prefix 0x")
 	return cmd
 }

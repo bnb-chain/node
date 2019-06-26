@@ -16,7 +16,6 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/validation"
 )
 
 const (
@@ -118,14 +117,6 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
 			return newCtx, sdk.ErrInternal("tx must be StdTx").Result(), true
-		}
-
-		if mode == sdk.RunTxModeCheckAfterPre ||
-			mode == sdk.RunTxModeCheck {
-			err := validation.CustomizedValidation(ctx, am, stdTx)
-			if err != nil {
-				return newCtx, err.Result(), true
-			}
 		}
 
 		if mode == sdk.RunTxModeDeliver ||

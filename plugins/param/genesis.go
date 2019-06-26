@@ -9,7 +9,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	param "github.com/binance-chain/node/plugins/param/types"
-	"github.com/binance-chain/node/plugins/tokens/account"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
@@ -71,7 +70,6 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{issue.MintMsgType, MintFee, sdk.FeeForAll},
 	&param.FixedFeeParams{burn.BurnRoute, BurnFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{freeze.FreezeRoute, FreezeFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{account.SetAccountFlags, SetAccountFlagsFee, sdk.FeeForProposer},
 
 	// Transfer
 	&param.TransferFeeParam{

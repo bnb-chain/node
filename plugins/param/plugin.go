@@ -45,10 +45,10 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		paramHub.UpdateFeeParams(ctx, timeLockFeeParams)
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP12, func(ctx sdk.Context) {
-		timeLockFeeParams := []param.FeeParam{
+		accountFlagsFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: types.FeeForProposer},
 		}
-		paramHub.UpdateFeeParams(ctx, timeLockFeeParams)
+		paramHub.UpdateFeeParams(ctx, accountFlagsFeeParams)
 	})
 }
 
