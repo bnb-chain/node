@@ -1,4 +1,4 @@
-package app
+package apptest
 
 import (
 	"testing"
@@ -205,12 +205,12 @@ func Test_Fill_3(t *testing.T) {
 	addr1 := accs[1].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	6              5        3      3      3       -3
-	6              4        2      5      5       -1
-	6      3       3*       1      6	  6       0
-	3      2       2               6      3       3
-	1      1       1	           6      1       5
+		sum    sell    price    buy    sum    exec    imbal
+		6              5        3      3      3       -3
+		6              4        2      5      5       -1
+		6      3       3*       1      6	  6       0
+		3      2       2               6      3       3
+		1      1       1	           6      1       5
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
@@ -277,10 +277,10 @@ func Test_Fill_4(t *testing.T) {
 	addr1 := accs[1].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	22             3*       30     30	  22      8
-	22     7       2               30     22      8
-	15     15      1	           30     15      15
+		sum    sell    price    buy    sum    exec    imbal
+		22             3*       30     30	  22      8
+		22     7       2               30     22      8
+		15     15      1	           30     15      15
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
@@ -347,10 +347,10 @@ func Test_Fill_5(t *testing.T) {
 	addr3 := accs[3].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	22             3*       30     30	  22      8
-	22     7       2               30     22      8
-	15     15      1	           30     15      15
+		sum    sell    price    buy    sum    exec    imbal
+		22             3*       30     30	  22      8
+		22     7       2               30     22      8
+		15     15      1	           30     15      15
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
@@ -520,10 +520,10 @@ func Test_Fill_6(t *testing.T) {
 	assert.Equal(int64(5e8), GetLocked(ctx, addr1, "BTC-000"))
 
 	/* trade @ 9
-    sum    sell    price    buy    sum    exec    imbal
-    5              9        10     10     5	      5
-    5      5       8	           10     5       5
-    */
+	   sum    sell    price    buy    sum    exec    imbal
+	   5              9        10     10     5	      5
+	   5      5       8	           10     5       5
+	*/
 
 	oidB = GetOrderId(addr0, 1, ctx)
 	msgB = order.NewNewOrderMsg(addr0, oidB, 1, "BTC-000_BNB", 9e8, 10e8)
@@ -561,10 +561,10 @@ func Test_Fill_6(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, addr1, "BTC-000"))
 
 	/* trade @ 8.55
-    sum    sell    price    buy    sum    exec    imbal
-    10             9        5      5      5	      -5
-    10     10      5	           5      5       -5
-    */
+	   sum    sell    price    buy    sum    exec    imbal
+	   10             9        5      5      5	      -5
+	   10     10      5	           5      5       -5
+	*/
 
 	oidS = GetOrderId(addr1, 2, ctx)
 	msgS = order.NewNewOrderMsg(addr1, oidS, 2, "BTC-000_BNB", 5e8, 10e8)
@@ -602,10 +602,10 @@ func Test_Fill_6(t *testing.T) {
 	assert.Equal(int64(5e8), GetLocked(ctx, addr1, "BTC-000"))
 
 	/* trade @ 8.9775
-    sum    sell    price    buy    sum    exec    imbal
-    5              12       10     10     5	      5
-    5      5       5	           10     5       5
-    */
+	   sum    sell    price    buy    sum    exec    imbal
+	   5              12       10     10     5	      5
+	   5      5       5	           10     5       5
+	*/
 
 	oidB = GetOrderId(addr0, 2, ctx)
 	msgB = order.NewNewOrderMsg(addr0, oidB, 1, "BTC-000_BNB", 12e8, 10e8)

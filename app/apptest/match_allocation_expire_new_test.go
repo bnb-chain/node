@@ -1,4 +1,4 @@
-package app
+package apptest
 
 import (
 	"fmt"
@@ -401,14 +401,14 @@ func Test_Expire_2bb_new(t *testing.T) {
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
 	/* concluded price = 4
-	   sum    sell    price    buy    sum    exec    imbal
-	   25     10      11
-       15             10       10     10     10      -5
-	   15     5       5               10     10      -5
-	   10	  4  	  4               10     10      0
-	   6      3       3	              10     6
-	   3	  2  	  2	              10     3
-	   1	  1       1               10     1
+		   sum    sell    price    buy    sum    exec    imbal
+		   25     10      11
+	       15             10       10     10     10      -5
+		   15     5       5               10     10      -5
+		   10	  4  	  4               10     10      0
+		   6      3       3	              10     6
+		   3	  2  	  2	              10     3
+		   1	  1       1               10     1
 	*/
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))

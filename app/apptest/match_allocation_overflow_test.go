@@ -1,8 +1,6 @@
-package app
+package apptest
 
 import (
-	"fmt"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"strings"
 	"testing"
 
@@ -17,10 +15,10 @@ import (
 /*
 test #1a: multiple buy orders (same price level) overflow int64 max
 */
-func Test_Overflow_1a_new(t *testing.T) {
+func Test_Overflow_1a(t *testing.T) {
 	assert := assert.New(t)
 
-	_, ctx, accs := SetupTest_new(1)
+	_, ctx, accs := SetupTest(1)
 	addr0 := accs[0].GetAddress()
 
 	// 10 * 1e18 > int64 max
@@ -43,10 +41,10 @@ func Test_Overflow_1a_new(t *testing.T) {
 /*
 test #1b: multiple buy orders (diff price levels) overflow int64 max, init price 1
 */
-func Test_Overflow_1b_new(t *testing.T) {
+func Test_Overflow_1b(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1)
+	addr, ctx, accs := SetupTest(1)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 
@@ -114,10 +112,10 @@ func Test_Overflow_1b_new(t *testing.T) {
 /*
 test #1c: multiple buy orders (diff price levels) overflow int64 max, init price 1e4
 */
-func Test_Overflow_1c_new(t *testing.T) {
+func Test_Overflow_1c(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1e4)
+	addr, ctx, accs := SetupTest(1e4)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 
@@ -187,10 +185,10 @@ func Test_Overflow_1c_new(t *testing.T) {
 /*
 test #1d: additional test case using very cheap bnb, not really overflow related
 */
-func Test_Overflow_1d_new(t *testing.T) {
+func Test_Overflow_1d(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1e18)
+	addr, ctx, accs := SetupTest(1e18)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	ResetAccount(ctx, addr0, 2e18, 100000e8, 100000e8)
@@ -233,10 +231,10 @@ func Test_Overflow_1d_new(t *testing.T) {
 /*
 test #2a: multiple sell orders (same price level) overflow int64 max
 */
-func Test_Overflow_2a_new(t *testing.T) {
+func Test_Overflow_2a(t *testing.T) {
 	assert := assert.New(t)
 
-	_, ctx, accs := SetupTest_new(1e18)
+	_, ctx, accs := SetupTest(1e18)
 	addr0 := accs[0].GetAddress()
 
 	for i := 0; i < 10; i++ {
@@ -255,10 +253,10 @@ func Test_Overflow_2a_new(t *testing.T) {
 /*
 test #2b: multiple sell orders (diff price levels) overflow int64 max
 */
-func Test_Overflow_2b_new(t *testing.T) {
+func Test_Overflow_2b(t *testing.T) {
 	assert := assert.New(t)
 
-	_, ctx, accs := SetupTest_new(1e18)
+	_, ctx, accs := SetupTest(1e18)
 	addr0 := accs[0].GetAddress()
 
 	for i := 0; i < 5; i++ {
@@ -277,10 +275,10 @@ func Test_Overflow_2b_new(t *testing.T) {
 /*
 test #3: non bnb pair (with cheap bnb)
 */
-func Test_Overflow_3_new(t *testing.T) {
+func Test_Overflow_3(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1e18, 1e18, 10e8)
+	addr, ctx, accs := SetupTest(1e18, 1e18, 10e8)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 
@@ -305,16 +303,6 @@ func Test_Overflow_3_new(t *testing.T) {
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_ETH-000")
 	assert.Equal(int64(10e8), lastPx)
 	assert.Equal(1, len(trades))
-	for i, trade := range trades {
-		fmt.Printf("#%d: p: %d; q: %d; s: %d\n",
-			i, trade.LastPx, trade.LastQty, trade.TickType)
-	}
-	assert.Equal(int64(1e8), trades[0].LastQty)
-	assert.Equal(int8(matcheng.Neutral), trades[0].TickType)
-	assert.Equal(int64(0.0010e8), trades[0].BuyerFee.Tokens[0].Amount)
-	assert.Equal("BTC-000", trades[0].BuyerFee.Tokens[0].Denom)
-	assert.Equal(int64(0.0100e8), trades[0].SellerFee.Tokens[0].Amount)
-	assert.Equal("ETH-000", trades[0].SellerFee.Tokens[0].Denom)
 
 	buys, sells = GetOrderBook("BTC-000_ETH-000")
 	assert.Equal(0, len(buys))
@@ -333,10 +321,10 @@ func Test_Overflow_3_new(t *testing.T) {
 /*
 test #4: non bnb pair (with expansive bnb)
 */
-func Test_Overflow_4_new(t *testing.T) {
+func Test_Overflow_4(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1, 1, 10e8)
+	addr, ctx, accs := SetupTest(1, 1, 10e8)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 
@@ -377,10 +365,10 @@ func Test_Overflow_4_new(t *testing.T) {
 /*
 test #5: sum of orders overflowed leads to unexpected trade failure
 */
-func Test_Overflow_5_new(t *testing.T) {
+func Test_Overflow_5(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest_new(1)
+	addr, ctx, accs := SetupTest(1)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	ResetAccount(ctx, addr0, 100000e8, 0, 0)

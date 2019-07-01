@@ -1,4 +1,4 @@
-package app
+package apptest
 
 import (
 	"testing"
@@ -205,12 +205,12 @@ func Test_IOC_4(t *testing.T) {
 	ctx = UpdateContextC(addr, ctx, 1)
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	10             5        6      6      6	      -4
-	10             4*       5      11	  10      1
-	10             3        4      15     10      5
-	10             2	    3	   18	  10	  8
-	10     10      1        2      20     10      10
+		sum    sell    price    buy    sum    exec    imbal
+		10             5        6      6      6	      -4
+		10             4*       5      11	  10      1
+		10             3        4      15     10      5
+		10             2	    3	   18	  10	  8
+		10     10      1        2      20     10      10
 	*/
 
 	for i := 0; i < 5; i++ {
@@ -271,13 +271,13 @@ func Test_IOC_5(t *testing.T) {
 	ctx = UpdateContextC(addr, ctx, 1)
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	20             6        7      7      7       -14
-	20             5        6      13     13	  -7
-	20             4        5      18	  18      -2
-	20             3*       20     38     20      18
-	20     10      2               38     20      18
-	10     10      1               38     20      28
+		sum    sell    price    buy    sum    exec    imbal
+		20             6        7      7      7       -14
+		20             5        6      13     13	  -7
+		20             4        5      18	  18      -2
+		20             3*       20     38     20      18
+		20     10      2               38     20      18
+		10     10      1               38     20      28
 	*/
 
 	oidB1 := GetOrderId(addr0, 0, ctx)

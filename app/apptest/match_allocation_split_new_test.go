@@ -1,7 +1,8 @@
-package app
+package apptest
 
 import (
 	"fmt"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,10 +16,10 @@ import (
 /*
 test #1a: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block
 */
-func Test_Split_1a(t *testing.T) {
+func Test_Split_1a_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest()
+	addr, ctx, accs := SetupTest_new()
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()
@@ -77,10 +78,10 @@ func Test_Split_1a(t *testing.T) {
 /*
 test #1b: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block, lot size test case 1
 */
-func Test_Split_1b(t *testing.T) {
+func Test_Split_1b_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest(1e5)
+	addr, ctx, accs := SetupTest_new(1e5)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()
@@ -139,10 +140,10 @@ func Test_Split_1b(t *testing.T) {
 /*
 test #1c: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from same block, lot size test case 2
 */
-func Test_Split_1c(t *testing.T) {
+func Test_Split_1c_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest(1e7)
+	addr, ctx, accs := SetupTest_new(1e7)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()
@@ -210,10 +211,10 @@ func Test_Split_1c(t *testing.T) {
 /*
 test #2: 3 consecutive matches, split 1, 1, 10 (3 orders with same price) from different blocks
 */
-func Test_Split_2(t *testing.T) {
+func Test_Split_2_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest()
+	addr, ctx, accs := SetupTest_new()
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()
@@ -282,10 +283,10 @@ func Test_Split_2(t *testing.T) {
 }
 
 // lot size changed (e.g. due to significant price changes) lead to not enough balance, chain panic
-func Test_Split_3(t *testing.T) {
+func Test_Split_3_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest(1e8)
+	addr, ctx, accs := SetupTest_new(1e8)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()
@@ -333,6 +334,16 @@ func Test_Split_3(t *testing.T) {
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
 	assert.Equal(int64(1e4), lastPx)
 	assert.Equal(2, len(trades))
+	for i, trade := range trades {
+		fmt.Printf("#%d: p: %d; q: %d; s: %d\n",
+			i, trade.LastPx, trade.LastQty, trade.TickType)
+	}
+	assert.Equal(int64(2e8), trades[0].LastQty)
+	assert.Equal(int8(matcheng.SellSurplus), trades[0].TickType)
+	assert.Equal(int64(0.0000001e8), trades[0].BuyerFee.Tokens[0].Amount)
+	assert.Equal(int64(8e8), trades[1].LastQty)
+	assert.Equal(int8(matcheng.SellSurplus), trades[1].TickType)
+	assert.Equal(int64(0.0000004e8), trades[1].BuyerFee.Tokens[0].Amount)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
@@ -352,10 +363,10 @@ func Test_Split_3(t *testing.T) {
 	assert.Equal(int64(0), GetLocked(ctx, addr3, "BTC-000"))
 }
 
-func Test_Split_4(t *testing.T) {
+func Test_Split_4_new(t *testing.T) {
 	assert := assert.New(t)
 
-	addr, ctx, accs := SetupTest(10)
+	addr, ctx, accs := SetupTest_new(10)
 	addr0 := accs[0].GetAddress()
 	addr1 := accs[1].GetAddress()
 	addr2 := accs[2].GetAddress()

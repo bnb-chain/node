@@ -1,4 +1,4 @@
-package app
+package apptest
 
 import (
 	"fmt"
@@ -16,6 +16,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 
+	"github.com/binance-chain/node/app"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex"
@@ -60,10 +61,10 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 	baseAcc := auth.BaseAccount{Address: accAddr}
 	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
 	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
-	genAccs := make([]GenesisAccount, 1)
+	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
-	genAccs[0] = NewGenesisAccount(appAcc, valAddr)
-	genesisState := GenesisState{
+	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
+	genesisState := app.GenesisState{
 		Tokens:       genTokens,
 		Accounts:     genAccs,
 		DexGenesis:   dex.DefaultGenesis,
@@ -132,10 +133,10 @@ func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Acco
 	baseAcc := auth.BaseAccount{Address: accAddr}
 	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
 	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
-	genAccs := make([]GenesisAccount, 1)
+	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
-	genAccs[0] = NewGenesisAccount(appAcc, valAddr)
-	genesisState := GenesisState{
+	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
+	genesisState := app.GenesisState{
 		Tokens:       genTokens,
 		Accounts:     genAccs,
 		DexGenesis:   dex.DefaultGenesis,

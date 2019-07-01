@@ -1,4 +1,4 @@
-package app
+package apptest
 
 import (
 	"fmt"
@@ -207,12 +207,12 @@ func Test_Fill_3_new(t *testing.T) {
 	addr1 := accs[1].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	6              5        3      3      3       -3
-	6              4        2      5      5       -1
-	6      3       3*       1      6	  6       0
-	3      2       2               6      3       3
-	1      1       1	           6      1       5
+		sum    sell    price    buy    sum    exec    imbal
+		6              5        3      3      3       -3
+		6              4        2      5      5       -1
+		6      3       3*       1      6	  6       0
+		3      2       2               6      3       3
+		1      1       1	           6      1       5
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
@@ -279,10 +279,10 @@ func Test_Fill_4_new(t *testing.T) {
 	addr1 := accs[1].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	22             3*       30     30	  22      8
-	22     7       2               30     22      8
-	15     15      1	           30     15      15
+		sum    sell    price    buy    sum    exec    imbal
+		22             3*       30     30	  22      8
+		22     7       2               30     22      8
+		15     15      1	           30     15      15
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
@@ -349,10 +349,10 @@ func Test_Fill_5_new(t *testing.T) {
 	addr3 := accs[3].GetAddress()
 
 	/*
-	sum    sell    price    buy    sum    exec    imbal
-	22             3*       30     30	  22      8
-	22     7       2               30     22      8
-	15     15      1	           30     15      15
+		sum    sell    price    buy    sum    exec    imbal
+		22             3*       30     30	  22      8
+		22     7       2               30     22      8
+		15     15      1	           30     15      15
 	*/
 
 	ctx = UpdateContextC(addr, ctx, 1)
