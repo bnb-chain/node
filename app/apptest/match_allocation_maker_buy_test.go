@@ -2021,13 +2021,13 @@ func Test_Maker_Buy_5(t *testing.T) {
 	assert.NoError(err)
 
 	oid = GetOrderId(addr1, 0, ctx)
-	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 10e8, 10e8)
-	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
+	msgS1 := order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 10e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgS1, testApp.Codec)
 	assert.NoError(err)
 
 	oid = GetOrderId(addr1, 1, ctx)
-	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 9e8, 10e8)
-	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
+	msgS2 := order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 9e8, 10e8)
+	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
 	assert.NoError(err)
 
 	oid = GetOrderId(addr1, 2, ctx)
@@ -2045,20 +2045,28 @@ func Test_Maker_Buy_5(t *testing.T) {
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
 
-	msgC := order.NewCancelOrderMsg(addr0, "BTC-000_BNB", msgB.Id)
-	_, err = testClient.DeliverTxSync(msgC, testApp.Codec)
+	msgC1 := order.NewCancelOrderMsg(addr0, "BTC-000_BNB", msgB.Id)
+	_, err = testClient.DeliverTxSync(msgC1, testApp.Codec)
+	assert.NoError(err)
+
+	msgC2 := order.NewCancelOrderMsg(addr1, "BTC-000_BNB", msgS1.Id)
+	_, err = testClient.DeliverTxSync(msgC2, testApp.Codec)
+	assert.NoError(err)
+
+	msgC3 := order.NewCancelOrderMsg(addr1, "BTC-000_BNB", msgS2.Id)
+	_, err = testClient.DeliverTxSync(msgC3, testApp.Codec)
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(4, len(buys))
-	assert.Equal(5, len(sells))
+	assert.Equal(3, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99724.9998e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(275e8), GetLocked(ctx, addr0, "BNB"))
-	assert.Equal(int64(99939e8), GetAvail(ctx, addr1, "BTC-000"))
-	assert.Equal(int64(100000e8), GetAvail(ctx, addr1, "BNB"))
-	assert.Equal(int64(61e8), GetLocked(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(99959e8), GetAvail(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(99999.9996e8), GetAvail(ctx, addr1, "BNB"))
+	assert.Equal(int64(41e8), GetLocked(ctx, addr1, "BTC-000"))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -2104,14 +2112,14 @@ func Test_Maker_Buy_5(t *testing.T) {
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(1, len(sells))
 
 	assert.Equal(int64(100032e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99739.8803e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(21e8), GetLocked(ctx, addr0, "BNB"))
-	assert.Equal(int64(99939e8), GetAvail(ctx, addr1, "BTC-000"))
-	assert.Equal(int64(100238.8805e8), GetAvail(ctx, addr1, "BNB"))
-	assert.Equal(int64(29e8), GetLocked(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(99959e8), GetAvail(ctx, addr1, "BTC-000"))
+	assert.Equal(int64(100238.8801e8), GetAvail(ctx, addr1, "BNB"))
+	assert.Equal(int64(9e8), GetLocked(ctx, addr1, "BTC-000"))
 }
 
 func Test_Maker_Buy_6(t *testing.T) {
