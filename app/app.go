@@ -520,7 +520,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if isBreatheBlock || ctx.RouterCallRecord()["stake"] {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
-		app.ValAddrCache.ClearCache()
+		if len(validatorUpdates) != 0 {
+			app.ValAddrCache.ClearCache()
+		}
 	}
 
 	if app.publicationConfig.ShouldPublishAny() &&
