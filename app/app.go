@@ -30,7 +30,6 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
-	"github.com/binance-chain/node/common/scripts"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
@@ -40,8 +39,9 @@ import (
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	accountscript "github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/account/setaccountflags"
 	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/plugins/tokens/account"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
@@ -233,7 +233,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
-	app.initCustomizedScripts()
 	if ServerContext.Config.StateSyncReactor {
 		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
@@ -262,12 +261,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 
 	// register msg types of upgrade
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
-}
-
-func (app *BinanceChain) initCustomizedScripts() {
-	//BEP12
-	scripts.AddTransferMemoCheckScript(app.AccountKeeper, app.TxDecoder)
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, setaccountflags.SetAccountFlagsMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -308,6 +302,7 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
+	accountscript.InitPlugin(app, app.AccountKeeper)
 }
 
 func (app *BinanceChain) initGovHooks() {
@@ -406,7 +401,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 		if admin.IsTxAllowed(tx) {
 			txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 			app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-			result = app.RunTx(sdk.RunTxModeCheckAfterPre, txBytes, tx, txHash)
+			result = app.RunTx(sdk.RunTxModeCheckAfterPre, tx, txHash)
 			if !result.IsOK() {
 				app.RemoveTxFromCache(txBytes)
 			}
@@ -421,7 +416,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 			if admin.IsTxAllowed(tx) {
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-				result = app.RunTx(sdk.RunTxModeCheck, txBytes, tx, txHash)
+				result = app.RunTx(sdk.RunTxModeCheck, tx, txHash)
 				if result.IsOK() {
 					app.AddTxToCache(txBytes, tx)
 				}
@@ -711,6 +706,7 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterCodec(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
+	accountscript.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)

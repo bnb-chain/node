@@ -173,7 +173,7 @@ func TestGenesis(t *testing.T) {
 		Address: addr,
 	}
 	tokens := []tokens.GenesisToken{{"BNB", "BNB", 100000, addr, false}}
-	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil)}
+	acc := &common.AppAccount{baseAcc, "blah", sdk.Coins(nil), sdk.Coins(nil), 0}
 
 	err := setGenesis(bapp, tokens, acc)
 	require.Nil(t, err)

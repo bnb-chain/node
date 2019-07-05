@@ -28,7 +28,7 @@ var (
 		"issueMsg":         {},
 		"mintMsg":          {},
 		"tokensBurn":       {},
-		"SetAccountFlags":  {},
+		"setAccountFlags":  {},
 		"tokensFreeze":     {},
 		"create_validator": {},
 		"remove_validator": {},
