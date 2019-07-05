@@ -60,7 +60,7 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}
 	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
-	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil), 0}
 	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
 	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
@@ -132,7 +132,7 @@ func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Acco
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}
 	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
-	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil)}
+	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil), 0}
 	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
 	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)

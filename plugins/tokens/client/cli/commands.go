@@ -26,9 +26,6 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 		client.PostCommands(
 			issueTokenCmd(cmdr),
 			mintTokenCmd(cmdr),
-			setAccountFlagsCmd(cmdr),
-			enableMemoCheckFlagCmd(cmdr),
-			disableMemoCheckFlagCmd(cmdr),
 			burnTokenCmd(cmdr),
 			freezeTokenCmd(cmdr),
 			unfreezeTokenCmd(cmdr),

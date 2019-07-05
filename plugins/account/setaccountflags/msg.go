@@ -1,4 +1,4 @@
-package account
+package setaccountflags
 
 import (
 	"encoding/json"
@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	AccountFlagsRoute = "AccountFlags"
-	SetAccountFlags   = "SetAccountFlags"
+	AccountFlagsRoute = "accountFlags"
+	SetAccountFlags   = "setAccountFlags"
 )
 
 var _ sdk.Msg = SetAccountFlagsMsg{}
@@ -29,7 +29,7 @@ func NewSetAccountFlagsMsg(from sdk.AccAddress, flags uint64) SetAccountFlagsMsg
 func (msg SetAccountFlagsMsg) Route() string { return AccountFlagsRoute }
 func (msg SetAccountFlagsMsg) Type() string  { return SetAccountFlags }
 func (msg SetAccountFlagsMsg) String() string {
-	return fmt.Sprintf("AccountFlags{%v#%v}", msg.From, msg.Flags)
+	return fmt.Sprintf("setAccountFlags{%v#%v}", msg.From, msg.Flags)
 }
 func (msg SetAccountFlagsMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
 func (msg SetAccountFlagsMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }

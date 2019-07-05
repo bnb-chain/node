@@ -1,4 +1,4 @@
-package account
+package setaccountflags
 
 import (
 	"fmt"
@@ -23,7 +23,8 @@ func NewHandler(accKeeper auth.AccountKeeper) sdk.Handler {
 }
 
 func handleSetAccountFlags(ctx sdk.Context, accKeeper auth.AccountKeeper, msg SetAccountFlagsMsg) sdk.Result {
-	account, ok := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
+	acc := accKeeper.GetAccount(ctx, msg.From)
+	account, ok := acc.(common.NamedAccount)
 	if !ok {
 		return sdk.ErrInternal("unexpected account type").Result()
 	}

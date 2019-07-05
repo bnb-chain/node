@@ -1,4 +1,4 @@
-package commands
+package cli
 
 import (
 	"fmt"
@@ -13,21 +13,22 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
 	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/scripts"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/account"
+	"github.com/binance-chain/node/plugins/account/setaccountflags"
+	"github.com/binance-chain/node/plugins/account/scripts"
+	"github.com/binance-chain/node/wire"
 )
 
 const (
 	accountFlags = "account-flags"
 )
 
-func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
+func setAccountFlagsCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-account-flags",
 		Short: "set account flags",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx, txBldr := client.PrepareCtx(cmdr.Cdc)
+			cliCtx, txBldr := client.PrepareCtx(cdc)
 			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
@@ -44,7 +45,7 @@ func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
 				return err
 			}
 			// build message
-			msg := account.NewSetAccountFlagsMsg(from, accountFlags)
+			msg := setaccountflags.NewSetAccountFlagsMsg(from, accountFlags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -57,12 +58,12 @@ func setAccountFlagsCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
+func enableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enable-memo-checker",
 		Short: "enable memo checker",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx, txBldr := client.PrepareCtx(cmdr.Cdc)
+			cliCtx, txBldr := client.PrepareCtx(cdc)
 			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
@@ -85,8 +86,8 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				}
 			} else {
 				cliCtx := context.NewCLIContext().
-					WithCodec(cmdr.Cdc).
-					WithAccountDecoder(authcmd.GetAccountDecoder(cmdr.Cdc))
+					WithCodec(cdc).
+					WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 				if err := cliCtx.EnsureAccountExistsFromAddr(from); err != nil {
 					return err
@@ -95,12 +96,15 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				appAccount := acc.(types.NamedAccount)
+				appAccount, ok := acc.(types.NamedAccount)
+				if !ok {
+					return fmt.Errorf("unexpected account type")
+				}
 				flags = appAccount.GetFlags()
 			}
 			flags = flags | scripts.TransferMemoCheckerFlag
 			// build message
-			msg := account.NewSetAccountFlagsMsg(from, flags)
+			msg := setaccountflags.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -113,12 +117,12 @@ func enableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
+func disableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable-memo-checker",
 		Short: "disable memo checker",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx, txBldr := client.PrepareCtx(cmdr.Cdc)
+			cliCtx, txBldr := client.PrepareCtx(cdc)
 			from, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
@@ -141,8 +145,8 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				}
 			} else {
 				cliCtx := context.NewCLIContext().
-					WithCodec(cmdr.Cdc).
-					WithAccountDecoder(authcmd.GetAccountDecoder(cmdr.Cdc))
+					WithCodec(cdc).
+					WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 				if err := cliCtx.EnsureAccountExistsFromAddr(from); err != nil {
 					return err
@@ -151,13 +155,16 @@ func disableMemoCheckFlagCmd(cmdr Commander) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				appAccount := acc.(types.NamedAccount)
+				appAccount, ok := acc.(types.NamedAccount)
+				if !ok {
+					return fmt.Errorf("unexpected account type")
+				}
 				flags = appAccount.GetFlags()
 			}
-			invMemoCheck := ^uint64(scripts.TransferMemoCheckerFlag)
+			invMemoCheck := ^scripts.TransferMemoCheckerFlag
 			flags = flags & invMemoCheck
 			// build message
-			msg := account.NewSetAccountFlagsMsg(from, flags)
+			msg := setaccountflags.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
