@@ -1,4 +1,4 @@
-package setaccountflags
+package account
 
 import (
 	"fmt"
@@ -27,9 +27,6 @@ func handleSetAccountFlags(ctx sdk.Context, accKeeper auth.AccountKeeper, msg Se
 	account, ok := acc.(common.NamedAccount)
 	if !ok {
 		return sdk.ErrInternal("unexpected account type").Result()
-	}
-	if account.GetFlags() == msg.Flags {
-		return sdk.ErrInvalidAccountFlags("try to set the same flags").Result()
 	}
 	account.SetFlags(msg.Flags)
 	accKeeper.SetAccount(ctx, account)

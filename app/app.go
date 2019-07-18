@@ -33,14 +33,13 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
-	accountscript "github.com/binance-chain/node/plugins/account"
-	"github.com/binance-chain/node/plugins/account/setaccountflags"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -261,7 +260,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 
 	// register msg types of upgrade
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, setaccountflags.SetAccountFlagsMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -302,7 +301,7 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
-	accountscript.InitPlugin(app, app.AccountKeeper)
+	account.InitPlugin(app, app.AccountKeeper)
 }
 
 func (app *BinanceChain) initGovHooks() {
@@ -706,7 +705,7 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterCodec(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
-	accountscript.RegisterWire(cdc)
+	account.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)

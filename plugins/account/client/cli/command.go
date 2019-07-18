@@ -11,7 +11,7 @@ import (
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 
 	scriptsCmd := &cobra.Command{
-		Use:   "script",
+		Use:   "account_flags",
 		Short: "set account flags for customized script",
 	}
 

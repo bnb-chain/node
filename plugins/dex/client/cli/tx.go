@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -10,10 +9,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	"github.com/binance-chain/node/common/client"
@@ -30,7 +27,6 @@ const (
 	flagQty         = "qty"
 	flagSide        = "side"
 	flagTimeInForce = "tif"
-	flagDryRun      = "dry"
 )
 
 func newOrderCmd(cdc *wire.Codec) *cobra.Command {
@@ -88,28 +84,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg.TimeInForce = tif
-			msgs := []sdk.Msg{msg}
-
-			if viper.GetBool(flagDryRun) {
-				fmt.Println("Performing dry run; will not broadcast the transaction.")
-				name, _ := cliCtx.GetFromName()
-				passphrase, err := keys.GetPassphrase(name)
-				txBytes, err := txBldr.BuildAndSign(name, passphrase, msgs)
-				if err != nil {
-					return err
-				}
-				var tx auth.StdTx
-				if err = txBldr.Codec.UnmarshalBinaryLengthPrefixed(txBytes, &tx); err == nil {
-					json, err := txBldr.Codec.MarshalJSON(tx)
-					if err == nil {
-						fmt.Printf("TX JSON: %s\n", json)
-					}
-				}
-				hexBytes := make([]byte, len(txBytes)*2)
-				hex.Encode(hexBytes, txBytes)
-				fmt.Printf("TX Hex: %s\n", hexBytes)
-				return nil
-			}
 
 			err = client.SendOrPrintTx(cliCtx, txBldr, msg)
 			if err != nil {
@@ -125,7 +99,6 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
 	cmd.Flags().StringP(flagTimeInForce, "t", "gte", "TimeInForce for the order (gte or ioc)")
-	cmd.Flags().BoolP(flagDryRun, "d", false, "Generate and return the tx bytes (do not broadcast)")
 	return cmd
 }
 

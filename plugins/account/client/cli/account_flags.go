@@ -14,7 +14,7 @@ import (
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/account/setaccountflags"
+	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/account/scripts"
 	"github.com/binance-chain/node/wire"
 )
@@ -45,7 +45,7 @@ func setAccountFlagsCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 			// build message
-			msg := setaccountflags.NewSetAccountFlagsMsg(from, accountFlags)
+			msg := account.NewSetAccountFlagsMsg(from, accountFlags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -104,7 +104,7 @@ func enableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 			}
 			flags = flags | scripts.TransferMemoCheckerFlag
 			// build message
-			msg := setaccountflags.NewSetAccountFlagsMsg(from, flags)
+			msg := account.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -164,7 +164,7 @@ func disableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 			invMemoCheck := ^scripts.TransferMemoCheckerFlag
 			flags = flags & invMemoCheck
 			// build message
-			msg := setaccountflags.NewSetAccountFlagsMsg(from, flags)
+			msg := account.NewSetAccountFlagsMsg(from, flags)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
