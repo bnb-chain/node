@@ -55,8 +55,8 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:6ed2234b494c14b2a4ef5111401d514ad015eb780f1068038baa28aaf3bc4011"
-  branch = "feature/add-new-error-type"
+  branch = "develop"
+  digest = "1:26ee1b7867b280585d7ed664cc1d16c5bdcc17a305d0e594920a21b0dc12455b"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -104,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = ""
+  revision = "4ff585c3201ffdb9b7ae29d189cf183b681ce41d"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -113,6 +113,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "52158e4697b87de16ed390e1bdaf813e581008fa"
+
+[[projects]]
+  digest = "1:34efba6719d5a29ddc868bf772b864980654dc1a1c18e06659e4246ea1665fb8"
+  name = "github.com/cosmos/ledger-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1c99b41f1877b58e3517ef93012cc76fe5cd335b"
+  version = "v0.9.2"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -685,21 +693,13 @@
   version = "v0.9.0"
 
 [[projects]]
-  digest = "1:c95f97a7ebc86127478375e2f8e8b49f096e92b79e49e70a570862eda4b18f5e"
+  digest = "1:d73648427026ac9aee38ab95f3aa105743f7aa0cd5bf54823c5fc7b7ab98eb86"
   name = "github.com/zondax/ledger-cosmos-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "fee2574758229322031b8b8d5c5f8197d121b952"
+  revision = "35ecc584d1362e3a501828550301e0da391197c2"
   source = "https://github.com/binance-chain/ledger-cosmos-go"
-  version = "v0.9.9-binance.1"
-
-[[projects]]
-  digest = "1:c450d0b3b9217e3926714751c2034a9171e2d769c254ef3c74e5795ad74e1b04"
-  name = "github.com/zondax/ledger-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "94455688b6fac63ee05a4a61f44d5a4095317f74"
-  version = "v0.9.0"
+  version = "v0.9.9-binance.2"
 
 [[projects]]
   branch = "master"
@@ -861,6 +861,7 @@
     "github.com/cosmos/cosmos-sdk/x/auth/client/rest",
     "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder",
     "github.com/cosmos/cosmos-sdk/x/bank",
+    "github.com/cosmos/cosmos-sdk/x/bank/client",
     "github.com/cosmos/cosmos-sdk/x/bank/client/cli",
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/gov",

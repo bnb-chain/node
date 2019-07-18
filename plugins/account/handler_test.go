@@ -1,4 +1,4 @@
-package setaccountflags
+package account
 
 import (
 	"testing"
@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/testutils"
+	"github.com/binance-chain/node/plugins/account/scripts"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -31,13 +32,20 @@ func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper) {
 
 func TestHandleIssueToken(t *testing.T) {
 	ctx, handler, accountKeeper := setup()
+
+	// Invalid account
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
-
-	msg := NewSetAccountFlagsMsg(acc.GetAddress(), 0x0000000000000001)
+	msg := NewSetAccountFlagsMsg(acc.GetAddress(), scripts.TransferMemoCheckerFlag)
 	sdkResult := handler(ctx, msg)
-	require.Equal(t, true, sdkResult.Code.IsOK())
+	require.Equal(t, false, sdkResult.Code.IsOK())
 
-	msg = NewSetAccountFlagsMsg(acc.GetAddress(), 0x0000000000000001)
+	// Invalid address
+	msg = NewSetAccountFlagsMsg(acc.GetAddress()[0:10], scripts.TransferMemoCheckerFlag)
 	sdkResult = handler(ctx, msg)
 	require.Equal(t, false, sdkResult.Code.IsOK())
+
+	_, acc = testutils.NewNamedAccount(ctx, accountKeeper, 100e8)
+	msg = NewSetAccountFlagsMsg(acc.GetAddress(), scripts.TransferMemoCheckerFlag)
+	sdkResult = handler(ctx, msg)
+	require.Equal(t, true, sdkResult.Code.IsOK())
 }

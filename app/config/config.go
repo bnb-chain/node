@@ -293,13 +293,13 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-	// example
-	// FixXxxHeight int64 `mapstructure:"fixXxxHeight"`
+	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
-	BEP12Height int64 `mapstructure:"BEP12Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
+
+	BEP12Height int64 `mapstructure:"BEP12Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
