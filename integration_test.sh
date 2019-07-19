@@ -27,6 +27,7 @@ function prepare_node() {
 
 	secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
+    $(cd "./${home}/config" && sed -i -e "s/BEP12Height = 9223372036854775807/BEP12Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
@@ -171,5 +172,41 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 result=$(./bnbcli dex show -l ${btc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
+## ROUND 3 ##
+sleep 1s
+## query account balance
+result=$(./bnbcli account $bob_addr --trust-node)
+balance1=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+
+sleep 1s
+# set an account flag which isn't bounded to transfer memo checker script
+result=$(expect ./set_account_flags.exp 0x02 bob ${chain_id} ${cli_home})
+check_operation "Set account flags" "${result}" "${chain_operation_words}"
+
+sleep 1s
+## query account balance
+result=$(./bnbcli account $bob_addr --trust-node)
+balance2=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+
+check_operation "Check fee deduction for set account flags transaction" "$(expr $balance2 - $balance1)" "100000000"
+
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
+check_operation "Send Token" "${result}" "${chain_operation_words}"
+
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "123456abcd")
+check_operation "Send Token" "${result}" "${chain_operation_words}"
+
+# set an account flag which is bounded to transfer memo checker script
+result=$(expect ./set_account_flags.exp 0x01 bob ${chain_id} ${cli_home})
+check_operation "Set account flags" "${result}" "${chain_operation_words}"
+
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
+check_operation "Send Token" "${result}" "ERROR"
+
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "123456abcd")
+check_operation "Send Token" "${result}" "ERROR:"
+
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "1234567890")
+check_operation "Send Token" "${result}" "${chain_operation_words}"
 
 exit_test 0

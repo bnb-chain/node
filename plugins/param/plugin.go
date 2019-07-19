@@ -13,6 +13,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	"github.com/binance-chain/node/plugins/account"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
@@ -43,6 +44,12 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, timeLockFeeParams)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP12, func(ctx sdk.Context) {
+		accountFlagsFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: types.FeeForProposer},
+		}
+		paramHub.UpdateFeeParams(ctx, accountFlagsFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
@@ -65,6 +72,7 @@ func init() {
 		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
 		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
 		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
+		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
 		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
 		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
 		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,

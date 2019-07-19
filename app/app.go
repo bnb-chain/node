@@ -35,6 +35,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -247,6 +248,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP12, upgradeConfig.BEP12Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
 
 	// register store keys of upgrade
@@ -258,6 +260,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		timelock.TimeRelockMsg{}.Type(),
 		timelock.TimeUnlockMsg{}.Type(),
 	)
+
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -298,6 +303,7 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
+	account.InitPlugin(app, app.AccountKeeper)
 }
 
 func (app *BinanceChain) initGovHooks() {
@@ -396,7 +402,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 		if admin.IsTxAllowed(tx) {
 			txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 			app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-			result = app.RunTx(sdk.RunTxModeCheckAfterPre, txBytes, tx, txHash)
+			result = app.RunTx(sdk.RunTxModeCheckAfterPre, tx, txHash)
 			if !result.IsOK() {
 				app.RemoveTxFromCache(txBytes)
 			}
@@ -411,7 +417,7 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 			if admin.IsTxAllowed(tx) {
 				txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 				app.Logger.Debug("Handle CheckTx", "Tx", txHash)
-				result = app.RunTx(sdk.RunTxModeCheck, txBytes, tx, txHash)
+				result = app.RunTx(sdk.RunTxModeCheck, tx, txHash)
 				if result.IsOK() {
 					app.AddTxToCache(txBytes, tx)
 				}
@@ -701,6 +707,7 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterCodec(cdc) // Register Msgs
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
+	account.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)

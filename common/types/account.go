@@ -21,6 +21,9 @@ type NamedAccount interface {
 	//TODO: this should merge into Coin
 	GetLockedCoins() sdk.Coins
 	SetLockedCoins(sdk.Coins)
+
+	GetFlags() uint64
+	SetFlags(uint64)
 }
 
 // Custom extensions for this application.  This is just an example of
@@ -36,6 +39,7 @@ type AppAccount struct {
 	Name             string    `json:"name"`
 	FrozenCoins      sdk.Coins `json:"frozen"`
 	LockedCoins      sdk.Coins `json:"locked"`
+	Flags            uint64    `json:"flags"`
 }
 
 // nolint
@@ -45,11 +49,14 @@ func (acc AppAccount) GetFrozenCoins() sdk.Coins        { return acc.FrozenCoins
 func (acc *AppAccount) SetFrozenCoins(frozen sdk.Coins) { acc.FrozenCoins = frozen }
 func (acc AppAccount) GetLockedCoins() sdk.Coins        { return acc.LockedCoins }
 func (acc *AppAccount) SetLockedCoins(frozen sdk.Coins) { acc.LockedCoins = frozen }
+func (acc *AppAccount) GetFlags() uint64                { return acc.Flags }
+func (acc *AppAccount) SetFlags(flags uint64)           { acc.Flags = flags }
 func (acc *AppAccount) Clone() sdk.Account {
 	baseAcc := acc.BaseAccount.Clone().(*auth.BaseAccount)
 	clonedAcc := &AppAccount{
 		BaseAccount: *baseAcc,
 		Name:        acc.Name,
+		Flags:       acc.Flags,
 	}
 	if acc.FrozenCoins == nil {
 		clonedAcc.FrozenCoins = nil
