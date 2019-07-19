@@ -31,6 +31,10 @@ func (vac *ValAddrCache) ClearCache() {
 	vac.cache = make(map[string]sdk.AccAddress)
 }
 
+func (vac *ValAddrCache) SetAccAddr(consAddr sdk.ConsAddress, accAddr sdk.AccAddress) {
+	vac.cache[string(consAddr)] = accAddr
+}
+
 func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) sdk.AccAddress {
 	if value, ok := vac.cache[string(consAddr)]; ok {
 		return value
@@ -40,7 +44,7 @@ func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) s
 		panic(fmt.Errorf("can't load validator with consensus address %s", consAddr.String()))
 	}
 	accAddr := validator.GetFeeAddr()
-	vac.cache[string(consAddr)] = accAddr
+	vac.SetAccAddr(consAddr, accAddr)
 	return accAddr
 }
 

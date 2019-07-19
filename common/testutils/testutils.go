@@ -51,6 +51,27 @@ func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.Priv
 	return privKey, acc
 }
 
+func NewNamedAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, types.NamedAccount) {
+	privKey, addr := PrivAndAddr()
+	acc := am.NewAccountWithAddress(ctx, addr)
+	acc.SetCoins(NewNativeTokens(free))
+
+	baseAcc := auth.BaseAccount{
+		Address:       acc.GetAddress(),
+		Coins:         acc.GetCoins(),
+		PubKey:        acc.GetPubKey(),
+		AccountNumber: acc.GetAccountNumber(),
+		Sequence:      acc.GetSequence(),
+	}
+	appAcc := &types.AppAccount{
+		BaseAccount: baseAcc,
+		Name:        "",
+		Flags:       0x0,
+	}
+	am.SetAccount(ctx, appAcc)
+	return privKey, appAcc
+}
+
 func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)

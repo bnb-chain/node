@@ -27,6 +27,8 @@ const (
 	TimeUnlockFee = 1e6
 	TimeRelockFee = 1e6
 
+	SetAccountFlagsFee = 1e8
+
 	// stake fee
 	CreateValidatorFee = 10e8
 	RemoveValidatorFee = 1e8

@@ -55,7 +55,7 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  digest = "1:6ed2234b494c14b2a4ef5111401d514ad015eb780f1068038baa28aaf3bc4011"
+  digest = "1:26ee1b7867b280585d7ed664cc1d16c5bdcc17a305d0e594920a21b0dc12455b"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -103,9 +103,9 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "8e2ea76b93193a9d6bfaca99808c7d5f7e06c8e9"
+  revision = "a96d2a2e35bf39ceab8ce5314a936e3ee406ed7f"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  version = "v0.25.0-binance.18"
+  version = "v0.25.0-binance.19"
 
 [[projects]]
   digest = "1:e8a3550c8786316675ff54ad6f09d265d129c9d986919af7f541afba50d87ce2"
@@ -113,6 +113,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "52158e4697b87de16ed390e1bdaf813e581008fa"
+
+[[projects]]
+  digest = "1:34efba6719d5a29ddc868bf772b864980654dc1a1c18e06659e4246ea1665fb8"
+  name = "github.com/cosmos/ledger-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1c99b41f1877b58e3517ef93012cc76fe5cd335b"
+  version = "v0.9.2"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -600,7 +608,7 @@
   version = "v0.12.0-binance.1"
 
 [[projects]]
-  digest = "1:dc2205db501620ad7c2be28dec030e1c953ecb05b0010c26271e4f832c171a2e"
+  digest = "1:e0565039b7cec1e4d6f3021049c6f58a73b41752c1a677e6fdedd9ff35d52be3"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -672,9 +680,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "9e594f505df07ce1d4067918dbe90d4df7bae8bc"
+  revision = "a0e0373b1686c62407941d4fac5252724aca4e22"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.31.5-binance.0"
+  version = "v0.31.5-binance.1"
 
 [[projects]]
   digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"
@@ -685,22 +693,13 @@
   version = "v0.9.0"
 
 [[projects]]
-  digest = "1:c95f97a7ebc86127478375e2f8e8b49f096e92b79e49e70a570862eda4b18f5e"
+  digest = "1:d73648427026ac9aee38ab95f3aa105743f7aa0cd5bf54823c5fc7b7ab98eb86"
   name = "github.com/zondax/ledger-cosmos-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "fee2574758229322031b8b8d5c5f8197d121b952"
+  revision = "35ecc584d1362e3a501828550301e0da391197c2"
   source = "https://github.com/binance-chain/ledger-cosmos-go"
-  version = "v0.9.9-binance.1"
-
-[[projects]]
-  digest = "1:11b3a00fab978e4edbad3322b9e024ea9031c7714f41dd9e92ac70f27d9adbe7"
-  name = "github.com/zondax/ledger-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "6d4c92579518a79bb50589cc1c35995f610832f5"
-  source = "https://github.com/binance-chain/ledger-go"
-  version = "v0.9.1"
+  version = "v0.9.9-binance.2"
 
 [[projects]]
   branch = "master"
@@ -862,6 +861,7 @@
     "github.com/cosmos/cosmos-sdk/x/auth/client/rest",
     "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder",
     "github.com/cosmos/cosmos-sdk/x/bank",
+    "github.com/cosmos/cosmos-sdk/x/bank/client",
     "github.com/cosmos/cosmos-sdk/x/bank/client/cli",
     "github.com/cosmos/cosmos-sdk/x/bank/client/rest",
     "github.com/cosmos/cosmos-sdk/x/gov",
