@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+FEATURES
+* [\#605](https://github.com/binance-chain/node/pull/605) [Account] accounts can set flags to turn on memo validation
+
 ## 0.6.0
 FEATURES
 * [\#598](https://github.com/binance-chain/node/pull/598) [CLI] don't broadcast time lock related txs to blockchain by default
