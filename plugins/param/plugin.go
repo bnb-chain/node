@@ -10,15 +10,16 @@ import (
 	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
+	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
-	"github.com/binance-chain/node/plugins/account"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
 
@@ -50,6 +51,15 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, accountFlagsFeeParams)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP3, func(ctx sdk.Context) {
+		swapFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: swap.HTLTMsg{}.Type(), Fee: HTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.DepositHTLTMsg{}.Type(), Fee: DepositHTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.ClaimHTLTMsg{}.Type(), Fee: ClaimHTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.RefundHTLTMsg{}.Type(), Fee: RefundHTLTFee, FeeFor: types.FeeForProposer},
+		}
+		paramHub.UpdateFeeParams(ctx, swapFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
@@ -78,5 +88,9 @@ func init() {
 		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
 		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
 		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                         fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
 	}
 }
