@@ -146,3 +146,15 @@ func (s *server) handleTimeLocksReq(cdc *wire.Codec, ctx context.CLIContext) htt
 func (s *server) handleTimeLockReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return tksapi.GetTimeLockReqHandler(cdc, ctx)
 }
+
+func (s *server) handleQuerySwapReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.QuerySwapReqHandler(cdc, ctx)
+}
+
+func (s *server) handleQuerySwapsByCreatorReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.QuerySwapsByCreatorReqHandler(cdc, ctx)
+}
+
+func (s *server) handleQuerySwapsByReceiverReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.QuerySwapsByReceiverReqHandler(cdc, ctx)
+}

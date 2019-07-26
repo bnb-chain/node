@@ -35,6 +35,10 @@ var (
 		"timeLock":         {},
 		"timeUnlock":       {},
 		"timeRelock":       {},
+
+		"HTLT": {},
+		"claimHTLT":     {},
+		"refundHTLT":     {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

@@ -31,14 +31,20 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			unfreezeTokenCmd(cmdr),
 			timeLockCmd(cmdr),
 			timeUnlockCmd(cmdr),
-			timeRelockCmd(cmdr))...)
+			timeRelockCmd(cmdr),
+			initiateSwapCmd(cmdr),
+			claimSwapCmd(cmdr),
+			refundSwapCmd(cmdr))...)
 
 	tokenCmd.AddCommand(
 		client.GetCommands(
 			listTokensCmd,
 			getTokenInfoCmd(cmdr),
 			queryTimeLocksCmd(cmdr),
-			queryTimeLockCmd(cmdr))...)
+			queryTimeLockCmd(cmdr),
+			querySwapCmd(cmdr),
+			querySwapsByReceiverCmd(cmdr),
+			querySwapsByCreatorCmd(cmdr))...)
 
 	tokenCmd.AddCommand(
 		client.PostCommands(MultiSendCmd(cdc))...,

@@ -29,6 +29,10 @@ const (
 
 	SetAccountFlagsFee = 1e8
 
+	HashTimerLockTransferFee = 62500
+	ClaimHashTimeLockFee     = 62500
+	RefundHashTimeLockFee    = 62500
+
 	// stake fee
 	CreateValidatorFee = 10e8
 	RemoveValidatorFee = 1e8
