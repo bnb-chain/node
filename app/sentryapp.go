@@ -83,7 +83,7 @@ func (app *SentryApplication) InitChain(req abci.RequestInitChain) (res abci.Res
 			msgs := tx.GetMsgs()
 			for _, msg := range msgs {
 				switch msg := msg.(type) {
-				case stake.MsgCreateValidator:
+				case stake.MsgCreateValidatorProposal:
 					validators = append(validators, abci.ValidatorUpdate{PubKey: tmtypes.TM2PB.PubKey(msg.PubKey), Power: defaultPower.ToInt64()})
 				default:
 					app.logger.Info("MsgType %s not supported ", msg.Type())
