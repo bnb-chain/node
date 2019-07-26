@@ -44,6 +44,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
 )
@@ -84,6 +85,7 @@ type BinanceChain struct {
 	stakeKeeper    stake.Keeper
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
+	swapKeeper     swap.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -148,6 +150,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
 		timelock.DefaultCodespace)
 
+	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -157,6 +161,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
+	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
 
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
@@ -207,6 +212,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.StakeStoreKey,
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
+		common.AtomicSwapStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -250,9 +256,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP12, upgradeConfig.BEP12Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP3, upgradeConfig.BEP3Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -263,6 +271,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.HashTimerLockTransferMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.ClaimHashTimerLockMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.RefundLockedAssetMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -300,7 +311,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
@@ -505,6 +516,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
+		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 		// other end blockers
 		<-icoDone
 	} else {
