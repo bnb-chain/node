@@ -2,10 +2,7 @@ package swap
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
-
-	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -59,14 +56,11 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("Non-exist random number hash: %v", msg.RandomNumberHash)).Result()
 	}
-	if swap.ExpireHeight >= ctx.BlockHeight() {
+	if swap.ExpireHeight <= ctx.BlockHeight() {
 		return ErrClaimExpiredSwap(fmt.Sprintf("Swap is expired, expired height %d", swap.ExpireHeight)).Result()
 	}
 
-	randomNumberAndTimestamp := make([]byte, RandomNumberLength + 8)
-	copy(randomNumberAndTimestamp[:RandomNumberLength], msg.RandomNumber)
-	binary.BigEndian.PutUint64(randomNumberAndTimestamp[RandomNumberLength:], swap.Timestamp)
-	if !bytes.Equal(tmhash.Sum(randomNumberAndTimestamp), msg.RandomNumberHash) {
+	if !bytes.Equal(CalculteRandomHash(msg.RandomNumber, swap.Timestamp), msg.RandomNumberHash) {
 		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
 	}
 
@@ -96,7 +90,7 @@ func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMs
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("Non-exist random number hash: %v", msg.RandomNumberHash)).Result()
 	}
-	if swap.ExpireHeight < ctx.BlockHeight() {
+	if ctx.BlockHeight() < swap.ExpireHeight {
 		return ErrRefundUnexpiredSwap(fmt.Sprintf("Expire height (%d) is still not reached", swap.ExpireHeight)).Result()
 	}
 

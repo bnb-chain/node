@@ -27,7 +27,7 @@ type HashTimerLockTransferMsg struct {
 	TimeSpan         uint64         `json:"time_span"`
 }
 
-func NewSetAccountFlagsMsg(from, to sdk.AccAddress, toOnOtherChain []byte, randomNumberHash []byte, timestamp uint64,
+func NewHashTimerLockTransferMsg(from, to sdk.AccAddress, toOnOtherChain []byte, randomNumberHash []byte, timestamp uint64,
 	outAmount sdk.Coin, inAmount uint64, timespan uint64) HashTimerLockTransferMsg {
 	return HashTimerLockTransferMsg{
 		From:             from,

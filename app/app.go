@@ -161,7 +161,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
-	app.QueryRouter().AddRoute("atomicswap", swap.NewQuerier(app.swapKeeper))
+	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
 
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
@@ -212,6 +212,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.StakeStoreKey,
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
+		common.AtomicSwapStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -310,7 +311,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)

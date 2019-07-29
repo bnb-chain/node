@@ -87,5 +87,8 @@ func init() {
 		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
 		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
 		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
+		swap.HashTimerLockTransfer:        fees.FixedFeeCalculatorGen,
+		swap.ClaimHashTimeLock:            fees.FixedFeeCalculatorGen,
+		swap.RefundLockedAsset:            fees.FixedFeeCalculatorGen,
 	}
 }

@@ -10,17 +10,17 @@ import (
 )
 
 const (
-	QuerySwapOut = "swapout"
-	QuerySwapIn  = "swapin"
+	QuerySwapFrom = "swapfrom"
+	QuerySwapTo   = "swapto"
 )
 
 func NewQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
 		switch path[0] {
-		case QuerySwapOut:
-			return querySwapOut(ctx, req, keeper)
-		case QuerySwapIn:
-			return querySwapIn(ctx, req, keeper)
+		case QuerySwapFrom:
+			return querySwapFrom(ctx, req, keeper)
+		case QuerySwapTo:
+			return querySwapTo(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("unknown atomic swap query endpoint %s", path[0]))
 		}
@@ -28,21 +28,22 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 // Params for query 'custom/atomicswap/swapout'
-type QuerySwapOutParams struct {
-	SwapCreator sdk.AccAddress
-	PageSize    int64
-	PageNum     int64
+type QuerySwapFromParams struct {
+	From     sdk.AccAddress
+	Status   SwapStatus
+	PageSize int64
+	PageNum  int64
 }
 
 // nolint: unparam
-func querySwapOut(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params QuerySwapOutParams
+func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params QuerySwapFromParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
 	}
 
-	if len(params.SwapCreator) != sdk.AddrLen {
+	if len(params.From) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
 	if params.PageSize > 1000 {
@@ -53,13 +54,14 @@ func querySwapOut(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte
 		params.PageSize = 100
 	}
 
-	iterator := keeper.GetSwapOutIterator(ctx, params.SwapCreator)
+	iterator := keeper.GetSwapFromIterator(ctx, params.From)
 	defer iterator.Close()
 
 	skipQuantity :=  params.PageSize * params.PageNum
 	count := int64(0)
 	atomicSwaps := make([]AtomicSwap, 0, params.PageSize)
 	for ; iterator.Valid(); iterator.Next() {
+		swap := keeper.QuerySwap(ctx, iterator.Value())
 		count++
 		if count <= skipQuantity {
 			continue
@@ -67,7 +69,9 @@ func querySwapOut(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte
 		if count - skipQuantity > params.PageSize {
 			break
 		}
-		swap := keeper.QuerySwap(ctx, iterator.Value())
+		if params.Status != NULL && swap.Status != params.Status {
+			continue
+		}
 		if swap != nil {
 			atomicSwaps = append(atomicSwaps, *swap)
 		}
@@ -82,21 +86,22 @@ func querySwapOut(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte
 }
 
 // Params for query 'custom/atomicswap/swapin'
-type QuerySwapInParams struct {
-	SwapReceiver sdk.AccAddress
-	PageSize     int64
-	PageNum      int64
+type QuerySwapToParams struct {
+	To       sdk.AccAddress
+	Status   SwapStatus
+	PageSize int64
+	PageNum  int64
 }
 
 // nolint: unparam
-func querySwapIn(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params QuerySwapInParams
+func querySwapTo(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params QuerySwapToParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
 	}
 
-	if len(params.SwapReceiver) != sdk.AddrLen {
+	if len(params.To) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
 	if params.PageSize > 1000 {
@@ -107,13 +112,14 @@ func querySwapIn(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 		params.PageSize = 100
 	}
 
-	iterator := keeper.GetSwapOutIterator(ctx, params.SwapReceiver)
+	iterator := keeper.GetSwapToIterator(ctx, params.To)
 	defer iterator.Close()
 
 	skipQuantity :=  params.PageSize * params.PageNum
 	count := int64(0)
 	atomicSwaps := make([]AtomicSwap, 0, params.PageSize)
 	for ; iterator.Valid(); iterator.Next() {
+		swap := keeper.QuerySwap(ctx, iterator.Value())
 		count++
 		if count <= skipQuantity {
 			continue
@@ -121,7 +127,9 @@ func querySwapIn(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 		if count - skipQuantity > params.PageSize {
 			break
 		}
-		swap := keeper.QuerySwap(ctx, iterator.Value())
+		if params.Status != NULL && swap.Status != params.Status {
+			continue
+		}
 		if swap != nil {
 			atomicSwaps = append(atomicSwaps, *swap)
 		}
