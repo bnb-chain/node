@@ -3,8 +3,6 @@ package tokens
 import (
 	"encoding/binary"
 	"fmt"
-	"time"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -36,10 +34,10 @@ func createQueryHandler(mapper Mapper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper, height int64, blockTime time.Time) {
+func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 	logger := bnclog.With("module", "tokens")
 
-	logger.Info("Delete swaps which are completed or expired", "blockHeight", height)
+	logger.Info("Delete swaps which are completed or expired", "blockHeight", ctx.BlockHeight())
 
 	iterator := swapKeeper.GetSwapTimerIterator(ctx)
 	defer iterator.Close()

@@ -20,6 +20,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
+	"github.com/binance-chain/node/plugins/tokens/swap"
 )
 
 const AbciQueryPrefix = "param"
@@ -49,6 +50,14 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, accountFlagsFeeParams)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP3, func(ctx sdk.Context) {
+		swapFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: swap.HashTimerLockTransferMsg{}.Type(), Fee: HashTimerLockTransferFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.ClaimHashTimerLockMsg{}.Type(), Fee: ClaimHashTimeLockFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.RefundLockedAssetMsg{}.Type(), Fee: RefundLockedAssetFee, FeeFor: types.FeeForProposer},
+		}
+		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
 }
 
