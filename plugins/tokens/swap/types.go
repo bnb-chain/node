@@ -23,6 +23,10 @@ const (
 )
 
 func (hexData HexData) String() string {
+	str := hex.EncodeToString(hexData)
+	if len(str) == 0 {
+		return ""
+	}
 	return "0x" + hex.EncodeToString(hexData)
 }
 
@@ -49,11 +53,11 @@ func (hexData *HexData) UnmarshalJSON(data []byte) error {
 
 func NewSwapStatusFromString(str string) SwapStatus {
 	switch str {
-	case "Open":
+	case "Open", "open":
 		return Open
-	case "Completed":
+	case "Completed", "completed":
 		return Completed
-	case "Expired":
+	case "Expired", "expired":
 		return Expired
 	default:
 		return NULL

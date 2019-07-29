@@ -27,12 +27,12 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
-// Params for query 'custom/atomicswap/swapout'
+// Params for query 'custom/atomicswap/swapfrom'
 type QuerySwapFromParams struct {
-	From     sdk.AccAddress
-	Status   SwapStatus
-	PageSize int64
-	PageNum  int64
+	From   sdk.AccAddress
+	Status SwapStatus
+	Limit  int64
+	Offset int64
 }
 
 // nolint: unparam
@@ -46,27 +46,26 @@ func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 	if len(params.From) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
-	if params.PageSize > 1000 {
-		return nil, ErrTooLargePageSize("Page size should be no greater than 1000")
+	if params.Limit > 1000 {
+		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
 	}
 	// Assign default page size
-	if params.PageSize == 0 {
-		params.PageSize = 100
+	if params.Limit == 0 {
+		params.Limit = 100
 	}
 
 	iterator := keeper.GetSwapFromIterator(ctx, params.From)
 	defer iterator.Close()
 
-	skipQuantity :=  params.PageSize * params.PageNum
 	count := int64(0)
-	atomicSwaps := make([]AtomicSwap, 0, params.PageSize)
+	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		swap := keeper.QuerySwap(ctx, iterator.Value())
 		count++
-		if count <= skipQuantity {
+		if count <= params.Offset {
 			continue
 		}
-		if count - skipQuantity > params.PageSize {
+		if count-params.Offset > params.Limit {
 			break
 		}
 		if params.Status != NULL && swap.Status != params.Status {
@@ -85,12 +84,12 @@ func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 	return bz, nil
 }
 
-// Params for query 'custom/atomicswap/swapin'
+// Params for query 'custom/atomicswap/swapto'
 type QuerySwapToParams struct {
-	To       sdk.AccAddress
-	Status   SwapStatus
-	PageSize int64
-	PageNum  int64
+	To     sdk.AccAddress
+	Status SwapStatus
+	Limit  int64
+	Offset int64
 }
 
 // nolint: unparam
@@ -104,27 +103,26 @@ func querySwapTo(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 	if len(params.To) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
-	if params.PageSize > 1000 {
-		return nil, ErrTooLargePageSize("Page size should be no greater than 1000")
+	if params.Limit > 1000 {
+		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
 	}
 	// Assign default page size
-	if params.PageSize == 0 {
-		params.PageSize = 100
+	if params.Limit == 0 {
+		params.Limit = 100
 	}
 
 	iterator := keeper.GetSwapToIterator(ctx, params.To)
 	defer iterator.Close()
 
-	skipQuantity :=  params.PageSize * params.PageNum
 	count := int64(0)
-	atomicSwaps := make([]AtomicSwap, 0, params.PageSize)
+	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		swap := keeper.QuerySwap(ctx, iterator.Value())
 		count++
-		if count <= skipQuantity {
+		if count <= params.Offset {
 			continue
 		}
-		if count - skipQuantity > params.PageSize {
+		if count-params.Offset > params.Limit {
 			break
 		}
 		if params.Status != NULL && swap.Status != params.Status {

@@ -35,10 +35,10 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		RandomNumber:     nil,
 		Timestamp:        msg.Timestamp,
 		ExpireHeight:     ctx.BlockHeight() + int64(msg.TimeSpan),
-		ClosedTime:		  0,
+		ClosedTime:       0,
 		Status:           Open,
 	}
-	err := kp.SaveSwap(ctx, swap);
+	err := kp.SaveSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -54,7 +54,10 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLockMsg) sdk.Result {
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("Non-exist random number hash: %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomeNumberHash %v", msg.RandomNumberHash)).Result()
+	}
+	if swap.Status != Open {
+		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actual it is %s", swap.Status.String())).Result()
 	}
 	if swap.ExpireHeight <= ctx.BlockHeight() {
 		return ErrClaimExpiredSwap(fmt.Sprintf("Swap is expired, expired height %d", swap.ExpireHeight)).Result()
@@ -88,7 +91,10 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMsg) sdk.Result {
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("Non-exist random number hash: %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomeNumberHash %v", msg.RandomNumberHash)).Result()
+	}
+	if swap.Status != Open {
+		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actual it is %s", swap.Status.String())).Result()
 	}
 	if ctx.BlockHeight() < swap.ExpireHeight {
 		return ErrRefundUnexpiredSwap(fmt.Sprintf("Expire height (%d) is still not reached", swap.ExpireHeight)).Result()
@@ -98,7 +104,7 @@ func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMs
 	if err != nil {
 		return err.Result()
 	}
-	if ctx.IsDeliverTx(){
+	if ctx.IsDeliverTx() {
 		kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
 	}
 

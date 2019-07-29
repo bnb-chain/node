@@ -2,6 +2,7 @@ package swap
 
 import (
 	"encoding/binary"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

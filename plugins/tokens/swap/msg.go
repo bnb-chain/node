@@ -19,8 +19,8 @@ var _ sdk.Msg = HashTimerLockTransferMsg{}
 type HashTimerLockTransferMsg struct {
 	From             sdk.AccAddress `json:"from"`
 	To               sdk.AccAddress `json:"to"`
-	ToOnOtherChain   []byte         `json:"to_on_other_chain"`
-	RandomNumberHash []byte         `json:"random_number_hash"`
+	ToOnOtherChain   HexData        `json:"to_on_other_chain"`
+	RandomNumberHash HexData        `json:"random_number_hash"`
 	Timestamp        uint64         `json:"timestamp"`
 	OutAmount        sdk.Coin       `json:"out_amount"`
 	InAmount         uint64         `json:"in_amount"`
@@ -86,8 +86,8 @@ var _ sdk.Msg = ClaimHashTimerLockMsg{}
 
 type ClaimHashTimerLockMsg struct {
 	From             sdk.AccAddress `json:"from"`
-	RandomNumberHash []byte         `json:"random_number_hash"`
-	RandomNumber     []byte         `json:"random_number"`
+	RandomNumberHash HexData        `json:"random_number_hash"`
+	RandomNumber     HexData        `json:"random_number"`
 }
 
 func NewClaimHashTimerLockMsg(from sdk.AccAddress, randomNumberHash, randomNumber []byte) ClaimHashTimerLockMsg {
@@ -133,7 +133,7 @@ var _ sdk.Msg = RefundLockedAssetMsg{}
 
 type RefundLockedAssetMsg struct {
 	From             sdk.AccAddress `json:"from"`
-	RandomNumberHash []byte         `json:"random_number_hash"`
+	RandomNumberHash HexData        `json:"random_number_hash"`
 }
 
 func NewRefundLockedAssetMsg(from sdk.AccAddress, randomNumberHash []byte) RefundLockedAssetMsg {

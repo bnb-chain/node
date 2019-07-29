@@ -13,11 +13,12 @@ const (
 	CodeInvalidSwapOutAmount       sdk.CodeType = 4
 	CodeInvalidTimeSpan            sdk.CodeType = 5
 	CodeDuplicatedRandomNumberHash sdk.CodeType = 6
-	CodeClaimExpiredSwap 		   sdk.CodeType = 7
-	CodeRefundUnexpiredSwap 	   sdk.CodeType = 8
+	CodeClaimExpiredSwap           sdk.CodeType = 7
+	CodeRefundUnexpiredSwap        sdk.CodeType = 8
 	CodeMismatchedRandomNumber     sdk.CodeType = 9
 	CodeNonExistRandomNumberHash   sdk.CodeType = 10
-	CodeTooLargePageSize           sdk.CodeType = 11
+	CodeTooLargeQueryLimit         sdk.CodeType = 11
+	CodeUnexpectedSwapStatus       sdk.CodeType = 12
 )
 
 func ErrInvalidOtherChainAddress(msg string) sdk.Error {
@@ -60,7 +61,10 @@ func ErrNonExistRandomNumberHash(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeNonExistRandomNumberHash, msg)
 }
 
-func ErrTooLargePageSize(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeTooLargePageSize, msg)
+func ErrTooLargeQueryLimit(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeTooLargeQueryLimit, msg)
 }
 
+func ErrUnexpectedSwapStatus(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeUnexpectedSwapStatus, msg)
+}

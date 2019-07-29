@@ -28,8 +28,8 @@ const (
 	flagRandomNumber     = "random-number"
 	flagTimestamp        = "timestamp"
 	flagTimespan         = "timespan"
-	flagPageSize         = "page-size"
-	flagPageNum          = "page-num"
+	flagLimit            = "limit"
+	flagOffset           = "offset"
 	flagStatus           = "swap-status"
 )
 
@@ -230,6 +230,10 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if res == nil {
+		return fmt.Errorf("no matched swap record")
+	}
+
 	atomicSwap := swap.DecodeAtomicSwap(c.Cdc, res)
 	var output []byte
 	if cliCtx.Indent {
@@ -242,22 +246,22 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func querySwapFromCmd(cmdr Commander) *cobra.Command {
+func querySwapsFromCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-from",
 		Short: "Query swaps from specified address",
-		RunE:  cmdr.querySwapFrom,
+		RunE:  cmdr.querySwapsFrom,
 	}
 
 	cmd.Flags().String(flagFromAddr, "", "The from address of swap, bech32 encoding")
-	cmd.Flags().Int64(flagPageSize, 100, "Pagination size ")
-	cmd.Flags().Int64(flagPageNum, 0, "Pagination number ")
+	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
+	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
 	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
 
 	return cmd
 }
 
-func (c Commander) querySwapFrom(cmd *cobra.Command, args []string) error {
+func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
@@ -265,15 +269,15 @@ func (c Commander) querySwapFrom(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	pageSize := viper.GetInt64(flagPageSize)
-	pageNum := viper.GetInt64(flagPageNum)
+	limit := viper.GetInt64(flagLimit)
+	offset := viper.GetInt64(flagOffset)
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapFromParams{
 		From:     fromAddr,
 		Status:   swapStatus,
-		PageSize: pageSize,
-		PageNum:  pageNum,
+		Limit:    limit,
+		Offset:   offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -290,22 +294,22 @@ func (c Commander) querySwapFrom(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func querySwapToCmd(cmdr Commander) *cobra.Command {
+func querySwapsToCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-to",
 		Short: "Query swaps to specified address",
-		RunE:  cmdr.querySwapTo,
+		RunE:  cmdr.querySwapsTo,
 	}
 
 	cmd.Flags().String(flagToAddr, "", "The receiver address of swap, bech32 encoding")
-	cmd.Flags().Int64(flagPageSize, 100, "Pagination size ")
-	cmd.Flags().Int64(flagPageNum, 0, "Pagination number ")
+	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
+	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
 	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
 
 	return cmd
 }
 
-func (c Commander) querySwapTo(cmd *cobra.Command, args []string) error {
+func (c Commander) querySwapsTo(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
@@ -313,15 +317,15 @@ func (c Commander) querySwapTo(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	pageSize := viper.GetInt64(flagPageSize)
-	pageNum := viper.GetInt64(flagPageNum)
+	limit := viper.GetInt64(flagLimit)
+	offset := viper.GetInt64(flagOffset)
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapToParams{
 		To:       toAddr,
 		Status:   swapStatus,
-		PageSize: pageSize,
-		PageNum:  pageNum,
+		Limit:    limit,
+		Offset:   offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)

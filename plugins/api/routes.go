@@ -68,6 +68,13 @@ func (s *server) bindRoutes() *server {
 	// time locks query
 	r.HandleFunc(prefix+"/timelock/timelocks/{address}", s.handleTimeLocksReq(s.cdc, s.ctx)).Methods("GET")
 	r.HandleFunc(prefix+"/timelock/timelock/{address}/{id}", s.handleTimeLockReq(s.cdc, s.ctx)).Methods("GET")
+	r.HandleFunc(prefix+"/atomicswap/{randomNumberHash}", s.handleQuerySwapReq(s.cdc, s.ctx)).Methods("GET")
+	r.HandleFunc(prefix+"/atomicswap/from/{fromAddr}/{swapStatus}", s.handleQuerySwapsFromReq(s.cdc, s.ctx)).
+		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
+		Methods("GET")
+	r.HandleFunc(prefix+"/atomicswap/to/{toAddr}/{swapStatus}", s.handleQuerySwapsToReq(s.cdc, s.ctx)).
+		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
+		Methods("GET")
 
 	// legacy plugin routes
 	// TODO: make these more like the above for simplicity.
