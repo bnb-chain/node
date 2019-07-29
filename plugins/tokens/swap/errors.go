@@ -17,6 +17,7 @@ const (
 	CodeRefundUnexpiredSwap 	   sdk.CodeType = 8
 	CodeMismatchedRandomNumber     sdk.CodeType = 9
 	CodeNonExistRandomNumberHash   sdk.CodeType = 10
+	CodeTooLargePageSize           sdk.CodeType = 11
 )
 
 func ErrInvalidOtherChainAddress(msg string) sdk.Error {
@@ -57,5 +58,9 @@ func ErrMismatchedRandomNumber(msg string) sdk.Error {
 
 func ErrNonExistRandomNumberHash(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeNonExistRandomNumberHash, msg)
+}
+
+func ErrTooLargePageSize(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeTooLargePageSize, msg)
 }
 
