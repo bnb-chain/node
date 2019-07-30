@@ -21,14 +21,14 @@ type HashTimerLockTransferMsg struct {
 	To               sdk.AccAddress `json:"to"`
 	ToOnOtherChain   HexData        `json:"to_on_other_chain"`
 	RandomNumberHash HexData        `json:"random_number_hash"`
-	Timestamp        uint64         `json:"timestamp"`
+	Timestamp        int64          `json:"timestamp"`
 	OutAmount        sdk.Coin       `json:"out_amount"`
-	InAmount         uint64         `json:"in_amount"`
-	TimeSpan         uint64         `json:"time_span"`
+	InAmount         int64          `json:"in_amount"`
+	TimeSpan         int64          `json:"time_span"`
 }
 
-func NewHashTimerLockTransferMsg(from, to sdk.AccAddress, toOnOtherChain []byte, randomNumberHash []byte, timestamp uint64,
-	outAmount sdk.Coin, inAmount uint64, timespan uint64) HashTimerLockTransferMsg {
+func NewHashTimerLockTransferMsg(from, to sdk.AccAddress, toOnOtherChain []byte, randomNumberHash []byte, timestamp int64,
+	outAmount sdk.Coin, inAmount int64, timespan int64) HashTimerLockTransferMsg {
 	return HashTimerLockTransferMsg{
 		From:             from,
 		To:               to,

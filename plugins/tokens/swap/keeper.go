@@ -41,14 +41,14 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 	}
 }
 
-func (kp *Keeper) SaveSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		panic("nil empty swap pointer")
 	}
 
 	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
-	if kvStore.Has(swapHashKey) {
+	if kvStore.Get(swapHashKey) != nil {
 		return ErrDuplicatedRandomNumberHash(fmt.Sprintf("Duplicated random number hash %v", swap.RandomNumberHash))
 	}
 	kvStore.Set(swapHashKey, EncodeAtomicSwap(kp.cdc, *swap))
@@ -87,15 +87,12 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	return nil
 }
 
-func (kp *Keeper) DeleteSwap(ctx sdk.Context, randomNumberHash []byte) sdk.Error {
+func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
-
-	swapHashKey := GetSwapHashKey(randomNumberHash)
-	if !kvStore.Has(swapHashKey) {
-		return sdk.ErrInternal(fmt.Sprintf("Can't delete non-exist swap %v", randomNumberHash))
+	if swap == nil {
+		panic("nil atomic swap pointer")
 	}
-	swap := DecodeAtomicSwap(kp.cdc, kvStore.Get(swapHashKey))
-
+	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
 	kvStore.Delete(swapHashKey)
 
 	swapCreatorKey := GetSwapFromKey(swap.From, swap.RandomNumberHash)
@@ -116,10 +113,11 @@ func (kp *Keeper) QuerySwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwa
 	kvStore := ctx.KVStore(kp.storeKey)
 
 	swapHashKey := GetSwapHashKey(randomNumberHash)
-	if !kvStore.Has(swapHashKey) {
+	bz := kvStore.Get(swapHashKey)
+	if bz == nil {
 		return nil
 	}
-	swap := DecodeAtomicSwap(kp.cdc, kvStore.Get(swapHashKey))
+	swap := DecodeAtomicSwap(kp.cdc, bz)
 	return &swap
 }
 

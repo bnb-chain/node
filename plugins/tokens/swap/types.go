@@ -96,12 +96,12 @@ type AtomicSwap struct {
 	To        sdk.AccAddress `json:"to"`
 	OutAmount sdk.Coin       `json:"out_amount"`
 
-	InAmount       uint64  `json:"in_amount"`
+	InAmount       int64   `json:"in_amount"`
 	ToOnOtherChain HexData `json:"to_on_other_chain"`
 
 	RandomNumberHash HexData `json:"random_number_hash"`
 	RandomNumber     HexData `json:"random_number"`
-	Timestamp        uint64  `json:"timestamp"`
+	Timestamp        int64   `json:"timestamp"`
 
 	ExpireHeight int64      `json:"expire_height"`
 	ClosedTime   int64      `json:"closed_time"`

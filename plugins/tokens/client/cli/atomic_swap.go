@@ -40,13 +40,13 @@ func initiateSwapCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.initiateSwap,
 	}
 
-	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number and timestamp")
-	cmd.Flags().String(flagToAddr, "", "The receiver address of BEP2 token")
-	cmd.Flags().String(flagOutAmount, "", "The swapped out BEP2 token")
+	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
+	cmd.Flags().String(flagToAddr, "", "The receiver address of BEP2 token, bech32 encoding")
+	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
 	cmd.Flags().Int64(flagInAmount, 0, "Expected gained token on the other chain, 8 decimals")
-	cmd.Flags().String(flagToOnOtherChain, "", "The receiver address on other chain, like Ethereum, must be encoding to hex string and prefix with 0x")
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of a random number and timestamp, based on SHA256, must be encoding to hex string and prefix with 0x")
-	cmd.Flags().Int64(flagTimestamp, 0, "Supposed to be the time of sending transaction, counted by second. In the response to a swap request on other chain, it should be identical to the one in the swap request")
+	cmd.Flags().String(flagToOnOtherChain, "", "The receiver address on other chain, like Ethereum, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
 	cmd.Flags().Int64(flagTimespan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
 
 	return cmd
@@ -69,7 +69,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	inAmount := uint64(viper.GetInt64(flagInAmount))
+	inAmount := viper.GetInt64(flagInAmount)
 	toOnOtherChainStr := viper.GetString(flagToOnOtherChain)
 	if !strings.HasPrefix(toOnOtherChainStr, "0x") {
 		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --to-on-other-chain")
@@ -80,7 +80,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 	}
 
 	var randomNumberHash []byte
-	var timestamp uint64
+	var timestamp int64
 	if !viper.GetBool(flagAuto) {
 		randomNumberHashStr := viper.GetString(flagRandomNumberHash)
 		if !strings.HasPrefix(randomNumberHashStr, "0x") {
@@ -90,16 +90,16 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		timestamp = uint64(viper.GetInt64(flagTimestamp))
+		timestamp = viper.GetInt64(flagTimestamp)
 	} else {
-		randomeNumber := make([]byte, 32)
+		randomeNumber := make([]byte, swap.RandomNumberLength)
 		rand.Read(randomeNumber)
-		timestamp = uint64(time.Now().Unix())
+		timestamp = time.Now().Unix()
 		randomNumberHash = swap.CalculteRandomHash(randomeNumber, timestamp)
 
-		fmt.Println(fmt.Sprintf("Random number: 0x%s, \nTimestamp: %d, \nRandom number hash: 0x%s",hex.EncodeToString(randomeNumber), timestamp, hex.EncodeToString(randomNumberHash)))
+		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomeNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}
-	timespan := uint64(viper.GetInt64(flagTimespan))
+	timespan := viper.GetInt64(flagTimespan)
 	// build message
 	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, timespan)
 
@@ -117,8 +117,8 @@ func claimSwapCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.claimSwap,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of a random number and timestamp, based on SHA256, must be encoding to hex string, like 0xXXX")
-	cmd.Flags().String(flagRandomNumber, "", "The secret random number")
+	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumber, "", "The secret random number, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -166,7 +166,7 @@ func refundSwapCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.refundSwap,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of a random number and timestamp, based on SHA256, must be encoding to hex string, like 0xXXX")
+	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -205,7 +205,7 @@ func querySwapCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.querySwap,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of a random number and timestamp, based on SHA256, must be encoding to hex string, like 0xXXX")
+	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -249,7 +249,7 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 func querySwapsFromCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-from",
-		Short: "Query swaps from specified address",
+		Short: "Query swaps from the specified address",
 		RunE:  cmdr.querySwapsFrom,
 	}
 
@@ -274,10 +274,10 @@ func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapFromParams{
-		From:     fromAddr,
-		Status:   swapStatus,
-		Limit:    limit,
-		Offset:   offset,
+		From:   fromAddr,
+		Status: swapStatus,
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -297,7 +297,7 @@ func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 func querySwapsToCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-to",
-		Short: "Query swaps to specified address",
+		Short: "Query swaps to the specified address",
 		RunE:  cmdr.querySwapsTo,
 	}
 
@@ -322,10 +322,10 @@ func (c Commander) querySwapsTo(cmd *cobra.Command, args []string) error {
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapToParams{
-		To:       toAddr,
-		Status:   swapStatus,
-		Limit:    limit,
-		Offset:   offset,
+		To:     toAddr,
+		Status: swapStatus,
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)

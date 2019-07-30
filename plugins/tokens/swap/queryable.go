@@ -49,7 +49,7 @@ func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 	if params.Limit > 1000 {
 		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
 	}
-	// Assign default page size
+	// Assign default limit value
 	if params.Limit == 0 {
 		params.Limit = 100
 	}
@@ -61,6 +61,12 @@ func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		swap := keeper.QuerySwap(ctx, iterator.Value())
+		if swap == nil {
+			continue
+		}
+		if params.Status != NULL && swap.Status != params.Status {
+			continue
+		}
 		count++
 		if count <= params.Offset {
 			continue
@@ -68,12 +74,7 @@ func querySwapFrom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 		if count-params.Offset > params.Limit {
 			break
 		}
-		if params.Status != NULL && swap.Status != params.Status {
-			continue
-		}
-		if swap != nil {
-			atomicSwaps = append(atomicSwaps, *swap)
-		}
+		atomicSwaps = append(atomicSwaps, *swap)
 	}
 
 	bz, err := codec.MarshalJSONIndent(keeper.cdc, atomicSwaps)
@@ -106,7 +107,7 @@ func querySwapTo(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 	if params.Limit > 1000 {
 		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
 	}
-	// Assign default page size
+	// Assign default limit value
 	if params.Limit == 0 {
 		params.Limit = 100
 	}
@@ -118,6 +119,12 @@ func querySwapTo(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		swap := keeper.QuerySwap(ctx, iterator.Value())
+		if swap == nil {
+			continue
+		}
+		if params.Status != NULL && swap.Status != params.Status {
+			continue
+		}
 		count++
 		if count <= params.Offset {
 			continue
@@ -125,12 +132,7 @@ func querySwapTo(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 		if count-params.Offset > params.Limit {
 			break
 		}
-		if params.Status != NULL && swap.Status != params.Status {
-			continue
-		}
-		if swap != nil {
-			atomicSwaps = append(atomicSwaps, *swap)
-		}
+		atomicSwaps = append(atomicSwaps, *swap)
 	}
 
 	bz, err := codec.MarshalJSONIndent(keeper.cdc, atomicSwaps)

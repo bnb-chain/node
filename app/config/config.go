@@ -302,7 +302,7 @@ type UpgradeConfig struct {
 	BEP19Height int64 `mapstructure:"BEP19Height"`
 
 	BEP12Height int64 `mapstructure:"BEP12Height"`
-	BEP3Height int64 `mapstructure:"BEP3Height"`
+	BEP3Height  int64 `mapstructure:"BEP3Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {

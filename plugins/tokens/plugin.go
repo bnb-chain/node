@@ -63,7 +63,7 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 			logger.Error("Swap status should be completed or expired", "swapStatus", swapRecord.Status)
 			continue
 		}
-		err := swapKeeper.DeleteSwap(ctx, swapRecord.RandomNumberHash)
+		err := swapKeeper.DeleteSwap(ctx, swapRecord)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Encounter error in deleting swaps which were completed or expired: %s", err.Error()))
 			continue
