@@ -37,6 +37,7 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		ExpireHeight:     ctx.BlockHeight() + int64(msg.TimeSpan),
 		ClosedTime:       0,
 		Status:           Open,
+		Index:            kp.GetIndex(ctx),
 	}
 	err := kp.CreateSwap(ctx, swap)
 	if err != nil {
@@ -78,7 +79,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 	swap.RandomNumber = msg.RandomNumber
 	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.UpdateSwap(ctx, swap)
+	err = kp.CloseSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -108,7 +109,7 @@ func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMs
 
 	swap.Status = Expired
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.UpdateSwap(ctx, swap)
+	err = kp.CloseSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}

@@ -1,6 +1,7 @@
 package swap
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -53,36 +54,34 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	}
 	kvStore.Set(swapHashKey, EncodeAtomicSwap(kp.cdc, *swap))
 
-	swapCreatorKey := GetSwapFromKey(swap.From, swap.RandomNumberHash)
+	swapCreatorKey := GetSwapFromKey(swap.From, swap.Index)
 	kvStore.Set(swapCreatorKey, swap.RandomNumberHash)
 
-	swapReceiverKey := GetSwapToKey(swap.To, swap.RandomNumberHash)
+	swapReceiverKey := GetSwapToKey(swap.To, swap.Index)
 	kvStore.Set(swapReceiverKey, swap.RandomNumberHash)
 
-	if swap.ClosedTime > 0 {
-		timeKey := GetTimeKey(swap.ClosedTime, swap.RandomNumberHash)
-		kvStore.Set(timeKey, swap.RandomNumberHash)
-	}
+	kp.SetIndex(ctx, swap.Index + 1)
 
 	return nil
 }
 
-func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		panic("nil atomic swap pointer")
 	}
+	if swap.ClosedTime <= 0 {
+		return sdk.ErrInternal("Missing swap close time")
+	}
 
 	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
 	if !kvStore.Has(swapHashKey) {
-		return sdk.ErrInternal(fmt.Sprintf("Trying to update non-exist swap %v", swap.RandomNumberHash))
+		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swap %v", swap.RandomNumberHash))
 	}
 	kvStore.Set(swapHashKey, EncodeAtomicSwap(kp.cdc, *swap))
 
-	if swap.ClosedTime > 0 {
-		timeKey := GetTimeKey(swap.ClosedTime, swap.RandomNumberHash)
-		kvStore.Set(timeKey, swap.RandomNumberHash)
-	}
+	timeKey := GetTimeKey(swap.ClosedTime, swap.Index)
+	kvStore.Set(timeKey, swap.RandomNumberHash)
 
 	return nil
 }
@@ -95,16 +94,14 @@ func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
 	kvStore.Delete(swapHashKey)
 
-	swapCreatorKey := GetSwapFromKey(swap.From, swap.RandomNumberHash)
+	swapCreatorKey := GetSwapFromKey(swap.From, swap.Index)
 	kvStore.Delete(swapCreatorKey)
 
-	swapReceiverKey := GetSwapToKey(swap.To, swap.RandomNumberHash)
+	swapReceiverKey := GetSwapToKey(swap.To, swap.Index)
 	kvStore.Delete(swapReceiverKey)
 
-	if swap.ClosedTime > 0 {
-		timeKey := GetTimeKey(swap.ClosedTime, swap.RandomNumberHash)
-		kvStore.Delete(timeKey)
-	}
+	timeKey := GetTimeKey(swap.ClosedTime, swap.Index)
+	kvStore.Delete(timeKey)
 
 	return nil
 }
@@ -134,6 +131,22 @@ func (kp *Keeper) GetSwapToIterator(ctx sdk.Context, addr sdk.AccAddress) (itera
 func (kp *Keeper) GetSwapTimerIterator(ctx sdk.Context) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
 	return sdk.KVStorePrefixIterator(kvStore, GetTimeQueueKey())
+}
+
+func (kp *Keeper) GetIndex(ctx sdk.Context) int64 {
+	kvStore := ctx.KVStore(kp.storeKey)
+	bz := kvStore.Get(SwapIndexKey)
+	if bz == nil {
+		return 0
+	}
+	return int64(binary.BigEndian.Uint64(bz))
+}
+
+func (kp *Keeper) SetIndex(ctx sdk.Context, index int64){
+	kvStore := ctx.KVStore(kp.storeKey)
+	value := make([]byte, 8)
+	binary.BigEndian.PutUint64(value, uint64(index))
+	kvStore.Set(SwapIndexKey, value)
 }
 
 func EncodeAtomicSwap(cdc *codec.Codec, swap AtomicSwap) []byte {

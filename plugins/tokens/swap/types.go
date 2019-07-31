@@ -104,6 +104,7 @@ type AtomicSwap struct {
 	Timestamp        int64   `json:"timestamp"`
 
 	ExpireHeight int64      `json:"expire_height"`
+	Index        int64      `json:"index"`
 	ClosedTime   int64      `json:"closed_time"`
 	Status       SwapStatus `json:"status"`
 }

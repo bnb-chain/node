@@ -100,6 +100,7 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	require.Equal(t, querySwap.Timestamp, swap.Timestamp)
 	require.Equal(t, querySwap.From, swap.From)
 	require.Equal(t, querySwap.To, swap.To)
+	require.Equal(t, querySwap.Index, int64(0))
 
 	iteratorFrom := keeper.GetSwapFromIterator(ctx, acc1.GetAddress())
 	require.True(t, iteratorFrom.Valid())
@@ -158,7 +159,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	querySwap.ClosedTime = time.Now().Unix()
 	querySwap.Status = Completed
 
-	err = keeper.UpdateSwap(ctx, querySwap)
+	err = keeper.CloseSwap(ctx, querySwap)
 	require.NoError(t, err)
 
 	querySwap = keeper.QuerySwap(ctx, randomNumberHash)
@@ -198,6 +199,7 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 		ExpireHeight:     1000,
 		ClosedTime:       0,
 		Status:           Open,
+		Index:            0,
 	}
 	err := keeper.CreateSwap(ctx, swap1)
 	require.NoError(t, err)
@@ -216,9 +218,11 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 		ExpireHeight:     1000,
 		ClosedTime:       0,
 		Status:           Open,
+		Index:            1,
 	}
 	err = keeper.CreateSwap(ctx, swap2)
 	require.NoError(t, err)
+	require.Equal(t, int64(2), keeper.GetIndex(ctx))
 
 	err = keeper.DeleteSwap(ctx, swap1)
 	require.NoError(t, err)
