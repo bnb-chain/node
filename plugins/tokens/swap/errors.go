@@ -19,6 +19,7 @@ const (
 	CodeNonExistRandomNumberHash   sdk.CodeType = 10
 	CodeTooLargeQueryLimit         sdk.CodeType = 11
 	CodeUnexpectedSwapStatus       sdk.CodeType = 12
+	CodeInvalidTimestamp           sdk.CodeType = 13
 )
 
 func ErrInvalidOtherChainAddress(msg string) sdk.Error {
@@ -67,4 +68,8 @@ func ErrTooLargeQueryLimit(msg string) sdk.Error {
 
 func ErrUnexpectedSwapStatus(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeUnexpectedSwapStatus, msg)
+}
+
+func ErrCodeInvalidTimestamp(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidTimestamp, msg)
 }

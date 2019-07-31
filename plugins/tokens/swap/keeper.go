@@ -60,7 +60,7 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	swapReceiverKey := GetSwapToKey(swap.To, swap.Index)
 	kvStore.Set(swapReceiverKey, swap.RandomNumberHash)
 
-	kp.SetIndex(ctx, swap.Index + 1)
+	kp.SetIndex(ctx, swap.Index+1)
 
 	return nil
 }
@@ -142,7 +142,7 @@ func (kp *Keeper) GetIndex(ctx sdk.Context) int64 {
 	return int64(binary.BigEndian.Uint64(bz))
 }
 
-func (kp *Keeper) SetIndex(ctx sdk.Context, index int64){
+func (kp *Keeper) SetIndex(ctx sdk.Context, index int64) {
 	kvStore := ctx.KVStore(kp.storeKey)
 	value := make([]byte, 8)
 	binary.BigEndian.PutUint64(value, uint64(index))

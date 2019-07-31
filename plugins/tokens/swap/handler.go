@@ -25,6 +25,9 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTransferMsg) sdk.Result {
+	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-7200 || msg.Timestamp > ctx.BlockHeader().Time.Unix()+3600 {
+		return ErrCodeInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
+	}
 	swap := &AtomicSwap{
 		From:             msg.From,
 		To:               msg.To,

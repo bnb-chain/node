@@ -1,9 +1,9 @@
 package commands
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -93,7 +93,10 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		timestamp = viper.GetInt64(flagTimestamp)
 	} else {
 		randomeNumber := make([]byte, swap.RandomNumberLength)
-		rand.Read(randomeNumber)
+		length, err := rand.Read(randomeNumber)
+		if err != nil || length != swap.RandomNumberLength {
+			return fmt.Errorf("failed to generate random number")
+		}
 		timestamp = time.Now().Unix()
 		randomNumberHash = swap.CalculteRandomHash(randomeNumber, timestamp)
 
