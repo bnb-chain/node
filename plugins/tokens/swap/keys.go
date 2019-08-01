@@ -6,6 +6,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	Int64Size = 8
+)
+
 var (
 	SwapHashKey      = []byte{0x01}
 	SwapFromQueueKey = []byte{0x02}
@@ -20,7 +24,7 @@ func GetSwapHashKey(randomNumberHash []byte) []byte {
 
 func GetSwapFromKey(addr sdk.AccAddress, index int64) []byte {
 	// prefix + addr + index
-	key := make([]byte, 1+sdk.AddrLen+8)
+	key := make([]byte, 1+sdk.AddrLen+Int64Size)
 	copy(key[:1], SwapFromQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	binary.BigEndian.PutUint64(key[1+sdk.AddrLen:], uint64(index))
@@ -36,7 +40,7 @@ func GetSwapFromQueueKey(addr sdk.AccAddress) []byte {
 
 func GetSwapToKey(addr sdk.AccAddress, index int64) []byte {
 	// prefix + addr + index
-	key := make([]byte, 1+sdk.AddrLen+8)
+	key := make([]byte, 1+sdk.AddrLen+Int64Size)
 	copy(key[:1], SwapToQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	binary.BigEndian.PutUint64(key[1+sdk.AddrLen:], uint64(index))
@@ -52,10 +56,10 @@ func GetSwapToQueueKey(addr sdk.AccAddress) []byte {
 
 func GetTimeKey(unixTime int64, index int64) []byte {
 	// prefix + unixTime + index
-	key := make([]byte, 1+8+8)
+	key := make([]byte, 1+Int64Size+Int64Size)
 	copy(key[:1], SwapTimeKey)
-	binary.BigEndian.PutUint64(key[1:1+8], uint64(unixTime))
-	binary.BigEndian.PutUint64(key[1+8:], uint64(index))
+	binary.BigEndian.PutUint64(key[1:1+Int64Size], uint64(unixTime))
+	binary.BigEndian.PutUint64(key[1+Int64Size:], uint64(index))
 	return key
 }
 

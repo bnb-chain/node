@@ -7,7 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// NewHandler creates a set account flags handler
 func NewHandler(kp Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
@@ -58,7 +57,7 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLockMsg) sdk.Result {
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomeNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomNumberHash %v", msg.RandomNumberHash)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actual it is %s", swap.Status.String())).Result()
@@ -93,7 +92,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMsg) sdk.Result {
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomeNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomNumberHash %v", msg.RandomNumberHash)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actual it is %s", swap.Status.String())).Result()

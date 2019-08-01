@@ -52,7 +52,7 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	if kvStore.Get(swapHashKey) != nil {
 		return ErrDuplicatedRandomNumberHash(fmt.Sprintf("Duplicated random number hash %v", swap.RandomNumberHash))
 	}
-	kvStore.Set(swapHashKey, EncodeAtomicSwap(kp.cdc, *swap))
+	kvStore.Set(swapHashKey, kp.cdc.MustMarshalBinaryBare(*swap))
 
 	swapCreatorKey := GetSwapFromKey(swap.From, swap.Index)
 	kvStore.Set(swapCreatorKey, swap.RandomNumberHash)
@@ -78,7 +78,7 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	if !kvStore.Has(swapHashKey) {
 		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swap %v", swap.RandomNumberHash))
 	}
-	kvStore.Set(swapHashKey, EncodeAtomicSwap(kp.cdc, *swap))
+	kvStore.Set(swapHashKey, kp.cdc.MustMarshalBinaryBare(*swap))
 
 	timeKey := GetTimeKey(swap.ClosedTime, swap.Index)
 	kvStore.Set(timeKey, swap.RandomNumberHash)
@@ -114,7 +114,8 @@ func (kp *Keeper) QuerySwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwa
 	if bz == nil {
 		return nil
 	}
-	swap := DecodeAtomicSwap(kp.cdc, bz)
+	var swap AtomicSwap
+	kp.cdc.MustUnmarshalBinaryBare(bz, &swap)
 	return &swap
 }
 
@@ -147,20 +148,4 @@ func (kp *Keeper) SetIndex(ctx sdk.Context, index int64) {
 	value := make([]byte, 8)
 	binary.BigEndian.PutUint64(value, uint64(index))
 	kvStore.Set(SwapIndexKey, value)
-}
-
-func EncodeAtomicSwap(cdc *codec.Codec, swap AtomicSwap) []byte {
-	bz, err := cdc.MarshalBinaryBare(swap)
-	if err != nil {
-		panic(err)
-	}
-	return bz
-}
-
-func DecodeAtomicSwap(cdc *codec.Codec, bz []byte) (swap AtomicSwap) {
-	err := cdc.UnmarshalBinaryBare(bz, &swap)
-	if err != nil {
-		panic(err)
-	}
-	return
 }

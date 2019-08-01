@@ -15,7 +15,7 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-// QuerySwapReqHandler creates an http request handler to get AtomicSwap record by randomeNumberHash
+// QuerySwapReqHandler creates an http request handler to get AtomicSwap record by randomNumberHash
 func QuerySwapReqHandler(
 	cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	responseType := "application/json"
@@ -53,7 +53,8 @@ func QuerySwapReqHandler(
 			return
 		}
 
-		atomicSwap := swap.DecodeAtomicSwap(cdc, res)
+		var atomicSwap swap.AtomicSwap
+		cdc.MustUnmarshalBinaryBare(res, &atomicSwap)
 		output, err := cdc.MarshalJSON(atomicSwap)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)

@@ -44,11 +44,11 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 
 	for ; iterator.Valid(); iterator.Next() {
 		key := iterator.Key()
-		if len(key) != 1+8+swap.RandomNumberHashLength {
-			logger.Error("Unexpected key length", "expectedLength", 1+8+swap.RandomNumberHashLength, "actualLength", len(key))
+		if len(key) != 1+swap.Int64Size+swap.Int64Size {
+			logger.Error("Unexpected key length", "expectedLength", 1+swap.Int64Size+swap.Int64Size, "actualLength", len(key))
 			continue
 		}
-		swapClosedTime := int64(binary.BigEndian.Uint64(key[1:1+8]))
+		swapClosedTime := int64(binary.BigEndian.Uint64(key[1:1+swap.Int64Size]))
 		// Only delete swaps which were closed one week ago
 		if swapClosedTime > ctx.BlockHeader().Time.Unix() - 86400 * 7 {
 			break

@@ -92,15 +92,15 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		}
 		timestamp = viper.GetInt64(flagTimestamp)
 	} else {
-		randomeNumber := make([]byte, swap.RandomNumberLength)
-		length, err := rand.Read(randomeNumber)
+		randomNumber := make([]byte, swap.RandomNumberLength)
+		length, err := rand.Read(randomNumber)
 		if err != nil || length != swap.RandomNumberLength {
 			return fmt.Errorf("failed to generate random number")
 		}
 		timestamp = time.Now().Unix()
-		randomNumberHash = swap.CalculteRandomHash(randomeNumber, timestamp)
+		randomNumberHash = swap.CalculteRandomHash(randomNumber, timestamp)
 
-		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomeNumber), timestamp, hex.EncodeToString(randomNumberHash)))
+		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}
 	timespan := viper.GetInt64(flagTimespan)
 	// build message
@@ -237,7 +237,8 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no matched swap record")
 	}
 
-	atomicSwap := swap.DecodeAtomicSwap(c.Cdc, res)
+	var atomicSwap swap.AtomicSwap
+	c.Cdc.MustUnmarshalBinaryBare(res, &atomicSwap)
 	var output []byte
 	if cliCtx.Indent {
 		output, err = c.Cdc.MarshalJSONIndent(atomicSwap, "", "  ")
