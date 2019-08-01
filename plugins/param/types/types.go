@@ -36,9 +36,9 @@ var (
 		"timeUnlock":       {},
 		"timeRelock":       {},
 
-		"hashTimerLockTransfer": {},
-		"claimHashTimeLock":     {},
-		"refundLockedAsset":     {},
+		"HTLT": {},
+		"claimHTLT":     {},
+		"refundHTLT":     {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

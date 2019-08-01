@@ -14,8 +14,8 @@ func NewHandler(kp Keeper) sdk.Handler {
 			return handleHashTimerLockTransfer(ctx, kp, msg)
 		case ClaimHashTimerLockMsg:
 			return handleClaimHashTimerLock(ctx, kp, msg)
-		case RefundLockedAssetMsg:
-			return handleRefundLockedAsset(ctx, kp, msg)
+		case RefundHashTimerLockMsg:
+			return handleRefundHashTimerLock(ctx, kp, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized message type: %T", msg)
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -24,7 +24,7 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTransferMsg) sdk.Result {
-	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-7200 || msg.Timestamp > ctx.BlockHeader().Time.Unix()+3600 {
+	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-TwoHour || msg.Timestamp > ctx.BlockHeader().Time.Unix()+OneHour {
 		return ErrCodeInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
 	}
 	swap := &AtomicSwap{
@@ -36,7 +36,7 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		RandomNumberHash: msg.RandomNumberHash,
 		RandomNumber:     nil,
 		Timestamp:        msg.Timestamp,
-		ExpireHeight:     ctx.BlockHeight() + int64(msg.TimeSpan),
+		ExpireHeight:     ctx.BlockHeight() + int64(msg.HeightSpan),
 		ClosedTime:       0,
 		Status:           Open,
 		Index:            kp.GetIndex(ctx),
@@ -66,7 +66,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 		return ErrClaimExpiredSwap(fmt.Sprintf("Swap is expired, expired height %d", swap.ExpireHeight)).Result()
 	}
 
-	if !bytes.Equal(CalculteRandomHash(msg.RandomNumber, swap.Timestamp), msg.RandomNumberHash) {
+	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), msg.RandomNumberHash) {
 		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
 	}
 
@@ -74,7 +74,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 	if err != nil {
 		return err.Result()
 	}
-	if ctx.IsDeliverTx() && kp.addrPool != nil {
+	if ctx.IsDeliverTx() && kp.addrPool != nil && !bytes.Equal(msg.From, swap.To) {
 		kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
 	}
 
@@ -89,7 +89,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 	return sdk.Result{Tags: tag}
 }
 
-func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMsg) sdk.Result {
+func handleRefundHashTimerLock(ctx sdk.Context, kp Keeper, msg RefundHashTimerLockMsg) sdk.Result {
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("There is no swap matched with randomNumberHash %v", msg.RandomNumberHash)).Result()
@@ -105,7 +105,7 @@ func handleRefundLockedAsset(ctx sdk.Context, kp Keeper, msg RefundLockedAssetMs
 	if err != nil {
 		return err.Result()
 	}
-	if ctx.IsDeliverTx() && kp.addrPool != nil {
+	if ctx.IsDeliverTx() && kp.addrPool != nil && !bytes.Equal(msg.From, swap.From) {
 		kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
 	}
 

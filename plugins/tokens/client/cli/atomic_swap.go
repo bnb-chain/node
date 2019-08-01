@@ -19,15 +19,15 @@ import (
 
 const (
 	flagAuto             = "auto"
-	flagFromAddr         = "from-addr"
-	flagToAddr           = "to-addr"
+	flagCreatorAddr      = "creator-addr"
+	flagReceiverAddr     = "receiver-addr"
 	flagOutAmount        = "out-amount"
 	flagInAmount         = "in-amount"
 	flagToOnOtherChain   = "to-on-other-chain"
 	flagRandomNumberHash = "random-number-hash"
 	flagRandomNumber     = "random-number"
 	flagTimestamp        = "timestamp"
-	flagTimespan         = "timespan"
+	flagHeightSpan       = "height-span"
 	flagLimit            = "limit"
 	flagOffset           = "offset"
 	flagStatus           = "swap-status"
@@ -41,13 +41,13 @@ func initiateSwapCmd(cmdr Commander) *cobra.Command {
 	}
 
 	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
-	cmd.Flags().String(flagToAddr, "", "The receiver address of BEP2 token, bech32 encoding")
+	cmd.Flags().String(flagReceiverAddr, "", "The receiver address of BEP2 token, bech32 encoding")
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
 	cmd.Flags().Int64(flagInAmount, 0, "Expected gained token on the other chain, 8 decimals")
 	cmd.Flags().String(flagToOnOtherChain, "", "The receiver address on other chain, like Ethereum, hex encoding and prefix with 0x")
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
-	cmd.Flags().Int64(flagTimespan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
+	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
 
 	return cmd
 }
@@ -60,7 +60,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	to, err := sdk.AccAddressFromBech32(viper.GetString(flagToAddr))
+	to, err := sdk.AccAddressFromBech32(viper.GetString(flagReceiverAddr))
 	if err != nil {
 		return err
 	}
@@ -98,13 +98,13 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate random number")
 		}
 		timestamp = time.Now().Unix()
-		randomNumberHash = swap.CalculteRandomHash(randomNumber, timestamp)
+		randomNumberHash = swap.CalculateRandomHash(randomNumber, timestamp)
 
 		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}
-	timespan := viper.GetInt64(flagTimespan)
+	heightSpan := viper.GetInt64(flagHeightSpan)
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, timespan)
+	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -226,7 +226,7 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	hashKey := swap.GetSwapHashKey(randomNumberHash)
+	hashKey := swap.BuildHashKey(randomNumberHash)
 
 	res, err := cliCtx.QueryStore(hashKey, common.AtomicSwapStoreName)
 	if err != nil {
@@ -250,14 +250,14 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func querySwapsFromCmd(cmdr Commander) *cobra.Command {
+func querySwapsByCreatorCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-swap-from",
-		Short: "Query swaps from the specified address",
-		RunE:  cmdr.querySwapsFrom,
+		Use:   "query-swap-by-creator",
+		Short: "Query swaps by the creator address",
+		RunE:  cmdr.querySwapsByCreator,
 	}
 
-	cmd.Flags().String(flagFromAddr, "", "The from address of swap, bech32 encoding")
+	cmd.Flags().String(flagCreatorAddr, "", "Swap creator address, bech32 encoding")
 	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
 	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
 	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
@@ -265,11 +265,11 @@ func querySwapsFromCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
+func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	fromAddr, err := sdk.AccAddressFromBech32(viper.GetString(flagFromAddr))
+	creator, err := sdk.AccAddressFromBech32(viper.GetString(flagCreatorAddr))
 	if err != nil {
 		return err
 	}
@@ -277,11 +277,11 @@ func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 	offset := viper.GetInt64(flagOffset)
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
-	params := swap.QuerySwapFromParams{
-		From:   fromAddr,
-		Status: swapStatus,
-		Limit:  limit,
-		Offset: offset,
+	params := swap.QuerySwapByCreatorParams{
+		Creator: creator,
+		Status:  swapStatus,
+		Limit:   limit,
+		Offset:  offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -289,7 +289,7 @@ func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapFrom), bz)
+	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapCreator), bz)
 	if err != nil {
 		return err
 	}
@@ -298,14 +298,14 @@ func (c Commander) querySwapsFrom(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func querySwapsToCmd(cmdr Commander) *cobra.Command {
+func querySwapsByReceiverCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-swap-to",
-		Short: "Query swaps to the specified address",
-		RunE:  cmdr.querySwapsTo,
+		Use:   "query-swap-by-receiver",
+		Short: "Query swaps by the receiver address",
+		RunE:  cmdr.querySwapsByReceiver,
 	}
 
-	cmd.Flags().String(flagToAddr, "", "The receiver address of swap, bech32 encoding")
+	cmd.Flags().String(flagReceiverAddr, "", "Swap receiver address, bech32 encoding")
 	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
 	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
 	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
@@ -313,11 +313,11 @@ func querySwapsToCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) querySwapsTo(cmd *cobra.Command, args []string) error {
+func (c Commander) querySwapsByReceiver(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	toAddr, err := sdk.AccAddressFromBech32(viper.GetString(flagToAddr))
+	receiver, err := sdk.AccAddressFromBech32(viper.GetString(flagReceiverAddr))
 	if err != nil {
 		return err
 	}
@@ -325,11 +325,11 @@ func (c Commander) querySwapsTo(cmd *cobra.Command, args []string) error {
 	offset := viper.GetInt64(flagOffset)
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
-	params := swap.QuerySwapToParams{
-		To:     toAddr,
-		Status: swapStatus,
-		Limit:  limit,
-		Offset: offset,
+	params := swap.QuerySwapByReceiverParams{
+		Receiver: receiver,
+		Status:   swapStatus,
+		Limit:    limit,
+		Offset:   offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -337,7 +337,7 @@ func (c Commander) querySwapsTo(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapTo), bz)
+	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapReceiver), bz)
 	if err != nil {
 		return err
 	}

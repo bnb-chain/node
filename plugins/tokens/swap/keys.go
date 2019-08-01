@@ -11,58 +11,58 @@ const (
 )
 
 var (
-	SwapHashKey      = []byte{0x01}
-	SwapFromQueueKey = []byte{0x02}
-	SwapToQueueKey   = []byte{0x03}
-	SwapTimeKey      = []byte{0x04}
-	SwapIndexKey     = []byte{0x05}
+	HashKey              = []byte{0x01}
+	SwapCreatorQueueKey  = []byte{0x02}
+	SwapReceiverQueueKey = []byte{0x03}
+	SwapCloseTimeKey     = []byte{0x04}
+	SwapIndexKey         = []byte{0x05}
 )
 
-func GetSwapHashKey(randomNumberHash []byte) []byte {
-	return append(SwapHashKey, randomNumberHash...)
+func BuildHashKey(randomNumberHash []byte) []byte {
+	return append(HashKey, randomNumberHash...)
 }
 
-func GetSwapFromKey(addr sdk.AccAddress, index int64) []byte {
+func BuildSwapCreatorKey(addr sdk.AccAddress, index int64) []byte {
 	// prefix + addr + index
 	key := make([]byte, 1+sdk.AddrLen+Int64Size)
-	copy(key[:1], SwapFromQueueKey)
+	copy(key[:1], SwapCreatorQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	binary.BigEndian.PutUint64(key[1+sdk.AddrLen:], uint64(index))
 	return key
 }
 
-func GetSwapFromQueueKey(addr sdk.AccAddress) []byte {
+func BuildSwapCreatorQueueKey(addr sdk.AccAddress) []byte {
 	key := make([]byte, 1+sdk.AddrLen)
-	copy(key[:1], SwapFromQueueKey)
+	copy(key[:1], SwapCreatorQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	return key
 }
 
-func GetSwapToKey(addr sdk.AccAddress, index int64) []byte {
+func BuildSwapReceiverKey(addr sdk.AccAddress, index int64) []byte {
 	// prefix + addr + index
 	key := make([]byte, 1+sdk.AddrLen+Int64Size)
-	copy(key[:1], SwapToQueueKey)
+	copy(key[:1], SwapReceiverQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	binary.BigEndian.PutUint64(key[1+sdk.AddrLen:], uint64(index))
 	return key
 }
 
-func GetSwapToQueueKey(addr sdk.AccAddress) []byte {
+func BuildSwapReceiverQueueKey(addr sdk.AccAddress) []byte {
 	key := make([]byte, 1+sdk.AddrLen)
-	copy(key[:1], SwapToQueueKey)
+	copy(key[:1], SwapReceiverQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	return key
 }
 
-func GetTimeKey(unixTime int64, index int64) []byte {
+func BuildCloseTimeKey(unixTime int64, index int64) []byte {
 	// prefix + unixTime + index
 	key := make([]byte, 1+Int64Size+Int64Size)
-	copy(key[:1], SwapTimeKey)
+	copy(key[:1], SwapCloseTimeKey)
 	binary.BigEndian.PutUint64(key[1:1+Int64Size], uint64(unixTime))
 	binary.BigEndian.PutUint64(key[1+Int64Size:], uint64(index))
 	return key
 }
 
-func GetTimeQueueKey() []byte {
-	return SwapTimeKey
+func BuildCloseTimeQueueKey() []byte {
+	return SwapCloseTimeKey
 }

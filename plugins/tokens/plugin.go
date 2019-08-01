@@ -3,6 +3,7 @@ package tokens
 import (
 	"encoding/binary"
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -39,7 +40,7 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 
 	logger.Info("Delete swaps which are completed or expired", "blockHeight", ctx.BlockHeight())
 
-	iterator := swapKeeper.GetSwapTimerIterator(ctx)
+	iterator := swapKeeper.GetSwapCloseTimeIterator(ctx)
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
@@ -48,9 +49,9 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 			logger.Error("Unexpected key length", "expectedLength", 1+swap.Int64Size+swap.Int64Size, "actualLength", len(key))
 			continue
 		}
-		swapClosedTime := int64(binary.BigEndian.Uint64(key[1:1+swap.Int64Size]))
+		swapClosedTime := int64(binary.BigEndian.Uint64(key[1 : 1+swap.Int64Size]))
 		// Only delete swaps which were closed one week ago
-		if swapClosedTime > ctx.BlockHeader().Time.Unix() - 86400 * 7 {
+		if swapClosedTime > ctx.BlockHeader().Time.Unix()-86400*7 {
 			break
 		}
 		randomNumberHash := iterator.Value()
@@ -69,5 +70,4 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 			continue
 		}
 	}
-
 }

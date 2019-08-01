@@ -6,7 +6,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 )
 
-func CalculteRandomHash(randomNumber []byte, timestamp int64) []byte {
+func CalculateRandomHash(randomNumber []byte, timestamp int64) []byte {
 	randomNumberAndTimestamp := make([]byte, RandomNumberLength+8)
 	copy(randomNumberAndTimestamp[:RandomNumberLength], randomNumber)
 	binary.BigEndian.PutUint64(randomNumberAndTimestamp[RandomNumberLength:], uint64(timestamp))

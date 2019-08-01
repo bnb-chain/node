@@ -20,7 +20,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 		Timestamp        int64
 		OutAmount        sdk.Coin
 		InAmount         int64
-		TimeSpan         int64
+		HeightSpan       int64
 		Pass             bool
 		ErrorCode        sdk.CodeType
 	}{
@@ -32,7 +32,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         1000,
+			HeightSpan:       1000,
 			Pass:             true,
 			ErrorCode:        0,
 		},
@@ -44,7 +44,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         1000,
+			HeightSpan:       1000,
 			Pass:             false,
 			ErrorCode:        0x7,
 		},
@@ -56,7 +56,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         1000,
+			HeightSpan:       1000,
 			Pass:             false,
 			ErrorCode:        0x1,
 		},
@@ -68,7 +68,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         1000,
+			HeightSpan:       1000,
 			Pass:             false,
 			ErrorCode:        0x2,
 		},
@@ -80,7 +80,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", -10000},
 			InAmount:         10000,
-			TimeSpan:         1000,
+			HeightSpan:       1000,
 			Pass:             false,
 			ErrorCode:        0x4,
 		},
@@ -92,7 +92,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         100,
+			HeightSpan:       100,
 			Pass:             false,
 			ErrorCode:        0x5,
 		},
@@ -104,7 +104,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			Timestamp:        1564471835,
 			OutAmount:        sdk.Coin{"BNB", 10000},
 			InAmount:         10000,
-			TimeSpan:         1000000,
+			HeightSpan:       1000000,
 			Pass:             false,
 			ErrorCode:        0x5,
 		},
@@ -113,7 +113,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 	for i, tc := range tests {
 		toOnOtherChain, _ := hex.DecodeString(tc.ToOnOtherChain)
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewHashTimerLockTransferMsg(tc.From, tc.To, toOnOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.InAmount, tc.TimeSpan)
+		msg := NewHashTimerLockTransferMsg(tc.From, tc.To, toOnOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.InAmount, tc.HeightSpan)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
