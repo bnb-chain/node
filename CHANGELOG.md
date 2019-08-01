@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1-hf.1
+BUG FIXES
+* [\#635](https://github.com/binance-chain/node/pull/635) fix panic in pre-check is not recovered
+
 ## 0.6.1
 FEATURES
 * [\#605](https://github.com/binance-chain/node/pull/605) [Account] accounts can set flags to turn on memo validation
