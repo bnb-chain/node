@@ -12,6 +12,6 @@ func TestCalculteRandomHash(t *testing.T) {
 	randomNumber, _ := hex.DecodeString(randomNumberStr)
 	timestamp := int64(1564471835)
 
-	randomNumberHash := CalculteRandomHash(randomNumber, timestamp)
+	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
 	require.Equal(t, "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167", hex.EncodeToString(randomNumberHash))
 }

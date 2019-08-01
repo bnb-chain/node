@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	AtomicSwapRoute       = "atomicSwap"
-	HashTimerLockTransfer = "hashTimerLockTransfer"
-	ClaimHashTimeLock     = "claimHashTimeLock"
-	RefundLockedAsset     = "refundLockedAsset"
+	AtomicSwapRoute = "atomicSwap"
+	HTLT            = "HTLT"
+	ClaimHTLT       = "claimHTLT"
+	RefundHTLT      = "refundHTLT"
 )
 
 var _ sdk.Msg = HashTimerLockTransferMsg{}
@@ -42,9 +42,9 @@ func NewHashTimerLockTransferMsg(from, to sdk.AccAddress, toOnOtherChain []byte,
 }
 
 func (msg HashTimerLockTransferMsg) Route() string { return AtomicSwapRoute }
-func (msg HashTimerLockTransferMsg) Type() string  { return HashTimerLockTransfer }
+func (msg HashTimerLockTransferMsg) Type() string  { return HTLT }
 func (msg HashTimerLockTransferMsg) String() string {
-	return fmt.Sprintf("hashTimerLockTransfer{%v#%v#%v#%v#%v#%v#%v#%v}", msg.From, msg.To, msg.ToOnOtherChain, msg.RandomNumberHash,
+	return fmt.Sprintf("HTLT{%v#%v#%v#%v#%v#%v#%v#%v}", msg.From, msg.To, msg.ToOnOtherChain, msg.RandomNumberHash,
 		msg.Timestamp, msg.OutAmount, msg.InAmount, msg.TimeSpan)
 }
 func (msg HashTimerLockTransferMsg) GetInvolvedAddresses() []sdk.AccAddress {
@@ -99,9 +99,9 @@ func NewClaimHashTimerLockMsg(from sdk.AccAddress, randomNumberHash, randomNumbe
 }
 
 func (msg ClaimHashTimerLockMsg) Route() string { return AtomicSwapRoute }
-func (msg ClaimHashTimerLockMsg) Type() string  { return ClaimHashTimeLock }
+func (msg ClaimHashTimerLockMsg) Type() string  { return ClaimHTLT }
 func (msg ClaimHashTimerLockMsg) String() string {
-	return fmt.Sprintf("claimHashTimeLock{%v#%v#%v}", msg.From, msg.RandomNumberHash, msg.RandomNumber)
+	return fmt.Sprintf("claimHTLT{%v#%v#%v}", msg.From, msg.RandomNumberHash, msg.RandomNumber)
 }
 func (msg ClaimHashTimerLockMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return append(msg.GetSigners(), AtomicSwapCoinsAccAddr)
@@ -129,31 +129,31 @@ func (msg ClaimHashTimerLockMsg) GetSignBytes() []byte {
 	return b
 }
 
-var _ sdk.Msg = RefundLockedAssetMsg{}
+var _ sdk.Msg = RefundHashTimerLockMsg{}
 
-type RefundLockedAssetMsg struct {
+type RefundHashTimerLockMsg struct {
 	From             sdk.AccAddress `json:"from"`
 	RandomNumberHash HexData        `json:"random_number_hash"`
 }
 
-func NewRefundLockedAssetMsg(from sdk.AccAddress, randomNumberHash []byte) RefundLockedAssetMsg {
-	return RefundLockedAssetMsg{
+func NewRefundLockedAssetMsg(from sdk.AccAddress, randomNumberHash []byte) RefundHashTimerLockMsg {
+	return RefundHashTimerLockMsg{
 		From:             from,
 		RandomNumberHash: randomNumberHash,
 	}
 }
 
-func (msg RefundLockedAssetMsg) Route() string { return AtomicSwapRoute }
-func (msg RefundLockedAssetMsg) Type() string  { return RefundLockedAsset }
-func (msg RefundLockedAssetMsg) String() string {
-	return fmt.Sprintf("refundLockedAsset{%v#%v}", msg.From, msg.RandomNumberHash)
+func (msg RefundHashTimerLockMsg) Route() string { return AtomicSwapRoute }
+func (msg RefundHashTimerLockMsg) Type() string  { return RefundHTLT }
+func (msg RefundHashTimerLockMsg) String() string {
+	return fmt.Sprintf("refundHTLT{%v#%v}", msg.From, msg.RandomNumberHash)
 }
-func (msg RefundLockedAssetMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg RefundHashTimerLockMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return append(msg.GetSigners(), AtomicSwapCoinsAccAddr)
 }
-func (msg RefundLockedAssetMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
+func (msg RefundHashTimerLockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
-func (msg RefundLockedAssetMsg) ValidateBasic() sdk.Error {
+func (msg RefundHashTimerLockMsg) ValidateBasic() sdk.Error {
 	if len(msg.From) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(fmt.Sprintf("Expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.From)))
 	}
@@ -163,7 +163,7 @@ func (msg RefundLockedAssetMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg RefundLockedAssetMsg) GetSignBytes() []byte {
+func (msg RefundHashTimerLockMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)

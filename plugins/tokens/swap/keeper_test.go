@@ -1,6 +1,7 @@
 package swap
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"os"
 	"testing"
@@ -167,6 +168,10 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 
 	iteratorTime := keeper.GetSwapTimerIterator(ctx)
 	require.True(t, iteratorTime.Valid())
+	key := iteratorTime.Key()
+	require.Equal(t, 1+Int64Size+Int64Size, len(key))
+	swapClosedTime := int64(binary.BigEndian.Uint64(key[1:1+Int64Size]))
+	require.Equal(t, querySwap.ClosedTime, swapClosedTime)
 	require.Equal(t, []byte(swap.RandomNumberHash), iteratorTime.Value())
 	iteratorTime.Next()
 	require.False(t, iteratorTime.Valid())

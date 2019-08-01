@@ -273,7 +273,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.HashTimerLockTransferMsg{}.Type())
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.ClaimHashTimerLockMsg{}.Type())
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.RefundLockedAssetMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3, swap.RefundHashTimerLockMsg{}.Type())
 }
 
 func (app *BinanceChain) initRunningMode() {

@@ -98,7 +98,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate random number")
 		}
 		timestamp = time.Now().Unix()
-		randomNumberHash = swap.CalculteRandomHash(randomNumber, timestamp)
+		randomNumberHash = swap.CalculateRandomHash(randomNumber, timestamp)
 
 		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}

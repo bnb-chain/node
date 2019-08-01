@@ -55,7 +55,7 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		swapFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: swap.HashTimerLockTransferMsg{}.Type(), Fee: HashTimerLockTransferFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: swap.ClaimHashTimerLockMsg{}.Type(), Fee: ClaimHashTimeLockFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.RefundLockedAssetMsg{}.Type(), Fee: RefundLockedAssetFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.RefundHashTimerLockMsg{}.Type(), Fee: RefundHashTimeLockFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
@@ -79,16 +79,16 @@ func init() {
 		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
 		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
-		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
-		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
-		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
-		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
-		swap.HashTimerLockTransfer:        fees.FixedFeeCalculatorGen,
-		swap.ClaimHashTimeLock:            fees.FixedFeeCalculatorGen,
-		swap.RefundLockedAsset:            fees.FixedFeeCalculatorGen,
+		issue.MintMsgType:               fees.FixedFeeCalculatorGen,
+		burn.BurnRoute:                  fees.FixedFeeCalculatorGen,
+		account.SetAccountFlagsMsgType:  fees.FixedFeeCalculatorGen,
+		freeze.FreezeRoute:              fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():           tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                       fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
 	}
 }

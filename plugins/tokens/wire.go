@@ -21,5 +21,5 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(timelock.TimeRelockMsg{}, "tokens/TimeRelockMsg", nil)
 	cdc.RegisterConcrete(swap.HashTimerLockTransferMsg{}, "tokens/HashTimerLockTransferMsg", nil)
 	cdc.RegisterConcrete(swap.ClaimHashTimerLockMsg{}, "tokens/ClaimHashTimerLockMsg", nil)
-	cdc.RegisterConcrete(swap.RefundLockedAssetMsg{}, "tokens/RefundLockedAssetMsg", nil)
+	cdc.RegisterConcrete(swap.RefundHashTimerLockMsg{}, "tokens/RefundHashTimerLockMsg", nil)
 }
