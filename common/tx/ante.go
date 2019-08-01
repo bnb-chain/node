@@ -61,11 +61,18 @@ func InitSigCache(size int) {
 
 // this function is not implemented in AnteHandler in BaseApp.
 func NewTxPreChecker() sdk.PreChecker {
-	return func(ctx sdk.Context, txBytes []byte, tx sdk.Tx) sdk.Result {
+	return func(ctx sdk.Context, txBytes []byte, tx sdk.Tx) (res sdk.Result) {
 		stdTx, ok := tx.(auth.StdTx)
 		if !ok {
 			return sdk.ErrInternal("tx must be StdTx").Result()
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				ctx.Logger().Error("failed to pre-check tx", "err", r)
+				res = sdk.ErrInternal("failed to pre-check tx").Result()
+			}
+		}()
 
 		err := validateBasic(stdTx)
 		if err != nil {
@@ -109,8 +116,9 @@ func NewTxPreChecker() sdk.PreChecker {
 // and deducts fees from the first signer.
 // NOTE: Receiving the `NewOrder` dependency here avoids an import cycle.
 // nolint: gocyclo
-// TODO: remove gas
-func NewAnteHandler(am auth.AccountMapper, orderMsgType string) sdk.AnteHandler {
+//
+// panic thrown in this function will be caught in RunTx
+func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 	return func(
 		ctx sdk.Context, tx sdk.Tx, mode sdk.RunTxMode,
 	) (newCtx sdk.Context, res sdk.Result, abort bool) {
@@ -210,6 +218,11 @@ func validateBasic(tx auth.StdTx) (err sdk.Error) {
 	}
 
 	// Assert that number of signatures is correct.
+	for _, msg := range tx.GetMsgs() {
+		if msg == nil {
+			return sdk.ErrUnknownRequest("msg should not be nil")
+		}
+	}
 	signerAddrs := tx.GetSigners()
 	if len(sigs) != len(signerAddrs) {
 		return sdk.ErrUnauthorized("wrong number of signers")
