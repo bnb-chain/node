@@ -40,7 +40,7 @@ func QuerySwapReqHandler(
 			throw(w, http.StatusBadRequest, err)
 			return
 		}
-		hashKey := swap.GetSwapHashKey(randomNumberHash)
+		hashKey := swap.BuildHashKey(randomNumberHash)
 
 		res, err := ctx.QueryStore(hashKey, common.AtomicSwapStoreName)
 		if err != nil {

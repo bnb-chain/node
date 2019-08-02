@@ -43,8 +43,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			queryTimeLocksCmd(cmdr),
 			queryTimeLockCmd(cmdr),
 			querySwapCmd(cmdr),
-			querySwapsToCmd(cmdr),
-			querySwapsFromCmd(cmdr))...)
+			querySwapsByReceiverCmd(cmdr),
+			querySwapsByCreatorCmd(cmdr))...)
 
 	tokenCmd.AddCommand(
 		client.PostCommands(MultiSendCmd(cdc))...,

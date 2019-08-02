@@ -151,10 +151,10 @@ func (s *server) handleQuerySwapReq(cdc *wire.Codec, ctx context.CLIContext) htt
 	return tksapi.QuerySwapReqHandler(cdc, ctx)
 }
 
-func (s *server) handleQuerySwapsFromReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return tksapi.QuerySwapsFromReqHandler(cdc, ctx)
+func (s *server) handleQuerySwapsByCreatorReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.QuerySwapsByCreatorReqHandler(cdc, ctx)
 }
 
-func (s *server) handleQuerySwapsToReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return tksapi.QuerySwapsToReqHandler(cdc, ctx)
+func (s *server) handleQuerySwapsByReceiverReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.QuerySwapsByReceiverReqHandler(cdc, ctx)
 }

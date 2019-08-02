@@ -15,6 +15,11 @@ import (
 	bnclog "github.com/binance-chain/node/common/log"
 )
 
+const (
+	OneHour = 3600
+	TwoHour = 7200
+)
+
 var (
 	// bnb prefix address:  bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u
 	// tbnb prefix address: tbnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4ffasp3d
@@ -48,16 +53,16 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 		panic("nil empty swap pointer")
 	}
 
-	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
-	if kvStore.Get(swapHashKey) != nil {
+	hashKey := BuildHashKey(swap.RandomNumberHash)
+	if kvStore.Get(hashKey) != nil {
 		return ErrDuplicatedRandomNumberHash(fmt.Sprintf("Duplicated random number hash %v", swap.RandomNumberHash))
 	}
-	kvStore.Set(swapHashKey, kp.cdc.MustMarshalBinaryBare(*swap))
+	kvStore.Set(hashKey, kp.cdc.MustMarshalBinaryBare(*swap))
 
-	swapCreatorKey := GetSwapFromKey(swap.From, swap.Index)
+	swapCreatorKey := BuildSwapCreatorKey(swap.From, swap.Index)
 	kvStore.Set(swapCreatorKey, swap.RandomNumberHash)
 
-	swapReceiverKey := GetSwapToKey(swap.To, swap.Index)
+	swapReceiverKey := BuildSwapReceiverKey(swap.To, swap.Index)
 	kvStore.Set(swapReceiverKey, swap.RandomNumberHash)
 
 	kp.SetIndex(ctx, swap.Index+1)
@@ -74,14 +79,14 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 		return sdk.ErrInternal("Missing swap close time")
 	}
 
-	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
-	if !kvStore.Has(swapHashKey) {
+	hashKey := BuildHashKey(swap.RandomNumberHash)
+	if !kvStore.Has(hashKey) {
 		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swap %v", swap.RandomNumberHash))
 	}
-	kvStore.Set(swapHashKey, kp.cdc.MustMarshalBinaryBare(*swap))
+	kvStore.Set(hashKey, kp.cdc.MustMarshalBinaryBare(*swap))
 
-	timeKey := GetTimeKey(swap.ClosedTime, swap.Index)
-	kvStore.Set(timeKey, swap.RandomNumberHash)
+	closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
+	kvStore.Set(closeTimeKey, swap.RandomNumberHash)
 
 	return nil
 }
@@ -91,17 +96,17 @@ func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		panic("nil atomic swap pointer")
 	}
-	swapHashKey := GetSwapHashKey(swap.RandomNumberHash)
-	kvStore.Delete(swapHashKey)
+	hashKey := BuildHashKey(swap.RandomNumberHash)
+	kvStore.Delete(hashKey)
 
-	swapCreatorKey := GetSwapFromKey(swap.From, swap.Index)
+	swapCreatorKey := BuildSwapCreatorKey(swap.From, swap.Index)
 	kvStore.Delete(swapCreatorKey)
 
-	swapReceiverKey := GetSwapToKey(swap.To, swap.Index)
+	swapReceiverKey := BuildSwapReceiverKey(swap.To, swap.Index)
 	kvStore.Delete(swapReceiverKey)
 
-	timeKey := GetTimeKey(swap.ClosedTime, swap.Index)
-	kvStore.Delete(timeKey)
+	closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
+	kvStore.Delete(closeTimeKey)
 
 	return nil
 }
@@ -109,8 +114,8 @@ func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) QuerySwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwap {
 	kvStore := ctx.KVStore(kp.storeKey)
 
-	swapHashKey := GetSwapHashKey(randomNumberHash)
-	bz := kvStore.Get(swapHashKey)
+	hashKey := BuildHashKey(randomNumberHash)
+	bz := kvStore.Get(hashKey)
 	if bz == nil {
 		return nil
 	}
@@ -119,19 +124,19 @@ func (kp *Keeper) QuerySwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwa
 	return &swap
 }
 
-func (kp *Keeper) GetSwapFromIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
+func (kp *Keeper) GetSwapCreatorIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
-	return sdk.KVStorePrefixIterator(kvStore, GetSwapFromQueueKey(addr))
+	return sdk.KVStorePrefixIterator(kvStore, BuildSwapCreatorQueueKey(addr))
 }
 
-func (kp *Keeper) GetSwapToIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
+func (kp *Keeper) GetSwapReceiverIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
-	return sdk.KVStorePrefixIterator(kvStore, GetSwapToQueueKey(addr))
+	return sdk.KVStorePrefixIterator(kvStore, BuildSwapReceiverQueueKey(addr))
 }
 
-func (kp *Keeper) GetSwapTimerIterator(ctx sdk.Context) (iterator store.Iterator) {
+func (kp *Keeper) GetSwapCloseTimeIterator(ctx sdk.Context) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
-	return sdk.KVStorePrefixIterator(kvStore, GetTimeQueueKey())
+	return sdk.KVStorePrefixIterator(kvStore, BuildCloseTimeQueueKey())
 }
 
 func (kp *Keeper) GetIndex(ctx sdk.Context) int64 {

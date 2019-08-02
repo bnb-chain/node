@@ -15,8 +15,8 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-// QuerySwapsToReqHandler creates an http request handler to
-func QuerySwapsToReqHandler(
+// QuerySwapsByCreatorReqHandler creates an http request handler to
+func QuerySwapsByCreatorReqHandler(
 	cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	responseType := "application/json"
 
@@ -30,32 +30,33 @@ func QuerySwapsToReqHandler(
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
-		toAddr, err := sdk.AccAddressFromBech32(vars["toAddr"])
+		creatorAddr, err := sdk.AccAddressFromBech32(vars["creatorAddr"])
 		if err != nil {
 			throw(w, http.StatusBadRequest, err)
 			return
 		}
+
 		swapStatus := swap.NewSwapStatusFromString(vars["swapStatus"])
 		limitStr := r.FormValue("limit")
 		offsetStr := r.FormValue("offset")
 
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			throw(w, http.StatusBadRequest, fmt.Errorf("invalid limit"))
+			throw(w, http.StatusExpectationFailed, fmt.Errorf("invalid limit"))
 			return
 		}
 
 		offset, err := strconv.Atoi(offsetStr)
 		if err != nil {
-			throw(w, http.StatusBadRequest, fmt.Errorf("invalid offset"))
+			throw(w, http.StatusExpectationFailed, fmt.Errorf("invalid offset"))
 			return
 		}
 
-		params := swap.QuerySwapToParams{
-			To:     toAddr,
-			Status: swapStatus,
-			Limit:  int64(limit),
-			Offset: int64(offset),
+		params := swap.QuerySwapByCreatorParams{
+			Creator: creatorAddr,
+			Status:  swapStatus,
+			Limit:   int64(limit),
+			Offset:  int64(offset),
 		}
 
 		bz, err := cdc.MarshalJSON(params)
@@ -64,7 +65,7 @@ func QuerySwapsToReqHandler(
 			return
 		}
 
-		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapTo), bz)
+		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapCreator), bz)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
