@@ -102,6 +102,9 @@ func enableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 				}
 				flags = appAccount.GetFlags()
 			}
+			if flags == (flags | scripts.TransferMemoCheckerFlag) {
+				return fmt.Errorf("transfer memo checker flag has already been enabled")
+			}
 			flags = flags | scripts.TransferMemoCheckerFlag
 			// build message
 			msg := account.NewSetAccountFlagsMsg(from, flags)
@@ -162,6 +165,9 @@ func disableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 				flags = appAccount.GetFlags()
 			}
 			invMemoCheck := ^scripts.TransferMemoCheckerFlag
+			if flags == (flags & invMemoCheck) {
+				return fmt.Errorf("transfer memo checker flag has already been disabled")
+			}
 			flags = flags & invMemoCheck
 			// build message
 			msg := account.NewSetAccountFlagsMsg(from, flags)
