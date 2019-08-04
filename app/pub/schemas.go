@@ -6,7 +6,7 @@ package pub
 // put old version into pub/schemas with version suffixed to filename for tracking historical version
 
 // Backward compatibility:
-// 1. publisher add field, consumer should initialize two decoder with two publisher schema, choose which decoded should be used by `lastestSchemaVersion` component in kafka message Key
+// 1. publisher add field, consumer should initialize two decoder with two publisher schema, choose which decoder should be used by `lastestSchemaVersion` component in kafka message Key
 // 2. consumer add field, consumer should initialize one decode with publisher schema and consumer schema. In which, consumer schema should define default value for added field
 
 const (
@@ -264,6 +264,7 @@ const (
 						"namespace": "com.company",
 						"fields": [
 							{ "name": "txhash", "type": "string" },
+							{ "name": "memo", "type": "string" },
 							{ "name": "from", "type": "string" },
 							{ "name": "to", 
                   				"type": {

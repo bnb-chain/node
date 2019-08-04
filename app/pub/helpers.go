@@ -46,8 +46,16 @@ func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
 	txs := pool.GetTxs()
 	txs.Range(func(key, value interface{}) bool {
 		txhash := key.(string)
-		t := value.(sdk.Tx)
-		msgs := t.GetMsgs()
+		stdTx, ok := value.(auth.StdTx)
+		var memo string
+		if ok {
+			memo = stdTx.GetMemo()
+		} else {
+			Logger.Error("tx is not an auth.StdTx", "hash", txhash)
+			return true
+		}
+
+		msgs := stdTx.GetMsgs()
 		for _, m := range msgs {
 			msg, ok := m.(bank.MsgSend)
 			if !ok {
@@ -61,7 +69,7 @@ func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
 				}
 				receivers = append(receivers, Receiver{Addr: o.Address.String(), Coins: coins})
 			}
-			transferToPublish = append(transferToPublish, Transfer{TxHash: txhash, From: msg.Inputs[0].Address.String(), To: receivers})
+			transferToPublish = append(transferToPublish, Transfer{TxHash: txhash, Memo: memo, From: msg.Inputs[0].Address.String(), To: receivers})
 		}
 		return true
 	})
