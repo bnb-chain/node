@@ -303,157 +303,43 @@ const (
     `
 	blockDatasSchema = `
 		{
-			"namespace":"com.company",
-			"type":"record",
-			"name":"blockData",
-			"doc":"The fields in this record contain information about the data in the single block of the Binance Chain.",
-			"fields":[
-				{
-					"name":"chainId",
-					"type":"string"
-				},
-				{
-					"name":"cryptoBlock",
-					"type":{
-						"type":"record",
-						"name":"CryptoBlock",
-						"doc":"This contains information for the given block or channel with all transactions within it.",
-						"fields":[
-							{
-								"name":"blockHash",
-								"type":"string",
-								"doc":"Hash of this block"
-							},
-							{
-								"name":"parentHash",
-								"type":"string",
-								"doc":"Hash of parent block"
-							},
-							{
-								"name":"blockHeight",
-								"type":"long",
-								"doc":"Height of this block"
-							},
-							{
-								"name":"timestamp",
-								"type":"string",
-								"doc":"Block time"
-							},
-							{
-								"name":"txTotal",
-								"type":"long",
-								"default":0,
-								"doc":"Overall tx count, including this block"
-							},
-							{
-								"name":"bnbBlockMeta",
-								"type":{
-									"type":"record",
-									"name":"bnbBlockMeta",
-									"doc":"binance-specific block data",
-									"fields":[
-										{
-											"name":"lastCommitHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"dataHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"validatorsHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"nextValidatorsHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"consensusHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"appHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"lastResultsHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"evidenceHash",
-											"type":"string",
-											"default":""
-										},
-										{
-											"name":"proposerAddress",
-											"type":"string",
-											"default":""
-										}
-									]
-								}
-							},
-							{
-								"name":"transactions",
-								"type":{
-									"type":"array",
-									"doc":"All transactions in the block",
-									"items":{
-										"name":"cryptoTx",
-										"type":"record",
-										"doc":"Array of fields contained within the transaction.",
-										"fields":[
-											{
-												"name":"txHash",
-												"type":"string"
-											},
-											{
-												"name":"fee",
-												"type":"string",
-												"default":"",
-												"doc":"Transaction fee"
-											},
-											{
-												"name":"inputs",
-												"type":{
-													"type":"array",
-													"doc":"Inputs into the transaction",
-													"items":{
-														"name":"txLineItem",
-														"type":"record",
-														"fields":[
-															{
-																"name":"address",
-																"type":"string"
-															},
-															{
-																"name":"coins",
-																"type":{
-																	"type":"array",
-																	"items":{
-																		"type":"record",
-																		"name":"Coin",
-																		"namespace":"com.company",
-																		"fields":[
-																			{
-																				"name":"denom",
-																				"type":"string"
-																			},
-																			{
-																				"name":"amount",
-																				"type":"long"
-																			}
-																		]
-																	}
-																}
-															}
+			"type": "record",
+			"name": "Transfers",
+			"namespace": "com.company",
+			"fields": [
+				{ "name": "height", "type": "long"},
+				{ "name": "num", "type": "int" },
+				{ "name": "timestamp", "type": "long" },
+				{ "name": "transfers",
+				  "type": {	
+				  	"type": "array",
+					"items": {
+						"type": "record",
+						"name": "Transfer",
+						"namespace": "com.company",
+						"fields": [
+							{ "name": "txhash", "type": "string" },
+							{ "name": "memo", "type": "string" },
+							{ "name": "from", "type": "string" },
+							{ "name": "to", 
+                  				"type": {
+ 									"type": "array",
+                    				"items": {
+										"type": "record",
+                       				 	"name": "Receiver",
+										"namespace": "com.company",
+										"fields": [
+											{ "name": "addr", "type": "string" },
+											{ "name": "coins",
+												"type": {
+													"type": "array",
+                                  					"items": {
+														"type": "record",
+														"name": "Coin",
+														"namespace": "com.company",
+														"fields": [
+															{ "name": "denom", "type": "string" },
+															{ "name": "amount", "type": "long" }
 														]
 													}
 												}

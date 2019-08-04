@@ -10,9 +10,7 @@ import (
 
 // queryOrderBook queries the store for the serialized order book for a given pair.
 func queryOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string, levels int) (*[]byte, error) {
-	var path string
-	path = fmt.Sprintf("dex/orderbook/%s/%d", pair, levels)
-	bz, err := ctx.Query(path, nil)
+	bz, err := ctx.Query(fmt.Sprintf("dex/orderbook/%s/%d", pair, levels), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -108,8 +108,8 @@ func TestBlockFeeMarshaling(t *testing.T) {
 }
 
 func TestTransferMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
-	msg := Transfers{42, 20, 1000, []Transfer{{TxHash: "123456ABCDE", Memo: "1234", From: "", To: []Receiver{{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, {"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
+	publisher := NewKafkaMarketDataPublisher(Logger, "")
+	msg := Transfers{42, 20, 1000, []Transfer{{TxHash: "123456ABCDE", Memo: "1234", From: "", To: []Receiver{Receiver{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, Receiver{"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
 	_, err := publisher.marshal(&msg, transferTpe)
 	if err != nil {
 		t.Fatal(err)

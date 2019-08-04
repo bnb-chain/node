@@ -58,7 +58,6 @@ var latestSchemaVersions = map[msgType]int{
 	executionResultTpe: 1,
 	blockFeeTpe:        0,
 	transferTpe:        1,
-	blockTpe:           0,
 }
 
 type AvroOrJsonMsg interface {

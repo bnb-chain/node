@@ -83,14 +83,6 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				Value: bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
-			if queryPrefix == DexMiniAbciQueryPrefix {
-				return &abci.ResponseQuery{
-					Code: uint32(sdk.ABCICodeOK),
-					Info: fmt.Sprintf(
-						"Unknown `%s` query path: %v",
-						queryPrefix, path),
-				}
-			}
 			//TODO: sync lock, validate pair
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
@@ -116,7 +108,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 					levelLimit = l
 				}
 			}
-			levels, pendingMatch := keeper.GetOrderBookLevels(pair, levelLimit)
+			levels := keeper.GetOrderBookLevels(pair, levelLimit)
 			book := store.OrderBook{
 				Height:       height,
 				Levels:       levels,
