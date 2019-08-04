@@ -43,6 +43,7 @@ sed -i -e "s/publishBlockFee = false/publishBlockFee = true/g" ${witnesshome}/co
 sed -i -e "s/accountBalanceTopic = \"accounts\"/accountBalanceTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/orderBookTopic = \"orders\"/orderBookTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/orderUpdatesTopic = \"orders\"/orderUpdatesTopic = \"test\"/g" ${witnesshome}/config/app.toml
+sed -i -e "s/transferTopic = \"transfers\"/transferTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/blockFeeTopic = \"accounts\"/blockFeeTopic = \"test\"/g" ${witnesshome}/config/app.toml
 sed -i -e "s/publishKafka = false/publishKafka = true/g" ${witnesshome}/config/app.toml
 sed -i -e "s/publishLocal = false/publishLocal = true/g" ${witnesshome}/config/app.toml
