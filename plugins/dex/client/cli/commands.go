@@ -9,6 +9,7 @@ import (
 
 const (
 	flagSymbol = "symbol"
+	flagLevels = "levels"
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
