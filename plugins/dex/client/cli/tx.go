@@ -16,6 +16,7 @@ import (
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/wire"
@@ -95,6 +96,7 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
+	cmd.Flags().IntP(flagLevels, "L", 100, "maximum level (1,5,10,20,50,100,500,1000) to return")
 	cmd.Flags().StringP(flagSide, "s", "", "side (buy as 1 or sell as 2) of the order")
 	cmd.Flags().StringP(flagPrice, "p", "", "price for the order")
 	cmd.Flags().StringP(flagQty, "q", "", "quantity for the order")
@@ -114,8 +116,12 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			levelsLimit := viper.GetInt(flagLevels)
+			if levelsLimit <= 0 || levelsLimit > dex.MaxDepthLevels {
+				return fmt.Errorf("%s should be greater than 0 and not exceed %d", flagLevels, dex.MaxDepthLevels)
+			}
 
-			ob, err := store.GetOrderBook(cdc, ctx, symbol)
+			ob, err := store.GetOrderBook(cdc, ctx, symbol, levelsLimit)
 			if err != nil {
 				return err
 			}
