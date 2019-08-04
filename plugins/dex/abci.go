@@ -15,7 +15,8 @@ import (
 )
 
 // TODO: improve, should be configurable
-const MaxDepthLevels = 100 // matches UI requirement
+const MaxDepthLevels = 1000    // matches UI requirement
+const DefaultDepthLevels = 100 // matches UI requirement
 
 func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
@@ -80,16 +81,32 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Value: bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
-			//TODO: sync lock, validate pair, level number
+			//TODO: sync lock, validate pair
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
-					Log:  "OrderBook query requires the pair symbol",
+					Log:  "OrderBook query requires the pair symbol and levels",
 				}
 			}
 			pair := path[2]
 			height := app.GetContextForCheckState().BlockHeight()
-			levels := keeper.GetOrderBookLevels(pair, MaxDepthLevels)
+			levelLimit := DefaultDepthLevels
+			if len(path) == 4 {
+				if l, err := strconv.Atoi(path[3]); err != nil {
+					return &abci.ResponseQuery{
+						Code: uint32(sdk.CodeUnknownRequest),
+						Log:  fmt.Sprintf("OrderBook query requires valid int levels parameter: %v", err),
+					}
+				} else if l <= 0 || l > MaxDepthLevels {
+					return &abci.ResponseQuery{
+						Code: uint32(sdk.CodeUnknownRequest),
+						Log:  "OrderBook query requires valid levels (>0 && <1000)",
+					}
+				} else {
+					levelLimit = l
+				}
+			}
+			levels := keeper.GetOrderBookLevels(pair, levelLimit)
 			book := store.OrderBook{
 				Height: height,
 				Levels: levels,
