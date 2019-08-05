@@ -36,7 +36,7 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		RandomNumberHash: msg.RandomNumberHash,
 		RandomNumber:     nil,
 		Timestamp:        msg.Timestamp,
-		ExpireHeight:     ctx.BlockHeight() + int64(msg.TimeSpan),
+		ExpireHeight:     ctx.BlockHeight() + int64(msg.HeightSpan),
 		ClosedTime:       0,
 		Status:           Open,
 		Index:            kp.GetIndex(ctx),

@@ -27,7 +27,7 @@ const (
 	flagRandomNumberHash = "random-number-hash"
 	flagRandomNumber     = "random-number"
 	flagTimestamp        = "timestamp"
-	flagTimespan         = "timespan"
+	flagHeightSpan       = "height-span"
 	flagLimit            = "limit"
 	flagOffset           = "offset"
 	flagStatus           = "swap-status"
@@ -47,7 +47,7 @@ func initiateSwapCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().String(flagToOnOtherChain, "", "The receiver address on other chain, like Ethereum, hex encoding and prefix with 0x")
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
-	cmd.Flags().Int64(flagTimespan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
+	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
 
 	return cmd
 }
@@ -102,9 +102,9 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 
 		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}
-	timespan := viper.GetInt64(flagTimespan)
+	heightSpan := viper.GetInt64(flagHeightSpan)
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, timespan)
+	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
 
 	err = msg.ValidateBasic()
 	if err != nil {

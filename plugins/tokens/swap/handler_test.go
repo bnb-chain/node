@@ -42,10 +42,10 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	outAmount := sdk.Coin{"BNB", 10000}
 	inAmount := int64(10000)
-	timeSpan := int64(1000)
+	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, timeSpan)
+	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -54,7 +54,7 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	require.Equal(t, sdk.Coins{outAmount}, AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
-	require.Equal(t, int64(timeSpan+10), swap.ExpireHeight)
+	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(100)
 
@@ -94,10 +94,10 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	outAmount := sdk.Coin{"BNB", 10000}
 	inAmount := int64(10000)
-	timeSpan := int64(1000)
+	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, timeSpan)
+	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -106,7 +106,7 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	require.Equal(t, sdk.Coins{outAmount}, AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
-	require.Equal(t, int64(timeSpan+10), swap.ExpireHeight)
+	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(2000)
 

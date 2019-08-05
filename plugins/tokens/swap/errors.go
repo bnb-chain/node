@@ -11,7 +11,7 @@ const (
 	CodeInvalidRandomNumberHash    sdk.CodeType = 2
 	CodeInvalidRandomNumber        sdk.CodeType = 3
 	CodeInvalidSwapOutAmount       sdk.CodeType = 4
-	CodeInvalidTimeSpan            sdk.CodeType = 5
+	CodeInvalidHeightSpan          sdk.CodeType = 5
 	CodeDuplicatedRandomNumberHash sdk.CodeType = 6
 	CodeClaimExpiredSwap           sdk.CodeType = 7
 	CodeRefundUnexpiredSwap        sdk.CodeType = 8
@@ -38,8 +38,8 @@ func ErrInvalidSwapOutAmount(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidSwapOutAmount, msg)
 }
 
-func ErrInvalidTimeSpan(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidTimeSpan, msg)
+func ErrInvalidHeightSpan(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidHeightSpan, msg)
 }
 
 func ErrDuplicatedRandomNumberHash(msg string) sdk.Error {
