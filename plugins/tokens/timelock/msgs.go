@@ -56,7 +56,7 @@ func (msg TimeLockMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.LockTime >= MaxLockTime {
-		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should not be less than %d", msg.LockTime, MaxLockTime))
+		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should be less than %d", msg.LockTime, MaxLockTime))
 	}
 
 	if !msg.Amount.IsValid() {
