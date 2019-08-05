@@ -11,8 +11,9 @@ import (
 const (
 	MsgRoute = "timelock"
 
-	MaxDescriptionLength = 128
-	MinLockTime          = 60 * time.Second
+	MaxDescriptionLength       = 128
+	MinLockTime                = 60 * time.Second
+	MaxLockTime          int64 = 253402300800 //seconds of 10000-01-01, which is required by amino
 )
 
 var _ sdk.Msg = TimeLockMsg{}
@@ -52,6 +53,10 @@ func (msg TimeLockMsg) ValidateBasic() sdk.Error {
 
 	if msg.LockTime <= 0 {
 		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should be larger than 0", msg.LockTime))
+	}
+
+	if msg.LockTime >= MaxLockTime {
+		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should not be less than %d", msg.LockTime, MaxLockTime))
 	}
 
 	if !msg.Amount.IsValid() {
@@ -116,6 +121,10 @@ func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
 
 	if msg.LockTime < 0 {
 		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should not be less than 0", msg.LockTime))
+	}
+
+	if msg.LockTime >= MaxLockTime {
+		return ErrInvalidLockTime(DefaultCodespace, fmt.Sprintf("lock time(%d) should be less than %d", msg.LockTime, MaxLockTime))
 	}
 
 	if !msg.Amount.IsValid() {
