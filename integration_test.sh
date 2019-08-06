@@ -28,6 +28,7 @@ function prepare_node() {
 	secret=$(./bnbchaind init --moniker testnode --home ${home} --home-client ${cli_home} --chain-id ${chain_id} | grep secret | grep -o ":.*" | grep -o "\".*"  | sed "s/\"//g")
 
     $(cd "./${home}/config" && sed -i -e "s/BEP12Height = 9223372036854775807/BEP12Height = 1/g" app.toml)
+    $(cd "./${home}/config" && sed -i -e "s/BEP3Height = 9223372036854775807/BEP3Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
@@ -208,5 +209,65 @@ check_operation "Send Token" "${result}" "ERROR:"
 
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "1234567890")
 check_operation "Send Token" "${result}" "${chain_operation_words}"
+
+
+## ROUND 4 ##
+sleep 1s
+# Initiate an atomic swap
+result=$(expect ./initiate-swap.exp 400 "100000000:BNB" 100000000 $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
+check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
+randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
+printf "Random number: $randomNumber\n"
+timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
+printf "Timestamp: $timestamp\n"
+randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
+printf "Random number hash: $randomNumberHash\n"
+
+sleep 1s
+
+swap1=$(./bnbcli token query-swap --random-number-hash $randomNumberHash --trust-node)
+swap1From=$(echo "${swap1}" | jq -r '.from')
+check_operation "Check swap creator address" $swap1From $alice_addr
+swap1To=$(echo "${swap1}" | jq -r '.to')
+check_operation "swap receiver address" $swap1To $bob_addr
+
+result=$(./bnbcli account bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u --trust-node)
+swapDeadAddrBalance=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+check_operation "the balance of swap dead address" $swapDeadAddrBalance "100000000"
+
+result=$(./bnbcli account $bob_addr --trust-node)
+balanceBobBeforeClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+
+# Claim an atomic swap
+result=$(expect ./claim-swap.exp $randomNumberHash $randomNumber alice ${chain_id} ${cli_home})
+check_operation "claim an atomic swap" "${result}" "${chain_operation_words}"
+
+sleep 1s
+
+result=$(./bnbcli account $bob_addr --trust-node)
+balanceBobAfterClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+check_operation "Bob balance after claim swap" "$(expr $balanceBobAfterClaim - $balanceBobBeforeClaim)" "100000000"
+
+# Initiate an atomic swap
+result=$(expect ./initiate-swap.exp 400 "100000000:BNB" 100000000 $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} ${cli_home})
+check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
+randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
+printf "Random number: $randomNumber\n"
+timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
+printf "Timestamp: $timestamp\n"
+randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
+printf "Random number hash: $randomNumberHash\n"
+
+sleep 1s
+
+# Refund an atomic swap
+result=$(expect ./refund-swap.exp $randomNumberHash alice ${chain_id} ${cli_home})
+check_operation "refund an atomic swap which is still not expired" "${result}" "ERROR"
+
+sleep 1s
+
+result=$(./bnbcli account bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u --trust-node)
+swapDeadAddrBalance=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
+check_operation "the balance of swap dead address" $swapDeadAddrBalance "100000000"
 
 exit_test 0
