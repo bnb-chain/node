@@ -562,8 +562,7 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:b3cfb8d82b1601a846417c3f31c03a7961862cb2c98dcf0959c473843e6d9a2b"
+  digest = "1:1779af995392cdfb654bfbb6234641cc591291778d790922d7043f9b937415e3"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -580,7 +579,7 @@
     "leveldb/util",
   ]
   pruneopts = "UT"
-  revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
+  revision = "02440ea7a28525b3079783ad9c27083994a42366"
 
 [[projects]]
   digest = "1:605b6546f3f43745695298ec2d342d3e952b6d91cdf9f349bea9315f677d759f"
@@ -590,25 +589,26 @@
   revision = "e5840949ff4fff0c56f9b6a541e22b63581ea9df"
 
 [[projects]]
-  digest = "1:a2318b27cf0fb75eb19db3a31039accaae12ab39786b609ed9d2f79ecbf4367d"
+  digest = "1:1a30bfdd642064774caab235062b0f7ed4a42fa27cc4a39a2a77b158be3f64a2"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
   pruneopts = "UT"
-  revision = "b3a81203066cc46107dcf5e2ae6d78260ccc7c5a"
+  revision = "28180260d055aa7aac954e0d6f6b09da53deb4f9"
   source = "github.com/binance-chain/bnc-go-amino"
-  version = "v0.14.1-binance.1"
+  version = "v0.14.1-binance.2"
 
 [[projects]]
-  digest = "1:e4dbbe8b0e24c8ce2920aa83ef5f6a7bcf6499d56145428be052545f3c13fcb9"
+  digest = "1:58d1addd92dab82a3ebfebf1e3417cd2db87e7e7c7f815b5341adc370ba88257"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0b4e51a6b062152fedf6e2ad1adee104a80770a5"
+  revision = "40991da7680a7198fc63eaa9f7532f55904f9499"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "v0.12.0-binance.2"
+  version = "v0.12.0-binance.3"
 
 [[projects]]
-  digest = "1:2df5aa4ce984493685e3edaf8e5b50e52a42f3ed838bd165dcb8bfb9ea7833b7"
+  branch = "develop"
+  digest = "1:ac6ed9d7d620bc192d085de526e386b08646634796510cc11f1334399a5624e2"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -681,9 +681,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "6212bb92288ff6a9b4a6f7099104c8affa8b8d8e"
+  revision = "84d54d617969c50347063a6e264b84c842071523"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.31.5-binance.2"
 
 [[projects]]
   digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"

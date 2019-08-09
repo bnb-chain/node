@@ -572,7 +572,6 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	account.SetCoins(accountCoin)
 
 	kp.am.SetAccount(ctx, account)
-	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
 	return nil
 }
 
