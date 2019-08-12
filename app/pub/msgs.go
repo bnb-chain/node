@@ -48,7 +48,7 @@ var latestSchemaVersions = map[msgType]int{
 	booksTpe:           0,
 	executionResultTpe: 1,
 	blockFeeTpe:        0,
-	transferTpe:        0,
+	transferTpe:        1,
 }
 
 type AvroOrJsonMsg interface {
@@ -652,17 +652,19 @@ func (msg Receiver) ToNativeMap() map[string]interface{} {
 
 type Transfer struct {
 	TxHash string
+	Memo   string // Added for BEP39
 	From   string
 	To     []Receiver
 }
 
 func (msg Transfer) String() string {
-	return fmt.Sprintf("Transfer : from: %s, to: %v", msg.From, msg.To)
+	return fmt.Sprintf("Transfer: txHash: %s, memo: %s, from: %s, to: %v", msg.TxHash, msg.Memo, msg.From, msg.To)
 }
 
 func (msg Transfer) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["txhash"] = msg.TxHash
+	native["memo"] = msg.Memo
 	native["from"] = msg.From
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {
