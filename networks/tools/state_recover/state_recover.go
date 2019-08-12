@@ -92,6 +92,28 @@ func resetBlockChainState(height int64, rootDir string) {
 	}
 
 	state.SaveState(stateDb, blockState)
+
+	// reset index height in state db
+	// NOTICE: Will not rollback index data in index db. If roll back all validators, the index db may contain dirty data.
+	rawHeight := stateDb.Get(state.IndexHeightKey)
+	if rawHeight != nil {
+		var indexHeight int64
+		err := cdc.UnmarshalBinaryBare(rawHeight, &indexHeight)
+		if err != nil {
+			// should not happen
+			cmn.Exit(fmt.Sprintf(`Load IndexHeight: Data has been corrupted or its spec has changed:
+                %v\n`, err))
+		}
+		if height < indexHeight {
+			bz, err := cdc.MarshalBinaryBare(height)
+			if err != nil {
+				cmn.Exit(fmt.Sprintf(`Faile to marshal index height:
+                %v\n`, err))
+			} else {
+				stateDb.Set(state.IndexHeightKey, bz)
+			}
+		}
+	}
 }
 
 func resetBlockStoreState(height int64, rootDir string) {
