@@ -108,7 +108,7 @@ func enableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 				}
 				flags = appAccount.GetFlags()
 			}
-			flags, err = enableFlag(flags, scripts.TransferMemoCheckerFlag)
+			flags, err = setFlagBits(flags, scripts.TransferMemoCheckerFlag)
 			if err != nil {
 				return err
 			}
@@ -163,7 +163,7 @@ func disableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 				}
 				flags = appAccount.GetFlags()
 			}
-			flags, err = disableFlag(flags, scripts.TransferMemoCheckerFlag)
+			flags, err = unsetFlagBits(flags, scripts.TransferMemoCheckerFlag)
 			if err != nil {
 				return err
 			}
