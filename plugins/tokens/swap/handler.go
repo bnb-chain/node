@@ -27,7 +27,25 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-TwoHour || msg.Timestamp > ctx.BlockHeader().Time.Unix()+OneHour {
 		return ErrCodeInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
 	}
-	swap := &AtomicSwap{
+
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, sdk.Coins{msg.OutAmount})
+	if err != nil {
+		return err.Result()
+	}
+
+	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
+	if swap != nil {
+		if !bytes.Equal(swap.From, msg.To) || !bytes.Equal(swap.To, msg.From) {
+			return ErrCodeInvalidResponseSwap("Response swap addresses don't match the original swap").Result()
+		}
+		swap.SwapAmount = msg.OutAmount
+		err := kp.UpdateSwap(ctx, swap)
+		if err != nil {
+			return err.Result()
+		}
+		return  sdk.Result{Tags: tags}
+	}
+	swap = &AtomicSwap{
 		From:             msg.From,
 		To:               msg.To,
 		OutAmount:        msg.OutAmount,
@@ -41,17 +59,12 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		Status:           Open,
 		Index:            kp.GetIndex(ctx),
 	}
-	err := kp.CreateSwap(ctx, swap)
+	err = kp.CreateSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
 
-	tag, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, sdk.Coins{msg.OutAmount})
-	if err != nil {
-		return err.Result()
-	}
-
-	return sdk.Result{Tags: tag}
+	return sdk.Result{Tags: tags}
 }
 
 func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLockMsg) sdk.Result {
@@ -70,23 +83,32 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
 	}
 
-	tag, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, sdk.Coins{swap.OutAmount})
+	toTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, sdk.Coins{swap.OutAmount})
 	if err != nil {
 		return err.Result()
 	}
-	if ctx.IsDeliverTx() && kp.addrPool != nil && !bytes.Equal(msg.From, swap.To) {
-		kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
+	fromTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, sdk.Coins{swap.SwapAmount})
+	if err != nil {
+		return err.Result()
+	}
+	if ctx.IsDeliverTx() && kp.addrPool != nil {
+		if !bytes.Equal(msg.From, swap.From) {
+			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
+		}
+		if !bytes.Equal(msg.From, swap.To) {
+			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
+		}
 	}
 
 	swap.RandomNumber = msg.RandomNumber
 	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.CloseSwap(ctx, swap)
+	err = kp.UpdateSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
-
-	return sdk.Result{Tags: tag}
+	tags := toTags.AppendTags(fromTags)
+	return sdk.Result{Tags: tags}
 }
 
 func handleRefundHashTimerLock(ctx sdk.Context, kp Keeper, msg RefundHashTimerLockMsg) sdk.Result {
@@ -101,20 +123,29 @@ func handleRefundHashTimerLock(ctx sdk.Context, kp Keeper, msg RefundHashTimerLo
 		return ErrRefundUnexpiredSwap(fmt.Sprintf("Expire height (%d) is still not reached", swap.ExpireHeight)).Result()
 	}
 
-	tag, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, sdk.Coins{swap.OutAmount})
+	fromTag, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, sdk.Coins{swap.OutAmount})
 	if err != nil {
 		return err.Result()
 	}
-	if ctx.IsDeliverTx() && kp.addrPool != nil && !bytes.Equal(msg.From, swap.From) {
-		kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
+	toTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, sdk.Coins{swap.SwapAmount})
+	if err != nil {
+		return err.Result()
+	}
+	if ctx.IsDeliverTx() && kp.addrPool != nil {
+		if !bytes.Equal(msg.From, swap.From) {
+			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
+		}
+		if !bytes.Equal(msg.From, swap.To) {
+			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
+		}
 	}
 
 	swap.Status = Expired
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.CloseSwap(ctx, swap)
+	err = kp.UpdateSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
-
-	return sdk.Result{Tags: tag}
+	tags := fromTag.AppendTags(toTags)
+	return sdk.Result{Tags: tags}
 }

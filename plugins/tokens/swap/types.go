@@ -96,9 +96,10 @@ func (status *SwapStatus) UnmarshalJSON(data []byte) error {
 }
 
 type AtomicSwap struct {
-	From      sdk.AccAddress `json:"from"`
-	To        sdk.AccAddress `json:"to"`
-	OutAmount sdk.Coin       `json:"out_amount"`
+	From       sdk.AccAddress `json:"from"`
+	To         sdk.AccAddress `json:"to"`
+	OutAmount  sdk.Coin       `json:"out_amount"`
+	SwapAmount sdk.Coin       `json:"swap_amount"`
 
 	InAmount       int64   `json:"in_amount"`
 	ToOnOtherChain HexData `json:"to_on_other_chain"`

@@ -70,13 +70,10 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	return nil
 }
 
-func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		panic("nil atomic swap pointer")
-	}
-	if swap.ClosedTime <= 0 {
-		return sdk.ErrInternal("Missing swap close time")
 	}
 
 	hashKey := BuildHashKey(swap.RandomNumberHash)
@@ -85,8 +82,10 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	}
 	kvStore.Set(hashKey, kp.cdc.MustMarshalBinaryBare(*swap))
 
-	closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
-	kvStore.Set(closeTimeKey, swap.RandomNumberHash)
+	if swap.ClosedTime > 0 {
+		closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
+		kvStore.Set(closeTimeKey, swap.RandomNumberHash)
+	}
 
 	return nil
 }
