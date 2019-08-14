@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
@@ -13,12 +12,10 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-const allowedLimits = "5,10,20,50,100"
-const defaultLimit = "100"
+var allowedLimits = [7]int{5, 10, 20, 50, 100, 500, 1000}
 
 // DepthReqHandler creates an http request handler to show market depth data
 func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	allowedLimitsA := strings.Split(allowedLimits, ",")
 
 	type params struct {
 		symbol string
@@ -36,24 +33,24 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		limitStr := r.FormValue("limit")
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			throw(w, http.StatusExpectationFailed, errors.New("invalid limit, supported limits: [5,10,20,50,100,500,1000]"))
+			return
+		}
 
 		// validate limit param
-		limitStrOk := defaultLimit
-		for _, lmt := range allowedLimitsA {
-			if lmt == limitStr {
-				limitStrOk = limitStr
+		limitOk := -1
+		for _, lmt := range allowedLimits {
+			if lmt == limit {
+				limitOk = lmt
 				break
 			}
 		}
 
-		limit, _ := strconv.Atoi(defaultLimit)
-		if len(limitStrOk) > 0 {
-			var err error
-			limit, err = strconv.Atoi(limitStrOk)
-			if err != nil {
-				throw(w, http.StatusExpectationFailed, errors.New("invalid limit"))
-				return
-			}
+		if limitOk == -1 {
+			throw(w, http.StatusExpectationFailed, errors.New("invalid limit, supported limits: [5,10,20,50,100,500,1000]"))
+			return
 		}
 
 		// collect params
@@ -63,14 +60,14 @@ func DepthReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 		}
 
 		// validate pair
-		err := store.ValidatePairSymbol(params.symbol)
+		err = store.ValidatePairSymbol(params.symbol)
 		if err != nil {
 			throw(w, http.StatusNotFound, err)
 			return
 		}
 
 		// query order book (includes block height)
-		ob, err := store.GetOrderBook(cdc, ctx, params.symbol)
+		ob, err := store.GetOrderBook(cdc, ctx, params.symbol, params.limit)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

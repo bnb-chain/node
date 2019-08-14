@@ -72,6 +72,17 @@ func TestTimeLockMsg(t *testing.T) {
 			pass:      true,
 			errorCode: sdk.CodeType(0),
 		},
+		{
+			from:        addrs[0],
+			description: strings.Repeat("d", 120),
+			amount: sdk.Coins{
+				sdk.NewCoin("ANB", 2000e8),
+				sdk.NewCoin("BNB", 2000e8),
+			},
+			lockTime:  MaxLockTime,
+			pass:      false,
+			errorCode: CodeInvalidLockTime,
+		},
 	}
 
 	for i, tc := range tests {
@@ -180,6 +191,18 @@ func TestTimeRelockMsg(t *testing.T) {
 			lockTime:  1000,
 			pass:      true,
 			errorCode: sdk.CodeType(0),
+		},
+		{
+			from:        addrs[0],
+			id:          1,
+			description: "",
+			amount: sdk.Coins{
+				sdk.NewCoin("ANB", 2000e8),
+				sdk.NewCoin("BNB", 2000e8),
+			},
+			lockTime:  MaxLockTime,
+			pass:      false,
+			errorCode: CodeInvalidLockTime,
 		},
 	}
 
