@@ -77,17 +77,17 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap := &AtomicSwap{
-		From:             acc1.GetAddress(),
-		To:               acc2.GetAddress(),
-		OutAmount:        sdk.Coin{"BNB", 10000},
-		InAmount:         10000,
-		ToOnOtherChain:   toOnOtherChain,
-		RandomNumberHash: randomNumberHash,
-		RandomNumber:     nil,
-		Timestamp:        1564471835,
-		ExpireHeight:     1000,
-		ClosedTime:       0,
-		Status:           Open,
+		From:                acc1.GetAddress(),
+		To:                  acc2.GetAddress(),
+		OutAmount:           sdk.Coin{"BNB", 10000},
+		ExpectedIncome:      "10000:BNB",
+		RecipientOtherChain: toOnOtherChain,
+		RandomNumberHash:    randomNumberHash,
+		RandomNumber:        nil,
+		Timestamp:           1564471835,
+		ExpireHeight:        1000,
+		ClosedTime:          0,
+		Status:              Open,
 	}
 	err := keeper.CreateSwap(ctx, swap)
 	require.NoError(t, err)
@@ -110,12 +110,12 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	require.False(t, creatorIterator.Valid())
 	creatorIterator.Close()
 
-	receiverIterator := keeper.GetSwapReceiverIterator(ctx, acc2.GetAddress())
-	require.True(t, receiverIterator.Valid())
-	require.Equal(t, []byte(swap.RandomNumberHash), receiverIterator.Value())
-	receiverIterator.Next()
-	require.False(t, receiverIterator.Valid())
-	receiverIterator.Close()
+	recipientIterator := keeper.GetSwapRecipientIterator(ctx, acc2.GetAddress())
+	require.True(t, recipientIterator.Valid())
+	require.Equal(t, []byte(swap.RandomNumberHash), recipientIterator.Value())
+	recipientIterator.Next()
+	require.False(t, recipientIterator.Valid())
+	recipientIterator.Close()
 
 	iteratorTime := keeper.GetSwapCloseTimeIterator(ctx)
 	require.False(t, iteratorTime.Valid())
@@ -137,24 +137,31 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap := &AtomicSwap{
-		From:             acc1.GetAddress(),
-		To:               acc2.GetAddress(),
-		OutAmount:        sdk.Coin{"BNB", 10000},
-		InAmount:         10000,
-		ToOnOtherChain:   toOnOtherChain,
-		RandomNumberHash: randomNumberHash,
-		RandomNumber:     nil,
-		Timestamp:        1564471835,
-		ExpireHeight:     1000,
-		ClosedTime:       0,
-		Status:           Open,
+		From:                acc1.GetAddress(),
+		To:                  acc2.GetAddress(),
+		OutAmount:           sdk.Coin{"BNB", 10000},
+		ExpectedIncome:      "10000:BNB",
+		RecipientOtherChain: toOnOtherChain,
+		RandomNumberHash:    randomNumberHash,
+		RandomNumber:        nil,
+		Timestamp:           1564471835,
+		ExpireHeight:        1000,
+		ClosedTime:          0,
+		Status:              Open,
 	}
 	err := keeper.CreateSwap(ctx, swap)
 	require.NoError(t, err)
 
 	querySwap := keeper.QuerySwap(ctx, randomNumberHash)
+	require.Equal(t, swap.RandomNumberHash, querySwap.RandomNumberHash)
 
-	require.Equal(t, querySwap.RandomNumberHash, swap.RandomNumberHash)
+	querySwap.InAmount =  sdk.Coin{"ABC", 100000000}
+	err = keeper.UpdateSwap(ctx, querySwap)
+	require.NoError(t, err)
+
+	querySwap = keeper.QuerySwap(ctx, randomNumberHash)
+	require.Equal(t, sdk.Coin{"ABC", 100000000}, querySwap.InAmount)
+
 
 	querySwap.RandomNumber, _ = hex.DecodeString("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649")
 	querySwap.ClosedTime = time.Now().Unix()
@@ -193,18 +200,18 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap1 := &AtomicSwap{
-		From:             acc1.GetAddress(),
-		To:               acc2.GetAddress(),
-		OutAmount:        sdk.Coin{"BNB", 10000},
-		InAmount:         10000,
-		ToOnOtherChain:   toOnOtherChain,
-		RandomNumberHash: randomNumberHash,
-		RandomNumber:     nil,
-		Timestamp:        1564471835,
-		ExpireHeight:     1000,
-		ClosedTime:       0,
-		Status:           Open,
-		Index:            0,
+		From:                acc1.GetAddress(),
+		To:                  acc2.GetAddress(),
+		OutAmount:           sdk.Coin{"BNB", 10000},
+		ExpectedIncome:      "10000:BNB",
+		RecipientOtherChain: toOnOtherChain,
+		RandomNumberHash:    randomNumberHash,
+		RandomNumber:        nil,
+		Timestamp:           1564471835,
+		ExpireHeight:        1000,
+		ClosedTime:          0,
+		Status:              Open,
+		Index:               0,
 	}
 	err := keeper.CreateSwap(ctx, swap1)
 	require.NoError(t, err)
@@ -212,18 +219,18 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	toOnOtherChain, _ = hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	randomNumberHash, _ = hex.DecodeString("0xba624f3a2c2909f26c9c9ac06d24ae6cab8483ca79cd95e073a8b7bbfc246701")
 	swap2 := &AtomicSwap{
-		From:             acc1.GetAddress(),
-		To:               acc2.GetAddress(),
-		OutAmount:        sdk.Coin{"BNB", 10000},
-		InAmount:         10000,
-		ToOnOtherChain:   toOnOtherChain,
-		RandomNumberHash: randomNumberHash,
-		RandomNumber:     nil,
-		Timestamp:        1564471835,
-		ExpireHeight:     1000,
-		ClosedTime:       0,
-		Status:           Open,
-		Index:            1,
+		From:                acc1.GetAddress(),
+		To:                  acc2.GetAddress(),
+		OutAmount:           sdk.Coin{"BNB", 10000},
+		ExpectedIncome:      "10000:BNB",
+		RecipientOtherChain: toOnOtherChain,
+		RandomNumberHash:    randomNumberHash,
+		RandomNumber:        nil,
+		Timestamp:           1564471835,
+		ExpireHeight:        1000,
+		ClosedTime:          0,
+		Status:              Open,
+		Index:               1,
 	}
 	err = keeper.CreateSwap(ctx, swap2)
 	require.NoError(t, err)
@@ -241,9 +248,9 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	require.False(t, creatorIterator.Valid())
 	creatorIterator.Close()
 
-	receiverIterator := keeper.GetSwapReceiverIterator(ctx, acc2.GetAddress())
-	require.False(t, receiverIterator.Valid())
-	receiverIterator.Close()
+	recipientIterator := keeper.GetSwapRecipientIterator(ctx, acc2.GetAddress())
+	require.False(t, recipientIterator.Valid())
+	recipientIterator.Close()
 
 	closeTimeIterator := keeper.GetSwapCloseTimeIterator(ctx)
 	require.False(t, closeTimeIterator.Valid())

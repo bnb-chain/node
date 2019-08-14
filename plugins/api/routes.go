@@ -72,7 +72,7 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc(prefix+"/atomicswap/creator/{creatorAddr}/{swapStatus}", s.handleQuerySwapsByCreatorReq(s.cdc, s.ctx)).
 		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
 		Methods("GET")
-	r.HandleFunc(prefix+"/atomicswap/receiver/{receiverAddr}/{swapStatus}", s.handleQuerySwapsByReceiverReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/atomicswap/recipient/{recipientAddr}/{swapStatus}", s.handleQuerySwapsByRecipientReq(s.cdc, s.ctx)).
 		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
 		Methods("GET")
 
