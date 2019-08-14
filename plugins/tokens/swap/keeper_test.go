@@ -160,7 +160,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	querySwap.ClosedTime = time.Now().Unix()
 	querySwap.Status = Completed
 
-	err = keeper.UpdateSwap(ctx, querySwap)
+	err = keeper.CloseSwap(ctx, querySwap)
 	require.NoError(t, err)
 
 	querySwap = keeper.QuerySwap(ctx, randomNumberHash)

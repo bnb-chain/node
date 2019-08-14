@@ -35,10 +35,13 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap != nil {
+		if ctx.BlockHeight() >= swap.ExpireHeight {
+			return ErrCodeResponseExpiredSwap("Response to an expired swap").Result()
+		}
 		if !bytes.Equal(swap.From, msg.To) || !bytes.Equal(swap.To, msg.From) {
 			return ErrCodeInvalidResponseSwap("Response swap addresses don't match the original swap").Result()
 		}
-		swap.SwapAmount = msg.OutAmount
+		swap.SwapAmount = swap.SwapAmount.Plus(msg.OutAmount)
 		err := kp.UpdateSwap(ctx, swap)
 		if err != nil {
 			return err.Result()
@@ -103,7 +106,7 @@ func handleClaimHashTimerLock(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLock
 	swap.RandomNumber = msg.RandomNumber
 	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.UpdateSwap(ctx, swap)
+	err = kp.CloseSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -142,7 +145,7 @@ func handleRefundHashTimerLock(ctx sdk.Context, kp Keeper, msg RefundHashTimerLo
 
 	swap.Status = Expired
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err = kp.UpdateSwap(ctx, swap)
+	err = kp.CloseSwap(ctx, swap)
 	if err != nil {
 		return err.Result()
 	}

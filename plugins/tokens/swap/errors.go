@@ -21,6 +21,7 @@ const (
 	CodeUnexpectedSwapStatus       sdk.CodeType = 12
 	CodeInvalidTimestamp           sdk.CodeType = 13
 	CodeInvalidResponseSwap        sdk.CodeType = 14
+	CodeResponseExpiredSwap        sdk.CodeType = 15
 )
 
 func ErrInvalidOtherChainAddress(msg string) sdk.Error {
@@ -77,4 +78,8 @@ func ErrCodeInvalidTimestamp(msg string) sdk.Error {
 
 func ErrCodeInvalidResponseSwap(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidResponseSwap, msg)
+}
+
+func ErrCodeResponseExpiredSwap(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeResponseExpiredSwap, msg)
 }
