@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	QuerySwapCreator  = "swapcreator"
-	QuerySwapReceiver = "swapreceiver"
+	QuerySwapCreator   = "swapcreator"
+	QuerySwapRecipient = "swaprecipient"
 )
 
 func NewQuerier(keeper Keeper) sdk.Querier {
@@ -19,8 +19,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		switch path[0] {
 		case QuerySwapCreator:
 			return querySwapByCreator(ctx, req, keeper)
-		case QuerySwapReceiver:
-			return querySwapByReceiver(ctx, req, keeper)
+		case QuerySwapRecipient:
+			return querySwapByRecipient(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("unknown atomic swap query endpoint %s", path[0]))
 		}
@@ -85,23 +85,23 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	return bz, nil
 }
 
-// Params for query 'custom/atomicswap/swapreceiver'
-type QuerySwapByReceiverParams struct {
-	Receiver sdk.AccAddress
-	Status   SwapStatus
-	Limit    int64
-	Offset   int64
+// Params for query 'custom/atomicswap/swaprecipient'
+type QuerySwapByRecipientParams struct {
+	Recipient sdk.AccAddress
+	Status    SwapStatus
+	Limit     int64
+	Offset    int64
 }
 
 // nolint: unparam
-func querySwapByReceiver(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params QuerySwapByReceiverParams
+func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params QuerySwapByRecipientParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
 	}
 
-	if len(params.Receiver) != sdk.AddrLen {
+	if len(params.Recipient) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
 	if params.Limit > 1000 {
@@ -112,7 +112,7 @@ func querySwapByReceiver(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) 
 		params.Limit = 100
 	}
 
-	iterator := keeper.GetSwapReceiverIterator(ctx, params.Receiver)
+	iterator := keeper.GetSwapRecipientIterator(ctx, params.Recipient)
 	defer iterator.Close()
 
 	count := int64(0)

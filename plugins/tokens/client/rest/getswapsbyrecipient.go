@@ -15,8 +15,8 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-// QuerySwapsByReceiverReqHandler creates an http request handler to
-func QuerySwapsByReceiverReqHandler(
+// QuerySwapsByRecipientReqHandler creates an http request handler to
+func QuerySwapsByRecipientReqHandler(
 	cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	responseType := "application/json"
 
@@ -30,7 +30,7 @@ func QuerySwapsByReceiverReqHandler(
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
-		receiverAddr, err := sdk.AccAddressFromBech32(vars["receiverAddr"])
+		recipientAddr, err := sdk.AccAddressFromBech32(vars["recipientAddr"])
 		if err != nil {
 			throw(w, http.StatusBadRequest, err)
 			return
@@ -51,11 +51,11 @@ func QuerySwapsByReceiverReqHandler(
 			return
 		}
 
-		params := swap.QuerySwapByReceiverParams{
-			Receiver: receiverAddr,
-			Status:   swapStatus,
-			Limit:    int64(limit),
-			Offset:   int64(offset),
+		params := swap.QuerySwapByRecipientParams{
+			Recipient: recipientAddr,
+			Status:    swapStatus,
+			Limit:     int64(limit),
+			Offset:    int64(offset),
 		}
 
 		bz, err := cdc.MarshalJSON(params)
@@ -64,7 +64,7 @@ func QuerySwapsByReceiverReqHandler(
 			return
 		}
 
-		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapReceiver), bz)
+		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapRecipient), bz)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
