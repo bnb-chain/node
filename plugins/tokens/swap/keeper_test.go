@@ -80,7 +80,7 @@ func TestKeeper_CreateSwap(t *testing.T) {
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
 		OutAmount:           sdk.Coin{"BNB", 10000},
-		InAmountOtherChain:  10000,
+		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
 		RandomNumber:        nil,
@@ -140,7 +140,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
 		OutAmount:           sdk.Coin{"BNB", 10000},
-		InAmountOtherChain:  10000,
+		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
 		RandomNumber:        nil,
@@ -153,8 +153,15 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	require.NoError(t, err)
 
 	querySwap := keeper.QuerySwap(ctx, randomNumberHash)
+	require.Equal(t, swap.RandomNumberHash, querySwap.RandomNumberHash)
 
-	require.Equal(t, querySwap.RandomNumberHash, swap.RandomNumberHash)
+	querySwap.InAmount =  sdk.Coin{"ABC", 100000000}
+	err = keeper.UpdateSwap(ctx, querySwap)
+	require.NoError(t, err)
+
+	querySwap = keeper.QuerySwap(ctx, randomNumberHash)
+	require.Equal(t, sdk.Coin{"ABC", 100000000}, querySwap.InAmount)
+
 
 	querySwap.RandomNumber, _ = hex.DecodeString("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649")
 	querySwap.ClosedTime = time.Now().Unix()
@@ -196,7 +203,7 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
 		OutAmount:           sdk.Coin{"BNB", 10000},
-		InAmountOtherChain:  10000,
+		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
 		RandomNumber:        nil,
@@ -215,7 +222,7 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
 		OutAmount:           sdk.Coin{"BNB", 10000},
-		InAmountOtherChain:  10000,
+		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
 		RandomNumber:        nil,

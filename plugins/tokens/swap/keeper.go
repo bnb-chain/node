@@ -50,7 +50,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("nil empty swap pointer")
+		panic("empty atomic swap pointer")
 	}
 
 	hashKey := BuildHashKey(swap.RandomNumberHash)
@@ -73,7 +73,7 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("nil atomic swap pointer")
+		panic("empty atomic swap pointer")
 	}
 
 	hashKey := BuildHashKey(swap.RandomNumberHash)
@@ -93,7 +93,7 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("nil atomic swap pointer")
+		panic("empty atomic swap pointer")
 	}
 	if swap.ClosedTime <= 0 {
 		return sdk.ErrInternal("Missing swap close time")

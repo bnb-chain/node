@@ -7,7 +7,7 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 8
 
-	CodeInvalidOtherChainAddress   sdk.CodeType = 1
+	CodeInvalidRecipientAddrOtherChain   sdk.CodeType = 1
 	CodeInvalidRandomNumberHash    sdk.CodeType = 2
 	CodeInvalidRandomNumber        sdk.CodeType = 3
 	CodeInvalidSwapOutAmount       sdk.CodeType = 4
@@ -20,12 +20,12 @@ const (
 	CodeTooLargeQueryLimit         sdk.CodeType = 11
 	CodeUnexpectedSwapStatus       sdk.CodeType = 12
 	CodeInvalidTimestamp           sdk.CodeType = 13
-	CodeInvalidResponseSwap        sdk.CodeType = 14
-	CodeResponseExpiredSwap        sdk.CodeType = 15
+	CodeInvalidSingleChainSwap     sdk.CodeType = 14
+	CodeInvalidExpectedIncome      sdk.CodeType = 15
 )
 
-func ErrInvalidOtherChainAddress(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidOtherChainAddress, msg)
+func ErrInvalidRecipientAddrOtherChain(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidRecipientAddrOtherChain, msg)
 }
 
 func ErrInvalidRandomNumberHash(msg string) sdk.Error {
@@ -76,10 +76,10 @@ func ErrCodeInvalidTimestamp(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidTimestamp, msg)
 }
 
-func ErrCodeInvalidResponseSwap(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidResponseSwap, msg)
+func ErrCodeInvalidSingleChainSwap(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidSingleChainSwap, msg)
 }
 
-func ErrCodeResponseExpiredSwap(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeResponseExpiredSwap, msg)
+func ErrCodeInvalidExpectedIncome(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidExpectedIncome, msg)
 }

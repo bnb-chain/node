@@ -22,37 +22,39 @@ const (
 	flagCreatorAddr         = "creator-addr"
 	flagRecipientAddr       = "recipient-addr"
 	flagOutAmount           = "out-amount"
-	flagInAmountOtherChain  = "in-amount-other-chain"
+	flagExpectedIncome      = "expected-income"
 	flagRecipientOtherChain = "recipient-other-chain"
 	flagRandomNumberHash    = "random-number-hash"
 	flagRandomNumber        = "random-number"
 	flagTimestamp           = "timestamp"
 	flagHeightSpan          = "height-span"
+	flagCrossChain          = "cross-chain"
 	flagLimit               = "limit"
 	flagOffset              = "offset"
 	flagStatus              = "swap-status"
 )
 
-func initiateSwapCmd(cmdr Commander) *cobra.Command {
+func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "initiate-swap",
-		Short: "initiate an atomic swap",
-		RunE:  cmdr.initiateSwap,
+		Use:   "initiate-HTLT",
+		Short: "initiate a hash timer lock transfer",
+		RunE:  cmdr.initiateHTLT,
 	}
 
 	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
-	cmd.Flags().Int64(flagInAmountOtherChain, 0, "Expected gained token on the other chain, 8 decimals")
+	cmd.Flags().String(flagExpectedIncome, "", "Expected income on the other chain")
 	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x")
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
 	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
+	cmd.Flags().Bool(flagCrossChain, true, "Identify whether the swap is cross chain swap")
 
 	return cmd
 }
 
-func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
+func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 
 	from, err := cliCtx.GetFromAddress()
@@ -69,9 +71,9 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	inAmountOtherChain := viper.GetInt64(flagInAmountOtherChain)
+	expectedIncome := viper.GetString(flagExpectedIncome)
 	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
-	if !strings.HasPrefix(recipientOtherChainStr, "0x") {
+	if len(recipientOtherChainStr) !=0 && !strings.HasPrefix(recipientOtherChainStr, "0x") {
 		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --to-on-other-chain")
 	}
 	recipientOtherChain, err := hex.DecodeString(recipientOtherChainStr[2:])
@@ -103,8 +105,9 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
 	}
 	heightSpan := viper.GetInt64(flagHeightSpan)
+	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, inAmountOtherChain, heightSpan)
+	msg := swap.NewHashTimerLockTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -113,11 +116,11 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
-func claimSwapCmd(cmdr Commander) *cobra.Command {
+func claimHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "claim-swap",
-		Short: "claim an atomic swap with random number",
-		RunE:  cmdr.claimSwap,
+		Use:   "claim-HTLT",
+		Short: "claim a hash timer lock transfer",
+		RunE:  cmdr.claimHTLT,
 	}
 
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
@@ -126,7 +129,7 @@ func claimSwapCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) claimSwap(cmd *cobra.Command, args []string) error {
+func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 
 	from, err := cliCtx.GetFromAddress()
@@ -162,11 +165,11 @@ func (c Commander) claimSwap(cmd *cobra.Command, args []string) error {
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
-func refundSwapCmd(cmdr Commander) *cobra.Command {
+func refundHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "refund-swap",
-		Short: "refund the asset locked by an expired atomic swap",
-		RunE:  cmdr.refundSwap,
+		Use:   "refund-HTLT",
+		Short: "refund a hash timer lock transfer",
+		RunE:  cmdr.refundHTLT,
 	}
 
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
@@ -174,7 +177,7 @@ func refundSwapCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) refundSwap(cmd *cobra.Command, args []string) error {
+func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 
 	from, err := cliCtx.GetFromAddress()

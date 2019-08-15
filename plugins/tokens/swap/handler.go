@@ -35,13 +35,22 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap != nil {
+		if swap.CrossChain || msg.CrossChain {
+			return ErrCodeInvalidSingleChainSwap("Both the swap and msg should be single chain mode").Result()
+		}
+		if swap.Status != Open {
+			return ErrCodeInvalidSingleChainSwap("Swap status is not open").Result()
+		}
 		if ctx.BlockHeight() >= swap.ExpireHeight {
-			return ErrCodeResponseExpiredSwap("Response to an expired swap").Result()
+			return ErrCodeInvalidSingleChainSwap("The swap expire height is passed").Result()
 		}
 		if !bytes.Equal(swap.From, msg.To) || !bytes.Equal(swap.To, msg.From) {
-			return ErrCodeInvalidResponseSwap("Response swap addresses don't match the original swap").Result()
+			return ErrCodeInvalidSingleChainSwap("Addresses don't match").Result()
 		}
-		swap.InAmount = swap.InAmount.Plus(msg.OutAmount)
+		if !swap.InAmount.IsZero() {
+			return ErrCodeInvalidSingleChainSwap("The swap has already been responded").Result()
+		}
+		swap.InAmount = msg.OutAmount
 		err := kp.UpdateSwap(ctx, swap)
 		if err != nil {
 			return err.Result()
@@ -53,12 +62,13 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 		To:                  msg.To,
 		OutAmount:           msg.OutAmount,
 		InAmount:            sdk.Coin{},
-		InAmountOtherChain:  msg.InAmountOtherChain,
+		ExpectedIncome:      msg.ExpectedIncome,
 		RecipientOtherChain: msg.RecipientOtherChain,
 		RandomNumberHash:    msg.RandomNumberHash,
 		RandomNumber:        nil,
 		Timestamp:           msg.Timestamp,
 		ExpireHeight:        ctx.BlockHeight() + int64(msg.HeightSpan),
+		CrossChain:          msg.CrossChain,
 		ClosedTime:          0,
 		Status:              Open,
 		Index:               kp.GetIndex(ctx),

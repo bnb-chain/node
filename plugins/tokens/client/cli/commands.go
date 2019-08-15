@@ -32,9 +32,9 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			timeLockCmd(cmdr),
 			timeUnlockCmd(cmdr),
 			timeRelockCmd(cmdr),
-			initiateSwapCmd(cmdr),
-			claimSwapCmd(cmdr),
-			refundSwapCmd(cmdr))...)
+			initiateHTLTCmd(cmdr),
+			claimHTLTCmd(cmdr),
+			refundHTLTCmd(cmdr))...)
 
 	tokenCmd.AddCommand(
 		client.GetCommands(
