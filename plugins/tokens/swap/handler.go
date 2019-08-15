@@ -24,15 +24,10 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTransferMsg) sdk.Result {
-	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-TwoHour || msg.Timestamp > ctx.BlockHeader().Time.Unix()+OneHour {
-		return ErrCodeInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
-	}
-
 	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, sdk.Coins{msg.OutAmount})
 	if err != nil {
 		return err.Result()
 	}
-
 	swap := kp.QuerySwap(ctx, msg.RandomNumberHash)
 	if swap != nil {
 		if swap.CrossChain || msg.CrossChain {
@@ -56,6 +51,9 @@ func handleHashTimerLockTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockTr
 			return err.Result()
 		}
 		return  sdk.Result{Tags: tags}
+	}
+	if msg.Timestamp < ctx.BlockHeader().Time.Unix()-TwoHour || msg.Timestamp > ctx.BlockHeader().Time.Unix()+OneHour {
+		return ErrCodeInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
 	}
 	swap = &AtomicSwap{
 		From:                msg.From,

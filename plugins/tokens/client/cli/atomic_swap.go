@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkClient "github.com/cosmos/cosmos-sdk/client"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/client"
@@ -45,7 +46,7 @@ func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
 	cmd.Flags().String(flagExpectedIncome, "", "Expected income on the other chain")
-	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x, leave it empty for single chain swap")
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
 	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
@@ -74,7 +75,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	expectedIncome := viper.GetString(flagExpectedIncome)
 	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
 	if len(recipientOtherChainStr) !=0 && !strings.HasPrefix(recipientOtherChainStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --to-on-other-chain")
+		return fmt.Errorf("must prefix with 0x for flag --recipient-other-chain")
 	}
 	recipientOtherChain, err := hex.DecodeString(recipientOtherChainStr[2:])
 	if err != nil {
@@ -108,6 +109,67 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
 	msg := swap.NewHashTimerLockTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+
+	err = msg.ValidateBasic()
+	if err != nil {
+		return err
+	}
+	return client.SendOrPrintTx(cliCtx, txBldr, msg)
+}
+
+func depositHTLTCmd(cmdr Commander) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "deposit-HTLT",
+		Short: "deposit a hash timer lock transfer",
+		RunE:  cmdr.depositHTLT,
+	}
+
+	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
+	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
+	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+
+	return cmd
+}
+
+func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
+	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
+
+	from, err := cliCtx.GetFromAddress()
+	if err != nil {
+		return err
+	}
+
+	recipient, err := sdk.AccAddressFromBech32(viper.GetString(flagRecipientAddr))
+	if err != nil {
+		return err
+	}
+	outAmount, err := sdk.ParseCoin(viper.GetString(flagOutAmount))
+	if err != nil {
+		return err
+	}
+
+	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
+	if !strings.HasPrefix(randomNumberHashStr, "0x") {
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	}
+	randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+	if err != nil {
+		return err
+	}
+
+	if !viper.GetBool(sdkClient.FlagOffline) {
+		hashKey := swap.BuildHashKey(randomNumberHash)
+		resp, err := cliCtx.QueryStore(hashKey, common.AtomicSwapStoreName)
+		if err != nil {
+			return err
+		}
+		if len(resp) == 0 {
+			return fmt.Errorf("there is no swap matched with randomNumberHash %s", randomNumberHashStr)
+		}
+	}
+
+	// build message
+	msg := swap.NewHashTimerLockTransferMsg(from, recipient, nil, randomNumberHash, 0, outAmount, "", swap.MinimumHeightSpan, false)
 
 	err = msg.ValidateBasic()
 	if err != nil {

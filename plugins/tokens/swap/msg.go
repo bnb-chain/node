@@ -17,6 +17,8 @@ const (
 	RandomNumberLength           = 32
 	MaxRecipientOtherChainLength = 32
 	MaxExpectedIncomeLength      = 64
+	MinimumHeightSpan            = 360
+	MaximumHeightSpan            = 518400
 )
 
 var _ sdk.Msg = HashTimerLockTransferMsg{}
@@ -81,7 +83,7 @@ func (msg HashTimerLockTransferMsg) ValidateBasic() sdk.Error {
 	if !msg.OutAmount.IsPositive() {
 		return ErrInvalidSwapOutAmount("The swapped out coin must be positive")
 	}
-	if msg.HeightSpan < 360 || msg.HeightSpan > 518400 {
+	if msg.HeightSpan < MinimumHeightSpan || msg.HeightSpan > MaximumHeightSpan {
 		return ErrInvalidHeightSpan("The height span should be no less than 360 and no greater than 518400")
 	}
 	return nil
