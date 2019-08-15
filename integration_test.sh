@@ -73,7 +73,7 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnb1[0-9a
 # wait for the chain
 sleep 10s
 
-Issue Token
+
 ## ROUND 1 ##
 
 # send
@@ -214,7 +214,7 @@ check_operation "Send Token" "${result}" "${chain_operation_words}"
 ## ROUND 4 ##
 sleep 1s
 # Initiate an atomic swap
-result=$(expect ./initiate-HTLT-auto.exp 2000 "100000000:BNB" 100000000 $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} true ${cli_home})
+result=$(expect ./initiate-HTLT-cross-chain.exp 2000 "100000000:BNB" 100000000 $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
 check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
@@ -246,7 +246,7 @@ balanceBobAfterClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
 check_operation "Bob balance after claim swap" "$(expr $balanceBobAfterClaim - $balanceBobBeforeClaim)" "100000000"
 
 # Initiate an atomic swap
-result=$(expect ./initiate-HTLT-auto.exp 2000 "100000000:BNB" 100000000 $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} true ${cli_home})
+result=$(expect ./initiate-HTLT-cross-chain.exp 2000 "100000000:BNB" 100000000 $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} ${cli_home})
 check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
@@ -268,16 +268,16 @@ check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Initiate a single chain atomic swa
-result=$(expect ./initiate-HTLT-auto.exp 2000 "100000000:BNB" "10000:${eth_symbol}" $bob_addr 0xaabbccdd alice ${chain_id} false ${cli_home})
+result=$(expect ./initiate-HTLT-single-chain.exp 2000 "100000000:BNB" "10000:${eth_symbol}" $bob_addr alice ${chain_id} ${cli_home})
 check_operation "Initiate a single chain atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
 
 sleep 1s
-# Respond to a single chain atomic swap
-result=$(expect ./initiate-HTLT.exp 2000 "10000:${eth_symbol}" "100000000:BNB" $alice_addr 0xaabbccdd bob ${chain_id} ${randomNumberHash} ${timestamp} false ${cli_home})
-check_operation "Respond to a single chain atomic swap" "${result}" "${chain_operation_words}"
+# Deposit to a single chain atomic swap
+result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # claim a single chain atomic swap
@@ -285,21 +285,31 @@ result=$(expect ./claim-HTLT.exp ${randomNumberHash} ${randomNumber} alice ${cha
 check_operation "claim a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
+# Deposit to a single chain atomic swap
+result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+check_operation "Deposit to a closed single chain atomic swap" "${result}" "ERROR"
+
+sleep 1s
 # Initiate a single chain atomic swa
-result=$(expect ./initiate-HTLT-auto.exp 500 "100000000:BNB" "10000:${eth_symbol}" $bob_addr 0xaabbccdd alice ${chain_id} false ${cli_home})
+result=$(expect ./initiate-HTLT-single-chain.exp 500 "100000000:BNB" "10000:${eth_symbol}" $bob_addr alice ${chain_id} ${cli_home})
 check_operation "Initiate a single chain atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
 
 sleep 1s
-# Respond to a single chain atomic swap
-result=$(expect ./initiate-HTLT.exp 500 "10000:${eth_symbol}" "100000000:BNB" $alice_addr 0xaabbccdd bob ${chain_id} ${randomNumberHash} ${timestamp} false ${cli_home})
-check_operation "Respond to a single chain atomic swap" "${result}" "${chain_operation_words}"
+# Deposit to a single chain atomic swap
+result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 3s
 # refund a single chain atomic swap
 result=$(expect ./refund-HTLT.exp ${randomNumberHash} alice ${chain_id} ${cli_home})
 check_operation "refund a single chain atomic swap" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# Deposit to a single chain atomic swap
+result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+check_operation "Deposit to a expired single chain atomic swap" "${result}" "ERROR"
 
 exit_test 0

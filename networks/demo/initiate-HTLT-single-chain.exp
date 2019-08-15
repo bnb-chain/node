@@ -1,0 +1,19 @@
+#!/usr/bin/expect
+
+set heightSpan [lindex $argv 0]
+set outAmount [lindex $argv 1]
+set expectedIncome [lindex $argv 2]
+set recipientAddr [lindex $argv 3]
+set from [lindex $argv 4]
+set chain_id [lindex $argv 5]
+set home [lindex $argv 6]
+
+set timeout 30
+	if {"${home}" == ""} {
+		spawn ./bnbcli token initiate-HTLT --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --expected-income $expectedIncome --recipient-addr $recipientAddr
+	} else {
+		spawn ./bnbcli token initiate-HTLT --home $home --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --expected-income $expectedIncome --recipient-addr $recipientAddr
+	}
+	expect "Password*"
+	send "12345678\r"
+interact

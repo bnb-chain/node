@@ -17,6 +17,8 @@ const (
 	RandomNumberLength           = 32
 	MaxRecipientOtherChainLength = 32
 	MaxExpectedIncomeLength      = 64
+	MinimumHeightSpan            = 360
+	MaximumHeightSpan            = 518400
 )
 
 var _ sdk.Msg = HashTimerLockTransferMsg{}
@@ -66,11 +68,14 @@ func (msg HashTimerLockTransferMsg) ValidateBasic() sdk.Error {
 	if len(msg.To) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(fmt.Sprintf("Expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.To)))
 	}
-	if len(msg.RecipientOtherChain) > MaxRecipientOtherChainLength {
-		return ErrInvalidRecipientAddrOtherChain(fmt.Sprintf("The length of recipient address on other chain should be less than %d", MaxRecipientOtherChainLength))
+	if !msg.CrossChain && len(msg.RecipientOtherChain) != 0 {
+		return ErrInvalidRecipientAddrOtherChain("Must leave recipient address on other chain to empty for single chain swap")
 	}
 	if msg.CrossChain && len(msg.RecipientOtherChain) == 0 {
-		return ErrInvalidRecipientAddrOtherChain("Missing recipient address for cross chain swap")
+		return ErrInvalidRecipientAddrOtherChain("Missing recipient address on other chain for cross chain swap")
+	}
+	if len(msg.RecipientOtherChain) > MaxRecipientOtherChainLength {
+		return ErrInvalidRecipientAddrOtherChain(fmt.Sprintf("The length of recipient address on other chain should be less than %d", MaxRecipientOtherChainLength))
 	}
 	if len(msg.ExpectedIncome) > MaxExpectedIncomeLength {
 		return ErrCodeInvalidExpectedIncome(fmt.Sprintf("The length of expected income should be less than %d", MaxExpectedIncomeLength))
@@ -81,7 +86,7 @@ func (msg HashTimerLockTransferMsg) ValidateBasic() sdk.Error {
 	if !msg.OutAmount.IsPositive() {
 		return ErrInvalidSwapOutAmount("The swapped out coin must be positive")
 	}
-	if msg.HeightSpan < 360 || msg.HeightSpan > 518400 {
+	if msg.HeightSpan < MinimumHeightSpan || msg.HeightSpan > MaximumHeightSpan {
 		return ErrInvalidHeightSpan("The height span should be no less than 360 and no greater than 518400")
 	}
 	return nil
