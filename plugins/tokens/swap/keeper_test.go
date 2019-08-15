@@ -95,7 +95,7 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	err = keeper.CreateSwap(ctx, swap)
 	require.Error(t, err)
 
-	querySwap := keeper.QuerySwap(ctx, randomNumberHash)
+	querySwap := keeper.GetSwap(ctx, randomNumberHash)
 
 	require.Equal(t, querySwap.RandomNumberHash, swap.RandomNumberHash)
 	require.Equal(t, querySwap.Timestamp, swap.Timestamp)
@@ -152,14 +152,14 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	err := keeper.CreateSwap(ctx, swap)
 	require.NoError(t, err)
 
-	querySwap := keeper.QuerySwap(ctx, randomNumberHash)
+	querySwap := keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, swap.RandomNumberHash, querySwap.RandomNumberHash)
 
 	querySwap.InAmount =  sdk.Coin{"ABC", 100000000}
 	err = keeper.UpdateSwap(ctx, querySwap)
 	require.NoError(t, err)
 
-	querySwap = keeper.QuerySwap(ctx, randomNumberHash)
+	querySwap = keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, sdk.Coin{"ABC", 100000000}, querySwap.InAmount)
 
 
@@ -170,7 +170,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	err = keeper.CloseSwap(ctx, querySwap)
 	require.NoError(t, err)
 
-	querySwap = keeper.QuerySwap(ctx, randomNumberHash)
+	querySwap = keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, querySwap.Status, Completed)
 
 	closeTimeIterator := keeper.GetSwapCloseTimeIterator(ctx)
@@ -241,8 +241,8 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	err = keeper.DeleteSwap(ctx, swap2)
 	require.NoError(t, err)
 
-	require.Nil(t, keeper.QuerySwap(ctx, swap1.RandomNumberHash))
-	require.Nil(t, keeper.QuerySwap(ctx, swap2.RandomNumberHash))
+	require.Nil(t, keeper.GetSwap(ctx, swap1.RandomNumberHash))
+	require.Nil(t, keeper.GetSwap(ctx, swap2.RandomNumberHash))
 
 	creatorIterator := keeper.GetSwapCreatorIterator(ctx, acc1.GetAddress())
 	require.False(t, creatorIterator.Valid())

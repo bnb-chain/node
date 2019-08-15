@@ -60,7 +60,7 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	count := int64(0)
 	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
-		swap := keeper.QuerySwap(ctx, iterator.Value())
+		swap := keeper.GetSwap(ctx, iterator.Value())
 		if swap == nil {
 			continue
 		}
@@ -118,7 +118,7 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 	count := int64(0)
 	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
-		swap := keeper.QuerySwap(ctx, iterator.Value())
+		swap := keeper.GetSwap(ctx, iterator.Value())
 		if swap == nil {
 			continue
 		}

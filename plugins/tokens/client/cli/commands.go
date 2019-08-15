@@ -33,6 +33,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			timeUnlockCmd(cmdr),
 			timeRelockCmd(cmdr),
 			initiateHTLTCmd(cmdr),
+			depositHTLTCmd(cmdr),
 			claimHTLTCmd(cmdr),
 			refundHTLTCmd(cmdr))...)
 

@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/wire"
+
+	"github.com/gorilla/mux"
 )
 
 // QuerySwapReqHandler creates an http request handler to get AtomicSwap record by randomNumberHash
