@@ -3,17 +3,17 @@
 set heightSpan [lindex $argv 0]
 set outAmount [lindex $argv 1]
 set inAmount [lindex $argv 2]
-set receiverAddr [lindex $argv 3]
-set toOnOtherChain [lindex $argv 4]
+set recipientAddr [lindex $argv 3]
+set recipientOtherChain [lindex $argv 4]
 set from [lindex $argv 5]
 set chain_id [lindex $argv 6]
 set home [lindex $argv 7]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token initiate-swap --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --in-amount $inAmount --receiver-addr $receiverAddr --to-on-other-chain $toOnOtherChain
+		spawn ./bnbcli token initiate-swap --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --in-amount-other-chain $inAmount --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain
 	} else {
-		spawn ./bnbcli token initiate-swap --home $home --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --in-amount $inAmount --receiver-addr $receiverAddr --to-on-other-chain $toOnOtherChain
+		spawn ./bnbcli token initiate-swap --home $home --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --in-amount-other-chain $inAmount --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain
 	}
 	expect "Password*"
 	send "12345678\r"

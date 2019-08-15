@@ -11,11 +11,11 @@ const (
 )
 
 var (
-	HashKey              = []byte{0x01}
-	SwapCreatorQueueKey  = []byte{0x02}
-	SwapReceiverQueueKey = []byte{0x03}
-	SwapCloseTimeKey     = []byte{0x04}
-	SwapIndexKey         = []byte{0x05}
+	HashKey               = []byte{0x01}
+	SwapCreatorQueueKey   = []byte{0x02}
+	SwapRecipientQueueKey = []byte{0x03}
+	SwapCloseTimeKey      = []byte{0x04}
+	SwapIndexKey          = []byte{0x05}
 )
 
 func BuildHashKey(randomNumberHash []byte) []byte {
@@ -38,18 +38,18 @@ func BuildSwapCreatorQueueKey(addr sdk.AccAddress) []byte {
 	return key
 }
 
-func BuildSwapReceiverKey(addr sdk.AccAddress, index int64) []byte {
+func BuildSwapRecipientKey(addr sdk.AccAddress, index int64) []byte {
 	// prefix + addr + index
 	key := make([]byte, 1+sdk.AddrLen+Int64Size)
-	copy(key[:1], SwapReceiverQueueKey)
+	copy(key[:1], SwapRecipientQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	binary.BigEndian.PutUint64(key[1+sdk.AddrLen:], uint64(index))
 	return key
 }
 
-func BuildSwapReceiverQueueKey(addr sdk.AccAddress) []byte {
+func BuildSwapRecipientQueueKey(addr sdk.AccAddress) []byte {
 	key := make([]byte, 1+sdk.AddrLen)
-	copy(key[:1], SwapReceiverQueueKey)
+	copy(key[:1], SwapRecipientQueueKey)
 	copy(key[1:1+sdk.AddrLen], addr)
 	return key
 }

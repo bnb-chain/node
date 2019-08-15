@@ -18,19 +18,19 @@ import (
 )
 
 const (
-	flagAuto             = "auto"
-	flagCreatorAddr      = "creator-addr"
-	flagReceiverAddr     = "receiver-addr"
-	flagOutAmount        = "out-amount"
-	flagInAmount         = "in-amount"
-	flagToOnOtherChain   = "to-on-other-chain"
-	flagRandomNumberHash = "random-number-hash"
-	flagRandomNumber     = "random-number"
-	flagTimestamp        = "timestamp"
-	flagHeightSpan       = "height-span"
-	flagLimit            = "limit"
-	flagOffset           = "offset"
-	flagStatus           = "swap-status"
+	flagAuto                = "auto"
+	flagCreatorAddr         = "creator-addr"
+	flagRecipientAddr       = "recipient-addr"
+	flagOutAmount           = "out-amount"
+	flagInAmountOtherChain  = "in-amount-other-chain"
+	flagRecipientOtherChain = "recipient-other-chain"
+	flagRandomNumberHash    = "random-number-hash"
+	flagRandomNumber        = "random-number"
+	flagTimestamp           = "timestamp"
+	flagHeightSpan          = "height-span"
+	flagLimit               = "limit"
+	flagOffset              = "offset"
+	flagStatus              = "swap-status"
 )
 
 func initiateSwapCmd(cmdr Commander) *cobra.Command {
@@ -41,10 +41,10 @@ func initiateSwapCmd(cmdr Commander) *cobra.Command {
 	}
 
 	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
-	cmd.Flags().String(flagReceiverAddr, "", "The receiver address of BEP2 token, bech32 encoding")
+	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
-	cmd.Flags().Int64(flagInAmount, 0, "Expected gained token on the other chain, 8 decimals")
-	cmd.Flags().String(flagToOnOtherChain, "", "The receiver address on other chain, like Ethereum, hex encoding and prefix with 0x")
+	cmd.Flags().Int64(flagInAmountOtherChain, 0, "Expected gained token on the other chain, 8 decimals")
+	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x")
 	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
 	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
@@ -60,7 +60,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	to, err := sdk.AccAddressFromBech32(viper.GetString(flagReceiverAddr))
+	to, err := sdk.AccAddressFromBech32(viper.GetString(flagRecipientAddr))
 	if err != nil {
 		return err
 	}
@@ -69,12 +69,12 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	inAmount := viper.GetInt64(flagInAmount)
-	toOnOtherChainStr := viper.GetString(flagToOnOtherChain)
-	if !strings.HasPrefix(toOnOtherChainStr, "0x") {
+	inAmountOtherChain := viper.GetInt64(flagInAmountOtherChain)
+	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
+	if !strings.HasPrefix(recipientOtherChainStr, "0x") {
 		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --to-on-other-chain")
 	}
-	toOnOtherChain, err := hex.DecodeString(toOnOtherChainStr[2:])
+	recipientOtherChain, err := hex.DecodeString(recipientOtherChainStr[2:])
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (c Commander) initiateSwap(cmd *cobra.Command, args []string) error {
 	}
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, to, toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
+	msg := swap.NewHashTimerLockTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, inAmountOtherChain, heightSpan)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -298,14 +298,14 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-func querySwapsByReceiverCmd(cmdr Commander) *cobra.Command {
+func querySwapsByRecipientCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-swap-by-receiver",
-		Short: "Query swaps by the receiver address",
-		RunE:  cmdr.querySwapsByReceiver,
+		Use:   "query-swap-by-recipient",
+		Short: "Query swaps by the recipient address",
+		RunE:  cmdr.querySwapsByRecipient,
 	}
 
-	cmd.Flags().String(flagReceiverAddr, "", "Swap receiver address, bech32 encoding")
+	cmd.Flags().String(flagRecipientAddr, "", "Swap recipient address, bech32 encoding")
 	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
 	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
 	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
@@ -313,11 +313,11 @@ func querySwapsByReceiverCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) querySwapsByReceiver(cmd *cobra.Command, args []string) error {
+func (c Commander) querySwapsByRecipient(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	receiver, err := sdk.AccAddressFromBech32(viper.GetString(flagReceiverAddr))
+	recipient, err := sdk.AccAddressFromBech32(viper.GetString(flagRecipientAddr))
 	if err != nil {
 		return err
 	}
@@ -325,11 +325,11 @@ func (c Commander) querySwapsByReceiver(cmd *cobra.Command, args []string) error
 	offset := viper.GetInt64(flagOffset)
 	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
-	params := swap.QuerySwapByReceiverParams{
-		Receiver: receiver,
-		Status:   swapStatus,
-		Limit:    limit,
-		Offset:   offset,
+	params := swap.QuerySwapByRecipientParams{
+		Recipient: recipient,
+		Status:    swapStatus,
+		Limit:     limit,
+		Offset:    offset,
 	}
 
 	bz, err := c.Cdc.MarshalJSON(params)
@@ -337,7 +337,7 @@ func (c Commander) querySwapsByReceiver(cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapReceiver), bz)
+	res, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapRecipient), bz)
 	if err != nil {
 		return err
 	}

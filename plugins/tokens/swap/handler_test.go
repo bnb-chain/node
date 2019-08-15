@@ -39,13 +39,13 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	timestamp := int64(1564471835)
-	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
+	recipientOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	outAmount := sdk.Coin{"BNB", 10000}
-	inAmount := int64(10000)
+	inAmountOtherChain := int64(10000)
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
+	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, inAmountOtherChain, heightSpan)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -91,13 +91,13 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	timestamp := int64(1564471835)
-	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
+	recipientOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
 	outAmount := sdk.Coin{"BNB", 10000}
-	inAmount := int64(10000)
+	inAmountOtherChain := int64(10000)
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), toOnOtherChain, randomNumberHash, timestamp, outAmount, inAmount, heightSpan)
+	msg = NewHashTimerLockTransferMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, inAmountOtherChain, heightSpan)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)

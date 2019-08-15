@@ -217,11 +217,8 @@ sleep 1s
 result=$(expect ./initiate-swap.exp 400 "100000000:BNB" 100000000 $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
 check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
-printf "Random number: $randomNumber\n"
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
-printf "Timestamp: $timestamp\n"
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
-printf "Random number hash: $randomNumberHash\n"
 
 sleep 1s
 
@@ -229,7 +226,7 @@ swap1=$(./bnbcli token query-swap --random-number-hash $randomNumberHash --trust
 swap1From=$(echo "${swap1}" | jq -r '.from')
 check_operation "Check swap creator address" $swap1From $alice_addr
 swap1To=$(echo "${swap1}" | jq -r '.to')
-check_operation "swap receiver address" $swap1To $bob_addr
+check_operation "swap recipient address" $swap1To $bob_addr
 
 result=$(./bnbcli account bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u --trust-node)
 swapDeadAddrBalance=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
@@ -251,12 +248,6 @@ check_operation "Bob balance after claim swap" "$(expr $balanceBobAfterClaim - $
 # Initiate an atomic swap
 result=$(expect ./initiate-swap.exp 400 "100000000:BNB" 100000000 $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} ${cli_home})
 check_operation "Initiate an atomic swap" "${result}" "${chain_operation_words}"
-randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
-printf "Random number: $randomNumber\n"
-timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
-printf "Timestamp: $timestamp\n"
-randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
-printf "Random number hash: $randomNumberHash\n"
 
 sleep 1s
 

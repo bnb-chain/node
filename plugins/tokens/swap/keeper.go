@@ -62,8 +62,8 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	swapCreatorKey := BuildSwapCreatorKey(swap.From, swap.Index)
 	kvStore.Set(swapCreatorKey, swap.RandomNumberHash)
 
-	swapReceiverKey := BuildSwapReceiverKey(swap.To, swap.Index)
-	kvStore.Set(swapReceiverKey, swap.RandomNumberHash)
+	swapRecipientKey := BuildSwapRecipientKey(swap.To, swap.Index)
+	kvStore.Set(swapRecipientKey, swap.RandomNumberHash)
 
 	kp.SetIndex(ctx, swap.Index+1)
 
@@ -122,8 +122,8 @@ func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	swapCreatorKey := BuildSwapCreatorKey(swap.From, swap.Index)
 	kvStore.Delete(swapCreatorKey)
 
-	swapReceiverKey := BuildSwapReceiverKey(swap.To, swap.Index)
-	kvStore.Delete(swapReceiverKey)
+	swapRecipientKey := BuildSwapRecipientKey(swap.To, swap.Index)
+	kvStore.Delete(swapRecipientKey)
 
 	closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
 	kvStore.Delete(closeTimeKey)
@@ -149,9 +149,9 @@ func (kp *Keeper) GetSwapCreatorIterator(ctx sdk.Context, addr sdk.AccAddress) (
 	return sdk.KVStorePrefixIterator(kvStore, BuildSwapCreatorQueueKey(addr))
 }
 
-func (kp *Keeper) GetSwapReceiverIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
+func (kp *Keeper) GetSwapRecipientIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
-	return sdk.KVStorePrefixIterator(kvStore, BuildSwapReceiverQueueKey(addr))
+	return sdk.KVStorePrefixIterator(kvStore, BuildSwapRecipientQueueKey(addr))
 }
 
 func (kp *Keeper) GetSwapCloseTimeIterator(ctx sdk.Context) (iterator store.Iterator) {
