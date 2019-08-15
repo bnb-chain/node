@@ -74,12 +74,16 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 
 	expectedIncome := viper.GetString(flagExpectedIncome)
 	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
-	if len(recipientOtherChainStr) !=0 && !strings.HasPrefix(recipientOtherChainStr, "0x") {
-		return fmt.Errorf("must prefix with 0x for flag --recipient-other-chain")
-	}
-	recipientOtherChain, err := hex.DecodeString(recipientOtherChainStr[2:])
-	if err != nil {
-		return err
+
+	var recipientOtherChain swap.HexData
+	if len(recipientOtherChainStr) !=0 {
+		if !strings.HasPrefix(recipientOtherChainStr, "0x") {
+			return fmt.Errorf("must prefix with 0x for flag --recipient-other-chain")
+		}
+		recipientOtherChain, err = hex.DecodeString(recipientOtherChainStr[2:])
+		if err != nil {
+			return err
+		}
 	}
 
 	var randomNumberHash []byte
