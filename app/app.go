@@ -273,6 +273,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3,
 		swap.HashTimerLockTransferMsg{}.Type(),
+		swap.DepositHashTimerLockMsg{}.Type(),
 		swap.ClaimHashTimerLockMsg{}.Type(),
 		swap.RefundHashTimerLockMsg{}.Type(),
 		)

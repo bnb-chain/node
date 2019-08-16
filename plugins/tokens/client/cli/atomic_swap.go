@@ -10,12 +10,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkClient "github.com/cosmos/cosmos-sdk/client"
-
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/plugins/tokens/swap"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -161,19 +159,8 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if !viper.GetBool(sdkClient.FlagOffline) {
-		hashKey := swap.BuildHashKey(randomNumberHash)
-		resp, err := cliCtx.QueryStore(hashKey, common.AtomicSwapStoreName)
-		if err != nil {
-			return err
-		}
-		if len(resp) == 0 {
-			return fmt.Errorf("there is no swap matched with randomNumberHash %s", randomNumberHashStr)
-		}
-	}
-
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, recipient, nil, randomNumberHash, 0, outAmount, "", swap.MinimumHeightSpan, false)
+	msg := swap.NewDepositHashTimerLockMsg(from, recipient, outAmount, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {

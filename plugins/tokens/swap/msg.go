@@ -10,6 +10,7 @@ import (
 const (
 	AtomicSwapRoute = "atomicSwap"
 	HTLT            = "HTLT"
+	DepositHTLT     = "depositHTLT"
 	ClaimHTLT       = "claimHTLT"
 	RefundHTLT      = "refundHTLT"
 
@@ -78,7 +79,7 @@ func (msg HashTimerLockTransferMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidRecipientAddrOtherChain(fmt.Sprintf("The length of recipient address on other chain should be less than %d", MaxRecipientOtherChainLength))
 	}
 	if len(msg.ExpectedIncome) > MaxExpectedIncomeLength {
-		return ErrCodeInvalidExpectedIncome(fmt.Sprintf("The length of expected income should be less than %d", MaxExpectedIncomeLength))
+		return ErrExpectedIncomeTooLong(fmt.Sprintf("The length of expected income should be less than %d", MaxExpectedIncomeLength))
 	}
 	if len(msg.RandomNumberHash) != RandomNumberHashLength {
 		return ErrInvalidRandomNumberHash(fmt.Sprintf("The length of random number hash should be %d", RandomNumberHashLength))
@@ -93,6 +94,58 @@ func (msg HashTimerLockTransferMsg) ValidateBasic() sdk.Error {
 }
 
 func (msg HashTimerLockTransferMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+var _ sdk.Msg = DepositHashTimerLockMsg{}
+
+type DepositHashTimerLockMsg struct {
+	From             sdk.AccAddress `json:"from"`
+	To               sdk.AccAddress `json:"to"`
+	OutAmount        sdk.Coin       `json:"out_amount"`
+	RandomNumberHash HexData        `json:"random_number_hash"`
+}
+
+func NewDepositHashTimerLockMsg(from, to sdk.AccAddress, outAmount sdk.Coin, randomNumberHash []byte) DepositHashTimerLockMsg {
+	return DepositHashTimerLockMsg{
+		From:             from,
+		To:               to,
+		OutAmount:        outAmount,
+		RandomNumberHash: randomNumberHash,
+	}
+}
+
+func (msg DepositHashTimerLockMsg) Route() string { return AtomicSwapRoute }
+func (msg DepositHashTimerLockMsg) Type() string  { return DepositHTLT }
+func (msg DepositHashTimerLockMsg) String() string {
+	return fmt.Sprintf("depositHTLT{%v#%v#%v#%v}", msg.From, msg.To, msg.OutAmount, msg.RandomNumberHash)
+}
+func (msg DepositHashTimerLockMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return append(msg.GetSigners(), AtomicSwapCoinsAccAddr)
+}
+func (msg DepositHashTimerLockMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
+
+func (msg DepositHashTimerLockMsg) ValidateBasic() sdk.Error {
+	if len(msg.From) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("Expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.From)))
+	}
+	if len(msg.To) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("Expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.To)))
+	}
+	if len(msg.RandomNumberHash) != RandomNumberHashLength {
+		return ErrInvalidRandomNumberHash(fmt.Sprintf("The length of random number hash should be %d", RandomNumberHashLength))
+	}
+	if !msg.OutAmount.IsPositive() {
+		return ErrInvalidSwapOutAmount("The swapped out coin must be positive")
+	}
+	return nil
+}
+
+func (msg DepositHashTimerLockMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)

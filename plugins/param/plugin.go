@@ -54,6 +54,7 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP3, func(ctx sdk.Context) {
 		swapFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: swap.HashTimerLockTransferMsg{}.Type(), Fee: HashTimerLockTransferFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.DepositHashTimerLockMsg{}.Type(), Fee: DepositHashTimeLockFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: swap.ClaimHashTimerLockMsg{}.Type(), Fee: ClaimHashTimeLockFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: swap.RefundHashTimerLockMsg{}.Type(), Fee: RefundHashTimeLockFee, FeeFor: types.FeeForProposer},
 		}
@@ -88,6 +89,7 @@ func init() {
 		timelock.TimeRelockMsg{}.Type(): fees.FixedFeeCalculatorGen,
 		bank.MsgSend{}.Type():           tokens.TransferFeeCalculatorGen,
 		swap.HTLT:                       fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:  				 fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
 	}
