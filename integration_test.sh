@@ -11,7 +11,7 @@ home="./testnoded"
 chain_id="bnbchain-1000"
 
 keys_operation_words="bnb"
-chain_operation_words="Committed"
+chain_operation_words="\"code\":0"
 order_book_words="10.00000000"
 
 round="1"
@@ -201,10 +201,10 @@ result=$(expect ./set_account_flags.exp 0x01 bob ${chain_id} ${cli_home})
 check_operation "Set account flags" "${result}" "${chain_operation_words}"
 
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
-check_operation "Send Token" "${result}" "ERROR"
+check_operation "Send Token" "${result}" "\"code\":65552"
 
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "123456abcd")
-check_operation "Send Token" "${result}" "ERROR:"
+check_operation "Send Token" "${result}" "\"code\":65552"
 
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "1234567890")
 check_operation "Send Token" "${result}" "${chain_operation_words}"

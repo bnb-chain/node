@@ -8,7 +8,9 @@ set to [lindex $argv 4]
 set memo [lindex $argv 5]
 
 set timeout 30
-    spawn ./bnbcli send --home $home --from $from --chain-id=$chain_id --amount $amount --to $to --memo $memo
+	spawn ./bnbcli send --home $home --from $from --chain-id=$chain_id --amount $amount --to $to --memo $memo
+	expect "confirm transaction before signing and broadcasting*"
+	send "y\r"
 	expect "Password*"
 	send "12345678\r"
 interact

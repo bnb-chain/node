@@ -12,6 +12,8 @@ set timeout 30
 	} else {
 		spawn ./bnbcli dex cancel -l $symbol --home $home --from $from --chain-id=$chain_id -f $id
 	}
+	expect "confirm transaction before signing and broadcasting*"
+	send "y\r"
 	expect "Password*"
 	send "12345678\r"
 interact

@@ -11,6 +11,8 @@ set timeout 30
 	} else {
 		spawn ./bnbcli account_flags set-account-flags --home $home --account-flags $flags --from $from --chain-id $chain_id
 	}
+	expect "confirm transaction before signing and broadcasting*"
+	send "y\r"
 	expect "Password*"
 	send "12345678\r"
 interact

@@ -14,6 +14,8 @@ set timeout 30
 	} else {
 		spawn ./bnbcli token issue --home $home -s $symbol --token-name $token_name -n $supply --mintable $mintable --from $from --chain-id $chain_id
 	}
+	expect "confirm transaction before signing and broadcasting*"
+	send "y\r"
 	expect "Password*"
 	send "12345678\r"
 interact
