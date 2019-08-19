@@ -36,6 +36,11 @@ func newTestFeeConfig() orderPkg.FeeConfig {
 	feeConfig.IOCExpireFee = 5e4
 	feeConfig.CancelFeeNative = 2e4
 	feeConfig.CancelFee = 1e5
+
+	feeConfig.MakerFeeRateNative = 100
+	feeConfig.MakerFeeRate = 200
+	feeConfig.TakerFeeRateNative = 500
+	feeConfig.TakerFeeRate = 1000
 	return feeConfig
 }
 

@@ -11,6 +11,7 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	cmnUtils "github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/utils"
@@ -31,10 +32,16 @@ const (
 	ExpireFeeNativeField = "ExpireFeeNative"
 	CancelFeeField       = "CancelFee"
 	CancelFeeNativeField = "CancelFeeNative"
-	FeeRateField         = "FeeRate"
-	FeeRateNativeField   = "FeeRateNative"
+	FeeRateField         = "FeeRate"       // DEPRECATED. after xxx upgrade
+	FeeRateNativeField   = "FeeRateNative" // DEPRECATED. after xxx upgrade
 	IOCExpireFee         = "IOCExpireFee"
 	IOCExpireFeeNative   = "IOCExpireFeeNative"
+
+	// maker/taker fee
+	MakerFeeRateField       = "MakerFeeRate"
+	MakerFeeRateNativeField = "MakerFeeRateNative"
+	TakerFeeRateField       = "TakerFeeRate"
+	TakerFeeRateNativeField = "TakerFeeRateNative"
 )
 
 var (
@@ -111,20 +118,21 @@ func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Tra
 
 	var nativeFee int64
 	var isOverflow bool
+	isMaker := tran.IsMaker()
 	if tran.IsNativeIn() {
 		// always have enough balance to pay the fee.
-		nativeFee = m.calcTradeFee(big.NewInt(tran.in), FeeByNativeToken).Int64()
+		nativeFee = m.calcTradeFee(big.NewInt(tran.in), FeeByNativeToken, isMaker).Int64()
 		return types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, nativeFee)}, types.FeeForProposer)
 	} else if tran.IsNativeOut() {
-		nativeFee, isOverflow = m.calcNativeFee(types.NativeTokenSymbol, tran.out, engines)
+		nativeFee, isOverflow = m.calcNativeFee(types.NativeTokenSymbol, tran.out, isMaker, engines)
 	} else {
-		nativeFee, isOverflow = m.calcNativeFee(tran.inAsset, tran.in, engines)
+		nativeFee, isOverflow = m.calcNativeFee(tran.inAsset, tran.in, isMaker, engines)
 	}
 
 	if isOverflow || nativeFee == 0 || nativeFee > balances.AmountOf(types.NativeTokenSymbol) {
 		// 1. if the fee is too low and round to 0, we charge by inAsset
 		// 2. no enough NativeToken, use the received tokens as fee
-		feeToken = sdk.NewCoin(tran.inAsset, m.calcTradeFee(big.NewInt(tran.in), FeeByTradeToken).Int64())
+		feeToken = sdk.NewCoin(tran.inAsset, m.calcTradeFee(big.NewInt(tran.in), FeeByTradeToken, isMaker).Int64())
 		m.logger.Debug("No enough native token to pay trade fee", "feeToken", feeToken)
 	} else {
 		// have sufficient native token to pay the fees
@@ -133,7 +141,7 @@ func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Tra
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[string]*matcheng.MatchEng) (fee int64, isOverflow bool) {
+func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, isMaker bool, engines map[string]*matcheng.MatchEng) (fee int64, isOverflow bool) {
 	var nativeNotional *big.Int
 	if isNativeToken(inSymbol) {
 		nativeNotional = big.NewInt(inQty)
@@ -155,7 +163,7 @@ func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[str
 		}
 	}
 
-	nativeFee := m.calcTradeFee(nativeNotional, FeeByNativeToken)
+	nativeFee := m.calcTradeFee(nativeNotional, FeeByNativeToken, isMaker)
 	if nativeFee.IsInt64() {
 		return nativeFee.Int64(), false
 	}
@@ -176,8 +184,9 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
+	isMaker := false // Before Galileo upgrade, we don't have maker/taker concepts, so always set it to false
 	if inSymbol == types.NativeTokenSymbol {
-		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByNativeToken).Int64())
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByNativeToken, isMaker).Int64())
 	} else {
 		// price against native token,
 		// both `amountOfNativeToken` and `feeByNativeToken` may overflow when it's a non-BNB pair like ABC_XYZ
@@ -195,7 +204,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 				big.NewInt(market.LastTradePrice))
 		}
-		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
+		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken, isMaker)
 		if feeByNativeToken.IsInt64() && feeByNativeToken.Int64() != 0 &&
 			feeByNativeToken.Int64() <= balances.AmountOf(types.NativeTokenSymbol) {
 			// 1. if the fee is too low and round to 0, we charge by inAsset
@@ -203,7 +212,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken.Int64())
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByTradeToken).Int64())
+			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByTradeToken, isMaker).Int64())
 			m.logger.Debug("No enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
@@ -264,12 +273,28 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
 }
 
-func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {
+func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType, isMaker bool) *big.Int {
 	var feeRate int64
-	if feeType == FeeByNativeToken {
-		feeRate = m.FeeConfig.FeeRateNative
-	} else if feeType == FeeByTradeToken {
-		feeRate = m.FeeConfig.FeeRate
+	if sdk.IsUpgrade(upgrade.MakerTakerFee) {
+		if isMaker {
+			if feeType == FeeByNativeToken {
+				feeRate = m.FeeConfig.MakerFeeRateNative
+			} else if feeType == FeeByTradeToken {
+				feeRate = m.FeeConfig.MakerFeeRate
+			}
+		} else {
+			if feeType == FeeByNativeToken {
+				feeRate = m.FeeConfig.TakerFeeRateNative
+			} else if feeType == FeeByTradeToken {
+				feeRate = m.FeeConfig.TakerFeeRate
+			}
+		}
+	} else {
+		if feeType == FeeByNativeToken {
+			feeRate = m.FeeConfig.FeeRateNative
+		} else if feeType == FeeByTradeToken {
+			feeRate = m.FeeConfig.FeeRate
+		}
 	}
 
 	// TODO: (Perf) find a more efficient way to replace the big.Int solution.
@@ -332,6 +357,11 @@ type FeeConfig struct {
 	CancelFeeNative    int64 `json:"cancel_fee_native"`
 	FeeRate            int64 `json:"fee_rate"`
 	FeeRateNative      int64 `json:"fee_rate_native"`
+
+	MakerFeeRate       int64 `json:"maker_fee_rate"`
+	MakerFeeRateNative int64 `json:"maker_fee_rate_native"`
+	TakerFeeRate       int64 `json:"taker_fee_rate"`
+	TakerFeeRateNative int64 `json:"taker_fee_rate_native"`
 }
 
 func NewFeeConfig() FeeConfig {
@@ -344,6 +374,11 @@ func NewFeeConfig() FeeConfig {
 		CancelFeeNative:    nilFeeValue,
 		FeeRate:            nilFeeValue,
 		FeeRateNative:      nilFeeValue,
+
+		MakerFeeRate:       nilFeeValue,
+		MakerFeeRateNative: nilFeeValue,
+		TakerFeeRate:       nilFeeValue,
+		TakerFeeRateNative: nilFeeValue,
 	}
 }
 
@@ -355,7 +390,11 @@ func (config FeeConfig) anyEmpty() bool {
 		config.CancelFee < 0 ||
 		config.CancelFeeNative < 0 ||
 		config.FeeRate < 0 ||
-		config.FeeRateNative < 0 {
+		config.FeeRateNative < 0 ||
+		config.MakerFeeRate < 0 ||
+		config.MakerFeeRateNative < 0 ||
+		config.TakerFeeRate < 0 ||
+		config.TakerFeeRateNative < 0 {
 		return true
 	}
 
@@ -384,6 +423,14 @@ func ParamToFeeConfig(feeParams []param.FeeParam) *FeeConfig {
 					config.IOCExpireFee = d.FeeValue
 				case IOCExpireFeeNative:
 					config.IOCExpireFeeNative = d.FeeValue
+				case MakerFeeRateField:
+					config.MakerFeeRate = d.FeeValue
+				case MakerFeeRateNativeField:
+					config.MakerFeeRateNative = d.FeeValue
+				case TakerFeeRateField:
+					config.TakerFeeRate = d.FeeValue
+				case TakerFeeRateNativeField:
+					config.TakerFeeRateNative = d.FeeValue
 				}
 			}
 			return &config

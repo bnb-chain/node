@@ -23,12 +23,18 @@ func NewTestFeeConfig() FeeConfig {
 	feeConfig.IOCExpireFee = 5e4
 	feeConfig.CancelFeeNative = 2e4
 	feeConfig.CancelFee = 1e5
+
+	feeConfig.MakerFeeRateNative = 100
+	feeConfig.MakerFeeRate = 200
+	feeConfig.TakerFeeRateNative = 500
+	feeConfig.TakerFeeRate = 1000
 	return feeConfig
 }
 
 func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "XYZ-111", 1e7))
 	_, acc := testutils.NewAccount(ctx, am, 0)
@@ -99,7 +105,8 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 
 func TestFeeManager_CalcTradesFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("XYZ-111", "BNB", 2e7))
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BTC", 1e4))
@@ -148,7 +155,8 @@ func TestFeeManager_CalcTradesFee(t *testing.T) {
 
 func TestFeeManager_CalcExpiresFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("XYZ-111", "BNB", 2e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC", 5e5))
@@ -195,7 +203,8 @@ func TestFeeManager_CalcExpiresFee(t *testing.T) {
 
 func TestFeeManager_CalcTradeFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	// BNB
 	_, acc := testutils.NewAccount(ctx, am, 0)
@@ -239,7 +248,8 @@ func TestFeeManager_CalcTradeFee(t *testing.T) {
 
 func TestFeeManager_CalcFixedFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	_, acc := testutils.NewAccount(ctx, am, 1e4)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC-000", 1e5))

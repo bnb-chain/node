@@ -493,7 +493,8 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 
 func TestKeeper_ExpireOrders(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC-000", "BNB", 1e6))
@@ -635,7 +636,8 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	assert := assert.New(t)
 	ctx, am, keeper := setup()
 	fees.Pool.Clear()
-	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	err := keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	require.NoError(t, err)
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 

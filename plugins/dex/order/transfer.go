@@ -69,6 +69,14 @@ func (tran *Transfer) IsBuyer() bool {
 	return tran.Oid == tran.Trade.Bid
 }
 
+func (tran *Transfer) IsMaker() bool {
+	if tran.Trade == nil {
+		return false
+	}
+	return (tran.Trade.TickType == me.SellTaker && tran.Oid == tran.Trade.Bid) ||
+		(tran.Trade.TickType == me.BuyTaker && tran.Oid == tran.Trade.Sid)
+}
+
 func (tran *Transfer) String() string {
 	return fmt.Sprintf("Transfer[eventType:%v, oid:%v, inAsset:%v, inQty:%v, outAsset:%v, outQty:%v, unlock:%v, fee:%v]",
 		tran.eventType, tran.Oid, tran.inAsset, tran.in, tran.outAsset, tran.out, tran.unlock, tran.Fee)

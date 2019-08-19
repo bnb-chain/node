@@ -51,6 +51,11 @@ func initFeeConfig() {
 	testFeeConfig.IOCExpireFee = 5e4
 	testFeeConfig.CancelFeeNative = 2e4
 	testFeeConfig.CancelFee = 1e5
+
+	testFeeConfig.MakerFeeRateNative = 100
+	testFeeConfig.MakerFeeRate = 200
+	testFeeConfig.TakerFeeRateNative = 500
+	testFeeConfig.TakerFeeRate = 1000
 }
 
 func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account) {

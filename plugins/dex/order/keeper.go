@@ -376,9 +376,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		close(symbolCh)
 	}
 	matchWorker := func() {
-		i := 0
 		for symbol := range symbolCh {
-			i++
 			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
 		}
 	}
