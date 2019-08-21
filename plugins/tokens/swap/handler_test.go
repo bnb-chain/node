@@ -56,7 +56,7 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmount}, AtomicSwapCoinsAcc.GetCoins())
 
-	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap := swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(100)
@@ -78,7 +78,7 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, 0, len(AtomicSwapCoinsAcc.GetCoins()))
 
-	swap = swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap = swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, Completed, swap.Status)
 }
 
@@ -108,7 +108,7 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmount}, AtomicSwapCoinsAcc.GetCoins())
 
-	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap := swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(2000)
@@ -127,7 +127,7 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, 0, len(AtomicSwapCoinsAcc.GetCoins()))
 
-	swap = swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap = swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, Expired, swap.Status)
 }
 
@@ -172,7 +172,7 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmountBNB}.Plus(sdk.Coins{outAmountABC}).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
-	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap := swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(20)
@@ -194,7 +194,7 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, 0, len(AtomicSwapCoinsAcc.GetCoins()))
 
-	swap = swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap = swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, Completed, swap.Status)
 
 	acc1Acc := accKeeper.GetAccount(ctx, acc1.GetAddress())
@@ -247,7 +247,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmountBNB}.Plus(sdk.Coins{outAmountABC}).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
-	swap := swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap := swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
 
 	ctx = ctx.WithBlockHeight(2000)
@@ -266,7 +266,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, 0, len(AtomicSwapCoinsAcc.GetCoins()))
 
-	swap = swapKeeper.QuerySwap(ctx, randomNumberHash)
+	swap = swapKeeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, Expired, swap.Status)
 
 	acc1Acc := accKeeper.GetAccount(ctx, acc1.GetAddress())

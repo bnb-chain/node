@@ -15,11 +15,6 @@ import (
 	bnclog "github.com/binance-chain/node/common/log"
 )
 
-const (
-	OneHour = 3600
-	TwoHour = 7200
-)
-
 var (
 	// bnb prefix address:  bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u
 	// tbnb prefix address: tbnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4ffasp3d
@@ -50,7 +45,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("empty atomic swap pointer")
+		return sdk.ErrInternal("empty atomic swap pointer")
 	}
 
 	hashKey := BuildHashKey(swap.RandomNumberHash)
@@ -73,7 +68,7 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("empty atomic swap pointer")
+		return sdk.ErrInternal("empty atomic swap pointer")
 	}
 
 	hashKey := BuildHashKey(swap.RandomNumberHash)
@@ -93,7 +88,7 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("empty atomic swap pointer")
+		return sdk.ErrInternal("empty atomic swap pointer")
 	}
 	if swap.ClosedTime <= 0 {
 		return sdk.ErrInternal("Missing swap close time")
@@ -114,7 +109,7 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
-		panic("nil atomic swap pointer")
+		return sdk.ErrInternal("empty atomic swap pointer")
 	}
 	hashKey := BuildHashKey(swap.RandomNumberHash)
 	kvStore.Delete(hashKey)
@@ -131,7 +126,7 @@ func (kp *Keeper) DeleteSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 	return nil
 }
 
-func (kp *Keeper) QuerySwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwap {
+func (kp *Keeper) GetSwap(ctx sdk.Context, randomNumberHash []byte) *AtomicSwap {
 	kvStore := ctx.KVStore(kp.storeKey)
 
 	hashKey := BuildHashKey(randomNumberHash)

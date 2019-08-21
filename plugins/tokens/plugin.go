@@ -51,11 +51,11 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 		}
 		swapClosedTime := int64(binary.BigEndian.Uint64(key[1 : 1+swap.Int64Size]))
 		// Only delete swaps which were closed one week ago
-		if swapClosedTime > ctx.BlockHeader().Time.Unix()-86400*7 {
+		if swapClosedTime > ctx.BlockHeader().Time.Unix()-swap.OneWeek {
 			break
 		}
 		randomNumberHash := iterator.Value()
-		swapRecord := swapKeeper.QuerySwap(ctx, randomNumberHash)
+		swapRecord := swapKeeper.GetSwap(ctx, randomNumberHash)
 		if swapRecord == nil {
 			logger.Error("Unexpected randomNumberHash, no corresponding swap record", "randomNumberHash", randomNumberHash)
 			continue

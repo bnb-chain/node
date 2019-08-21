@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/wire"
+
+	"github.com/gorilla/mux"
 )
 
 // QuerySwapsByRecipientReqHandler creates an http request handler to
