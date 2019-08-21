@@ -160,7 +160,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 	for i, tc := range tests {
 		recipientOtherChain, _ := hex.DecodeString(tc.RecipientOtherChain)
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewHashTimerLockTransferMsg(tc.From, tc.To, recipientOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
+		msg := NewHashTimerLockedTransferMsg(tc.From, tc.To, recipientOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
@@ -214,7 +214,7 @@ func TestClaimHashTimerLockMsg(t *testing.T) {
 	for i, tc := range tests {
 		randomNumber, _ := hex.DecodeString(tc.RandomNumber)
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewClaimHashTimerLockMsg(tc.From, randomNumberHash, randomNumber)
+		msg := NewClaimHashTimerLockedTransferMsg(tc.From, randomNumberHash, randomNumber)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
@@ -256,7 +256,7 @@ func TestRefundLockedAssetMsg(t *testing.T) {
 
 	for i, tc := range tests {
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewRefundLockedAssetMsg(tc.From, randomNumberHash)
+		msg := NewRefundRefundHashTimerLockedTransferMsg(tc.From, randomNumberHash)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {

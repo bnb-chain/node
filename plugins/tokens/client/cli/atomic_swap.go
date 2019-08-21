@@ -35,8 +35,8 @@ const (
 
 func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "initiate-HTLT",
-		Short: "initiate a hash timer lock transfer",
+		Use:   "HTLT",
+		Short: "Create a hash timer lock transfer",
 		RunE:  cmdr.initiateHTLT,
 	}
 
@@ -110,7 +110,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHashTimerLockTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+	msg := swap.NewHashTimerLockedTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -160,7 +160,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewDepositHashTimerLockMsg(from, recipient, outAmount, randomNumberHash)
+	msg := swap.NewDepositHashTimerLockedTransferMsg(from, recipient, outAmount, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -209,7 +209,7 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewClaimHashTimerLockMsg(from, randomNumberHash, randomNumber)
+	msg := swap.NewClaimHashTimerLockedTransferMsg(from, randomNumberHash, randomNumber)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -248,7 +248,7 @@ func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewRefundLockedAssetMsg(from, randomNumberHash)
+	msg := swap.NewRefundRefundHashTimerLockedTransferMsg(from, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
