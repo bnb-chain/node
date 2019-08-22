@@ -401,7 +401,7 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *bc.BlockStore {
 	block = NewMockBlock(txs, height, lastCommit, cdc)
 	blockParts = block.MakePartSet(BlockPartSize)
 	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
-	//blockID := tmtypes.BlockID{Hash: block.Hash(), PartsHeader: blockParts.Header()}
+	//blockID := tmtypes.BlockID{RandomNumberHash: block.RandomNumberHash(), PartsHeader: blockParts.Header()}
 	//lastCommit = tmtypes.MakeCommit(block)
 	height++
 	msgs11 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123463", Side.BUY, "XYZ-000_BNB", 96000, 2500000)}

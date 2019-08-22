@@ -5,11 +5,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 const (
+	QuerySwapHash      = "swaphash"
 	QuerySwapCreator   = "swapcreator"
 	QuerySwapRecipient = "swaprecipient"
 )
@@ -17,6 +17,8 @@ const (
 func NewQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
 		switch path[0] {
+		case QuerySwapHash:
+			return querySwapByHash(ctx, req, keeper)
 		case QuerySwapCreator:
 			return querySwapByCreator(ctx, req, keeper)
 		case QuerySwapRecipient:
@@ -27,10 +29,39 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
+// Params for query 'custom/atomicswap/swaphash'
+type QuerySwapByHashParams struct {
+	RandomNumberHash HexData
+}
+
+// nolint: unparam
+func querySwapByHash(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params QuerySwapByHashParams
+	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("incorrectly formatted request data: %s", err.Error()))
+	}
+
+	if len(params.RandomNumberHash) != RandomNumberHashLength {
+		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of random number hash should be %d", RandomNumberHashLength))
+	}
+
+	swap := keeper.GetSwap(ctx, params.RandomNumberHash)
+	if swap == nil {
+		return nil, ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", params.RandomNumberHash))
+	}
+
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, *swap)
+	if err != nil {
+		return nil, sdk.ErrInternal(fmt.Sprintf("could not marshal result to JSON: %s", err.Error()))
+	}
+
+	return bz, nil
+}
+
 // Params for query 'custom/atomicswap/swapcreator'
 type QuerySwapByCreatorParams struct {
 	Creator sdk.AccAddress
-	Status  SwapStatus
 	Limit   int64
 	Offset  int64
 }
@@ -40,7 +71,7 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	var params QuerySwapByCreatorParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("incorrectly formatted request data: %s", err.Error()))
 	}
 
 	if len(params.Creator) != sdk.AddrLen {
@@ -58,15 +89,8 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	defer iterator.Close()
 
 	count := int64(0)
-	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
+	randomNumberHashList := make([]HexData, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
-		swap := keeper.GetSwap(ctx, iterator.Value())
-		if swap == nil {
-			continue
-		}
-		if params.Status != NULL && swap.Status != params.Status {
-			continue
-		}
 		count++
 		if count <= params.Offset {
 			continue
@@ -74,12 +98,12 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 		if count-params.Offset > params.Limit {
 			break
 		}
-		atomicSwaps = append(atomicSwaps, *swap)
+		randomNumberHashList = append(randomNumberHashList, iterator.Value())
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, atomicSwaps)
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, randomNumberHashList)
 	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+		return nil, sdk.ErrInternal(fmt.Sprintf("could not marshal result to JSON: %s", err.Error()))
 	}
 
 	return bz, nil
@@ -88,7 +112,6 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 // Params for query 'custom/atomicswap/swaprecipient'
 type QuerySwapByRecipientParams struct {
 	Recipient sdk.AccAddress
-	Status    SwapStatus
 	Limit     int64
 	Offset    int64
 }
@@ -98,7 +121,7 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 	var params QuerySwapByRecipientParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("incorrectly formatted request data: %s", err.Error()))
 	}
 
 	if len(params.Recipient) != sdk.AddrLen {
@@ -116,15 +139,8 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 	defer iterator.Close()
 
 	count := int64(0)
-	atomicSwaps := make([]AtomicSwap, 0, params.Limit)
+	randomNumberHashList := make([]HexData, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
-		swap := keeper.GetSwap(ctx, iterator.Value())
-		if swap == nil {
-			continue
-		}
-		if params.Status != NULL && swap.Status != params.Status {
-			continue
-		}
 		count++
 		if count <= params.Offset {
 			continue
@@ -132,12 +148,12 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 		if count-params.Offset > params.Limit {
 			break
 		}
-		atomicSwaps = append(atomicSwaps, *swap)
+		randomNumberHashList = append(randomNumberHashList, iterator.Value())
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, atomicSwaps)
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, randomNumberHashList)
 	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+		return nil, sdk.ErrInternal(fmt.Sprintf("could not marshal result to JSON: %s", err.Error()))
 	}
 
 	return bz, nil

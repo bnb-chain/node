@@ -88,7 +88,7 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 		return err.Result()
 	}
 
-	return  sdk.Result{Tags: tags}
+	return sdk.Result{Tags: tags}
 
 }
 

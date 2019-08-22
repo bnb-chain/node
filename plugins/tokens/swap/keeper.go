@@ -8,7 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-
 	"github.com/tendermint/tendermint/crypto"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -76,11 +75,6 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swap *AtomicSwap) sdk.Error {
 		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swap %v", swap.RandomNumberHash))
 	}
 	kvStore.Set(hashKey, kp.cdc.MustMarshalBinaryBare(*swap))
-
-	if swap.ClosedTime > 0 {
-		closeTimeKey := BuildCloseTimeKey(swap.ClosedTime, swap.Index)
-		kvStore.Set(closeTimeKey, swap.RandomNumberHash)
-	}
 
 	return nil
 }

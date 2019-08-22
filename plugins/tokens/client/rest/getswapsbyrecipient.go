@@ -7,11 +7,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/gorilla/mux"
 
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/wire"
-
-	"github.com/gorilla/mux"
 )
 
 // QuerySwapsByRecipientReqHandler creates an http request handler to
@@ -34,7 +33,6 @@ func QuerySwapsByRecipientReqHandler(
 			throw(w, http.StatusBadRequest, err)
 			return
 		}
-		swapStatus := swap.NewSwapStatusFromString(vars["swapStatus"])
 		limitStr := r.FormValue("limit")
 		offsetStr := r.FormValue("offset")
 
@@ -52,7 +50,6 @@ func QuerySwapsByRecipientReqHandler(
 
 		params := swap.QuerySwapByRecipientParams{
 			Recipient: recipientAddr,
-			Status:    swapStatus,
 			Limit:     int64(limit),
 			Offset:    int64(offset),
 		}
