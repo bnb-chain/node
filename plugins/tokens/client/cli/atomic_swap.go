@@ -109,7 +109,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHashTimerLockedTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -120,7 +120,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 
 func depositHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "deposit-HTLT",
+		Use:   "deposit",
 		Short: "deposit a hash timer lock transfer",
 		RunE:  cmdr.depositHTLT,
 	}
@@ -159,7 +159,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewDepositHashTimerLockedTransferMsg(from, recipient, outAmount, randomNumberHash)
+	msg := swap.NewDepositHTLTMsg(from, recipient, outAmount, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -170,7 +170,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 
 func claimHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "claim-HTLT",
+		Use:   "claim",
 		Short: "claim a hash timer lock transfer",
 		RunE:  cmdr.claimHTLT,
 	}
@@ -208,7 +208,7 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewClaimHashTimerLockedTransferMsg(from, randomNumberHash, randomNumber)
+	msg := swap.NewClaimHTLTMsg(from, randomNumberHash, randomNumber)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -219,7 +219,7 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 
 func refundHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "refund-HTLT",
+		Use:   "refund",
 		Short: "refund a hash timer lock transfer",
 		RunE:  cmdr.refundHTLT,
 	}
@@ -247,7 +247,7 @@ func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewRefundRefundHashTimerLockedTransferMsg(from, randomNumberHash)
+	msg := swap.NewRefundHTLTMsg(from, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -308,7 +308,7 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 func querySwapsByCreatorCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-by-creator",
-		Short: "Query swaps' random number hash by the creator address",
+		Short: "Query random number hash list by the creator address",
 		RunE:  cmdr.querySwapsByCreator,
 	}
 
@@ -353,7 +353,7 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 func querySwapsByRecipientCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-by-recipient",
-		Short: "Query swaps' random number hash by the recipient address",
+		Short: "Query random number hash list by the recipient address",
 		RunE:  cmdr.querySwapsByRecipient,
 	}
 

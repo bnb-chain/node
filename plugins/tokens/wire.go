@@ -19,8 +19,8 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(timelock.TimeLockMsg{}, "tokens/TimeLockMsg", nil)
 	cdc.RegisterConcrete(timelock.TimeUnlockMsg{}, "tokens/TimeUnlockMsg", nil)
 	cdc.RegisterConcrete(timelock.TimeRelockMsg{}, "tokens/TimeRelockMsg", nil)
-	cdc.RegisterConcrete(swap.HashTimerLockedTransferMsg{}, "tokens/HashTimerLockedTransferMsg", nil)
-	cdc.RegisterConcrete(swap.DepositHashTimerLockedTransferMsg{}, "tokens/DepositHashTimerLockedTransferMsg", nil)
-	cdc.RegisterConcrete(swap.ClaimHashTimerLockedTransferMsg{}, "tokens/ClaimHashTimerLockedTransferMsg", nil)
-	cdc.RegisterConcrete(swap.RefundHashTimerLockedTransferMsg{}, "tokens/RefundHashTimerLockedTransferMsg", nil)
+	cdc.RegisterConcrete(swap.HTLTMsg{}, "tokens/HTLTMsg", nil)
+	cdc.RegisterConcrete(swap.DepositHTLTMsg{}, "tokens/DepositHTLTMsg", nil)
+	cdc.RegisterConcrete(swap.ClaimHTLTMsg{}, "tokens/ClaimHTLTMsg", nil)
+	cdc.RegisterConcrete(swap.RefundHTLTMsg{}, "tokens/RefundHTLTMsg", nil)
 }

@@ -236,7 +236,7 @@ result=$(./bnbcli account $bob_addr --trust-node)
 balanceBobBeforeClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
 
 # Claim an atomic swap
-result=$(expect ./claim-HTLT.exp $randomNumberHash $randomNumber alice ${chain_id} ${cli_home})
+result=$(expect ./claim.exp $randomNumberHash $randomNumber alice ${chain_id} ${cli_home})
 check_operation "claim an atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
@@ -252,7 +252,7 @@ check_operation "Create an atomic swap" "${result}" "${chain_operation_words}"
 sleep 1s
 
 # Refund an atomic swap
-result=$(expect ./refund-HTLT.exp $randomNumberHash alice ${chain_id} ${cli_home})
+result=$(expect ./refund.exp $randomNumberHash alice ${chain_id} ${cli_home})
 check_operation "refund an atomic swap which is still not expired" "${result}" "ERROR"
 
 sleep 1s
@@ -276,17 +276,17 @@ randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # claim a single chain atomic swap
-result=$(expect ./claim-HTLT.exp ${randomNumberHash} ${randomNumber} alice ${chain_id} ${cli_home})
+result=$(expect ./claim.exp ${randomNumberHash} ${randomNumber} alice ${chain_id} ${cli_home})
 check_operation "claim a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a closed single chain atomic swap" "${result}" "ERROR"
 
 sleep 1s
@@ -299,17 +299,17 @@ randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 3s
 # refund a single chain atomic swap
-result=$(expect ./refund-HTLT.exp ${randomNumberHash} alice ${chain_id} ${cli_home})
+result=$(expect ./refund.exp ${randomNumberHash} alice ${chain_id} ${cli_home})
 check_operation "refund a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit-HTLT.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a expired single chain atomic swap" "${result}" "ERROR"
 
 exit_test 0

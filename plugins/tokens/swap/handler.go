@@ -10,13 +10,13 @@ import (
 func NewHandler(kp Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case HashTimerLockedTransferMsg:
+		case HTLTMsg:
 			return handleHashTimerLockedTransfer(ctx, kp, msg)
-		case DepositHashTimerLockedTransferMsg:
+		case DepositHTLTMsg:
 			return handleDepositHashTimerLockedTransfer(ctx, kp, msg)
-		case ClaimHashTimerLockedTransferMsg:
+		case ClaimHTLTMsg:
 			return handleClaimHashTimerLockedTransfer(ctx, kp, msg)
-		case RefundHashTimerLockedTransferMsg:
+		case RefundHTLTMsg:
 			return handleRefundHashTimerLockedTransfer(ctx, kp, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized message type: %T", msg)
@@ -25,7 +25,7 @@ func NewHandler(kp Keeper) sdk.Handler {
 	}
 }
 
-func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLockedTransferMsg) sdk.Result {
+func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
 	blockTime := ctx.BlockHeader().Time.Unix()
 	if msg.Timestamp < blockTime-TwoHours || msg.Timestamp > blockTime+OneHour {
 		return ErrInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
@@ -57,7 +57,7 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HashTimerLock
 	return sdk.Result{Tags: tags}
 }
 
-func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHashTimerLockedTransferMsg) sdk.Result {
+func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
 	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
@@ -92,7 +92,7 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 
 }
 
-func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHashTimerLockedTransferMsg) sdk.Result {
+func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg) sdk.Result {
 	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
@@ -146,7 +146,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHas
 	return sdk.Result{Tags: tags}
 }
 
-func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHashTimerLockedTransferMsg) sdk.Result {
+func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg) sdk.Result {
 	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
 	if swap == nil {
 		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()

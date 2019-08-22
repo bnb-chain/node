@@ -7,11 +7,11 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 8
 
-	CodeInvalidRecipientAddrOtherChain   sdk.CodeType = 1
-	CodeInvalidRandomNumberHash    sdk.CodeType = 2
-	CodeInvalidRandomNumber        sdk.CodeType = 3
-	CodeInvalidSwapOutAmount         sdk.CodeType = 4
-	CodeInvalidHeightSpan            sdk.CodeType = 5
+	CodeInvalidRecipientAddrOtherChain sdk.CodeType = 1
+	CodeInvalidRandomNumberHash        sdk.CodeType = 2
+	CodeInvalidRandomNumber            sdk.CodeType = 3
+	CodeInvalidSwapOutAmount           sdk.CodeType = 4
+	CodeInvalidHeightSpan              sdk.CodeType = 5
 	CodeDuplicatedRandomNumberHash     sdk.CodeType = 6
 	CodeClaimExpiredSwap               sdk.CodeType = 7
 	CodeRefundUnexpiredSwap            sdk.CodeType = 8

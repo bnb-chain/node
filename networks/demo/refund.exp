@@ -7,9 +7,9 @@ set home [lindex $argv 3]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token refund-HTLT --from $from --chain-id $chain_id --random-number-hash $randomNumberHash
+		spawn ./bnbcli token refund --from $from --chain-id $chain_id --random-number-hash $randomNumberHash
 	} else {
-		spawn ./bnbcli token refund-HTLT --home $home --from $from --chain-id $chain_id --random-number-hash $randomNumberHash
+		spawn ./bnbcli token refund --home $home --from $from --chain-id $chain_id --random-number-hash $randomNumberHash
 	}
 	expect "Password*"
 	send "12345678\r"

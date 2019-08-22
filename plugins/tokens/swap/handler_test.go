@@ -46,7 +46,7 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockedTransferMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -61,15 +61,15 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 
 	wrongRandomNumberStr := "62fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649"
 	wrongRandomNumber, _ := hex.DecodeString(wrongRandomNumberStr)
-	msg = NewClaimHashTimerLockedTransferMsg(acc1.GetAddress(), randomNumberHash, wrongRandomNumber)
+	msg = NewClaimHTLTMsg(acc1.GetAddress(), randomNumberHash, wrongRandomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ToABCICode(DefaultCodespace, CodeMismatchedRandomNumber))
 
-	msg = NewRefundRefundHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash)
+	msg = NewRefundHTLTMsg(acc2.GetAddress(), randomNumberHash)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ToABCICode(DefaultCodespace, CodeRefundUnexpiredSwap))
 
-	msg = NewClaimHashTimerLockedTransferMsg(acc1.GetAddress(), randomNumberHash, randomNumber)
+	msg = NewClaimHTLTMsg(acc1.GetAddress(), randomNumberHash, randomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
 
@@ -98,7 +98,7 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockedTransferMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -111,14 +111,14 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 
 	ctx = ctx.WithBlockHeight(2000)
 
-	msg = NewClaimHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash, randomNumber)
+	msg = NewClaimHTLTMsg(acc2.GetAddress(), randomNumberHash, randomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ToABCICode(DefaultCodespace, CodeClaimExpiredSwap), result.Code)
 
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmount}, AtomicSwapCoinsAcc.GetCoins())
 
-	msg = NewRefundRefundHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash)
+	msg = NewRefundHTLTMsg(acc2.GetAddress(), randomNumberHash)
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 
@@ -155,14 +155,14 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockedTransferMsg(acc1.GetAddress(), acc2.GetAddress(), nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
 
 	outAmountABC := sdk.Coin{"ABC", 100000000}
 	expectedIncome = "10000:BNB"
-	msg = NewHashTimerLockedTransferMsg(acc2.GetAddress(), acc1.GetAddress(), nil, randomNumberHash, timestamp, outAmountABC, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc2.GetAddress(), acc1.GetAddress(), nil, randomNumberHash, timestamp, outAmountABC, expectedIncome, heightSpan, false)
 
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -177,15 +177,15 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 
 	wrongRandomNumberStr := "62fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649"
 	wrongRandomNumber, _ := hex.DecodeString(wrongRandomNumberStr)
-	msg = NewClaimHashTimerLockedTransferMsg(acc1.GetAddress(), randomNumberHash, wrongRandomNumber)
+	msg = NewClaimHTLTMsg(acc1.GetAddress(), randomNumberHash, wrongRandomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ToABCICode(DefaultCodespace, CodeMismatchedRandomNumber))
 
-	msg = NewRefundRefundHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash)
+	msg = NewRefundHTLTMsg(acc2.GetAddress(), randomNumberHash)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ToABCICode(DefaultCodespace, CodeRefundUnexpiredSwap))
 
-	msg = NewClaimHashTimerLockedTransferMsg(acc1.GetAddress(), randomNumberHash, randomNumber)
+	msg = NewClaimHTLTMsg(acc1.GetAddress(), randomNumberHash, randomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
 
@@ -230,14 +230,14 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHashTimerLockedTransferMsg(acc1.GetAddress(), acc2.GetAddress(), nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
 
 	outAmountABC := sdk.Coin{"ABC", 100000000}
 	expectedIncome = "10000:BNB"
-	msg = NewHashTimerLockedTransferMsg(acc2.GetAddress(), acc1.GetAddress(), nil, randomNumberHash, timestamp, outAmountABC, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc2.GetAddress(), acc1.GetAddress(), nil, randomNumberHash, timestamp, outAmountABC, expectedIncome, heightSpan, false)
 
 	result = handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
@@ -250,14 +250,14 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 
 	ctx = ctx.WithBlockHeight(2000)
 
-	msg = NewClaimHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash, randomNumber)
+	msg = NewClaimHTLTMsg(acc2.GetAddress(), randomNumberHash, randomNumber)
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ToABCICode(DefaultCodespace, CodeClaimExpiredSwap), result.Code)
 
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
 	require.Equal(t, sdk.Coins{outAmountBNB}.Plus(sdk.Coins{outAmountABC}).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
-	msg = NewRefundRefundHashTimerLockedTransferMsg(acc2.GetAddress(), randomNumberHash)
+	msg = NewRefundHTLTMsg(acc2.GetAddress(), randomNumberHash)
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 
