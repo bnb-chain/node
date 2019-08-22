@@ -10,17 +10,17 @@ import (
 	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
+	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
-	"github.com/binance-chain/node/plugins/account"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/plugins/tokens/swap"
+	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
 
 const AbciQueryPrefix = "param"
@@ -53,10 +53,10 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP3, func(ctx sdk.Context) {
 		swapFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: swap.HashTimerLockedTransferMsg{}.Type(), Fee: HashTimerLockTransferFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.DepositHashTimerLockedTransferMsg{}.Type(), Fee: DepositHashTimeLockFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.ClaimHashTimerLockedTransferMsg{}.Type(), Fee: ClaimHashTimeLockFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.RefundHashTimerLockedTransferMsg{}.Type(), Fee: RefundHashTimeLockFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.HTLTMsg{}.Type(), Fee: HTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.DepositHTLTMsg{}.Type(), Fee: DepositHTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.ClaimHTLTMsg{}.Type(), Fee: ClaimHTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.RefundHTLTMsg{}.Type(), Fee: RefundHTLTFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
@@ -80,17 +80,17 @@ func init() {
 		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
 		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
-		issue.MintMsgType:               fees.FixedFeeCalculatorGen,
-		burn.BurnRoute:                  fees.FixedFeeCalculatorGen,
-		account.SetAccountFlagsMsgType:  fees.FixedFeeCalculatorGen,
-		freeze.FreezeRoute:              fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type(): fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type(): fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():           tokens.TransferFeeCalculatorGen,
-		swap.HTLT:                       fees.FixedFeeCalculatorGen,
-		swap.DepositHTLT:  				 fees.FixedFeeCalculatorGen,
-		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
-		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
+		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
+		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
+		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
+		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                         fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
 	}
 }

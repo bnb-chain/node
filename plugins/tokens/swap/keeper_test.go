@@ -7,14 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-
+	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -155,13 +153,12 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	querySwap := keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, swap.RandomNumberHash, querySwap.RandomNumberHash)
 
-	querySwap.InAmount =  sdk.Coin{"ABC", 100000000}
+	querySwap.InAmount = sdk.Coin{"ABC", 100000000}
 	err = keeper.UpdateSwap(ctx, querySwap)
 	require.NoError(t, err)
 
 	querySwap = keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, sdk.Coin{"ABC", 100000000}, querySwap.InAmount)
-
 
 	querySwap.RandomNumber, _ = hex.DecodeString("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649")
 	querySwap.ClosedTime = time.Now().Unix()
@@ -177,7 +174,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	require.True(t, closeTimeIterator.Valid())
 	key := closeTimeIterator.Key()
 	require.Equal(t, 1+Int64Size+Int64Size, len(key))
-	swapClosedTime := int64(binary.BigEndian.Uint64(key[1:1+Int64Size]))
+	swapClosedTime := int64(binary.BigEndian.Uint64(key[1 : 1+Int64Size]))
 	require.Equal(t, querySwap.ClosedTime, swapClosedTime)
 	require.Equal(t, []byte(swap.RandomNumberHash), closeTimeIterator.Value())
 	closeTimeIterator.Next()

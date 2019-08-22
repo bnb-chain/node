@@ -7,12 +7,10 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/wire"
-
-	"github.com/gorilla/mux"
 )
 
 // QuerySwapReqHandler creates an http request handler to get AtomicSwap record by randomNumberHash
@@ -40,27 +38,21 @@ func QuerySwapReqHandler(
 			throw(w, http.StatusBadRequest, err)
 			return
 		}
-		hashKey := swap.BuildHashKey(randomNumberHash)
+		params := swap.QuerySwapByHashParams{
+			RandomNumberHash: randomNumberHash,
+		}
 
-		res, err := ctx.QueryStore(hashKey, common.AtomicSwapStoreName)
+		bz, err := cdc.MarshalJSON(params)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		if res == nil {
-			throw(w, http.StatusBadRequest, fmt.Errorf("no matched swap record"))
-			return
-		}
-
-		var atomicSwap swap.AtomicSwap
-		cdc.MustUnmarshalBinaryBare(res, &atomicSwap)
-		output, err := cdc.MarshalJSON(atomicSwap)
+		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapByHashParams{}), bz)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
-
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
 		w.Write(output)

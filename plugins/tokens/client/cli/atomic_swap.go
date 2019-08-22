@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/plugins/tokens/swap"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -30,7 +30,6 @@ const (
 	flagCrossChain          = "cross-chain"
 	flagLimit               = "limit"
 	flagOffset              = "offset"
-	flagStatus              = "swap-status"
 )
 
 func initiateHTLTCmd(cmdr Commander) *cobra.Command {
@@ -45,7 +44,7 @@ func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
 	cmd.Flags().String(flagExpectedIncome, "", "Expected income on the other chain")
 	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x, leave it empty for single chain swap")
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
 	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
 	cmd.Flags().Bool(flagCrossChain, false, "Create cross chain hash timer lock transfer")
@@ -74,7 +73,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
 
 	var recipientOtherChain swap.HexData
-	if len(recipientOtherChainStr) !=0 {
+	if len(recipientOtherChainStr) != 0 {
 		if !strings.HasPrefix(recipientOtherChainStr, "0x") {
 			return fmt.Errorf("must prefix with 0x for flag --recipient-other-chain")
 		}
@@ -110,7 +109,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHashTimerLockedTransferMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -121,14 +120,14 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 
 func depositHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "deposit-HTLT",
+		Use:   "deposit",
 		Short: "deposit a hash timer lock transfer",
 		RunE:  cmdr.depositHTLT,
 	}
 
 	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -160,7 +159,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewDepositHashTimerLockedTransferMsg(from, recipient, outAmount, randomNumberHash)
+	msg := swap.NewDepositHTLTMsg(from, recipient, outAmount, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -171,12 +170,12 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 
 func claimHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "claim-HTLT",
+		Use:   "claim",
 		Short: "claim a hash timer lock transfer",
 		RunE:  cmdr.claimHTLT,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 	cmd.Flags().String(flagRandomNumber, "", "The secret random number, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
@@ -209,7 +208,7 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewClaimHashTimerLockedTransferMsg(from, randomNumberHash, randomNumber)
+	msg := swap.NewClaimHTLTMsg(from, randomNumberHash, randomNumber)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -220,12 +219,12 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 
 func refundHTLTCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "refund-HTLT",
+		Use:   "refund",
 		Short: "refund a hash timer lock transfer",
 		RunE:  cmdr.refundHTLT,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -248,7 +247,7 @@ func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewRefundRefundHashTimerLockedTransferMsg(from, randomNumberHash)
+	msg := swap.NewRefundHTLTMsg(from, randomNumberHash)
 
 	err = msg.ValidateBasic()
 	if err != nil {
@@ -264,7 +263,7 @@ func querySwapCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.querySwap,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "Hash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -309,14 +308,13 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 func querySwapsByCreatorCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-by-creator",
-		Short: "Query swaps by the creator address",
+		Short: "Query random number hash list by the creator address",
 		RunE:  cmdr.querySwapsByCreator,
 	}
 
 	cmd.Flags().String(flagCreatorAddr, "", "Swap creator address, bech32 encoding")
 	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
 	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
-	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
 
 	return cmd
 }
@@ -331,11 +329,9 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 	}
 	limit := viper.GetInt64(flagLimit)
 	offset := viper.GetInt64(flagOffset)
-	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapByCreatorParams{
 		Creator: creator,
-		Status:  swapStatus,
 		Limit:   limit,
 		Offset:  offset,
 	}
@@ -357,14 +353,13 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 func querySwapsByRecipientCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap-by-recipient",
-		Short: "Query swaps by the recipient address",
+		Short: "Query random number hash list by the recipient address",
 		RunE:  cmdr.querySwapsByRecipient,
 	}
 
 	cmd.Flags().String(flagRecipientAddr, "", "Swap recipient address, bech32 encoding")
 	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
 	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
-	cmd.Flags().String(flagStatus, "NULL", "Swap status, NULL|Open|Completed|Expired")
 
 	return cmd
 }
@@ -379,11 +374,9 @@ func (c Commander) querySwapsByRecipient(cmd *cobra.Command, args []string) erro
 	}
 	limit := viper.GetInt64(flagLimit)
 	offset := viper.GetInt64(flagOffset)
-	swapStatus := swap.NewSwapStatusFromString(viper.GetString(flagStatus))
 
 	params := swap.QuerySwapByRecipientParams{
 		Recipient: recipient,
-		Status:    swapStatus,
 		Limit:     limit,
 		Offset:    offset,
 	}
