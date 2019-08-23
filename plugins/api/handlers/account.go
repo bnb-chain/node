@@ -22,6 +22,7 @@ import (
 func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	type response struct {
 		auth.BaseAccount
+		Flags    uint64                  `json:"flags"`
 		Balances []tkclient.TokenBalance `json:"balances"`
 		Coins    *struct{}               `json:"coins,omitempty"` // omit `coins`
 	}
@@ -71,6 +72,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 		appAccount := account.(*types.AppAccount)
 		resp := response{
 			BaseAccount: appAccount.BaseAccount,
+			Flags:       appAccount.Flags,
 			Balances:    toTokenBalances(appAccount),
 		}
 
