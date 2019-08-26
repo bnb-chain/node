@@ -34,7 +34,7 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		From:                msg.From,
 		To:                  msg.To,
 		OutAmount:           msg.OutAmount,
-		InAmount:            sdk.Coin{},
+		InAmount:            nil,
 		ExpectedIncome:      msg.ExpectedIncome,
 		RecipientOtherChain: msg.RecipientOtherChain,
 		RandomNumberHash:    msg.RandomNumberHash,
@@ -50,7 +50,7 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 	if err != nil {
 		return err.Result()
 	}
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, sdk.Coins{msg.OutAmount})
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
 	if err != nil {
 		return err.Result()
 	}
@@ -83,7 +83,7 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 		return err.Result()
 	}
 
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, sdk.Coins{msg.OutAmount})
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
 	if err != nil {
 		return err.Result()
 	}
@@ -114,14 +114,14 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 
 	tags := sdk.EmptyTags()
 	if !swap.OutAmount.IsZero() {
-		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, sdk.Coins{swap.OutAmount})
+		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.OutAmount)
 		if err != nil {
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
 	}
 	if !swap.InAmount.IsZero() {
-		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, sdk.Coins{swap.InAmount})
+		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.InAmount)
 		if err != nil {
 			return err.Result()
 		}
@@ -160,14 +160,14 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 
 	tags := sdk.EmptyTags()
 	if !swap.OutAmount.IsZero() {
-		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, sdk.Coins{swap.OutAmount})
+		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.OutAmount)
 		if err != nil {
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
 	}
 	if !swap.InAmount.IsZero() {
-		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, sdk.Coins{swap.InAmount})
+		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.InAmount)
 		if err != nil {
 			return err.Result()
 		}

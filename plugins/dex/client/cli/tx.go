@@ -142,7 +142,6 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 
 	cmd.Flags().IntP(flagLevels, "L", 100, "maximum level (1,5,10,20,50,100,500,1000) to return")
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
-	cmd.Flags().IntP(flagLevels, "L", 100, "maximum level (1,5,10,20,50,100,500,1000) to return")
 	return cmd
 }
 
