@@ -41,7 +41,7 @@ func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 
 	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
-	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
+	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: 100:BNB")
 	cmd.Flags().String(flagExpectedIncome, "", "Expected income on the other chain")
 	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x, leave it empty for single chain swap")
 	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
@@ -64,7 +64,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	outAmount, err := sdk.ParseCoin(viper.GetString(flagOutAmount))
+	outAmount, err := sdk.ParseCoins(viper.GetString(flagOutAmount))
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	outAmount, err := sdk.ParseCoin(viper.GetString(flagOutAmount))
+	outAmount, err := sdk.ParseCoins(viper.GetString(flagOutAmount))
 	if err != nil {
 		return err
 	}

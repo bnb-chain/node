@@ -18,7 +18,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 		RecipientOtherChain string
 		RandomNumberHash    string
 		Timestamp           int64
-		OutAmount           sdk.Coin
+		OutAmount           sdk.Coins
 		ExpectedIncome      string
 		HeightSpan          int64
 		Pass                bool
@@ -31,7 +31,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                true,
@@ -44,7 +44,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -57,7 +57,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -70,7 +70,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "54be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -83,7 +83,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", -10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", -10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -96,7 +96,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          100,
 			Pass:                false,
@@ -109,7 +109,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000000,
 			Pass:                false,
@@ -122,7 +122,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,
@@ -135,7 +135,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          false,
@@ -148,7 +148,7 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coin{"BNB", 10000},
+			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "1000000000000000000000000000000000000000000000000000000000000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,

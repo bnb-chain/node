@@ -77,7 +77,7 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	swap := &AtomicSwap{
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
-		OutAmount:           sdk.Coin{"BNB", 10000},
+		OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
@@ -137,7 +137,7 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	swap := &AtomicSwap{
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
-		OutAmount:           sdk.Coin{"BNB", 10000},
+		OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
@@ -153,12 +153,12 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	querySwap := keeper.GetSwap(ctx, randomNumberHash)
 	require.Equal(t, swap.RandomNumberHash, querySwap.RandomNumberHash)
 
-	querySwap.InAmount = sdk.Coin{"ABC", 100000000}
+	querySwap.InAmount = sdk.Coins{sdk.Coin{"ABC", 100000000}}
 	err = keeper.UpdateSwap(ctx, querySwap)
 	require.NoError(t, err)
 
 	querySwap = keeper.GetSwap(ctx, randomNumberHash)
-	require.Equal(t, sdk.Coin{"ABC", 100000000}, querySwap.InAmount)
+	require.Equal(t, sdk.Coins{sdk.Coin{"ABC", 100000000}}, querySwap.InAmount)
 
 	querySwap.RandomNumber, _ = hex.DecodeString("52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649")
 	querySwap.ClosedTime = time.Now().Unix()
@@ -199,7 +199,7 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	swap1 := &AtomicSwap{
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
-		OutAmount:           sdk.Coin{"BNB", 10000},
+		OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
@@ -218,7 +218,7 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	swap2 := &AtomicSwap{
 		From:                acc1.GetAddress(),
 		To:                  acc2.GetAddress(),
-		OutAmount:           sdk.Coin{"BNB", 10000},
+		OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
 		ExpectedIncome:      "10000:BNB",
 		RecipientOtherChain: toOnOtherChain,
 		RandomNumberHash:    randomNumberHash,
