@@ -106,7 +106,7 @@ func (app *SentryApplication) ReCheckTx(txBytes []byte) (res abci.ResponseCheckT
 			app.logger.Info("Remove tx", "txHash", txHash)
 			return abci.ResponseCheckTx{
 				Code: uint32(types.CodeInternal),
-				Log:  fmt.Sprintf("Tx expires. RandomNumberHash: %s.", txHash),
+				Log:  fmt.Sprintf("Tx expires. Hash: %s.", txHash),
 			}
 		} else {
 			// Mark as good
@@ -117,7 +117,7 @@ func (app *SentryApplication) ReCheckTx(txBytes []byte) (res abci.ResponseCheckT
 			app.logger.Debug("Remove tx", "txHash", txHash)
 			return abci.ResponseCheckTx{
 				Code: uint32(types.CodeInternal),
-				Log:  fmt.Sprintf("Cache is full, discard tx. RandomNumberHash: %s", txHash),
+				Log:  fmt.Sprintf("Cache is full, discard tx. Hash: %s", txHash),
 			}
 		}
 		app.logger.Info("Add tx", "txHash", txHash)
