@@ -98,6 +98,9 @@ func enableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 					return err
 				}
 			} else {
+				if err := cliCtx.EnsureAccountExistsFromAddr(from); err != nil {
+					return err
+				}
 				acc, err := cliCtx.GetAccount(from)
 				if err != nil {
 					return err
@@ -153,6 +156,9 @@ func disableMemoCheckFlagCmd(cdc *wire.Codec) *cobra.Command {
 					return err
 				}
 			} else {
+				if err := cliCtx.EnsureAccountExistsFromAddr(from); err != nil {
+					return err
+				}
 				acc, err := cliCtx.GetAccount(from)
 				if err != nil {
 					return err
