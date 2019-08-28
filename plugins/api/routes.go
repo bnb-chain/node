@@ -68,7 +68,7 @@ func (s *server) bindRoutes() *server {
 	// time locks query
 	r.HandleFunc(prefix+"/timelock/timelocks/{address}", s.handleTimeLocksReq(s.cdc, s.ctx)).Methods("GET")
 	r.HandleFunc(prefix+"/timelock/timelock/{address}/{id}", s.handleTimeLockReq(s.cdc, s.ctx)).Methods("GET")
-	r.HandleFunc(prefix+"/atomicswap/{randomNumberHash}", s.handleQuerySwapReq(s.cdc, s.ctx)).Methods("GET")
+	r.HandleFunc(prefix+"/atomicswap/{swapID}", s.handleQuerySwapReq(s.cdc, s.ctx)).Methods("GET")
 	r.HandleFunc(prefix+"/atomicswap/creator/{creatorAddr}", s.handleQuerySwapsByCreatorReq(s.cdc, s.ctx)).
 		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
 		Methods("GET")

@@ -46,7 +46,8 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		Status:              Open,
 		Index:               kp.GetIndex(ctx),
 	}
-	err := kp.CreateSwap(ctx, swap)
+	swapID := CalculateSwapID(swap.RandomNumberHash, swap.From, msg.SenderOtherChain)
+	err := kp.CreateSwap(ctx, swapID, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -54,13 +55,13 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 	if err != nil {
 		return err.Result()
 	}
-	return sdk.Result{Tags: tags}
+	return sdk.Result{Tags: tags, Data: swapID}
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.CrossChain {
 		return ErrInvalidSingleChainSwap("Can't deposit to cross chain swap").Result()
@@ -71,14 +72,14 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 	if ctx.BlockHeight() >= swap.ExpireHeight {
 		return ErrInvalidSingleChainSwap(fmt.Sprintf("Current block height is %d, the swap expire height(%d) is passed", ctx.BlockHeight(), swap.ExpireHeight)).Result()
 	}
-	if !bytes.Equal(swap.From, msg.To) || !bytes.Equal(swap.To, msg.From) {
+	if !bytes.Equal(swap.To, msg.From) {
 		return ErrInvalidSingleChainSwap(fmt.Sprintf("Addresses don't match, expected deposit from %s and recipient %s", swap.To.String(), swap.From.String())).Result()
 	}
 	if !swap.InAmount.IsZero() {
 		return ErrInvalidSingleChainSwap("Can't deposit a swap for multiple times").Result()
 	}
 	swap.InAmount = msg.OutAmount
-	err := kp.UpdateSwap(ctx, swap)
+	err := kp.UpdateSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -93,9 +94,9 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 }
 
 func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
@@ -104,7 +105,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 		return ErrClaimExpiredSwap(fmt.Sprintf("Current block height is %d, the swap expire height(%d) is passed", ctx.BlockHeight(), swap.ExpireHeight)).Result()
 	}
 
-	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), msg.RandomNumberHash) {
+	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), swap.RandomNumberHash) {
 		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
 	}
 
@@ -139,7 +140,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	swap.RandomNumber = msg.RandomNumber
 	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err := kp.CloseSwap(ctx, swap)
+	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -147,9 +148,9 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 }
 
 func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
@@ -184,7 +185,7 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 
 	swap.Status = Expired
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err := kp.CloseSwap(ctx, swap)
+	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}

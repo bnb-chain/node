@@ -28,18 +28,18 @@ func QuerySwapReqHandler(
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
-		randomNumberHashStr := vars["randomNumberHash"]
-		if !strings.HasPrefix(randomNumberHashStr, "0x") {
-			throw(w, http.StatusBadRequest, fmt.Errorf("randomNumberHash must prefix with 0x"))
+		swapIDStr := vars["swapID"]
+		if !strings.HasPrefix(swapIDStr, "0x") {
+			throw(w, http.StatusBadRequest, fmt.Errorf("swapID must prefix with 0x"))
 			return
 		}
-		randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+		swapID, err := hex.DecodeString(swapIDStr[2:])
 		if err != nil {
 			throw(w, http.StatusBadRequest, err)
 			return
 		}
-		params := swap.QuerySwapByHashParams{
-			RandomNumberHash: randomNumberHash,
+		params := swap.QuerySwapByID{
+			SwapID: swapID,
 		}
 
 		bz, err := cdc.MarshalJSON(params)
@@ -48,7 +48,7 @@ func QuerySwapReqHandler(
 			return
 		}
 
-		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapByHashParams{}), bz)
+		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapByID{}), bz)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

@@ -7,16 +7,16 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 8
 
-	CodeInvalidRecipientAddrOtherChain sdk.CodeType = 1
+	CodeInvalidAddrOtherChain          sdk.CodeType = 1
 	CodeInvalidRandomNumberHash        sdk.CodeType = 2
 	CodeInvalidRandomNumber            sdk.CodeType = 3
 	CodeInvalidSwapOutAmount           sdk.CodeType = 4
 	CodeInvalidHeightSpan              sdk.CodeType = 5
-	CodeDuplicatedRandomNumberHash     sdk.CodeType = 6
+	CodeDuplicatedSwapID               sdk.CodeType = 6
 	CodeClaimExpiredSwap               sdk.CodeType = 7
 	CodeRefundUnexpiredSwap            sdk.CodeType = 8
 	CodeMismatchedRandomNumber         sdk.CodeType = 9
-	CodeNonExistRandomNumberHash       sdk.CodeType = 10
+	CodeNonExistSwapID                 sdk.CodeType = 10
 	CodeTooLargeQueryLimit             sdk.CodeType = 11
 	CodeUnexpectedSwapStatus           sdk.CodeType = 12
 	CodeInvalidTimestamp               sdk.CodeType = 13
@@ -25,8 +25,8 @@ const (
 	CodeUnexpectedClaimSingleChainSwap sdk.CodeType = 16
 )
 
-func ErrInvalidRecipientAddrOtherChain(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidRecipientAddrOtherChain, msg)
+func ErrInvalidAddrOtherChain(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidAddrOtherChain, msg)
 }
 
 func ErrInvalidRandomNumberHash(msg string) sdk.Error {
@@ -45,8 +45,8 @@ func ErrInvalidHeightSpan(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidHeightSpan, msg)
 }
 
-func ErrDuplicatedRandomNumberHash(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeDuplicatedRandomNumberHash, msg)
+func ErrDuplicatedSwapID(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeDuplicatedSwapID, msg)
 }
 
 func ErrClaimExpiredSwap(msg string) sdk.Error {
@@ -61,8 +61,8 @@ func ErrMismatchedRandomNumber(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeMismatchedRandomNumber, msg)
 }
 
-func ErrNonExistRandomNumberHash(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeNonExistRandomNumberHash, msg)
+func ErrNonExistSwapID(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeNonExistSwapID, msg)
 }
 
 func ErrTooLargeQueryLimit(msg string) sdk.Error {

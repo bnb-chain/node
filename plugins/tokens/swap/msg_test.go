@@ -10,12 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHashTimerLockTransferMsg(t *testing.T) {
+func TestHTLTMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(2, sdk.Coins{})
 	tests := []struct {
 		From                sdk.AccAddress
 		To                  sdk.AccAddress
 		RecipientOtherChain string
+		SenderOtherChain    string
 		RandomNumberHash    string
 		Timestamp           int64
 		OutAmount           sdk.Coins
@@ -159,8 +160,9 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 
 	for i, tc := range tests {
 		recipientOtherChain, _ := hex.DecodeString(tc.RecipientOtherChain)
+		senderOtherChain, _ := hex.DecodeString(tc.SenderOtherChain)
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewHTLTMsg(tc.From, tc.To, recipientOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
+		msg := NewHTLTMsg(tc.From, tc.To, recipientOtherChain, senderOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
@@ -172,49 +174,48 @@ func TestHashTimerLockTransferMsg(t *testing.T) {
 	}
 }
 
-func TestClaimHashTimerLockMsg(t *testing.T) {
+func TestDepositHTLTMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(2, sdk.Coins{})
 	tests := []struct {
-		From             sdk.AccAddress
-		RandomNumberHash string
-		RandomNumber     string
-		Pass             bool
-		ErrorCode        sdk.CodeType
+		From      sdk.AccAddress
+		SwapID    string
+		OutAmount sdk.Coins
+		Pass      bool
+		ErrorCode sdk.CodeType
 	}{
 		{
-			From:             addrs[0],
-			RandomNumber:     "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
-			RandomNumberHash: "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             true,
-			ErrorCode:        0,
+			From:      addrs[0],
+			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      true,
+			ErrorCode: 0,
 		},
 		{
-			From:             addrs[0][1:],
-			RandomNumber:     "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
-			RandomNumberHash: "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             false,
-			ErrorCode:        0x7,
+			From:      addrs[0][1:],
+			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      false,
+			ErrorCode: 0x7,
 		},
 		{
-			From:             addrs[0],
-			RandomNumber:     "fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
-			RandomNumberHash: "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             false,
-			ErrorCode:        0x3,
+			From:      addrs[0],
+			OutAmount: sdk.Coins{sdk.Coin{"BNB", 0}},
+			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      false,
+			ErrorCode: 0x4,
 		},
 		{
-			From:             addrs[0],
-			RandomNumber:     "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
-			RandomNumberHash: "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             false,
-			ErrorCode:        0x2,
+			From:      addrs[0],
+			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			SwapID:    "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      false,
+			ErrorCode: 0x2,
 		},
 	}
 
 	for i, tc := range tests {
-		randomNumber, _ := hex.DecodeString(tc.RandomNumber)
-		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewClaimHTLTMsg(tc.From, randomNumberHash, randomNumber)
+		swapID, _ := hex.DecodeString(tc.SwapID)
+		msg := NewDepositHTLTMsg(tc.From, tc.OutAmount, swapID)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
@@ -226,37 +227,91 @@ func TestClaimHashTimerLockMsg(t *testing.T) {
 	}
 }
 
-func TestRefundLockedAssetMsg(t *testing.T) {
+func TestClaimHTLTMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(2, sdk.Coins{})
 	tests := []struct {
-		From             sdk.AccAddress
-		RandomNumberHash string
-		Pass             bool
-		ErrorCode        sdk.CodeType
+		From         sdk.AccAddress
+		SwapID       string
+		RandomNumber string
+		Pass         bool
+		ErrorCode    sdk.CodeType
 	}{
 		{
-			From:             addrs[0],
-			RandomNumberHash: "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             true,
-			ErrorCode:        0,
+			From:         addrs[0],
+			RandomNumber: "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
+			SwapID:       "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:         true,
+			ErrorCode:    0,
 		},
 		{
-			From:             addrs[0][2:],
-			RandomNumberHash: "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             false,
-			ErrorCode:        0x7,
+			From:         addrs[0][1:],
+			RandomNumber: "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
+			SwapID:       "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:         false,
+			ErrorCode:    0x7,
 		},
 		{
-			From:             addrs[0],
-			RandomNumberHash: "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Pass:             false,
-			ErrorCode:        0x2,
+			From:         addrs[0],
+			RandomNumber: "fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
+			SwapID:       "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:         false,
+			ErrorCode:    0x3,
+		},
+		{
+			From:         addrs[0],
+			RandomNumber: "52fdfc072182654f163f5f0f9a621d729566c74d10037c4d7bbb0407d1e2c649",
+			SwapID:       "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:         false,
+			ErrorCode:    0x2,
 		},
 	}
 
 	for i, tc := range tests {
-		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewRefundHTLTMsg(tc.From, randomNumberHash)
+		randomNumber, _ := hex.DecodeString(tc.RandomNumber)
+		swapID, _ := hex.DecodeString(tc.SwapID)
+		msg := NewClaimHTLTMsg(tc.From, swapID, randomNumber)
+
+		err := msg.ValidateBasic()
+		if tc.Pass {
+			require.Nil(t, err, "test: %v", i)
+		} else {
+			require.NotNil(t, err, "test: %v", i)
+			require.Equal(t, err.Code(), tc.ErrorCode)
+		}
+	}
+}
+
+func TestRefundHTLTMsg(t *testing.T) {
+	_, addrs, _, _ := mock.CreateGenAccounts(2, sdk.Coins{})
+	tests := []struct {
+		From      sdk.AccAddress
+		SwapID    string
+		Pass      bool
+		ErrorCode sdk.CodeType
+	}{
+		{
+			From:      addrs[0],
+			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      true,
+			ErrorCode: 0,
+		},
+		{
+			From:      addrs[0][2:],
+			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      false,
+			ErrorCode: 0x7,
+		},
+		{
+			From:      addrs[0],
+			SwapID:    "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Pass:      false,
+			ErrorCode: 0x2,
+		},
+	}
+
+	for i, tc := range tests {
+		swapID, _ := hex.DecodeString(tc.SwapID)
+		msg := NewRefundHTLTMsg(tc.From, swapID)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
