@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	QuerySwapHash      = "swaphash"
+	QuerySwapID        = "swapid"
 	QuerySwapCreator   = "swapcreator"
 	QuerySwapRecipient = "swaprecipient"
 )
@@ -17,8 +17,8 @@ const (
 func NewQuerier(keeper Keeper) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
 		switch path[0] {
-		case QuerySwapHash:
-			return querySwapByHash(ctx, req, keeper)
+		case QuerySwapID:
+			return querySwapByID(ctx, req, keeper)
 		case QuerySwapCreator:
 			return querySwapByCreator(ctx, req, keeper)
 		case QuerySwapRecipient:
@@ -29,26 +29,26 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
-// Params for query 'custom/atomicswap/swaphash'
-type QuerySwapByHashParams struct {
-	RandomNumberHash HexData
+// Params for query 'custom/atomicswap/swapid'
+type QuerySwapByID struct {
+	SwapID HexData
 }
 
 // nolint: unparam
-func querySwapByHash(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params QuerySwapByHashParams
+func querySwapByID(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params QuerySwapByID
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("incorrectly formatted request data: %s", err.Error()))
 	}
 
-	if len(params.RandomNumberHash) != RandomNumberHashLength {
-		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of random number hash should be %d", RandomNumberHashLength))
+	if len(params.SwapID) != SwapIDLength {
+		return nil, ErrInvalidSwapID(fmt.Sprintf("length of swapID should be %d", SwapIDLength))
 	}
 
-	swap := keeper.GetSwap(ctx, params.RandomNumberHash)
+	swap := keeper.GetSwap(ctx, params.SwapID)
 	if swap == nil {
-		return nil, ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", params.RandomNumberHash))
+		return nil, nil
 	}
 
 	bz, err := codec.MarshalJSONIndent(keeper.cdc, *swap)
@@ -77,19 +77,18 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	if len(params.Creator) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
-	if params.Limit > 1000 {
-		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
+	if params.Limit <= 0 || params.Limit > 100 {
+		return nil, ErrInvalidPaginationParameters("limit should be in (0, 100]")
 	}
-	// Assign default limit value
-	if params.Limit == 0 {
-		params.Limit = 100
+	if params.Offset < 0 {
+		return nil, ErrInvalidPaginationParameters("offset must be positive")
 	}
 
 	iterator := keeper.GetSwapCreatorIterator(ctx, params.Creator)
 	defer iterator.Close()
 
 	count := int64(0)
-	randomNumberHashList := make([]HexData, 0, params.Limit)
+	swapIDList := make([]HexData, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		count++
 		if count <= params.Offset {
@@ -98,10 +97,10 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 		if count-params.Offset > params.Limit {
 			break
 		}
-		randomNumberHashList = append(randomNumberHashList, iterator.Value())
+		swapIDList = append(swapIDList, iterator.Value())
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, randomNumberHashList)
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, swapIDList)
 	if err != nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("could not marshal result to JSON: %s", err.Error()))
 	}
@@ -127,19 +126,18 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 	if len(params.Recipient) != sdk.AddrLen {
 		return nil, sdk.ErrInvalidAddress(fmt.Sprintf("length of address should be %d", sdk.AddrLen))
 	}
-	if params.Limit > 1000 {
-		return nil, ErrTooLargeQueryLimit("limit should not be greater 1000")
+	if params.Limit <= 0 || params.Limit > 100 {
+		return nil, ErrInvalidPaginationParameters("limit should be in (0, 100]")
 	}
-	// Assign default limit value
-	if params.Limit == 0 {
-		params.Limit = 100
+	if params.Offset < 0 {
+		return nil, ErrInvalidPaginationParameters("offset must be positive")
 	}
 
 	iterator := keeper.GetSwapRecipientIterator(ctx, params.Recipient)
 	defer iterator.Close()
 
 	count := int64(0)
-	randomNumberHashList := make([]HexData, 0, params.Limit)
+	swapIDList := make([]HexData, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		count++
 		if count <= params.Offset {
@@ -148,10 +146,10 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 		if count-params.Offset > params.Limit {
 			break
 		}
-		randomNumberHashList = append(randomNumberHashList, iterator.Value())
+		swapIDList = append(swapIDList, iterator.Value())
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, randomNumberHashList)
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, swapIDList)
 	if err != nil {
 		return nil, sdk.ErrInternal(fmt.Sprintf("could not marshal result to JSON: %s", err.Error()))
 	}

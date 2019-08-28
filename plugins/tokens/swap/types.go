@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type SwapStatus byte
+type SwapStatus int8
 type HexData []byte
 
 const (
@@ -24,7 +24,7 @@ func (hexData HexData) String() string {
 	if len(str) == 0 {
 		return ""
 	}
-	return "0x" + hex.EncodeToString(hexData)
+	return "0x" + str
 }
 
 func (hexData HexData) MarshalJSON() ([]byte, error) {
@@ -101,8 +101,8 @@ type AtomicSwap struct {
 	ExpectedIncome      string  `json:"expected_income"`
 	RecipientOtherChain HexData `json:"recipient_other_chain"`
 
-	RandomNumberHash HexData `json:"random_number_hash"`
-	RandomNumber     HexData `json:"random_number"`
+	RandomNumberHash HexData `json:"random_number_hash"` // 32-length byte array, sha256(random_number, timestamp)
+	RandomNumber     HexData `json:"random_number"`      // random_number is a 32-length random byte array
 	Timestamp        int64   `json:"timestamp"`
 
 	CrossChain bool `json:"cross_chain"`

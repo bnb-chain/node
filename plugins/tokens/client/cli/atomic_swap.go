@@ -17,14 +17,15 @@ import (
 )
 
 const (
-	flagAuto                = "auto"
 	flagCreatorAddr         = "creator-addr"
 	flagRecipientAddr       = "recipient-addr"
 	flagOutAmount           = "out-amount"
 	flagExpectedIncome      = "expected-income"
 	flagRecipientOtherChain = "recipient-other-chain"
+	flagSenderOtherChain    = "sender-other-chain"
 	flagRandomNumberHash    = "random-number-hash"
 	flagRandomNumber        = "random-number"
+	flagSwapID              = "swap-id"
 	flagTimestamp           = "timestamp"
 	flagHeightSpan          = "height-span"
 	flagCrossChain          = "cross-chain"
@@ -39,13 +40,13 @@ func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.initiateHTLT,
 	}
 
-	cmd.Flags().Bool(flagAuto, false, "Automatically generate random number hash and timestamp, if true, --random-number-hash and --timestamp can be left out")
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
-	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: 100:BNB")
-	cmd.Flags().String(flagExpectedIncome, "", "Expected income on the other chain")
+	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
+	cmd.Flags().String(flagExpectedIncome, "", "Expected income from swap counter party, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
 	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, hex encoding and prefix with 0x, leave it empty for single chain swap")
-	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
-	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request")
+	cmd.Flags().String(flagSenderOtherChain, "", "The sender address on other chain, like Ethereum, hex encoding and prefix with 0x, leave it empty for single chain swap")
+	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x. If left out, a random value will be generated")
+	cmd.Flags().Int64(flagTimestamp, 0, "The time of sending transaction, counted by second. In the response to a swap request from other chains, it should be identical to the one in the swap request. If left out, current timestamp will be used")
 	cmd.Flags().Int64(flagHeightSpan, 0, "The number of blocks to wait before the asset may be returned to swap creator if not claimed via random number")
 	cmd.Flags().Bool(flagCrossChain, false, "Create cross chain hash timer lock transfer")
 
@@ -71,49 +72,61 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 
 	expectedIncome := viper.GetString(flagExpectedIncome)
 	recipientOtherChainStr := viper.GetString(flagRecipientOtherChain)
-
+	senderOtherChainStr := viper.GetString(flagSenderOtherChain)
 	var recipientOtherChain swap.HexData
+	var senderOtherChain swap.HexData
 	if len(recipientOtherChainStr) != 0 {
 		if !strings.HasPrefix(recipientOtherChainStr, "0x") {
-			return fmt.Errorf("must prefix with 0x for flag --recipient-other-chain")
+			return fmt.Errorf("must prefix with 0x for --%s", flagRecipientOtherChain)
 		}
 		recipientOtherChain, err = hex.DecodeString(recipientOtherChainStr[2:])
 		if err != nil {
 			return err
 		}
 	}
-
-	var randomNumberHash []byte
-	var timestamp int64
-	if !viper.GetBool(flagAuto) {
-		randomNumberHashStr := viper.GetString(flagRandomNumberHash)
-		if !strings.HasPrefix(randomNumberHashStr, "0x") {
-			return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	if len(senderOtherChainStr) != 0 {
+		if !strings.HasPrefix(senderOtherChainStr, "0x") {
+			return fmt.Errorf("must prefix with 0x for --%s", flagSenderOtherChain)
 		}
-		randomNumberHash, err = hex.DecodeString(randomNumberHashStr[2:])
+		senderOtherChain, err = hex.DecodeString(senderOtherChainStr[2:])
 		if err != nil {
 			return err
 		}
-		timestamp = viper.GetInt64(flagTimestamp)
-	} else {
+	}
+
+	var timestamp int64
+	var randomNumberHash []byte
+	timestamp = viper.GetInt64(flagTimestamp)
+	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
+	if timestamp == 0 {
+		timestamp = time.Now().Unix()
+	}
+	if len(randomNumberHashStr) == 0 {
 		randomNumber := make([]byte, swap.RandomNumberLength)
 		length, err := rand.Read(randomNumber)
 		if err != nil || length != swap.RandomNumberLength {
 			return fmt.Errorf("failed to generate random number")
 		}
-		timestamp = time.Now().Unix()
 		randomNumberHash = swap.CalculateRandomHash(randomNumber, timestamp)
-
-		fmt.Println(fmt.Sprintf("Random number: 0x%s \nTimestamp: %d \nRandom number hash: 0x%s", hex.EncodeToString(randomNumber), timestamp, hex.EncodeToString(randomNumberHash)))
+		fmt.Println(fmt.Sprintf("Random number: 0x%s", hex.EncodeToString(randomNumber)))
+	} else {
+		if !strings.HasPrefix(randomNumberHashStr, "0x") {
+			return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagRandomNumberHash)
+		}
+		randomNumberHash, err = hex.DecodeString(randomNumberHashStr[2:])
+		if err != nil {
+			return err
+		}
 	}
+	fmt.Println(fmt.Sprintf("Timestamp: %d\nRandom number hash: 0x%s", timestamp, hex.EncodeToString(randomNumberHash)))
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
 
-	err = msg.ValidateBasic()
-	if err != nil {
-		return err
+	sdkErr := msg.ValidateBasic()
+	if sdkErr != nil {
+		return fmt.Errorf("%v", sdkErr.Data())
 	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
@@ -125,9 +138,8 @@ func depositHTLTCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.depositHTLT,
 	}
 
-	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 token, example: 100:BNB")
-	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
-	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
+	cmd.Flags().String(flagSwapID, "", "ID of previously created swap, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -140,30 +152,26 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	recipient, err := sdk.AccAddressFromBech32(viper.GetString(flagRecipientAddr))
-	if err != nil {
-		return err
-	}
 	outAmount, err := sdk.ParseCoins(viper.GetString(flagOutAmount))
 	if err != nil {
 		return err
 	}
 
-	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
-	if !strings.HasPrefix(randomNumberHashStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	swapIDStr := viper.GetString(flagSwapID)
+	if !strings.HasPrefix(swapIDStr, "0x") {
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagSwapID)
 	}
-	randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+	swapID, err := hex.DecodeString(swapIDStr[2:])
 	if err != nil {
 		return err
 	}
 
 	// build message
-	msg := swap.NewDepositHTLTMsg(from, recipient, outAmount, randomNumberHash)
+	msg := swap.NewDepositHTLTMsg(from, outAmount, swapID)
 
-	err = msg.ValidateBasic()
-	if err != nil {
-		return err
+	sdkErr := msg.ValidateBasic()
+	if sdkErr != nil {
+		return fmt.Errorf("%v", sdkErr.Data())
 	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
@@ -175,8 +183,8 @@ func claimHTLTCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.claimHTLT,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
-	cmd.Flags().String(flagRandomNumber, "", "The secret random number, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagSwapID, "", "ID of previously created swap, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagRandomNumber, "", "The random number to unlock the locked hash, 32 bytes, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -189,18 +197,18 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
-	if !strings.HasPrefix(randomNumberHashStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	swapIDStr := viper.GetString(flagSwapID)
+	if !strings.HasPrefix(swapIDStr, "0x") {
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagSwapID)
 	}
-	randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+	swapID, err := hex.DecodeString(swapIDStr[2:])
 	if err != nil {
 		return err
 	}
 
 	randomNumberStr := viper.GetString(flagRandomNumber)
 	if !strings.HasPrefix(randomNumberStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number")
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagRandomNumber)
 	}
 	randomNumber, err := hex.DecodeString(randomNumberStr[2:])
 	if err != nil {
@@ -208,11 +216,11 @@ func (c Commander) claimHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewClaimHTLTMsg(from, randomNumberHash, randomNumber)
+	msg := swap.NewClaimHTLTMsg(from, swapID, randomNumber)
 
-	err = msg.ValidateBasic()
-	if err != nil {
-		return err
+	sdkErr := msg.ValidateBasic()
+	if sdkErr != nil {
+		return fmt.Errorf("%v", sdkErr.Data())
 	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
@@ -224,7 +232,7 @@ func refundHTLTCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.refundHTLT,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagSwapID, "", "ID of previously created swap, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -237,21 +245,21 @@ func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
-	if !strings.HasPrefix(randomNumberHashStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	swapIDStr := viper.GetString(flagSwapID)
+	if !strings.HasPrefix(swapIDStr, "0x") {
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagSwapID)
 	}
-	randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+	swapID, err := hex.DecodeString(swapIDStr[2:])
 	if err != nil {
 		return err
 	}
 
 	// build message
-	msg := swap.NewRefundHTLTMsg(from, randomNumberHash)
+	msg := swap.NewRefundHTLTMsg(from, swapID)
 
-	err = msg.ValidateBasic()
-	if err != nil {
-		return err
+	sdkErr := msg.ValidateBasic()
+	if sdkErr != nil {
+		return fmt.Errorf("%v", sdkErr.Data())
 	}
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
@@ -259,11 +267,11 @@ func (c Commander) refundHTLT(cmd *cobra.Command, args []string) error {
 func querySwapCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-swap",
-		Short: "Query an atomic swap by random number hash",
+		Short: "Query an atomic swap by swapID",
 		RunE:  cmdr.querySwap,
 	}
 
-	cmd.Flags().String(flagRandomNumberHash, "", "RandomNumberHash of random number and timestamp, based on SHA256, 32 bytes, hex encoding and prefix with 0x")
+	cmd.Flags().String(flagSwapID, "", "ID of previously created swap, hex encoding and prefix with 0x")
 
 	return cmd
 }
@@ -272,16 +280,19 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 
 	cliCtx, _ := client.PrepareCtx(c.Cdc)
 
-	randomNumberHashStr := viper.GetString(flagRandomNumberHash)
-	if !strings.HasPrefix(randomNumberHashStr, "0x") {
-		return fmt.Errorf("must specify hex encoding string and prefix with 0x for flag --random-number-hash")
+	swapIDStr := viper.GetString(flagSwapID)
+	if !strings.HasPrefix(swapIDStr, "0x") {
+		return fmt.Errorf("must specify hex encoding string and prefix with 0x for --%s", flagSwapID)
 	}
-	randomNumberHash, err := hex.DecodeString(randomNumberHashStr[2:])
+	swapID, err := hex.DecodeString(swapIDStr[2:])
 	if err != nil {
 		return err
 	}
+	if len(swapID) != swap.SwapIDLength {
+		return fmt.Errorf("expected swapID length is %d, actually it is %d", swap.SwapIDLength, len(swapID))
+	}
 
-	hashKey := swap.BuildHashKey(randomNumberHash)
+	hashKey := swap.BuildHashKey(swapID)
 
 	res, err := cliCtx.QueryStore(hashKey, common.AtomicSwapStoreName)
 	if err != nil {
@@ -307,14 +318,14 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 
 func querySwapsByCreatorCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-swap-by-creator",
-		Short: "Query random number hash list by the creator address",
+		Use:   "query-swapIDs-by-creator",
+		Short: "Query swapID list by the creator address",
 		RunE:  cmdr.querySwapsByCreator,
 	}
 
 	cmd.Flags().String(flagCreatorAddr, "", "Swap creator address, bech32 encoding")
-	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
-	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
+	cmd.Flags().Int64(flagLimit, 100, "The maximum quantity of swapIDs you want to get")
+	cmd.Flags().Int64(flagOffset, 0, "The number of swapIDs you want to skip")
 
 	return cmd
 }
@@ -329,6 +340,12 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 	}
 	limit := viper.GetInt64(flagLimit)
 	offset := viper.GetInt64(flagOffset)
+	if limit <= 0 || limit > 100 {
+		return fmt.Errorf("limit should be (1, 100]")
+	}
+	if offset < 0 {
+		return fmt.Errorf("offset must be positive")
+	}
 
 	params := swap.QuerySwapByCreatorParams{
 		Creator: creator,
@@ -352,14 +369,14 @@ func (c Commander) querySwapsByCreator(cmd *cobra.Command, args []string) error 
 
 func querySwapsByRecipientCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-swap-by-recipient",
-		Short: "Query random number hash list by the recipient address",
+		Use:   "query-swapIDs-by-recipient",
+		Short: "Query swapID list by the recipient address",
 		RunE:  cmdr.querySwapsByRecipient,
 	}
 
 	cmd.Flags().String(flagRecipientAddr, "", "Swap recipient address, bech32 encoding")
-	cmd.Flags().Int64(flagLimit, 100, "query result limitation")
-	cmd.Flags().Int64(flagOffset, 0, "skipped quantity")
+	cmd.Flags().Int64(flagLimit, 100, "The maximum quantity of swapIDs you want to get")
+	cmd.Flags().Int64(flagOffset, 0, "The number of swapIDs you want to skip")
 
 	return cmd
 }
@@ -374,6 +391,12 @@ func (c Commander) querySwapsByRecipient(cmd *cobra.Command, args []string) erro
 	}
 	limit := viper.GetInt64(flagLimit)
 	offset := viper.GetInt64(flagOffset)
+	if limit <= 0 || limit > 100 {
+		return fmt.Errorf("limit should be (1, 100]")
+	}
+	if offset < 0 {
+		return fmt.Errorf("offset must be positive")
+	}
 
 	params := swap.QuerySwapByRecipientParams{
 		Recipient: recipient,

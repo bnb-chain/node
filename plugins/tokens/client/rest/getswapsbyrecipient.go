@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,8 +14,8 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-// QuerySwapsByRecipientReqHandler creates an http request handler to
-func QuerySwapsByRecipientReqHandler(
+// QuerySwapIDsByRecipientReqHandler creates an http request handler to query swapID list by recipient address
+func QuerySwapIDsByRecipientReqHandler(
 	cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	responseType := "application/json"
 
@@ -41,10 +42,18 @@ func QuerySwapsByRecipientReqHandler(
 			throw(w, http.StatusBadRequest, fmt.Errorf("invalid limit"))
 			return
 		}
+		if limit <= 0 || limit > 100 {
+			throw(w, http.StatusBadRequest, fmt.Errorf("limit should be in (0, 100]"))
+			return
+		}
 
 		offset, err := strconv.Atoi(offsetStr)
 		if err != nil {
 			throw(w, http.StatusBadRequest, fmt.Errorf("invalid offset"))
+			return
+		}
+		if offset < 0 {
+			throw(w, http.StatusBadRequest, fmt.Errorf("offset must be positiv"))
 			return
 		}
 
@@ -54,13 +63,30 @@ func QuerySwapsByRecipientReqHandler(
 			Offset:    int64(offset),
 		}
 
-		bz, err := cdc.MarshalJSON(params)
+		paramsBytes, err := cdc.MarshalJSON(params)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		output, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapRecipient), bz)
+		bz, err := ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", swap.AtomicSwapRoute, swap.QuerySwapRecipient), paramsBytes)
+		if err != nil {
+			throw(w, http.StatusInternalServerError, err)
+			return
+		}
+		var swapIDs []swap.HexData
+		err = cdc.UnmarshalJSON(bz, &swapIDs)
+		if err != nil {
+			throw(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		if len(swapIDs) == 0 {
+			throw(w, http.StatusNotFound, fmt.Errorf("no match swapID"))
+			return
+		}
+
+		output, err := json.MarshalIndent(swapIDs, "", "  ")
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

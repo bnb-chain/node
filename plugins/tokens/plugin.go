@@ -46,6 +46,7 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 	for ; iterator.Valid(); iterator.Next() {
 		key := iterator.Key()
 		if len(key) != 1+swap.Int64Size+swap.Int64Size {
+			swapKeeper.DeleteKey(ctx, key)
 			logger.Error("Unexpected key length", "expectedLength", 1+swap.Int64Size+swap.Int64Size, "actualLength", len(key))
 			continue
 		}
@@ -54,17 +55,18 @@ func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 		if swapClosedTime > ctx.BlockHeader().Time.Unix()-swap.OneWeek {
 			break
 		}
-		randomNumberHash := iterator.Value()
-		swapRecord := swapKeeper.GetSwap(ctx, randomNumberHash)
+		swapID := iterator.Value()
+		swapRecord := swapKeeper.GetSwap(ctx, swapID)
 		if swapRecord == nil {
-			logger.Error("Unexpected randomNumberHash, no corresponding swap record", "randomNumberHash", randomNumberHash)
+			swapKeeper.DeleteKey(ctx, key)
+			logger.Error("No matched swap", "swapID", swapID)
 			continue
 		}
 		if swapRecord.Status != swap.Completed && swapRecord.Status != swap.Expired {
-			logger.Error("Swap status should be completed or expired", "swapStatus", swapRecord.Status)
+			logger.Error("Swap status must be completed or expired", "swapStatus", swapRecord.Status)
 			continue
 		}
-		err := swapKeeper.DeleteSwap(ctx, swapRecord)
+		err := swapKeeper.DeleteSwap(ctx, swapID, swapRecord)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Encounter error in deleting swaps which were completed or expired: %s", err.Error()))
 			continue

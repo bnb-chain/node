@@ -27,8 +27,12 @@ func NewHandler(kp Keeper) sdk.Handler {
 
 func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
 	blockTime := ctx.BlockHeader().Time.Unix()
-	if msg.Timestamp < blockTime-TwoHours || msg.Timestamp > blockTime+OneHour {
-		return ErrInvalidTimestamp(fmt.Sprintf("The timestamp (%d) should not be one hour ahead or two hours behind block time (%d)", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
+	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
+		return ErrInvalidTimestamp(fmt.Sprintf("Timestamp (%d) can neither be 15 minutes ahead of the current time (%d), nor 30 minutes later", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
+	}
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
+	if err != nil {
+		return err.Result()
 	}
 	swap := &AtomicSwap{
 		From:                msg.From,
@@ -44,23 +48,21 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		CrossChain:          msg.CrossChain,
 		ClosedTime:          0,
 		Status:              Open,
-		Index:               kp.GetIndex(ctx),
+		Index:               kp.getIndex(ctx),
 	}
-	err := kp.CreateSwap(ctx, swap)
+	swapID := CalculateSwapID(swap.RandomNumberHash, swap.From, msg.SenderOtherChain)
+	err = kp.CreateSwap(ctx, swapID, swap)
 	if err != nil {
 		return err.Result()
 	}
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
-	if err != nil {
-		return err.Result()
-	}
-	return sdk.Result{Tags: tags}
+
+	return sdk.Result{Tags: tags, Data: swapID}
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.CrossChain {
 		return ErrInvalidSingleChainSwap("Can't deposit to cross chain swap").Result()
@@ -71,19 +73,19 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 	if ctx.BlockHeight() >= swap.ExpireHeight {
 		return ErrInvalidSingleChainSwap(fmt.Sprintf("Current block height is %d, the swap expire height(%d) is passed", ctx.BlockHeight(), swap.ExpireHeight)).Result()
 	}
-	if !bytes.Equal(swap.From, msg.To) || !bytes.Equal(swap.To, msg.From) {
+	if !bytes.Equal(swap.To, msg.From) {
 		return ErrInvalidSingleChainSwap(fmt.Sprintf("Addresses don't match, expected deposit from %s and recipient %s", swap.To.String(), swap.From.String())).Result()
 	}
 	if !swap.InAmount.IsZero() {
 		return ErrInvalidSingleChainSwap("Can't deposit a swap for multiple times").Result()
 	}
-	swap.InAmount = msg.OutAmount
-	err := kp.UpdateSwap(ctx, swap)
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
 	if err != nil {
 		return err.Result()
 	}
 
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
+	swap.InAmount = msg.OutAmount
+	err = kp.UpdateSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -93,9 +95,9 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 }
 
 func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
@@ -104,7 +106,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 		return ErrClaimExpiredSwap(fmt.Sprintf("Current block height is %d, the swap expire height(%d) is passed", ctx.BlockHeight(), swap.ExpireHeight)).Result()
 	}
 
-	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), msg.RandomNumberHash) {
+	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), swap.RandomNumberHash) {
 		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
 	}
 
@@ -128,10 +130,10 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 		tags = tags.AppendTags(sendCoinTags)
 	}
 	if ctx.IsDeliverTx() && kp.addrPool != nil {
-		if !bytes.Equal(msg.From, swap.From) {
+		if !bytes.Equal(msg.From, swap.From) && !swap.InAmount.IsZero() {
 			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
 		}
-		if !bytes.Equal(msg.From, swap.To) {
+		if !bytes.Equal(msg.From, swap.To) && !swap.OutAmount.IsZero() {
 			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
 		}
 	}
@@ -139,7 +141,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	swap.RandomNumber = msg.RandomNumber
 	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err := kp.CloseSwap(ctx, swap)
+	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}
@@ -147,9 +149,9 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 }
 
 func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg) sdk.Result {
-	swap := kp.GetSwap(ctx, msg.RandomNumberHash)
+	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
-		return ErrNonExistRandomNumberHash(fmt.Sprintf("No matched swap with randomNumberHash %v", msg.RandomNumberHash)).Result()
+		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
 	}
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
@@ -174,17 +176,17 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 		tags = tags.AppendTags(sendCoinTags)
 	}
 	if ctx.IsDeliverTx() && kp.addrPool != nil {
-		if !bytes.Equal(msg.From, swap.From) {
+		if !bytes.Equal(msg.From, swap.From) && !swap.OutAmount.IsZero() {
 			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.From})
 		}
-		if !bytes.Equal(msg.From, swap.To) {
+		if !bytes.Equal(msg.From, swap.To) && !swap.InAmount.IsZero() {
 			kp.addrPool.AddAddrs([]sdk.AccAddress{swap.To})
 		}
 	}
 
 	swap.Status = Expired
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err := kp.CloseSwap(ctx, swap)
+	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()
 	}
