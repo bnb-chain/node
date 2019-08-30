@@ -7,12 +7,10 @@ set home [lindex $argv 3]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli account_flags set-account-flags --account-flags $flags --from $from --chain-id $chain_id
+		spawn ./bnbcli account_flags set-account-flags -y --account-flags $flags --from $from --chain-id $chain_id
 	} else {
-		spawn ./bnbcli account_flags set-account-flags --home $home --account-flags $flags --from $from --chain-id $chain_id
+		spawn ./bnbcli account_flags set-account-flags -y --home $home --account-flags $flags --from $from --chain-id $chain_id
 	}
-	expect "confirm transaction before signing and broadcasting*"
-	send "y\r"
 	expect "Password*"
 	send "12345678\r"
 interact
