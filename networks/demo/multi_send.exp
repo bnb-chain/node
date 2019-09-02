@@ -6,7 +6,7 @@ set chain_id [lindex $argv 2]
 set tx [lindex $argv 3]
 
 set timeout 30
-	spawn ./bnbcli token multi-send -y --home $home --from $from --chain-id=$chain_id --transfers $tx
+	spawn ./bnbcli token multi-send --home $home --from $from --chain-id=$chain_id --transfers $tx
 	expect "Password*"
 	send "12345678\r"
 interact

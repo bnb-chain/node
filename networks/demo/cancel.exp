@@ -8,9 +8,9 @@ set home [lindex $argv 4]
 
 set timeout 30
 	if {"$home" == ""} {
-		spawn ./bnbcli dex cancel -y -l $symbol --from $from --chain-id=$chain_id -f $id
+		spawn ./bnbcli dex cancel -l $symbol --from $from --chain-id=$chain_id -f $id
 	} else {
-		spawn ./bnbcli dex cancel -y -l $symbol --home $home --from $from --chain-id=$chain_id -f $id
+		spawn ./bnbcli dex cancel -l $symbol --home $home --from $from --chain-id=$chain_id -f $id
 	}
 	expect "Password*"
 	send "12345678\r"

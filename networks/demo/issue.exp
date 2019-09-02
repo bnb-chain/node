@@ -10,9 +10,9 @@ set home [lindex $argv 6]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token issue -y -s $symbol --token-name $token_name -n $supply --mintable $mintable --from $from --chain-id $chain_id
+		spawn ./bnbcli token issue -s $symbol --token-name $token_name -n $supply --mintable $mintable --from $from --chain-id $chain_id
 	} else {
-		spawn ./bnbcli token issue -y --home $home -s $symbol --token-name $token_name -n $supply --mintable $mintable --from $from --chain-id $chain_id
+		spawn ./bnbcli token issue --home $home -s $symbol --token-name $token_name -n $supply --mintable $mintable --from $from --chain-id $chain_id
 	}
 	expect "Password*"
 	send "12345678\r"

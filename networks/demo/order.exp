@@ -11,9 +11,9 @@ set home [lindex $argv 7]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli dex order -y -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
+		spawn ./bnbcli dex order -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
 	} else {
-		spawn ./bnbcli dex order -y --home $home -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
+		spawn ./bnbcli dex order --home $home -l $pair -s $side -p $price -q $quantity --from $from --chain-id=$chain_id -t $tif
 	}
 	expect "Password*"
 	send "12345678\r"

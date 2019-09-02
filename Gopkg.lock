@@ -56,7 +56,7 @@
 
 [[projects]]
   branch = "refactor-client"
-  digest = "1:79c4c06c11653c955f690b2f49192313d6367b4fba7320665af64a686d0fdcc0"
+  digest = "1:546689cfbe2eb738fae969a1db8232a98339886e7c4f9bcaeea00ccf3a55d932"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -105,7 +105,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "04546a9521984a49a96dff336f714de981cf3280"
+  revision = "cbacfa099db7e4c1d3cdba512773f374553a2c6f"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
