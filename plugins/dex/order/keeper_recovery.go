@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"time"
 
 	bc "github.com/tendermint/tendermint/blockchain"
@@ -164,11 +165,12 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 	}
 	for _, m := range ao.Orders {
 		orderHolder := m
-		kp.allOrders[m.Symbol][m.Id] = &orderHolder
+		symbol := strings.ToUpper(m.Symbol)
+		kp.allOrders[symbol][m.Id] = &orderHolder
 		if m.CreatedHeight == height {
-			kp.roundOrders[m.Symbol] = append(kp.roundOrders[m.Symbol], m.Id)
+			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
 			if m.TimeInForce == TimeInForce.IOC {
-				kp.roundIOCOrders[m.Symbol] = append(kp.roundIOCOrders[m.Symbol], m.Id)
+				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
 			}
 		}
 		if kp.CollectOrderInfoForPublish {
