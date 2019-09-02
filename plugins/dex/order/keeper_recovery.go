@@ -180,7 +180,19 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 	for _, m := range ao.Orders {
 		orderHolder := m
 		symbol := strings.ToUpper(m.Symbol)
-		kp.ReloadOrder(symbol, &orderHolder, height)
+		kp.allOrders[symbol][m.Id] = &orderHolder
+		if m.CreatedHeight == height {
+			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
+			if m.TimeInForce == TimeInForce.IOC {
+				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
+			}
+		}
+		if kp.CollectOrderInfoForPublish {
+			if _, exists := kp.OrderInfosForPub[m.Id]; !exists {
+				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
+				kp.OrderInfosForPub[m.Id] = &orderHolder
+			}
+		}
 	}
 	ctx.Logger().Info("Recovered active orders. Snapshot is fully loaded")
 	return height, nil
