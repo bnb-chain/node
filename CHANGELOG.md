@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1-hf.3
+BUG FIXES
+* [\#654](https://github.com/binance-chain/node/pull/654) [Dex] fix can't bring bnbchaind back when there is an order whose symbol is lower case
+
 ## 0.6.1-hf.2
 BUG FIXES
 * [\#641](https://github.com/binance-chain/node/pull/641) [Dex] Add max lock time in time lock plugin
