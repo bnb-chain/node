@@ -18,7 +18,7 @@ const (
 	RandomNumberHashLength  = 32
 	RandomNumberLength      = 32
 	SwapIDLength            = 32
-	MaxOtherChainAddrLength = 128
+	MaxOtherChainAddrLength = 64
 	MaxExpectedIncomeLength = 64
 	MinimumHeightSpan       = 360
 	MaximumHeightSpan       = 518400
@@ -90,13 +90,6 @@ func (msg HTLTMsg) ValidateBasic() sdk.Error {
 	}
 	if len(msg.ExpectedIncome) > MaxExpectedIncomeLength {
 		return ErrInvalidExpectedIncome(fmt.Sprintf("The length of expected income should be less than %d", MaxExpectedIncomeLength))
-	}
-	expectedIncome, err := sdk.ParseCoins(msg.ExpectedIncome)
-	if err != nil {
-		return ErrInvalidExpectedIncome("Invalid expected income pattern, legal pattern: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
-	}
-	if !expectedIncome.IsPositive() {
-		return ErrInvalidExpectedIncome("The expected income coins must be positive")
 	}
 	if len(msg.RandomNumberHash) != RandomNumberHashLength {
 		return ErrInvalidRandomNumberHash(fmt.Sprintf("The length of random number hash should be %d", RandomNumberHashLength))

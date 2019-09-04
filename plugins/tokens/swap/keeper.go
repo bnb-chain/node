@@ -43,11 +43,10 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 }
 
 func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
-	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
-
+	kvStore := ctx.KVStore(kp.storeKey)
 	hashKey := BuildHashKey(swapID)
 	if kvStore.Get(hashKey) != nil {
 		return ErrDuplicatedSwapID(fmt.Sprintf("Duplicated swapID %v", swapID))
@@ -68,11 +67,10 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicS
 }
 
 func (kp *Keeper) UpdateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
-	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
-
+	kvStore := ctx.KVStore(kp.storeKey)
 	hashKey := BuildHashKey(swapID)
 	if !kvStore.Has(hashKey) {
 		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swapID %v", swapID))
@@ -83,14 +81,13 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicS
 }
 
 func (kp *Keeper) CloseSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
-	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
 	if swap.ClosedTime <= 0 {
 		return sdk.ErrInternal("Missing swap close time")
 	}
-
+	kvStore := ctx.KVStore(kp.storeKey)
 	hashKey := BuildHashKey(swapID)
 	if !kvStore.Has(hashKey) {
 		return sdk.ErrInternal(fmt.Sprintf("Trying to close non-exist swapID %v", swapID))
@@ -104,10 +101,10 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSw
 }
 
 func (kp *Keeper) DeleteSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
-	kvStore := ctx.KVStore(kp.storeKey)
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
+	kvStore := ctx.KVStore(kp.storeKey)
 	hashKey := BuildHashKey(swapID)
 	kvStore.Delete(hashKey)
 

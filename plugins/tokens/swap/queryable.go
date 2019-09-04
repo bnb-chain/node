@@ -95,7 +95,7 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 		if count <= params.Offset {
 			continue
 		}
-		if count-params.Offset > params.Limit {
+		if int64(len(swapIDList)) > params.Limit {
 			break
 		}
 		swapIDList = append(swapIDList, iterator.Value())
@@ -144,7 +144,7 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 		if count <= params.Offset {
 			continue
 		}
-		if count-params.Offset > params.Limit {
+		if int64(len(swapIDList)) > params.Limit {
 			break
 		}
 		swapIDList = append(swapIDList, iterator.Value())

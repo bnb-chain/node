@@ -57,7 +57,7 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		return err.Result()
 	}
 
-	return sdk.Result{Tags: tags, Log: fmt.Sprintf("swapID: %s", hex.EncodeToString(swapID))}
+	return sdk.Result{Tags: tags, Data: swapID, Log: fmt.Sprintf("swapID: %s", hex.EncodeToString(swapID))}
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
@@ -88,6 +88,7 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 	swap.InAmount = msg.Amount
 	err = kp.UpdateSwap(ctx, msg.SwapID, swap)
 	if err != nil {
+		kp.logger.Error("Failed to update swap", "err", err.Error())
 		return err.Result()
 	}
 
@@ -119,6 +120,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	if !swap.OutAmount.IsZero() {
 		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.OutAmount)
 		if err != nil {
+			kp.logger.Error("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.To.String(), "amount", swap.OutAmount.String(), "err", err.Error())
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
@@ -126,6 +128,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	if !swap.InAmount.IsZero() {
 		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.InAmount)
 		if err != nil {
+			kp.logger.Error("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.From.String(), "amount", swap.InAmount.String(), "err", err.Error())
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
@@ -144,6 +147,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
 	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
+		kp.logger.Error("Failed to close swap", "err", err.Error())
 		return err.Result()
 	}
 	return sdk.Result{Tags: tags}
@@ -165,6 +169,7 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 	if !swap.OutAmount.IsZero() {
 		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.OutAmount)
 		if err != nil {
+			kp.logger.Error("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.From.String(), "amount", swap.OutAmount.String(), "err", err.Error())
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
@@ -172,6 +177,7 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 	if !swap.InAmount.IsZero() {
 		sendCoinTags, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.InAmount)
 		if err != nil {
+			kp.logger.Error("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.To.String(), "amount", swap.InAmount.String(), "err", err.Error())
 			return err.Result()
 		}
 		tags = tags.AppendTags(sendCoinTags)
@@ -189,6 +195,7 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
 	err := kp.CloseSwap(ctx, msg.SwapID, swap)
 	if err != nil {
+		kp.logger.Error("Failed to close swap", "err", err.Error())
 		return err.Result()
 	}
 	return sdk.Result{Tags: tags}
