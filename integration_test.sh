@@ -214,19 +214,19 @@ check_operation "Send Token" "${result}" "${chain_operation_words}"
 ## ROUND 4 ##
 sleep 1s
 # Create an atomic swap
-result=$(expect ./HTLT-cross-chain.exp 2000 "100000000:BNB" 100000000 $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
+result=$(expect ./HTLT-cross-chain.exp 2000 "100000000:BNB" "100000000:BNB" $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
 check_operation "Create an atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
-
+swapID=$(sed 's/swapID: //g' <<< $(echo "${result}" | tail -n 1 | grep -o "swapID: [0-9a-z]*"))
 sleep 1s
 
-swap1=$(./bnbcli token query-swap --random-number-hash $randomNumberHash --trust-node)
-swap1From=$(echo "${swap1}" | jq -r '.from')
-check_operation "Check swap creator address" $swap1From $alice_addr
-swap1To=$(echo "${swap1}" | jq -r '.to')
-check_operation "swap recipient address" $swap1To $bob_addr
+atimicSwap=$(./bnbcli token query-swap --swap-id ${swapID} --trust-node)
+swapFrom=$(echo "${atimicSwap}" | jq -r '.from')
+check_operation "Check swap creator address" $swapFrom $alice_addr
+swapTo=$(echo "${atimicSwap}" | jq -r '.to')
+check_operation "swap recipient address" $swapTo $bob_addr
 
 result=$(./bnbcli account bnb1wxeplyw7x8aahy93w96yhwm7xcq3ke4f8ge93u --trust-node)
 swapDeadAddrBalance=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
@@ -236,7 +236,7 @@ result=$(./bnbcli account $bob_addr --trust-node)
 balanceBobBeforeClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
 
 # Claim an atomic swap
-result=$(expect ./claim.exp $randomNumberHash $randomNumber alice ${chain_id} ${cli_home})
+result=$(expect ./claim.exp ${swapID} $randomNumber alice ${chain_id} ${cli_home})
 check_operation "claim an atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
@@ -246,13 +246,14 @@ balanceBobAfterClaim=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
 check_operation "Bob balance after claim swap" "$(expr $balanceBobAfterClaim - $balanceBobBeforeClaim)" "100000000"
 
 # Create an atomic swap
-result=$(expect ./HTLT-cross-chain.exp 2000 "100000000:BNB" 100000000 $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} ${cli_home})
+result=$(expect ./HTLT-cross-chain.exp 2000 "100000000:BNB" "100000000:BNB" $alice_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 bob ${chain_id} ${cli_home})
 check_operation "Create an atomic swap" "${result}" "${chain_operation_words}"
+swapID=$(sed 's/swapID: //g' <<< $(echo "${result}" | tail -n 1 | grep -o "swapID: [0-9a-z]*"))
 
 sleep 1s
 
 # Refund an atomic swap
-result=$(expect ./refund.exp $randomNumberHash alice ${chain_id} ${cli_home})
+result=$(expect ./refund.exp ${swapID} alice ${chain_id} ${cli_home})
 check_operation "refund an atomic swap which is still not expired" "${result}" "ERROR"
 
 sleep 1s
@@ -273,20 +274,21 @@ check_operation "Create a single chain atomic swap" "${result}" "${chain_operati
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
-
+swapID=$(sed 's/swapID: //g' <<< $(echo "${result}" | tail -n 1 | grep -o "swapID: [0-9a-z]*"))
 sleep 1s
+
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id} ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # claim a single chain atomic swap
-result=$(expect ./claim.exp ${randomNumberHash} ${randomNumber} alice ${chain_id} ${cli_home})
+result=$(expect ./claim.exp ${swapID} ${randomNumber} alice ${chain_id} ${cli_home})
 check_operation "claim a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id} ${cli_home})
 check_operation "Deposit to a closed single chain atomic swap" "${result}" "ERROR"
 
 sleep 1s
@@ -296,20 +298,21 @@ check_operation "Create a single chain atomic swap" "${result}" "${chain_operati
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
 randomNumberHash=$(sed 's/Random number hash: //g' <<< $(echo "${result}" | grep -o "Random number hash: [0-9a-z]*"))
+swapID=$(sed 's/swapID: //g' <<< $(echo "${result}" | tail -n 1 | grep -o "swapID: [0-9a-z]*"))
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 3s
 # refund a single chain atomic swap
-result=$(expect ./refund.exp ${randomNumberHash} alice ${chain_id} ${cli_home})
+result=$(expect ./refund.exp ${swapID} alice ${chain_id} ${cli_home})
 check_operation "refund a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Deposit to a single chain atomic swap
-result=$(expect ./deposit.exp $alice_addr "10000:${eth_symbol}" ${randomNumberHash} bob ${chain_id}  ${cli_home})
+result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a expired single chain atomic swap" "${result}" "ERROR"
 
 exit_test 0

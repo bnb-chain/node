@@ -3,6 +3,7 @@ package swap
 import (
 	"encoding/hex"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,19 +43,20 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 
 	recipientOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
 	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
-	outAmount := sdk.Coins{sdk.Coin{"BNB", 10000}}
+	amount := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "10000:BNB"
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, amount, expectedIncome, heightSpan, true)
 
 	result := handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
-	swapID := result.Data
+	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
+	swapID, _ := hex.DecodeString(swapIDStr)
 
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmount, AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amount, AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.GetSwap(ctx, swapID)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
@@ -96,19 +98,20 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
 	recipientOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
 	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
-	outAmount := sdk.Coins{sdk.Coin{"BNB", 10000}}
+	amount := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "10000:BNB"
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, true)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, amount, expectedIncome, heightSpan, true)
 
 	result := handler(ctx, msg)
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
-	swapID := result.Data
+	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
+	swapID, _ := hex.DecodeString(swapIDStr)
 
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmount, AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amount, AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.GetSwap(ctx, swapID)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
@@ -120,7 +123,7 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	require.Equal(t, sdk.ToABCICode(DefaultCodespace, CodeClaimExpiredSwap), result.Code)
 
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmount, AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amount, AtomicSwapCoinsAcc.GetCoins())
 
 	msg = NewRefundHTLTMsg(acc2.GetAddress(), swapID)
 	result = handler(ctx, msg)
@@ -154,26 +157,27 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	timestamp := time.Now().Unix()
 	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
 
-	outAmountBNB := sdk.Coins{sdk.Coin{"BNB", 10000}}
+	amountBNB := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "100000000:ABC"
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, amountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
-	swapID := result.Data
+	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
+	swapID, _ := hex.DecodeString(swapIDStr)
 
-	outAmountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
+	amountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
 	expectedIncome = "10000:BNB"
-	msg = NewDepositHTLTMsg(acc2.GetAddress(), outAmountABC, swapID)
+	msg = NewDepositHTLTMsg(acc2.GetAddress(), amountABC, swapID)
 
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmountBNB.Plus(outAmountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amountBNB.Plus(amountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.GetSwap(ctx, swapID)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
@@ -201,12 +205,12 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	require.Equal(t, Completed, swap.Status)
 
 	acc1Acc := accKeeper.GetAccount(ctx, acc1.GetAddress())
-	require.Equal(t, outAmountABC[0].Amount, acc1Acc.GetCoins().AmountOf("ABC"))
-	require.Equal(t, outAmountBNB[0].Amount, acc1OrignalCoins.AmountOf("BNB")-acc1Acc.GetCoins().AmountOf("BNB"))
+	require.Equal(t, amountABC[0].Amount, acc1Acc.GetCoins().AmountOf("ABC"))
+	require.Equal(t, amountBNB[0].Amount, acc1OrignalCoins.AmountOf("BNB")-acc1Acc.GetCoins().AmountOf("BNB"))
 
 	acc2Acc := accKeeper.GetAccount(ctx, acc2.GetAddress())
-	require.Equal(t, outAmountBNB[0].Amount, acc2Acc.GetCoins().AmountOf("BNB")-acc2OrignalCoins.AmountOf("BNB"))
-	require.Equal(t, outAmountABC[0].Amount, acc2OrignalCoins.AmountOf("ABC")-acc2Acc.GetCoins().AmountOf("ABC"))
+	require.Equal(t, amountBNB[0].Amount, acc2Acc.GetCoins().AmountOf("BNB")-acc2OrignalCoins.AmountOf("BNB"))
+	require.Equal(t, amountABC[0].Amount, acc2OrignalCoins.AmountOf("ABC")-acc2Acc.GetCoins().AmountOf("ABC"))
 }
 
 func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
@@ -230,26 +234,27 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	timestamp := time.Now().Unix()
 	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
 
-	outAmountBNB := sdk.Coins{sdk.Coin{"BNB", 10000}}
+	amountBNB := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "100000000:ABC"
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, amountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
-	swapID := result.Data
+	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
+	swapID, _ := hex.DecodeString(swapIDStr)
 
-	outAmountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
+	amountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
 	expectedIncome = "10000:BNB"
-	msg = NewDepositHTLTMsg(acc2.GetAddress(), outAmountABC, swapID)
+	msg = NewDepositHTLTMsg(acc2.GetAddress(), amountABC, swapID)
 
 	result = handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
 
 	AtomicSwapCoinsAcc := accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmountBNB.Plus(outAmountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amountBNB.Plus(amountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
 	swap := swapKeeper.GetSwap(ctx, swapID)
 	require.Equal(t, int64(heightSpan+10), swap.ExpireHeight)
@@ -261,7 +266,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	require.Equal(t, sdk.ToABCICode(DefaultCodespace, CodeClaimExpiredSwap), result.Code)
 
 	AtomicSwapCoinsAcc = accKeeper.GetAccount(ctx, AtomicSwapCoinsAccAddr)
-	require.Equal(t, outAmountBNB.Plus(outAmountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
+	require.Equal(t, amountBNB.Plus(amountABC).Sort(), AtomicSwapCoinsAcc.GetCoins())
 
 	msg = NewRefundHTLTMsg(acc2.GetAddress(), swapID)
 	result = handler(ctx, msg)

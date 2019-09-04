@@ -1,7 +1,7 @@
 #!/usr/bin/expect
 
 set heightSpan [lindex $argv 0]
-set outAmount [lindex $argv 1]
+set amount [lindex $argv 1]
 set expectedIncome [lindex $argv 2]
 set recipientAddr [lindex $argv 3]
 set recipientOtherChain [lindex $argv 4]
@@ -11,9 +11,9 @@ set home [lindex $argv 7]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token HTLT --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --expected-income $expectedIncome --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain --cross-chain
+		spawn ./bnbcli token HTLT --from $from --chain-id $chain_id --height-span $heightSpan --amount $amount --expected-income $expectedIncome --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain --cross-chain
 	} else {
-		spawn ./bnbcli token HTLT --home $home --from $from --chain-id $chain_id --auto --height-span $heightSpan --out-amount $outAmount --expected-income $expectedIncome --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain --cross-chain
+		spawn ./bnbcli token HTLT --home $home --from $from --chain-id $chain_id --height-span $heightSpan --amount $amount --expected-income $expectedIncome --recipient-addr $recipientAddr --recipient-other-chain $recipientOtherChain --cross-chain
 	}
 	expect "Password*"
 	send "12345678\r"

@@ -1,6 +1,6 @@
 #!/usr/bin/expect
 
-set randomNumberHash [lindex $argv 0]
+set swapID [lindex $argv 0]
 set randomNumber [lindex $argv 1]
 set from [lindex $argv 2]
 set chain_id [lindex $argv 3]
@@ -8,9 +8,9 @@ set home [lindex $argv 4]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token claim --from $from --chain-id $chain_id --random-number-hash $randomNumberHash --random-number $randomNumber
+		spawn ./bnbcli token claim --from $from --chain-id $chain_id --swap-id $swapID --random-number $randomNumber
 	} else {
-		spawn ./bnbcli token claim --home $home --from $from --chain-id $chain_id --random-number-hash $randomNumberHash --random-number $randomNumber
+		spawn ./bnbcli token claim --home $home --from $from --chain-id $chain_id --swap-id $swapID --random-number $randomNumber
 	}
 	expect "Password*"
 	send "12345678\r"

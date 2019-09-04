@@ -18,7 +18,6 @@ import (
 const (
 	flagCreatorAddr         = "creator-addr"
 	flagRecipientAddr       = "recipient-addr"
-	flagOutAmount           = "out-amount"
 	flagExpectedIncome      = "expected-income"
 	flagRecipientOtherChain = "recipient-other-chain"
 	flagSenderOtherChain    = "sender-other-chain"
@@ -40,7 +39,7 @@ func initiateHTLTCmd(cmdr Commander) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagRecipientAddr, "", "The recipient address of BEP2 token, bech32 encoding")
-	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
+	cmd.Flags().String(flagAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
 	cmd.Flags().String(flagExpectedIncome, "", "Expected income from swap counter party, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
 	cmd.Flags().String(flagRecipientOtherChain, "", "The recipient address on other chain, like Ethereum, leave it empty for single chain swap")
 	cmd.Flags().String(flagSenderOtherChain, "", "The sender address on other chain, like Ethereum, leave it empty for single chain swap")
@@ -64,7 +63,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	outAmount, err := sdk.ParseCoins(viper.GetString(flagOutAmount))
+	amount, err := sdk.ParseCoins(viper.GetString(flagAmount))
 	if err != nil {
 		return err
 	}
@@ -98,7 +97,7 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
-	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, outAmount, expectedIncome, heightSpan, crossChain)
+	msg := swap.NewHTLTMsg(from, to, recipientOtherChain, senderOtherChain, randomNumberHash, timestamp, amount, expectedIncome, heightSpan, crossChain)
 
 	sdkErr := msg.ValidateBasic()
 	if sdkErr != nil {
@@ -114,7 +113,7 @@ func depositHTLTCmd(cmdr Commander) *cobra.Command {
 		RunE:  cmdr.depositHTLT,
 	}
 
-	cmd.Flags().String(flagOutAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
+	cmd.Flags().String(flagAmount, "", "The swapped out amount BEP2 tokens, example: \"100:BNB\" or \"100:BNB,10000:BTCB-1DE\"")
 	cmd.Flags().String(flagSwapID, "", "ID of previously created swap, hex encoding")
 
 	return cmd
@@ -128,7 +127,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	outAmount, err := sdk.ParseCoins(viper.GetString(flagOutAmount))
+	amount, err := sdk.ParseCoins(viper.GetString(flagAmount))
 	if err != nil {
 		return err
 	}
@@ -139,7 +138,7 @@ func (c Commander) depositHTLT(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := swap.NewDepositHTLTMsg(from, outAmount, swapID)
+	msg := swap.NewDepositHTLTMsg(from, amount, swapID)
 
 	sdkErr := msg.ValidateBasic()
 	if sdkErr != nil {

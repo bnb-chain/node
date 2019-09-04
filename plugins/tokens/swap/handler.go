@@ -2,6 +2,7 @@ package swap
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,14 +31,14 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
 		return ErrInvalidTimestamp(fmt.Sprintf("Timestamp (%d) can neither be 15 minutes ahead of the current time (%d), nor 30 minutes later", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
 	}
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.Amount)
 	if err != nil {
 		return err.Result()
 	}
 	swap := &AtomicSwap{
 		From:                msg.From,
 		To:                  msg.To,
-		OutAmount:           msg.OutAmount,
+		OutAmount:           msg.Amount,
 		InAmount:            nil,
 		ExpectedIncome:      msg.ExpectedIncome,
 		RecipientOtherChain: msg.RecipientOtherChain,
@@ -56,7 +57,7 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		return err.Result()
 	}
 
-	return sdk.Result{Tags: tags, Data: swapID}
+	return sdk.Result{Tags: tags, Log: fmt.Sprintf("swapID: %s", hex.EncodeToString(swapID))}
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
@@ -79,12 +80,12 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 	if !swap.InAmount.IsZero() {
 		return ErrInvalidSingleChainSwap("Can't deposit a swap for multiple times").Result()
 	}
-	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.OutAmount)
+	tags, err := kp.ck.SendCoins(ctx, msg.From, AtomicSwapCoinsAccAddr, msg.Amount)
 	if err != nil {
 		return err.Result()
 	}
 
-	swap.InAmount = msg.OutAmount
+	swap.InAmount = msg.Amount
 	err = kp.UpdateSwap(ctx, msg.SwapID, swap)
 	if err != nil {
 		return err.Result()

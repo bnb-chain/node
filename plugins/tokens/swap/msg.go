@@ -33,14 +33,14 @@ type HTLTMsg struct {
 	SenderOtherChain    string         `json:"sender_other_chain"`
 	RandomNumberHash    cmm.HexBytes   `json:"random_number_hash"`
 	Timestamp           int64          `json:"timestamp"`
-	OutAmount           sdk.Coins      `json:"out_amount"`
+	Amount              sdk.Coins      `json:"amount"`
 	ExpectedIncome      string         `json:"expected_income"`
 	HeightSpan          int64          `json:"height_span"`
 	CrossChain          bool           `json:"cross_chain"`
 }
 
 func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain string, randomNumberHash cmm.HexBytes, timestamp int64,
-	outAmount sdk.Coins, expectedIncome string, heightSpan int64, crossChain bool) HTLTMsg {
+	amount sdk.Coins, expectedIncome string, heightSpan int64, crossChain bool) HTLTMsg {
 	return HTLTMsg{
 		From:                from,
 		To:                  to,
@@ -48,7 +48,7 @@ func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain s
 		SenderOtherChain:    senderOtherChain,
 		RandomNumberHash:    randomNumberHash,
 		Timestamp:           timestamp,
-		OutAmount:           outAmount,
+		Amount:              amount,
 		ExpectedIncome:      expectedIncome,
 		HeightSpan:          heightSpan,
 		CrossChain:          crossChain,
@@ -59,7 +59,7 @@ func (msg HTLTMsg) Route() string { return AtomicSwapRoute }
 func (msg HTLTMsg) Type() string  { return HTLT }
 func (msg HTLTMsg) String() string {
 	return fmt.Sprintf("HTLT{%v#%v#%v#%v#%v#%v#%v#%v#%v#%v}", msg.From, msg.To, msg.RecipientOtherChain, msg.SenderOtherChain, msg.RandomNumberHash,
-		msg.Timestamp, msg.OutAmount, msg.ExpectedIncome, msg.HeightSpan, msg.CrossChain)
+		msg.Timestamp, msg.Amount, msg.ExpectedIncome, msg.HeightSpan, msg.CrossChain)
 }
 func (msg HTLTMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return append(msg.GetSigners(), AtomicSwapCoinsAccAddr)
@@ -101,7 +101,7 @@ func (msg HTLTMsg) ValidateBasic() sdk.Error {
 	if len(msg.RandomNumberHash) != RandomNumberHashLength {
 		return ErrInvalidRandomNumberHash(fmt.Sprintf("The length of random number hash should be %d", RandomNumberHashLength))
 	}
-	if !msg.OutAmount.IsPositive() {
+	if !msg.Amount.IsPositive() {
 		return sdk.ErrInvalidCoins("The swapped out coins must be positive")
 	}
 	if msg.HeightSpan < MinimumHeightSpan || msg.HeightSpan > MaximumHeightSpan {
@@ -121,23 +121,23 @@ func (msg HTLTMsg) GetSignBytes() []byte {
 var _ sdk.Msg = DepositHTLTMsg{}
 
 type DepositHTLTMsg struct {
-	From      sdk.AccAddress `json:"from"`
-	OutAmount sdk.Coins      `json:"out_amount"`
-	SwapID    cmm.HexBytes   `json:"swap_id"`
+	From   sdk.AccAddress `json:"from"`
+	Amount sdk.Coins      `json:"amount"`
+	SwapID cmm.HexBytes   `json:"swap_id"`
 }
 
-func NewDepositHTLTMsg(from sdk.AccAddress, outAmount sdk.Coins, swapID cmm.HexBytes) DepositHTLTMsg {
+func NewDepositHTLTMsg(from sdk.AccAddress, amount sdk.Coins, swapID cmm.HexBytes) DepositHTLTMsg {
 	return DepositHTLTMsg{
-		From:      from,
-		OutAmount: outAmount,
-		SwapID:    swapID,
+		From:   from,
+		Amount: amount,
+		SwapID: swapID,
 	}
 }
 
 func (msg DepositHTLTMsg) Route() string { return AtomicSwapRoute }
 func (msg DepositHTLTMsg) Type() string  { return DepositHTLT }
 func (msg DepositHTLTMsg) String() string {
-	return fmt.Sprintf("depositHTLT{%v#%v#%v}", msg.From, msg.OutAmount, msg.SwapID)
+	return fmt.Sprintf("depositHTLT{%v#%v#%v}", msg.From, msg.Amount, msg.SwapID)
 }
 func (msg DepositHTLTMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return append(msg.GetSigners(), AtomicSwapCoinsAccAddr)
@@ -153,7 +153,7 @@ func (msg DepositHTLTMsg) ValidateBasic() sdk.Error {
 	if len(msg.SwapID) != SwapIDLength {
 		return ErrInvalidSwapID(fmt.Sprintf("The length of swapID should be %d", SwapIDLength))
 	}
-	if !msg.OutAmount.IsPositive() {
+	if !msg.Amount.IsPositive() {
 		return sdk.ErrInvalidCoins("The swapped out coins must be positive")
 	}
 	return nil

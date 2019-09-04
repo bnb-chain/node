@@ -19,7 +19,7 @@ func TestHTLTMsg(t *testing.T) {
 		SenderOtherChain    string
 		RandomNumberHash    string
 		Timestamp           int64
-		OutAmount           sdk.Coins
+		Amount              sdk.Coins
 		ExpectedIncome      string
 		HeightSpan          int64
 		Pass                bool
@@ -29,10 +29,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                true,
@@ -42,10 +42,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0][1:],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -55,10 +55,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -68,10 +68,24 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
+			SenderOtherChain:    "0x491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17491e71b619878c083eaf2894718383c7eb15eb17",
+			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
+			Timestamp:           1564471835,
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
+			ExpectedIncome:      "10000:BNB",
+			HeightSpan:          1000,
+			Pass:                false,
+			CrossChain:          true,
+			ErrorCode:           CodeInvalidAddrOtherChain,
+		},
+		{
+			From:                addrs[0],
+			To:                  addrs[1],
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "54be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -81,10 +95,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", -10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", -10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			Pass:                false,
@@ -94,10 +108,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          100,
 			Pass:                false,
@@ -107,10 +121,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000000,
 			Pass:                false,
@@ -123,7 +137,7 @@ func TestHTLTMsg(t *testing.T) {
 			RecipientOtherChain: "",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,
@@ -136,7 +150,7 @@ func TestHTLTMsg(t *testing.T) {
 			RecipientOtherChain: "",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "10000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          false,
@@ -146,10 +160,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "1000000000000000000000000000000000000000000000000000000000000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,
@@ -159,10 +173,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "1000BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,
@@ -172,10 +186,10 @@ func TestHTLTMsg(t *testing.T) {
 		{
 			From:                addrs[0],
 			To:                  addrs[1],
-			RecipientOtherChain: "491e71b619878c083eaf2894718383c7eb15eb17",
+			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
 			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Timestamp:           1564471835,
-			OutAmount:           sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
 			ExpectedIncome:      "-1000:BNB",
 			HeightSpan:          1000,
 			CrossChain:          true,
@@ -186,7 +200,7 @@ func TestHTLTMsg(t *testing.T) {
 
 	for i, tc := range tests {
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewHTLTMsg(tc.From, tc.To, tc.RecipientOtherChain, tc.SenderOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
+		msg := NewHTLTMsg(tc.From, tc.To, tc.RecipientOtherChain, tc.SenderOtherChain, randomNumberHash, tc.Timestamp, tc.Amount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
@@ -203,34 +217,34 @@ func TestDepositHTLTMsg(t *testing.T) {
 	tests := []struct {
 		From      sdk.AccAddress
 		SwapID    string
-		OutAmount sdk.Coins
+		Amount    sdk.Coins
 		Pass      bool
 		ErrorCode sdk.CodeType
 	}{
 		{
 			From:      addrs[0],
-			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:    sdk.Coins{sdk.Coin{"BNB", 10000}},
 			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Pass:      true,
 			ErrorCode: 0,
 		},
 		{
 			From:      addrs[0][1:],
-			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:    sdk.Coins{sdk.Coin{"BNB", 10000}},
 			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Pass:      false,
 			ErrorCode: CodeClaimExpiredSwap,
 		},
 		{
 			From:      addrs[0],
-			OutAmount: sdk.Coins{sdk.Coin{"BNB", 0}},
+			Amount:    sdk.Coins{sdk.Coin{"BNB", 0}},
 			SwapID:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Pass:      false,
 			ErrorCode: sdk.CodeInvalidCoins,
 		},
 		{
 			From:      addrs[0],
-			OutAmount: sdk.Coins{sdk.Coin{"BNB", 10000}},
+			Amount:    sdk.Coins{sdk.Coin{"BNB", 10000}},
 			SwapID:    "543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
 			Pass:      false,
 			ErrorCode: CodeInvalidSwapID,
@@ -239,7 +253,7 @@ func TestDepositHTLTMsg(t *testing.T) {
 
 	for i, tc := range tests {
 		swapID, _ := hex.DecodeString(tc.SwapID)
-		msg := NewDepositHTLTMsg(tc.From, tc.OutAmount, swapID)
+		msg := NewDepositHTLTMsg(tc.From, tc.Amount, swapID)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {
