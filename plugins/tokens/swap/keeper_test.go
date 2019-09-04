@@ -72,8 +72,8 @@ func TestKeeper_CreateSwap(t *testing.T) {
 	_, acc1 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 	_, acc2 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 
-	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	toOnOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap := &AtomicSwap{
 		From:                acc1.GetAddress(),
@@ -134,8 +134,8 @@ func TestKeeper_UpdateSwap(t *testing.T) {
 	_, acc1 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 	_, acc2 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 
-	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	toOnOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap := &AtomicSwap{
 		From:                acc1.GetAddress(),
@@ -198,8 +198,8 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	_, acc1 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 	_, acc2 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 
-	toOnOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	toOnOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	randomNumberHash, _ := hex.DecodeString("be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167")
 	swap1 := &AtomicSwap{
 		From:                acc1.GetAddress(),
@@ -219,8 +219,8 @@ func TestKeeper_DeleteSwap(t *testing.T) {
 	err := keeper.CreateSwap(ctx, swapID1, swap1)
 	require.NoError(t, err)
 
-	toOnOtherChain, _ = hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ = hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	toOnOtherChain = "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain = "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	randomNumberHash, _ = hex.DecodeString("0xba624f3a2c2909f26c9c9ac06d24ae6cab8483ca79cd95e073a8b7bbfc246701")
 	swap2 := &AtomicSwap{
 		From:                acc1.GetAddress(),

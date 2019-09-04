@@ -2,6 +2,7 @@ package swap
 
 import (
 	"encoding/binary"
+	"strings"
 
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
@@ -21,7 +22,8 @@ func CalculateRandomHash(randomNumber []byte, timestamp int64) []byte {
 	return tmhash.Sum(data)
 }
 
-func CalculateSwapID(randomNumberHash []byte, sender sdk.AccAddress, senderOtherChain HexData) []byte {
+func CalculateSwapID(randomNumberHash []byte, sender sdk.AccAddress, senderOtherChain string) []byte {
+	senderOtherChain = strings.ToLower(senderOtherChain)
 	data := randomNumberHash
 	data = append(data, []byte(sender)...)
 	data = append(data, []byte(senderOtherChain)...)

@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
@@ -28,12 +27,7 @@ func QuerySwapReqHandler(
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
-		swapIDStr := vars["swapID"]
-		if !strings.HasPrefix(swapIDStr, "0x") {
-			throw(w, http.StatusBadRequest, fmt.Errorf("swapID must prefix with 0x"))
-			return
-		}
-		swapID, err := hex.DecodeString(swapIDStr[2:])
+		swapID, err := hex.DecodeString(vars["swapID"])
 		if err != nil {
 			throw(w, http.StatusBadRequest, err)
 			return

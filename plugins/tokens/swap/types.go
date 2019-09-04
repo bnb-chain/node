@@ -1,16 +1,13 @@
 package swap
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	cmm "github.com/tendermint/tendermint/libs/common"
 )
 
 type SwapStatus int8
-type HexData []byte
 
 const (
 	NULL      SwapStatus = 0x00
@@ -18,39 +15,6 @@ const (
 	Completed SwapStatus = 0x02
 	Expired   SwapStatus = 0x03
 )
-
-func (hexData HexData) String() string {
-	str := hex.EncodeToString(hexData)
-	if len(str) == 0 {
-		return ""
-	}
-	return "0x" + str
-}
-
-func (hexData HexData) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hexData.String())
-}
-
-func (hexData *HexData) UnmarshalJSON(data []byte) error {
-	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return err
-	}
-	if len(s) == 0 {
-		*hexData = nil
-		return nil
-	}
-	if !strings.HasPrefix(s, "0x") {
-		return fmt.Errorf("hex string must prefix with 0x")
-	}
-	bytesArray, err := hex.DecodeString(s[2:])
-	if err != nil {
-		return err
-	}
-	*hexData = bytesArray
-	return nil
-}
 
 func NewSwapStatusFromString(str string) SwapStatus {
 	switch str {
@@ -98,12 +62,12 @@ type AtomicSwap struct {
 	OutAmount sdk.Coins      `json:"out_amount"`
 	InAmount  sdk.Coins      `json:"in_amount"`
 
-	ExpectedIncome      string  `json:"expected_income"`
-	RecipientOtherChain HexData `json:"recipient_other_chain"`
+	ExpectedIncome      string `json:"expected_income"`
+	RecipientOtherChain string `json:"recipient_other_chain"`
 
-	RandomNumberHash HexData `json:"random_number_hash"` // 32-length byte array, sha256(random_number, timestamp)
-	RandomNumber     HexData `json:"random_number"`      // random_number is a 32-length random byte array
-	Timestamp        int64   `json:"timestamp"`
+	RandomNumberHash cmm.HexBytes `json:"random_number_hash"` // 32-length byte array, sha256(random_number, timestamp)
+	RandomNumber     cmm.HexBytes `json:"random_number"`      // random_number is a 32-length random byte array
+	Timestamp        int64        `json:"timestamp"`
 
 	CrossChain bool `json:"cross_chain"`
 

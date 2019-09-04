@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+	cmm "github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -31,7 +32,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 
 // Params for query 'custom/atomicswap/swapid'
 type QuerySwapByID struct {
-	SwapID HexData
+	SwapID cmm.HexBytes
 }
 
 // nolint: unparam
@@ -88,7 +89,7 @@ func querySwapByCreator(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (
 	defer iterator.Close()
 
 	count := int64(0)
-	swapIDList := make([]HexData, 0, params.Limit)
+	swapIDList := make([]cmm.HexBytes, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		count++
 		if count <= params.Offset {
@@ -137,7 +138,7 @@ func querySwapByRecipient(ctx sdk.Context, req abci.RequestQuery, keeper Keeper)
 	defer iterator.Close()
 
 	count := int64(0)
-	swapIDList := make([]HexData, 0, params.Limit)
+	swapIDList := make([]cmm.HexBytes, 0, params.Limit)
 	for ; iterator.Valid(); iterator.Next() {
 		count++
 		if count <= params.Offset {

@@ -24,8 +24,8 @@ func TestCalculateSwapID(t *testing.T) {
 	randomNumberHash, _ := hex.DecodeString(randomNumberHashStr)
 
 	sender := sdk.AccAddress(crypto.AddressHash([]byte("sender")))
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	senderOtherChain := "0x833914c3A745d924bf71d98F9F9Ae126993E3C88"
 
 	swapID := CalculateSwapID(randomNumberHash, sender, senderOtherChain)
-	require.Equal(t, "84c7e282501eeaa771d1133bc3f4ddf23d79bed2eb3f51e411c935c158397ef0", hex.EncodeToString(swapID))
+	require.Equal(t, "1e2103882a9da088befc55eea4d25b6ef0a634ef483c6249615fa62078f0dc79", hex.EncodeToString(swapID))
 }

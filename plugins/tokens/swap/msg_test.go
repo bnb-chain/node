@@ -185,10 +185,8 @@ func TestHTLTMsg(t *testing.T) {
 	}
 
 	for i, tc := range tests {
-		recipientOtherChain, _ := hex.DecodeString(tc.RecipientOtherChain)
-		senderOtherChain, _ := hex.DecodeString(tc.SenderOtherChain)
 		randomNumberHash, _ := hex.DecodeString(tc.RandomNumberHash)
-		msg := NewHTLTMsg(tc.From, tc.To, recipientOtherChain, senderOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
+		msg := NewHTLTMsg(tc.From, tc.To, tc.RecipientOtherChain, tc.SenderOtherChain, randomNumberHash, tc.Timestamp, tc.OutAmount, tc.ExpectedIncome, tc.HeightSpan, tc.CrossChain)
 
 		err := msg.ValidateBasic()
 		if tc.Pass {

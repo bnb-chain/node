@@ -40,8 +40,8 @@ func TestHandleCreateAndClaimSwap(t *testing.T) {
 	timestamp := time.Now().Unix()
 	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
 
-	recipientOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	recipientOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	outAmount := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "10000:BNB"
 	heightSpan := int64(1000)
@@ -94,8 +94,8 @@ func TestHandleCreateAndRefundSwap(t *testing.T) {
 	randomNumber, _ := hex.DecodeString(randomNumberStr)
 	timestamp := time.Now().Unix()
 	randomNumberHash := CalculateRandomHash(randomNumber, timestamp)
-	recipientOtherChain, _ := hex.DecodeString("491e71b619878c083eaf2894718383c7eb15eb17")
-	senderOtherChain, _ := hex.DecodeString("833914c3A745d924bf71d98F9F9Ae126993E3C88")
+	recipientOtherChain := "491e71b619878c083eaf2894718383c7eb15eb17"
+	senderOtherChain := "833914c3A745d924bf71d98F9F9Ae126993E3C88"
 	outAmount := sdk.Coins{sdk.Coin{"BNB", 10000}}
 	expectedIncome := "10000:BNB"
 	heightSpan := int64(1000)
@@ -159,7 +159,7 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), nil, nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)
@@ -235,7 +235,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	heightSpan := int64(1000)
 
 	var msg sdk.Msg
-	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), nil, nil, randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
+	msg = NewHTLTMsg(acc1.GetAddress(), acc2.GetAddress(), "", "", randomNumberHash, timestamp, outAmountBNB, expectedIncome, heightSpan, false)
 
 	result := handler(ctx, msg)
 	require.Equal(t, sdk.ABCICodeOK, result.Code)

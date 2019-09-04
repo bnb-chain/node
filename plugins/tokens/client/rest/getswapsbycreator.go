@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
+	cmm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/wire"
@@ -76,7 +77,7 @@ func QuerySwapIDsByCreatorReqHandler(
 			return
 		}
 
-		var swapIDs []swap.HexData
+		var swapIDs []cmm.HexBytes
 		err = cdc.UnmarshalJSON(bz, &swapIDs)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)

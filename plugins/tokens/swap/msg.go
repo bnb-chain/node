@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	cmm "github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 	RandomNumberHashLength  = 32
 	RandomNumberLength      = 32
 	SwapIDLength            = 32
-	MaxOtherChainAddrLength = 64
+	MaxOtherChainAddrLength = 128
 	MaxExpectedIncomeLength = 64
 	MinimumHeightSpan       = 360
 	MaximumHeightSpan       = 518400
@@ -28,9 +29,9 @@ var _ sdk.Msg = HTLTMsg{}
 type HTLTMsg struct {
 	From                sdk.AccAddress `json:"from"`
 	To                  sdk.AccAddress `json:"to"`
-	RecipientOtherChain HexData        `json:"recipient_other_chain"`
-	SenderOtherChain    HexData        `json:"sender_other_chain"`
-	RandomNumberHash    HexData        `json:"random_number_hash"`
+	RecipientOtherChain string         `json:"recipient_other_chain"`
+	SenderOtherChain    string         `json:"sender_other_chain"`
+	RandomNumberHash    cmm.HexBytes   `json:"random_number_hash"`
 	Timestamp           int64          `json:"timestamp"`
 	OutAmount           sdk.Coins      `json:"out_amount"`
 	ExpectedIncome      string         `json:"expected_income"`
@@ -38,7 +39,7 @@ type HTLTMsg struct {
 	CrossChain          bool           `json:"cross_chain"`
 }
 
-func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain []byte, randomNumberHash []byte, timestamp int64,
+func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain string, randomNumberHash cmm.HexBytes, timestamp int64,
 	outAmount sdk.Coins, expectedIncome string, heightSpan int64, crossChain bool) HTLTMsg {
 	return HTLTMsg{
 		From:                from,
@@ -122,10 +123,10 @@ var _ sdk.Msg = DepositHTLTMsg{}
 type DepositHTLTMsg struct {
 	From      sdk.AccAddress `json:"from"`
 	OutAmount sdk.Coins      `json:"out_amount"`
-	SwapID    HexData        `json:"swap_id"`
+	SwapID    cmm.HexBytes   `json:"swap_id"`
 }
 
-func NewDepositHTLTMsg(from sdk.AccAddress, outAmount sdk.Coins, swapID []byte) DepositHTLTMsg {
+func NewDepositHTLTMsg(from sdk.AccAddress, outAmount sdk.Coins, swapID cmm.HexBytes) DepositHTLTMsg {
 	return DepositHTLTMsg{
 		From:      from,
 		OutAmount: outAmount,
@@ -170,11 +171,11 @@ var _ sdk.Msg = ClaimHTLTMsg{}
 
 type ClaimHTLTMsg struct {
 	From         sdk.AccAddress `json:"from"`
-	SwapID       HexData        `json:"swap_id"`
-	RandomNumber HexData        `json:"random_number"`
+	SwapID       cmm.HexBytes   `json:"swap_id"`
+	RandomNumber cmm.HexBytes   `json:"random_number"`
 }
 
-func NewClaimHTLTMsg(from sdk.AccAddress, swapID, randomNumber []byte) ClaimHTLTMsg {
+func NewClaimHTLTMsg(from sdk.AccAddress, swapID, randomNumber cmm.HexBytes) ClaimHTLTMsg {
 	return ClaimHTLTMsg{
 		From:         from,
 		SwapID:       swapID,
@@ -219,13 +220,13 @@ var _ sdk.Msg = RefundHTLTMsg{}
 
 type RefundHTLTMsg struct {
 	From   sdk.AccAddress `json:"from"`
-	SwapID HexData        `json:"swap_id"`
+	SwapID cmm.HexBytes   `json:"swap_id"`
 }
 
-func NewRefundHTLTMsg(from sdk.AccAddress, randomNumberHash []byte) RefundHTLTMsg {
+func NewRefundHTLTMsg(from sdk.AccAddress, swapID cmm.HexBytes) RefundHTLTMsg {
 	return RefundHTLTMsg{
 		From:   from,
-		SwapID: randomNumberHash,
+		SwapID: swapID,
 	}
 }
 
@@ -246,7 +247,7 @@ func (msg RefundHTLTMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress(fmt.Sprintf("Expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.From)))
 	}
 	if len(msg.SwapID) != SwapIDLength {
-		return ErrInvalidSwapID(fmt.Sprintf("The length of random number hash should be %d", RandomNumberHashLength))
+		return ErrInvalidSwapID(fmt.Sprintf("The length of swapID should be %d", SwapIDLength))
 	}
 	return nil
 }
