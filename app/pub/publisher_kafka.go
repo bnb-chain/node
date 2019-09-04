@@ -223,14 +223,25 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 	backOffInSeconds := time.Duration(1)
 
 	for {
-		if partition, offset, err = publisher.producers[topic].SendMessage(message); err == sarama.ErrOutOfBrokers || err == breaker.ErrBreakerOpen {
+		if partition, offset, err = publisher.producers[topic].SendMessage(message); publisher.isRetryableErr(err) {
 			backOffInSeconds <<= 1
-			Logger.Error("encountered retriable error, retrying...", "after", backOffInSeconds, "err", err)
-			time.Sleep(backOffInSeconds * time.Second)
+			backOffTime := backOffInSeconds * time.Second
+			Logger.Error("encountered retryable error, retrying...", "after", backOffTime, "err", err)
+			time.Sleep(backOffTime)
 		} else {
 			return
 		}
 	}
+}
+
+// these errors happens indicate there is something wrong with kafka cluster,
+// we should not continue before the connectivity issue is gone
+// otherwise, downstream services might missing blocks
+func (publisher *KafkaMarketDataPublisher) isRetryableErr(err error) bool {
+	return err == sarama.ErrOutOfBrokers ||
+		err == breaker.ErrBreakerOpen ||
+		strings.Contains(err.Error(), "i/o timeout") ||
+		strings.Contains(err.Error(), "connection refused")
 }
 
 func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgType) ([]byte, error) {
