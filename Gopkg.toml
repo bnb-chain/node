@@ -37,7 +37,7 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  branch = "index"
+  version = "=v0.31.5-binance.2"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
