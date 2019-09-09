@@ -42,13 +42,13 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: TimeUnlockFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: TimeRelockFee, FeeFor: types.FeeForProposer},
 		}
-		paramHub.ParamUpdated(ctx, []interface{}{timeLockFeeParams})
+		paramHub.UpdateParams(ctx, []interface{}{timeLockFeeParams})
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP12, func(ctx sdk.Context) {
 		accountFlagsFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: types.FeeForProposer},
 		}
-		paramHub.ParamUpdated(ctx, []interface{}{accountFlagsFeeParams})
+		paramHub.UpdateParams(ctx, []interface{}{accountFlagsFeeParams})
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.MakerTakerFee, func(ctx sdk.Context) {
 		dexFeeParams := []param.FeeParam{
@@ -63,14 +63,14 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 					{order.IOCExpireFee, 10000},
 					{order.IOCExpireFeeNative, 2500},
 
-					{order.MakerFeeRateField, 200 },
-					{order.MakerFeeRateNativeField, 100},
+					{order.MakerFeeRateField, 1000 },
+					{order.MakerFeeRateNativeField, 400},
 					{order.TakerFeeRateField, 1000},
 					{order.TakerFeeRateNativeField, 400},
 				},
 			},
 		}
-		paramHub.ParamUpdated(ctx, []interface{}{dexFeeParams})
+		paramHub.UpdateParams(ctx, []interface{}{dexFeeParams})
 	})
 }
 

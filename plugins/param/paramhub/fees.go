@@ -22,7 +22,7 @@ func (keeper *Keeper) SetFeeParams(ctx sdk.Context, fp []types.FeeParam) {
 	return
 }
 
-func (keeper *Keeper) UpdateFeeParams(ctx sdk.Context, updates []types.FeeParam) {
+func (keeper *Keeper) updateFeeParams(ctx sdk.Context, updates []types.FeeParam) {
 	origin := keeper.GetFeeParams(ctx)
 	opFeeMap := make(map[string]int, len(updates))
 	dexFeeLoc := 0
@@ -67,7 +67,7 @@ func (keeper *Keeper) registerFeeParamCallBack() {
 			for _, c := range changes {
 				switch change := c.(type) {
 				case []types.FeeParam:
-					keeper.UpdateFeeParams(context, change)
+					keeper.updateFeeParams(context, change)
 				default:
 					keeper.logger.Debug("Receive param changes that not interested.")
 				}

@@ -32,8 +32,8 @@ const (
 	ExpireFeeNativeField = "ExpireFeeNative"
 	CancelFeeField       = "CancelFee"
 	CancelFeeNativeField = "CancelFeeNative"
-	FeeRateField         = "FeeRate"       // DEPRECATED. after xxx upgrade
-	FeeRateNativeField   = "FeeRateNative" // DEPRECATED. after xxx upgrade
+	FeeRateField         = "FeeRate"       // used before Archimedes upgrade
+	FeeRateNativeField   = "FeeRateNative" // used before Archimedes upgrade
 	IOCExpireFee         = "IOCExpireFee"
 	IOCExpireFeeNative   = "IOCExpireFeeNative"
 
@@ -54,7 +54,7 @@ type FeeManager struct {
 	FeeConfig FeeConfig
 }
 
-func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
+func NewFeeManager(cdc *wire.Codec, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
 		cdc:       cdc,
 		logger:    logger,
@@ -66,6 +66,13 @@ func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) 
 func (m *FeeManager) UpdateConfig(feeConfig FeeConfig) error {
 	if feeConfig.anyEmpty() {
 		return errors.New("invalid FeeConfig")
+	}
+
+	if feeConfig.MakerFeeRate < feeConfig.MakerFeeRateNative {
+		return errors.New("MakerFeeRateNative should not be larger than MakerFeeRate")
+	}
+	if feeConfig.TakerFeeRate < feeConfig.TakerFeeRateNative {
+		return errors.New("TakerFeeRateNative should not be larger than TakerFeeRate")
 	}
 	m.FeeConfig = feeConfig
 	return nil

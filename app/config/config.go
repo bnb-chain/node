@@ -57,6 +57,8 @@ BEP10Height = {{ .UpgradeConfig.BEP10Height }}
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 # Block height of BEP12 upgrade
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
+# Block height of MakerTakerFee upgrade
+MakerTakerFeeHeight = {{.UpgradeConfig.MakerTakerFeeHeight }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -299,7 +301,11 @@ type UpgradeConfig struct {
 	BEP10Height int64 `mapstructure:"BEP10Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
 
+	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
+
+	// Archimedes Upgrade
+	MakerTakerFeeHeight int64 `mapstructure:"MakerTakerFeeHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -309,6 +315,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP10Height: math.MaxInt64,
 		BEP19Height: math.MaxInt64,
 		BEP12Height: math.MaxInt64,
+		MakerTakerFeeHeight:math.MaxInt64,
 	}
 }
 

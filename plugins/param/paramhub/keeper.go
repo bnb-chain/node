@@ -72,16 +72,15 @@ func (keeper *Keeper) EndBreatheBlock(ctx sdk.Context) {
 		changes = append(changes, feeChange)
 	}
 	// Add other param change here
-	keeper.ParamUpdated(ctx, changes)
+	keeper.UpdateParams(ctx, changes)
 	return
 }
 
-func (keeper *Keeper) ParamUpdated(ctx sdk.Context, changes []interface{}) {
+func (keeper *Keeper) UpdateParams(ctx sdk.Context, changes []interface{}) {
 	if len(changes) != 0 {
 		keeper.notifyOnUpdate(ctx, changes)
 	}
 }
-
 
 func (keeper *Keeper) notifyOnUpdate(ctx sdk.Context, changes []interface{}) {
 	for _, c := range keeper.updateCallbacks {
