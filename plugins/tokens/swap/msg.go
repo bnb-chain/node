@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	cmm "github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -31,7 +30,7 @@ type HTLTMsg struct {
 	To                  sdk.AccAddress `json:"to"`
 	RecipientOtherChain string         `json:"recipient_other_chain"`
 	SenderOtherChain    string         `json:"sender_other_chain"`
-	RandomNumberHash    cmm.HexBytes   `json:"random_number_hash"`
+	RandomNumberHash    SwapBytes      `json:"random_number_hash"`
 	Timestamp           int64          `json:"timestamp"`
 	Amount              sdk.Coins      `json:"amount"`
 	ExpectedIncome      string         `json:"expected_income"`
@@ -39,7 +38,7 @@ type HTLTMsg struct {
 	CrossChain          bool           `json:"cross_chain"`
 }
 
-func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain string, randomNumberHash cmm.HexBytes, timestamp int64,
+func NewHTLTMsg(from, to sdk.AccAddress, recipientOtherChain, senderOtherChain string, randomNumberHash SwapBytes, timestamp int64,
 	amount sdk.Coins, expectedIncome string, heightSpan int64, crossChain bool) HTLTMsg {
 	return HTLTMsg{
 		From:                from,
@@ -116,10 +115,10 @@ var _ sdk.Msg = DepositHTLTMsg{}
 type DepositHTLTMsg struct {
 	From   sdk.AccAddress `json:"from"`
 	Amount sdk.Coins      `json:"amount"`
-	SwapID cmm.HexBytes   `json:"swap_id"`
+	SwapID SwapBytes      `json:"swap_id"`
 }
 
-func NewDepositHTLTMsg(from sdk.AccAddress, amount sdk.Coins, swapID cmm.HexBytes) DepositHTLTMsg {
+func NewDepositHTLTMsg(from sdk.AccAddress, amount sdk.Coins, swapID SwapBytes) DepositHTLTMsg {
 	return DepositHTLTMsg{
 		From:   from,
 		Amount: amount,
@@ -164,11 +163,11 @@ var _ sdk.Msg = ClaimHTLTMsg{}
 
 type ClaimHTLTMsg struct {
 	From         sdk.AccAddress `json:"from"`
-	SwapID       cmm.HexBytes   `json:"swap_id"`
-	RandomNumber cmm.HexBytes   `json:"random_number"`
+	SwapID       SwapBytes      `json:"swap_id"`
+	RandomNumber SwapBytes      `json:"random_number"`
 }
 
-func NewClaimHTLTMsg(from sdk.AccAddress, swapID, randomNumber cmm.HexBytes) ClaimHTLTMsg {
+func NewClaimHTLTMsg(from sdk.AccAddress, swapID, randomNumber SwapBytes) ClaimHTLTMsg {
 	return ClaimHTLTMsg{
 		From:         from,
 		SwapID:       swapID,
@@ -213,10 +212,10 @@ var _ sdk.Msg = RefundHTLTMsg{}
 
 type RefundHTLTMsg struct {
 	From   sdk.AccAddress `json:"from"`
-	SwapID cmm.HexBytes   `json:"swap_id"`
+	SwapID SwapBytes      `json:"swap_id"`
 }
 
-func NewRefundHTLTMsg(from sdk.AccAddress, swapID cmm.HexBytes) RefundHTLTMsg {
+func NewRefundHTLTMsg(from sdk.AccAddress, swapID SwapBytes) RefundHTLTMsg {
 	return RefundHTLTMsg{
 		From:   from,
 		SwapID: swapID,

@@ -1,10 +1,11 @@
 package swap
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	cmm "github.com/tendermint/tendermint/libs/common"
 )
 
 type SwapStatus int8
@@ -56,6 +57,38 @@ func (status *SwapStatus) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type SwapBytes []byte
+
+func (bz SwapBytes) Marshal() ([]byte, error) {
+	return bz, nil
+}
+
+func (bz *SwapBytes) Unmarshal(data []byte) error {
+	*bz = data
+	return nil
+}
+
+func (bz SwapBytes) MarshalJSON() ([]byte, error) {
+	s := hex.EncodeToString(bz)
+	jbz := make([]byte, len(s)+2)
+	jbz[0] = '"'
+	copy(jbz[1:], []byte(s))
+	jbz[len(jbz)-1] = '"'
+	return jbz, nil
+}
+
+func (bz *SwapBytes) UnmarshalJSON(data []byte) error {
+	if len(data) < 2 || data[0] != '"' || data[len(data)-1] != '"' {
+		return fmt.Errorf("Invalid hex string: %s", data)
+	}
+	bz2, err := hex.DecodeString(string(data[1 : len(data)-1]))
+	if err != nil {
+		return err
+	}
+	*bz = bz2
+	return nil
+}
+
 type AtomicSwap struct {
 	From      sdk.AccAddress `json:"from"`
 	To        sdk.AccAddress `json:"to"`
@@ -65,9 +98,9 @@ type AtomicSwap struct {
 	ExpectedIncome      string `json:"expected_income"`
 	RecipientOtherChain string `json:"recipient_other_chain"`
 
-	RandomNumberHash cmm.HexBytes `json:"random_number_hash"` // 32-length byte array, sha256(random_number, timestamp)
-	RandomNumber     cmm.HexBytes `json:"random_number"`      // random_number is a 32-length random byte array
-	Timestamp        int64        `json:"timestamp"`
+	RandomNumberHash SwapBytes `json:"random_number_hash"` // 32-length byte array, sha256(random_number, timestamp)
+	RandomNumber     SwapBytes `json:"random_number"`      // random_number is a 32-length random byte array
+	Timestamp        int64     `json:"timestamp"`
 
 	CrossChain bool `json:"cross_chain"`
 

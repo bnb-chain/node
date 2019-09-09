@@ -9,7 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/tendermint/tendermint/crypto"
-	cmm "github.com/tendermint/tendermint/libs/common"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
@@ -42,7 +41,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 	}
 }
 
-func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
@@ -66,7 +65,7 @@ func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicS
 	return nil
 }
 
-func (kp *Keeper) UpdateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) UpdateSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
@@ -80,7 +79,7 @@ func (kp *Keeper) UpdateSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicS
 	return nil
 }
 
-func (kp *Keeper) CloseSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) CloseSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
@@ -100,7 +99,7 @@ func (kp *Keeper) CloseSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSw
 	return nil
 }
 
-func (kp *Keeper) DeleteSwap(ctx sdk.Context, swapID cmm.HexBytes, swap *AtomicSwap) sdk.Error {
+func (kp *Keeper) DeleteSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
 	}
@@ -125,7 +124,7 @@ func (kp *Keeper) DeleteKey(ctx sdk.Context, key []byte) {
 	kvStore.Delete(key)
 }
 
-func (kp *Keeper) GetSwap(ctx sdk.Context, swapID cmm.HexBytes) *AtomicSwap {
+func (kp *Keeper) GetSwap(ctx sdk.Context, swapID SwapBytes) *AtomicSwap {
 	kvStore := ctx.KVStore(kp.storeKey)
 
 	hashKey := BuildHashKey(swapID)
