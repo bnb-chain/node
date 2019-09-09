@@ -29,10 +29,10 @@ const (
 
 	SetAccountFlagsFee = 1e8
 
-	HTLTFee        = 62500
-	DepositHTLTFee = 62500
-	ClaimHTLTFee   = 62500
-	RefundHTLTFee  = 62500
+	HTLTFee        = 37500
+	DepositHTLTFee = 37500
+	ClaimHTLTFee   = 37500
+	RefundHTLTFee  = 37500
 
 	// stake fee
 	CreateValidatorFee = 10e8

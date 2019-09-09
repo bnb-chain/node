@@ -170,32 +170,6 @@ func TestHTLTMsg(t *testing.T) {
 			Pass:                false,
 			ErrorCode:           CodeInvalidExpectedIncome,
 		},
-		{
-			From:                addrs[0],
-			To:                  addrs[1],
-			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
-			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Timestamp:           1564471835,
-			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
-			ExpectedIncome:      "1000BNB",
-			HeightSpan:          1000,
-			CrossChain:          true,
-			Pass:                false,
-			ErrorCode:           CodeInvalidExpectedIncome,
-		},
-		{
-			From:                addrs[0],
-			To:                  addrs[1],
-			RecipientOtherChain: "0x491e71b619878c083eaf2894718383c7eb15eb17",
-			RandomNumberHash:    "be543130668282f267580badb1c956dacd4502be3b57846443c9921118ffa167",
-			Timestamp:           1564471835,
-			Amount:              sdk.Coins{sdk.Coin{"BNB", 10000}},
-			ExpectedIncome:      "-1000:BNB",
-			HeightSpan:          1000,
-			CrossChain:          true,
-			Pass:                false,
-			ErrorCode:           CodeInvalidExpectedIncome,
-		},
 	}
 
 	for i, tc := range tests {

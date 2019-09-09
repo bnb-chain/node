@@ -305,7 +305,7 @@ sleep 1s
 result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
 
-sleep 3s
+sleep 5s
 # refund a single chain atomic swap
 result=$(expect ./refund.exp ${swapID} alice ${chain_id} ${cli_home})
 check_operation "refund a single chain atomic swap" "${result}" "${chain_operation_words}"
