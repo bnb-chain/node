@@ -89,10 +89,11 @@ type BinanceChain struct {
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
-	baseConfig        *config.BaseConfig
-	upgradeConfig     *config.UpgradeConfig
-	publicationConfig *config.PublicationConfig
-	publisher         pub.MarketDataPublisher
+	baseConfig         *config.BaseConfig
+	upgradeConfig      *config.UpgradeConfig
+	abciQueryBlackList map[string]bool
+	publicationConfig  *config.PublicationConfig
+	publisher          pub.MarketDataPublisher
 
 	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
 	// check nil-ness to know whether metrics collection is turn on
@@ -111,12 +112,13 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:           baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
-		Codec:             cdc,
-		queryHandlers:     make(map[string]types.AbciQueryHandler),
-		baseConfig:        ServerContext.BaseConfig,
-		upgradeConfig:     ServerContext.UpgradeConfig,
-		publicationConfig: ServerContext.PublicationConfig,
+		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
+		Codec:              cdc,
+		queryHandlers:      make(map[string]types.AbciQueryHandler),
+		baseConfig:         ServerContext.BaseConfig,
+		upgradeConfig:      ServerContext.UpgradeConfig,
+		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
+		publicationConfig:  ServerContext.PublicationConfig,
 	}
 	// set upgrade config
 	SetUpgradeConfig(app.upgradeConfig)
@@ -277,6 +279,14 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		swap.ClaimHTLTMsg{}.Type(),
 		swap.RefundHTLTMsg{}.Type(),
 	)
+}
+
+func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
+	cfg := make(map[string]bool)
+	for _, path := range queryConfig.ABCIQueryBlackList {
+		cfg[path] = true
+	}
+	return cfg
 }
 
 func (app *BinanceChain) initRunningMode() {
@@ -625,6 +635,10 @@ func (app *BinanceChain) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	path := baseapp.SplitPath(req.Path)
 	if len(path) == 0 {
 		msg := "no query path provided"
+		return sdk.ErrUnknownRequest(msg).QueryResult()
+	}
+	if app.abciQueryBlackList[req.Path] {
+		msg := fmt.Sprintf("abci query interface (%s) is in black list", req.Path)
 		return sdk.ErrUnknownRequest(msg).QueryResult()
 	}
 	prefix := path[0]
