@@ -32,7 +32,7 @@
 [[override]]
   name = "github.com/tendermint/iavl"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "=v0.12.0-binance.1"
+  version = "=v0.12.0-binance.2"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
@@ -42,7 +42,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "develop"
+  version = "=v0.25.0-binance.19"
   [[prune.project]]
       name = "github.com/zondax/hid"
       unused-packages = false
