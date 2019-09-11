@@ -599,16 +599,16 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  digest = "1:1ac12d8dc0930588ad4082b0c186c4a602a17dee5e74869c0237b212ed4e5fee"
+  digest = "1:e4dbbe8b0e24c8ce2920aa83ef5f6a7bcf6499d56145428be052545f3c13fcb9"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "b84252441ae02d158b54f62138a929365fd1d4ee"
+  revision = "0b4e51a6b062152fedf6e2ad1adee104a80770a5"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "v0.12.0-binance.1"
+  version = "v0.12.0-binance.2"
 
 [[projects]]
-  digest = "1:e0565039b7cec1e4d6f3021049c6f58a73b41752c1a677e6fdedd9ff35d52be3"
+  digest = "1:2df5aa4ce984493685e3edaf8e5b50e52a42f3ed838bd165dcb8bfb9ea7833b7"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -618,6 +618,7 @@
     "abci/server",
     "abci/types",
     "blockchain",
+    "blockchain/hot",
     "cmd/tendermint/commands",
     "config",
     "consensus",
@@ -680,9 +681,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "a0e0373b1686c62407941d4fac5252724aca4e22"
+  revision = "6212bb92288ff6a9b4a6f7099104c8affa8b8d8e"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.31.5-binance.1"
+  version = "v0.31.5-binance.2"
 
 [[projects]]
   digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"

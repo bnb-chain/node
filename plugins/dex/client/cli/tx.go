@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	clientflag "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	txutils "github.com/cosmos/cosmos-sdk/client/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -68,14 +69,18 @@ func newOrderCmd(cdc *wire.Codec) *cobra.Command {
 			side := int8(viper.GetInt(flagSide))
 
 			// avoids an ugly panin sequence 0 with --dry
-			acc, err := cliCtx.GetAccount(from)
-			if acc == nil || err != nil {
-				fmt.Println("No transactions involving this address yet. Using sequence 0.")
-				txBldr = txBldr.WithSequence(0)
+			if viper.GetBool(clientflag.FlagOffline) {
+				txBldr = txBldr.WithSequence(viper.GetInt64(clientflag.FlagSequence))
 			} else {
-				err = client.EnsureSequence(cliCtx, &txBldr)
-				if err != nil {
-					return err
+				acc, err := cliCtx.GetAccount(from)
+				if acc == nil || err != nil {
+					fmt.Println("No transactions involving this address yet. Using sequence 0.")
+					txBldr = txBldr.WithSequence(0)
+				} else {
+					err = client.EnsureSequence(cliCtx, &txBldr)
+					if err != nil {
+						return err
+					}
 				}
 			}
 
@@ -136,6 +141,7 @@ func showOrderBookCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().IntP(flagLevels, "L", 100, "maximum level (1,5,10,20,50,100,500,1000) to return")
 	cmd.Flags().StringP(flagSymbol, "l", "", "the listed trading pair, such as ADA_BNB")
 	return cmd
 }

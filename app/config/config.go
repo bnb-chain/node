@@ -57,6 +57,12 @@ BEP10Height = {{ .UpgradeConfig.BEP10Height }}
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 # Block height of BEP12 upgrade
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
+# Block height of BEP3 upgrade
+BEP3Height = {{ .UpgradeConfig.BEP3Height }}
+
+[query]
+# ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
+ABCIQueryBlackList = {{ .QueryConfig.ABCIQueryBlackList }}
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
@@ -146,6 +152,7 @@ type BinanceChainConfig struct {
 	*LogConfig         `mapstructure:"log"`
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
+	*QueryConfig       `mapstructure:"query"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -155,6 +162,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		LogConfig:         defaultLogConfig(),
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
+		QueryConfig:       defaultQueryConfig(),
 	}
 }
 
@@ -300,6 +308,7 @@ type UpgradeConfig struct {
 	BEP19Height int64 `mapstructure:"BEP19Height"`
 
 	BEP12Height int64 `mapstructure:"BEP12Height"`
+	BEP3Height  int64 `mapstructure:"BEP3Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -309,6 +318,17 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP10Height: math.MaxInt64,
 		BEP19Height: math.MaxInt64,
 		BEP12Height: math.MaxInt64,
+		BEP3Height:  math.MaxInt64,
+	}
+}
+
+type QueryConfig struct {
+	ABCIQueryBlackList []string `mapstructure:"ABCIQueryBlackList"`
+}
+
+func defaultQueryConfig() *QueryConfig {
+	return &QueryConfig{
+		ABCIQueryBlackList: nil,
 	}
 }
 
