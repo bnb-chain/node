@@ -1,34 +1,11 @@
 # Changelog
 
-## 0.7
-FEATURES
-* [\#725](https://github.com/binance-chain/node/pull/725) [Token] [Dex] BEP8 - Mini-BEP2 token features
-* [\#710](https://github.com/binance-chain/node/pull/710) [DEX] BEP70 - Support busd pair listing and trading
-
-IMPROVEMENTS
-* [\#704](https://github.com/binance-chain/node/pull/704) [DEX] BEP67 Price-based Order Expiration
-* [\#714](https://github.com/binance-chain/node/pull/714) [DEX] Add pendingMatch flag to orderbook query response
-
-## 0.6.3
-
-BUG FIXES
-* [\#677](https://github.com/binance-chain/node/pull/677) [Dex] fix account may have currency with zero balance 
-
-IMPROVEMENTS
-* [\#672](https://github.com/binance-chain/node/pull/672) [DEX] Change listing rule
-* [\#666](https://github.com/binance-chain/node/pull/666) [Deps] Upgrade tendermint to 0.32.3
-* [\#667](https://github.com/binance-chain/node/pull/667) [Pub] publish block info for audit
-* [\#686](https://github.com/binance-chain/node/pull/686) [Pub] expose kafka version in publisher setting 
-
-## 0.6.2-hf.1
-
-BUG FIXES
-Bump Tendermint version to v0.31.5-binance.3 to address p2p panic errors.
-
 ## 0.6.2
+BUG FIXES
+* [\#641](https://github.com/binance-chain/node/pull/641) [Dex] add max lock time in time lock plugin
+* [\#633]( https://github.com/binance-chain/node/pull/633)[CLI] fix offline mode issue for sending order
+* [\#651]( https://github.com/binance-chain/node/pull/651)[API] add account flag in api-server account query response
 
-FEATURES
-* [\#634](https://github.com/binance-chain/node/pull/634) [Token] BEP3 - Atomic swap
 
 IMPROVEMENTS
 * [\#638](https://github.com/binance-chain/node/pull/638) [Pub] BEP39 - add memo to transfer kafka message
@@ -36,22 +13,9 @@ IMPROVEMENTS
 * [\#643](https://github.com/binance-chain/node/pull/643) [TOOL] tools: state_recover add index height rollback
 * [\#637](https://github.com/binance-chain/node/pull/637) [CLI] add account flag check for enable command and disable command
 
-BUG FIXES
-* [\#641](https://github.com/binance-chain/node/pull/641) [Dex] add max lock time in time lock plugin
-* [\#633]( https://github.com/binance-chain/node/pull/633)[CLI] fix offline mode issue for sending order
-* [\#651]( https://github.com/binance-chain/node/pull/651)[API] add account flag in api-server account query response
+FEATURES
+* [\#634](https://github.com/binance-chain/node/pull/634) [Token] BEP3 - Atomic swap
 
-## 0.6.1-hf.3
-BUG FIXES
-* [\#654](https://github.com/binance-chain/node/pull/654) [Dex] fix can't bring bnbchaind back when there is an order whose symbol is lower case
-
-## 0.6.1-hf.2
-BUG FIXES
-* [\#641](https://github.com/binance-chain/node/pull/641) [Dex] Add max lock time in time lock plugin
-
-IMPROVEMENTS
-* [\#638](https://github.com/binance-chain/node/pull/638) [Pub] BEP39 - add memo to transfer kafka message
-* [\#639](https://github.com/binance-chain/node/pull/639) [ABCI] add levels parameter to depth ABCI query
 
 ## 0.6.1-hf.1
 BUG FIXES
