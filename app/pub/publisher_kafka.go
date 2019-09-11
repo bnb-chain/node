@@ -223,7 +223,7 @@ func (publisher *KafkaMarketDataPublisher) publishWithRetry(
 	backOffInSeconds := time.Duration(1)
 
 	for {
-		if partition, offset, err = publisher.producers[topic].SendMessage(message); publisher.isRetryableErr(err) {
+		if partition, offset, err = publisher.producers[topic].SendMessage(message); err != nil && publisher.isRetryableErr(err) {
 			backOffInSeconds <<= 1
 			backOffTime := backOffInSeconds * time.Second
 			Logger.Error("encountered retryable error, retrying...", "after", backOffTime, "err", err)
