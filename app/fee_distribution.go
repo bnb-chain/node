@@ -50,7 +50,6 @@ func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) s
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
-	defer fees.Pool.Clear()
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
 		// no fees in this block

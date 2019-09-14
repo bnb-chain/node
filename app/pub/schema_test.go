@@ -1,10 +1,12 @@
 package pub
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/common/log"
@@ -12,6 +14,9 @@ import (
 )
 
 // This test ensures schema or AvroOrJsonMsg change are consistent and prevent marshal error in runtime
+var testBlock = `
+{"ChainID":"bnbchain-1000","CryptoBlock":{"BlockHash":"b42e1f89b9986c441a2de425e3c7ce90859276899f7900a2be5b7a24d2123b7a","ParentHash":"dd444e38f1874993ba92b0bb420b0f534e6333a893066207467ea3b6117dabee","BlockHeight":580,"Timestamp":"2019-09-17T07:00:02.678369Z","TxTotal":28,"NativeBlockMeta":{"LastCommitHash":"5ef145920e6714acc4f9bfbca8b51fb11dd82e9704e9a62cc83f6630d5c8a9a2","DataHash":"06381b06d80d6462899656d14cc7898878bbd1bcc3458fc592aa97947396307a","ValidatorsHash":"a8209794d6638a7cd09cfcd8381eb5568ed9b20cf5e0332bec60629409da9f2f","NextValidatorsHash":"a8209794d6638a7cd09cfcd8381eb5568ed9b20cf5e0332bec60629409da9f2f","ConsensusHash":"294d8fbd0b94b767a7eba9840f299a3586da7fe6b5dead3b7eecba193c400f93","AppHash":"15f60c1ca6b5ef6bcac93a7969424ff1e3e330804127586adc7e18cefbc3e33d","LastResultsHash":"","EvidenceHash":"","ProposerAddress":"bca1ry8p38u46jkrfjfmqdg5kx3ymktshyqrqdp3rz"},"Transactions":[{"TxHash":"A495179A39D033ABC3A0BB95526EDCFFC6256D3EBAE62CB79E09774853774DE6","Fee":"37500BNB","Timestamp":"2019-09-17T07:00:02.678369Z","Inputs":[{"Address":"bnb1lag5vw33q99jp73rs4murl35terycjxay07eyg","Coins":null}],"Outputs":null,"NativeTransaction":{"Source":0,"TxType":"HTLT","TxAsset":"","OrderId":"","Code":0,"Data":"{\"from\":\"bnb1lag5vw33q99jp73rs4murl35terycjxay07eyg\",\"to\":\"bnb16unm97grz9m3snejn9nv80th7eu24d02ux6z5g\",\"recipient_other_chain\":\"\",\"sender_other_chain\":\"\",\"random_number_hash\":\"8e740d3d7c2b9450a311bda08dc53225a791f4993544603e02a6949b8bb7afdb\",\"timestamp\":1568703602,\"amount\":[{\"denom\":\"BNB\",\"amount\":100000000}],\"expected_income\":\"10000:ETH-746\",\"height_span\":500,\"cross_chain\":false}"}}]}}
+`
 
 func TestMain(m *testing.M) {
 	Logger = log.With("module", "pub")
@@ -20,7 +25,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestExecutionResultsMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "")
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
 	trades := trades{
 		NumOfMsgs: 1,
 		Trades: []*Trade{{
@@ -74,7 +79,7 @@ func TestExecutionResultsMarshaling(t *testing.T) {
 }
 
 func TestBooksMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "")
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
 	book := OrderBookDelta{"NNB_BNB", []PriceLevel{{100, 100}}, []PriceLevel{{100, 100}}}
 	msg := Books{42, 100, 1, []OrderBookDelta{book}}
 	_, err := publisher.marshal(&msg, booksTpe)
@@ -84,8 +89,8 @@ func TestBooksMarshaling(t *testing.T) {
 }
 
 func TestAccountsMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "")
-	accs := []Account{{"b-1", "BNB:1000;BTC:10", []*AssetBalance{{Asset: "BNB", Free: 100}}}}
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	accs := []Account{{"b-1", "BNB:1000;BTC:10", 0, []*AssetBalance{{Asset: "BNB", Free: 100}}}}
 	msg := Accounts{42, 2, accs}
 	_, err := publisher.marshal(&msg, accountsTpe)
 	if err != nil {
@@ -94,7 +99,7 @@ func TestAccountsMarshaling(t *testing.T) {
 }
 
 func TestBlockFeeMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "")
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
 	msg := BlockFee{1, "BNB:1000;BTC:10", []string{"bnc1", "bnc2", "bnc3"}}
 	_, err := publisher.marshal(&msg, blockFeeTpe)
 	if err != nil {
@@ -103,9 +108,20 @@ func TestBlockFeeMarshaling(t *testing.T) {
 }
 
 func TestTransferMarshaling(t *testing.T) {
-	publisher := NewKafkaMarketDataPublisher(Logger, "")
-	msg := Transfers{42, 20, 1000, []Transfer{{TxHash: "123456ABCDE", Memo: "1234", From: "", To: []Receiver{Receiver{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, Receiver{"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := Transfers{42, 20, 1000, []Transfer{{TxHash: "123456ABCDE", Memo: "1234", From: "", To: []Receiver{{"bnc1", []Coin{{"BNB", 100}, {"BTC", 100}}}, {"bnc2", []Coin{{"BNB", 200}, {"BTC", 200}}}}}}}
 	_, err := publisher.marshal(&msg, transferTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBlockMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	var msg Block
+	err := json.Unmarshal([]byte(testBlock), &msg)
+	assert.NoError(t, err)
+	_, err = publisher.marshal(&msg, blockTpe)
 	if err != nil {
 		t.Fatal(err)
 	}

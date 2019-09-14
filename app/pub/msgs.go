@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -18,6 +19,12 @@ const (
 	executionResultTpe
 	blockFeeTpe
 	transferTpe
+	blockTpe
+)
+
+var (
+	nativeBlockMetaKey = fmt.Sprintf("%sBlockMeta",strings.ToLower(types.NativeTokenSymbol))
+	nativeTransactionKey = fmt.Sprintf("%sTransaction",strings.ToLower(types.NativeTokenSymbol))
 )
 
 // the strings should be keep consistence with top level record name in schemas.go
@@ -34,6 +41,8 @@ func (this msgType) String() string {
 		return "BlockFee"
 	case transferTpe:
 		return "Transfers"
+	case blockTpe:
+		return "Block"
 	default:
 		return "Unknown"
 	}
@@ -44,11 +53,12 @@ func (this msgType) String() string {
 // figure out which version of writer schema to use.
 // This allows consumers be deployed independently (in advance) with publisher
 var latestSchemaVersions = map[msgType]int{
-	accountsTpe:        0,
+	accountsTpe:        1,
 	booksTpe:           0,
 	executionResultTpe: 1,
 	blockFeeTpe:        0,
 	transferTpe:        1,
+	blockTpe:           0,
 }
 
 type AvroOrJsonMsg interface {
@@ -505,6 +515,8 @@ func (msg *AssetBalance) ToNativeMap() map[string]interface{} {
 type Account struct {
 	Owner    string // string representation of AccAddress
 	Fee      string
+	Sequence int64
+
 	Balances []*AssetBalance
 }
 
@@ -530,6 +542,7 @@ func (msg *Account) ToNativeMap() map[string]interface{} {
 	for idx, b := range msg.Balances {
 		bs[idx] = b.ToNativeMap()
 	}
+	native["sequence"] = msg.Sequence
 	native["fee"] = msg.Fee
 	native["balances"] = bs
 	return native
@@ -696,5 +709,183 @@ func (msg Transfers) ToNativeMap() map[string]interface{} {
 	native["timestamp"] = msg.Timestamp
 	native["num"] = msg.Num
 	native["transfers"] = transfers
+	return native
+}
+
+type Block struct {
+	ChainID     string
+	CryptoBlock CryptoBlock
+}
+
+func (msg Block) String() string {
+	return fmt.Sprintf("Block: blockHash: %s, blockHeihgt: %d, numofTx: %d", msg.CryptoBlock.BlockHash, msg.CryptoBlock.BlockHeight, len(msg.CryptoBlock.Transactions))
+}
+
+func (msg Block) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["chainId"] = msg.ChainID
+	native["cryptoBlock"] = msg.CryptoBlock.ToNativeMap()
+	return native
+}
+
+type CryptoBlock struct {
+	BlockHash   string
+	ParentHash  string
+	BlockHeight int64
+	Timestamp   string
+	TxTotal     int64
+
+	BlockMeta    NativeBlockMeta
+	Transactions []Transaction
+}
+
+func (msg CryptoBlock) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+
+	native["blockHash"] = msg.BlockHash
+	native["parentHash"] = msg.ParentHash
+	native["blockHeight"] = msg.BlockHeight
+	native["timestamp"] = msg.Timestamp
+	native["txTotal"] = msg.TxTotal
+	native[nativeBlockMetaKey] = msg.BlockMeta.ToNativeMap()
+
+	transactions := make([]map[string]interface{}, 0, len(msg.Transactions))
+	for _, t := range msg.Transactions {
+		transactions = append(transactions, t.ToNativeMap())
+	}
+	native["transactions"] = transactions
+	return native
+}
+
+func (msg CryptoBlock) String() string {
+	return fmt.Sprintf("CryptoBlock: blockHash: %s, blockHeihgt: %d, numofTx: %d", msg.BlockHash, msg.BlockHeight, len(msg.Transactions))
+}
+
+type NativeBlockMeta struct {
+	LastCommitHash     string
+	DataHash           string
+	ValidatorsHash     string
+	NextValidatorsHash string
+	ConsensusHash      string
+	AppHash            string
+	LastResultsHash    string
+	EvidenceHash       string
+	ProposerAddress    string
+}
+
+func (msg NativeBlockMeta) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["lastCommitHash"] = msg.LastCommitHash
+	native["dataHash"] = msg.DataHash
+	native["validatorsHash"] = msg.ValidatorsHash
+	native["nextValidatorsHash"] = msg.NextValidatorsHash
+	native["consensusHash"] = msg.ConsensusHash
+	native["appHash"] = msg.AppHash
+	native["lastResultsHash"] = msg.LastResultsHash
+	native["evidenceHash"] = msg.EvidenceHash
+	native["proposerAddress"] = msg.ProposerAddress
+	return native
+}
+
+func (msg NativeBlockMeta) String() string {
+	return fmt.Sprintf("NativeBlockMeta: dataHash: %s, appHash: %s, proposerAddress: %s", msg.DataHash, msg.AppHash, msg.ProposerAddress)
+}
+
+type Transaction struct {
+	TxHash    string
+	Fee       string
+	Timestamp string
+
+	Inputs  []Input
+	Outputs []Output
+
+	NativeTransaction NativeTransaction
+}
+
+func (msg Transaction) String() string {
+	return fmt.Sprintf("Transaction: txHash: %s, fee: %s, source: %d, type: %s, data: %s", msg.TxHash, msg.Fee, msg.NativeTransaction.Source, msg.NativeTransaction.TxType, msg.NativeTransaction.Data)
+}
+
+func (msg Transaction) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["txHash"] = msg.TxHash
+	native["fee"] = msg.Fee
+	inputs := make([]map[string]interface{}, 0, len(msg.Inputs))
+	for _, c := range msg.Inputs {
+		inputs = append(inputs, c.ToNativeMap())
+	}
+	native["inputs"] = inputs
+	outputs := make([]map[string]interface{}, 0, len(msg.Outputs))
+	for _, c := range msg.Outputs {
+		outputs = append(outputs, c.ToNativeMap())
+	}
+	native["outputs"] = outputs
+	native[nativeTransactionKey] = msg.NativeTransaction.ToNativeMap()
+	return native
+}
+
+type Input struct {
+	Address string
+	Coins   []Coin
+}
+
+func (msg Input) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["address"] = msg.Address
+	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	for idx, c := range msg.Coins {
+		coins[idx] = c.ToNativeMap()
+	}
+	native["coins"] = coins
+	return native
+}
+
+func (msg Input) String() string {
+	return fmt.Sprintf("Input: address: %s, coins: %v", msg.Address, msg.Coins)
+}
+
+type Output struct {
+	Address string
+	Coins   []Coin
+}
+
+func (msg Output) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["address"] = msg.Address
+	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	for idx, c := range msg.Coins {
+		coins[idx] = c.ToNativeMap()
+	}
+	native["coins"] = coins
+	return native
+}
+
+func (msg Output) String() string {
+	return fmt.Sprintf("Output: address: %s, coins: %v", msg.Address, msg.Coins)
+}
+
+type NativeTransaction struct {
+	Source     int64
+	TxType     string
+	TxAsset    string
+	OrderId    string
+	Code       uint32
+	Data       string
+	ProposalId int64
+}
+
+func (msg NativeTransaction) String() string {
+	return fmt.Sprintf("NativeTransaction: TxType: %s, Code: %d,data: %s", msg.TxType, msg.Code, msg.Data)
+}
+
+func (msg NativeTransaction) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["source"] = msg.Source
+	native["txType"] = msg.TxType
+	native["txAssert"] = msg.TxAsset
+	native["orderId"] = msg.OrderId
+	native["code"] = int64(msg.Code)
+	native["data"] = msg.Data
+	native["proposalId"] = msg.ProposalId
 	return native
 }
