@@ -110,7 +110,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
+		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
 		Codec:              cdc,
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
@@ -177,7 +177,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
-			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir()))
+			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir(), app.publicationConfig.StopOnKafkaFail))
 		}
 		if app.publicationConfig.PublishLocal {
 			publishers = append(publishers, pub.NewLocalMarketDataPublisher(ServerContext.Config.RootDir, app.Logger, app.publicationConfig))
@@ -463,15 +463,18 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 // Implements ABCI
 func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 	res = app.BaseApp.DeliverTx(txBytes)
+	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 	if res.IsOK() {
 		// commit or panic
-		fees.Pool.CommitFee(cmn.HexBytes(tmhash.Sum(txBytes)).String())
+		fees.Pool.CommitFee(txHash)
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
 			app.processErrAbciResponseForPub(txBytes)
 		}
 	}
-
+	if app.publicationConfig.PublishBlock {
+		tx.Pool.AddTxRes(txHash, res)
+	}
 	return res
 }
 
@@ -569,7 +572,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
-
+	fees.Pool.Clear()
+	// just clean it, no matter use it or not.
+	tx.Pool.Clean()
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
@@ -751,6 +756,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 
 	var accountsToPublish map[string]pub.Account
 	var transferToPublish *pub.Transfers
+	var blockToPublish *pub.Block
 	var latestPriceLevels order.ChangedPriceLevelsMap
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
@@ -768,6 +774,11 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 			transferToPublish = pub.GetTransferPublished(app.Pool, height, blockTime)
 		}
 
+		if app.publicationConfig.PublishBlock {
+			header := ctx.BlockHeader()
+			blockHash := ctx.BlockHash()
+			blockToPublish = pub.GetBlockPublished(app.Pool, header, blockHash)
+		}
 		if app.publicationConfig.PublishOrderBook {
 			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 		}
@@ -800,7 +811,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		latestPriceLevels,
 		blockFee,
 		app.DexKeeper.RoundOrderFees,
-		transferToPublish)
+		transferToPublish,
+		blockToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {

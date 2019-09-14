@@ -75,6 +75,7 @@ func TestNoFeeDistribution(t *testing.T) {
 	require.True(t, true, fee.IsEmpty())
 
 	blockFee := distributeFee(ctx, am, valAddrCache, true)
+	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "", nil}, blockFee)
 	checkBalance(t, ctx, am, valAddrCache, []int64{100, 100, 100, 100})
 }
@@ -84,6 +85,7 @@ func TestFeeDistribution2Proposer(t *testing.T) {
 	am, valAddrCache, ctx, proposerAcc, _, _, _ := setup()
 	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForProposer))
 	blockFee := distributeFee(ctx, am, valAddrCache, true)
+	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{string(proposerAcc.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valAddrCache, []int64{110, 100, 100, 100})
 }
@@ -94,12 +96,15 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// fee amount can be divided evenly
 	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 40)}, types.FeeForAll))
 	blockFee := distributeFee(ctx, am, valAddrCache, true)
+	// Notice: clean the pool after distributeFee
+	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "BNB:40", []string{string(proposerAcc.GetAddress()), string(valAcc1.GetAddress()), string(valAcc2.GetAddress()), string(valAcc3.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valAddrCache, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
 	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 50)}, types.FeeForAll))
 	blockFee = distributeFee(ctx, am, valAddrCache, true)
+	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{string(proposerAcc.GetAddress()), string(valAcc1.GetAddress()), string(valAcc2.GetAddress()), string(valAcc3.GetAddress())}}, blockFee)
 	checkBalance(t, ctx, am, valAddrCache, []int64{124, 122, 122, 122})
 }

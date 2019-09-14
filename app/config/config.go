@@ -112,14 +112,27 @@ publishTransfer = {{ .PublicationConfig.PublishTransfer }}
 transferTopic = "{{ .PublicationConfig.TransferTopic }}"
 transferKafka = "{{ .PublicationConfig.TransferKafka }}"
 
+# Whether we want publish block
+publishBlock = {{ .PublicationConfig.PublishBlock }}
+blockTopic = "{{ .PublicationConfig.BlockTopic }}"
+blockKafka = "{{ .PublicationConfig.BlockKafka }}"
+
 # Global setting
-publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
+publicationChannelSize = {{ .PublicationConfig.PublicationChannelSize }}
 publishKafka = {{ .PublicationConfig.PublishKafka }}
 publishLocal = {{ .PublicationConfig.PublishLocal }}
 # max size in megabytes of marketdata json file before rotate
 localMaxSize = {{ .PublicationConfig.LocalMaxSize }}
 # max days of marketdata json files to keep before deleted
 localMaxAge = {{ .PublicationConfig.LocalMaxAge }}
+
+# whether the kafka open SASL_PLAINTEXT auth
+auth = {{ .PublicationConfig.Auth }}
+kafkaUserName = "{{ .PublicationConfig.KafkaUserName }}"
+kafkaPassword = "{{ .PublicationConfig.KafkaPassword }}"
+
+# stop process when publish to Kafka failed
+stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
 
 [log]
 
@@ -213,6 +226,10 @@ type PublicationConfig struct {
 	TransferTopic   string `mapstructure:"transferTopic"`
 	TransferKafka   string `mapstructure:"transferKafka"`
 
+	PublishBlock bool   `mapstructure:"publishBlock"`
+	BlockTopic   string `mapstructure:"blockTopic"`
+	BlockKafka   string `mapstructure:"blockKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -229,6 +246,11 @@ type PublicationConfig struct {
 	LocalMaxSize int `mapstructure:"localMaxSize"`
 	// refer: https://github.com/natefinch/lumberjack/blob/7d6a1875575e09256dc552b4c0e450dcd02bd10e/lumberjack.go#L89-L94
 	LocalMaxAge int `mapstructure:"localMaxAge"`
+
+	Auth            bool   `mapstructure:"auth"`
+	StopOnKafkaFail bool   `mapstructure:"stopOnKafkaFail"`
+	KafkaUserName   string `mapstructure:"kafkaUserName"`
+	KafkaPassword   string `mapstructure:"kafkaPassword"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -253,12 +275,22 @@ func defaultPublicationConfig() *PublicationConfig {
 		TransferTopic:   "transfers",
 		TransferKafka:   "127.0.0.1:9092",
 
+		PublishBlock: false,
+		BlockTopic:   "block",
+		BlockKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
-		PublishLocal:           false,
-		LocalMaxSize:           1024,
-		LocalMaxAge:            7,
+
+		PublishLocal: false,
+		LocalMaxSize: 1024,
+		LocalMaxAge:  7,
+
+		Auth:            false,
+		KafkaUserName:   "",
+		KafkaPassword:   "",
+		StopOnKafkaFail: false,
 	}
 }
 
@@ -267,7 +299,8 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishAccountBalance ||
 		pubCfg.PublishOrderBook ||
 		pubCfg.PublishBlockFee ||
-		pubCfg.PublishTransfer
+		pubCfg.PublishTransfer ||
+		pubCfg.PublishBlock
 }
 
 type LogConfig struct {

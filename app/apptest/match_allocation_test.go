@@ -200,7 +200,7 @@ func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Acco
 func UpdateContextC(addr crypto.Address, ctx sdk.Context, height int64) sdk.Context {
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: addr, Height: height}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: addr, Power: 10}, SignedLastBlock: true},
-	})
+	}).WithBlockHash([]byte("testhash"))
 	testApp.DeliverState.Ctx = ctx
 	return ctx
 }
@@ -209,7 +209,7 @@ func UpdateContextC(addr crypto.Address, ctx sdk.Context, height int64) sdk.Cont
 func UpdateContextB(addr crypto.Address, ctx sdk.Context, height int64, tNow time.Time) sdk.Context {
 	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: addr, Height: height, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
 		{Validator: abci.Validator{Address: addr, Power: 10}, SignedLastBlock: true},
-	})
+	}).WithBlockHash([]byte("testhash"))
 	testApp.DeliverState.Ctx = ctx
 	return ctx
 }

@@ -46,3 +46,11 @@ func (p *pool) Clear() {
 	p.fees = map[string]types.Fee{}
 	p.committedFees = types.Fee{}
 }
+
+func (p *pool) GetFee(txHash string) *types.Fee {
+	if fee, ok := p.fees[txHash]; ok {
+		return &fee
+	} else {
+		return nil
+	}
+}

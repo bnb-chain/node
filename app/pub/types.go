@@ -18,6 +18,7 @@ type BlockInfoToPublish struct {
 	blockFee           BlockFee
 	feeHolder          orderPkg.FeeHolder
 	transfers          *Transfers
+	block              *Block
 }
 
 func NewBlockInfoToPublish(
@@ -31,7 +32,7 @@ func NewBlockInfoToPublish(
 	accounts map[string]Account,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap,
 	blockFee BlockFee,
-	feeHolder orderPkg.FeeHolder, transfers *Transfers) BlockInfoToPublish {
+	feeHolder orderPkg.FeeHolder, transfers *Transfers, block *Block) BlockInfoToPublish {
 	return BlockInfoToPublish{
 		height,
 		timestamp,
@@ -44,5 +45,6 @@ func NewBlockInfoToPublish(
 		latestPriceLevels,
 		blockFee,
 		feeHolder,
-		transfers}
+		transfers,
+		block}
 }
