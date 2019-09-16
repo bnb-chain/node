@@ -15,7 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	"github.com/tendermint/tendermint/blockchain"
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmcfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -24,6 +23,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/snapshot"
+	tmstore "github.com/tendermint/tendermint/store"
 
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/common"
@@ -171,7 +171,7 @@ func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
 	} else {
 		blockDB := baseapp.LoadBlockDB()
 		defer blockDB.Close()
-		blockStore := blockchain.NewBlockStore(blockDB)
+		blockStore := tmstore.NewBlockStore(blockDB)
 		block := blockStore.LoadBlock(latestBlockHeight)
 		timeOfLatestBlock = block.Time
 	}

@@ -60,7 +60,7 @@ func (app *SentryApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseI
 	return abci.ResponseInfo{Data: "{\"name\": \"sentry node\"}"}
 }
 
-func (app *SentryApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
+func (app *SentryApplication) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	return abci.ResponseCheckTx{Code: abci.CodeTypeOK}
 }
 
@@ -96,9 +96,9 @@ func (app *SentryApplication) InitChain(req abci.RequestInitChain) (res abci.Res
 	}
 }
 
-func (app *SentryApplication) ReCheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
+func (app *SentryApplication) ReCheckTx(req abci.RequestCheckTx) (res abci.ResponseCheckTx) {
 	// Decode the Tx.
-	txHash := common.HexBytes(tmhash.Sum(txBytes)).String()
+	txHash := common.HexBytes(tmhash.Sum(req.Tx)).String()
 
 	if tx := app.cache.get(txHash); tx != nil {
 		if tx.survive >= SentryAppConfig.MaxSurvive {
