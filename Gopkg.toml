@@ -41,12 +41,12 @@
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  branch = "develop"
+  branch = "upgrade_0.32.3"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "develop"
+  branch = "tendermint-upgrade"
   [[prune.project]]
       name = "github.com/zondax/hid"
       unused-packages = false

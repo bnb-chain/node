@@ -21,6 +21,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/binance-chain/node/admin"
@@ -311,7 +312,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	// count back to days in config.
 	blockDB := baseapp.LoadBlockDB()
 	defer blockDB.Close()
-	blockStore := blockchain.NewBlockStore(blockDB)
+	blockStore := tmstore.NewBlockStore(blockDB)
 	txDB := baseapp.LoadTxDB()
 	defer txDB.Close()
 
@@ -390,7 +391,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 					panic(err)
 				}
 				bz := app.Codec.MustMarshalBinaryLengthPrefixed(tx)
-				res := app.BaseApp.DeliverTx(bz)
+				res := app.BaseApp.DeliverTx(abci.RequestDeliverTx{Tx: bz})
 				if !res.IsOK() {
 					panic(res.Log)
 				}
@@ -419,9 +420,10 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	}
 }
 
-func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
+func (app *BinanceChain) CheckTx(req abci.RequestCheckTx) (res abci.ResponseCheckTx) {
 	var result sdk.Result
 	var tx sdk.Tx
+	txBytes := req.Tx
 	// try to get the Tx first from cache, if succeed, it means it is PreChecked.
 	tx, ok := app.GetTxFromCache(txBytes)
 	if ok {
@@ -454,23 +456,23 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 	}
 
 	return abci.ResponseCheckTx{
-		Code: uint32(result.Code),
-		Data: result.Data,
-		Log:  result.Log,
-		Tags: result.Tags,
+		Code:   uint32(result.Code),
+		Data:   result.Data,
+		Log:    result.Log,
+		Events: result.Tags.ToEvents(),
 	}
 }
 
 // Implements ABCI
-func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
-	res = app.BaseApp.DeliverTx(txBytes)
-	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.DeliverTx(req)
+	txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 	if res.IsOK() {
 		// commit or panic
 		fees.Pool.CommitFee(txHash)
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
-			app.processErrAbciResponseForPub(txBytes)
+			app.processErrAbciResponseForPub(req.Tx)
 		}
 	}
 	if app.publicationConfig.PublishBlock {
@@ -481,10 +483,10 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 
 // PreDeliverTx implements extended ABCI for concurrency
 // PreCheckTx would perform decoding, signture and other basic verification
-func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
-	res = app.BaseApp.PreDeliverTx(txBytes)
+func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.PreDeliverTx(req)
 	if res.IsErr() {
-		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+		txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 		app.Logger.Error("failed to process invalid tx during pre-deliver", "tx", txHash, "res", res.String())
 		// TODO(#446): comment out temporally for thread safety
 		//if app.publicationConfig.PublishOrderUpdates {
@@ -581,7 +583,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
-		Tags:             tags,
+		Events:           tags.ToEvents(),
 	}
 }
 

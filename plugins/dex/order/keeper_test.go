@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/binance-chain/node/common"
@@ -373,8 +373,8 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 	return tx
 }
 
-func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *bc.BlockStore {
-	blockStore := bc.NewBlockStore(storedb)
+func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *tmstore.BlockStore {
+	blockStore := tmstore.NewBlockStore(storedb)
 	lastCommit := &tmtypes.Commit{}
 	buyerAdd, buyerPrivKey := MakeAddress()
 	sellerAdd, sellerPrivKey := MakeAddress()
@@ -460,7 +460,7 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	keeper2 := MakeKeeper(cdc)
-	blockStore := bc.NewBlockStore(memDB)
+	blockStore := tmstore.NewBlockStore(memDB)
 	ctx = sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper2.initOrderBook(ctx, 0, 7, blockStore, db.NewMemDB(), 3, auth.DefaultTxDecoder(cdc))

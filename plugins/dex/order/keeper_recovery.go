@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	bc "github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -206,6 +206,16 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 		err := kp.cdc.UnmarshalBinaryBare(rawBytes, &txResult)
 		if err != nil {
 			logger.Error("Error reading TxResult", "txHash", txHash, "err", err)
+			txResultDeprecated := new(tmtypes.TxResultDeprecated)
+			err := kp.cdc.UnmarshalBinaryBare(rawBytes, &txResultDeprecated)
+			if err == nil {
+				logger.Info("Reading TxResultDeprecated successfully", "txHash", txHash, "err", err)
+				if txResultDeprecated.Result.IsErr() || txResultDeprecated.Height != height {
+					continue
+				}
+			} else {
+				logger.Error("Error reading TxResultDeprecated", "txHash", txHash, "err", err)
+			}
 			//Should be indexer bug, need to continue to recover, but need to check why indexer is not working!
 			skipTxResultCheck = true
 		}
@@ -258,7 +268,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 	kp.MatchAll(height, t) //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB dbm.DB, lastHeight, breatheHeight int64,
+func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, txDB dbm.DB, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
@@ -269,7 +279,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *bc.BlockStore, txDB
 	return nil
 }
 
-func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *bc.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	var timeOfLatestBlock time.Time
 	if lastHeight == 0 {
 		timeOfLatestBlock = utils.Now()
