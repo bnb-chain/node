@@ -90,8 +90,8 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 	}
 }
 
-func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	kp.initOrderBook(ctx, blockInterval, daysBack, blockStore, txDB, lastHeight, txDecoder)
+func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	kp.initOrderBook(ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
 	kp.InitRecentPrices(ctx)
 }
 

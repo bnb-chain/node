@@ -314,15 +314,15 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	blockDB := baseapp.LoadBlockDB()
 	defer blockDB.Close()
 	blockStore := tmstore.NewBlockStore(blockDB)
-	txDB := baseapp.LoadTxDB()
-	defer txDB.Close()
+	stateDB := baseapp.LoadStateDB()
+	defer stateDB.Close()
 
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
 		blockStore,
-		txDB,
+		stateDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
 }

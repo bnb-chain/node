@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	"github.com/tendermint/tendermint/state"
 	"io"
 	"sort"
 	"strings"
@@ -185,53 +186,30 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 	return height, nil
 }
 
-func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB dbm.DB, txDecoder sdk.TxDecoder,
+func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, stateDB dbm.DB, txDecoder sdk.TxDecoder,
 	height int64, timestamp time.Time) {
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
 		return
 	}
+	abciRes, err := state.LoadABCIResponses(stateDB, height)
+	if err != nil {
+		panic(fmt.Errorf("failed to load abci response when replay block at height %d, err %v", height, err))
+	}
+	if len(abciRes.DeliverTx) != len(block.Txs) {
+		panic(fmt.Errorf("length of delivertx %d and lenght of tx %d mismatch a"))
+	}
 	// the time we replay should be consistent with ctx.BlockHeader().Time
 	t := timestamp.UnixNano()
-	for _, txBytes := range block.Txs {
-		txHash := cmn.HexBytes(tmhash.Sum(txBytes))
-		skipTxResultCheck := false
-		rawBytes := txDB.Get(txHash)
-		if rawBytes == nil {
-			logger.Error("Cannot get tx from tx_index store", "txHash", txHash)
-			//Should be indexer bug, need to continue to recover, but need to check why indexer is not working!
-			skipTxResultCheck = true
-		}
-
-		txResult := new(tmtypes.TxResult)
-		err := kp.cdc.UnmarshalBinaryBare(rawBytes, &txResult)
-		if err != nil {
-			logger.Error("Error reading TxResult", "txHash", txHash, "err", err)
-			txResultDeprecated := new(tmtypes.TxResultDeprecated)
-			err := kp.cdc.UnmarshalBinaryBare(rawBytes, &txResultDeprecated)
-			if err == nil {
-				logger.Info("Reading TxResultDeprecated successfully", "txHash", txHash, "err", err)
-				if txResultDeprecated.Result.IsErr() || txResultDeprecated.Height != height {
-					continue
-				}
-			} else {
-				logger.Error("Error reading TxResultDeprecated", "txHash", txHash, "err", err)
-			}
-			//Should be indexer bug, need to continue to recover, but need to check why indexer is not working!
-			skipTxResultCheck = true
-		}
-
-		if !skipTxResultCheck && (txResult.Result.IsErr() || txResult.Height != height) {
-			// the txResult.Height != height means at this height this tx is invalid
-			// later on a valid transaction overwritten this invalid tx in tx_index store
-			logger.Info("does not recover invalid tx", "txHash", txHash, "err", txResult.Result.Log, "height", txResult.Height)
+	for idx, txBytes := range block.Txs {
+		if abciRes.DeliverTx[idx].IsErr() {
 			continue
 		}
-
 		tx, err := txDecoder(txBytes)
 		if err != nil {
 			panic(err)
 		}
+		txHash := cmn.HexBytes(tmhash.Sum(txBytes))
 		msgs := tx.GetMsgs()
 		for _, m := range msgs {
 			switch msg := m.(type) {
@@ -269,18 +247,18 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, txDB 
 	kp.MatchAll(height, t) //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, txDB dbm.DB, lastHeight, breatheHeight int64,
+func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		ctx.Logger().Info("Relaying block for order book", "height", i)
 		upgrade.Mgr.SetHeight(i)
-		kp.replayOneBlocks(ctx.Logger(), block, txDB, txDecoder, i, block.Time)
+		kp.replayOneBlocks(ctx.Logger(), block, stateDb, txDecoder, i, block.Time)
 	}
 	return nil
 }
 
-func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, txDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	var timeOfLatestBlock time.Time
 	if lastHeight == 0 {
 		timeOfLatestBlock = utils.Now()
@@ -294,7 +272,7 @@ func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, bl
 	}
 	logger := ctx.Logger().With("module", "dex")
 	logger.Info("Initialized Block Store for replay", "toHeight", lastHeight)
-	err = kp.ReplayOrdersFromBlock(ctx.WithLogger(logger), blockStore, txDB, lastHeight, height, txDecoder)
+	err = kp.ReplayOrdersFromBlock(ctx.WithLogger(logger), blockStore, stateDB, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}
