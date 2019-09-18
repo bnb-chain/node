@@ -190,7 +190,7 @@ func (app *BinanceChain) reInitChain() error {
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
 		snapshot.Manager().GetBlockStore(),
-		snapshot.Manager().GetTxDB(),
+		snapshot.Manager().GetStateDB(),
 		app.LastBlockHeight(),
 		app.TxDecoder)
 	app.initParams()
