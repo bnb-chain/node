@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tendermint/tendermint/state"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -373,15 +375,18 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 	return tx
 }
 
-func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *tmstore.BlockStore {
+func GenerateBlocksAndSave(storedb db.DB, withInvalidTx bool, cdc *wire.Codec) (*tmstore.BlockStore, db.DB) {
 	blockStore := tmstore.NewBlockStore(storedb)
+	statedb := db.NewMemDB()
 	lastCommit := &tmtypes.Commit{}
 	buyerAdd, buyerPrivKey := MakeAddress()
 	sellerAdd, sellerPrivKey := MakeAddress()
-	txs := make([]auth.StdTx, 0)
+	txs := make([]auth.StdTx, 1)
 	height := int64(1)
-	block := NewMockBlock(txs, height, lastCommit, cdc)
+	block := NewMockBlock([]auth.StdTx{{Msgs: []sdk.Msg{bank.MsgSend{}}}}, height, lastCommit, cdc)
+	deliverRes := state.ABCIResponses{DeliverTx: []*abci.ResponseDeliverTx{{Code: 0, Log: "ok"}}}
 	blockParts := block.MakePartSet(BlockPartSize)
+	state.SaveABCIResponses(statedb, height, &deliverRes)
 	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
 	height++
 	txs = make([]auth.StdTx, 7)
@@ -402,6 +407,23 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *tmstore.BlockStore {
 	block = NewMockBlock(txs, height, lastCommit, cdc)
 	blockParts = block.MakePartSet(BlockPartSize)
 	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
+	deliverRes = state.ABCIResponses{
+		DeliverTx: []*abci.ResponseDeliverTx{
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+		},
+	}
+	if withInvalidTx {
+		deliverRes.DeliverTx[1] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
+		deliverRes.DeliverTx[3] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
+		deliverRes.DeliverTx[5] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
+	}
+	state.SaveABCIResponses(statedb, height, &deliverRes)
 	//blockID := tmtypes.BlockID{Hash: block.Hash(), PartsHeader: blockParts.Header()}
 	//lastCommit = tmtypes.MakeCommit(block)
 	height++
@@ -418,8 +440,23 @@ func GenerateBlocksAndSave(storedb db.DB, cdc *wire.Codec) *tmstore.BlockStore {
 	txs[4] = MakeTxFromMsg(msgs15, int64(100), int64(7005), sellerPrivKey)
 	block = NewMockBlock(txs, height, lastCommit, cdc)
 	blockParts = block.MakePartSet(BlockPartSize)
+	deliverRes = state.ABCIResponses{
+		DeliverTx: []*abci.ResponseDeliverTx{
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+			{Code: 0, Log: "ok"},
+		},
+	}
+	if withInvalidTx {
+		deliverRes.DeliverTx[1] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
+		deliverRes.DeliverTx[3] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
+	}
+
+	state.SaveABCIResponses(statedb, height, &deliverRes)
 	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
-	return blockStore
+	return blockStore, statedb
 }
 
 func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
@@ -427,7 +464,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
 	memDB := db.NewMemDB()
-	blockStore := GenerateBlocksAndSave(memDB, cdc)
+	blockStore, stateDB := GenerateBlocksAndSave(memDB, false, cdc)
 	logger := log.NewTMLogger(os.Stdout)
 	cms := MakeCMS(nil)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -435,7 +472,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, db.NewMemDB(), int64(3), int64(1), auth.DefaultTxDecoder(cdc))
+	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, stateDB, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
 	assert.Nil(err)
 	buys, sells := keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
@@ -446,12 +483,35 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
+func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	memDB := db.NewMemDB()
+	blockStore, stateDB := GenerateBlocksAndSave(memDB, true, cdc)
+	logger := log.NewTMLogger(os.Stdout)
+	cms := MakeCMS(nil)
+	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
+	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, stateDB, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
+	assert.Nil(err)
+	buys, sells := keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
+	assert.Equal(1, len(buys))
+	assert.Equal(2, len(sells))
+	assert.Equal(int64(97000), sells[0].Price)
+	assert.Equal(int64(96000), buys[0].Price)
+	assert.Equal(int64(0), buys[0].Orders[0].CumQty)
+}
+
 func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
 	memDB := db.NewMemDB()
-	GenerateBlocksAndSave(memDB, cdc)
+	blockStore, stateDB := GenerateBlocksAndSave(memDB, false, cdc)
 	logger := log.NewTMLogger(os.Stdout)
 	cms := MakeCMS(memDB)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -460,10 +520,10 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper.AddEngine(tradingPair)
 
 	keeper2 := MakeKeeper(cdc)
-	blockStore := tmstore.NewBlockStore(memDB)
+	//blockStore := tmstore.NewBlockStore(memDB)
 	ctx = sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper2.initOrderBook(ctx, 0, 7, blockStore, db.NewMemDB(), 3, auth.DefaultTxDecoder(cdc))
+	keeper2.initOrderBook(ctx, 0, 7, blockStore, stateDB, 3, auth.DefaultTxDecoder(cdc))
 	buys, sells := keeper2.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	assert.Equal(2, len(buys))
 	assert.Equal(1, len(sells))

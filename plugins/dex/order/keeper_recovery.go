@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
-	"github.com/tendermint/tendermint/state"
 	"io"
 	"sort"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/state"
 	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
@@ -196,13 +196,14 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, state
 	if err != nil {
 		panic(fmt.Errorf("failed to load abci response when replay block at height %d, err %v", height, err))
 	}
-	if len(abciRes.DeliverTx) != len(block.Txs) {
-		panic(fmt.Errorf("length of delivertx %d and lenght of tx %d mismatch a"))
+	if abciRes != nil && len(abciRes.DeliverTx) != len(block.Txs) {
+		panic(fmt.Errorf("length of delivertx %d and lenght of tx %d mismatch ", len(abciRes.DeliverTx), len(block.Txs)))
 	}
 	// the time we replay should be consistent with ctx.BlockHeader().Time
 	t := timestamp.UnixNano()
 	for idx, txBytes := range block.Txs {
 		if abciRes.DeliverTx[idx].IsErr() {
+			logger.Info("Skip tx when replay", "height", height, "idx", idx)
 			continue
 		}
 		tx, err := txDecoder(txBytes)

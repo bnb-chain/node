@@ -114,9 +114,9 @@ func TestPreCheckTxWithRightPubKey(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ABCICodeOK))
-	res = app.CheckTx(txBytes)
+	res = app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ABCICodeOK))
 }
 
@@ -146,9 +146,9 @@ func TestPreCheckTxWithWrongPubKey(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ABCICodeOK))
-	res = app.CheckTx(txBytes)
+	res = app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidPubKey)))
 	require.Contains(t, res.Log, "PubKey of account does not match PubKey of signature")
 }
@@ -179,7 +179,7 @@ func TestPreCheckTxWithEmptyPubKey(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidPubKey)))
 	require.Contains(t, res.Log, "public key of signature should not be nil")
 }
@@ -210,7 +210,7 @@ func TestPreCheckTxWithEmptySignatures(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "no signers")
 }
@@ -241,7 +241,7 @@ func TestPreCheckTxWithWrongSignerNum(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "wrong number of signers")
 }
@@ -271,7 +271,7 @@ func TestPreCheckTxWithData(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnauthorized)))
 	require.Contains(t, res.Log, "data field is not allowed to use in transaction for now")
 }
@@ -301,7 +301,7 @@ func TestPreCheckTxWithLargeMemo(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeMemoTooLarge)))
 	require.Contains(t, res.Log, "maximum number of characters")
 }
@@ -330,9 +330,9 @@ func TestPreCheckTxWithWrongPubKeyAndEmptyAccountPubKey(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.PreCheckTx(txBytes)
+	res := app.PreCheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.CodeOK))
-	res = app.CheckTx(txBytes)
+	res = app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidPubKey)))
 	require.Contains(t, res.Log, "PubKey does not match Signer address")
 }
@@ -359,7 +359,7 @@ func TestCheckTxWithUnrecognizedAccount(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.CheckTx(txBytes)
+	res := app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeUnknownAddress)))
 }
 
@@ -387,7 +387,7 @@ func TestCheckTxWithWrongSequence(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.CheckTx(txBytes)
+	res := app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidSequence)))
 	require.Contains(t, res.Log, "Invalid sequence")
 }
@@ -416,7 +416,7 @@ func TestCheckTxWithWrongAccountNum(t *testing.T) {
 	txBytes, err := Codec.MarshalBinaryLengthPrefixed(tx)
 	require.Nil(t, err)
 
-	res := app.CheckTx(txBytes)
+	res := app.CheckTx(abci.RequestCheckTx{Tx: txBytes})
 	require.Equal(t, res.Code, uint32(sdk.ToABCICode(sdk.CodespaceRoot, sdk.CodeInvalidSequence)))
 	require.Contains(t, res.Log, "Invalid account number")
 }
