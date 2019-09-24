@@ -3,8 +3,9 @@ package matcheng
 import (
 	"math"
 
-	"github.com/binance-chain/node/common/log"
 	tmlog "github.com/tendermint/tendermint/libs/log"
+
+	"github.com/binance-chain/node/common/log"
 )
 
 type MatchEng struct {

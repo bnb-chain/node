@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
+
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
