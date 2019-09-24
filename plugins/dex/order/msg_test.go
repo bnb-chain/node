@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/binance-chain/node/common/testutils"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/binance-chain/node/common/testutils"
 
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 

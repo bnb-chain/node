@@ -1,9 +1,10 @@
 package tokens
 
 import (
-	"github.com/binance-chain/node/common/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	"github.com/binance-chain/node/common/utils"
 
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"

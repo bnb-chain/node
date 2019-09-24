@@ -1,34 +1,26 @@
 GOTOOLS = \
 	github.com/mitchellh/gox \
-	github.com/golang/dep/cmd/dep \
 	github.com/golangci/golangci-lint/cmd/golangci-lint \
 	github.com/gogo/protobuf/protoc-gen-gogo \
 	github.com/square/certstrap
 GOBIN?=${GOPATH}/bin
 
-PACKAGES=$(shell go list ./... | grep -v '/vendor/')
-COMMIT_HASH := $(shell git rev-parse --short HEAD)
-WITH_CLEVELDB ?= true
-WITH_BOLTDB ?= true
+export GO111MODULE = on
 
-COSMOS_RELEASE := $(shell grep 'github.com/binance-chain/bnc-cosmos-sdk' Gopkg.toml -n1|grep version|awk '{print $$4}'| sed 's/\"//g')
-TENDER_RELEASE := $(shell grep 'github.com/tendermint/tendermint' Gopkg.toml -n2|grep version|awk '{print $$4}'| sed 's/\"//g')
+PACKAGES=$(shell go list ./...)
+COMMIT_HASH := $(shell git rev-parse --short HEAD)
+
+COSMOS_RELEASE := $(shell grep 'github.com/binance-chain/bnc-cosmos-sdk' go.mod |awk '{print $$4}')
+TENDER_RELEASE := $(shell grep 'github.com/binance-chain/bnc-tendermint' go.mod| grep -v iavl| awk '{print $$4}')
 
 BUILD_TAGS = netgo
 
-ifeq ($(WITH_CLEVELDB),true)
-  BUILD_TAGS += cleveldb
-endif
-ifeq ($(WITH_BOLTDB),true)
-  BUILD_TAGS += boltdb
-endif
-
 BUILD_CLI_TAGS = netgo
-BUILD_FLAGS = -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+BUILD_FLAGS = -mod=readonly -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 BUILD_CLI_FLAGS = -tags "${BUILD_CLI_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 # Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
 BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
-BUILD_CFLAGS = ${BUILD_FLAGS} -tags "gcc libsecp256k1"
+BUILD_CFLAGS = ${BUILD_FLAGS} -tags "cleveldb"
 BUILD_TESTNET_FLAGS = ${BUILD_CLI_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
 
 UNAME_S := $(shell uname -s)
@@ -40,7 +32,7 @@ ifeq ($(UNAME_S),Linux)
 	BUILD_CFLAGS += -ldflags '-extldflags "-static"'
 endif
 
-all: get_vendor_deps format build
+all: format build
 
 LEDGER_ENABLED ?= true
 
@@ -73,7 +65,7 @@ endif
 ########################################
 ### CI
 
-ci: get_vendor_deps build
+ci: build
 
 ########################################
 ### Build
@@ -99,6 +91,7 @@ else
 	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
 	go build $(BUILD_FLAGS) -o build/lightd ./cmd/lightd
 endif
+
 
 build_c:
 ifeq ($(OS),Windows_NT)
@@ -143,20 +136,11 @@ install_c:
 	go install $(BUILD_FLAGS) ./cmd/bnbsentry
 
 ########################################
-### Dependencies
-
-get_vendor_deps:
-	@rm -rf vendor/
-	@echo "--> Running dep ensure"
-	@dep ensure -v
-	@go get golang.org/x/tools/cmd/goimports
-
-########################################
 ### Format
 format:
 	@echo "-->Formatting"
-	$(shell cd ../../../ && goimports -w -local github.com/binance-chain/node $(PACKAGES))
-	$(shell cd ../../../ && gofmt -w $(PACKAGES))
+	$(shell go fmt ./...)
+	$(shell find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w)
 
 ########################################
 ### Lint
@@ -192,9 +176,11 @@ cleanup_after_test_with_deadlock:
 
 
 test_race:
+	@echo "--> Running go test --race"
 	@go test -race $(PACKAGES)
 
 test_unit:
+	@echo "--> Running go test"
 	@go test $(PACKAGES)
 
 integration_test: build
@@ -236,4 +222,4 @@ localnet-stop:
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: build install get_vendor_deps test test_unit build-linux build-docker-node localnet-start localnet-stop
+.PHONY: build install test test_unit build-linux build-docker-node localnet-start localnet-stop
