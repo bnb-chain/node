@@ -76,9 +76,8 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error
 	return nil
 }
 
-func handleList(
-	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper, msg ListMsg,
-) sdk.Result {
+func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
+	msg ListMsg) sdk.Result {
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()
 	}
