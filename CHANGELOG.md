@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.2-hf.1
+
+BUG FIXES
+Bump Tendermint version to v0.31.5-binance.3 to address p2p panic errors.
+
+## 0.6.2
+
+FEATURES
+* [\#634](https://github.com/binance-chain/node/pull/634) [Token] BEP3 - Atomic swap
+
+IMPROVEMENTS
+* [\#638](https://github.com/binance-chain/node/pull/638) [Pub] BEP39 - add memo to transfer kafka message
+* [\#639](https://github.com/binance-chain/node/pull/639) [ABCI] add levels parameter to depth ABCI query
+* [\#643](https://github.com/binance-chain/node/pull/643) [TOOL] tools: state_recover add index height rollback
+* [\#637](https://github.com/binance-chain/node/pull/637) [CLI] add account flag check for enable command and disable command
+
+BUG FIXES
+* [\#641](https://github.com/binance-chain/node/pull/641) [Dex] add max lock time in time lock plugin
+* [\#633]( https://github.com/binance-chain/node/pull/633)[CLI] fix offline mode issue for sending order
+* [\#651]( https://github.com/binance-chain/node/pull/651)[API] add account flag in api-server account query response
+
 ## 0.6.1-hf.3
 BUG FIXES
 * [\#654](https://github.com/binance-chain/node/pull/654) [Dex] fix can't bring bnbchaind back when there is an order whose symbol is lower case
