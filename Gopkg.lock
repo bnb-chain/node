@@ -608,7 +608,7 @@
   version = "v0.12.0-binance.2"
 
 [[projects]]
-  digest = "1:2df5aa4ce984493685e3edaf8e5b50e52a42f3ed838bd165dcb8bfb9ea7833b7"
+  digest = "1:6d97ab9ff158f0e64a4a4cffdf0c40cebca3960324c387384d4b2091b82cd41b"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -681,9 +681,9 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "6212bb92288ff6a9b4a6f7099104c8affa8b8d8e"
+  revision = "3d4c98cf1c291694ccccb905d87a2ba41ae24591"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "v0.31.5-binance.2"
+  version = "v0.31.5-binance.3"
 
 [[projects]]
   digest = "1:b73f5e117bc7c6e8fc47128f20db48a873324ad5cfeeebfc505e85c58682b5e4"
