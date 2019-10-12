@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2-hf.1
+
+BUG FIXES
+Bump Tendermint version to v0.31.5-binance.3 to address p2p panic errors.
+
 ## 0.6.2
 
 FEATURES
