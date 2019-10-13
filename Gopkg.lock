@@ -56,7 +56,7 @@
 
 [[projects]]
   branch = "develop"
-  digest = "1:de44f2392291051999e1a839513e808883ea84f77b3e8cb6964e7b4c1c7c77b5"
+  digest = "1:60eb32afdf137b7cc87383fb86df100b12f201f6303601d0303ba0321cbcd6a1"
   name = "github.com/cosmos/cosmos-sdk"
   packages = [
     "baseapp",
@@ -104,7 +104,7 @@
     "x/stake/types",
   ]
   pruneopts = "UT"
-  revision = "0200b6f5e39f2377793901df518bff8094d9ef76"
+  revision = "dac4fc27877f46ed78b6b12a7b7685ed13055f35"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
 
 [[projects]]
@@ -599,13 +599,13 @@
   version = "v0.14.1-binance.1"
 
 [[projects]]
-  digest = "1:1ac12d8dc0930588ad4082b0c186c4a602a17dee5e74869c0237b212ed4e5fee"
+  digest = "1:e4dbbe8b0e24c8ce2920aa83ef5f6a7bcf6499d56145428be052545f3c13fcb9"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "b84252441ae02d158b54f62138a929365fd1d4ee"
+  revision = "0b4e51a6b062152fedf6e2ad1adee104a80770a5"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "v0.12.0-binance.1"
+  version = "v0.12.0-binance.2"
 
 [[projects]]
   digest = "1:2df5aa4ce984493685e3edaf8e5b50e52a42f3ed838bd165dcb8bfb9ea7833b7"

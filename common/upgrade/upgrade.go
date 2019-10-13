@@ -17,6 +17,8 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
+	// TBD Upgrade
+	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 )
 
 func UpgradeBEP10(before func(), after func()) {
