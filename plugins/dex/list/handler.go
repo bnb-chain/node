@@ -99,12 +99,12 @@ func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper
 			return sdk.ErrUnauthorized("only the owner of the base asset or quote asset can list the trading pair").Result()
 		}
 	} else {
-		if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
-			return sdk.ErrInvalidCoins("quote token does not exist").Result()
-		}
-
 		if !baseToken.IsOwner(msg.From) {
 			return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
+		}
+
+		if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+			return sdk.ErrInvalidCoins("quote token does not exist").Result()
 		}
 	}
 
