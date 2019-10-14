@@ -7,13 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/binance-chain/node/common/upgrade"
-
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkStore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -22,9 +15,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
