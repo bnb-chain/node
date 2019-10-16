@@ -77,20 +77,62 @@ func loadValidatorsInfo(db db.DB, height int64) *state.ValidatorsInfo {
 func resetBlockChainState(height int64, rootDir string) {
 	stateDb, err := newLevelDb("state", rootDir)
 	if err != nil {
-		fmt.Printf("new levelDb err in path %s\n", path.Join(rootDir, "data"))
+		cmn.Exit(fmt.Sprintf("new levelDb err in path %s\n", path.Join(rootDir, "data")))
 		return
 	}
 	defer stateDb.Close()
 
 	var blockState state.State
-	buf := stateDb.Get(calcStateKey(height))
-	err = cdc.UnmarshalBinaryBare(buf, &blockState)
-	if err != nil {
-		// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
-		cmn.Exit(fmt.Sprintf(`LoadState: Data has been corrupted or its spec has changed:
-                %v\n`, err))
-	}
+	latestState := state.LoadState(stateDb)
+	latestHeight := latestState.LastBlockHeight
+	if latestHeight-height > latestStateToKeep {
+		blockDb, err := newLevelDb("blockstore", rootDir)
+		if err != nil {
+			cmn.Exit(fmt.Sprintf("new levelDb err in path %s\n", path.Join(rootDir, "data")))
+			return
+		}
+		defer blockDb.Close()
+		blockstore := blockchain.NewBlockStore(blockDb)
+		block := blockstore.LoadBlock(height)
+		nextBlock := blockstore.LoadBlock(height + 1)
+		blockState = latestState.Copy()
+		blockState.LastBlockHeight = height
+		blockState.LastBlockTotalTx = block.TotalTxs
+		blockState.LastBlockID = nextBlock.LastBlockID
+		blockState.LastBlockTime = block.Time
+		blockState.NextValidators, err = state.LoadValidators(stateDb, height+2)
+		if err != nil {
+			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			return
+		}
+		blockState.Validators, err = state.LoadValidators(stateDb, height+1)
+		if err != nil {
+			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			return
+		}
+		blockState.LastValidators, err = state.LoadValidators(stateDb, height)
+		if err != nil {
+			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			return
+		}
+		blockState.LastHeightConsensusParamsChanged = 1
+		blockState.ConsensusParams, err = state.LoadConsensusParams(stateDb, height)
+		if err != nil {
+			cmn.Exit(fmt.Sprintf("failed to load consensusparam info"))
+			return
+		}
+		blockState.LastResultsHash = nextBlock.LastResultsHash
+		blockState.AppHash = nextBlock.AppHash
 
+	} else {
+		buf := stateDb.Get(calcStateKey(height))
+		err = cdc.UnmarshalBinaryBare(buf, &blockState)
+		if err != nil {
+			// DATA HAS BEEN CORRUPTED OR THE SPEC HAS CHANGED
+			cmn.Exit(fmt.Sprintf(`LoadState: Data has been corrupted or its spec has changed:
+                %v\n`, err))
+		}
+	}
 	state.SaveState(stateDb, blockState)
 
 	// reset index height in state db
@@ -198,6 +240,7 @@ func resetPrivValidator(height int64, rootDir string) {
 		privValidator = privval.LoadFilePV(keyPath, statePath)
 	} else {
 		fmt.Printf("This is not a validator node, no need to reset priv_validator file")
+		return
 	}
 	// TODO(#121): Should we also need reset LastRound, LastStep?
 	privValidator.LastSignState.Height = height
