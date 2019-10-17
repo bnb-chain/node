@@ -116,6 +116,10 @@ func resetBlockChainState(height int64, rootDir string) {
 			return
 		}
 		blockState.LastHeightConsensusParamsChanged = 1
+		validatorInfo := loadValidatorsInfo(stateDb, height)
+		if validatorInfo != nil {
+			blockState.LastHeightValidatorsChanged = validatorInfo.LastHeightChanged
+		}
 		blockState.ConsensusParams, err = state.LoadConsensusParams(stateDb, height)
 		if err != nil {
 			cmn.Exit(fmt.Sprintf("failed to load consensusparam info"))
