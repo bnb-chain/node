@@ -66,6 +66,12 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
 	}
 
+	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
+		if utils.IsUnderMinNotional(msg.Price, msg.Quantity) {
+			return errors.New("notional value of the order is too small")
+		}
+	}
+
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
 		return errors.New("notional value of the order is too large(cannot fit in int64)")
 	}

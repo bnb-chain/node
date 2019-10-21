@@ -44,3 +44,12 @@ func IsExceedMaxNotional(price, qty int64) bool {
 	var bi big.Int
 	return !bi.Div(bi.Mul(big.NewInt(qty), big.NewInt(price)), big.NewInt(1e8)).IsInt64()
 }
+
+// min notional is 1, so we need to ensure price * qty / 1e8 >= 1
+func IsUnderMinNotional(price, qty int64) bool {
+	if p, ok := utils.Mul64(price, qty); !ok {
+		return false
+	} else {
+		return p >= 1e8
+	}
+}
