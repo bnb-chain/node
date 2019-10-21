@@ -42,7 +42,7 @@
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"
   source = "github.com/binance-chain/bnc-cosmos-sdk"
-  branch = "develop"
+  branch = "tss_mvp"
   [[prune.project]]
       name = "github.com/zondax/hid"
       unused-packages = false
@@ -70,7 +70,7 @@
 [[override]]
   name = "golang.org/x/crypto"
   source = "https://github.com/tendermint/crypto"
-  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+  revision = "45b1026d81ae4466562fd5c62c2755ae851c45b0"
 
 # we use the secp256k1 implementation:
 [[override]]
