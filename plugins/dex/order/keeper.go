@@ -111,13 +111,49 @@ func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
 	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
 	for _, pair := range tradingPairs {
 		if prices, ok := kp.recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
-			_, lotSize := kp.PairMapper.UpdateTickSizeAndLotSize(ctx, pair, prices)
+			priceWMA := dexUtils.CalcPriceWMA(prices)
+			tickSize, lotSize := kp.determineTickAndLotSize(pair, priceWMA)
+			if tickSize != pair.TickSize.ToInt64() ||
+				lotSize != pair.LotSize.ToInt64() {
+				ctx.Logger().Info("Updating tick/lotsize",
+					"pair", pair.GetSymbol(), "old_ticksize", pair.TickSize, "new_ticksize", tickSize,
+					"old_lotsize", pair.LotSize, "new_lotsize", lotSize)
+				pair.TickSize = utils.Fixed8(tickSize)
+				pair.LotSize = utils.Fixed8(lotSize)
+				kp.PairMapper.AddTradingPair(ctx, pair)
+			}
 			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
 		} else {
 			// keep the current tick_size/lot_size
 			continue
 		}
 	}
+}
+
+func (kp *Keeper) determineTickAndLotSize(pair dexTypes.TradingPair, priceWMA int64) (tickSize, lotSize int64) {
+	tickSize = dexUtils.CalcTickSize(priceWMA)
+	if !sdk.IsUpgrade(upgrade.LotSizeOptimization) {
+		lotSize = dexUtils.CalcLotSize(priceWMA)
+		return
+	}
+
+	var priceAgainstNative int64
+	if pair.BaseAssetSymbol == types.NativeTokenSymbol {
+		// price of BNB/BNB is 1e8
+		priceAgainstNative = 1e8
+	} else if pair.QuoteAssetSymbol == types.NativeTokenSymbol {
+		priceAgainstNative = priceWMA
+	} else {
+		if ps, ok := kp.recentPrices[dexUtils.Assets2TradingPair(pair.BaseAssetSymbol, types.NativeTokenSymbol)]; ok {
+			priceAgainstNative = dexUtils.CalcPriceWMA(ps)
+		} else {
+			ps = kp.recentPrices[dexUtils.Assets2TradingPair(types.NativeTokenSymbol, pair.BaseAssetSymbol)]
+			wma := dexUtils.CalcPriceWMA(ps)
+			priceAgainstNative = 1e16 / wma
+		}
+	}
+	lotSize = dexUtils.CalcLotSize(priceAgainstNative)
+	return
 }
 
 func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {

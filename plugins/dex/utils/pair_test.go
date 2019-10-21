@@ -27,8 +27,9 @@ func TestCalcLotSizeAndCalcTickSize(t *testing.T) {
 	}
 
 	for i := 0; i < len(tests); i++ {
-		tickSize, lotSize := utils.CalcTickSizeAndLotSize(tests[i].price)
+		tickSize := utils.CalcTickSize(tests[i].price)
 		assert.Equal(t, tests[i].tickSize, tickSize)
+		lotSize := utils.CalcLotSize(tests[i].price)
 		assert.Equal(t, tests[i].lotSize, lotSize)
 	}
 }

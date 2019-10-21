@@ -24,7 +24,6 @@ type TradingPairMapper interface {
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	DeleteTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
-	UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64)
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
 }
@@ -111,24 +110,6 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	}
 
 	return res
-}
-
-func (m mapper) UpdateTickSizeAndLotSize(ctx sdk.Context, pair types.TradingPair, recentPrices *utils.FixedSizeRing) (tickSize, lotSize int64) {
-	priceWMA := dexUtils.CalcPriceWMA(recentPrices)
-	tickSize, lotSize = dexUtils.CalcTickSizeAndLotSize(priceWMA)
-
-	if tickSize != pair.TickSize.ToInt64() ||
-		lotSize != pair.LotSize.ToInt64() {
-		ctx.Logger().Info("Updating tick/lotsize",
-			"pair", pair.GetSymbol(), "old_ticksize", pair.TickSize, "new_ticksize", tickSize,
-			"old_lotsize", pair.LotSize, "new_lotsize", lotSize)
-		pair.TickSize = utils.Fixed8(tickSize)
-		pair.LotSize = utils.Fixed8(lotSize)
-
-		m.AddTradingPair(ctx, pair)
-
-	}
-	return tickSize, lotSize
 }
 
 func (m mapper) getRecentPricesSeq(height, pricesStoreEvery, numPricesStored int64) int64 {
