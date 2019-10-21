@@ -59,6 +59,8 @@ BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
 # Block height of BEP3 upgrade
 BEP3Height = {{ .UpgradeConfig.BEP3Height }}
+# Block height of FixSignBytesOverflow upgrade
+FixSignBytesOverflowHeight = {{ .UpgradeConfig.FixSignBytesOverflowHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -309,16 +311,19 @@ type UpgradeConfig struct {
 
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	BEP3Height  int64 `mapstructure:"BEP3Height"`
+
+	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	return &UpgradeConfig{
-		BEP6Height:  math.MaxInt64,
-		BEP9Height:  math.MaxInt64, //TODO change default when update
-		BEP10Height: math.MaxInt64,
-		BEP19Height: math.MaxInt64,
-		BEP12Height: math.MaxInt64,
-		BEP3Height:  math.MaxInt64,
+		BEP6Height:                 math.MaxInt64,
+		BEP9Height:                 math.MaxInt64, //TODO change default when update
+		BEP10Height:                math.MaxInt64,
+		BEP19Height:                math.MaxInt64,
+		BEP12Height:                math.MaxInt64,
+		BEP3Height:                 math.MaxInt64,
+		FixSignBytesOverflowHeight: math.MaxInt64,
 	}
 }
 
