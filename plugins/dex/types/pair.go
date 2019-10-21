@@ -13,15 +13,17 @@ type TradingPair struct {
 	LotSize          ctuils.Fixed8 `json:"lot_size"`
 }
 
+// only for test use
 func NewTradingPair(baseAssetSymbol, quoteAssetSymbol string, listPrice int64) TradingPair {
-	tickSize, lotSize := utils.CalcTickSizeAndLotSize(listPrice)
+	lotSize := utils.CalcLotSize(listPrice)
+	return NewTradingPairWithLotSize(baseAssetSymbol, quoteAssetSymbol, listPrice, lotSize)
+}
 
-	// TODO: symbol validations should also happen here, but a lot of tests rely on this method.
-	//       for now, these checks are done in TradingPairMapper#AddTradingPair.
-
+func NewTradingPairWithLotSize(baseAsset, quoteAsset string, listPrice, lotSize int64) TradingPair {
+	tickSize := utils.CalcTickSize(listPrice)
 	return TradingPair{
-		BaseAssetSymbol:  baseAssetSymbol,
-		QuoteAssetSymbol: quoteAssetSymbol,
+		BaseAssetSymbol:  baseAsset,
+		QuoteAssetSymbol: quoteAsset,
 		ListPrice:        ctuils.Fixed8(listPrice),
 		TickSize:         ctuils.Fixed8(tickSize),
 		LotSize:          ctuils.Fixed8(lotSize),
