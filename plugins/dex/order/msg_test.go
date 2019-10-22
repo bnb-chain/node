@@ -8,8 +8,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/binance-chain/node/common/testutils"
-
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -18,6 +16,7 @@ import (
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	cmn "github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/testutils"
 )
 
 func newCLIContext() context.CLIContext {
