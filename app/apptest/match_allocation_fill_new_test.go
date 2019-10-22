@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/binance-chain/node/plugins/dex/matcheng"
-
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 
