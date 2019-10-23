@@ -50,6 +50,6 @@ func IsUnderMinNotional(price, qty int64) bool {
 	if p, ok := utils.Mul64(price, qty); !ok {
 		return false
 	} else {
-		return p >= 1e8
+		return p < 1e8
 	}
 }

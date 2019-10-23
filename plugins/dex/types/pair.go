@@ -13,7 +13,7 @@ type TradingPair struct {
 	LotSize          ctuils.Fixed8 `json:"lot_size"`
 }
 
-// only for test use
+// NOTE: only for test use
 func NewTradingPair(baseAssetSymbol, quoteAssetSymbol string, listPrice int64) TradingPair {
 	lotSize := utils.CalcLotSize(listPrice)
 	return NewTradingPairWithLotSize(baseAssetSymbol, quoteAssetSymbol, listPrice, lotSize)
