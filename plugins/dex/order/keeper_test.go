@@ -25,6 +25,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -541,6 +542,74 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 		sdk.NewCoin("BNB", 1e4),
 	}.Sort(), acc.GetCoins())
 	fees.Pool.Clear()
+}
+
+func TestKeeper_DetermineLotSize(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+	lotsize := keeper.DetermineLotSize("BNB", "BTC-000", 1e6)
+	assert.Equal(int64(1e5), lotsize)
+	lotsize = keeper.DetermineLotSize("AAA-000", "BNB", 1e6)
+	assert.Equal(int64(1e7), lotsize)
+
+	// no recentPrices recorded, use engine.LastTradePrice
+	pair1 := dextypes.NewTradingPairWithLotSize("BNB", "BTC-000", 1e6, 1e5)
+	keeper.AddEngine(pair1)
+	pair2 := dextypes.NewTradingPairWithLotSize("AAA-000", "BNB", 1e6, 1e7)
+	keeper.AddEngine(pair2)
+	lotsize = keeper.DetermineLotSize("AAA-000", "BTC-000", 1e4)
+	assert.Equal(int64(1e7), lotsize)
+	lotsize = keeper.DetermineLotSize("BTC-000", "AAA-000", 1e12)
+	assert.Equal(int64(1e3), lotsize)
+
+	// store some recentPrices
+	keeper.StoreTradePrices(ctx.WithBlockHeight(1 * pricesStoreEvery))
+	keeper.engines[pair1.GetSymbol()].LastTradePrice = 1e8
+	keeper.engines[pair2.GetSymbol()].LastTradePrice = 1e8
+	keeper.StoreTradePrices(ctx.WithBlockHeight(2 * pricesStoreEvery))
+	lotsize = keeper.DetermineLotSize("AAA-000", "BTC-000", 1e4)
+	assert.Equal(int64(1e6), lotsize) // wma price of AAA-000/BNB is between 1e7 and 1e8
+	lotsize = keeper.DetermineLotSize("BTC-000", "AAA-000", 1e12)
+	assert.Equal(int64(1e5), lotsize) // wma price of BNB/BTC-000 is between 1e7 and 1e8
+}
+
+func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, -1)
+
+	pair1 := dextypes.NewTradingPairWithLotSize("BNB", "BTC-000", 1e5, 1e5)
+	keeper.AddEngine(pair1)
+	assert.NoError(keeper.PairMapper.AddTradingPair(ctx, pair1))
+	pair2 := dextypes.NewTradingPairWithLotSize("AAA-000", "BNB", 1e5, 1e8)
+	keeper.AddEngine(pair2)
+	assert.NoError(keeper.PairMapper.AddTradingPair(ctx, pair2))
+	pair3 := dextypes.NewTradingPairWithLotSize("AAA-000", "BTC-000", 1e2, 1e8)
+	keeper.AddEngine(pair3)
+	assert.NoError(keeper.PairMapper.AddTradingPair(ctx, pair3))
+
+	for i := 0; i < minimalNumPrices; i++ {
+		keeper.engines[pair1.GetSymbol()].LastTradePrice += 1e5
+		keeper.engines[pair2.GetSymbol()].LastTradePrice += 1e5
+		keeper.engines[pair3.GetSymbol()].LastTradePrice += 1e2
+		keeper.StoreTradePrices(ctx.WithBlockHeight(int64(i) * pricesStoreEvery))
+	}
+	keeper.UpdateTickSizeAndLotSize(ctx)
+	assert.Equal(int64(1e5), keeper.engines[pair1.GetSymbol()].LotSize)
+	assert.Equal(int64(1e6), keeper.engines[pair2.GetSymbol()].LotSize)
+	assert.Equal(int64(1e6), keeper.engines[pair3.GetSymbol()].LotSize)
+	pair1, err := keeper.PairMapper.GetTradingPair(ctx, pair1.BaseAssetSymbol, pair1.QuoteAssetSymbol)
+	assert.NoError(err)
+	assert.Equal(int64(1e2), pair1.TickSize.ToInt64())
+	assert.Equal(int64(1e5), pair1.LotSize.ToInt64())
+	pair2, err = keeper.PairMapper.GetTradingPair(ctx, pair2.BaseAssetSymbol, pair2.QuoteAssetSymbol)
+	assert.NoError(err)
+	assert.Equal(int64(1e2), pair2.TickSize.ToInt64())
+	assert.Equal(int64(1e6), pair2.LotSize.ToInt64())
+	pair3, err = keeper.PairMapper.GetTradingPair(ctx, pair3.BaseAssetSymbol, pair3.QuoteAssetSymbol)
+	assert.NoError(err)
+	assert.Equal(int64(1), pair3.TickSize.ToInt64())
+	assert.Equal(int64(1e6), pair3.LotSize.ToInt64())
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {

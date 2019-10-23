@@ -322,12 +322,12 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 -1,
-		BEP9Height:                 -1,
-		BEP10Height:                -1,
-		BEP19Height:                -1,
-		BEP12Height:                -1,
-		BEP3Height:                 -1,
+		BEP6Height:                 1,
+		BEP9Height:                 1,
+		BEP10Height:                1,
+		BEP19Height:                1,
+		BEP12Height:                1,
+		BEP3Height:                 1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
 	}
