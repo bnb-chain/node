@@ -10,8 +10,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
@@ -96,7 +98,13 @@ func handleList(
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 
-	pair := types.NewTradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
+	var lotSize int64
+	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
+		lotSize = keeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
+	} else {
+		lotSize = utils.CalcLotSize(msg.InitPrice)
+	}
+	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
 	err = keeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {
 		return sdk.ErrInternal(err.Error()).Result()

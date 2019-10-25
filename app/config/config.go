@@ -61,6 +61,8 @@ BEP12Height = {{ .UpgradeConfig.BEP12Height }}
 BEP3Height = {{ .UpgradeConfig.BEP3Height }}
 # Block height of FixSignBytesOverflow upgrade
 FixSignBytesOverflowHeight = {{ .UpgradeConfig.FixSignBytesOverflowHeight }}
+# Block height of LotSizeOptimization upgrade
+LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -308,22 +310,26 @@ type UpgradeConfig struct {
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
-
+	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
-	BEP3Height  int64 `mapstructure:"BEP3Height"`
-
+	// Archimedes Upgrade
+	BEP3Height int64 `mapstructure:"BEP3Height"`
+	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
+	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
+	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 math.MaxInt64,
-		BEP9Height:                 math.MaxInt64, //TODO change default when update
-		BEP10Height:                math.MaxInt64,
-		BEP19Height:                math.MaxInt64,
-		BEP12Height:                math.MaxInt64,
-		BEP3Height:                 math.MaxInt64,
+		BEP6Height:                 1,
+		BEP9Height:                 1,
+		BEP10Height:                1,
+		BEP19Height:                1,
+		BEP12Height:                1,
+		BEP3Height:                 1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
+		LotSizeUpgradeHeight:       math.MaxInt64,
 	}
 }
 
