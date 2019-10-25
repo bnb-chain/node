@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
@@ -26,7 +25,7 @@ func Test_Expire_1_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -125,7 +124,7 @@ func Test_Expire_2a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -194,7 +193,7 @@ func Test_Expire_2aa_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -293,7 +292,7 @@ func Test_Expire_2b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -362,7 +361,7 @@ func Test_Expire_2bb_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -467,7 +466,7 @@ func Test_Expire_3_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -625,7 +624,7 @@ func Test_Expire_4a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -695,7 +694,7 @@ func Test_Expire_4b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -736,7 +735,7 @@ func Test_Expire_5a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 1, tNow)
 
@@ -784,7 +783,7 @@ func Test_Expire_5b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 1, tNow)
 
@@ -854,7 +853,7 @@ func Test_Expire_6_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -911,7 +910,7 @@ func Test_Expire_7_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -988,7 +987,7 @@ func Test_Expire_8_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -1070,7 +1069,7 @@ func Test_Expire_9_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 

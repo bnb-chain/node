@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -59,8 +58,8 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 	addr := secp256k1.GenPrivKey().PubKey().Address()
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}
-	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
-	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil), 0}
+	genTokens := []tokens.GenesisToken{{"BNB", "BNB", 100000000e8, accAddr, false}}
+	appAcc := &common.AppAccount{baseAcc, "baseAcc", sdk.Coins(nil), sdk.Coins(nil), 0}
 	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
 	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
@@ -75,7 +74,7 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 		panic(err)
 	}
 	testApp.InitChain(abci.RequestInitChain{
-		Validators: []abci.ValidatorUpdate{},
+		Validators:    []abci.ValidatorUpdate{},
 		AppStateBytes: stateBytes})
 	// it is required in fee distribution during end block
 	testApp.ValAddrCache.SetAccAddr(sdk.ConsAddress(valAddr), appAcc.Address)
@@ -131,8 +130,8 @@ func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Acco
 	addr := secp256k1.GenPrivKey().PubKey().Address()
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}
-	genTokens := []tokens.GenesisToken{{"BNB","BNB",100000000e8,accAddr,false}}
-	appAcc := &common.AppAccount{baseAcc,"baseAcc",sdk.Coins(nil),sdk.Coins(nil), 0}
+	genTokens := []tokens.GenesisToken{{"BNB", "BNB", 100000000e8, accAddr, false}}
+	appAcc := &common.AppAccount{baseAcc, "baseAcc", sdk.Coins(nil), sdk.Coins(nil), 0}
 	genAccs := make([]app.GenesisAccount, 1)
 	valAddr := ed25519.GenPrivKey().PubKey().Address()
 	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
@@ -147,7 +146,7 @@ func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Acco
 		panic(err)
 	}
 	testApp.InitChain(abci.RequestInitChain{
-		Validators: []abci.ValidatorUpdate{},
+		Validators:    []abci.ValidatorUpdate{},
 		AppStateBytes: stateBytes})
 	// it is required in fee distribution during end block
 	testApp.ValAddrCache.SetAccAddr(sdk.ConsAddress(valAddr), appAcc.Address)

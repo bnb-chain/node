@@ -2,15 +2,14 @@ package apptest
 
 import (
 	"fmt"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
