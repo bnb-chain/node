@@ -74,9 +74,8 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error
 	return nil
 }
 
-func handleList(
-	ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper, msg ListMsg,
-) sdk.Result {
+func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
+	msg ListMsg) sdk.Result {
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()
 	}
@@ -90,8 +89,23 @@ func handleList(
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
-	if !baseToken.IsOwner(msg.From) {
-		return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
+	if sdk.IsUpgrade(upgrade.ListingRuleUpgrade) {
+		quoteToken, err := tokenMapper.GetToken(ctx, msg.QuoteAssetSymbol)
+		if err != nil {
+			return sdk.ErrInvalidCoins(err.Error()).Result()
+		}
+
+		if !baseToken.IsOwner(msg.From) && !quoteToken.IsOwner(msg.From) {
+			return sdk.ErrUnauthorized("only the owner of the base asset or quote asset can list the trading pair").Result()
+		}
+	} else {
+		if !baseToken.IsOwner(msg.From) {
+			return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
+		}
+
+		if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+			return sdk.ErrInvalidCoins("quote token does not exist").Result()
+		}
 	}
 
 	if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {

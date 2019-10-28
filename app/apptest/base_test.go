@@ -20,7 +20,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-    "github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/app"
 	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
