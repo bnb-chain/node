@@ -63,6 +63,8 @@ BEP3Height = {{ .UpgradeConfig.BEP3Height }}
 FixSignBytesOverflowHeight = {{ .UpgradeConfig.FixSignBytesOverflowHeight }}
 # Block height of LotSizeOptimization upgrade
 LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
+# Block height of changing listing rule upgrade
+ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -317,6 +319,7 @@ type UpgradeConfig struct {
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
+	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -330,6 +333,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP3Height:                 1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
+		ListingRuleUpgradeHeight:   math.MaxInt64,
 	}
 }
 

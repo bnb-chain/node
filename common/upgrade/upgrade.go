@@ -20,6 +20,7 @@ const (
 	// TODO: add upgrade name
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
+	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 )
 
 func UpgradeBEP10(before func(), after func()) {

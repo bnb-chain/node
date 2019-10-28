@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
@@ -3048,7 +3047,7 @@ func Test_Maker_Sell_10b_new(t *testing.T) {
 
 /*
 test #11: cancel maker order, no bnb balance
- */
+*/
 func Test_Maker_Sell_11_new(t *testing.T) {
 	assert := assert.New(t)
 

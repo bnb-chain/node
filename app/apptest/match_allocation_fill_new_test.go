@@ -2,14 +2,13 @@ package apptest
 
 import (
 	"fmt"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -152,7 +151,7 @@ func Test_Fill_2_new(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		oid := GetOrderId(addr0, int64(i), ctx)
 		msg := order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -220,7 +219,7 @@ func Test_Fill_3_new(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		oid := GetOrderId(addr0, int64(i), ctx)
 		msg := order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", int64(i+3)*1e8, int64(i+1)*1e8)
-		if i % 1 == 0 {
+		if i%1 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
@@ -230,7 +229,7 @@ func Test_Fill_3_new(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		oid := GetOrderId(addr1, int64(i), ctx)
 		msg := order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", int64(i+1)*1e8, int64(i+1)*1e8)
-		if i % 2 == 0 {
+		if i%2 == 0 {
 			msg.TimeInForce = 3
 		}
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)

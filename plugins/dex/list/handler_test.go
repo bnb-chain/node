@@ -7,11 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkStore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,9 +15,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/stretchr/testify/require"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
@@ -319,4 +319,56 @@ func TestListHandler_WrongTradingPair(t *testing.T) {
 	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
 	require.Contains(t, result.Log, fmt.Sprintf("token %s should be listed against BNB before listing %s against %s",
 		quoteAsset, baseAsset, quoteAsset))
+}
+
+func TestListHandler_AfterUpgrade(t *testing.T) {
+	cdc := MakeCodec()
+	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	err := tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Bitcoin",
+		Symbol:      "BTC-000",
+		OrigSymbol:  "BTC",
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+
+	err = tokenMapper.NewToken(ctx, types.Token{
+		Name:        "Native Token",
+		Symbol:      types.NativeTokenSymbol,
+		OrigSymbol:  types.NativeTokenSymbol,
+		TotalSupply: 10000,
+		Owner:       sdk.AccAddress("testacc"),
+	})
+	require.Nil(t, err, "new token error")
+	proposal := getProposal(true, "BTC-000", "BNB")
+	proposal.SetStatus(gov.StatusPassed)
+	govKeeper.SetProposal(ctx, proposal)
+
+	var upgradeHeight int64 = 1000
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeHeight)
+	sdk.UpgradeMgr.SetHeight(upgradeHeight + 1)
+
+	// wrong owner
+	listMsg := ListMsg{
+		ProposalId:       1,
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
+		InitPrice:        1000,
+		From:             sdk.AccAddress("wrong_acc"),
+	}
+	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
+	require.Contains(t, result.Log, "only the owner of the base asset or quote asset can list the trading pair")
+
+	// right owner
+	listMsg = ListMsg{
+		ProposalId:       1,
+		BaseAssetSymbol:  "BTC-000",
+		QuoteAssetSymbol: types.NativeTokenSymbol,
+		InitPrice:        1000,
+		From:             sdk.AccAddress("testacc"),
+	}
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, listMsg)
+	require.Equal(t, result.Code, sdk.ABCICodeOK)
 }
