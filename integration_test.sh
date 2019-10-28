@@ -293,7 +293,7 @@ check_operation "Deposit to a closed single chain atomic swap" "${result}" "ERRO
 
 sleep 1s
 # Create a single chain atomic swa
-result=$(expect ./HTLT-single-chain.exp 500 "100000000:BNB" "10000:${eth_symbol}" $bob_addr alice ${chain_id} ${cli_home})
+result=$(expect ./HTLT-single-chain.exp 360 "100000000:BNB" "10000:${eth_symbol}" $bob_addr alice ${chain_id} ${cli_home})
 check_operation "Create a single chain atomic swap" "${result}" "${chain_operation_words}"
 randomNumber=$(sed 's/Random number: //g' <<< $(echo "${result}" | grep -o "Random number: [0-9a-z]*"))
 timestamp=$(sed 's/Timestamp: //g' <<< $(echo "${result}" | grep -o "Timestamp: [0-9]*"))
@@ -304,11 +304,6 @@ sleep 1s
 # Deposit to a single chain atomic swap
 result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_operation_words}"
-
-sleep 5s
-# refund a single chain atomic swap
-result=$(expect ./refund.exp ${swapID} alice ${chain_id} ${cli_home})
-check_operation "refund a single chain atomic swap" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # Deposit to a single chain atomic swap
