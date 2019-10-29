@@ -475,7 +475,7 @@ func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) 
 		}
 	}
 	if app.publicationConfig.PublishBlock {
-		tx.Pool.AddTxRes(txHash, res)
+		pub.Pool.AddTxRes(txHash, res)
 	}
 	return res
 }
@@ -576,7 +576,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
-	tx.Pool.Clean()
+	pub.Pool.Clean()
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.

@@ -15,7 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/tokens/burn"
@@ -80,7 +79,7 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 		if fee != nil {
 			feeStr = fee.Tokens.String()
 		}
-		txRes := tx.Pool.GetTxRes(txhash)
+		txRes := Pool.GetTxRes(txhash)
 		if txRes == nil {
 			Logger.Error("failed to get tx res", "hash", txhash)
 			return true
