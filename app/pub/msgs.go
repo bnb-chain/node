@@ -23,8 +23,8 @@ const (
 )
 
 var (
-	nativeBlockMetaKey = fmt.Sprintf("%sBlockMeta",strings.ToLower(types.NativeTokenSymbol))
-	nativeTransactionKey = fmt.Sprintf("%sTransaction",strings.ToLower(types.NativeTokenSymbol))
+	nativeBlockMetaKey   = fmt.Sprintf("%sBlockMeta", strings.ToLower(types.NativeTokenSymbol))
+	nativeTransactionKey = fmt.Sprintf("%sTransaction", strings.ToLower(types.NativeTokenSymbol))
 )
 
 // the strings should be keep consistence with top level record name in schemas.go

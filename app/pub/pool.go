@@ -1,4 +1,4 @@
-package tx
+package pub
 
 import (
 	abci "github.com/tendermint/tendermint/abci/types"
