@@ -85,7 +85,7 @@ var rootCmd = &cobra.Command{
 		pub.Logger = context.Logger.With("module", "pub")
 		pub.Cfg = &cfg.PublicationConfig
 		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, cfg.PublicationConfig.PublicationChannelSize)
-		publisher := pub.NewKafkaMarketDataPublisher(pub.Logger, "")
+		publisher := pub.NewKafkaMarketDataPublisher(pub.Logger, "", false)
 		go pub.Publish(publisher, nil, pub.Logger, pub.Cfg, pub.ToPublishCh)
 		pub.IsLive = true
 		srv := &http.Server{
@@ -132,7 +132,7 @@ var rootCmd = &cobra.Command{
 				tradesToPublish, orderChanges, accounts = generator.ExpireMessages(h, timeNow)
 			}
 			time.Sleep(time.Duration(cfg.BlockIntervalMs) * time.Millisecond)
-			generator.Publish(int64(h), timePub, tradesToPublish, orderChanges, generator.OrderChangeMap, accounts, transfers)
+			generator.Publish(int64(h), timePub, tradesToPublish, orderChanges, generator.OrderChangeMap, accounts, transfers, nil)
 		}
 
 		<-finishSignal

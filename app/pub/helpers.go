@@ -1,17 +1,26 @@
 package pub
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
+	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/freeze"
+	"github.com/binance-chain/node/plugins/tokens/issue"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Trade) []string {
@@ -39,6 +48,127 @@ func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.Keeper, tradesToPublish []*Tr
 	}
 
 	return res
+}
+
+func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Block {
+	txs := pool.GetTxs()
+	transactionsToPublish := make([]Transaction, 0, 0)
+	timeStamp := header.GetTime().Format(time.RFC3339Nano)
+	txs.Range(func(key, value interface{}) bool {
+		txhash := key.(string)
+		stdTx, ok := value.(auth.StdTx)
+		if !ok {
+			Logger.Error("tx is not an auth.StdTx", "hash", txhash)
+			return true
+		}
+
+		msgs := stdTx.GetMsgs()
+		if len(msgs) == 0 {
+			Logger.Error("tx contains no messages", "hash", txhash)
+			return true
+		}
+		// TODO, if support multi message in one transaction in future, this part need change, refer issue #681
+		msg := msgs[0]
+		bz, err := json.Marshal(msg)
+		if err != nil {
+			Logger.Error("MarshalJSON message failed", "err", err)
+			return true
+		}
+		fee := fees.Pool.GetFee(txhash)
+		feeStr := ""
+		if fee != nil {
+			feeStr = fee.Tokens.String()
+		}
+		txRes := Pool.GetTxRes(txhash)
+		if txRes == nil {
+			Logger.Error("failed to get tx res", "hash", txhash)
+			return true
+		}
+		var txAsset string
+		var orderId string
+		var outputs []Output
+		var proposalId int64
+		inputs := []Input{{Address: msg.GetSigners()[0].String()}}
+
+		switch msg := msg.(type) {
+		case orderPkg.NewOrderMsg:
+			var orderRes orderPkg.NewOrderResponse
+			err = json.Unmarshal([]byte(txRes.Data), &orderRes)
+			if err != nil {
+				Logger.Error("failed to get order id", "err", err)
+				return true
+			}
+			orderId = orderRes.OrderID
+			txAsset = msg.Symbol
+		case gov.MsgSubmitProposal:
+			proposalIdStr := string(txRes.Data)
+			proposalId, err = strconv.ParseInt(proposalIdStr, 10, 64)
+			if err != nil {
+				Logger.Error("failed to parse proposalId")
+				return true
+			}
+		case orderPkg.CancelOrderMsg:
+			orderId = msg.RefId
+			txAsset = msg.Symbol
+		case bank.MsgSend:
+			// TODO for now there is no requirement to support multi send message, will support multi send in issue #680
+			txAsset = msg.Inputs[0].Coins[0].Denom
+			inputs = transferInputsToPublish(msg.Inputs)
+			outputs = transferOutputsToPublish(msg.Outputs)
+		case gov.MsgDeposit:
+			txAsset = types.NativeTokenSymbol
+		case issue.IssueMsg:
+			txAsset = msg.Symbol
+		case issue.MintMsg:
+			txAsset = msg.Symbol
+		case burn.BurnMsg:
+			txAsset = msg.Symbol
+		case freeze.FreezeMsg:
+			txAsset = msg.Symbol
+		case freeze.UnfreezeMsg:
+			txAsset = msg.Symbol
+			// will not cover timelock, timeUnlock, timeRelock, atomic Swap
+		}
+		transactionsToPublish = append(transactionsToPublish, Transaction{
+			TxHash:    txhash,
+			Timestamp: timeStamp,
+			Fee:       feeStr,
+			Inputs:    inputs,
+			Outputs:   outputs,
+			NativeTransaction: NativeTransaction{
+				Source:     stdTx.Source,
+				ProposalId: proposalId,
+				TxType:     msg.Type(),
+				TxAsset:    txAsset,
+				OrderId:    orderId,
+				Code:       txRes.Code,
+				Data:       string(bz),
+			},
+		})
+		return true
+	})
+	return &Block{
+		ChainID: header.ChainID,
+		CryptoBlock: CryptoBlock{
+			BlockHash:   hex.EncodeToString(blockHash),
+			ParentHash:  hex.EncodeToString(header.LastBlockId.Hash),
+			BlockHeight: header.Height,
+			Timestamp:   timeStamp,
+			TxTotal:     header.TotalTxs,
+			BlockMeta: NativeBlockMeta{
+				LastCommitHash:     hex.EncodeToString(header.LastCommitHash),
+				DataHash:           hex.EncodeToString(header.DataHash),
+				ValidatorsHash:     hex.EncodeToString(header.ValidatorsHash),
+				NextValidatorsHash: hex.EncodeToString(header.NextValidatorsHash),
+				ConsensusHash:      hex.EncodeToString(header.ConsensusHash),
+				AppHash:            hex.EncodeToString(header.AppHash),
+				LastResultsHash:    hex.EncodeToString(header.LastResultsHash),
+				EvidenceHash:       hex.EncodeToString(header.EvidenceHash),
+				ProposerAddress:    sdk.ConsAddress(header.ProposerAddress).String(),
+			},
+			Transactions: transactionsToPublish,
+		},
+	}
 }
 
 func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
@@ -118,7 +248,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 						}
 					}
 
-					res[addrBytesStr] = Account{Owner: addrBytesStr, Balances: assets}
+					res[addrBytesStr] = Account{Owner: addrBytesStr, Sequence: acc.GetSequence(), Balances: assets}
 				} else {
 					Logger.Error(fmt.Sprintf("failed to get account %s from AccountKeeper", addr.String()))
 				}
@@ -317,7 +447,7 @@ func filterChangedOrderBooksByOrders(
 			}
 		}
 	}
-	for symbol, _ := range allSymbols {
+	for symbol := range allSymbols {
 		if len(res[symbol].Sells) == 0 && len(res[symbol].Buys) == 0 {
 			delete(res, symbol)
 		}
@@ -492,4 +622,28 @@ func getSerializedFeeForOrder(orderInfo *orderPkg.OrderInfo, status orderPkg.Cha
 		return feeStr
 	}
 
+}
+
+func transferInputsToPublish(inputs []bank.Input) []Input {
+	transInputs := make([]Input, 0, len(inputs))
+	for _, i := range inputs {
+		input := Input{Address: i.Address.String()}
+		for _, c := range i.Coins {
+			input.Coins = append(input.Coins, Coin{Denom: c.Denom, Amount: c.Amount})
+		}
+		transInputs = append(transInputs, input)
+	}
+	return transInputs
+}
+
+func transferOutputsToPublish(outputs []bank.Output) []Output {
+	transOutputs := make([]Output, 0, len(outputs))
+	for _, o := range outputs {
+		output := Output{Address: o.Address.String()}
+		for _, c := range o.Coins {
+			output.Coins = append(output.Coins, Coin{Denom: c.Denom, Amount: c.Amount})
+		}
+		transOutputs = append(transOutputs, output)
+	}
+	return transOutputs
 }

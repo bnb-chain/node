@@ -64,8 +64,8 @@ func (mg *MessageGenerator) OneOnOneMessages(height int, timeNow time.Time) (tra
 
 		tradesToPublish[i] = makeTradeToPub(fmt.Sprintf("%d-%d", height, i), sellOrder.Id, buyOrder.Id, mg.sellerAddrs[i].String(), mg.buyerAddrs[i].String(), price, amount)
 
-		accounts[mg.buyerAddrs[i].String()] = pub.Account{string(mg.buyerAddrs[i]), "", []*pub.AssetBalance{{"NNB", 10000000000000000 + 100000000*int64(seq), 0, 0}, {"BNB", 10000000000000000 - 100000000*int64(seq), 0, 0}}}
-		accounts[mg.sellerAddrs[i].String()] = pub.Account{string(mg.sellerAddrs[i]), "", []*pub.AssetBalance{{"NNB", 10000000000000000 - 100000000*int64(seq), 0, 0}, {"BNB", 10000000000000000 + 100000000*int64(seq), 0, 0}}}
+		accounts[mg.buyerAddrs[i].String()] = pub.Account{string(mg.buyerAddrs[i]), "", 0, []*pub.AssetBalance{{"NNB", 10000000000000000 + 100000000*int64(seq), 0, 0}, {"BNB", 10000000000000000 - 100000000*int64(seq), 0, 0}}}
+		accounts[mg.sellerAddrs[i].String()] = pub.Account{string(mg.sellerAddrs[i]), "", 0, []*pub.AssetBalance{{"NNB", 10000000000000000 - 100000000*int64(seq), 0, 0}, {"BNB", 10000000000000000 + 100000000*int64(seq), 0, 0}}}
 	}
 	transfers = &pub.Transfers{Height: int64(height), Num: 0, Transfers: []pub.Transfer{}}
 	for i := 0; i < mg.NumOfTransferPerBlock; i++ {
@@ -112,8 +112,8 @@ func (mg *MessageGenerator) TwoOnOneMessages(height int, timeNow time.Time) (tra
 				mg.buyerAddrs[i].String(), 100000000, 100000000)
 			mg.OrderChangeMap[buyOrder.Id] = &buyOrder
 			mg.OrderChangeMap[sellOrder.Id] = &sellOrder
-			accounts[mg.buyerAddrs[i/2].String()] = pub.Account{string(mg.buyerAddrs[i].String()), "", []*pub.AssetBalance{{"NNB", 10000000000000000 + 100000000*int64(height), 0, 0}, {"BNB", 10000000000000000 - 100000000*int64(height), 0, 0}}}
-			accounts[mg.sellerAddrs[i].String()] = pub.Account{string(mg.sellerAddrs[i].String()), "", []*pub.AssetBalance{{"NNB", 10000000000000000 - 200000000*int64(height), 0, 0}, {"BNB", 10000000000000000 + 200000000*int64(height), 0, 0}}}
+			accounts[mg.buyerAddrs[i/2].String()] = pub.Account{string(mg.buyerAddrs[i].String()), "", 0, []*pub.AssetBalance{{"NNB", 10000000000000000 + 100000000*int64(height), 0, 0}, {"BNB", 10000000000000000 - 100000000*int64(height), 0, 0}}}
+			accounts[mg.sellerAddrs[i].String()] = pub.Account{string(mg.sellerAddrs[i].String()), "", 0, []*pub.AssetBalance{{"NNB", 10000000000000000 - 200000000*int64(height), 0, 0}, {"BNB", 10000000000000000 + 200000000*int64(height), 0, 0}}}
 		}
 	}
 	transfers = &pub.Transfers{Height: int64(height), Num: 0, Transfers: []pub.Transfer{}}
@@ -139,7 +139,7 @@ func (mg *MessageGenerator) ExpireMessages(height int, timeNow time.Time) (trade
 	return
 }
 
-func (mg MessageGenerator) Publish(height, timePub int64, tradesToPublish []*pub.Trade, orderChanges orderPkg.OrderChanges, orderChangesMap orderPkg.OrderInfoForPublish, accounts map[string]pub.Account, transfers *pub.Transfers) {
+func (mg MessageGenerator) Publish(height, timePub int64, tradesToPublish []*pub.Trade, orderChanges orderPkg.OrderChanges, orderChangesMap orderPkg.OrderInfoForPublish, accounts map[string]pub.Account, transfers *pub.Transfers, block *pub.Block) {
 	orderChangesCopy := make(orderPkg.OrderInfoForPublish, len(orderChangesMap))
 	for k, v := range orderChangesMap {
 		orderChangesCopy[k] = v
@@ -156,7 +156,8 @@ func (mg MessageGenerator) Publish(height, timePub int64, tradesToPublish []*pub
 		nil,
 		pub.BlockFee{},
 		nil,
-		transfers)
+		transfers,
+		block)
 }
 
 func makeOrderInfo(sender sdk.AccAddress, side int8, height, price, qty, cumQty, timePub int64) orderPkg.OrderInfo {

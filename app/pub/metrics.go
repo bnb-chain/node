@@ -24,9 +24,9 @@ type Metrics struct {
 	// Time used to collect orderbook information
 	CollectOrderBookTimeMs metricsPkg.Gauge
 
-	// Time used to publish a block
+	// Time used to publish everything in a block
 	// Should be (approximate) sum of folllowing Times
-	PublishBlockTimeMs metricsPkg.Gauge
+	PublishTotalTimeMs metricsPkg.Gauge
 	// Time used to publish order & trade
 	PublishTradeAndOrderTimeMs metricsPkg.Gauge
 	// Time used to publish orderbook
@@ -37,6 +37,8 @@ type Metrics struct {
 	PublishBlockfeeTimeMs metricsPkg.Gauge
 	// Time	used to publish transfer
 	PublishTransfersTimeMs metricsPkg.Gauge
+	// Time	used to publish block
+	PublishBlockTimeMs metricsPkg.Gauge
 
 	// num of trade
 	NumTrade metricsPkg.Gauge
@@ -78,10 +80,10 @@ func PrometheusMetrics() *Metrics {
 			Name:      "collect_orderbook",
 			Help:      "Time to collect order book info",
 		}, []string{}),
-		PublishBlockTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		PublishTotalTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Subsystem: "publication",
-			Name:      "block_pub_time",
-			Help:      "Time to publish a block (ms)",
+			Name:      "total_pub_time",
+			Help:      "Time to publish everything within a block (ms)",
 		}, []string{}),
 		PublishTradeAndOrderTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Subsystem: "publication",
@@ -107,6 +109,11 @@ func PrometheusMetrics() *Metrics {
 			Subsystem: "publication",
 			Name:      "transfers_pub_time",
 			Help:      "Time to publish transfers (ms)",
+		}, []string{}),
+		PublishBlockTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+			Subsystem: "publication",
+			Name:      "block_pub_time",
+			Help:      "Time to publish block info (ms)",
 		}, []string{}),
 
 		NumTrade: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{

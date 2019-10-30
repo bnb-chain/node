@@ -12,6 +12,7 @@ type MockMarketDataPublisher struct {
 	ExecutionResultsPublished []*ExecutionResults
 	BlockFeePublished         []BlockFee
 	TransferPublished         []Transfers
+	BlockPublished            []*Block
 
 	Lock             *sync.Mutex // as mock publisher is only used in testing, its no harm to have this granularity Lock
 	MessagePublished uint32      // atomic integer used to determine the published messages
@@ -32,6 +33,8 @@ func (publisher *MockMarketDataPublisher) publish(msg AvroOrJsonMsg, tpe msgType
 		publisher.BlockFeePublished = append(publisher.BlockFeePublished, msg.(BlockFee))
 	case transferTpe:
 		publisher.TransferPublished = append(publisher.TransferPublished, msg.(Transfers))
+	case blockTpe:
+		publisher.BlockPublished = append(publisher.BlockPublished, msg.(*Block))
 	default:
 		panic(fmt.Errorf("does not support type %s", tpe.String()))
 	}
@@ -55,6 +58,7 @@ func NewMockMarketDataPublisher() (publisher *MockMarketDataPublisher) {
 		make([]*ExecutionResults, 0),
 		make([]BlockFee, 0),
 		make([]Transfers, 0),
+		make([]*Block, 0),
 		&sync.Mutex{},
 		0,
 	}

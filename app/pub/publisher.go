@@ -44,7 +44,7 @@ func Publish(
 			metrics.PublicationQueueSize.Set(float64(len(ToPublishCh)))
 		}
 
-		publishBlockTime := Timer(Logger, fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
+		publishTotalTime := Timer(Logger, fmt.Sprintf("publish market data, height=%d", marketData.height), func() {
 			// Implementation note: publication order are important here,
 			// DEX query service team relies on the fact that we publish orders before trades so that
 			// they can assign buyer/seller address into trade before persist into DB
@@ -149,6 +149,15 @@ func Publish(
 				}
 			}
 
+			if cfg.PublishBlock {
+				duration := Timer(Logger, "publish block", func() {
+					publishBlock(publisher, marketData.height, marketData.timestamp, marketData.block)
+				})
+				if metrics != nil {
+					metrics.PublishBlockTimeMs.Set(float64(duration))
+				}
+			}
+
 			if metrics != nil {
 				metrics.PublicationHeight.Set(float64(marketData.height))
 				blockInterval := time.Since(lastPublishedTime)
@@ -158,7 +167,7 @@ func Publish(
 		})
 
 		if metrics != nil {
-			metrics.PublishBlockTimeMs.Set(float64(publishBlockTime))
+			metrics.PublishTotalTimeMs.Set(float64(publishTotalTime))
 		}
 	}
 }
@@ -248,6 +257,12 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 func publishTransfers(publisher MarketDataPublisher, height, timestamp int64, transfers *Transfers) {
 	if transfers != nil {
 		publisher.publish(transfers, transferTpe, height, timestamp)
+	}
+}
+
+func publishBlock(publisher MarketDataPublisher, height, timestamp int64, block *Block) {
+	if block != nil {
+		publisher.publish(block, blockTpe, height, timestamp)
 	}
 }
 
