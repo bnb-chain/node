@@ -564,9 +564,12 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 		panic(errors.New("unlocked tokens cannot cover the expense"))
 	}
 	account.SetLockedCoins(newLocked)
-	account.SetCoins(account.GetCoins().
-		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)}).
-		Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, tran.unlock-tran.out)}))
+	accountCoin := account.GetCoins().
+		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)})
+	if remain := tran.unlock-tran.out; remain > 0 || !sdk.IsUpgrade(upgrade.FixZeroBalance) {
+		accountCoin = accountCoin.Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, remain)})
+	}
+	account.SetCoins(accountCoin)
 
 	kp.am.SetAccount(ctx, account)
 	kp.logger.Debug("Performed Trade Allocation", "account", account, "allocation", tran.String())
