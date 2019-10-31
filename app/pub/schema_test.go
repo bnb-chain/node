@@ -20,7 +20,7 @@ var testBlock = `
 
 func TestMain(m *testing.M) {
 	Logger = log.With("module", "pub")
-	Cfg = &config.PublicationConfig{}
+	Cfg = &config.PublicationConfig{KafkaVersion: "2.1.0"}
 	os.Exit(m.Run())
 }
 

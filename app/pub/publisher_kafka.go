@@ -38,8 +38,23 @@ type KafkaMarketDataPublisher struct {
 }
 
 func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config, err error) {
+	version, err := sarama.ParseKafkaVersion(Cfg.KafkaVersion)
+	if err != nil {
+		return nil, fmt.Errorf("%v. Please choose a version within: %s", err, sarama.SupportedVersions)
+	}
+	supported := false
+	for _, supportedVer := range sarama.SupportedVersions {
+		if version == supportedVer {
+			supported = true
+			break
+		}
+	}
+	if !supported {
+		return nil, fmt.Errorf("kafka version in app.toml is not supported. Please choose a version within: %s", sarama.SupportedVersions)
+	}
+
 	config = sarama.NewConfig()
-	config.Version = sarama.MaxVersion
+	config.Version = version
 	if config.ClientID, err = os.Hostname(); err != nil {
 		return
 	}
