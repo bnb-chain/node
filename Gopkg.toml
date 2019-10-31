@@ -25,19 +25,23 @@
 #   unused-packages = true
 
 [[override]]
+  name = "github.com/syndtr/goleveldb"
+  revision = "02440ea7a28525b3079783ad9c27083994a42366"
+
+[[override]]
   name = "github.com/tendermint/go-amino"
   source = "github.com/binance-chain/bnc-go-amino"
-  version = "=v0.14.1-binance.1"
+  version = "=v0.14.1-binance.2"
 
 [[override]]
   name = "github.com/tendermint/iavl"
   source = "github.com/binance-chain/bnc-tendermint-iavl"
-  version = "=v0.12.0-binance.2"
+  version = "=v0.12.0-binance.3"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
   source = "github.com/binance-chain/bnc-tendermint"
-  version = "=v0.31.5-binance.2"
+  branch = "develop"
 
 [[constraint]]
   name = "github.com/cosmos/cosmos-sdk"

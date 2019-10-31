@@ -12,7 +12,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
@@ -130,7 +129,6 @@ func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
 ) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	log.With("module", "dex").Info("Incoming New Order", "order", msg)
 	// this check costs least.
 	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
@@ -218,7 +216,6 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
 	}
 
-	log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
 	ord, err := keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
