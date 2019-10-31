@@ -136,6 +136,10 @@ kafkaPassword = "{{ .PublicationConfig.KafkaPassword }}"
 # stop process when publish to Kafka failed
 stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
 
+# please modify the default value into the version of Kafka you are using
+# kafka broker version, default (and most recommended) is 2.1.0. Minimal supported version could be 0.8.2.0
+kafkaVersion = "{{ .PublicationConfig.KafkaVersion }}"
+
 [log]
 
 # Write logs to console instead of file
@@ -253,6 +257,8 @@ type PublicationConfig struct {
 	StopOnKafkaFail bool   `mapstructure:"stopOnKafkaFail"`
 	KafkaUserName   string `mapstructure:"kafkaUserName"`
 	KafkaPassword   string `mapstructure:"kafkaPassword"`
+
+	KafkaVersion string `mapstructure:"kafkaVersion"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -293,6 +299,8 @@ func defaultPublicationConfig() *PublicationConfig {
 		KafkaUserName:   "",
 		KafkaPassword:   "",
 		StopOnKafkaFail: false,
+
+		KafkaVersion: "2.1.0",
 	}
 }
 
