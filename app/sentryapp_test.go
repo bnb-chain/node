@@ -34,7 +34,7 @@ func applyBlock(t *testing.T, app *SentryApplication, checkTxs [][]byte, recheck
 	app.EndBlock(abci.RequestEndBlock{})
 	app.Commit()
 	for i, tx := range recheckTxs {
-		resp := app.ReCheckTx(abci.RequestCheckTx{Tx: tx})
+		resp := app.ReCheckTx(abci.RequestCheckTx{Tx: tx, Type: abci.CheckTxType_Recheck})
 		assert.Equal(recheckRes[i], resp.Code == abci.CodeTypeOK, msg)
 	}
 	assert.Equal(cacheSize, len(app.cache.pool), msg)
