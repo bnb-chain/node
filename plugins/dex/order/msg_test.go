@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/binance-chain/node/common/testutils"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
@@ -17,6 +16,7 @@ import (
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
 	cmn "github.com/binance-chain/node/common"
+	"github.com/binance-chain/node/common/testutils"
 )
 
 func newCLIContext() context.CLIContext {

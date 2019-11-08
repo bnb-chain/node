@@ -5,13 +5,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/binance-chain/node/wire"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/gorilla/mux"
 	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
+
+	"github.com/binance-chain/node/wire"
 )
 
 // ValidatorQueryReqHandler queries the whole validator set

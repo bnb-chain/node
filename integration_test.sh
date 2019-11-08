@@ -29,7 +29,9 @@ function prepare_node() {
 
     $(cd "./${home}/config" && sed -i -e "s/BEP12Height = 9223372036854775807/BEP12Height = 1/g" app.toml)
     $(cd "./${home}/config" && sed -i -e "s/BEP3Height = 9223372036854775807/BEP3Height = 1/g" app.toml)
-	$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+    $(cd "./${home}/config" && sed -i -e "s/timeout_commit = \"1s\"/timeout_commit = \"500ms\"/g" config.toml)
+	#$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
+	#$(cd "./${home}/config" && sed -i -e "s/db_backend = \"goleveldb\"/db_backend = \"boltdb\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
 
@@ -80,6 +82,7 @@ sleep 10s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
+sleep 1s
 # multi send
 echo ${bob_addr}
 result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"100000000000000:BNB\"},{\"to\":\"${alice_addr}\",\"amount\":\"100000000000000:BNB\"}]")
@@ -91,6 +94,7 @@ result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${
 btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
 check_operation "Issue Token" "${result}" "${chain_operation_words}"
 
+sleep 1s
 # mint token
 result=$(expect ./mint.exp ${btc_symbol} 1000000000000000 bob ${chain_id} ${cli_home})
 check_operation "Mint Token" "${result}" "${chain_operation_words}"
@@ -191,22 +195,28 @@ balance2=$(echo "${result}" | jq -r '.value.base.coins[0].amount')
 
 check_operation "Check fee deduction for set account flags transaction" "$(expr $balance2 - $balance1)" "100000000"
 
+sleep 1s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
+sleep 1s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "123456abcd")
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
+sleep 1s
 # set an account flag which is bounded to transfer memo checker script
 result=$(expect ./set_account_flags.exp 0x01 bob ${chain_id} ${cli_home})
 check_operation "Set account flags" "${result}" "${chain_operation_words}"
 
+sleep 1s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "ERROR"
 
+sleep 1s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "123456abcd")
 check_operation "Send Token" "${result}" "ERROR:"
 
+sleep 1s
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr} "1234567890")
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
@@ -308,6 +318,6 @@ check_operation "Deposit to a single chain atomic swap" "${result}" "${chain_ope
 sleep 1s
 # Deposit to a single chain atomic swap
 result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
-check_operation "Deposit to a expired single chain atomic swap" "${result}" "ERROR"
+check_operation "Deposit to a deposited single chain atomic swap" "${result}" "ERROR"
 
 exit_test 0

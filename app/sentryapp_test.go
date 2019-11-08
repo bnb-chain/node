@@ -28,13 +28,13 @@ func applyBlock(t *testing.T, app *SentryApplication, checkTxs [][]byte, recheck
 	assert := assert.New(t)
 	app.BeginBlock(abci.RequestBeginBlock{})
 	for _, tx := range checkTxs {
-		resp := app.CheckTx(tx)
+		resp := app.CheckTx(abci.RequestCheckTx{Tx: tx})
 		assert.Equal(abci.CodeTypeOK, resp.Code, msg)
 	}
 	app.EndBlock(abci.RequestEndBlock{})
 	app.Commit()
 	for i, tx := range recheckTxs {
-		resp := app.ReCheckTx(tx)
+		resp := app.ReCheckTx(abci.RequestCheckTx{Tx: tx, Type: abci.CheckTxType_Recheck})
 		assert.Equal(recheckRes[i], resp.Code == abci.CodeTypeOK, msg)
 	}
 	assert.Equal(cacheSize, len(app.cache.pool), msg)

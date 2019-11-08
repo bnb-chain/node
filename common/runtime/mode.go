@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/binance-chain/node/common/log"
 	"github.com/tendermint/tendermint/config"
+
+	"github.com/binance-chain/node/common/log"
 )
 
 type Mode uint8
