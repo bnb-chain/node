@@ -566,7 +566,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	account.SetLockedCoins(newLocked)
 	accountCoin := account.GetCoins().
 		Plus(sdk.Coins{sdk.NewCoin(tran.inAsset, tran.in)})
-	if remain := tran.unlock-tran.out; remain > 0 || !sdk.IsUpgrade(upgrade.FixZeroBalance) {
+	if remain := tran.unlock - tran.out; remain > 0 || !sdk.IsUpgrade(upgrade.FixZeroBalance) {
 		accountCoin = accountCoin.Plus(sdk.Coins{sdk.NewCoin(tran.outAsset, remain)})
 	}
 	account.SetCoins(accountCoin)
