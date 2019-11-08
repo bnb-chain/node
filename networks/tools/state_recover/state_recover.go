@@ -92,7 +92,7 @@ func resetBlockChainState(height int64, rootDir string) {
 			return
 		}
 		defer blockDb.Close()
-		blockstore := blockchain.NewBlockStore(blockDb)
+		blockstore := tmstore.NewBlockStore(blockDb)
 		block := blockstore.LoadBlock(height)
 		nextBlock := blockstore.LoadBlock(height + 1)
 		blockState = latestState.Copy()
