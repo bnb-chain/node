@@ -12,7 +12,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
@@ -64,6 +63,12 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 
 	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
 		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
+	}
+
+	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
+		if utils.IsUnderMinNotional(msg.Price, msg.Quantity) {
+			return errors.New("notional value of the order is too small")
+		}
 	}
 
 	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
@@ -124,7 +129,6 @@ func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
 ) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	log.With("module", "dex").Info("Incoming New Order", "order", msg)
 	// this check costs least.
 	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
@@ -212,7 +216,6 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
 	}
 
-	log.With("module", "dex").Info("Incoming Cancel", "cancel", msg)
 	ord, err := keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()

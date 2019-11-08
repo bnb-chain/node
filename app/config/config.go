@@ -59,6 +59,14 @@ BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
 # Block height of BEP3 upgrade
 BEP3Height = {{ .UpgradeConfig.BEP3Height }}
+# Block height of FixSignBytesOverflow upgrade
+FixSignBytesOverflowHeight = {{ .UpgradeConfig.FixSignBytesOverflowHeight }}
+# Block height of LotSizeOptimization upgrade
+LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
+# Block height of changing listing rule upgrade
+ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
+# Block height of FixZeroBalanceHeight upgrade
+FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -106,14 +114,31 @@ publishTransfer = {{ .PublicationConfig.PublishTransfer }}
 transferTopic = "{{ .PublicationConfig.TransferTopic }}"
 transferKafka = "{{ .PublicationConfig.TransferKafka }}"
 
+# Whether we want publish block
+publishBlock = {{ .PublicationConfig.PublishBlock }}
+blockTopic = "{{ .PublicationConfig.BlockTopic }}"
+blockKafka = "{{ .PublicationConfig.BlockKafka }}"
+
 # Global setting
-publicationChannelSize = "{{ .PublicationConfig.PublicationChannelSize }}"
+publicationChannelSize = {{ .PublicationConfig.PublicationChannelSize }}
 publishKafka = {{ .PublicationConfig.PublishKafka }}
 publishLocal = {{ .PublicationConfig.PublishLocal }}
 # max size in megabytes of marketdata json file before rotate
 localMaxSize = {{ .PublicationConfig.LocalMaxSize }}
 # max days of marketdata json files to keep before deleted
 localMaxAge = {{ .PublicationConfig.LocalMaxAge }}
+
+# whether the kafka open SASL_PLAINTEXT auth
+auth = {{ .PublicationConfig.Auth }}
+kafkaUserName = "{{ .PublicationConfig.KafkaUserName }}"
+kafkaPassword = "{{ .PublicationConfig.KafkaPassword }}"
+
+# stop process when publish to Kafka failed
+stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
+
+# please modify the default value into the version of Kafka you are using
+# kafka broker version, default (and most recommended) is 2.1.0. Minimal supported version could be 0.8.2.0
+kafkaVersion = "{{ .PublicationConfig.KafkaVersion }}"
 
 [log]
 
@@ -207,6 +232,10 @@ type PublicationConfig struct {
 	TransferTopic   string `mapstructure:"transferTopic"`
 	TransferKafka   string `mapstructure:"transferKafka"`
 
+	PublishBlock bool   `mapstructure:"publishBlock"`
+	BlockTopic   string `mapstructure:"blockTopic"`
+	BlockKafka   string `mapstructure:"blockKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -223,6 +252,13 @@ type PublicationConfig struct {
 	LocalMaxSize int `mapstructure:"localMaxSize"`
 	// refer: https://github.com/natefinch/lumberjack/blob/7d6a1875575e09256dc552b4c0e450dcd02bd10e/lumberjack.go#L89-L94
 	LocalMaxAge int `mapstructure:"localMaxAge"`
+
+	Auth            bool   `mapstructure:"auth"`
+	StopOnKafkaFail bool   `mapstructure:"stopOnKafkaFail"`
+	KafkaUserName   string `mapstructure:"kafkaUserName"`
+	KafkaPassword   string `mapstructure:"kafkaPassword"`
+
+	KafkaVersion string `mapstructure:"kafkaVersion"`
 }
 
 func defaultPublicationConfig() *PublicationConfig {
@@ -247,12 +283,24 @@ func defaultPublicationConfig() *PublicationConfig {
 		TransferTopic:   "transfers",
 		TransferKafka:   "127.0.0.1:9092",
 
+		PublishBlock: false,
+		BlockTopic:   "block",
+		BlockKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
-		PublishLocal:           false,
-		LocalMaxSize:           1024,
-		LocalMaxAge:            7,
+
+		PublishLocal: false,
+		LocalMaxSize: 1024,
+		LocalMaxAge:  7,
+
+		Auth:            false,
+		KafkaUserName:   "",
+		KafkaPassword:   "",
+		StopOnKafkaFail: false,
+
+		KafkaVersion: "2.1.0",
 	}
 }
 
@@ -261,7 +309,8 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishAccountBalance ||
 		pubCfg.PublishOrderBook ||
 		pubCfg.PublishBlockFee ||
-		pubCfg.PublishTransfer
+		pubCfg.PublishTransfer ||
+		pubCfg.PublishBlock
 }
 
 type LogConfig struct {
@@ -306,19 +355,30 @@ type UpgradeConfig struct {
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
 	BEP10Height int64 `mapstructure:"BEP10Height"`
 	BEP19Height int64 `mapstructure:"BEP19Height"`
-
+	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
-	BEP3Height  int64 `mapstructure:"BEP3Height"`
+	// Archimedes Upgrade
+	BEP3Height int64 `mapstructure:"BEP3Height"`
+	// TODO: add upgrade name
+	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
+	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
+	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
+	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
+	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:  math.MaxInt64,
-		BEP9Height:  math.MaxInt64, //TODO change default when update
-		BEP10Height: math.MaxInt64,
-		BEP19Height: math.MaxInt64,
-		BEP12Height: math.MaxInt64,
-		BEP3Height:  math.MaxInt64,
+		BEP6Height:                 1,
+		BEP9Height:                 1,
+		BEP10Height:                1,
+		BEP19Height:                1,
+		BEP12Height:                1,
+		BEP3Height:                 1,
+		FixSignBytesOverflowHeight: math.MaxInt64,
+		LotSizeUpgradeHeight:       math.MaxInt64,
+		ListingRuleUpgradeHeight:   math.MaxInt64,
+		FixZeroBalanceHeight:       math.MaxInt64,
 	}
 }
 

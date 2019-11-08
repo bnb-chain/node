@@ -18,11 +18,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/blockchain"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/binance-chain/node/admin"
@@ -112,7 +112,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer}, baseAppOptions...),
+		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
 		Codec:              cdc,
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
@@ -179,7 +179,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
-			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir()))
+			publishers = append(publishers, pub.NewKafkaMarketDataPublisher(app.Logger, ServerContext.Config.DBDir(), app.publicationConfig.StopOnKafkaFail))
 		}
 		if app.publicationConfig.PublishLocal {
 			publishers = append(publishers, pub.NewLocalMarketDataPublisher(ServerContext.Config.RootDir, app.Logger, app.publicationConfig))
@@ -259,6 +259,10 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP12, upgradeConfig.BEP12Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, upgradeConfig.BEP19Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP3, upgradeConfig.BEP3Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixSignBytesOverflow, upgradeConfig.FixSignBytesOverflowHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -309,16 +313,16 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	// count back to days in config.
 	blockDB := baseapp.LoadBlockDB()
 	defer blockDB.Close()
-	blockStore := blockchain.NewBlockStore(blockDB)
-	txDB := baseapp.LoadTxDB()
-	defer txDB.Close()
+	blockStore := tmstore.NewBlockStore(blockDB)
+	stateDB := baseapp.LoadStateDB()
+	defer stateDB.Close()
 
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
 		blockStore,
-		txDB,
+		stateDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
 }
@@ -388,7 +392,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 					panic(err)
 				}
 				bz := app.Codec.MustMarshalBinaryLengthPrefixed(tx)
-				res := app.BaseApp.DeliverTx(bz)
+				res := app.BaseApp.DeliverTx(abci.RequestDeliverTx{Tx: bz})
 				if !res.IsOK() {
 					panic(res.Log)
 				}
@@ -417,9 +421,10 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 	}
 }
 
-func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
+func (app *BinanceChain) CheckTx(req abci.RequestCheckTx) (res abci.ResponseCheckTx) {
 	var result sdk.Result
 	var tx sdk.Tx
+	txBytes := req.Tx
 	// try to get the Tx first from cache, if succeed, it means it is PreChecked.
 	tx, ok := app.GetTxFromCache(txBytes)
 	if ok {
@@ -452,34 +457,37 @@ func (app *BinanceChain) CheckTx(txBytes []byte) (res abci.ResponseCheckTx) {
 	}
 
 	return abci.ResponseCheckTx{
-		Code: uint32(result.Code),
-		Data: result.Data,
-		Log:  result.Log,
-		Tags: result.Tags,
+		Code:   uint32(result.Code),
+		Data:   result.Data,
+		Log:    result.Log,
+		Events: result.Tags.ToEvents(),
 	}
 }
 
 // Implements ABCI
-func (app *BinanceChain) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
-	res = app.BaseApp.DeliverTx(txBytes)
+func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.DeliverTx(req)
+	txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 	if res.IsOK() {
 		// commit or panic
-		fees.Pool.CommitFee(cmn.HexBytes(tmhash.Sum(txBytes)).String())
+		fees.Pool.CommitFee(txHash)
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
-			app.processErrAbciResponseForPub(txBytes)
+			app.processErrAbciResponseForPub(req.Tx)
 		}
 	}
-
+	if app.publicationConfig.PublishBlock {
+		pub.Pool.AddTxRes(txHash, res)
+	}
 	return res
 }
 
 // PreDeliverTx implements extended ABCI for concurrency
 // PreCheckTx would perform decoding, signture and other basic verification
-func (app *BinanceChain) PreDeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
-	res = app.BaseApp.PreDeliverTx(txBytes)
+func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	res = app.BaseApp.PreDeliverTx(req)
 	if res.IsErr() {
-		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
+		txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 		app.Logger.Error("failed to process invalid tx during pre-deliver", "tx", txHash, "res", res.String())
 		// TODO(#446): comment out temporally for thread safety
 		//if app.publicationConfig.PublishOrderUpdates {
@@ -568,13 +576,15 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
-
+	fees.Pool.Clear()
+	// just clean it, no matter use it or not.
+	pub.Pool.Clean()
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
-		Tags:             tags,
+		Events:           tags.ToEvents(),
 	}
 }
 
@@ -750,6 +760,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 
 	var accountsToPublish map[string]pub.Account
 	var transferToPublish *pub.Transfers
+	var blockToPublish *pub.Block
 	var latestPriceLevels order.ChangedPriceLevelsMap
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
@@ -767,6 +778,11 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 			transferToPublish = pub.GetTransferPublished(app.Pool, height, blockTime)
 		}
 
+		if app.publicationConfig.PublishBlock {
+			header := ctx.BlockHeader()
+			blockHash := ctx.BlockHash()
+			blockToPublish = pub.GetBlockPublished(app.Pool, header, blockHash)
+		}
 		if app.publicationConfig.PublishOrderBook {
 			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 		}
@@ -799,7 +815,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		latestPriceLevels,
 		blockFee,
 		app.DexKeeper.RoundOrderFees,
-		transferToPublish)
+		transferToPublish,
+		blockToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {

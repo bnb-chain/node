@@ -333,9 +333,11 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 				panic(err)
 			}
 			var pid string
-			for _, tag := range proposalJson.Response.Tags {
-				if string(tag.Key) == "proposal-id" {
-					pid = string(tag.Value)
+			for _, event := range proposalJson.Response.Events {
+				for _, pair := range event.Attributes {
+					if string(pair.Key) == "proposal-id" {
+						pid = string(pair.Value)
+					}
 				}
 			}
 			time.Sleep(stime * time.Millisecond)

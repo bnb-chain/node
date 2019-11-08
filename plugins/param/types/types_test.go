@@ -3,8 +3,9 @@ package types
 import (
 	"testing"
 
-	"github.com/binance-chain/node/common/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 func TestFixedFeeParamTypeCheck(t *testing.T) {

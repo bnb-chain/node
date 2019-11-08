@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
@@ -24,7 +23,7 @@ func Test_Expire_1(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -106,7 +105,7 @@ func Test_Expire_2a(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -172,7 +171,7 @@ func Test_Expire_2b(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -238,7 +237,7 @@ func Test_Expire_3(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -388,7 +387,7 @@ func Test_Expire_4a(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -453,7 +452,7 @@ func Test_Expire_4b(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -487,7 +486,7 @@ func Test_Expire_5(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 1, tNow)
 
@@ -533,7 +532,7 @@ func Test_Expire_6(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 

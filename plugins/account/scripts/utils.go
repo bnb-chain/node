@@ -16,7 +16,7 @@ func isFlagEnabled(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, 
 	if !ok {
 		return false
 	}
-	if account.GetFlags() & targetFlag == 0 {
+	if account.GetFlags()&targetFlag == 0 {
 		return false
 	}
 	return true

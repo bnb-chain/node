@@ -2,7 +2,6 @@ package cli
 
 import "fmt"
 
-
 func setFlagBits(flags uint64, targetFlag uint64) (uint64, error) {
 	enabledFlags := flags | targetFlag
 	if flags == enabledFlags {

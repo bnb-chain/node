@@ -2,11 +2,11 @@ package apptest
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
@@ -26,7 +26,7 @@ func Test_Expire_1_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -52,10 +52,12 @@ func Test_Expire_1_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	// testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(5, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -95,10 +97,11 @@ func Test_Expire_1_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 6, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 	transfers = make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(5, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -125,7 +128,7 @@ func Test_Expire_2a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -160,10 +163,12 @@ func Test_Expire_2a_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(5, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -194,7 +199,7 @@ func Test_Expire_2aa_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -293,7 +298,7 @@ func Test_Expire_2b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -328,10 +333,12 @@ func Test_Expire_2b_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(5, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -362,7 +369,7 @@ func Test_Expire_2bb_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -467,7 +474,7 @@ func Test_Expire_3_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -558,10 +565,12 @@ func Test_Expire_3_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(10, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -625,7 +634,7 @@ func Test_Expire_4a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -633,10 +642,12 @@ func Test_Expire_4a_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(3, len(transfers))
 
@@ -695,7 +706,7 @@ func Test_Expire_4b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 2, tNow)
 
@@ -703,10 +714,12 @@ func Test_Expire_4b_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(3, len(transfers))
 
@@ -736,7 +749,7 @@ func Test_Expire_5a_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 1, tNow)
 
@@ -784,7 +797,7 @@ func Test_Expire_5b_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextB(addr, ctx, 1, tNow)
 
@@ -854,7 +867,7 @@ func Test_Expire_6_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -878,10 +891,12 @@ func Test_Expire_6_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(1, len(transfers))
 	for i := 0; i < len(transfers); i++ {
@@ -911,7 +926,7 @@ func Test_Expire_7_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -944,14 +959,15 @@ func Test_Expire_7_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(2, len(transfers))
 	for _, transfer := range transfers {
-		fmt.Println(transfer.Oid, transfer.Fee.Tokens[0].Denom)
 		if transfer.Fee.Tokens[0].Denom == "ETH-000" {
 			// eth expire fee: 0.001 bnb, 0.001/15 = 0.00006666 eth
 			assert.Equal(int64(0.00006666e8), transfer.Fee.Tokens[0].Amount)
@@ -988,7 +1004,7 @@ func Test_Expire_8_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 
@@ -1027,10 +1043,12 @@ func Test_Expire_8_new(t *testing.T) {
 
 	ctx = UpdateContextB(addr, ctx, 3, tNow.AddDate(0, 0, 3))
 
-	//testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	var m sync.Mutex
 	transfers := make([]*order.Transfer, 0)
 	testApp.DexKeeper.ExpireOrders(ctx, ctx.BlockHeader().Time, func(transfer order.Transfer) {
+		m.Lock()
 		transfers = append(transfers, &transfer)
+		m.Unlock()
 	})
 	assert.Equal(3, len(transfers))
 	assert.Equal("BNB", transfers[0].Fee.Tokens[0].Denom)
@@ -1070,7 +1088,7 @@ func Test_Expire_9_new(t *testing.T) {
 
 	tNow := time.Now()
 
-	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0,0,-1)})
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -1)})
 
 	ctx = UpdateContextC(addr, ctx, 1)
 

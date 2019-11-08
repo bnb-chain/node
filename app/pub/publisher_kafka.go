@@ -30,14 +30,31 @@ type KafkaMarketDataPublisher struct {
 	executionResultsCodec *goavro.Codec
 	blockFeeCodec         *goavro.Codec
 	transfersCodec        *goavro.Codec
+	blockCodec            *goavro.Codec
 
+	failFast         bool
 	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
 	producers        map[string]sarama.SyncProducer // topic -> producer
 }
 
 func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config, err error) {
+	version, err := sarama.ParseKafkaVersion(Cfg.KafkaVersion)
+	if err != nil {
+		return nil, fmt.Errorf("%v. Please choose a version within: %s", err, sarama.SupportedVersions)
+	}
+	supported := false
+	for _, supportedVer := range sarama.SupportedVersions {
+		if version == supportedVer {
+			supported = true
+			break
+		}
+	}
+	if !supported {
+		return nil, fmt.Errorf("kafka version in app.toml is not supported. Please choose a version within: %s", sarama.SupportedVersions)
+	}
+
 	config = sarama.NewConfig()
-	config.Version = sarama.MaxVersion
+	config.Version = version
 	if config.ClientID, err = os.Hostname(); err != nil {
 		return
 	}
@@ -48,6 +65,13 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	config.Producer.Return.Successes = true
 	config.Producer.Retry.Max = 20
 	config.Producer.Compression = sarama.CompressionGZIP
+
+	if Cfg.Auth {
+		config.Net.SASL.Enable = true
+		config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+		config.Net.SASL.User = Cfg.KafkaUserName
+		config.Net.SASL.Password = Cfg.KafkaPassword
+	}
 
 	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection
 	// to make sure messages won't out-of-order
@@ -104,6 +128,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishBlock {
+		if _, ok := publisher.producers[Cfg.BlockTopic]; !ok {
+			publisher.producers[Cfg.BlockTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create blocks producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -139,6 +173,9 @@ func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tp
 			Logger.Error("failed to publish, tring to log essential message", "topic", topic, "msg", avroMessage.String(), "err", err)
 			if essMsg, ok := avroMessage.(EssMsg); ok {
 				publisher.publishEssentialMsg(essMsg, topic, tpe, height, timestamp)
+			}
+			if publisher.failFast {
+				panic(fmt.Sprintf("publish kafka message failed %v", err))
 			}
 		}
 	} else {
@@ -182,6 +219,8 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.BlockFeeTopic
 	case transferTpe:
 		topic = Cfg.TransferTopic
+	case blockTpe:
+		topic = Cfg.BlockTopic
 	}
 	return
 }
@@ -258,6 +297,8 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.blockFeeCodec
 	case transferTpe:
 		codec = publisher.transfersCodec
+	case blockTpe:
+		codec = publisher.blockCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -279,17 +320,20 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 		return err
 	} else if publisher.transfersCodec, err = goavro.NewCodec(transfersSchema); err != nil {
 		return err
+	} else if publisher.blockCodec, err = goavro.NewCodec(blockDatasSchema); err != nil {
+		return err
 	}
 	return nil
 }
 
 func NewKafkaMarketDataPublisher(
-	logger log.Logger, dbDir string) (publisher *KafkaMarketDataPublisher) {
+	logger log.Logger, dbDir string, failFast bool) (publisher *KafkaMarketDataPublisher) {
 
 	sarama.Logger = saramaLogger{logger.With("module", "sarama")}
 	publisher = &KafkaMarketDataPublisher{
 		producers:        make(map[string]sarama.SyncProducer),
 		essentialLogPath: filepath.Join(dbDir, essentialLogDir),
+		failFast:         failFast,
 	}
 
 	if err := publisher.initAvroCodecs(); err != nil {

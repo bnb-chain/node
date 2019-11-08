@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/binance-chain/node/common/utils"
@@ -63,6 +62,9 @@ func Test_Cancel_1_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99810.9996e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(189e8), GetLocked(ctx, addr0, "BNB"))
+	// endblock will do clean work
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+
 }
 
 /*
@@ -106,6 +108,7 @@ func Test_Cancel_2_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99945.9998e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(54e8), GetLocked(ctx, addr0, "BNB"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -149,6 +152,7 @@ func Test_Cancel_3_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99879.9998e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(120e8), GetLocked(ctx, addr0, "BNB"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -194,6 +198,7 @@ func Test_Cancel_4_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99999.9968e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -239,6 +244,7 @@ func Test_Cancel_5_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99999.9968e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -313,6 +319,7 @@ func Test_Cancel_6_new(t *testing.T) {
 	assert.Equal(int64(99984e8), GetAvail(ctx, addr1, "BTC-000"))
 	assert.Equal(int64(100015.992e8), GetAvail(ctx, addr1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr1, "BTC-000"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -381,6 +388,7 @@ func Test_Cancel_7_new(t *testing.T) {
 	assert.Equal(int64(99999.9996e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BTC-000"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -421,6 +429,7 @@ func Test_Cancel_8_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(0), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }
 
 /*
@@ -461,4 +470,5 @@ func Test_Cancel_9_new(t *testing.T) {
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(0), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BTC-000"))
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 }

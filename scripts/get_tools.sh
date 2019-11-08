@@ -39,9 +39,6 @@ installFromGithub() {
 }
 
 ######################## COMMON TOOLS ########################################
-installFromGithub golang/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2 cmd/dep
-
-## make test_with_deadlock
 ## XXX: https://github.com/tendermint/tendermint/issues/3242
 installFromGithub petermattis/goid b0b1615b78e5ee59739545bb38426383b2cda4c9
 installFromGithub sasha-s/go-deadlock d68e2bc52ae3291765881b9056f2c1527f245f1e

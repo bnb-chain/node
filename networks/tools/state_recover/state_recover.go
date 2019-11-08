@@ -10,7 +10,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/iavl"
-	"github.com/tendermint/tendermint/blockchain"
 	cfg "github.com/tendermint/tendermint/config"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -19,6 +18,7 @@ import (
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tendermint/tendermint/state"
+	tmstore "github.com/tendermint/tendermint/store"
 
 	"github.com/binance-chain/node/common"
 )
@@ -92,7 +92,7 @@ func resetBlockChainState(height int64, rootDir string) {
 			return
 		}
 		defer blockDb.Close()
-		blockstore := blockchain.NewBlockStore(blockDb)
+		blockstore := tmstore.NewBlockStore(blockDb)
 		block := blockstore.LoadBlock(height)
 		nextBlock := blockstore.LoadBlock(height + 1)
 		blockState = latestState.Copy()
@@ -170,7 +170,7 @@ func resetBlockStoreState(height int64, rootDir string) {
 	}
 	defer blockDb.Close()
 
-	blockState := blockchain.LoadBlockStoreStateJSON(blockDb)
+	blockState := tmstore.LoadBlockStoreStateJSON(blockDb)
 	blockState.Height = height
 	blockState.Save(blockDb)
 }

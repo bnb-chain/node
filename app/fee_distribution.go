@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/stake"
+
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
@@ -50,7 +51,6 @@ func (vac *ValAddrCache) GetAccAddr(ctx sdk.Context, consAddr sdk.ConsAddress) s
 
 func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
-	defer fees.Pool.Clear()
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
 		// no fees in this block
