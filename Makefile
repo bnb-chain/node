@@ -163,6 +163,8 @@ test:
 
 # uses https://github.com/sasha-s/go-deadlock/ to detect potential deadlocks
 set_with_deadlock:
+	cp go.mod go.mod_bak
+	cp go.sum go.sum_bak
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.RWMutex/deadlock.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.Mutex/deadlock.Mutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
@@ -173,6 +175,8 @@ cleanup_after_test_with_deadlock:
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.Mutex/sync.Mutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
 	find . -name "*.go.mutex_bak" | grep -v "vendor/" | xargs rm
+	mv go.mod_bak go.mod
+	mv go.sum_bak go.sum
 
 
 test_race:
