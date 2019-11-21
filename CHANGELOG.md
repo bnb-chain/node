@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.3-hf.1
+
+BUG FIXES
+* [\#693](https://github.com/binance-chain/node/pull/693) [Deps] hot fix for hard fork in stdTx getSigner
+
+## 0.6.3
+
+BUG FIXES
+* [\#677](https://github.com/binance-chain/node/pull/677) [Dex] fix account may have currency with zero balance 
+
+IMPROVEMENTS
+* [\#672](https://github.com/binance-chain/node/pull/672) [DEX] Change listing rule
+* [\#666](https://github.com/binance-chain/node/pull/666) [Deps] Upgrade tendermint to 0.32.3
+* [\#667](https://github.com/binance-chain/node/pull/667) [Pub] publish block info for audit
+* [\#686](https://github.com/binance-chain/node/pull/686) [Pub] expose kafka version in publisher setting 
+
 ## 0.6.2-hf.1
 
 BUG FIXES
