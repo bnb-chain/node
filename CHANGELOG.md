@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.3-hf.1
+
+BUG FIXES
+* [\#693](https://github.com/binance-chain/node/pull/693) [Deps] hot fix for hard fork in stdTx getSigner
+
 ## 0.6.3
 
 BUG FIXES
