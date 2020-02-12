@@ -170,7 +170,6 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 		symbol := strings.ToUpper(m.Symbol)
 		kp.allOrders[symbol][m.Id] = &orderHolder
 		if m.CreatedHeight == height {
-			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
 			if m.TimeInForce == TimeInForce.IOC {
 				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
 			}

@@ -22,6 +22,8 @@ func Test_Overflow_1a_new(t *testing.T) {
 	_, ctx, accs := SetupTest_new(1)
 	addr0 := accs[0].GetAddress()
 
+	initBuys, _ := GetOrderBook("BTC-000_BNB")
+	assert.Equal(0, len(initBuys))
 	// 10 * 1e18 > int64 max
 	for i := 0; i < 10; i++ {
 		oid := GetOrderId(addr0, int64(i), ctx)
@@ -34,8 +36,9 @@ func Test_Overflow_1a_new(t *testing.T) {
 			assert.True(strings.Contains(res.Log, "order quantity is too large to be placed on this price level"))
 		}
 	}
-
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 	buys, _ := GetOrderBook("BTC-000_BNB")
+	fmt.Printf("　sell size: %d\n", len(buys))
 	assert.Equal(utils.Fixed8(9e18), buys[0].qty)
 }
 
@@ -73,6 +76,8 @@ func Test_Overflow_1b_new(t *testing.T) {
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, int64(i+1)))
 	}
 
 	oidS := GetOrderId(addr1, 0, ctx)
@@ -81,9 +86,11 @@ func Test_Overflow_1b_new(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
 
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidS))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidS, 2, int64(1)))
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(10, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, addr0, "BNB"))
@@ -144,6 +151,8 @@ func Test_Overflow_1c_new(t *testing.T) {
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, int64(i+1)))
 	}
 
 	oidS1 := GetOrderId(addr1, 0, ctx)
@@ -151,10 +160,11 @@ func Test_Overflow_1c_new(t *testing.T) {
 	res, err := testClient.DeliverTxSync(msgS1, testApp.Codec)
 	assert.NoError(err)
 	assert.Equal(uint32(0), res.Code)
-
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidS1))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidS1, 2, int64(1)))
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(10, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(94500e8), GetAvail(ctx, addr0, "BNB"))
@@ -172,6 +182,7 @@ func Test_Overflow_1c_new(t *testing.T) {
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(10, len(buys))
 	assert.Equal(0, len(sells))
+	assert.Equal(false, OrderExists("BTC-000_BNB", oidS1))
 
 	// fee charged from receiving token btc-000, as fee in bnb is < 1
 	assert.Equal(int64(100009.9900e8), GetAvail(ctx, addr0, "BTC-000"))
@@ -208,8 +219,12 @@ func Test_Overflow_1d_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB1))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidS1))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidB1, 1, 1e18))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidS1, 2, 1e18))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -220,6 +235,10 @@ func Test_Overflow_1d_new(t *testing.T) {
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
+	assert.Equal(false, OrderExists("BTC-000_BNB", oidB1))
+	assert.Equal(false, RoundOrderExists("BTC-000_BNB", oidB1, 1, 1e18))
+	assert.Equal(false, OrderExists("BTC-000_BNB", oidS1))
+	assert.Equal(false, RoundOrderExists("BTC-000_BNB", oidS1, 2, 1e18))
 
 	assert.Equal(int64(10000000000001), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(1999999989995000000), GetAvail(ctx, addr0, "BNB"))
@@ -244,10 +263,18 @@ func Test_Overflow_2a_new(t *testing.T) {
 		res, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 1e18))
 	}
 
 	_, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(utils.Fixed8(10e8), sells[0].qty)
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 1e18)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(10e8), sum)
 	// grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max
 }
 
@@ -267,7 +294,7 @@ func Test_Overflow_2b_new(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(uint32(0), res.Code)
 	}
-
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 	_, sells := GetOrderBook("BTC-000_BNB")
 	assert.Equal(5, len(sells))
 	// grand these orders, when the total amount (q*p + q*p + ... ) of a pair from one address is greater than int64 max
@@ -296,8 +323,13 @@ func Test_Overflow_3_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_ETH-000")
-	assert.Equal(1, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+
+	assert.Equal(true, OrderExists("BTC-000_ETH-000", oidB1))
+	assert.Equal(true, OrderExists("BTC-000_ETH-000", oidS1))
+	assert.Equal(true, RoundOrderExists("BTC-000_ETH-000", oidB1, 1, 10e8))
+	assert.Equal(true, RoundOrderExists("BTC-000_ETH-000", oidS1, 2, 10e8))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -318,6 +350,10 @@ func Test_Overflow_3_new(t *testing.T) {
 	buys, sells = GetOrderBook("BTC-000_ETH-000")
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidB1))
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidS1))
+	assert.Equal(false, RoundOrderExists("BTC-000_ETH-000", oidB1, 1, 10e8))
+	assert.Equal(false, RoundOrderExists("BTC-000_ETH-000", oidS1, 2, 10e8))
 
 	assert.Equal(int64(99990e8), GetAvail(ctx, addr0, "ETH-000"))
 	assert.Equal(int64(100000.9990e8), GetAvail(ctx, addr0, "BTC-000"))
@@ -352,9 +388,12 @@ func Test_Overflow_4_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_ETH-000")
-	assert.Equal(1, len(buys))
-	assert.Equal(1, len(sells))
-
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(true, OrderExists("BTC-000_ETH-000", oidB1))
+	assert.Equal(true, OrderExists("BTC-000_ETH-000", oidS1))
+	assert.Equal(true, RoundOrderExists("BTC-000_ETH-000", oidB1, 1, 10e8))
+	assert.Equal(true, RoundOrderExists("BTC-000_ETH-000", oidS1, 2, 10e8))
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_ETH-000")
@@ -364,7 +403,10 @@ func Test_Overflow_4_new(t *testing.T) {
 	buys, sells = GetOrderBook("BTC-000_ETH-000")
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
-
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidB1))
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidS1))
+	assert.Equal(false, RoundOrderExists("BTC-000_ETH-000", oidB1, 1, 10e8))
+	assert.Equal(false, RoundOrderExists("BTC-000_ETH-000", oidS1, 2, 10e8))
 	assert.Equal(int64(100000.9990e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99990e8), GetAvail(ctx, addr0, "ETH-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BNB"))
@@ -410,9 +452,14 @@ func Test_Overflow_5_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB1))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB2))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidS1))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidB1, 1, 5))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidB2, 1, 4))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidS1, 2, 3))
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
@@ -422,7 +469,12 @@ func Test_Overflow_5_new(t *testing.T) {
 	buys, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys))
 	assert.Equal(0, len(sells))
-
+	assert.Equal(false, OrderExists("BTC-000_BNB", oidB1))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB2))
+	assert.Equal(false, OrderExists("BTC-000_BNB", oidS1))
+	assert.Equal(false, RoundOrderExists("BTC-000_BNB", oidB1, 1, 5))
+	assert.Equal(false, RoundOrderExists("BTC-000_BNB", oidB2, 1, 4))
+	assert.Equal(false, RoundOrderExists("BTC-000_BNB", oidS1, 2, 3))
 	assert.Equal(int64(9e18), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(96898.6500e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(400e8), GetLocked(ctx, addr0, "BNB"))

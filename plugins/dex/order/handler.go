@@ -96,10 +96,20 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *Keeper, acc common.Named
 		}
 
 		pl := keeper.GetPriceLevel(symbol, msg.Side, msg.Price)
+
 		totalQty := msg.Quantity
 		if pl != nil {
 			totalQty += pl.TotalLeavesQty()
 		}
+		if sdk.IsUpgrade(upgrade.BEP19) {
+			roundOrders := keeper.GetRoundPriceLevelOrders(symbol, msg.Side, msg.Price)
+			for _, orderId := range roundOrders {
+				if orderInfo, ok := keeper.OrderExists(symbol, orderId); ok {
+					totalQty += orderInfo.Quantity - orderInfo.CumQty
+				}
+			}
+		}
+
 		if totalQty < 0 {
 			// overflow, this is a implicit requirement from the match engine.
 			return errors.New("order quantity is too large to be placed on this price level")
@@ -218,7 +228,11 @@ func handleCancelOrder(
 
 	ord, err := keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	if err != nil {
-		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
+		orderInfo, ok := keeper.OrderExists(origOrd.Symbol, origOrd.Id)
+		if !ok {
+			return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
+		}
+		ord = convertToOrderPart(orderInfo)
 	}
 	transfer := TransferFromCanceled(ord, origOrd, false)
 	sdkError := keeper.doTransfer(ctx, &transfer)
@@ -255,4 +269,9 @@ func handleCancelOrder(
 	}
 
 	return sdk.Result{}
+}
+
+func convertToOrderPart(orderInfo OrderInfo) me.OrderPart {
+	return me.OrderPart{Id: orderInfo.Id, Time: orderInfo.CreatedTimestamp,
+		Qty: orderInfo.Quantity, CumQty: orderInfo.CumQty}
 }

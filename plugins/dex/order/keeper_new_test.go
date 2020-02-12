@@ -5,22 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/state"
-	tmstore "github.com/tendermint/tendermint/store"
-	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/fees"
@@ -29,51 +17,15 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
-func MakeCodec() *wire.Codec {
-	var cdc = wire.NewCodec()
-
-	wire.RegisterCrypto(cdc) // Register crypto.
-	bank.RegisterCodec(cdc)
-	sdk.RegisterCodec(cdc) // Register Msgs
-	tokens.RegisterWire(cdc)
-	types.RegisterWire(cdc)
-	cdc.RegisterConcrete(NewOrderMsg{}, "dex/NewOrder", nil)
-	cdc.RegisterConcrete(CancelOrderMsg{}, "dex/CancelOrder", nil)
-
-	cdc.RegisterConcrete(OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
-	cdc.RegisterConcrete(ActiveOrders{}, "dex/ActiveOrders", nil)
-
-	return cdc
-}
-
-func MakeKeeper(cdc *wire.Codec) *Keeper {
-	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	codespacer := sdk.NewCodespacer()
-	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
-	return keeper
-}
-
-func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
-	if memDB == nil {
-		memDB = db.NewMemDB()
-	}
-	ms := sdkstore.NewCommitMultiStore(memDB)
-	ms.MountStoreWithDB(common.DexStoreKey, sdk.StoreTypeIAVL, nil)
-	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, nil)
-	ms.LoadLatestVersion()
-	cms := ms.CacheMultiStore()
-	return cms
-}
-
-func TestKeeper_MatchFailure(t *testing.T) {
+func TestNewKeeper_MatchFailure(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -119,7 +71,9 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	assert.Equal(7, i)
 }
 
-func TestKeeper_MarkBreatheBlock(t *testing.T) {
+func TestNewKeeper_MarkBreatheBlock(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -142,7 +96,9 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	assert.Equal(int64(43), h)
 }
 
-func Test_compressAndSave(t *testing.T) {
+func TestNew_compressAndSave(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	//keeper := MakeKeeper(cdc)
@@ -175,23 +131,9 @@ func Test_compressAndSave(t *testing.T) {
 	assert.True(len(bz) < len(bytes))
 }
 
-func MakeAddress() (sdk.AccAddress, secp256k1.PrivKeySecp256k1) {
-	privKey := secp256k1.GenPrivKey()
-	pubKey := privKey.PubKey()
-	addr := sdk.AccAddress(pubKey.Address())
-	return addr, privKey
-}
-
-func effectedStoredKVPairs(keeper *Keeper, ctx sdk.Context, keys []string) map[string][]byte {
-	res := make(map[string][]byte, len(keys))
-	store := ctx.KVStore(keeper.storeKey)
-	for _, key := range keys {
-		res[key] = store.Get([]byte(key))
-	}
-	return res
-}
-
-func TestKeeper_SnapShotOrderBook(t *testing.T) {
+func TestNewKeeper_SnapShotOrderBook(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -209,22 +151,28 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)
+	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 980000, 1000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)
+	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 970000, 5000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)
+	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 950000, 5000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.RoundOrderExists("XYZ-000_BNB", Side.BUY, 96000, "123462")
 	assert.Equal(1, len(keeper.allOrders))
 	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
+	keeper.matchAndDistributeTrades(false, 42, 0)
+
 	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
+	t.Log(err)
 	storedKVPairs1 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys1)
 	effectedStoredKeys2, err := keeper.SnapShotOrderBook(ctx, 43)
+	t.Log(err)
 	storedKVPairs2 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys2)
+
 	assert.Equal(storedKVPairs1, storedKVPairs2)
 
 	assert.Nil(err)
@@ -233,7 +181,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(7, len(keeper2.allOrders["XYZ-000_BNB"]))
 	o123459 := keeper2.allOrders["XYZ-000_BNB"]["123459"]
-	assert.Equal(int64(98000), o123459.Price)
+	assert.Equal(int64(980000), o123459.Price)
 	assert.Equal(int64(1000000), o123459.Quantity)
 	assert.Equal(int64(0), o123459.CumQty)
 	assert.Equal(int64(42), o123459.CreatedHeight)
@@ -247,11 +195,13 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(3, len(sells))
 	assert.Equal(int64(102000), buys[0].Price)
 	assert.Equal(int64(96000), buys[3].Price)
-	assert.Equal(int64(95000), sells[0].Price)
-	assert.Equal(int64(98000), sells[2].Price)
+	assert.Equal(int64(950000), sells[0].Price)
+	assert.Equal(int64(980000), sells[2].Price)
 }
 
-func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
+func TestNewKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -299,7 +249,9 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(int64(102000), buys[0].Price)
 }
 
-func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
+func TestNewKeeper_SnapShotOrderBookEmpty(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -333,7 +285,9 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert.Equal(0, len(sells))
 }
 
-func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
+func TestNewKeeper_LoadOrderBookSnapshot(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -347,120 +301,9 @@ func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	assert.Nil(err)
 }
 
-func NewMockBlock(txs []auth.StdTx, height int64, commit *tmtypes.Commit, cdc *wire.Codec) *tmtypes.Block {
-	tmTxs := make([]tmtypes.Tx, len(txs))
-	for i, tx := range txs {
-		tmTxs[i], _ = cdc.MarshalBinaryLengthPrefixed(tx)
-	}
-	return tmtypes.MakeBlock(height, tmTxs, commit, nil)
-}
-
-const BlockPartSize = 65536
-
-func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k1.PrivKeySecp256k1) auth.StdTx {
-	signMsg := txbuilder.StdSignMsg{
-		ChainID:       "chainID1",
-		AccountNumber: accountNumber,
-		Sequence:      seqNum,
-		Msgs:          msgs,
-		Memo:          "Memo1",
-	}
-	sig, _ := privKey.Sign(signMsg.Bytes())
-	sigs := []auth.StdSignature{{
-		PubKey:        privKey.PubKey(),
-		Signature:     sig,
-		AccountNumber: accountNumber,
-		Sequence:      seqNum,
-	}}
-	tx := auth.NewStdTx(signMsg.Msgs, sigs, signMsg.Memo, 0, nil)
-	return tx
-}
-
-func GenerateBlocksAndSave(storedb db.DB, withInvalidTx bool, cdc *wire.Codec) (*tmstore.BlockStore, db.DB) {
-	blockStore := tmstore.NewBlockStore(storedb)
-	statedb := db.NewMemDB()
-	lastCommit := &tmtypes.Commit{}
-	buyerAdd, buyerPrivKey := MakeAddress()
-	sellerAdd, sellerPrivKey := MakeAddress()
-	txs := make([]auth.StdTx, 1)
-	height := int64(1)
-	block := NewMockBlock([]auth.StdTx{{Msgs: []sdk.Msg{bank.MsgSend{}}}}, height, lastCommit, cdc)
-	deliverRes := state.ABCIResponses{DeliverTx: []*abci.ResponseDeliverTx{{Code: 0, Log: "ok"}}}
-	blockParts := block.MakePartSet(BlockPartSize)
-	state.SaveABCIResponses(statedb, height, &deliverRes)
-	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
-	height++
-	txs = make([]auth.StdTx, 7)
-	msgs01 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 3000000)}
-	txs[0] = MakeTxFromMsg(msgs01, int64(100), int64(9001), buyerPrivKey)
-	msgs02 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123457", Side.BUY, "XYZ-000_BNB", 101000, 1000000)}
-	txs[1] = MakeTxFromMsg(msgs02, int64(100), int64(9002), buyerPrivKey)
-	msgs03 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)}
-	txs[2] = MakeTxFromMsg(msgs03, int64(1001), int64(7001), sellerPrivKey)
-	msgs04 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)}
-	txs[3] = MakeTxFromMsg(msgs04, int64(100), int64(9003), buyerPrivKey)
-	msgs05 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)}
-	txs[4] = MakeTxFromMsg(msgs05, int64(1001), int64(7002), sellerPrivKey)
-	msgs06 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)}
-	txs[5] = MakeTxFromMsg(msgs06, int64(1001), int64(7003), sellerPrivKey)
-	msgs07 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)}
-	txs[6] = MakeTxFromMsg(msgs07, int64(100), int64(9004), buyerPrivKey)
-	block = NewMockBlock(txs, height, lastCommit, cdc)
-	blockParts = block.MakePartSet(BlockPartSize)
-	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
-	deliverRes = state.ABCIResponses{
-		DeliverTx: []*abci.ResponseDeliverTx{
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-		},
-	}
-	if withInvalidTx {
-		deliverRes.DeliverTx[1] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
-		deliverRes.DeliverTx[3] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
-		deliverRes.DeliverTx[5] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
-	}
-	state.SaveABCIResponses(statedb, height, &deliverRes)
-	//blockID := tmtypes.BlockID{Hash: block.Hash(), PartsHeader: blockParts.Header()}
-	//lastCommit = tmtypes.MakeCommit(block)
-	height++
-	msgs11 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123463", Side.BUY, "XYZ-000_BNB", 96000, 2500000)}
-	msgs12 := []sdk.Msg{NewNewOrderMsg(buyerAdd, "123464", Side.BUY, "XYZ-000_BNB", 97000, 1500000)}
-	msgs13 := []sdk.Msg{NewNewOrderMsg(sellerAdd, "123465", Side.SELL, "XYZ-000_BNB", 107000, 1500000)}
-	msgs14 := []sdk.Msg{NewCancelOrderMsg(buyerAdd, "XYZ-000_BNB", "123462")}
-	msgs15 := []sdk.Msg{NewCancelOrderMsg(sellerAdd, "XYZ-000_BNB", "123465")}
-	txs = make([]auth.StdTx, 5)
-	txs[0] = MakeTxFromMsg(msgs11, int64(100), int64(9005), buyerPrivKey)
-	txs[1] = MakeTxFromMsg(msgs12, int64(100), int64(9006), buyerPrivKey)
-	txs[2] = MakeTxFromMsg(msgs13, int64(100), int64(7004), sellerPrivKey)
-	txs[3] = MakeTxFromMsg(msgs14, int64(100), int64(9007), buyerPrivKey)
-	txs[4] = MakeTxFromMsg(msgs15, int64(100), int64(7005), sellerPrivKey)
-	block = NewMockBlock(txs, height, lastCommit, cdc)
-	blockParts = block.MakePartSet(BlockPartSize)
-	deliverRes = state.ABCIResponses{
-		DeliverTx: []*abci.ResponseDeliverTx{
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-			{Code: 0, Log: "ok"},
-		},
-	}
-	if withInvalidTx {
-		deliverRes.DeliverTx[1] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
-		deliverRes.DeliverTx[3] = &abci.ResponseDeliverTx{Code: 1, Log: "Error"}
-	}
-
-	state.SaveABCIResponses(statedb, height, &deliverRes)
-	blockStore.SaveBlock(block, blockParts, &tmtypes.Commit{})
-	return blockStore, statedb
-}
-
-func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
+func TestNewKeeper_ReplayOrdersFromBlock(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -484,7 +327,9 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
+func TestNewKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -507,7 +352,9 @@ func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
 	assert.Equal(int64(0), buys[0].Orders[0].CumQty)
 }
 
-func TestKeeper_InitOrderBookDay1(t *testing.T) {
+func TestNewKeeper_InitOrderBookDay1(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -534,26 +381,9 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	assert.Equal(int64(96000), buys[1].Price)
 }
 
-func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStoreKey) sdk.AccountCache {
-	accountStore := ms.GetKVStore(accountKey)
-	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
-	return auth.NewAccountCache(accountStoreCache)
-}
-
-func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
-	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
-	cdc := wire.NewCodec()
-	types.RegisterWire(cdc)
-	wire.RegisterCrypto(cdc)
-	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
-	accountCache := getAccountCache(cdc, ms, capKey)
-	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
-	return
-}
-
-func TestKeeper_ExpireOrders(t *testing.T) {
+func TestNewKeeper_ExpireOrders(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
@@ -563,8 +393,8 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC-000_BNB", 1e6, 1e6), 10000, 0, 10000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC-000_BNB", 2e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "3", Side.BUY, "XYZ-000_BNB", 1e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.SELL, "ABC-000_BNB", 1e6, 1e8), 10000, 0, 10000, 0, 0, "", 0}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC-000_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.SELL, "ABC-000_BNB", 3e6, 1e8), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC-000_BNB", 3e6, 2e8), 15000, 0, 15000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.BUY, "XYZ-000_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, "", 0}, false)
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
 		sdk.NewCoin("ABC-000", 3e8),
@@ -573,6 +403,7 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	am.SetAccount(ctx, acc)
 
 	breathTime, _ := time.Parse(time.RFC3339, "2018-01-02T00:00:01Z")
+	keeper.matchAndDistributeTrades(false, 42, 0)
 	keeper.MarkBreatheBlock(ctx, 15000, breathTime)
 
 	keeper.ExpireOrders(ctx, breathTime.AddDate(0, 0, 3), nil)
@@ -605,7 +436,9 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	fees.Pool.Clear()
 }
 
-func TestKeeper_DetermineLotSize(t *testing.T) {
+func TestNewKeeper_DetermineLotSize(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	ctx, _, keeper := setup()
 	lotsize := keeper.DetermineLotSize("BNB", "BTC-000", 1e6)
@@ -634,7 +467,9 @@ func TestKeeper_DetermineLotSize(t *testing.T) {
 	assert.Equal(int64(1e5), lotsize) // wma price of BNB/BTC-000 is between 1e7 and 1e8
 }
 
-func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
+func TestNewKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	ctx, _, keeper := setup()
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, -1)
@@ -673,7 +508,9 @@ func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
 	assert.Equal(int64(1e6), pair3.LotSize.ToInt64())
 }
 
-func TestKeeper_UpdateLotSize(t *testing.T) {
+func TestNewKeeper_UpdateLotSize(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -689,7 +526,9 @@ func TestKeeper_UpdateLotSize(t *testing.T) {
 	assert.Equal(int64(1e3), keeper.engines[tradingPair.GetSymbol()].LotSize)
 }
 
-func TestOpenOrders_AfterMatch(t *testing.T) {
+func TestNewOpenOrders_AfterMatch(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	keeper := initKeeper()
 	keeper.AddEngine(dextypes.NewTradingPair("NNB", "BNB", 100000000))
@@ -761,7 +600,9 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(0, len(res))
 }
 
-func TestKeeper_DelistTradingPair(t *testing.T) {
+func TestNewKeeper_DelistTradingPair(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	ctx, am, keeper := setup()
 	fees.Pool.Clear()
@@ -806,6 +647,10 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
+	keeper.matchAndDistributeTrades(false, 42, 0)
+	assert.Equal(1, len(keeper.allOrders))
+	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.engines))
 	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
 	assert.Equal(0, len(keeper.allOrders))
 	assert.Equal(0, len(keeper.engines))
@@ -818,7 +663,9 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 }
 
 //
-func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
+func TestNewKeeper_DelistTradingPair_Empty(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	ctx, _, keeper := setup()
 	fees.Pool.Clear()
@@ -840,7 +687,9 @@ func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 }
 
-func TestKeeper_CanListTradingPair_Normal(t *testing.T) {
+func TestNewKeeper_CanListTradingPair_Normal(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	ctx, _, keeper := setup()
 
 	err := keeper.CanListTradingPair(ctx, "AAA-000", types.NativeTokenSymbol)
@@ -850,7 +699,9 @@ func TestKeeper_CanListTradingPair_Normal(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestKeeper_CanListTradingPair_Abnormal(t *testing.T) {
+func TestNewKeeper_CanListTradingPair_Abnormal(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	ctx, _, keeper := setup()
 
 	err := keeper.CanListTradingPair(ctx, "AAA-000", "AAA-000")
@@ -869,7 +720,9 @@ func TestKeeper_CanListTradingPair_Abnormal(t *testing.T) {
 	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before listing BBB-000 against AAA-000")
 }
 
-func TestKeeper_CanDelistTradingPair(t *testing.T) {
+func TestNewKeeper_CanDelistTradingPair(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	ctx, _, keeper := setup()
 
 	err := keeper.CanDelistTradingPair(ctx, "AAA-000", "AAA-000")
@@ -891,4 +744,12 @@ func TestKeeper_CanDelistTradingPair(t *testing.T) {
 	err = keeper.CanDelistTradingPair(ctx, types.NativeTokenSymbol, "BBB-000")
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
+}
+
+func setChainVersion() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, -1)
+}
+
+func resetChainVersion() {
+	upgrade.Mgr.Config.HeightMap = nil
 }

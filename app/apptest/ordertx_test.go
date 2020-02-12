@@ -134,10 +134,15 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
 	buys, sells := getOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
+	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
-	assert.Equal(utils.Fixed8(355e8), buys[0].price)
-	assert.Equal(utils.Fixed8(1e8), buys[0].qty)
+
+	orders := GetRoundPlOrders("BTC-000_BNB", 1, 355e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(1e8), sum)
 }
 
 func Test_Match(t *testing.T) {
@@ -197,8 +202,8 @@ func Test_Match(t *testing.T) {
 	msg = o.NewNewOrderMsg(add, genOrderID(add, 3, ctx, am), 1, "BTC-000_BNB", 98e8, 300e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	buys, sells := getOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
@@ -251,8 +256,8 @@ func Test_Match(t *testing.T) {
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 	buys, sells = getOrderBook("ETH-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
 	buys, sells = getOrderBook("ETH-000_BNB")

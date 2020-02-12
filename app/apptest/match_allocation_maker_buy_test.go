@@ -54,35 +54,47 @@ func Test_Maker_Buy_1a(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 12e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 12e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 8e8, 10e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 8e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 9e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 9e8))
 
 	oid = GetOrderId(addr1, 3, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 10e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 10e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(4, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(98350e8), GetAvail(ctx, addr0, "BNB"))
@@ -171,35 +183,47 @@ func Test_Maker_Buy_1b(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 12e8, 59e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 12e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 8e8, 10e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 8e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 9e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 9e8))
 
 	oid = GetOrderId(addr1, 3, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 10e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 10e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(4, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(98657e8), GetAvail(ctx, addr0, "BNB"))
@@ -291,35 +315,47 @@ func Test_Maker_Buy_1c(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 11e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 11e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 8e8, 10e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 8e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 9e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 9e8))
 
 	oid = GetOrderId(addr1, 3, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 10e8, 30e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 10e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(4, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(98575e8), GetAvail(ctx, addr0, "BNB"))
@@ -450,15 +486,19 @@ func Test_Maker_Buy_2a(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 9e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 9e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 7e8, 75e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 7e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99025e8), GetAvail(ctx, addr0, "BNB"))
@@ -557,15 +597,19 @@ func Test_Maker_Buy_2b(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 9e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 9e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 7e8, 75e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 7e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99525e8), GetAvail(ctx, addr0, "BNB"))
@@ -676,26 +720,40 @@ func Test_Maker_Buy_2c(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 9e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 9e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 7e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 7e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 7e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 7e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 7e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 7e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(75e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 7e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(75e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99525e8), GetAvail(ctx, addr0, "BNB"))
@@ -807,31 +865,46 @@ func Test_Maker_Buy_2d(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 18e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 8e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 8e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 31e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 31e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 31e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(93e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 6e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(93e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99395e8), GetAvail(ctx, addr0, "BNB"))
@@ -947,31 +1020,47 @@ func Test_Maker_Buy_2e(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 8e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 8e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(60e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 6e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(60e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99325e8), GetAvail(ctx, addr0, "BNB"))
@@ -1102,31 +1191,46 @@ func Test_Maker_Buy_2f(t *testing.T) {
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 10e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 10e8))
 
 	oid = GetOrderId(addr0, 2, ctx)
 	msg = order.NewNewOrderMsg(addr0, oid, 1, "BTC-000_BNB", 8e8, 25e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, 8e8))
 
 	oid = GetOrderId(addr1, 0, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 1, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	oid = GetOrderId(addr1, 2, ctx)
 	msg = order.NewNewOrderMsg(addr1, oid, 2, "BTC-000_BNB", 6e8, 20e8)
 	_, err = testClient.DeliverTxSync(msg, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, 6e8))
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(60e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 6e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(60e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99325e8), GetAvail(ctx, addr0, "BNB"))
@@ -1256,9 +1360,14 @@ func Test_Maker_Buy_3a(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(75e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 7e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(75e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99475e8), GetAvail(ctx, addr0, "BNB"))
@@ -1408,9 +1517,14 @@ func Test_Maker_Buy_3b(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(75e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 7e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(75e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99475e8), GetAvail(ctx, addr0, "BNB"))
@@ -1560,9 +1674,14 @@ func Test_Maker_Buy_3c(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(93e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 7e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(93e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99565e8), GetAvail(ctx, addr0, "BNB"))
@@ -1738,9 +1857,14 @@ func Test_Maker_Buy_3d(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(60e8), sells[0].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 2, 6e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(60e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99361e8), GetAvail(ctx, addr0, "BNB"))
@@ -1902,8 +2026,8 @@ func Test_Maker_Buy_4(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(5, len(buys))
-	assert.Equal(5, len(sells))
+	assert.Equal(3, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99695e8), GetAvail(ctx, addr0, "BNB"))
@@ -2057,8 +2181,8 @@ func Test_Maker_Buy_5(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(2, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99724.9998e8), GetAvail(ctx, addr0, "BNB"))
@@ -2181,8 +2305,8 @@ func Test_Maker_Buy_6(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(2, len(sells))
+	assert.Equal(2, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99701e8), GetAvail(ctx, addr0, "BNB"))
@@ -2295,8 +2419,8 @@ func Test_Maker_Buy_7(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(2, len(sells))
+	assert.Equal(3, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99701e8), GetAvail(ctx, addr0, "BNB"))
@@ -2422,9 +2546,14 @@ func Test_Maker_Buy_8(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(utils.Fixed8(20e8), buys[2].qty)
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
+	orders := GetRoundPlOrders("BTC-000_BNB", 1, 8e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(20e8), sum)
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99830e8), GetAvail(ctx, addr0, "BNB"))
@@ -2538,9 +2667,16 @@ func Test_Maker_Buy_9a(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(utils.Fixed8(20e8), buys[1].qty)
-	assert.Equal(1, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(utils.Fixed8(3e8), buys[0].qty)
+	orders := GetRoundPlOrders("BTC-000_BNB", 1, 8e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(17e8), sum)
+
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99807e8), GetAvail(ctx, addr0, "BNB"))
@@ -2643,9 +2779,17 @@ func Test_Maker_Buy_9b(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(utils.Fixed8(65e8), buys[1].qty)
-	assert.Equal(1, len(sells))
+	assert.Equal(1, len(buys))
+
+	assert.Equal(utils.Fixed8(10e8), buys[0].qty)
+	orders := GetRoundPlOrders("BTC-000_BNB", 1, 6e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(55e8), sum)
+
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99495e8), GetAvail(ctx, addr0, "BNB"))

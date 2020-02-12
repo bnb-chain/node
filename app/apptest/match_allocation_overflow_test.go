@@ -1,6 +1,7 @@
 package apptest
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -34,6 +35,7 @@ func Test_Overflow_1a(t *testing.T) {
 	}
 
 	buys, _ := GetOrderBook("BTC-000_BNB")
+	fmt.Printf("　sell size: %d\n", len(buys))
 	assert.Equal(utils.Fixed8(9e18), buys[0].qty)
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ const (
 	numPricesStored  = 2000
 	pricesStoreEvery = 1000
 	minimalNumPrices = 500
+	underscore       = "_"
 )
 
 type FeeHandler func(map[string]*types.Fee)
@@ -50,7 +52,7 @@ type Keeper struct {
 	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
 	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
 	OrderInfosForPub           OrderInfoForPublish              // for publication usage
-	roundOrders                map[string][]string              // limit to the total tx number in a block
+	roundOrders                map[string]map[string][]string   // limit to the total tx number in a block. symbol -> side_price -> [] order Id
 	roundIOCOrders             map[string][]string
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
 	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
@@ -79,7 +81,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		OrderChangesMtx:            &sync.Mutex{},
 		OrderChanges:               make(OrderChanges, 0),
 		OrderInfosForPub:           make(OrderInfoForPublish),
-		roundOrders:                make(map[string][]string, 256),
+		roundOrders:                make(map[string]map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
@@ -192,7 +194,10 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		return
 	}
 
-	_, err = eng.Book.InsertOrder(info.Id, info.Side, info.CreatedHeight, info.Price, info.Quantity)
+	if !sdk.IsUpgrade(upgrade.BEP19) {
+		_, err = eng.Book.InsertOrder(info.Id, info.Side, info.CreatedHeight, info.Price, info.Quantity)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -208,17 +213,28 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
-	if ids, ok := kp.roundOrders[symbol]; ok {
-		kp.roundOrders[symbol] = append(ids, info.Id)
-	} else {
-		newIds := make([]string, 0, 16)
-		kp.roundOrders[symbol] = append(newIds, info.Id)
-	}
+	kp.insertRoundOrder(symbol, info.Side, info.Price, info.Id)
+
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
 	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
+}
+
+func (kp *Keeper) insertRoundOrder(symbol string, side int8, price int64, orderId string) {
+	priceLevel, ok := kp.roundOrders[symbol]
+	if !ok {
+		priceLevel = make(map[string][]string)
+		kp.roundOrders[symbol] = priceLevel
+	}
+	key := buildSidePriceKey(side, price)
+	orderIds, ok := priceLevel[key]
+	if !ok {
+		orderIds = make([]string, 0, 16)
+		kp.roundOrders[symbol][key] = orderIds
+	}
+	kp.roundOrders[symbol][key] = append(orderIds, orderId)
 }
 
 func orderNotFound(symbol, id string) error {
@@ -235,10 +251,16 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, postCancelHandler func(o
 	if !ok {
 		return orderNotFound(symbol, id)
 	}
+
 	delete(kp.allOrders[symbol], id)
+
+	roundOrderRemoved := kp.removeRoundOrder(symbol, ordMsg.Side, ordMsg.Price, id)
+
 	ord, err := eng.Book.RemoveOrder(id, ordMsg.Side, ordMsg.Price)
-	if err != nil {
+	if err != nil && !roundOrderRemoved {
 		return err
+	} else {
+		ord = convertToOrderPart(ordMsg)
 	}
 
 	if postCancelHandler != nil {
@@ -288,6 +310,20 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	concurrency := len(tradeOuts)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
+	if sdk.IsUpgrade(upgrade.BEP19) {
+		roundOrders := make([]OrderInfo, 0, 16)
+		for _, orderIds := range kp.roundOrders[symbol] {
+			for _, orderId := range orderIds {
+				orderInfo, ok := kp.allOrders[symbol][orderId]
+				if !ok {
+					fmt.Errorf("Failed to find order [%v] on symbol [%v]", orderId, symbol)
+				} else {
+					roundOrders = append(roundOrders, *orderInfo)
+				}
+			}
+		}
+		insertOrderBook(engine.Book, &roundOrders)
+	}
 	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for i := range engine.Trades {
@@ -315,7 +351,12 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
-		thisRoundIds := kp.roundOrders[symbol]
+		thisRoundIds := make([]string, 0, 16)
+		for _, orderIds := range kp.roundOrders[symbol] {
+			for _, orderId := range orderIds {
+				thisRoundIds = append(thisRoundIds, orderId)
+			}
+		}
 		for _, id := range thisRoundIds {
 			msg := orders[id]
 			delete(orders, id)
@@ -415,7 +456,9 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	if distributeTrade {
 		ordNum := 0
 		for _, perSymbol := range kp.roundOrders {
-			ordNum += len(perSymbol)
+			for _, perPriceLevel := range perSymbol {
+				ordNum += len(perPriceLevel)
+			}
 		}
 		for i := range tradeOuts {
 			//assume every new order would have 2 trades and generate 4 transfer
@@ -576,7 +619,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 }
 
 func (kp *Keeper) clearAfterMatch() {
-	kp.roundOrders = make(map[string][]string, 256)
+	kp.roundOrders = make(map[string]map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
@@ -969,7 +1012,7 @@ func (kp *Keeper) ClearRoundFee() {
 func (kp *Keeper) ClearOrders() {
 	kp.engines = make(map[string]*me.MatchEng)
 	kp.allOrders = make(map[string]map[string]*OrderInfo, 256)
-	kp.roundOrders = make(map[string][]string, 256)
+	kp.roundOrders = make(map[string]map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
 }
@@ -1104,4 +1147,59 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	return nil
+}
+
+func (kp *Keeper) GetRoundPriceLevelOrders(symbol string, side int8, price int64) []string {
+	key := buildSidePriceKey(side, price)
+	if perSymbol, ok := kp.roundOrders[symbol]; ok {
+		if orderIds, ok := perSymbol[key]; ok {
+			return orderIds
+		}
+	}
+	return nil
+}
+
+func buildSidePriceKey(side int8, price int64) string {
+	var keyBuilder strings.Builder
+	keyBuilder.WriteString(strconv.Itoa(int(side)))
+	keyBuilder.WriteString(underscore)
+	keyBuilder.WriteString(strconv.FormatInt(price, 10))
+	key := keyBuilder.String()
+	return key
+}
+
+func (kp *Keeper) RoundOrderExists(symbol string, side int8, price int64, id string) bool {
+	key := buildSidePriceKey(side, price)
+	if perSymbol, ok := kp.roundOrders[symbol]; ok {
+		if orderIds, ok := perSymbol[key]; ok {
+			for _, orderId := range orderIds {
+				if orderId == id {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (kp *Keeper) removeRoundOrder(symbol string, side int8, price int64, id string) bool {
+	key := buildSidePriceKey(side, price)
+	if perSymbol, ok := kp.roundOrders[symbol]; ok {
+		if orderIds, ok := perSymbol[key]; ok {
+			for index, orderId := range orderIds {
+				if orderId == id {
+					orderIds = append(orderIds[:index], orderIds[index+1:]...)
+					perSymbol[key] = orderIds
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func insertOrderBook(orderBook me.OrderBookInterface, orderInfos *[]OrderInfo) {
+	for _, orderBuffered := range *orderInfos {
+		orderBook.InsertOrder(orderBuffered.Id, orderBuffered.Side, orderBuffered.CreatedHeight, orderBuffered.Price, orderBuffered.Quantity)
+	}
 }

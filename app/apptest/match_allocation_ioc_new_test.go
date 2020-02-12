@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -29,8 +28,8 @@ func Test_IOC_1_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, _ := GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
-
+	assert.Equal(0, len(buys))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99999e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(1e8), GetLocked(ctx, addr0, "BNB"))
@@ -41,7 +40,7 @@ func Test_IOC_1_new(t *testing.T) {
 
 	buys, _ = GetOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
-
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidB))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99999.9999e8), GetAvail(ctx, addr0, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr0, "BNB"))
@@ -53,8 +52,8 @@ func Test_IOC_1_new(t *testing.T) {
 	assert.NoError(err)
 
 	_, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(sells))
-
+	assert.Equal(0, len(sells))
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidS))
 	assert.Equal(int64(99999e8), GetAvail(ctx, addr1, "BTC-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr1, "BNB"))
 	assert.Equal(int64(1e8), GetLocked(ctx, addr1, "BTC-000"))
@@ -65,7 +64,7 @@ func Test_IOC_1_new(t *testing.T) {
 
 	_, sells = GetOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(sells))
-
+	assert.Equal(false, OrderExists("BTC-000_ETH-000", oidS))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr1, "BTC-000"))
 	assert.Equal(int64(99999.9999e8), GetAvail(ctx, addr1, "BNB"))
 	assert.Equal(int64(0), GetLocked(ctx, addr1, "BTC-000"))
@@ -89,10 +88,12 @@ func Test_IOC_2_new(t *testing.T) {
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, int64(i+1)*1e8))
 	}
 
 	buys, _ := GetOrderBook("BTC-000_BNB")
-	assert.Equal(5, len(buys))
+	assert.Equal(0, len(buys))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99945e8), GetAvail(ctx, addr0, "BNB"))
@@ -115,10 +116,12 @@ func Test_IOC_2_new(t *testing.T) {
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 2, int64(i+1)*1e8))
 	}
 
 	_, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(5, len(sells))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(99985e8), GetAvail(ctx, addr1, "BTC-000"))
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr1, "BNB"))
@@ -161,8 +164,8 @@ func Test_IOC_3_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99998e8), GetAvail(ctx, addr0, "BNB"))
@@ -218,6 +221,8 @@ func Test_IOC_4_new(t *testing.T) {
 		msg.TimeInForce = 3
 		_, err := testClient.DeliverTxSync(msg, testApp.Codec)
 		assert.NoError(err)
+		assert.Equal(true, OrderExists("BTC-000_BNB", oid))
+		assert.Equal(true, RoundOrderExists("BTC-000_BNB", oid, 1, int64(i+1)*1e8))
 	}
 
 	oidS := GetOrderId(addr1, 0, ctx)
@@ -227,8 +232,8 @@ func Test_IOC_4_new(t *testing.T) {
 	assert.NoError(err)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(5, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99930e8), GetAvail(ctx, addr0, "BNB"))
@@ -316,10 +321,16 @@ func Test_IOC_5_new(t *testing.T) {
 	_, err = testClient.DeliverTxSync(msgS2, testApp.Codec)
 	assert.NoError(err)
 
+	orders := GetRoundPlOrders("BTC-000_BNB", 1, 3e8)
+	sum := int64(0)
+	for _, order := range orders {
+		sum += order.Quantity - order.CumQty
+	}
+	assert.Equal(int64(20e8), sum)
+
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(utils.Fixed8(20e8), buys[3].qty)
-	assert.Equal(2, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99848e8), GetAvail(ctx, addr0, "BNB"))
@@ -365,9 +376,11 @@ func Test_IOC_6_new(t *testing.T) {
 	msgB.TimeInForce = 3
 	_, err := testClient.DeliverTxSync(msgB, testApp.Codec)
 	assert.NoError(err)
+	assert.Equal(true, OrderExists("BTC-000_BNB", oidB))
+	assert.Equal(true, RoundOrderExists("BTC-000_BNB", oidB, 1, 1e7))
 
 	buys, _ := GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
+	assert.Equal(0, len(buys))
 
 	assert.Equal(int64(100000e8), GetAvail(ctx, addr0, "BTC-000"))
 	assert.Equal(int64(99), GetAvail(ctx, addr0, "BNB"))

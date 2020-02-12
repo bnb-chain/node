@@ -242,6 +242,25 @@ func GetOrderBook(pair string) ([]level, []level) {
 	return buys, sells
 }
 
+func GetRoundPlOrders(symbol string, side int8, price int64) []order.OrderInfo {
+	roundOrderIds := testApp.DexKeeper.GetRoundPriceLevelOrders(symbol, side, price)
+	orders := make([]order.OrderInfo, 16)
+	for _, roundOrderId := range roundOrderIds {
+		order, _ := testApp.DexKeeper.OrderExists(symbol, roundOrderId)
+		orders = append(orders, order)
+	}
+	return orders
+}
+
+func RoundOrderExists(symbol string, orderId string, side int8, price int64) bool {
+	return testApp.DexKeeper.RoundOrderExists(symbol, side, price, orderId)
+}
+
+func OrderExists(symbol string, orderId string) bool {
+	_, exists := testApp.DexKeeper.OrderExists(symbol, orderId)
+	return exists
+}
+
 func ResetAccount(ctx sdk.Context, addr sdk.AccAddress, ccy1 int64, ccy2 int64, ccy3 int64) {
 	acc := testApp.AccountKeeper.GetAccount(ctx, addr)
 	acc.SetCoins(sdk.Coins{
@@ -1014,8 +1033,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells := GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -1060,7 +1079,7 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(1, len(buys))
+	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
@@ -1122,7 +1141,7 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
+	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
@@ -1204,7 +1223,7 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
+	assert.Equal(0, len(buys))
 	assert.Equal(2, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
@@ -1269,8 +1288,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(2, len(sells))
+	assert.Equal(0, len(buys))
+	assert.Equal(1, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -1324,7 +1343,7 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
+	assert.Equal(0, len(buys))
 	assert.Equal(2, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
@@ -1389,8 +1408,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
-	assert.Equal(4, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(1, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -1452,8 +1471,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(3, len(sells))
+	assert.Equal(2, len(buys))
+	assert.Equal(0, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -1531,8 +1550,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(4, len(buys))
-	assert.Equal(4, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(1, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
@@ -1581,7 +1600,7 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(2, len(buys))
+	assert.Equal(1, len(buys))
 	assert.Equal(3, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
@@ -1642,8 +1661,8 @@ func Test_Match_Allocation_new(t *testing.T) {
 	res, err = testClient.DeliverTxSync(msg, testApp.Codec)
 
 	buys, sells = GetOrderBook("BTC-000_BNB")
-	assert.Equal(3, len(buys))
-	assert.Equal(1, len(sells))
+	assert.Equal(1, len(buys))
+	assert.Equal(0, len(sells))
 
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 
