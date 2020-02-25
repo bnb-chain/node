@@ -17,8 +17,8 @@ const (
 	CodeProphecyFinalized             sdk.CodeType = 1004
 	CodeDuplicateMessage              sdk.CodeType = 1005
 	CodeInvalidClaim                  sdk.CodeType = 1006
-	CodeInvalidValidator              sdk.CodeType = 1006
-	CodeInternalDB                    sdk.CodeType = 1006
+	CodeInvalidValidator              sdk.CodeType = 1007
+	CodeInternalDB                    sdk.CodeType = 1008
 )
 
 func ErrProphecyNotFound() sdk.Error {
