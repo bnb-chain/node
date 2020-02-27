@@ -9,13 +9,13 @@ import (
 
 const (
 	RouteTransfer = "crossTransfer"
+	RouteTimeout  = "crossTimeout"
 )
 
 var _ sdk.Msg = TransferMsg{}
 
 type TransferMsg struct {
-	Symbol           string          `json:"symbol"`
-	Sequence         int64           `json:"nonce"`
+	Sequence         int64           `json:"sequence"`
 	ContractAddress  EthereumAddress `json:"contract_address"`
 	SenderAddress    EthereumAddress `json:"sender_address"`
 	ReceiverAddress  sdk.AccAddress  `json:"receiver_address"`
@@ -24,11 +24,10 @@ type TransferMsg struct {
 	ValidatorAddress sdk.ValAddress  `json:"validator_address"`
 }
 
-func NewTransferMsg(symbol string, sequence int64, contractAddr EthereumAddress,
+func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 	senderAddr EthereumAddress, receiverAddr sdk.AccAddress, amount sdk.Coin,
 	relayFee sdk.Coin, validatorAddr sdk.ValAddress) TransferMsg {
 	return TransferMsg{
-		Symbol:           symbol,
 		Sequence:         sequence,
 		ContractAddress:  contractAddr,
 		SenderAddress:    senderAddr,
@@ -47,14 +46,14 @@ func (msg TransferMsg) GetSigners() []sdk.AccAddress {
 }
 
 func (msg TransferMsg) String() string {
-	return fmt.Sprintf("TransferMsg{Symbol:%s,"+
+	return fmt.Sprintf("TransferMsg{"+
 		"ValidatorAddress:%v,"+
 		"ContractAddress:%s,"+
 		"SenderAddress:%s,"+
 		"ReceiverAddress:%s,"+
 		"Amount:%s,"+
 		"RelayFee:%s,"+
-		"ValidatorAddress:%s}", msg.Symbol, msg.ValidatorAddress,
+		"ValidatorAddress:%s}", msg.ValidatorAddress,
 		msg.ContractAddress.String(), msg.SenderAddress.String(), msg.ReceiverAddress.String(),
 		msg.Amount.String(), msg.RelayFee.String(), msg.ValidatorAddress.String())
 }
@@ -74,9 +73,6 @@ func (msg TransferMsg) GetInvolvedAddresses() []sdk.AccAddress {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg TransferMsg) ValidateBasic() sdk.Error {
-	if len(msg.Symbol) == 0 {
-		return ErrInvalidSymbol("symbol should not be empty")
-	}
 	if msg.Sequence < 0 {
 		return ErrInvalidSequence("sequence should not be less than 0")
 	}
@@ -96,6 +92,70 @@ func (msg TransferMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
 	if !msg.RelayFee.IsPositive() {
+		return ErrInvalidAmount("amount to send should be positive")
+	}
+	return nil
+}
+
+var _ sdk.Msg = TimeoutMsg{}
+
+type TimeoutMsg struct {
+	SenderAddress    sdk.AccAddress `json:"sender_address"`
+	Sequence         int64          `json:"sequence"`
+	Amount           sdk.Coin       `json:"amount"`
+	ValidatorAddress sdk.ValAddress `json:"validator_address"`
+}
+
+func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.ValAddress) TimeoutMsg {
+	return TimeoutMsg{
+		SenderAddress:    senderAddr,
+		Sequence:         sequence,
+		Amount:           amount,
+		ValidatorAddress: validatorAddr,
+	}
+}
+
+// nolint
+func (msg TimeoutMsg) Route() string { return RouteTimeout }
+func (msg TimeoutMsg) Type() string  { return RouteTimeout }
+func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{sdk.AccAddress(msg.ValidatorAddress)}
+}
+
+func (msg TimeoutMsg) String() string {
+	return fmt.Sprintf("TransferMsg{"+
+		"SenderAddress:%s,"+
+		"Sequence:%d,"+
+		"Amount:%s,"+
+		"ValidatorAddress:%s}",
+		msg.SenderAddress.String(), msg.Sequence, msg.Amount.String(), msg.ValidatorAddress.String())
+}
+
+// GetSignBytes - Get the bytes for the message signer to sign on
+func (msg TimeoutMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+func (msg TimeoutMsg) GetInvolvedAddresses() []sdk.AccAddress {
+	return msg.GetSigners()
+}
+
+// ValidateBasic is used to quickly disqualify obviously invalid messages quickly
+func (msg TimeoutMsg) ValidateBasic() sdk.Error {
+	if len(msg.SenderAddress) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(msg.SenderAddress.String())
+	}
+	if msg.Sequence < 0 {
+		return ErrInvalidSequence("sequence should not be less than 0")
+	}
+	if len(msg.ValidatorAddress) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(msg.ValidatorAddress.String())
+	}
+	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
 	return nil

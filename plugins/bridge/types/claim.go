@@ -13,6 +13,7 @@ const (
 	ClaimIdDelimiter = "-"
 
 	TransferChannelId uint8 = 1
+	TimeoutChannelId  uint8 = 2
 )
 
 func GetClaimId(channel uint8, sequence int64) string {
@@ -47,4 +48,33 @@ func GetTransferClaimFromOracleClaim(claim string) (TransferClaim, sdk.Error) {
 		return TransferClaim{}, ErrInvalidTransferMsg(err.Error())
 	}
 	return transferClaim, nil
+}
+
+type TimeoutClaim struct {
+	SenderAddress sdk.AccAddress `json:"sender_address"`
+	Amount        sdk.Coin       `json:"amount"`
+}
+
+func CreateOracleClaimFromTimeoutMsg(msg TimeoutMsg) (oracle.Claim, sdk.Error) {
+	claimId := GetClaimId(TimeoutChannelId, msg.Sequence)
+
+	timeoutClaim := TimeoutClaim{
+		SenderAddress: msg.SenderAddress,
+		Amount:        msg.Amount,
+	}
+	claimBytes, err := json.Marshal(timeoutClaim)
+	if err != nil {
+		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
+	}
+	claim := oracle.NewClaim(claimId, msg.ValidatorAddress, string(claimBytes))
+	return claim, nil
+}
+
+func GetTimeoutClaimFromOracleClaim(claim string) (TimeoutClaim, sdk.Error) {
+	timeoutClaim := TimeoutClaim{}
+	err := json.Unmarshal([]byte(claim), &timeoutClaim)
+	if err != nil {
+		return TimeoutClaim{}, ErrInvalidTransferMsg(err.Error())
+	}
+	return timeoutClaim, nil
 }

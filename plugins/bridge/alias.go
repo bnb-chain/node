@@ -6,6 +6,8 @@ import (
 )
 
 type (
-	Keeper      = keeper.Keeper
+	Keeper = keeper.Keeper
+
 	TransferMsg = types.TransferMsg
+	TimeoutMsg  = types.TimeoutMsg
 )

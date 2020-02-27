@@ -56,5 +56,27 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
 
-	return oracle.Prophecy{}, nil
+	return prophecy, nil
+}
+
+func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	if prophecy.Status.Text == oracle.SuccessStatusText {
+		timeoutClaim, err := types.GetTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
+		if err != nil {
+			return oracle.Prophecy{}, err
+		}
+
+		_, err = k.bankKeeper.SendCoins(ctx, timeoutClaim.SenderAddress, PegAccount, sdk.Coins{timeoutClaim.Amount})
+		if err != nil {
+			return oracle.Prophecy{}, err
+		}
+	} else if prophecy.Status.Text == oracle.FailedStatusText {
+		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+	}
+	return prophecy, nil
 }
