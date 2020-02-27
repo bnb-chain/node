@@ -37,7 +37,7 @@ func NewKeeper(
 	return Keeper{
 		cdc:         cdc,
 		storeKey:    storeKey,
-		paramSpace:  paramSpace,
+		paramSpace:  paramSpace.WithTypeTable(ParamTypeTable()),
 		stakeKeeper: stakeKeeper,
 	}
 }
@@ -85,18 +85,18 @@ func (k Keeper) setProphecy(ctx sdk.Context, prophecy types.Prophecy) {
 }
 
 // ProcessClaim ...
-func (k Keeper) ProcessClaim(ctx sdk.Context, claim types.Claim) (types.Status, error) {
+func (k Keeper) ProcessClaim(ctx sdk.Context, claim types.Claim) (types.Prophecy, sdk.Error) {
 	activeValidator := k.checkActiveValidator(ctx, claim.ValidatorAddress)
 	if !activeValidator {
-		return types.Status{}, types.ErrInvalidValidator()
+		return types.Prophecy{}, types.ErrInvalidValidator()
 	}
 
 	if claim.ID == "" {
-		return types.Status{}, types.ErrInvalidIdentifier()
+		return types.Prophecy{}, types.ErrInvalidIdentifier()
 	}
 
 	if claim.Content == "" {
-		return types.Status{}, types.ErrInvalidClaim()
+		return types.Prophecy{}, types.ErrInvalidClaim()
 	}
 
 	prophecy, found := k.GetProphecy(ctx, claim.ID)
@@ -108,18 +108,18 @@ func (k Keeper) ProcessClaim(ctx sdk.Context, claim types.Claim) (types.Status, 
 	case types.PendingStatusText:
 		// continue processing
 	default:
-		return types.Status{}, types.ErrProphecyFinalized()
+		return types.Prophecy{}, types.ErrProphecyFinalized()
 	}
 
 	if prophecy.ValidatorClaims[claim.ValidatorAddress.String()] != "" {
-		return types.Status{}, types.ErrDuplicateMessage()
+		return types.Prophecy{}, types.ErrDuplicateMessage()
 	}
 
 	prophecy.AddClaim(claim.ValidatorAddress, claim.Content)
 	prophecy = k.processCompletion(ctx, prophecy)
 
 	k.setProphecy(ctx, prophecy)
-	return prophecy.Status, nil
+	return prophecy, nil
 }
 
 func (k Keeper) checkActiveValidator(ctx sdk.Context, validatorAddress sdk.ValAddress) bool {
