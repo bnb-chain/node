@@ -21,12 +21,12 @@ type TransferMsg struct {
 	ReceiverAddress  sdk.AccAddress  `json:"receiver_address"`
 	Amount           sdk.Coin        `json:"amount"`
 	RelayFee         sdk.Coin        `json:"relay_fee"`
-	ValidatorAddress sdk.ValAddress  `json:"validator_address"`
+	ValidatorAddress sdk.AccAddress  `json:"validator_address"`
 }
 
 func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 	senderAddr EthereumAddress, receiverAddr sdk.AccAddress, amount sdk.Coin,
-	relayFee sdk.Coin, validatorAddr sdk.ValAddress) TransferMsg {
+	relayFee sdk.Coin, validatorAddr sdk.AccAddress) TransferMsg {
 	return TransferMsg{
 		Sequence:         sequence,
 		ContractAddress:  contractAddr,
@@ -42,7 +42,7 @@ func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 func (msg TransferMsg) Route() string { return RouteTransfer }
 func (msg TransferMsg) Type() string  { return RouteTransfer }
 func (msg TransferMsg) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{sdk.AccAddress(msg.ValidatorAddress)}
+	return []sdk.AccAddress{msg.ValidatorAddress}
 }
 
 func (msg TransferMsg) String() string {
@@ -103,10 +103,10 @@ type TimeoutMsg struct {
 	SenderAddress    sdk.AccAddress `json:"sender_address"`
 	Sequence         int64          `json:"sequence"`
 	Amount           sdk.Coin       `json:"amount"`
-	ValidatorAddress sdk.ValAddress `json:"validator_address"`
+	ValidatorAddress sdk.AccAddress `json:"validator_address"`
 }
 
-func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.ValAddress) TimeoutMsg {
+func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TimeoutMsg {
 	return TimeoutMsg{
 		SenderAddress:    senderAddr,
 		Sequence:         sequence,
@@ -119,7 +119,7 @@ func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, v
 func (msg TimeoutMsg) Route() string { return RouteTimeout }
 func (msg TimeoutMsg) Type() string  { return RouteTimeout }
 func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{sdk.AccAddress(msg.ValidatorAddress)}
+	return []sdk.AccAddress{msg.ValidatorAddress}
 }
 
 func (msg TimeoutMsg) String() string {
