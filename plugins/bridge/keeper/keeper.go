@@ -1,6 +1,9 @@
 package keeper
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -21,17 +24,41 @@ type Keeper struct {
 
 	oracleKeeper oracle.Keeper
 
+	storeKey sdk.StoreKey // The key used to access the store from the Context.
+
 	// The reference to the CoinKeeper to modify balances
 	bankKeeper bank.Keeper
 }
 
 // NewKeeper creates new instances of the bridge Keeper
-func NewKeeper(cdc *codec.Codec, oracleKeeper oracle.Keeper, bankKeeper bank.Keeper) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, oracleKeeper oracle.Keeper, bankKeeper bank.Keeper) Keeper {
 	return Keeper{
 		cdc:          cdc,
+		storeKey:     storeKey,
 		bankKeeper:   bankKeeper,
 		oracleKeeper: oracleKeeper,
 	}
+}
+
+func (k Keeper) IncreaseSequence(ctx sdk.Context, key string) {
+	currentSequence := k.GetCurrentSequence(ctx, key)
+
+	store := ctx.KVStore(k.storeKey)
+	store.Set([]byte(key), []byte(strconv.FormatInt(currentSequence+1, 10)))
+}
+
+func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get([]byte(key))
+	if bz == nil {
+		return types.StartSequence
+	}
+
+	sequence, err := strconv.ParseInt(string(bz), 10, 64)
+	if err != nil {
+		panic(fmt.Errorf("wrong sequence, key=%s, sequence=%s", key, string(bz)))
+	}
+	return sequence
 }
 
 func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
@@ -52,6 +79,9 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		}
 
 		// TODO distribute delay fee
+
+		// increase sequence
+		k.IncreaseSequence(ctx, types.KeyCurrentTransferSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
@@ -75,6 +105,8 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 		if err != nil {
 			return oracle.Prophecy{}, err
 		}
+
+		k.IncreaseSequence(ctx, types.KeyTimeoutSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}

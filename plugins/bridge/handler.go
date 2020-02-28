@@ -1,6 +1,8 @@
 package bridge
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/plugins/bridge/types"
@@ -21,7 +23,11 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleTransferMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferMsg) sdk.Result {
-	// TODO reject wrong sequence
+	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyCurrentTransferSequence)
+	if msg.Sequence != currentSequence {
+		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
+	}
+
 	claim, err := types.CreateOracleClaimFromTransferMsg(msg)
 	if err != nil {
 		return err.Result()
@@ -36,7 +42,11 @@ func handleTransferMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferMsg) sd
 }
 
 func handleTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TimeoutMsg) sdk.Result {
-	// TODO reject wrong sequence
+	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyTimeoutSequence)
+	if msg.Sequence != currentSequence {
+		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
+	}
+
 	claim, err := types.CreateOracleClaimFromTimeoutMsg(msg)
 	if err != nil {
 		return err.Result()
