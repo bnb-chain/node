@@ -10,5 +10,4 @@ func RegisterWire(cdc *codec.Codec) {
 	cdc.RegisterConcrete(Prophecy{}, "oracle/Prophecy", nil)
 	cdc.RegisterConcrete(Status{}, "oracle/Status", nil)
 	cdc.RegisterConcrete(DBProphecy{}, "oracle/DBProphecy", nil)
-
 }

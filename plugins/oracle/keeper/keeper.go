@@ -21,7 +21,7 @@ type Keeper struct {
 }
 
 var (
-	ParamStoreKeyProphecyParams = []byte("prophecyparams")
+	ParamStoreKeyProphecyParams = []byte("prophecyParams")
 )
 
 func ParamTypeTable() params.TypeTable {

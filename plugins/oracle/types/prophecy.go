@@ -9,7 +9,7 @@ import (
 
 // DefaultConsensusNeeded defines the default consensus value required for a
 // prophecy to be finalized
-const DefaultConsensusNeeded float64 = 0.7
+var DefaultConsensusNeeded sdk.Dec = sdk.NewDecWithPrec(7, 1)
 
 type ProphecyParams struct {
 	ConsensusNeeded sdk.Dec `json:"ConsensusNeeded"` //  Minimum deposit for a proposal to enter voting period.
