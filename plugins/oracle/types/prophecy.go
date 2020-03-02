@@ -12,7 +12,7 @@ import (
 const DefaultConsensusNeeded float64 = 0.7
 
 type ProphecyParams struct {
-	ConsensusNeeded float64 `json:"ConsensusNeeded"` //  Minimum deposit for a proposal to enter voting period.
+	ConsensusNeeded sdk.Dec `json:"ConsensusNeeded"` //  Minimum deposit for a proposal to enter voting period.
 }
 
 // Prophecy is a struct that contains all the metadata of an oracle ritual.

@@ -48,6 +48,10 @@ func (k Keeper) GetProphecyParams(ctx sdk.Context) types.ProphecyParams {
 	return depositParams
 }
 
+func (k Keeper) SetProphecyParams(ctx sdk.Context, params types.ProphecyParams) {
+	k.paramSpace.Set(ctx, ParamStoreKeyProphecyParams, &params)
+}
+
 // GetProphecy gets the entire prophecy data struct for a given id
 func (k Keeper) GetProphecy(ctx sdk.Context, id string) (types.Prophecy, bool) {
 	store := ctx.KVStore(k.storeKey)
@@ -139,16 +143,19 @@ func (k Keeper) checkActiveValidator(ctx sdk.Context, validatorAddress sdk.ValAd
 func (k Keeper) processCompletion(ctx sdk.Context, prophecy types.Prophecy) types.Prophecy {
 	highestClaim, highestClaimPower, totalClaimsPower := prophecy.FindHighestClaim(ctx, k.stakeKeeper)
 	totalPower := k.stakeKeeper.GetLastTotalPower(ctx)
-	highestConsensusRatio := float64(highestClaimPower) / float64(totalPower)
+
+	highestConsensusRatio := sdk.NewDec(highestClaimPower).Quo(sdk.NewDec(totalPower))
 	remainingPossibleClaimPower := totalPower - totalClaimsPower
 	highestPossibleClaimPower := highestClaimPower + remainingPossibleClaimPower
-	highestPossibleConsensusRatio := float64(highestPossibleClaimPower) / float64(totalPower)
+
+	highestPossibleConsensusRatio := sdk.NewDec(highestPossibleClaimPower).Quo(sdk.NewDec(totalPower))
 
 	prophecyParams := k.GetProphecyParams(ctx)
-	if highestConsensusRatio >= prophecyParams.ConsensusNeeded {
+
+	if highestConsensusRatio.GTE(prophecyParams.ConsensusNeeded) {
 		prophecy.Status.Text = types.SuccessStatusText
 		prophecy.Status.FinalClaim = highestClaim
-	} else if highestPossibleConsensusRatio < prophecyParams.ConsensusNeeded {
+	} else if highestPossibleConsensusRatio.LT(prophecyParams.ConsensusNeeded) {
 		prophecy.Status.Text = types.FailedStatusText
 	}
 	return prophecy

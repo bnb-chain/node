@@ -8,7 +8,7 @@ require (
 	github.com/cosmos/peggy v0.0.0-20200220185344-95feea7def17 // indirect
 	github.com/deathowl/go-metrics-prometheus v0.0.0-20170731161557-091131e49c33
 	github.com/eapache/go-resiliency v1.1.0
-	github.com/ethereum/go-ethereum v1.8.27
+	github.com/ethereum/go-ethereum v1.9.10
 	github.com/go-kit/kit v0.9.0
 	github.com/google/btree v1.0.0
 	github.com/gorilla/mux v1.7.4

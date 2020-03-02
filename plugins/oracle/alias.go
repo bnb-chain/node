@@ -36,7 +36,6 @@ var (
 	NewStatus                        = types.NewStatus
 
 	// variable aliases
-
 	StatusTextToString = types.StatusTextToString
 	StringToStatusText = types.StringToStatusText
 )
