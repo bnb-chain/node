@@ -37,7 +37,7 @@ func CreateOracleClaimFromTransferMsg(msg TransferMsg) (oracle.Claim, sdk.Error)
 	if err != nil {
 		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
 	}
-	claim := oracle.NewClaim(claimId, msg.ValidatorAddress, string(claimBytes))
+	claim := oracle.NewClaim(claimId, sdk.ValAddress(msg.ValidatorAddress), string(claimBytes))
 	return claim, nil
 }
 
@@ -66,7 +66,7 @@ func CreateOracleClaimFromTimeoutMsg(msg TimeoutMsg) (oracle.Claim, sdk.Error) {
 	if err != nil {
 		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
 	}
-	claim := oracle.NewClaim(claimId, msg.ValidatorAddress, string(claimBytes))
+	claim := oracle.NewClaim(claimId, sdk.ValAddress(msg.ValidatorAddress), string(claimBytes))
 	return claim, nil
 }
 
