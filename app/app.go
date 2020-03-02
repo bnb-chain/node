@@ -15,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -86,6 +87,7 @@ type BinanceChain struct {
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
+	ibcKeeper      ibc.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -154,11 +156,14 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
+	app.ibcKeeper = ibc.NewKeeper(cdc, common.IBCStoreKey, ibc.DefaultCodespace)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper))
+		AddRoute("gov", gov.NewHandler(app.govKeeper)).
+		AddRoute("ibc", ibc.NewHandler(app.ibcKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
@@ -215,6 +220,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.IBCStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -752,6 +758,7 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
+	ibc.RegisterCodec(cdc)
 	return cdc
 }
 

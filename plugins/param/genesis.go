@@ -3,6 +3,7 @@ package param
 import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	sdk "github.com/binance-chain/node/common/types"
@@ -33,6 +34,8 @@ const (
 	DepositHTLTFee = 37500
 	ClaimHTLTFee   = 37500
 	RefundHTLTFee  = 37500
+
+	IBCPackageFee  = 37500
 
 	// stake fee
 	CreateValidatorFee = 10e8
@@ -75,6 +78,7 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{issue.MintMsgType, MintFee, sdk.FeeForAll},
 	&param.FixedFeeParams{burn.BurnRoute, BurnFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{freeze.FreezeRoute, FreezeFee, sdk.FeeForProposer},
+	&param.FixedFeeParams{ibc.IBCPackageMsg{}.Type(), IBCPackageFee, sdk.FeeForProposer},
 
 	// Transfer
 	&param.TransferFeeParam{

@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
@@ -92,5 +93,6 @@ func init() {
 		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
+		ibc.IBCPackageMsg{}.Type():        fees.FixedFeeCalculatorGen,
 	}
 }

@@ -14,6 +14,7 @@ const (
 	GovStoreName        = "gov"
 	TimeLockStoreName   = "time_lock"
 	AtomicSwapStoreName = "atomic_swap"
+	IBCStoreName        = "ibc"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -32,6 +33,7 @@ var (
 	GovStoreKey        = sdk.NewKVStoreKey(GovStoreName)
 	TimeLockStoreKey   = sdk.NewKVStoreKey(TimeLockStoreName)
 	AtomicSwapStoreKey = sdk.NewKVStoreKey(AtomicSwapStoreName)
+	IBCStoreKey        = sdk.NewKVStoreKey(IBCStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)

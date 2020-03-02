@@ -40,6 +40,8 @@ var (
 		"depositHTLT": {},
 		"claimHTLT":   {},
 		"refundHTLT":  {},
+
+		"IBCPackage": {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
