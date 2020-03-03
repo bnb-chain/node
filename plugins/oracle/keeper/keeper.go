@@ -20,6 +20,11 @@ type Keeper struct {
 	stakeKeeper types.StakingKeeper
 }
 
+// Parameter store
+const (
+	DefaultParamSpace = "oracle"
+)
+
 var (
 	ParamStoreKeyProphecyParams = []byte("prophecyParams")
 )

@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	RouteTransfer = "crossTransfer"
-	RouteTimeout  = "crossTimeout"
+	RouteBridge = "bridge"
+
+	TransferMsgType = "crossTransfer"
+	TimeoutMsgType  = "crossTimeout"
 )
 
 var _ sdk.Msg = TransferMsg{}
@@ -39,8 +41,8 @@ func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 }
 
 // nolint
-func (msg TransferMsg) Route() string { return RouteTransfer }
-func (msg TransferMsg) Type() string  { return RouteTransfer }
+func (msg TransferMsg) Route() string { return RouteBridge }
+func (msg TransferMsg) Type() string  { return TransferMsgType }
 func (msg TransferMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }
@@ -116,8 +118,8 @@ func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, v
 }
 
 // nolint
-func (msg TimeoutMsg) Route() string { return RouteTimeout }
-func (msg TimeoutMsg) Type() string  { return RouteTimeout }
+func (msg TimeoutMsg) Route() string { return RouteBridge }
+func (msg TimeoutMsg) Type() string  { return TimeoutMsgType }
 func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }

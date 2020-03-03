@@ -18,7 +18,10 @@ func NewEthereumAddress(address string) EthereumAddress {
 }
 
 func (ethAddr EthereumAddress) IsEmpty() bool {
-	return gethCommon.Address(ethAddr).Big().Cmp(big.NewInt(0)) == 0
+	addrValue := big.NewInt(0)
+	addrValue.SetBytes(ethAddr[:])
+
+	return addrValue.Cmp(big.NewInt(0)) == 0
 }
 
 // Route should return the name of the module

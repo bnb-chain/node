@@ -35,6 +35,8 @@ var (
 		"timeLock":         {},
 		"timeUnlock":       {},
 		"timeRelock":       {},
+		"crossTransfer":    {},
+		"crossTimeout":     {},
 
 		"HTLT":        {},
 		"depositHTLT": {},

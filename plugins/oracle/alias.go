@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	DefaultConsensusNeeded = types.DefaultConsensusNeeded
-	PendingStatusText      = types.PendingStatusText
-	SuccessStatusText      = types.SuccessStatusText
-	FailedStatusText       = types.FailedStatusText
+	PendingStatusText = types.PendingStatusText
+	SuccessStatusText = types.SuccessStatusText
+	FailedStatusText  = types.FailedStatusText
+	DefaultParamSpace = keeper.DefaultParamSpace
 )
 
 var (

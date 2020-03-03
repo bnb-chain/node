@@ -1,9 +1,7 @@
-package commands
+package cli
 
 import (
 	"errors"
-
-	"github.com/binance-chain/node/plugins/bridge/types"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
@@ -13,10 +11,12 @@ import (
 	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
 const (
-	flagSequence        = "sequence"
+	flagSequence        = "channel-sequence"
 	flagContractAddress = "contract-address"
 	flagSenderAddress   = "sender-address"
 	flagReceiverAddress = "receiver-address"
@@ -66,8 +66,10 @@ func TransferCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("relay fee should not be empty")
 			}
 
-			receiverAddr, err := sdk.AccAddressFromBech32(viper.GetString(receiverAddressStr))
+			receiverAddr, err := sdk.AccAddressFromBech32(receiverAddressStr)
+			println(receiverAddressStr)
 			if err != nil {
+				println(err.Error())
 				return err
 			}
 
@@ -112,6 +114,7 @@ func TransferCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
 	cmd.Flags().String(flagContractAddress, "", "contract address")
 	cmd.Flags().String(flagSenderAddress, "", "sender address")
+	cmd.Flags().String(flagReceiverAddress, "", "receiver address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
 	cmd.Flags().String(flagRelayFee, "", "amount of relay fee")
 
@@ -178,7 +181,7 @@ func TimeoutCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
+	cmd.Flags().Int64(flagSequence, 0, "sequence of timeout channel")
 	cmd.Flags().String(flagSenderAddress, "", "sender address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
 

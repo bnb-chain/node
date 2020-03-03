@@ -5,6 +5,10 @@ import (
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
+var (
+	NewKeeper = keeper.NewKeeper
+)
+
 type (
 	Keeper = keeper.Keeper
 

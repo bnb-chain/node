@@ -6,6 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
+	"github.com/binance-chain/node/plugins/bridge"
+
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
@@ -60,6 +62,14 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
+
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BSCUpgrade, func(ctx sdk.Context) {
+		swapFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: bridge.TransferMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
+			&param.FixedFeeParams{MsgType: bridge.TimeoutMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
+		}
+		paramHub.UpdateFeeParams(ctx, swapFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
@@ -92,5 +102,7 @@ func init() {
 		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
+		bridge.TransferMsg{}.Type():       fees.FixedFeeCalculatorGen,
+		bridge.TimeoutMsg{}.Type():        fees.FixedFeeCalculatorGen,
 	}
 }

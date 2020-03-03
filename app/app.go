@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/binance-chain/node/plugins/oracle"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -36,6 +38,7 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -86,6 +89,8 @@ type BinanceChain struct {
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
+	oracleKeeper   oracle.Keeper
+	bridgeKeeper   bridge.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -154,6 +159,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
+	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.oracleKeeper, app.CoinKeeper)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -215,6 +223,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.BridgeStoreKey,
+		common.OracleStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -263,10 +273,13 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BSCUpgrade, upgradeConfig.BSCHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.BridgeStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.OracleStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -274,14 +287,16 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		timelock.TimeRelockMsg{}.Type(),
 		timelock.TimeUnlockMsg{}.Type(),
 	)
-
-	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3,
 		swap.HTLTMsg{}.Type(),
 		swap.DepositHTLTMsg{}.Type(),
 		swap.ClaimHTLTMsg{}.Type(),
 		swap.RefundHTLTMsg{}.Type(),
+	)
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BSCUpgrade,
+		bridge.TimeoutMsg{}.Type(),
+		bridge.TransferMsg{}.Type(),
 	)
 }
 
@@ -332,6 +347,8 @@ func (app *BinanceChain) initPlugins() {
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
+	oracle.InitPlugin(app.oracleKeeper)
+	bridge.InitPlugin(app, app.bridgeKeeper)
 }
 
 func (app *BinanceChain) initGovHooks() {
@@ -752,6 +769,8 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
+	bridge.RegisterWire(cdc)
+	oracle.RegisterWire(cdc)
 	return cdc
 }
 
