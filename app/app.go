@@ -217,7 +217,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.AtomicSwapStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
-	app.SetPreChecker(tx.NewTxPreChecker())
+	app.SetPreChecker(nil)
 	app.MountStoresTransient(common.TParamsStoreKey, common.TStakeStoreKey)
 
 	// block store required to hydrate dex OB
@@ -475,6 +475,7 @@ func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.Response
 		if app.publicationConfig.PublishOrderUpdates {
 			app.processErrAbciResponseForPub(req.Tx)
 		}
+		app.Logger.Error("failed to process invalid tx", "tx", txHash, "res", res.Log)
 	}
 	if app.publicationConfig.PublishBlock {
 		pub.Pool.AddTxRes(txHash, res)

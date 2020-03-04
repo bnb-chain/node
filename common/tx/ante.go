@@ -128,14 +128,14 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 			return newCtx, sdk.ErrInternal("tx must be StdTx").Result(), true
 		}
 
-		if mode == sdk.RunTxModeDeliver ||
-			mode == sdk.RunTxModeCheck ||
-			mode == sdk.RunTxModeSimulate {
-			err := validateBasic(stdTx)
-			if err != nil {
-				return newCtx, err.Result(), true
-			}
-		}
+		//if mode == sdk.RunTxModeDeliver ||
+		//	mode == sdk.RunTxModeCheck ||
+		//	mode == sdk.RunTxModeSimulate {
+		//	err := validateBasic(stdTx)
+		//	if err != nil {
+		//		return newCtx, err.Result(), true
+		//	}
+		//}
 
 		sigs := stdTx.GetSignatures()
 		signerAddrs := stdTx.GetSigners()
@@ -153,7 +153,7 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]sdk.Account, len(signerAddrs))
 		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
-		chainID := ctx.ChainID()
+		//chainID := ctx.ChainID()
 		// check sigs and nonce
 		for i := 0; i < len(sigs); i++ {
 			signerAddr, sig := signerAddrs[i], sigs[i]
@@ -162,21 +162,21 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 				return newCtx, err.Result(), true
 			}
 
-			if mode == sdk.RunTxModeDeliver ||
-				mode == sdk.RunTxModeCheck ||
-				mode == sdk.RunTxModeSimulate {
-				// check signature, return account with incremented nonce
-				signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
-				res := processSig(txHash, sig, signerAcc.GetPubKey(), signBytes)
-				if !res.IsOK() {
-					return newCtx, res, true
-				}
-			} else {
-				// if we do not processSig here, we should make sure pubKey of signature is identical to pubKey of account
-				if !signerAcc.GetPubKey().Equals(sig.PubKey) {
-					return newCtx, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature").Result(), true
-				}
-			}
+			//if mode == sdk.RunTxModeDeliver ||
+			//	mode == sdk.RunTxModeCheck ||
+			//	mode == sdk.RunTxModeSimulate {
+			//	// check signature, return account with incremented nonce
+			//	signBytes := auth.StdSignBytes(chainID, accNums[i], sequences[i], msgs, stdTx.GetMemo(), stdTx.GetSource(), stdTx.GetData())
+			//	res := processSig(txHash, sig, signerAcc.GetPubKey(), signBytes)
+			//	if !res.IsOK() {
+			//		return newCtx, res, true
+			//	}
+			//} else {
+			//	// if we do not processSig here, we should make sure pubKey of signature is identical to pubKey of account
+			//	if !signerAcc.GetPubKey().Equals(sig.PubKey) {
+			//		return newCtx, sdk.ErrInvalidPubKey("PubKey of account does not match PubKey of signature").Result(), true
+			//	}
+			//}
 
 			// Save the account.
 			am.SetAccount(newCtx, signerAcc)
@@ -310,9 +310,9 @@ func processSig(txHash string,
 	}
 
 	// Check sig.
-	if !pubKey.VerifyBytes(signBytes, sig.Signature) {
-		return sdk.ErrUnauthorized("signature verification failed").Result()
-	}
+	//if !pubKey.VerifyBytes(signBytes, sig.Signature) {
+	//	return sdk.ErrUnauthorized("signature verification failed").Result()
+	//}
 
 	sigCache.addSig(txHash)
 	return
