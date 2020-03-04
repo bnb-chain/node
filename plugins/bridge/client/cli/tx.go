@@ -67,7 +67,6 @@ func TransferCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			receiverAddr, err := sdk.AccAddressFromBech32(receiverAddressStr)
-			println(receiverAddressStr)
 			if err != nil {
 				println(err.Error())
 				return err

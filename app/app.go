@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/binance-chain/node/plugins/oracle"
+	"github.com/binance-chain/node/plugins/tokens/cross_chain"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -43,6 +43,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
+	"github.com/binance-chain/node/plugins/oracle"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -80,17 +81,18 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper     bank.Keeper
-	DexKeeper      *dex.DexKeeper
-	AccountKeeper  auth.AccountKeeper
-	TokenMapper    tkstore.Mapper
-	ValAddrCache   *ValAddrCache
-	stakeKeeper    stake.Keeper
-	govKeeper      gov.Keeper
-	timeLockKeeper timelock.Keeper
-	swapKeeper     swap.Keeper
-	oracleKeeper   oracle.Keeper
-	bridgeKeeper   bridge.Keeper
+	CoinKeeper       bank.Keeper
+	DexKeeper        *dex.DexKeeper
+	AccountKeeper    auth.AccountKeeper
+	TokenMapper      tkstore.Mapper
+	ValAddrCache     *ValAddrCache
+	stakeKeeper      stake.Keeper
+	govKeeper        gov.Keeper
+	timeLockKeeper   timelock.Keeper
+	swapKeeper       swap.Keeper
+	oracleKeeper     oracle.Keeper
+	bridgeKeeper     bridge.Keeper
+	crossChainKeeper cross_chain.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -161,6 +163,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.oracleKeeper, app.CoinKeeper)
+	app.crossChainKeeper = cross_chain.NewKeeper(cdc, common.CrossChainStoreKey, app.TokenMapper, app.CoinKeeper)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -225,6 +228,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.AtomicSwapStoreKey,
 		common.BridgeStoreKey,
 		common.OracleStoreKey,
+		common.CrossChainStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -280,6 +284,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.BridgeStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.OracleStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.CrossChainStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -297,6 +302,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BSCUpgrade,
 		bridge.TimeoutMsg{}.Type(),
 		bridge.TransferMsg{}.Type(),
+		cross_chain.BindMsg{}.Type(),
+		cross_chain.TransferMsg{}.Type(),
 	)
 }
 
@@ -343,7 +350,8 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper,
+		app.swapKeeper, app.crossChainKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)

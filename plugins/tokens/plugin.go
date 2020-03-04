@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/binance-chain/node/plugins/tokens/cross_chain"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -19,9 +21,10 @@ const abciQueryPrefix = "tokens"
 // InitPlugin initializes the plugin.
 func InitPlugin(
 	appp app.ChainApp, mapper Mapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
-	timeLockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
+	timeLockKeeper timelock.Keeper, swapKeeper swap.Keeper, crossChainKeeper cross_chain.Keeper) {
 	// add msg handlers
-	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper, swapKeeper) {
+	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper,
+		swapKeeper, crossChainKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

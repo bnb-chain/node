@@ -27,12 +27,14 @@ const (
 )
 
 type Token struct {
-	Name        string         `json:"name"`
-	Symbol      string         `json:"symbol"`
-	OrigSymbol  string         `json:"original_symbol"`
-	TotalSupply utils.Fixed8   `json:"total_supply"`
-	Owner       sdk.AccAddress `json:"owner"`
-	Mintable    bool           `json:"mintable"`
+	Name            string         `json:"name"`
+	Symbol          string         `json:"symbol"`
+	OrigSymbol      string         `json:"original_symbol"`
+	TotalSupply     utils.Fixed8   `json:"total_supply"`
+	Owner           sdk.AccAddress `json:"owner"`
+	Mintable        bool           `json:"mintable"`
+	ContractAddress string         `json:"contract_address"`
+	ContractDecimal int            `json:"contract_decimal"`
 }
 
 func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress, mintable bool) (*Token, error) {

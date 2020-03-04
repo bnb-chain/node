@@ -3,6 +3,7 @@ module github.com/binance-chain/node
 go 1.12
 
 require (
+	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/Shopify/sarama v1.21.0
 	github.com/cosmos/cosmos-sdk v0.38.0
 	github.com/cosmos/peggy v0.0.0-20200220185344-95feea7def17 // indirect
@@ -10,6 +11,7 @@ require (
 	github.com/eapache/go-resiliency v1.1.0
 	github.com/ethereum/go-ethereum v1.9.10
 	github.com/go-kit/kit v0.9.0
+	github.com/gogo/protobuf v1.3.1
 	github.com/google/btree v1.0.0
 	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/golang-lru v0.5.3
@@ -18,6 +20,8 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
+	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/spf13/cobra v0.0.6

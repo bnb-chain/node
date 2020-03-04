@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/cross_chain"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/swap"
@@ -23,4 +24,6 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(swap.DepositHTLTMsg{}, "tokens/DepositHTLTMsg", nil)
 	cdc.RegisterConcrete(swap.ClaimHTLTMsg{}, "tokens/ClaimHTLTMsg", nil)
 	cdc.RegisterConcrete(swap.RefundHTLTMsg{}, "tokens/RefundHTLTMsg", nil)
+	cdc.RegisterConcrete(cross_chain.BindMsg{}, "tokens/BindMsg", nil)
+	cdc.RegisterConcrete(cross_chain.TransferMsg{}, "tokens/TransferMsg", nil)
 }

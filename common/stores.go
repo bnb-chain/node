@@ -16,6 +16,7 @@ const (
 	AtomicSwapStoreName = "atomic_swap"
 	BridgeStoreName     = "bridge"
 	OracleStoreName     = "oracle"
+	CrossChainStoreName = "cross_chain"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -36,24 +37,27 @@ var (
 	AtomicSwapStoreKey = sdk.NewKVStoreKey(AtomicSwapStoreName)
 	BridgeStoreKey     = sdk.NewKVStoreKey(BridgeStoreName)
 	OracleStoreKey     = sdk.NewKVStoreKey(OracleStoreName)
+	CrossChainStoreKey = sdk.NewKVStoreKey(CrossChainStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
 
 	StoreKeyNameMap = map[string]sdk.StoreKey{
-		MainStoreName:            MainStoreKey,
-		AccountStoreName:         AccountStoreKey,
-		ValAddrStoreName:         ValAddrStoreKey,
-		TokenStoreName:           TokenStoreKey,
-		DexStoreName:             DexStoreKey,
-		PairStoreName:            PairStoreKey,
-		StakeStoreName:           StakeStoreKey,
-		ParamsStoreName:          ParamsStoreKey,
-		GovStoreName:             GovStoreKey,
-		TimeLockStoreName:        TimeLockStoreKey,
-		AtomicSwapStoreName:      AtomicSwapStoreKey,
-		BridgeStoreName:          BridgeStoreKey,
-		OracleStoreName:          OracleStoreKey,
+		MainStoreName:       MainStoreKey,
+		AccountStoreName:    AccountStoreKey,
+		ValAddrStoreName:    ValAddrStoreKey,
+		TokenStoreName:      TokenStoreKey,
+		DexStoreName:        DexStoreKey,
+		PairStoreName:       PairStoreKey,
+		StakeStoreName:      StakeStoreKey,
+		ParamsStoreName:     ParamsStoreKey,
+		GovStoreName:        GovStoreKey,
+		TimeLockStoreName:   TimeLockStoreKey,
+		AtomicSwapStoreName: AtomicSwapStoreKey,
+		BridgeStoreName:     BridgeStoreKey,
+		OracleStoreName:     OracleStoreKey,
+		CrossChainStoreName: CrossChainStoreKey,
+
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 	}
@@ -70,6 +74,7 @@ var (
 		GovStoreName,
 		TimeLockStoreName,
 		AtomicSwapStoreName,
+		CrossChainStoreName,
 	}
 )
 

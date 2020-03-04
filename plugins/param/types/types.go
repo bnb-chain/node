@@ -37,6 +37,8 @@ var (
 		"timeRelock":       {},
 		"crossTransfer":    {},
 		"crossTimeout":     {},
+		"bindToBSC":        {},
+		"transferToBSC":    {},
 
 		"HTLT":        {},
 		"depositHTLT": {},

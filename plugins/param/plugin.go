@@ -6,19 +6,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/plugins/bridge"
-
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
+	"github.com/binance-chain/node/plugins/tokens/cross_chain"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/swap"
@@ -67,6 +67,8 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		swapFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: bridge.TransferMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
 			&param.FixedFeeParams{MsgType: bridge.TimeoutMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
+			&param.FixedFeeParams{MsgType: cross_chain.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: cross_chain.TransferMsg{}.Type(), Fee: CrossTransferFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
@@ -104,5 +106,8 @@ func init() {
 		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
 		bridge.TransferMsg{}.Type():       fees.FixedFeeCalculatorGen,
 		bridge.TimeoutMsg{}.Type():        fees.FixedFeeCalculatorGen,
+		bridge.TimeoutMsg{}.Type():        fees.FixedFeeCalculatorGen,
+		cross_chain.BindMsgType:           fees.FixedFeeCalculatorGen,
+		cross_chain.TransferMsgType:       fees.FixedFeeCalculatorGen,
 	}
 }
