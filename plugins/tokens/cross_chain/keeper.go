@@ -5,7 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 type Keeper struct {
@@ -13,12 +13,12 @@ type Keeper struct {
 
 	storeKey sdk.StoreKey // The key used to access the store from the Context.
 
-	TokenMapper tokens.Mapper
+	TokenMapper store.Mapper
 
 	BankKeeper bank.Keeper
 }
 
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper tokens.Mapper, bankKeeper bank.Keeper) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, bankKeeper bank.Keeper) Keeper {
 	return Keeper{
 		cdc:         cdc,
 		TokenMapper: tokenMapper,
