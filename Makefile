@@ -80,16 +80,16 @@ define buildwindows
 endef
 
 
-build: get_tools
+build:
 ifeq ($(OS),Windows_NT)
 	$(call buildwindows)
 else
 	go build $(BUILD_CLI_FLAGS) -o build/bnbcli ./cmd/bnbcli
-	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
+	## go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
 	go build $(BUILD_FLAGS) -o build/bnbchaind ./cmd/bnbchaind
-	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
-	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
-	go build $(BUILD_FLAGS) -o build/lightd ./cmd/lightd
+	## go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
+	## go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
+	## go build $(BUILD_FLAGS) -o build/lightd ./cmd/lightd
 endif
 
 

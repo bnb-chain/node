@@ -535,7 +535,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
-		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime,!app.BaseApp.IsIavlMock())
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 		// other end blockers

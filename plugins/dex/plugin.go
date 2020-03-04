@@ -40,7 +40,7 @@ func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper, height int64, blockTime time.Time) {
+func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper, height int64, blockTime time.Time, doSnap bool) {
 	logger := bnclog.With("module", "dex")
 
 	logger.Info("Delist trading pairs", "blockHeight", height)
@@ -59,8 +59,10 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	logger.Info("Mark BreathBlock", "blockHeight", height)
 	dexKeeper.MarkBreatheBlock(ctx, height, blockTime)
 	logger.Info("Save Orderbook snapshot", "blockHeight", height)
-	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
-		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
+	if doSnap {
+		if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
+			logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
+		}
 	}
 	return
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/spf13/viper"
 	"io"
 
 	"github.com/spf13/cobra"
@@ -20,7 +22,11 @@ import (
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	return app.NewBinanceChain(logger, db, storeTracer)
+	if viper.GetBool("iavl-mock") {
+		return app.NewBinanceChain(logger, db, storeTracer, baseapp.SetIavlIsMock)
+	} else {
+		return app.NewBinanceChain(logger, db, storeTracer)
+	}
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {
