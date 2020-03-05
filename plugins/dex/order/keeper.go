@@ -213,7 +213,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
-	kp.insertRoundOrder(symbol, info.Side, info.Price, info.Id)
+	kp.InsertRoundOrder(symbol, info.Side, info.Price, info.Id)
 
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
@@ -222,7 +222,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	return nil
 }
 
-func (kp *Keeper) insertRoundOrder(symbol string, side int8, price int64, orderId string) {
+func (kp *Keeper) InsertRoundOrder(symbol string, side int8, price int64, orderId string) {
 	priceLevel, ok := kp.roundOrders[symbol]
 	if !ok {
 		priceLevel = make(map[string][]string)
