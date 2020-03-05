@@ -248,6 +248,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
+	app.initCrossSourceChainID()
+	RegisterCrossChainChannel()
 	if ServerContext.Config.StateSyncReactor {
 		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
@@ -289,6 +291,28 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		swap.ClaimHTLTMsg{}.Type(),
 		swap.RefundHTLTMsg{}.Type(),
 	)
+}
+
+func (app *BinanceChain) initCrossSourceChainID() {
+	chainID := app.CheckState.Ctx.ChainID()
+	switch chainID {
+	case "Binance-Chain-Tigris": // mainnet
+		sdk.InitCrossChainID(0x0001)
+	case "Binance-Chain-Nile":   // testnet
+		sdk.InitCrossChainID(0x0002)
+	default: 					 // others
+		sdk.InitCrossChainID(0x0003)
+	}
+}
+
+func RegisterCrossChainChannel() {
+	channelList := []string{"bind", "transfer", "timeout", "staking"} // append new channel names here in the future
+	for _, channelName := range channelList {
+		err := sdk.RegisterNewCrossChainChannel(channelName)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {

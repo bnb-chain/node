@@ -52,6 +52,8 @@ func main() {
 	config.SetBech32PrefixForConsensusNode(ctx.Bech32PrefixConsAddr, ctx.Bech32PrefixConsPub)
 	config.Seal()
 
+	app.RegisterCrossChainChannel()
+
 	// TODO: setup keybase, viper object, etc. to be passed into
 	// the below functions and eliminate global vars, like we do
 	// with the cdc
