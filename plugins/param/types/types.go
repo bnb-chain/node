@@ -35,10 +35,10 @@ var (
 		"timeLock":         {},
 		"timeUnlock":       {},
 		"timeRelock":       {},
-		"crossTransfer":    {},
+		"crossTransferIn":  {},
 		"crossTimeout":     {},
-		"bindToBSC":        {},
-		"transferToBSC":    {},
+		"crossBind":        {},
+		"crossTransferOut": {},
 
 		"HTLT":        {},
 		"depositHTLT": {},

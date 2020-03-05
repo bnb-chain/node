@@ -12,6 +12,8 @@ var (
 type (
 	Keeper = keeper.Keeper
 
-	TransferMsg = types.TransferMsg
-	TimeoutMsg  = types.TimeoutMsg
+	TransferInMsg  = types.TransferInMsg
+	TimeoutMsg     = types.TimeoutMsg
+	TransferOutMsg = types.TransferOutMsg
+	BindMsg        = types.BindMsg
 )

@@ -3,20 +3,26 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
+	MaxDecimal                  int = 18
+	MinTransferOutExpireTimeGap     = 60 * time.Second
+
 	RouteBridge = "bridge"
 
-	TransferMsgType = "crossTransfer"
-	TimeoutMsgType  = "crossTimeout"
+	TransferInMsgType  = "crossTransferIn"
+	TimeoutMsgType     = "crossTimeout"
+	BindMsgType        = "crossBind"
+	TransferOutMsgType = "crossTransferOut"
 )
 
-var _ sdk.Msg = TransferMsg{}
+var _ sdk.Msg = TransferInMsg{}
 
-type TransferMsg struct {
+type TransferInMsg struct {
 	Sequence         int64           `json:"sequence"`
 	ContractAddress  EthereumAddress `json:"contract_address"`
 	SenderAddress    EthereumAddress `json:"sender_address"`
@@ -24,12 +30,13 @@ type TransferMsg struct {
 	Amount           sdk.Coin        `json:"amount"`
 	RelayFee         sdk.Coin        `json:"relay_fee"`
 	ValidatorAddress sdk.AccAddress  `json:"validator_address"`
+	ExpireTime       int64           `json:"expire_time"`
 }
 
 func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 	senderAddr EthereumAddress, receiverAddr sdk.AccAddress, amount sdk.Coin,
-	relayFee sdk.Coin, validatorAddr sdk.AccAddress) TransferMsg {
-	return TransferMsg{
+	relayFee sdk.Coin, validatorAddr sdk.AccAddress, expireTime int64) TransferInMsg {
+	return TransferInMsg{
 		Sequence:         sequence,
 		ContractAddress:  contractAddr,
 		SenderAddress:    senderAddr,
@@ -37,31 +44,33 @@ func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
 		Amount:           amount,
 		RelayFee:         relayFee,
 		ValidatorAddress: validatorAddr,
+		ExpireTime:       expireTime,
 	}
 }
 
 // nolint
-func (msg TransferMsg) Route() string { return RouteBridge }
-func (msg TransferMsg) Type() string  { return TransferMsgType }
-func (msg TransferMsg) GetSigners() []sdk.AccAddress {
+func (msg TransferInMsg) Route() string { return RouteBridge }
+func (msg TransferInMsg) Type() string  { return TransferInMsgType }
+func (msg TransferInMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }
 
-func (msg TransferMsg) String() string {
-	return fmt.Sprintf("TransferMsg{"+
+func (msg TransferInMsg) String() string {
+	return fmt.Sprintf("TransferInMsg{"+
 		"ValidatorAddress:%v,"+
 		"ContractAddress:%s,"+
 		"SenderAddress:%s,"+
 		"ReceiverAddress:%s,"+
 		"Amount:%s,"+
 		"RelayFee:%s,"+
-		"ValidatorAddress:%s}", msg.ValidatorAddress,
+		"ValidatorAddress:%s,"+
+		"ExpireTime:%d}", msg.ValidatorAddress,
 		msg.ContractAddress.String(), msg.SenderAddress.String(), msg.ReceiverAddress.String(),
-		msg.Amount.String(), msg.RelayFee.String(), msg.ValidatorAddress.String())
+		msg.Amount.String(), msg.RelayFee.String(), msg.ValidatorAddress.String(), msg.ExpireTime)
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
-func (msg TransferMsg) GetSignBytes() []byte {
+func (msg TransferInMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -69,14 +78,17 @@ func (msg TransferMsg) GetSignBytes() []byte {
 	return b
 }
 
-func (msg TransferMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg TransferInMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg TransferMsg) ValidateBasic() sdk.Error {
+func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if msg.Sequence < 0 {
 		return ErrInvalidSequence("sequence should not be less than 0")
+	}
+	if msg.ExpireTime <= 0 {
+		return ErrInvalidExpireTime("expire time should be larger than 0")
 	}
 	if msg.ContractAddress.IsEmpty() {
 		return ErrInvalidEthereumAddress("contract address should not be empty")
@@ -125,7 +137,7 @@ func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
 }
 
 func (msg TimeoutMsg) String() string {
-	return fmt.Sprintf("TransferMsg{"+
+	return fmt.Sprintf("TransferInMsg{"+
 		"SenderAddress:%s,"+
 		"Sequence:%d,"+
 		"Amount:%s,"+
@@ -161,4 +173,107 @@ func (msg TimeoutMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
 	return nil
+}
+
+var _ sdk.Msg = BindMsg{}
+
+type BindMsg struct {
+	From            sdk.AccAddress  `json:"from"`
+	Symbol          string          `json:"symbol"`
+	ContractAddress EthereumAddress `json:"contract_address"`
+	ContractDecimal int             `json:"contract_decimal"`
+}
+
+func NewBindMsg(from sdk.AccAddress, symbol string, contractAddress EthereumAddress, contractDecimal int) BindMsg {
+	return BindMsg{
+		From:            from,
+		Symbol:          symbol,
+		ContractAddress: contractAddress,
+		ContractDecimal: contractDecimal,
+	}
+}
+
+func (msg BindMsg) Route() string { return RouteBridge }
+func (msg BindMsg) Type() string  { return BindMsgType }
+func (msg BindMsg) String() string {
+	return fmt.Sprintf("Bind{%v#%s%d}", msg.From, msg.ContractAddress.String(), msg.ContractDecimal)
+}
+func (msg BindMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
+func (msg BindMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
+
+func (msg BindMsg) ValidateBasic() sdk.Error {
+	if len(msg.From) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("address length should be %d", sdk.AddrLen))
+	}
+
+	if len(msg.Symbol) == 0 {
+		return ErrInvalidSymbol("symbol should not be empty")
+	}
+
+	if msg.ContractAddress.IsEmpty() {
+		return ErrInvalidContractAddress("contract address should not be empty")
+	}
+
+	if msg.ContractDecimal < 0 || msg.ContractDecimal > MaxDecimal {
+		return ErrInvalidDecimal(fmt.Sprintf("decimal should be no less than 0 and larger than %d", MaxDecimal))
+	}
+
+	return nil
+}
+
+func (msg BindMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg) // XXX: ensure some canonical form
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+type TransferOutMsg struct {
+	From       sdk.AccAddress  `json:"from"`
+	To         EthereumAddress `json:"to"`
+	Amount     sdk.Coin        `json:"amount"`
+	ExpireTime int64           `json:"expire_time"`
+}
+
+func NewTransferOutMsg(from sdk.AccAddress, to EthereumAddress, amount sdk.Coin, expireTime int64) TransferOutMsg {
+	return TransferOutMsg{
+		From:   from,
+		To:     to,
+		Amount: amount,
+	}
+}
+
+func (msg TransferOutMsg) Route() string { return RouteBridge }
+func (msg TransferOutMsg) Type() string  { return TransferOutMsgType }
+func (msg TransferOutMsg) String() string {
+	return fmt.Sprintf("Transfer{%v#%s#%s}", msg.From, msg.To.String(), msg.Amount.String())
+}
+func (msg TransferOutMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
+func (msg TransferOutMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
+func (msg TransferOutMsg) ValidateBasic() sdk.Error {
+	if len(msg.From) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("address length should be %d", sdk.AddrLen))
+	}
+
+	if msg.To.IsEmpty() {
+		return ErrInvalidContractAddress("to address should not be empty")
+	}
+
+	if !msg.Amount.IsPositive() {
+		return sdk.ErrInvalidCoins("amount should be positive")
+	}
+
+	if msg.ExpireTime <= 0 {
+		return ErrInvalidExpireTime("expire time should be larger than 0")
+	}
+
+	return nil
+}
+func (msg TransferOutMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg) // XXX: ensure some canonical form
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

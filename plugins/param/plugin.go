@@ -18,7 +18,6 @@ import (
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
-	"github.com/binance-chain/node/plugins/tokens/cross_chain"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/swap"
@@ -65,10 +64,10 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BSCUpgrade, func(ctx sdk.Context) {
 		swapFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: bridge.TransferMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
+			&param.FixedFeeParams{MsgType: bridge.TransferInMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
 			&param.FixedFeeParams{MsgType: bridge.TimeoutMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
-			&param.FixedFeeParams{MsgType: cross_chain.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: cross_chain.TransferMsg{}.Type(), Fee: CrossTransferFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
@@ -104,10 +103,10 @@ func init() {
 		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
-		bridge.TransferMsg{}.Type():       fees.FixedFeeCalculatorGen,
+		bridge.TransferInMsg{}.Type():     fees.FixedFeeCalculatorGen,
 		bridge.TimeoutMsg{}.Type():        fees.FixedFeeCalculatorGen,
 		bridge.TimeoutMsg{}.Type():        fees.FixedFeeCalculatorGen,
-		cross_chain.BindMsgType:           fees.FixedFeeCalculatorGen,
-		cross_chain.TransferMsgType:       fees.FixedFeeCalculatorGen,
+		bridge.BindMsg{}.Type():           fees.FixedFeeCalculatorGen,
+		bridge.TransferOutMsg{}.Type():    fees.FixedFeeCalculatorGen,
 	}
 }

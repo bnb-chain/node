@@ -7,16 +7,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/binance-chain/node/plugins/bridge/types"
 	"github.com/binance-chain/node/plugins/oracle"
-)
-
-var (
-	// bnb prefix address:  bnb1v8vkkymvhe2sf7gd2092ujc6hweta38xadu2pj
-	// tbnb prefix address: tbnb1v8vkkymvhe2sf7gd2092ujc6hweta38xnc4wpr
-	PegAccount = sdk.AccAddress(crypto.AddressHash([]byte("BinanceChainPegAccount")))
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 // Keeper maintains the link to data storage and
@@ -29,15 +23,18 @@ type Keeper struct {
 	storeKey sdk.StoreKey // The key used to access the store from the Context.
 
 	// The reference to the CoinKeeper to modify balances
-	bankKeeper bank.Keeper
+	BankKeeper bank.Keeper
+
+	TokenMapper store.Mapper
 }
 
 // NewKeeper creates new instances of the bridge Keeper
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, oracleKeeper oracle.Keeper, bankKeeper bank.Keeper) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper oracle.Keeper, bankKeeper bank.Keeper) Keeper {
 	return Keeper{
 		cdc:          cdc,
 		storeKey:     storeKey,
-		bankKeeper:   bankKeeper,
+		BankKeeper:   bankKeeper,
+		TokenMapper:  tokenMapper,
 		oracleKeeper: oracleKeeper,
 	}
 }
@@ -75,12 +72,20 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 			return oracle.Prophecy{}, err
 		}
 
-		_, err = k.bankKeeper.SendCoins(ctx, PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
+		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
+			// TODO write timeout package when timeout
+			return oracle.Prophecy{}, types.ErrInvalidExpireTime(fmt.Sprintf("expire time(%d) is before now(%d)",
+				transferClaim.ExpireTime, ctx.BlockHeader().Time.Unix()))
+		}
+
+		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
 		if err != nil {
 			return oracle.Prophecy{}, err
 		}
 
 		// TODO distribute delay fee
+
+		// TODO should we delete prophecy when prophecy succeeds
 
 		// increase sequence
 		k.IncreaseSequence(ctx, types.KeyCurrentTransferSequence)
@@ -103,7 +108,7 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 			return oracle.Prophecy{}, err
 		}
 
-		_, err = k.bankKeeper.SendCoins(ctx, timeoutClaim.SenderAddress, PegAccount, sdk.Coins{timeoutClaim.Amount})
+		_, err = k.BankKeeper.SendCoins(ctx, timeoutClaim.SenderAddress, types.PegAccount, sdk.Coins{timeoutClaim.Amount})
 		if err != nil {
 			return oracle.Prophecy{}, err
 		}

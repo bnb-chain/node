@@ -45,7 +45,6 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/plugins/tokens/cross_chain"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -80,18 +79,17 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper       bank.Keeper
-	DexKeeper        *dex.DexKeeper
-	AccountKeeper    auth.AccountKeeper
-	TokenMapper      tkstore.Mapper
-	ValAddrCache     *ValAddrCache
-	stakeKeeper      stake.Keeper
-	govKeeper        gov.Keeper
-	timeLockKeeper   timelock.Keeper
-	swapKeeper       swap.Keeper
-	oracleKeeper     oracle.Keeper
-	bridgeKeeper     bridge.Keeper
-	crossChainKeeper cross_chain.Keeper
+	CoinKeeper     bank.Keeper
+	DexKeeper      *dex.DexKeeper
+	AccountKeeper  auth.AccountKeeper
+	TokenMapper    tkstore.Mapper
+	ValAddrCache   *ValAddrCache
+	stakeKeeper    stake.Keeper
+	govKeeper      gov.Keeper
+	timeLockKeeper timelock.Keeper
+	swapKeeper     swap.Keeper
+	oracleKeeper   oracle.Keeper
+	bridgeKeeper   bridge.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -161,8 +159,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
-	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.oracleKeeper, app.CoinKeeper)
-	app.crossChainKeeper = cross_chain.NewKeeper(cdc, common.CrossChainStoreKey, app.TokenMapper, app.CoinKeeper)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -300,9 +297,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BSCUpgrade,
 		bridge.TimeoutMsg{}.Type(),
-		bridge.TransferMsg{}.Type(),
-		cross_chain.BindMsg{}.Type(),
-		cross_chain.TransferMsg{}.Type(),
+		bridge.TransferInMsg{}.Type(),
+		bridge.BindMsg{}.Type(),
+		bridge.TransferOutMsg{}.Type(),
 	)
 }
 
@@ -350,7 +347,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper,
-		app.swapKeeper, app.crossChainKeeper)
+		app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)

@@ -24,14 +24,16 @@ type TransferClaim struct {
 	ReceiverAddress sdk.AccAddress `json:"receiver_address"`
 	Amount          sdk.Coin       `json:"amount"`
 	RelayFee        sdk.Coin       `json:"relay_fee"`
+	ExpireTime      int64          `json:"expire_time"`
 }
 
-func CreateOracleClaimFromTransferMsg(msg TransferMsg) (oracle.Claim, sdk.Error) {
+func CreateOracleClaimFromTransferMsg(msg TransferInMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(TransferChannelId, msg.Sequence)
 	transferClaim := TransferClaim{
 		ReceiverAddress: msg.ReceiverAddress,
 		Amount:          msg.Amount,
 		RelayFee:        msg.RelayFee,
+		ExpireTime:      msg.ExpireTime,
 	}
 	claimBytes, err := json.Marshal(transferClaim)
 	if err != nil {
