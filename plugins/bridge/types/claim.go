@@ -21,15 +21,19 @@ func GetClaimId(channel uint8, sequence int64) string {
 }
 
 type TransferClaim struct {
-	ReceiverAddress sdk.AccAddress `json:"receiver_address"`
-	Amount          sdk.Coin       `json:"amount"`
-	RelayFee        sdk.Coin       `json:"relay_fee"`
-	ExpireTime      int64          `json:"expire_time"`
+	ContractAddress EthereumAddress `json:"contract_address"`
+	SenderAddress   EthereumAddress `json:"sender_address"`
+	ReceiverAddress sdk.AccAddress  `json:"receiver_address"`
+	Amount          sdk.Coin        `json:"amount"`
+	RelayFee        sdk.Coin        `json:"relay_fee"`
+	ExpireTime      int64           `json:"expire_time"`
 }
 
 func CreateOracleClaimFromTransferMsg(msg TransferInMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(TransferChannelId, msg.Sequence)
 	transferClaim := TransferClaim{
+		ContractAddress: msg.ContractAddress,
+		SenderAddress:   msg.SenderAddress,
 		ReceiverAddress: msg.ReceiverAddress,
 		Amount:          msg.Amount,
 		RelayFee:        msg.RelayFee,

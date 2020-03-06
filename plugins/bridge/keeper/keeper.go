@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -22,20 +24,29 @@ type Keeper struct {
 
 	storeKey sdk.StoreKey // The key used to access the store from the Context.
 
+	SourceChainId uint16
+	DestChainId   uint16
+
 	// The reference to the CoinKeeper to modify balances
 	BankKeeper bank.Keeper
 
 	TokenMapper store.Mapper
+
+	IbcKeeper ibc.Keeper
 }
 
 // NewKeeper creates new instances of the bridge Keeper
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper oracle.Keeper, bankKeeper bank.Keeper) Keeper {
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper oracle.Keeper,
+	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, sourceChainId, destChainId uint16) Keeper {
 	return Keeper{
-		cdc:          cdc,
-		storeKey:     storeKey,
-		BankKeeper:   bankKeeper,
-		TokenMapper:  tokenMapper,
-		oracleKeeper: oracleKeeper,
+		cdc:           cdc,
+		storeKey:      storeKey,
+		BankKeeper:    bankKeeper,
+		TokenMapper:   tokenMapper,
+		IbcKeeper:     ibcKeeper,
+		SourceChainId: sourceChainId,
+		DestChainId:   destChainId,
+		oracleKeeper:  oracleKeeper,
 	}
 }
 
@@ -73,9 +84,23 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		}
 
 		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-			// TODO write timeout package when timeout
-			return oracle.Prophecy{}, types.ErrInvalidExpireTime(fmt.Sprintf("expire time(%d) is before now(%d)",
-				transferClaim.ExpireTime, ctx.BlockHeader().Time.Unix()))
+			timeOutPackage, err := types.SerializeTimeoutPackage(transferClaim.Amount.Amount,
+				transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
+
+			if err != nil {
+				return oracle.Prophecy{}, types.ErrSerializePackageFailed(err.Error())
+			}
+
+			timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
+			if err != nil {
+				return oracle.Prophecy{}, types.ErrGetChannelIdFailed(err.Error())
+			}
+
+			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
+			if sdkErr != nil {
+				return oracle.Prophecy{}, sdkErr
+			}
+			return prophecy, nil
 		}
 
 		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})

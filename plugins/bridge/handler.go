@@ -83,6 +83,25 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInternal(fmt.Sprintf("update token bind info error")).Result()
 	}
 
+	pegAccount := keeper.BankKeeper.GetCoins(ctx, types.PegAccount)
+	pegAmount := pegAccount.AmountOf(symbol)
+
+	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
+		token.TotalSupply.ToInt64(), pegAmount, types.RelayReward)
+	if err != nil {
+		return types.ErrSerializePackageFailed(err.Error()).Result()
+	}
+
+	bindChannelId, err := sdk.GetChannelID(types.BindChannelName)
+	if err != nil {
+		return types.ErrGetChannelIdFailed(err.Error()).Result()
+	}
+
+	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId, bindPackage)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
 	return sdk.Result{}
 }
 
@@ -106,6 +125,23 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, sdk.Coins{msg.Amount})
 	if cErr != nil {
 		return cErr.Result()
+	}
+
+	contractAddr := types.NewEthereumAddress(token.ContractAddress)
+	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
+		msg.Amount.Amount, msg.ExpireTime, types.RelayReward)
+	if err != nil {
+		return types.ErrSerializePackageFailed(err.Error()).Result()
+	}
+
+	transferChannelId, err := sdk.GetChannelID(types.TransferOutChannelName)
+	if err != nil {
+		return types.ErrGetChannelIdFailed(err.Error()).Result()
+	}
+
+	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId, transferPackage)
+	if sdkErr != nil {
+		return sdkErr.Result()
 	}
 
 	return sdk.Result{}

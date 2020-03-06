@@ -18,6 +18,8 @@ const (
 	CodeTokenNotBound          sdk.CodeType = 7
 	CodeInvalidSymbol          sdk.CodeType = 8
 	CodeInvalidExpireTime      sdk.CodeType = 9
+	CodeSerializePackageFailed sdk.CodeType = 10
+	CodeGetChannelIdFailed     sdk.CodeType = 11
 )
 
 //----------------------------------------
@@ -57,4 +59,12 @@ func ErrInvalidSymbol(msg string) sdk.Error {
 
 func ErrInvalidExpireTime(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidExpireTime, msg)
+}
+
+func ErrSerializePackageFailed(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeSerializePackageFailed, msg)
+}
+
+func ErrGetChannelIdFailed(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeGetChannelIdFailed, msg)
 }

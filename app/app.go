@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -90,11 +92,13 @@ type BinanceChain struct {
 	swapKeeper     swap.Keeper
 	oracleKeeper   oracle.Keeper
 	bridgeKeeper   bridge.Keeper
+	ibcKeeper      ibc.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
 	baseConfig         *config.BaseConfig
 	upgradeConfig      *config.UpgradeConfig
+	crossChainConfig   *config.CrossChainConfig
 	abciQueryBlackList map[string]bool
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
@@ -121,6 +125,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
 		upgradeConfig:      ServerContext.UpgradeConfig,
+		crossChainConfig:   ServerContext.CrossChainConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
 	}
@@ -159,7 +164,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
-	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper)
+	app.ibcKeeper = ibc.NewKeeper(cdc, common.IbcStoreKey, ibc.DefaultCodespace)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
+		app.ibcKeeper, app.crossChainConfig.SourceChainId, app.crossChainConfig.DestinationChainId)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -224,7 +231,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.AtomicSwapStoreKey,
 		common.BridgeStoreKey,
 		common.OracleStoreKey,
-		common.CrossChainStoreKey,
+		common.IbcStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -280,7 +287,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.BridgeStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.OracleStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.CrossChainStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BSCUpgrade, common.IbcStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,

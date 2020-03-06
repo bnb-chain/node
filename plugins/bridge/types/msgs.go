@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -11,6 +12,12 @@ import (
 const (
 	MaxDecimal                  int = 18
 	MinTransferOutExpireTimeGap     = 60 * time.Second
+	// TODO change relay reward
+	RelayReward int64 = 1e6
+
+	BindChannelName        = "bind"
+	TransferOutChannelName = "transferOut"
+	TimeoutChannelName     = "timeout"
 
 	RouteBridge = "bridge"
 
@@ -135,7 +142,6 @@ func (msg TimeoutMsg) Type() string  { return TimeoutMsgType }
 func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }
-
 func (msg TimeoutMsg) String() string {
 	return fmt.Sprintf("TransferInMsg{"+
 		"SenderAddress:%s,"+
@@ -276,4 +282,59 @@ func (msg TransferOutMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func SerializeBindPackage(bep2TokenSymbol string, bep2TokenOwner sdk.AccAddress, contractAddr []byte,
+	totalSupply int64, peggyAmount int64, relayReward int64) ([]byte, error) {
+	serializedBytes := make([]byte, 32+20+20+32+32+8)
+	if len(bep2TokenSymbol) > 32 {
+		return nil, fmt.Errorf("bep2 token symbol length should be no more than 32")
+	}
+	copy(serializedBytes[0:32], bep2TokenSymbol)
+	copy(serializedBytes[32:52], bep2TokenOwner)
+
+	if len(contractAddr) != 20 {
+		return nil, fmt.Errorf("contract address length must be 20")
+	}
+	copy(serializedBytes[52:72], contractAddr)
+
+	binary.BigEndian.PutUint64(serializedBytes[96:104], uint64(totalSupply))
+	binary.BigEndian.PutUint64(serializedBytes[128:136], uint64(peggyAmount))
+	binary.BigEndian.PutUint64(serializedBytes[160:168], uint64(relayReward))
+
+	return serializedBytes, nil
+}
+
+func SerializeTimeoutPackage(refundAmount int64, contractAddr []byte, refundAddr []byte) ([]byte, error) {
+	serializedBytes := make([]byte, 32+20+20)
+	if len(contractAddr) != 20 || len(refundAddr) != 20 {
+		return nil, fmt.Errorf("length of address must be 20")
+	}
+	binary.BigEndian.PutUint64(serializedBytes[24:32], uint64(refundAmount))
+	copy(serializedBytes[32:52], contractAddr)
+	copy(serializedBytes[52:], refundAddr)
+
+	return serializedBytes, nil
+}
+
+func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, sender []byte, recipient []byte,
+	amount int64, expireTime int64, relayReward int64) ([]byte, error) {
+	serializedBytes := make([]byte, 32+20+20+20+32+8+32)
+	if len(bep2TokenSymbol) > 32 {
+		return nil, fmt.Errorf("bep2 token symbol length should be no more than 32")
+	}
+	copy(serializedBytes[0:32], bep2TokenSymbol)
+
+	if len(contractAddr) != 20 || len(sender) != 20 || len(recipient) != 20 {
+		return nil, fmt.Errorf("length of address must be 20")
+	}
+	copy(serializedBytes[32:52], contractAddr)
+	copy(serializedBytes[52:72], sender)
+	copy(serializedBytes[72:92], recipient)
+
+	binary.BigEndian.PutUint64(serializedBytes[116:124], uint64(amount))
+	binary.BigEndian.PutUint64(serializedBytes[124:132], uint64(expireTime))
+	binary.BigEndian.PutUint64(serializedBytes[156:164], uint64(relayReward))
+
+	return serializedBytes, nil
 }

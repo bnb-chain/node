@@ -154,6 +154,12 @@ logFileRoot = "{{ .LogConfig.LogFileRoot }}"
 logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
+
+[cross_chain]
+
+sourceChainId = {{ .CrossChainConfig.SourceChainId }}
+destinationChainId = {{ .CrossChainConfig.DestinationChainId }}
+
 `
 
 type BinanceChainContext struct {
@@ -180,6 +186,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
+	*CrossChainConfig  `mapstructure:"cross_chain"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -190,6 +197,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
+		CrossChainConfig:  defaultCrossChainConfig(),
 	}
 }
 
@@ -313,6 +321,18 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishBlockFee ||
 		pubCfg.PublishTransfer ||
 		pubCfg.PublishBlock
+}
+
+type CrossChainConfig struct {
+	SourceChainId      uint16 `mapstructure:"sourceChainId"`
+	DestinationChainId uint16 `mapstructure:"destinationChainId"`
+}
+
+func defaultCrossChainConfig() *CrossChainConfig {
+	return &CrossChainConfig{
+		SourceChainId:      0,
+		DestinationChainId: 0,
+	}
 }
 
 type LogConfig struct {
