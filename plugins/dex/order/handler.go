@@ -272,6 +272,6 @@ func handleCancelOrder(
 }
 
 func convertToOrderPart(orderInfo OrderInfo) me.OrderPart {
-	return me.OrderPart{Id: orderInfo.Id, Time: orderInfo.CreatedTimestamp,
+	return me.OrderPart{Id: orderInfo.Id, Time: orderInfo.CreatedHeight,
 		Qty: orderInfo.Quantity, CumQty: orderInfo.CumQty}
 }
