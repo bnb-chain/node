@@ -76,19 +76,19 @@ func TestTimeoutMsg(t *testing.T) {
 		expectedPass bool
 	}{
 		{
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.ValAddress(addrs[0])),
+			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			true,
 		}, {
-			NewTimeoutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, sdk.ValAddress(addrs[0])),
+			NewTimeoutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, sdk.ValAddress(addrs[0])),
+			NewTimeoutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, sdk.ValAddress(addrs[0])),
+			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.ValAddress{1, 2}),
+			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.AccAddress{1, 2}),
 			true,
 		},
 	}
@@ -113,22 +113,25 @@ func TestBindMsg(t *testing.T) {
 		expectedPass bool
 	}{
 		{
-			NewBindMsg(addrs[0], "BNB", nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 1),
 			true,
 		}, {
-			NewBindMsg(addrs[0], "", nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "", 1, nonEmptyEthAddr, 1),
 			false,
 		}, {
-			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "BNB", 0, nonEmptyEthAddr, 1),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", emptyEthAddr, 1),
+			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", 1, nonEmptyEthAddr, 1),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", nonEmptyEthAddr, -1),
+			NewBindMsg(addrs[0], "BNB", 1, emptyEthAddr, 1),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", nonEmptyEthAddr, 20),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, -1),
+			false,
+		}, {
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 20),
 			false,
 		},
 	}

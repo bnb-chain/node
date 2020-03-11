@@ -83,11 +83,19 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInternal(fmt.Sprintf("update token bind info error")).Result()
 	}
 
-	pegAccount := keeper.BankKeeper.GetCoins(ctx, types.PegAccount)
-	pegAmount := pegAccount.AmountOf(symbol)
+	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, sdk.Coins{
+		sdk.Coin{
+			Denom:  symbol,
+			Amount: msg.Amount,
+		},
+	})
+
+	if cErr != nil {
+		return cErr.Result()
+	}
 
 	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
-		token.TotalSupply.ToInt64(), pegAmount, types.RelayReward)
+		token.TotalSupply.ToInt64(), msg.Amount, types.RelayReward)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}

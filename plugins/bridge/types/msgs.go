@@ -186,13 +186,15 @@ var _ sdk.Msg = BindMsg{}
 type BindMsg struct {
 	From            sdk.AccAddress  `json:"from"`
 	Symbol          string          `json:"symbol"`
+	Amount          int64           `json:"amount"`
 	ContractAddress EthereumAddress `json:"contract_address"`
 	ContractDecimal int             `json:"contract_decimal"`
 }
 
-func NewBindMsg(from sdk.AccAddress, symbol string, contractAddress EthereumAddress, contractDecimal int) BindMsg {
+func NewBindMsg(from sdk.AccAddress, symbol string, amount int64, contractAddress EthereumAddress, contractDecimal int) BindMsg {
 	return BindMsg{
 		From:            from,
+		Amount:          amount,
 		Symbol:          symbol,
 		ContractAddress: contractAddress,
 		ContractDecimal: contractDecimal,
@@ -202,7 +204,7 @@ func NewBindMsg(from sdk.AccAddress, symbol string, contractAddress EthereumAddr
 func (msg BindMsg) Route() string { return RouteBridge }
 func (msg BindMsg) Type() string  { return BindMsgType }
 func (msg BindMsg) String() string {
-	return fmt.Sprintf("Bind{%v#%s%d}", msg.From, msg.ContractAddress.String(), msg.ContractDecimal)
+	return fmt.Sprintf("Bind{%v#%s#%d$%s#%d}", msg.From, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimal)
 }
 func (msg BindMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
 func (msg BindMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
@@ -214,6 +216,10 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 
 	if len(msg.Symbol) == 0 {
 		return ErrInvalidSymbol("symbol should not be empty")
+	}
+
+	if msg.Amount <= 0 {
+		return ErrInvalidAmount("amount should be larger than 0")
 	}
 
 	if msg.ContractAddress.IsEmpty() {
