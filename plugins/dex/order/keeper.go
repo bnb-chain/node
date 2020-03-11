@@ -33,6 +33,7 @@ const (
 	numPricesStored  = 2000
 	pricesStoreEvery = 1000
 	minimalNumPrices = 500
+	depthCacheLimit  = 1000
 )
 
 type FeeHandler func(map[string]*types.Fee)
@@ -57,6 +58,7 @@ type Keeper struct {
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
+	OrderBookCacheable         bool
 	logger                     tmlog.Logger
 }
 
@@ -65,8 +67,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
+func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool, orderBookCacheable bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
 		PairMapper:                 tradingPairMapper,
@@ -86,6 +87,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
+		OrderBookCacheable:         orderBookCacheable,
 		logger:                     logger,
 	}
 }
@@ -354,6 +356,9 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			}
 		}
 	}
+	if kp.OrderBookCacheable {
+		engine.BookCache = kp.GetOrderBookLevels(symbol, depthCacheLimit)
+	}
 }
 
 func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
@@ -457,16 +462,24 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 
 	if eng, ok := kp.engines[pair]; ok {
 		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
-			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
-			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
-			i++
-		},
-			func(p *me.PriceLevel) {
-				orderbook[j].SellPrice = utils.Fixed8(p.Price)
-				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
-				j++
-			})
+		if kp.OrderBookCacheable {
+			if len(eng.BookCache) < maxLevels {
+				copy(orderbook, eng.BookCache)
+			} else {
+				orderbook = eng.BookCache[:maxLevels]
+			}
+		} else {
+			eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+				orderbook[i].BuyPrice = utils.Fixed8(p.Price)
+				orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
+				i++
+			},
+				func(p *me.PriceLevel) {
+					orderbook[j].SellPrice = utils.Fixed8(p.Price)
+					orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
+					j++
+				})
+		}
 	}
 	return orderbook
 }

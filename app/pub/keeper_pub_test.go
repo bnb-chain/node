@@ -61,7 +61,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger).WithAccountCache(accountCache)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true, false)
 	tradingPair := dextypes.NewTradingPair("XYZ-000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)

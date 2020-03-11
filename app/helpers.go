@@ -162,6 +162,10 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	}
 }
 
+func (app *BinanceChain) GetBasicConfig() *config.BaseConfig{
+	return app.baseConfig
+}
+
 func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
 	// we should only sync to breathe block height
 	latestBlockHeight := app.LastBlockHeight()
