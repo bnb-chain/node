@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
@@ -67,6 +68,11 @@ func handleTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TimeoutMsg) sdk.
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
+	if !time.Unix(msg.ExpireTime, 0).After(ctx.BlockHeader().Time.Add(types.MinBindExpireTimeGap)) {
+		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time should be %d seconds after now(%s)",
+			types.MinBindExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
+	}
+
 	symbol := strings.ToUpper(msg.Symbol)
 
 	token, err := keeper.TokenMapper.GetToken(ctx, symbol)
@@ -83,19 +89,27 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInternal(fmt.Sprintf("update token bind info error")).Result()
 	}
 
-	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, sdk.Coins{
-		sdk.Coin{
-			Denom:  symbol,
-			Amount: msg.Amount,
-		},
-	})
+	peggyAmount := sdk.Coins{sdk.Coin{Denom: symbol, Amount: msg.Amount}}
+	relayFee := sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}}
+	transferAmount := peggyAmount.Plus(relayFee)
+
+	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
 
 	if cErr != nil {
 		return cErr.Result()
 	}
-
+	var calibratedTotalSupply sdk.Int
+	var calibratedAmount sdk.Int
+	if msg.ContractDecimal >= cmmtypes.TokenDecimals {
+		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-8)))
+		calibratedAmount = sdk.NewInt(msg.Amount).Mul(sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-8)))
+	} else {
+		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(sdk.NewIntWithDecimal(1, int(8-msg.ContractDecimal)))
+		calibratedAmount = sdk.NewInt(msg.Amount).Div(sdk.NewIntWithDecimal(1, int(8-msg.ContractDecimal)))
+	}
+	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, 10))
 	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
-		token.TotalSupply.ToInt64(), msg.Amount, types.RelayReward)
+		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
@@ -130,14 +144,22 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrTokenNotBound(fmt.Sprintf("token %s is not bound", symbol)).Result()
 	}
 
-	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, sdk.Coins{msg.Amount})
+	transferAmount := sdk.Coins{msg.Amount}.Plus(sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}})
+	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
 	if cErr != nil {
 		return cErr.Result()
 	}
 
+	var calibratedAmount sdk.Int
+	if token.ContractDecimal >= cmmtypes.TokenDecimals {
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimal-8)))
+	} else {
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(sdk.NewIntWithDecimal(1, int(8-token.ContractDecimal)))
+	}
+	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, 10))
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
-		msg.Amount.Amount, msg.ExpireTime, types.RelayReward)
+		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}

@@ -113,25 +113,25 @@ func TestBindMsg(t *testing.T) {
 		expectedPass bool
 	}{
 		{
-			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 1, 100),
 			true,
 		}, {
-			NewBindMsg(addrs[0], "", 1, nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "", 1, nonEmptyEthAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 0, nonEmptyEthAddr, 1),
+			NewBindMsg(addrs[0], "BNB", 0, nonEmptyEthAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", 1, nonEmptyEthAddr, 1),
+			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", 1, nonEmptyEthAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 1, emptyEthAddr, 1),
+			NewBindMsg(addrs[0], "BNB", 1, emptyEthAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, -1),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, -1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 20),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 20, 100),
 			false,
 		},
 	}

@@ -34,7 +34,7 @@ type Token struct {
 	Owner           sdk.AccAddress `json:"owner"`
 	Mintable        bool           `json:"mintable"`
 	ContractAddress string         `json:"contract_address"`
-	ContractDecimal int            `json:"contract_decimal"`
+	ContractDecimal int8           `json:"contract_decimal"`
 }
 
 func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress, mintable bool) (*Token, error) {
