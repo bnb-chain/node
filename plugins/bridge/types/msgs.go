@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	cmmtypes "github.com/binance-chain/node/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -13,7 +14,6 @@ const (
 	MaxDecimal                  int8 = 18
 	MinTransferOutExpireTimeGap      = 60 * time.Second
 	MinBindExpireTimeGap             = 600 * time.Second
-
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 
@@ -106,8 +106,8 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
-	if !msg.RelayFee.IsPositive() {
-		return ErrInvalidAmount("relay fee amount should be positive")
+	if !msg.RelayFee.IsPositive() || msg.RelayFee.Denom != cmmtypes.NativeTokenSymbol {
+		return ErrInvalidAmount("amount to send should be positive native token")
 	}
 	return nil
 }
