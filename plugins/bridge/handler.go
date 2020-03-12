@@ -154,7 +154,6 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 
 	symbol := strings.ToUpper(msg.Amount.Denom)
-
 	token, err := keeper.TokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", symbol)).Result()
