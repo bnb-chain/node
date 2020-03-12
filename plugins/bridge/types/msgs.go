@@ -26,6 +26,7 @@ const (
 	TransferOutTimeoutMsgType = "crossTransferOutTimeout"
 	BindMsgType               = "crossBind"
 	TransferOutMsgType        = "crossTransferOut"
+	UpdateBindMsgType         = "crossUpdateBind"
 )
 
 var _ sdk.Msg = TransferInMsg{}
@@ -270,7 +271,7 @@ func NewUpdateBindMsg(sequence int64, validatorAddress sdk.AccAddress, symbol st
 }
 
 func (msg UpdateBindMsg) Route() string { return RouteBridge }
-func (msg UpdateBindMsg) Type() string  { return BindMsgType }
+func (msg UpdateBindMsg) Type() string  { return UpdateBindMsgType }
 func (msg UpdateBindMsg) String() string {
 	return fmt.Sprintf("UpdateBind{%v#%s#%d$%s#%d#%d}", msg.ValidatorAddress, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimal, msg.Status)
 }

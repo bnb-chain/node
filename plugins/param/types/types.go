@@ -39,6 +39,7 @@ var (
 		"crossTransferOutTimeout": {},
 		"crossBind":               {},
 		"crossTransferOut":        {},
+		"crossUpdateBind":         {},
 
 		"HTLT":        {},
 		"depositHTLT": {},

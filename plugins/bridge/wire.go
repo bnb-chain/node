@@ -10,4 +10,5 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(TransferOutTimeoutMsg{}, "bridge/TransferOutTimeoutMsg", nil)
 	cdc.RegisterConcrete(BindMsg{}, "bridge/BindMsg", nil)
 	cdc.RegisterConcrete(TransferOutMsg{}, "bridge/TransferOutMsg", nil)
+	cdc.RegisterConcrete(UpdateBindMsg{}, "bridge/UpdateBindMsg", nil)
 }

@@ -307,6 +307,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferInMsg{}.Type(),
 		bridge.BindMsg{}.Type(),
 		bridge.TransferOutMsg{}.Type(),
+		bridge.UpdateBindMsg{}.Type(),
 	)
 }
 

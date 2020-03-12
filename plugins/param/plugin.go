@@ -68,6 +68,7 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: bridge.TransferOutTimeoutMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
 			&param.FixedFeeParams{MsgType: bridge.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.UpdateBindMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
@@ -105,7 +106,7 @@ func init() {
 		swap.RefundHTLT:                       fees.FixedFeeCalculatorGen,
 		bridge.TransferInMsg{}.Type():         fees.FixedFeeCalculatorGen,
 		bridge.TransferOutTimeoutMsg{}.Type(): fees.FixedFeeCalculatorGen,
-		bridge.TransferOutTimeoutMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		bridge.UpdateBindMsg{}.Type():         fees.FixedFeeCalculatorGen,
 		bridge.BindMsg{}.Type():               fees.FixedFeeCalculatorGen,
 		bridge.TransferOutMsg{}.Type():        fees.FixedFeeCalculatorGen,
 	}
