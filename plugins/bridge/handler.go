@@ -116,11 +116,11 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	var calibratedTotalSupply sdk.Int
 	var calibratedAmount sdk.Int
 	if msg.ContractDecimal >= cmmtypes.TokenDecimals {
-		decimals := sdk.NewIntWithDecimal(1, int(token.ContractDecimal-cmmtypes.TokenDecimals))
+		decimals := sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-cmmtypes.TokenDecimals))
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Mul(decimals)
 	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimal))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimal))
 		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
 			return types.ErrInvalidAmount("can't calibrate bep2 amount to the amount of ERC20").Result()
 		}
@@ -128,7 +128,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
-	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
+	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
@@ -154,7 +154,6 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 
 	symbol := strings.ToUpper(msg.Amount.Denom)
-
 	token, err := keeper.TokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", symbol)).Result()
