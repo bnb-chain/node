@@ -9,18 +9,20 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 12
 
-	CodeInvalidTransferMsg     sdk.CodeType = 1
-	CodeInvalidSequence        sdk.CodeType = 2
-	CodeInvalidAmount          sdk.CodeType = 3
-	CodeInvalidEthereumAddress sdk.CodeType = 4
-	CodeInvalidDecimal         sdk.CodeType = 5
-	CodeInvalidContractAddress sdk.CodeType = 6
-	CodeTokenNotBound          sdk.CodeType = 7
-	CodeInvalidSymbol          sdk.CodeType = 8
-	CodeInvalidExpireTime      sdk.CodeType = 9
-	CodeSerializePackageFailed sdk.CodeType = 10
-	CodeGetChannelIdFailed     sdk.CodeType = 11
-	CodeBindRequestExist       sdk.CodeType = 12
+	CodeInvalidTransferMsg      sdk.CodeType = 1
+	CodeInvalidSequence         sdk.CodeType = 2
+	CodeInvalidAmount           sdk.CodeType = 3
+	CodeInvalidEthereumAddress  sdk.CodeType = 4
+	CodeInvalidDecimal          sdk.CodeType = 5
+	CodeInvalidContractAddress  sdk.CodeType = 6
+	CodeTokenNotBound           sdk.CodeType = 7
+	CodeInvalidSymbol           sdk.CodeType = 8
+	CodeInvalidExpireTime       sdk.CodeType = 9
+	CodeSerializePackageFailed  sdk.CodeType = 10
+	CodeGetChannelIdFailed      sdk.CodeType = 11
+	CodeBindRequestExists       sdk.CodeType = 12
+	CodeBindRequestNotExists    sdk.CodeType = 13
+	CodeBindRequestNotIdentical sdk.CodeType = 14
 )
 
 //----------------------------------------
@@ -70,6 +72,14 @@ func ErrGetChannelIdFailed(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeGetChannelIdFailed, msg)
 }
 
-func ErrBindRequestExist(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeBindRequestExist, msg)
+func ErrBindRequestExists(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeBindRequestExists, msg)
+}
+
+func ErrBindRequestNotExists(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeBindRequestNotExists, msg)
+}
+
+func ErrBindRequestNotIdentical(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeBindRequestNotIdentical, msg)
 }

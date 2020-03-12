@@ -18,6 +18,8 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleTransferInMsg(ctx, keeper, msg)
 		case TransferOutMsg:
 			return handleTransferOutMsg(ctx, keeper, msg)
+		case UpdateBindMsg:
+			return handleUpdateBindMsg(ctx, keeper, msg)
 		case BindMsg:
 			return handleBindMsg(ctx, keeper, msg)
 		case TransferOutTimeoutMsg:
@@ -34,7 +36,7 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 		return types.ErrInvalidSymbol(fmt.Sprintf("relay fee should be native token(%s)", cmmtypes.NativeTokenSymbol)).Result()
 	}
 
-	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyCurrentTransferSequence)
+	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyCurrentTransferInSequence)
 	if msg.Sequence != currentSequence {
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
 	}
@@ -53,17 +55,36 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 }
 
 func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferOutTimeoutMsg) sdk.Result {
-	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyTimeoutSequence)
+	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyTransferOutTimeoutSequence)
 	if msg.Sequence != currentSequence {
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
 	}
 
-	claim, err := types.CreateOracleClaimFromTimeoutMsg(msg)
+	claim, err := types.CreateOracleClaimFromTransferOutTimeoutMsg(msg)
 	if err != nil {
 		return err.Result()
 	}
 
 	_, err = bridgeKeeper.ProcessTimeoutClaim(ctx, claim)
+	if err != nil {
+		return err.Result()
+	}
+
+	return sdk.Result{}
+}
+
+func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.Result {
+	currentSequence := keeper.GetCurrentSequence(ctx, types.KeyUpdateBindSequence)
+	if msg.Sequence != currentSequence {
+		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
+	}
+
+	claim, err := types.CreateOracleClaimFromUpdateBindMsg(msg)
+	if err != nil {
+		return err.Result()
+	}
+
+	_, err = keeper.ProcessUpdateBindClaim(ctx, claim)
 	if err != nil {
 		return err.Result()
 	}
@@ -93,11 +114,6 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
 
-	//err = keeper.TokenMapper.UpdateBind(ctx, symbol, msg.ContractAddress.String(), msg.ContractDecimal)
-	//if err != nil {
-	//	return sdk.ErrInternal(fmt.Sprintf("update token bind info error")).Result()
-	//}
-
 	bindRequest := types.GetBindRequest(msg)
 	sdkErr := keeper.CreateBindRequest(ctx, bindRequest)
 	if sdkErr != nil {
@@ -115,12 +131,12 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	var calibratedTotalSupply sdk.Int
 	var calibratedAmount sdk.Int
-	if msg.ContractDecimal >= cmmtypes.TokenDecimals {
-		decimals := sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-cmmtypes.TokenDecimals))
+	if msg.ContractDecimals >= cmmtypes.TokenDecimals {
+		decimals := sdk.NewIntWithDecimal(1, int(msg.ContractDecimals-cmmtypes.TokenDecimals))
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Mul(decimals)
 	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimal))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
 		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
 			return types.ErrInvalidAmount("can't calibrate bep2 amount to the amount of ERC20").Result()
 		}

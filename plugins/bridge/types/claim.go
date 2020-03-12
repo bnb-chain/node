@@ -12,8 +12,9 @@ import (
 const (
 	ClaimIdDelimiter = "-"
 
-	TransferChannelId uint8 = 1
-	TimeoutChannelId  uint8 = 2
+	TransferChannelId           uint8 = 1
+	TransferOutTimeoutChannelId uint8 = 2
+	UpdateBindChannelId         uint8 = 3
 )
 
 func GetClaimId(channel uint8, sequence int64) string {
@@ -56,19 +57,19 @@ func GetTransferClaimFromOracleClaim(claim string) (TransferClaim, sdk.Error) {
 	return transferClaim, nil
 }
 
-type TimeoutClaim struct {
+type TransferOutTimeoutClaim struct {
 	SenderAddress sdk.AccAddress `json:"sender_address"`
 	Amount        sdk.Coin       `json:"amount"`
 }
 
-func CreateOracleClaimFromTimeoutMsg(msg TransferOutTimeoutMsg) (oracle.Claim, sdk.Error) {
-	claimId := GetClaimId(TimeoutChannelId, msg.Sequence)
+func CreateOracleClaimFromTransferOutTimeoutMsg(msg TransferOutTimeoutMsg) (oracle.Claim, sdk.Error) {
+	claimId := GetClaimId(TransferOutTimeoutChannelId, msg.Sequence)
 
-	timeoutClaim := TimeoutClaim{
+	transferOutTimeoutClaim := TransferOutTimeoutClaim{
 		SenderAddress: msg.SenderAddress,
 		Amount:        msg.Amount,
 	}
-	claimBytes, err := json.Marshal(timeoutClaim)
+	claimBytes, err := json.Marshal(transferOutTimeoutClaim)
 	if err != nil {
 		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
 	}
@@ -76,11 +77,46 @@ func CreateOracleClaimFromTimeoutMsg(msg TransferOutTimeoutMsg) (oracle.Claim, s
 	return claim, nil
 }
 
-func GetTimeoutClaimFromOracleClaim(claim string) (TimeoutClaim, sdk.Error) {
-	timeoutClaim := TimeoutClaim{}
-	err := json.Unmarshal([]byte(claim), &timeoutClaim)
+func GetTransferOutTimeoutClaimFromOracleClaim(claim string) (TransferOutTimeoutClaim, sdk.Error) {
+	transferOutTimeoutClaim := TransferOutTimeoutClaim{}
+	err := json.Unmarshal([]byte(claim), &transferOutTimeoutClaim)
 	if err != nil {
-		return TimeoutClaim{}, ErrInvalidTransferMsg(err.Error())
+		return TransferOutTimeoutClaim{}, ErrInvalidTransferMsg(err.Error())
 	}
-	return timeoutClaim, nil
+	return transferOutTimeoutClaim, nil
+}
+
+type UpdateBindClaim struct {
+	Status           BindStatus      `json:"status"`
+	Symbol           string          `json:"symbol"`
+	Amount           int64           `json:"amount"`
+	ContractAddress  EthereumAddress `json:"contract_address"`
+	ContractDecimals int8            `json:"contract_decimals"`
+}
+
+func CreateOracleClaimFromUpdateBindMsg(msg UpdateBindMsg) (oracle.Claim, sdk.Error) {
+	claimId := GetClaimId(UpdateBindChannelId, msg.Sequence)
+
+	updateBindClaim := UpdateBindMsg{
+		Status:           msg.Status,
+		Symbol:           msg.Symbol,
+		Amount:           msg.Amount,
+		ContractAddress:  msg.ContractAddress,
+		ContractDecimals: msg.ContractDecimals,
+	}
+	claimBytes, err := json.Marshal(updateBindClaim)
+	if err != nil {
+		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
+	}
+	claim := oracle.NewClaim(claimId, sdk.ValAddress(msg.ValidatorAddress), string(claimBytes))
+	return claim, nil
+}
+
+func GetUpdateBindClaimFromOracleClaim(claim string) (UpdateBindMsg, sdk.Error) {
+	updateBindClaim := UpdateBindMsg{}
+	err := json.Unmarshal([]byte(claim), &updateBindClaim)
+	if err != nil {
+		return UpdateBindMsg{}, ErrInvalidTransferMsg(err.Error())
+	}
+	return updateBindClaim, nil
 }

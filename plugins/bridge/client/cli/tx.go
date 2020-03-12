@@ -19,16 +19,16 @@ import (
 )
 
 const (
-	flagSequence        = "channel-sequence"
-	flagContractAddress = "contract-address"
-	flagSenderAddress   = "sender-address"
-	flagReceiverAddress = "receiver-address"
-	flagAmount          = "amount"
-	flagSymbol          = "symbol"
-	flagRelayFee        = "relay-fee"
-	flagContractDecimal = "contract-decimal"
-	flagToAddress       = "to"
-	flagExpireTime      = "expire-time"
+	flagSequence         = "channel-sequence"
+	flagContractAddress  = "contract-address"
+	flagSenderAddress    = "sender-address"
+	flagReceiverAddress  = "receiver-address"
+	flagAmount           = "amount"
+	flagSymbol           = "symbol"
+	flagRelayFee         = "relay-fee"
+	flagContractDecimals = "contract-decimals"
+	flagToAddress        = "to"
+	flagExpireTime       = "expire-time"
 )
 
 func TransferInCmd(cdc *codec.Codec) *cobra.Command {
@@ -212,13 +212,13 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			contractAddress := viper.GetString(flagContractAddress)
-			contractDecimal := viper.GetInt(flagContractDecimal)
+			contractDecimals := viper.GetInt(flagContractDecimals)
 			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
 			expireTime := viper.GetInt64(flagExpireTime)
 
 			// build message
-			msg := types.NewBindMsg(from, symbol, amount, types.NewEthereumAddress(contractAddress), int8(contractDecimal), expireTime)
+			msg := types.NewBindMsg(from, symbol, amount, types.NewEthereumAddress(contractAddress), int8(contractDecimals), expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -229,7 +229,7 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagContractAddress, "", "contract address")
-	cmd.Flags().Int(flagContractDecimal, 0, "contract token decimal")
+	cmd.Flags().Int(flagContractDecimals, 0, "contract token decimals")
 	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
 	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")

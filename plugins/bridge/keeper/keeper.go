@@ -132,7 +132,7 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		// TODO should we delete prophecy when prophecy succeeds
 
 		// increase sequence
-		k.IncreaseSequence(ctx, types.KeyCurrentTransferSequence)
+		k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
@@ -147,7 +147,7 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 	}
 
 	if prophecy.Status.Text == oracle.SuccessStatusText {
-		timeoutClaim, err := types.GetTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
+		timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
 		if err != nil {
 			return oracle.Prophecy{}, err
 		}
@@ -157,7 +157,57 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 			return oracle.Prophecy{}, err
 		}
 
-		k.IncreaseSequence(ctx, types.KeyTimeoutSequence)
+		k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
+	} else if prophecy.Status.Text == oracle.FailedStatusText {
+		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+	}
+	return prophecy, nil
+}
+
+func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	if prophecy.Status.Text == oracle.SuccessStatusText {
+		updateBindClaim, err := types.GetUpdateBindClaimFromOracleClaim(prophecy.Status.FinalClaim)
+		if err != nil {
+			return oracle.Prophecy{}, err
+		}
+
+		bindRequest, err := k.GetBindRequest(ctx, updateBindClaim.Symbol)
+		if err != nil {
+			return oracle.Prophecy{}, err
+		}
+
+		if bindRequest.Symbol != updateBindClaim.Symbol ||
+			bindRequest.Amount != updateBindClaim.Amount ||
+			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() ||
+			bindRequest.ContractDecimals != updateBindClaim.ContractDecimals {
+
+			return oracle.Prophecy{}, types.ErrBindRequestNotIdentical("update bind claim is not identical to bind request")
+		}
+
+		if updateBindClaim.Status == types.BindStatusSuccess {
+			stdError := k.TokenMapper.UpdateBind(ctx, updateBindClaim.Symbol,
+				updateBindClaim.ContractAddress.String(), updateBindClaim.ContractDecimals)
+
+			if stdError != nil {
+				return oracle.Prophecy{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
+			}
+		} else {
+			_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
+				sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: bindRequest.Amount}})
+			if err != nil {
+				return oracle.Prophecy{}, err
+			}
+		}
+
+		k.DeleteBindRequest(ctx, updateBindClaim.Symbol)
+
+		// TODO Distribute fee
+		k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
@@ -170,7 +220,7 @@ func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Er
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(key)
 	if bz != nil {
-		return types.ErrBindRequestExist(fmt.Sprintf("bind request of %s already exists", req.Symbol))
+		return types.ErrBindRequestExists(fmt.Sprintf("bind request of %s already exists", req.Symbol))
 	}
 
 	reqBytes, err := json.Marshal(req)
@@ -180,4 +230,29 @@ func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Er
 
 	store.Set(key, reqBytes)
 	return nil
+}
+
+func (k Keeper) DeleteBindRequest(ctx sdk.Context, symbol string) {
+	key := types.GetBindRequestKey(symbol)
+
+	store := ctx.KVStore(k.storeKey)
+	store.Delete(key)
+}
+
+func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindRequest, sdk.Error) {
+	key := types.GetBindRequestKey(symbol)
+
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(key)
+	if bz == nil {
+		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s already exists", req.Symbol))
+	}
+
+	var bindRequest types.BindRequest
+	err := json.Unmarshal(bz, &bindRequest)
+	if err != nil {
+		return types.BindRequest{}, sdk.ErrInternal(fmt.Sprintf("unmarshal bind request error, err=%s", err.Error()))
+	}
+
+	return bindRequest, nil
 }

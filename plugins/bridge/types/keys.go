@@ -14,10 +14,11 @@ var (
 )
 
 const (
-	StartSequence int64 = 1
+	StartSequence int64 = 0
 
-	KeyCurrentTransferSequence = "transferSequence"
-	KeyTimeoutSequence         = "timeoutSequence"
+	KeyCurrentTransferInSequence  = "transferInSeq"
+	KeyTransferOutTimeoutSequence = "transferOutTimeoutSeq"
+	KeyUpdateBindSequence         = "updateBindSeq"
 
 	keyBindRequest = "bindReq:%s"
 )

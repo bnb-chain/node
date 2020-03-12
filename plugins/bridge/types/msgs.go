@@ -173,29 +173,29 @@ func (msg TransferOutTimeoutMsg) ValidateBasic() sdk.Error {
 var _ sdk.Msg = BindMsg{}
 
 type BindMsg struct {
-	From            sdk.AccAddress  `json:"from"`
-	Symbol          string          `json:"symbol"`
-	Amount          int64           `json:"amount"`
-	ContractAddress EthereumAddress `json:"contract_address"`
-	ContractDecimal int8            `json:"contract_decimal"`
-	ExpireTime      int64           `json:"expire_time"`
+	From             sdk.AccAddress  `json:"from"`
+	Symbol           string          `json:"symbol"`
+	Amount           int64           `json:"amount"`
+	ContractAddress  EthereumAddress `json:"contract_address"`
+	ContractDecimals int8            `json:"contract_decimals"`
+	ExpireTime       int64           `json:"expire_time"`
 }
 
-func NewBindMsg(from sdk.AccAddress, symbol string, amount int64, contractAddress EthereumAddress, contractDecimal int8, expireTime int64) BindMsg {
+func NewBindMsg(from sdk.AccAddress, symbol string, amount int64, contractAddress EthereumAddress, contractDecimals int8, expireTime int64) BindMsg {
 	return BindMsg{
-		From:            from,
-		Amount:          amount,
-		Symbol:          symbol,
-		ContractAddress: contractAddress,
-		ContractDecimal: contractDecimal,
-		ExpireTime:      expireTime,
+		From:             from,
+		Amount:           amount,
+		Symbol:           symbol,
+		ContractAddress:  contractAddress,
+		ContractDecimals: contractDecimals,
+		ExpireTime:       expireTime,
 	}
 }
 
 func (msg BindMsg) Route() string { return RouteBridge }
 func (msg BindMsg) Type() string  { return BindMsgType }
 func (msg BindMsg) String() string {
-	return fmt.Sprintf("Bind{%v#%s#%d$%s#%d#%d}", msg.From, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimal, msg.ExpireTime)
+	return fmt.Sprintf("Bind{%v#%s#%d$%s#%d#%d}", msg.From, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimals, msg.ExpireTime)
 }
 func (msg BindMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
 func (msg BindMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
@@ -217,8 +217,8 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidContractAddress("contract address should not be empty")
 	}
 
-	if msg.ContractDecimal < 0 || msg.ContractDecimal > MaxDecimal {
-		return ErrInvalidDecimal(fmt.Sprintf("decimal should be no less than 0 and larger than %d", MaxDecimal))
+	if msg.ContractDecimals < 0 {
+		return ErrInvalidDecimal("decimal should be no less than 0")
 	}
 
 	if msg.ExpireTime <= 0 {
@@ -229,6 +229,78 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 }
 
 func (msg BindMsg) GetSignBytes() []byte {
+	b, err := json.Marshal(msg) // XXX: ensure some canonical form
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+var _ sdk.Msg = UpdateBindMsg{}
+
+type BindStatus int
+
+const (
+	BindStatusSuccess          BindStatus = 0
+	BindStatusRejected         BindStatus = 1
+	BindStatusTimeout          BindStatus = 2
+	BindStatusInvalidParameter BindStatus = 3
+)
+
+type UpdateBindMsg struct {
+	Sequence         int64           `json:"sequence"`
+	Status           BindStatus      `json:"status"`
+	Symbol           string          `json:"symbol"`
+	Amount           int64           `json:"amount"`
+	ContractAddress  EthereumAddress `json:"contract_address"`
+	ContractDecimals int8            `json:"contract_decimals"`
+	ValidatorAddress sdk.AccAddress  `json:"validator_address"`
+}
+
+func NewUpdateBindMsg(sequence int64, validatorAddress sdk.AccAddress, symbol string, amount int64, contractAddress EthereumAddress, contractDecimals int8, status BindStatus) UpdateBindMsg {
+	return UpdateBindMsg{
+		Sequence:         sequence,
+		ValidatorAddress: validatorAddress,
+		Amount:           amount,
+		Symbol:           symbol,
+		ContractAddress:  contractAddress,
+		ContractDecimals: contractDecimals,
+		Status:           status,
+	}
+}
+
+func (msg UpdateBindMsg) Route() string { return RouteBridge }
+func (msg UpdateBindMsg) Type() string  { return BindMsgType }
+func (msg UpdateBindMsg) String() string {
+	return fmt.Sprintf("UpdateBind{%v#%s#%d$%s#%d#%d}", msg.ValidatorAddress, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimal, msg.Status)
+}
+func (msg UpdateBindMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
+func (msg UpdateBindMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.ValidatorAddress} }
+
+func (msg UpdateBindMsg) ValidateBasic() sdk.Error {
+	if len(msg.ValidatorAddress) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("address length should be %d", sdk.AddrLen))
+	}
+
+	if len(msg.Symbol) == 0 {
+		return ErrInvalidSymbol("symbol should not be empty")
+	}
+
+	if msg.Amount <= 0 {
+		return ErrInvalidAmount("amount should be larger than 0")
+	}
+
+	if msg.ContractAddress.IsEmpty() {
+		return ErrInvalidContractAddress("contract address should not be empty")
+	}
+
+	if msg.ContractDecimals < 0 {
+		return ErrInvalidDecimal("decimal should be no less than 0")
+	}
+
+	return nil
+}
+func (msg UpdateBindMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
 		panic(err)

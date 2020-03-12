@@ -16,4 +16,5 @@ type (
 	TransferOutTimeoutMsg = types.TransferOutTimeoutMsg
 	TransferOutMsg        = types.TransferOutMsg
 	BindMsg               = types.BindMsg
+	UpdateBindMsg         = types.UpdateBindMsg
 )
