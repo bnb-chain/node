@@ -272,7 +272,6 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagContractAddress, "", "contract address")
 	cmd.Flags().String(flagToAddress, "", "smart chain address")
 	cmd.Flags().String(flagAmount, "", "amount")
 	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
