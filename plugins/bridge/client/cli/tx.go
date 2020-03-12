@@ -215,9 +215,10 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 			contractDecimal := viper.GetInt(flagContractDecimal)
 			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
+			expireTime := viper.GetInt64(flagExpireTime)
 
 			// build message
-			msg := types.NewBindMsg(from, symbol, amount, types.NewEthereumAddress(contractAddress), contractDecimal)
+			msg := types.NewBindMsg(from, symbol, amount, types.NewEthereumAddress(contractAddress), int8(contractDecimal), expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -231,6 +232,7 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int(flagContractDecimal, 0, "contract token decimal")
 	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
+	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
 
 	return cmd
 }

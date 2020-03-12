@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 	"github.com/binance-chain/node/plugins/oracle"
 	"github.com/binance-chain/node/plugins/tokens/store"
@@ -83,8 +84,25 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 			return oracle.Prophecy{}, err
 		}
 
+		tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
+		if errMsg != nil {
+			return oracle.Prophecy{}, sdk.ErrInternal(errMsg.Error())
+		}
+
+		var calibratedAmount sdk.Int
+		if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
+			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
+			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
+		} else {
+			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
+			if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
+				return oracle.Prophecy{}, types.ErrInvalidAmount("can't calibrate timeout amount")
+			}
+			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
+		}
+
 		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-			timeOutPackage, err := types.SerializeTimeoutPackage(transferClaim.Amount.Amount,
+			timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
 				transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
 
 			if err != nil {
