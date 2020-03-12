@@ -128,7 +128,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
-	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
+	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()

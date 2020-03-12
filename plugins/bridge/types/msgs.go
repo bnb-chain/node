@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	cmmtypes "github.com/binance-chain/node/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -106,8 +105,8 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
-	if !msg.RelayFee.IsPositive() || msg.RelayFee.Denom != cmmtypes.NativeTokenSymbol {
-		return ErrInvalidAmount("amount to send should be positive native token")
+	if !msg.RelayFee.IsPositive() {
+		return ErrInvalidAmount("relay fee amount should be positive")
 	}
 	return nil
 }
@@ -290,40 +289,38 @@ func (msg TransferOutMsg) GetSignBytes() []byte {
 /*
 	struct BindRequestPackage {
 		bytes32 bep2TokenSymbol; // 32 0:32
-		address bep2TokenOwner;  // 20 32:52
-		address contractAddr;    // 20 52:72
-		uint256 totalSupply;     // 32 72:104
-		uint256 peggyAmount;     // 32 104:136
-		uint64  expireTime;      // 8  136:144
-		uint256 relayReward;     // 32 144:176
+		address contractAddr;    // 20 32:52
+		uint256 totalSupply;     // 32 52:84
+		uint256 peggyAmount;     // 32 84:116
+		uint64  expireTime;      // 8  116:124
+		uint256 relayReward;     // 32 124:156
 	}
 */
-func SerializeBindPackage(bep2TokenSymbol string, bep2TokenOwner sdk.AccAddress, contractAddr []byte,
+func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
 	totalSupply sdk.Int, peggyAmount sdk.Int, expireTime int64, relayReward sdk.Int) ([]byte, error) {
-	serializedBytes := make([]byte, 32+20+20+32+32+8+32)
+	serializedBytes := make([]byte, 32+20+32+32+8+32)
 	if len(bep2TokenSymbol) > 32 {
 		return nil, fmt.Errorf("bep2 token symbol length should be no more than 32")
 	}
 	copy(serializedBytes[0:32], bep2TokenSymbol)
-	copy(serializedBytes[32:52], bep2TokenOwner)
 
 	if len(contractAddr) != 20 {
 		return nil, fmt.Errorf("contract address length must be 20")
 	}
-	copy(serializedBytes[52:72], contractAddr)
-	if totalSupply.BigInt().BitLen() > 256 || peggyAmount.BigInt().BitLen() > 256 || relayReward.BigInt().BitLen() > 256 {
-		return nil, fmt.Errorf("overflow, maximum bits is 256")
+	copy(serializedBytes[32:52], contractAddr)
+	if totalSupply.BigInt().BitLen() > 255 || peggyAmount.BigInt().BitLen() > 255 || relayReward.BigInt().BitLen() > 255 {
+		return nil, fmt.Errorf("overflow, maximum bits is 255")
 	}
 	length := len(totalSupply.BigInt().Bytes())
-	copy(serializedBytes[104-length:104], totalSupply.BigInt().Bytes())
+	copy(serializedBytes[84-length:84], totalSupply.BigInt().Bytes())
 
 	length = len(peggyAmount.BigInt().Bytes())
-	copy(serializedBytes[136-length:136], peggyAmount.BigInt().Bytes())
+	copy(serializedBytes[116-length:116], peggyAmount.BigInt().Bytes())
 
-	binary.BigEndian.PutUint64(serializedBytes[136:144], uint64(expireTime))
+	binary.BigEndian.PutUint64(serializedBytes[116:124], uint64(expireTime))
 
 	length = len(relayReward.BigInt().Bytes())
-	copy(serializedBytes[176-length:176], relayReward.BigInt().Bytes())
+	copy(serializedBytes[156-length:156], relayReward.BigInt().Bytes())
 
 	return serializedBytes, nil
 }
@@ -340,7 +337,7 @@ func SerializeTimeoutPackage(refundAmount sdk.Int, contractAddr []byte, refundAd
 	if len(contractAddr) != 20 || len(refundAddr) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
 	}
-	if refundAmount.BigInt().BitLen() > 256 {
+	if refundAmount.BigInt().BitLen() > 255 {
 		return nil, fmt.Errorf("amount overflow, maximum bits is 256")
 	}
 	length := len(refundAmount.BigInt().Bytes())
@@ -378,8 +375,8 @@ func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, se
 	copy(serializedBytes[52:72], sender)
 	copy(serializedBytes[72:92], recipient)
 
-	if amount.BigInt().BitLen() > 256 || relayReward.BigInt().BitLen() > 256 {
-		return nil, fmt.Errorf("overflow, maximum bits is 256")
+	if amount.BigInt().BitLen() > 255 || relayReward.BigInt().BitLen() > 255 {
+		return nil, fmt.Errorf("overflow, maximum bits is 255")
 	}
 
 	length := len(amount.BigInt().Bytes())
