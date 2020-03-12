@@ -101,13 +101,18 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	var calibratedTotalSupply sdk.Int
 	var calibratedAmount sdk.Int
 	if msg.ContractDecimal >= cmmtypes.TokenDecimals {
-		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-8)))
-		calibratedAmount = sdk.NewInt(msg.Amount).Mul(sdk.NewIntWithDecimal(1, int(msg.ContractDecimal-8)))
+		decimals := sdk.NewIntWithDecimal(1, int(token.ContractDecimal-cmmtypes.TokenDecimals))
+		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(decimals)
+		calibratedAmount = sdk.NewInt(msg.Amount).Mul(decimals)
 	} else {
-		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(sdk.NewIntWithDecimal(1, int(8-msg.ContractDecimal)))
-		calibratedAmount = sdk.NewInt(msg.Amount).Div(sdk.NewIntWithDecimal(1, int(8-msg.ContractDecimal)))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimal))
+		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
+			return types.ErrInvalidAmount("can't calibrate bep2 amount to the amount of ERC20").Result()
+		}
+		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
+		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
-	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, 10))
+	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 	bindPackage, err := types.SerializeBindPackage(symbol, token.Owner, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
@@ -152,11 +157,15 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	var calibratedAmount sdk.Int
 	if token.ContractDecimal >= cmmtypes.TokenDecimals {
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimal-8)))
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimal-cmmtypes.TokenDecimals)))
 	} else {
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(sdk.NewIntWithDecimal(1, int(8-token.ContractDecimal)))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimal))
+		if !sdk.NewInt(msg.Amount.Amount).Mod(decimals).IsZero(){
+			return types.ErrInvalidAmount("can't calibrate transfer amount to the amount of ERC20").Result()
+		}
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(decimals)
 	}
-	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, 10))
+	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
 		calibratedAmount, msg.ExpireTime, calibratedRelayFee)

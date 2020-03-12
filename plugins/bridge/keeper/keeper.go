@@ -91,9 +91,14 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 
 		var calibratedAmount sdk.Int
 		if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals)))
+			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
+			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
 		} else {
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal)))
+			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
+			if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
+				return oracle.Prophecy{}, types.ErrInvalidAmount("can't calibrate timeout amount")
+			}
+			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
 		}
 
 		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
