@@ -20,40 +20,40 @@ func TestTransferMsg(t *testing.T) {
 		expectedPass bool
 	}{
 		{
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			true,
 		},
 		{
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 0),
 			false,
 		}, {
-			NewTransferMsg(-1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(-1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, emptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, emptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, nonEmptyEthAddr, emptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, emptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, sdk.AccAddress{},
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, sdk.AccAddress{},
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 0}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 0}, addrs[0], 1000),
 			false,
 		}, {
-			NewTransferMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
 				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, sdk.AccAddress{}, 1000),
 			false,
 		},
@@ -72,7 +72,7 @@ func TestTimeoutMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
 	tests := []struct {
-		timeoutMsg   TimeoutMsg
+		timeoutMsg   TransferOutTimeoutMsg
 		expectedPass bool
 	}{
 		{

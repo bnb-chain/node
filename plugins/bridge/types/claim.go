@@ -61,7 +61,7 @@ type TimeoutClaim struct {
 	Amount        sdk.Coin       `json:"amount"`
 }
 
-func CreateOracleClaimFromTimeoutMsg(msg TimeoutMsg) (oracle.Claim, sdk.Error) {
+func CreateOracleClaimFromTimeoutMsg(msg TransferOutTimeoutMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(TimeoutChannelId, msg.Sequence)
 
 	timeoutClaim := TimeoutClaim{

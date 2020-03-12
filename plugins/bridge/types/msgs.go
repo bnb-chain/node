@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	cmmtypes "github.com/binance-chain/node/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -14,6 +13,7 @@ const (
 	MaxDecimal                  int8 = 18
 	MinTransferOutExpireTimeGap      = 60 * time.Second
 	MinBindExpireTimeGap             = 600 * time.Second
+
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 
@@ -23,10 +23,10 @@ const (
 
 	RouteBridge = "bridge"
 
-	TransferInMsgType  = "crossTransferIn"
-	TimeoutMsgType     = "crossTimeout"
-	BindMsgType        = "crossBind"
-	TransferOutMsgType = "crossTransferOut"
+	TransferInMsgType         = "crossTransferIn"
+	TransferOutTimeoutMsgType = "crossTransferOutTimeout"
+	BindMsgType               = "crossBind"
+	TransferOutMsgType        = "crossTransferOut"
 )
 
 var _ sdk.Msg = TransferInMsg{}
@@ -42,7 +42,7 @@ type TransferInMsg struct {
 	ExpireTime       int64           `json:"expire_time"`
 }
 
-func NewTransferMsg(sequence int64, contractAddr EthereumAddress,
+func NewTransferInMsg(sequence int64, contractAddr EthereumAddress,
 	senderAddr EthereumAddress, receiverAddr sdk.AccAddress, amount sdk.Coin,
 	relayFee sdk.Coin, validatorAddr sdk.AccAddress, expireTime int64) TransferInMsg {
 	return TransferInMsg{
@@ -65,16 +65,8 @@ func (msg TransferInMsg) GetSigners() []sdk.AccAddress {
 }
 
 func (msg TransferInMsg) String() string {
-	return fmt.Sprintf("TransferInMsg{"+
-		"ValidatorAddress:%v,"+
-		"ContractAddress:%s,"+
-		"SenderAddress:%s,"+
-		"ReceiverAddress:%s,"+
-		"Amount:%s,"+
-		"RelayFee:%s,"+
-		"ValidatorAddress:%s,"+
-		"ExpireTime:%d}", msg.ValidatorAddress,
-		msg.ContractAddress.String(), msg.SenderAddress.String(), msg.ReceiverAddress.String(),
+	return fmt.Sprintf("TransferIn{%v#%s#%s#%s#%s#%s#%s#%d}",
+		msg.ValidatorAddress, msg.ContractAddress.String(), msg.SenderAddress.String(), msg.ReceiverAddress.String(),
 		msg.Amount.String(), msg.RelayFee.String(), msg.ValidatorAddress.String(), msg.ExpireTime)
 }
 
@@ -114,23 +106,23 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
-	if !msg.RelayFee.IsPositive() || msg.RelayFee.Denom != cmmtypes.NativeTokenSymbol {
-		return ErrInvalidAmount("amount to send should be positive native token")
+	if !msg.RelayFee.IsPositive() {
+		return ErrInvalidAmount("relay fee amount should be positive")
 	}
 	return nil
 }
 
-var _ sdk.Msg = TimeoutMsg{}
+var _ sdk.Msg = TransferOutTimeoutMsg{}
 
-type TimeoutMsg struct {
+type TransferOutTimeoutMsg struct {
 	SenderAddress    sdk.AccAddress `json:"sender_address"`
 	Sequence         int64          `json:"sequence"`
 	Amount           sdk.Coin       `json:"amount"`
 	ValidatorAddress sdk.AccAddress `json:"validator_address"`
 }
 
-func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TimeoutMsg {
-	return TimeoutMsg{
+func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TransferOutTimeoutMsg {
+	return TransferOutTimeoutMsg{
 		SenderAddress:    senderAddr,
 		Sequence:         sequence,
 		Amount:           amount,
@@ -139,22 +131,18 @@ func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, v
 }
 
 // nolint
-func (msg TimeoutMsg) Route() string { return RouteBridge }
-func (msg TimeoutMsg) Type() string  { return TimeoutMsgType }
-func (msg TimeoutMsg) GetSigners() []sdk.AccAddress {
+func (msg TransferOutTimeoutMsg) Route() string { return RouteBridge }
+func (msg TransferOutTimeoutMsg) Type() string  { return TransferOutTimeoutMsgType }
+func (msg TransferOutTimeoutMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }
-func (msg TimeoutMsg) String() string {
-	return fmt.Sprintf("TransferInMsg{"+
-		"SenderAddress:%s,"+
-		"Sequence:%d,"+
-		"Amount:%s,"+
-		"ValidatorAddress:%s}",
+func (msg TransferOutTimeoutMsg) String() string {
+	return fmt.Sprintf("TransferOutTimeout{%s#%d#%s#%s}",
 		msg.SenderAddress.String(), msg.Sequence, msg.Amount.String(), msg.ValidatorAddress.String())
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
-func (msg TimeoutMsg) GetSignBytes() []byte {
+func (msg TransferOutTimeoutMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -162,12 +150,12 @@ func (msg TimeoutMsg) GetSignBytes() []byte {
 	return b
 }
 
-func (msg TimeoutMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg TransferOutTimeoutMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg TimeoutMsg) ValidateBasic() sdk.Error {
+func (msg TransferOutTimeoutMsg) ValidateBasic() sdk.Error {
 	if len(msg.SenderAddress) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(msg.SenderAddress.String())
 	}

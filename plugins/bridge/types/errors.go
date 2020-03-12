@@ -20,6 +20,7 @@ const (
 	CodeInvalidExpireTime      sdk.CodeType = 9
 	CodeSerializePackageFailed sdk.CodeType = 10
 	CodeGetChannelIdFailed     sdk.CodeType = 11
+	CodeBindRequestExist       sdk.CodeType = 12
 )
 
 //----------------------------------------
@@ -67,4 +68,8 @@ func ErrSerializePackageFailed(msg string) sdk.Error {
 
 func ErrGetChannelIdFailed(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeGetChannelIdFailed, msg)
+}
+
+func ErrBindRequestExist(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeBindRequestExist, msg)
 }

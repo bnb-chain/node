@@ -94,7 +94,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.NewTransferMsg(sequence,
+			msg := types.NewTransferInMsg(sequence,
 				types.NewEthereumAddress(contractAddress),
 				types.NewEthereumAddress(senderAddress),
 				receiverAddr,

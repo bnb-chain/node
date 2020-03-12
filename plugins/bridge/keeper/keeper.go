@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -151,7 +152,7 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 			return oracle.Prophecy{}, err
 		}
 
-		_, err = k.BankKeeper.SendCoins(ctx, timeoutClaim.SenderAddress, types.PegAccount, sdk.Coins{timeoutClaim.Amount})
+		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
 		if err != nil {
 			return oracle.Prophecy{}, err
 		}
@@ -161,4 +162,22 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
 	return prophecy, nil
+}
+
+func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Error {
+	key := types.GetBindRequestKey(req.Symbol)
+
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(key)
+	if bz != nil {
+		return types.ErrBindRequestExist(fmt.Sprintf("bind request of %s already exists", req.Symbol))
+	}
+
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return sdk.ErrInternal(fmt.Sprintf("marshal bind request error, err=%s", err.Error()))
+	}
+
+	store.Set(key, reqBytes)
+	return nil
 }
