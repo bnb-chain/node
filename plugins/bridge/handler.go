@@ -2,9 +2,10 @@ package bridge
 
 import (
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"strconv"
 	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
@@ -45,16 +46,17 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 		return err.Result()
 	}
 
-	_, err = bridgeKeeper.ProcessTransferClaim(ctx, claim)
+	_, tags, err := bridgeKeeper.ProcessTransferClaim(ctx, claim)
 	if err != nil {
 		return err.Result()
 	}
 
-	tags := sdk.NewTags(
+	resultTags := sdk.NewTags(
 		types.Action, types.ActionTransferIn,
+		types.TransferInSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
-
-	return sdk.Result{Tags: tags}
+	resultTags = resultTags.AppendTags(tags)
+	return sdk.Result{Tags: resultTags}
 }
 
 func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferOutTimeoutMsg) sdk.Result {
@@ -73,11 +75,12 @@ func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg Trans
 		return err.Result()
 	}
 
-	tags := sdk.NewTags(
-		types.Action, types.ActionTimeout,
+	resultTags := sdk.NewTags(
+		types.Action, types.ActionTransferOutTimeout,
+		types.TransferOutTimeoutSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
 
-	return sdk.Result{Tags: tags}
+	return sdk.Result{Tags: resultTags}
 }
 
 func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.Result {
@@ -102,6 +105,7 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 
 	tags := sdk.NewTags(
 		types.Action, types.ActionUpdateBind,
+		types.UpdateBindSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
 
 	return sdk.Result{Tags: tags}
@@ -167,7 +171,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdkErr.Result()
 	}
 
-	expireTime := msg.ExpireTime+ctx.BlockHeader().Time.Unix()
+	expireTime := msg.ExpireTime + ctx.BlockHeader().Time.Unix()
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, expireTime, calibratedRelayFee)
 	if err != nil {
@@ -179,6 +183,11 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
+	bindSequence, err := keeper.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId)
+	if err != nil {
+		return types.ErrGetChannelIdFailed(err.Error()).Result()
+	}
+
 	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
@@ -186,6 +195,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	tags := sdk.NewTags(
 		types.Action, types.ActionBind,
+		types.BindSequence, []byte(strconv.Itoa(int(bindSequence))),
 		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
 	)
 
@@ -227,7 +237,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
-	expireTime := msg.ExpireTime+ctx.BlockHeader().Time.Unix()
+	expireTime := msg.ExpireTime + ctx.BlockHeader().Time.Unix()
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
 		calibratedAmount, expireTime, calibratedRelayFee)
 	if err != nil {
@@ -239,6 +249,10 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
+	transferOutSequence, err := keeper.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId)
+	if err != nil {
+		return types.ErrGetChannelIdFailed(err.Error()).Result()
+	}
 	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
@@ -246,6 +260,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	tags := sdk.NewTags(
 		types.Action, types.ActionTransferOut,
+		types.TransferOutSequence, []byte(strconv.Itoa(int(transferOutSequence))),
 		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
 	)
 

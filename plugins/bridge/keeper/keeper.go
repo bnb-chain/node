@@ -73,71 +73,84 @@ func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
 	return sequence
 }
 
-func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
-		return oracle.Prophecy{}, err
+		return oracle.Prophecy{}, nil, err
 	}
 
-	if prophecy.Status.Text == oracle.SuccessStatusText {
-		transferClaim, err := types.GetTransferClaimFromOracleClaim(prophecy.Status.FinalClaim)
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
-		if errMsg != nil {
-			return oracle.Prophecy{}, sdk.ErrInternal(errMsg.Error())
-		}
-
-		var calibratedAmount sdk.Int
-		if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
-		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
-			if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
-				return oracle.Prophecy{}, types.ErrInvalidAmount("can't calibrate timeout amount")
-			}
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
-		}
-
-		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-			timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
-				transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
-
-			if err != nil {
-				return oracle.Prophecy{}, types.ErrSerializePackageFailed(err.Error())
-			}
-
-			timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
-			if err != nil {
-				return oracle.Prophecy{}, types.ErrGetChannelIdFailed(err.Error())
-			}
-
-			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
-			if sdkErr != nil {
-				return oracle.Prophecy{}, sdkErr
-			}
-			return prophecy, nil
-		}
-
-		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		// TODO distribute delay fee
-
-		// TODO should we delete prophecy when prophecy succeeds
-
-		// increase sequence
-		k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
-	} else if prophecy.Status.Text == oracle.FailedStatusText {
+	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+		return prophecy, nil, nil
 	}
 
-	return prophecy, nil
+	if prophecy.Status.Text != oracle.SuccessStatusText {
+		return prophecy, nil, nil
+	}
+
+	transferClaim, err := types.GetTransferClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	if err != nil {
+		return oracle.Prophecy{}, nil, err
+	}
+
+	tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
+	if errMsg != nil {
+		return oracle.Prophecy{}, nil, sdk.ErrInternal(errMsg.Error())
+	}
+
+	var calibratedAmount sdk.Int
+	if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
+		decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
+		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
+	} else {
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
+		if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
+			return oracle.Prophecy{}, nil, types.ErrInvalidAmount("can't calibrate timeout amount")
+		}
+		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
+	}
+
+	if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
+		timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
+			transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
+
+		if err != nil {
+			return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
+		}
+
+		timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
+		if err != nil {
+			return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
+		}
+
+		transferInTimeoutSequence, err := k.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
+		if err != nil {
+			return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
+		}
+		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
+		if sdkErr != nil {
+			return oracle.Prophecy{}, nil, sdkErr
+		}
+		tags := sdk.NewTags(
+			sdk.TagAction, types.ActionTransferInTimeOut,
+			types.TransferInTimeoutSequence, []byte(strconv.Itoa(int(transferInTimeoutSequence))),
+		)
+
+		return prophecy, tags, nil
+	}
+
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
+	if err != nil {
+		return oracle.Prophecy{}, nil, err
+	}
+
+	// TODO distribute delay fee
+
+	// TODO should we delete prophecy when prophecy succeeds
+
+	// increase sequence
+	k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
+	return prophecy, nil, nil
 }
 
 func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
@@ -146,21 +159,26 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 		return oracle.Prophecy{}, err
 	}
 
-	if prophecy.Status.Text == oracle.SuccessStatusText {
-		timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
-	} else if prophecy.Status.Text == oracle.FailedStatusText {
+	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+		return prophecy, nil
 	}
+	if prophecy.Status.Text != oracle.SuccessStatusText {
+		return prophecy, nil
+	}
+
+	timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
+
 	return prophecy, nil
 }
 
