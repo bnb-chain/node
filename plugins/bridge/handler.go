@@ -79,6 +79,10 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
 	}
 
+	if _, err := keeper.TokenMapper.GetToken(ctx, msg.Symbol); err != nil {
+		return types.ErrInvalidSymbol(fmt.Sprintf("token %s is not existing", msg.Symbol)).Result()
+	}
+
 	claim, err := types.CreateOracleClaimFromUpdateBindMsg(msg)
 	if err != nil {
 		return err.Result()
@@ -114,17 +118,11 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
 
-	bindRequest := types.GenerateBindRequest(msg)
-	sdkErr := keeper.CreateBindRequest(ctx, bindRequest)
-	if sdkErr != nil {
-		return sdkErr.Result()
-	}
-
 	peggyAmount := sdk.Coins{sdk.Coin{Denom: symbol, Amount: msg.Amount}}
 	relayFee := sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}}
 	transferAmount := peggyAmount.Plus(relayFee)
 
-	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
+	_, sdkErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -144,6 +142,20 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
+
+	bindRequest := types.BindRequest{
+		From:             msg.From,
+		Symbol:           msg.Symbol,
+		Amount:           calibratedAmount,
+		ContractAddress:  msg.ContractAddress,
+		ContractDecimals: msg.ContractDecimals,
+		ExpireTime:       msg.ExpireTime,
+	}
+	sdkErr = keeper.CreateBindRequest(ctx, bindRequest)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {

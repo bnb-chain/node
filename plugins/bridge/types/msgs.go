@@ -257,7 +257,7 @@ func ParseBindStatus(input string) (BindStatus, error) {
 		return BindStatusRejected, nil
 	case "timeout":
 		return BindStatusTimeout, nil
-	case "invalid" :
+	case "invalid":
 		return BindStatusInvalidParameter, nil
 	default:
 		return BindStatusInvalidParameter, fmt.Errorf("unsupported bind status")
@@ -268,13 +268,13 @@ type UpdateBindMsg struct {
 	Sequence         int64           `json:"sequence"`
 	Status           BindStatus      `json:"status"`
 	Symbol           string          `json:"symbol"`
-	Amount           int64           `json:"amount"`
+	Amount           sdk.Int         `json:"amount"`
 	ContractAddress  EthereumAddress `json:"contract_address"`
 	ContractDecimals int8            `json:"contract_decimals"`
 	ValidatorAddress sdk.AccAddress  `json:"validator_address"`
 }
 
-func NewUpdateBindMsg(sequence int64, validatorAddress sdk.AccAddress, symbol string, amount int64, contractAddress EthereumAddress, contractDecimals int8, status BindStatus) UpdateBindMsg {
+func NewUpdateBindMsg(sequence int64, validatorAddress sdk.AccAddress, symbol string, amount sdk.Int, contractAddress EthereumAddress, contractDecimals int8, status BindStatus) UpdateBindMsg {
 	return UpdateBindMsg{
 		Sequence:         sequence,
 		ValidatorAddress: validatorAddress,
@@ -303,7 +303,7 @@ func (msg UpdateBindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidSymbol("symbol should not be empty")
 	}
 
-	if msg.Amount <= 0 {
+	if !msg.Amount.GT(sdk.ZeroInt()) {
 		return ErrInvalidAmount("amount should be larger than 0")
 	}
 

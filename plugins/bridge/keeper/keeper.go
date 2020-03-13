@@ -55,13 +55,13 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper
 func (k Keeper) IncreaseSequence(ctx sdk.Context, key string) {
 	currentSequence := k.GetCurrentSequence(ctx, key)
 
-	store := ctx.KVStore(k.storeKey)
-	store.Set([]byte(key), []byte(strconv.FormatInt(currentSequence+1, 10)))
+	kvStore := ctx.KVStore(k.storeKey)
+	kvStore.Set([]byte(key), []byte(strconv.FormatInt(currentSequence+1, 10)))
 }
 
 func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get([]byte(key))
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get([]byte(key))
 	if bz == nil {
 		return types.StartSequence
 	}
@@ -182,7 +182,7 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 		}
 
 		if bindRequest.Symbol != updateBindClaim.Symbol ||
-			bindRequest.Amount != updateBindClaim.Amount ||
+			!bindRequest.Amount.Equal(updateBindClaim.Amount) ||
 			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() ||
 			bindRequest.ContractDecimals != updateBindClaim.ContractDecimals {
 
@@ -197,8 +197,16 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 				return oracle.Prophecy{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
 			}
 		} else {
+			var calibratedAmount int64
+			if cmmtypes.TokenDecimals > bindRequest.ContractDecimals {
+				decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-bindRequest.ContractDecimals))
+				calibratedAmount = bindRequest.Amount.Mul(decimals).Int64()
+			} else {
+				decimals := sdk.NewIntWithDecimal(1, int(bindRequest.ContractDecimals-cmmtypes.TokenDecimals))
+				calibratedAmount = bindRequest.Amount.Div(decimals).Int64()
+			}
 			_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
-				sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: bindRequest.Amount}})
+				sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: calibratedAmount}})
 			if err != nil {
 				return oracle.Prophecy{}, err
 			}
