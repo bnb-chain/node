@@ -28,6 +28,7 @@ const (
 	flagRelayFee         = "relay-fee"
 	flagContractDecimals = "contract-decimals"
 	flagToAddress        = "to"
+	flagStatus           = "status"
 	flagExpireTime       = "expire-time"
 )
 
@@ -294,7 +295,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			contractDecimals := viper.GetInt(flagContractDecimals)
 			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
-			status := viper.GetInt(flagSymbol)
+			status := viper.GetInt(flagStatus)
 
 			fromAddr, err := cliCtx.GetFromAddress()
 			if err != nil {
@@ -329,6 +330,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int(flagContractDecimals, 0, "contract token decimals")
 	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
+	cmd.Flags().Int(flagStatus, 0, "status")
 
 	return cmd
 }
