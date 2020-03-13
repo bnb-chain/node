@@ -4,16 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
 )
 
 const (
 	MaxDecimal                  int8 = 18
-	MinTransferOutExpireTimeGap      = 60 * time.Second
-	MinBindExpireTimeGap             = 600 * time.Second
+	MinTransferOutExpireTimeGap      = 600
+	MinBindExpireTimeGap             = 600
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 

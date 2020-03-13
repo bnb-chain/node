@@ -2,10 +2,9 @@ package bridge
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strconv"
+	"strings"
 
 	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
@@ -51,7 +50,11 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.Action, types.ActionTransferIn,
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferOutTimeoutMsg) sdk.Result {
@@ -70,7 +73,11 @@ func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg Trans
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.Action, types.ActionTimeout,
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.Result {
@@ -93,13 +100,17 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.Action, types.ActionUpdateBind,
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
-	if !time.Unix(msg.ExpireTime, 0).After(ctx.BlockHeader().Time.Add(types.MinBindExpireTimeGap)) {
-		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time should be %d seconds after now(%s)",
-			types.MinBindExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
+	if msg.ExpireTime < types.MinBindExpireTimeGap {
+		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time %d is less than minimum expire time gap %d )",
+			msg.ExpireTime, types.MinBindExpireTimeGap)).Result()
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
@@ -156,8 +167,9 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdkErr.Result()
 	}
 
+	expireTime := msg.ExpireTime+ctx.BlockHeader().Time.Unix()
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
-		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
+		calibratedTotalSupply, calibratedAmount, expireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
@@ -172,13 +184,18 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdkErr.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.Action, types.ActionBind,
+		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sdk.Result {
-	if !time.Unix(msg.ExpireTime, 0).After(ctx.BlockHeader().Time.Add(types.MinTransferOutExpireTimeGap)) {
-		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time should be %d seconds after now(%s)",
-			types.MinTransferOutExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
+	if msg.ExpireTime < types.MinTransferOutExpireTimeGap {
+		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time %d is less than minimum expire time gap %d )",
+			msg.ExpireTime, types.MinTransferOutExpireTimeGap)).Result()
 	}
 
 	symbol := strings.ToUpper(msg.Amount.Denom)
@@ -210,8 +227,9 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
+	expireTime := msg.ExpireTime+ctx.BlockHeader().Time.Unix()
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
-		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
+		calibratedAmount, expireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
@@ -226,5 +244,10 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return sdkErr.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.Action, types.ActionTransferOut,
+		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
+	)
+
+	return sdk.Result{Tags: tags}
 }

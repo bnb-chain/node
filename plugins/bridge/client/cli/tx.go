@@ -125,7 +125,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagReceiverAddress, "", "receiver address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
 	cmd.Flags().String(flagRelayFee, "", "amount of relay fee")
-	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
+	cmd.Flags().Int64(flagExpireTime, 0, "expire period, counted by second")
 
 	return cmd
 }
