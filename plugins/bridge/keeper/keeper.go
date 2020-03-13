@@ -245,7 +245,7 @@ func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindReques
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(key)
 	if bz == nil {
-		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s already exists", req.Symbol))
+		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s does not exist", symbol))
 	}
 
 	var bindRequest types.BindRequest

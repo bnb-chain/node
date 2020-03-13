@@ -273,7 +273,7 @@ func NewUpdateBindMsg(sequence int64, validatorAddress sdk.AccAddress, symbol st
 func (msg UpdateBindMsg) Route() string { return RouteBridge }
 func (msg UpdateBindMsg) Type() string  { return UpdateBindMsgType }
 func (msg UpdateBindMsg) String() string {
-	return fmt.Sprintf("UpdateBind{%v#%s#%d$%s#%d#%d}", msg.ValidatorAddress, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimal, msg.Status)
+	return fmt.Sprintf("UpdateBind{%v#%s#%d$%s#%d#%d}", msg.ValidatorAddress, msg.Symbol, msg.Amount, msg.ContractAddress.String(), msg.ContractDecimals, msg.Status)
 }
 func (msg UpdateBindMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
 func (msg UpdateBindMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.ValidatorAddress} }
