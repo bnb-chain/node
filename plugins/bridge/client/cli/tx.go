@@ -129,10 +129,10 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func TimeoutCmd(cdc *codec.Codec) *cobra.Command {
+func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "timeout",
-		Short: "Transfer timeout",
+		Use:   "transfer-out-timeout",
+		Short: "Transfer out timeout",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -275,6 +275,60 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagToAddress, "", "smart chain address")
 	cmd.Flags().String(flagAmount, "", "amount")
 	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
+
+	return cmd
+}
+
+func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update-bind",
+		Short: "update bind",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			sequence := viper.GetInt64(flagSequence)
+			contractAddress := viper.GetString(flagContractAddress)
+			contractDecimals := viper.GetInt(flagContractDecimals)
+			amount := viper.GetInt64(flagAmount)
+			symbol := viper.GetString(flagSymbol)
+			status := viper.GetInt(flagSymbol)
+
+			fromAddr, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			msg := types.NewUpdateBindMsg(sequence,
+				fromAddr,
+				symbol,
+				amount,
+				types.NewEthereumAddress(contractAddress),
+				int8(contractDecimals),
+				types.BindStatus(status),
+			)
+
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			if cliCtx.GenerateOnly {
+				return utils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
+			}
+
+			cliCtx.PrintResponse = true
+			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+		},
+	}
+
+	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
+	cmd.Flags().String(flagContractAddress, "", "contract address")
+	cmd.Flags().Int(flagContractDecimals, 0, "contract token decimals")
+	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
+	cmd.Flags().String(flagSymbol, "", "symbol")
 
 	return cmd
 }

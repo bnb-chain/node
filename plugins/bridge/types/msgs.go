@@ -239,7 +239,7 @@ func (msg BindMsg) GetSignBytes() []byte {
 
 var _ sdk.Msg = UpdateBindMsg{}
 
-type BindStatus int
+type BindStatus int8
 
 const (
 	BindStatusSuccess          BindStatus = 0
