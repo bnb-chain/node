@@ -217,8 +217,8 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Error {
 	key := types.GetBindRequestKey(req.Symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
 	if bz != nil {
 		return types.ErrBindRequestExists(fmt.Sprintf("bind request of %s already exists", req.Symbol))
 	}
@@ -228,24 +228,24 @@ func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Er
 		return sdk.ErrInternal(fmt.Sprintf("marshal bind request error, err=%s", err.Error()))
 	}
 
-	store.Set(key, reqBytes)
+	kvStore.Set(key, reqBytes)
 	return nil
 }
 
 func (k Keeper) DeleteBindRequest(ctx sdk.Context, symbol string) {
 	key := types.GetBindRequestKey(symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	kvStore.Delete(key)
 }
 
 func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindRequest, sdk.Error) {
 	key := types.GetBindRequestKey(symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
 	if bz == nil {
-		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s does not exist", symbol))
+		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s already exists", symbol))
 	}
 
 	var bindRequest types.BindRequest

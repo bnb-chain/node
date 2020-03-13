@@ -11,7 +11,7 @@ type BindRequest struct {
 	ExpireTime       int64           `json:"expire_time"`
 }
 
-func GetBindRequest(msg BindMsg) BindRequest {
+func GenerateBindRequest(msg BindMsg) BindRequest {
 	return BindRequest{
 		From:             msg.From,
 		Symbol:           msg.Symbol,

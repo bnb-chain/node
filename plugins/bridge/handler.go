@@ -114,7 +114,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
 
-	bindRequest := types.GetBindRequest(msg)
+	bindRequest := types.GenerateBindRequest(msg)
 	sdkErr := keeper.CreateBindRequest(ctx, bindRequest)
 	if sdkErr != nil {
 		return sdkErr.Result()
@@ -138,7 +138,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
 		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount("can't calibrate bep2 amount to the amount of ERC20").Result()
+			return types.ErrInvalidAmount(fmt.Sprintf("can't calibrate bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
 		}
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)

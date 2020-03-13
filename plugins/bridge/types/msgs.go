@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -247,6 +248,21 @@ const (
 	BindStatusTimeout          BindStatus = 2
 	BindStatusInvalidParameter BindStatus = 3
 )
+
+func ParseBindStatus(input string) (BindStatus, error) {
+	switch strings.ToLower(input) {
+	case "success":
+		return BindStatusSuccess, nil
+	case "reject":
+		return BindStatusRejected, nil
+	case "timeout":
+		return BindStatusTimeout, nil
+	case "invalid" :
+		return BindStatusInvalidParameter, nil
+	default:
+		return BindStatusInvalidParameter, fmt.Errorf("unsupported bind status")
+	}
+}
 
 type UpdateBindMsg struct {
 	Sequence         int64           `json:"sequence"`
