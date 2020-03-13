@@ -1,8 +1,9 @@
 package matcheng
 
 import (
-	"github.com/binance-chain/node/plugins/dex/store"
 	"math"
+
+	"github.com/binance-chain/node/plugins/dex/store"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 

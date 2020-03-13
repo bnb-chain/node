@@ -162,7 +162,7 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	}
 }
 
-func (app *BinanceChain) GetBasicConfig() *config.BaseConfig{
+func (app *BinanceChain) GetBasicConfig() *config.BaseConfig {
 	return app.baseConfig
 }
 
