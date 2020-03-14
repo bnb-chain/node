@@ -52,7 +52,6 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 	}
 
 	resultTags := sdk.NewTags(
-		types.Action, types.ActionTransferIn,
 		types.TransferInSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
 	resultTags = resultTags.AppendTags(tags)
@@ -76,7 +75,6 @@ func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg Trans
 	}
 
 	resultTags := sdk.NewTags(
-		types.Action, types.ActionTransferOutTimeout,
 		types.TransferOutTimeoutSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
 
@@ -104,7 +102,6 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 	}
 
 	tags := sdk.NewTags(
-		types.Action, types.ActionUpdateBind,
 		types.UpdateBindSequence, []byte(strconv.Itoa(int(msg.Sequence))),
 	)
 
@@ -194,7 +191,6 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	}
 
 	tags := sdk.NewTags(
-		types.Action, types.ActionBind,
 		types.BindSequence, []byte(strconv.Itoa(int(bindSequence))),
 		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
 	)
@@ -259,7 +255,6 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 
 	tags := sdk.NewTags(
-		types.Action, types.ActionTransferOut,
 		types.TransferOutSequence, []byte(strconv.Itoa(int(transferOutSequence))),
 		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
 	)
