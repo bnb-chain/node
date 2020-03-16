@@ -88,15 +88,7 @@ func main() {
 	dexcmd.AddCommands(rootCmd, cdc)
 	paramcmd.AddCommands(rootCmd, cdc)
 
-	// stake cmds
-	rootCmd.AddCommand(
-
-		client.PostCommands(
-			stakecmd.GetCmdCreateValidator(cdc),
-			stakecmd.GetCmdRemoveValidator(cdc),
-			stakecmd.GetCmdQueryValidators("stake", cdc),
-			stakecmd.GetCmdQueryUnbondingDelegations("stake", cdc),
-		)...)
+	stakecmd.AddCommands(rootCmd, cdc)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 

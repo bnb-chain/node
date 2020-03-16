@@ -40,6 +40,12 @@ var (
 		"depositHTLT": {},
 		"claimHTLT":   {},
 		"refundHTLT":  {},
+
+		"side_create_validator": {},
+		"side_edit_validator": {},
+		"side_delegate": {},
+		"side_redelegate": {},
+		"side_undelegate": {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

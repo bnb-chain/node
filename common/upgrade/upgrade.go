@@ -17,11 +17,13 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
-	// TODO: add upgrade name
+	// Heisenberg Upgrade
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
+	// TODO: add upgrade name
+	LaunchBscUpgrade = sdk.LaunchBscUpgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {
