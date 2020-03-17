@@ -123,10 +123,7 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 			return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
 		}
 
-		transferInTimeoutSequence, err := k.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
-		if err != nil {
-			return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
-		}
+		transferInTimeoutSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
 		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
 		if sdkErr != nil {
 			return oracle.Prophecy{}, nil, sdkErr

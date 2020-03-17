@@ -180,11 +180,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
-	bindSequence, err := keeper.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId)
-	if err != nil {
-		return types.ErrGetChannelIdFailed(err.Error()).Result()
-	}
-
+	bindSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId)
 	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
@@ -245,10 +241,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
-	transferOutSequence, err := keeper.IbcKeeper.GetSequence(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId)
-	if err != nil {
-		return types.ErrGetChannelIdFailed(err.Error()).Result()
-	}
+	transferOutSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId)
 	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
