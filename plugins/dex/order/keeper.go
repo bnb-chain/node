@@ -1052,6 +1052,17 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		return errors.New("trading pair exists")
 	}
 
+	if sdk.IsUpgrade(upgrade.BEP_BUSD) {
+		for _, symbol := range types.GetSupportedListAgainstSymbols() {
+			if baseAsset == symbol || quoteAsset == symbol {
+				if kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, symbol) ||
+					kp.PairMapper.Exists(ctx, symbol, types.NativeTokenSymbol) {
+					return nil
+				}
+			}
+		}
+	}
+
 	if baseAsset != types.NativeTokenSymbol &&
 		quoteAsset != types.NativeTokenSymbol {
 

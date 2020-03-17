@@ -3,6 +3,8 @@ package order
 import (
 	"testing"
 
+	"github.com/binance-chain/node/common/upgrade"
+
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -285,4 +287,72 @@ func TestFeeManager_CalcFixedFee(t *testing.T) {
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e13)}, fee.Tokens)
 	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC-000", 1e13)}, fee.Tokens)
+}
+
+func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, -1)
+
+	ctx, am, keeper := setup()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.AddEngine(dextype.NewTradingPair("BNB", "BUSD-BD1", 1e5))
+	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BUSD-BD1", 1e7))
+	keeper.AddEngine(dextype.NewTradingPair("BUSD-BD1", "XYZ-999", 1e6))
+
+	// enough BNB, BNB will be collected
+	_, acc := testutils.NewAccount(ctx, am, 1e5)
+	tran := Transfer{
+		inAsset:  "BUSD-BD1",
+		in:       1000,
+		outAsset: "ABC-000",
+		out:      100,
+	}
+	fee := keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	require.Equal(t, sdk.Coins{{"BNB", 5e2}}, fee.Tokens)
+
+	// transferred in ABC-000
+	tran = Transfer{
+		inAsset:  "ABC-000",
+		in:       1000,
+		outAsset: "BUSD-BD1",
+		out:      100,
+	}
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	require.Equal(t, sdk.Coins{{"BNB", 5e1}}, fee.Tokens)
+
+	// transferred in XYZ-999
+	tran = Transfer{
+		inAsset:  "XYZ-999",
+		in:       1000,
+		outAsset: "BUSD-BD1",
+		out:      100,
+	}
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	require.Equal(t, sdk.Coins{{"BNB", 5e4}}, fee.Tokens)
+}
+
+func TestFeeManager_CalcFixedFee_SupportBUSD(t *testing.T) {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, -1)
+
+	ctx, am, keeper := setup()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	keeper.AddEngine(dextype.NewTradingPair("BNB", "BUSD-BD1", 1e5))
+	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BUSD-BD1", 1e7))
+	keeper.AddEngine(dextype.NewTradingPair("BUSD-BD1", "XYZ-999", 1e6))
+
+	// no enough BNB, the transferred-in asset will be collected
+	// buy BUSD-BD1
+	acc.SetCoins(sdk.Coins{{Denom: "BUSD-BD1", Amount: 1e4}})
+	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BUSD-BD1", keeper.engines)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("BUSD-BD1", 1e2)}, fee.Tokens)
+
+	// buy ABC-000
+	acc.SetCoins(sdk.Coins{{Denom: "ABC-000", Amount: 1e4}})
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e3)}, fee.Tokens)
+
+	// buy XYZ-999
+	acc.SetCoins(sdk.Coins{{Denom: "XYZ-999", Amount: 1e4}})
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "XYZ-999", keeper.engines)
+	require.Equal(t, sdk.Coins{sdk.NewCoin("XYZ-999", 1)}, fee.Tokens)
 }

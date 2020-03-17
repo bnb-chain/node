@@ -6,6 +6,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/binance-chain/node/common/upgrade"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
@@ -134,7 +136,7 @@ func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Tra
 }
 
 func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[string]*matcheng.MatchEng) (fee int64, isOverflow bool) {
-	var nativeNotional *big.Int
+	var nativeNotional = big.NewInt(0)
 	if isNativeToken(inSymbol) {
 		nativeNotional = big.NewInt(inQty)
 	} else {
@@ -143,15 +145,58 @@ func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[str
 		if engine, ok := engines[utils.Assets2TradingPair(inSymbol, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			nativeNotional = utils.CalBigNotional(engine.LastTradePrice, inQty)
-		} else {
+		} else if engine, ok := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]; ok {
 			// BNB_XYZ
-			engine := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inSymbol)]
 			var amount big.Int
 			nativeNotional = amount.Div(
 				amount.Mul(
 					big.NewInt(inQty),
 					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 				big.NewInt(engine.LastTradePrice))
+		} else {
+			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
+			if sdk.IsUpgrade(upgrade.BEP_BUSD) {
+				for _, symbol := range types.GetSupportedListAgainstSymbols() {
+					var foundFirstPair, foundSecondPair bool
+					var intermediateAmount = big.NewInt(0)
+
+					if market, ok := engines[utils.Assets2TradingPair(symbol, inSymbol)]; ok {
+						foundFirstPair = true
+						var tmp big.Int
+						intermediateAmount = tmp.Div(tmp.Mul(
+							big.NewInt(inQty),
+							big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+							big.NewInt(market.LastTradePrice))
+					} else if market, ok := engines[utils.Assets2TradingPair(inSymbol, symbol)]; ok {
+						foundFirstPair = true
+						intermediateAmount = utils.CalBigNotional(market.LastTradePrice, inQty)
+					}
+
+					if foundFirstPair {
+						var intermediateTmp int64
+						if intermediateAmount.IsInt64() {
+							intermediateTmp = intermediateAmount.Int64()
+						} else {
+							intermediateTmp = math.MaxInt64
+						}
+						if market, ok := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, symbol)]; ok {
+							foundSecondPair = true
+							var tmp big.Int
+							nativeNotional = tmp.Div(tmp.Mul(
+								big.NewInt(intermediateTmp),
+								big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+								big.NewInt(market.LastTradePrice))
+						} else if market, ok := engines[utils.Assets2TradingPair(symbol, types.NativeTokenSymbol)]; ok {
+							foundSecondPair = true
+							nativeNotional = utils.CalBigNotional(market.LastTradePrice, intermediateTmp)
+						}
+					}
+
+					if foundFirstPair && foundSecondPair {
+						break
+					}
+				}
+			}
 		}
 	}
 
@@ -238,7 +283,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	} else {
 		// the amount may overflow int64, so use big.Int instead.
 		// TODO: (perf) may remove the big.Int use to improve the performance
-		var amount *big.Int
+		var amount = big.NewInt(0)
 		if market, ok := engines[utils.Assets2TradingPair(inAsset, types.NativeTokenSymbol)]; ok {
 			// XYZ_BNB
 			var tmp big.Int
@@ -246,10 +291,54 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 				big.NewInt(feeAmount),
 				big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 				big.NewInt(market.LastTradePrice))
-		} else {
+		} else if market, ok := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]; ok {
 			// BNB_XYZ
-			market = engines[utils.Assets2TradingPair(types.NativeTokenSymbol, inAsset)]
 			amount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
+		} else {
+			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
+			if sdk.IsUpgrade(upgrade.BEP_BUSD) {
+				for _, symbol := range types.GetSupportedListAgainstSymbols() {
+					var foundFirstPair, foundSecondPair bool
+					var intermediateAmount = big.NewInt(0)
+
+					if market, ok := engines[utils.Assets2TradingPair(symbol, types.NativeTokenSymbol)]; ok {
+						foundFirstPair = true
+						var tmp big.Int
+						intermediateAmount = tmp.Div(tmp.Mul(
+							big.NewInt(feeAmount),
+							big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+							big.NewInt(market.LastTradePrice))
+					} else if market, ok := engines[utils.Assets2TradingPair(types.NativeTokenSymbol, symbol)]; ok {
+						foundFirstPair = true
+						intermediateAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
+					}
+
+					if foundFirstPair {
+						var intermediateTmp int64
+						if intermediateAmount.IsInt64() {
+							intermediateTmp = intermediateAmount.Int64()
+						} else {
+							intermediateTmp = math.MaxInt64
+						}
+
+						if market, ok := engines[utils.Assets2TradingPair(inAsset, symbol)]; ok {
+							foundSecondPair = true
+							var tmp big.Int
+							amount = tmp.Div(tmp.Mul(
+								big.NewInt(intermediateTmp),
+								big.NewInt(cmnUtils.Fixed8One.ToInt64())),
+								big.NewInt(market.LastTradePrice))
+						} else if market, ok := engines[utils.Assets2TradingPair(symbol, inAsset)]; ok {
+							foundSecondPair = true
+							amount = utils.CalBigNotional(market.LastTradePrice, intermediateTmp)
+						}
+					}
+
+					if foundFirstPair && foundSecondPair {
+						break
+					}
+				}
+			}
 		}
 
 		if amount.IsInt64() {

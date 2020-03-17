@@ -17,6 +17,9 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
+	//TODO: change the correct BEP number
+	BEP_BUSD = "BEP_BUSD" // supporting listing and trading BUSD pairs
+
 	// TODO: add upgrade name
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
