@@ -23,8 +23,8 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleUpdateBindMsg(ctx, keeper, msg)
 		case BindMsg:
 			return handleBindMsg(ctx, keeper, msg)
-		case TransferOutTimeoutMsg:
-			return handleTransferOutTimeoutMsg(ctx, keeper, msg)
+		case UpdateTransferOutMsg:
+			return handleUpdateTransferOutMsg(ctx, keeper, msg)
 		default:
 			errMsg := "Unrecognized bridge msg type"
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -42,12 +42,12 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
 	}
 
-	claim, err := types.CreateOracleClaimFromTransferMsg(msg)
+	claim, err := types.CreateOracleClaimFromTransferInMsg(msg)
 	if err != nil {
 		return err.Result()
 	}
 
-	_, tags, err := bridgeKeeper.ProcessTransferClaim(ctx, claim)
+	_, tags, err := bridgeKeeper.ProcessTransferInClaim(ctx, claim)
 	if err != nil {
 		return err.Result()
 	}
@@ -59,13 +59,13 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 	return sdk.Result{Tags: resultTags}
 }
 
-func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferOutTimeoutMsg) sdk.Result {
-	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyTransferOutTimeoutSequence)
+func handleUpdateTransferOutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg UpdateTransferOutMsg) sdk.Result {
+	currentSequence := bridgeKeeper.GetCurrentSequence(ctx, types.KeyUpdateTransferOutSequence)
 	if msg.Sequence != currentSequence {
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
 	}
 
-	claim, err := types.CreateOracleClaimFromTransferOutTimeoutMsg(msg)
+	claim, err := types.CreateOracleClaimFromUpdateTransferOutMsg(msg)
 	if err != nil {
 		return err.Result()
 	}

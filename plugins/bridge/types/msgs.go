@@ -22,11 +22,11 @@ const (
 
 	RouteBridge = "bridge"
 
-	TransferInMsgType         = "crossTransferIn"
-	TransferOutTimeoutMsgType = "crossTransferOutTimeout"
-	BindMsgType               = "crossBind"
-	TransferOutMsgType        = "crossTransferOut"
-	UpdateBindMsgType         = "crossUpdateBind"
+	TransferInMsgType        = "crossTransferIn"
+	UpdateTransferOutMsgType = "crossUpdateTransferOut"
+	BindMsgType              = "crossBind"
+	TransferOutMsgType       = "crossTransferOut"
+	UpdateBindMsgType        = "crossUpdateBind"
 )
 
 var _ sdk.Msg = TransferInMsg{}
@@ -112,37 +112,48 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-var _ sdk.Msg = TransferOutTimeoutMsg{}
+var _ sdk.Msg = UpdateTransferOutMsg{}
 
-type TransferOutTimeoutMsg struct {
-	SenderAddress    sdk.AccAddress `json:"sender_address"`
-	Sequence         int64          `json:"sequence"`
-	Amount           sdk.Coin       `json:"amount"`
-	ValidatorAddress sdk.AccAddress `json:"validator_address"`
+type TransferOutStatus int8
+
+const (
+	TransferOutStatusRejected         TransferOutStatus = 1
+	TransferOutStatusTimeout          TransferOutStatus = 2
+	TransferOutStatusInvalidParameter TransferOutStatus = 3
+)
+
+type UpdateTransferOutMsg struct {
+	SenderAddress    sdk.AccAddress    `json:"sender_address"`
+	Sequence         int64             `json:"sequence"`
+	Amount           sdk.Coin          `json:"amount"`
+	Status           TransferOutStatus `json:"status"`
+	ValidatorAddress sdk.AccAddress    `json:"validator_address"`
 }
 
-func NewTransferOutTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TransferOutTimeoutMsg {
-	return TransferOutTimeoutMsg{
+func NewUpdateTransferOutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin,
+	validatorAddr sdk.AccAddress, status TransferOutStatus) UpdateTransferOutMsg {
+	return UpdateTransferOutMsg{
 		SenderAddress:    senderAddr,
 		Sequence:         sequence,
 		Amount:           amount,
 		ValidatorAddress: validatorAddr,
+		Status:           status,
 	}
 }
 
 // nolint
-func (msg TransferOutTimeoutMsg) Route() string { return RouteBridge }
-func (msg TransferOutTimeoutMsg) Type() string  { return TransferOutTimeoutMsgType }
-func (msg TransferOutTimeoutMsg) GetSigners() []sdk.AccAddress {
+func (msg UpdateTransferOutMsg) Route() string { return RouteBridge }
+func (msg UpdateTransferOutMsg) Type() string  { return UpdateTransferOutMsgType }
+func (msg UpdateTransferOutMsg) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.ValidatorAddress}
 }
-func (msg TransferOutTimeoutMsg) String() string {
-	return fmt.Sprintf("TransferOutTimeout{%s#%d#%s#%s}",
+func (msg UpdateTransferOutMsg) String() string {
+	return fmt.Sprintf("UpdateTransferOut{%s#%d#%s#%s}",
 		msg.SenderAddress.String(), msg.Sequence, msg.Amount.String(), msg.ValidatorAddress.String())
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
-func (msg TransferOutTimeoutMsg) GetSignBytes() []byte {
+func (msg UpdateTransferOutMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
@@ -150,12 +161,12 @@ func (msg TransferOutTimeoutMsg) GetSignBytes() []byte {
 	return b
 }
 
-func (msg TransferOutTimeoutMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg UpdateTransferOutMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
-func (msg TransferOutTimeoutMsg) ValidateBasic() sdk.Error {
+func (msg UpdateTransferOutMsg) ValidateBasic() sdk.Error {
 	if len(msg.SenderAddress) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(msg.SenderAddress.String())
 	}
@@ -167,6 +178,11 @@ func (msg TransferOutTimeoutMsg) ValidateBasic() sdk.Error {
 	}
 	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
+	}
+	if msg.Status != TransferOutStatusRejected &&
+		msg.Status != TransferOutStatusTimeout &&
+		msg.Status != TransferOutStatusInvalidParameter {
+		return ErrInvalidStatus(fmt.Sprintf("status(%d) does not exist", msg.Status))
 	}
 	return nil
 }
@@ -285,6 +301,13 @@ func (msg UpdateBindMsg) ValidateBasic() sdk.Error {
 
 	if len(msg.Symbol) == 0 {
 		return ErrInvalidSymbol("symbol should not be empty")
+	}
+
+	if msg.Status != BindStatusSuccess &&
+		msg.Status != BindStatusRejected &&
+		msg.Status != BindStatusTimeout &&
+		msg.Status != BindStatusInvalidParameter {
+		return ErrInvalidStatus(fmt.Sprintf("status(%d) does not exist", msg.Status))
 	}
 
 	if !msg.Amount.GT(sdk.ZeroInt()) {

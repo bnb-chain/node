@@ -16,9 +16,9 @@ var (
 const (
 	StartSequence int64 = 0
 
-	KeyCurrentTransferInSequence  = "transferInSeq"
-	KeyTransferOutTimeoutSequence = "transferOutTimeoutSeq"
-	KeyUpdateBindSequence         = "updateBindSeq"
+	KeyCurrentTransferInSequence = "transferInSeq"
+	KeyUpdateTransferOutSequence = "updateTransferOutSeq"
+	KeyUpdateBindSequence        = "updateBindSeq"
 
 	keyBindRequest = "bindReq:%s"
 )

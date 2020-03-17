@@ -72,23 +72,23 @@ func TestTimeoutMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
 	tests := []struct {
-		timeoutMsg   TransferOutTimeoutMsg
+		timeoutMsg   UpdateTransferOutMsg
 		expectedPass bool
 	}{
 		{
-			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewUpdateTransferOutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			true,
 		}, {
-			NewTransferOutTimeoutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewUpdateTransferOutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTransferOutTimeoutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewUpdateTransferOutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, addrs[0]),
+			NewUpdateTransferOutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, addrs[0]),
 			false,
 		}, {
-			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.AccAddress{1, 2}),
+			NewUpdateTransferOutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.AccAddress{1, 2}),
 			true,
 		},
 	}

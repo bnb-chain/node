@@ -73,7 +73,7 @@ func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
 	return sequence
 }
 
-func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
+func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
 		return oracle.Prophecy{}, nil, err
@@ -88,12 +88,12 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		return prophecy, nil, nil
 	}
 
-	transferClaim, err := types.GetTransferClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	transferInClaim, err := types.GetTransferInClaimFromOracleClaim(prophecy.Status.FinalClaim)
 	if err != nil {
 		return oracle.Prophecy{}, nil, err
 	}
 
-	tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
+	tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferInClaim.Amount.Denom)
 	if errMsg != nil {
 		return oracle.Prophecy{}, nil, sdk.ErrInternal(errMsg.Error())
 	}
@@ -101,18 +101,18 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 	var calibratedAmount sdk.Int
 	if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
 		decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
-		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
+		calibratedAmount = sdk.NewInt(transferInClaim.Amount.Amount).Mul(decimals)
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
-		if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
+		if !sdk.NewInt(transferInClaim.Amount.Amount).Mod(decimals).IsZero() {
 			return oracle.Prophecy{}, nil, types.ErrInvalidAmount("can't calibrate timeout amount")
 		}
-		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
+		calibratedAmount = sdk.NewInt(transferInClaim.Amount.Amount).Div(decimals)
 	}
 
-	if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
+	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
 		timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
-			transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
+			transferInClaim.ContractAddress[:], transferInClaim.SenderAddress[:])
 
 		if err != nil {
 			return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
@@ -136,7 +136,7 @@ func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracl
 		return prophecy, tags, nil
 	}
 
-	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferInClaim.ReceiverAddress, sdk.Coins{transferInClaim.Amount})
 	if err != nil {
 		return oracle.Prophecy{}, nil, err
 	}
@@ -164,17 +164,17 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 		return prophecy, nil
 	}
 
-	timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	updateTransferOutClaim, err := types.GetUpdateTransferOutClaimFromOracleClaim(prophecy.Status.FinalClaim)
 	if err != nil {
 		return oracle.Prophecy{}, err
 	}
 
-	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, updateTransferOutClaim.SenderAddress, sdk.Coins{updateTransferOutClaim.Amount})
 	if err != nil {
 		return oracle.Prophecy{}, err
 	}
 
-	k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
+	k.IncreaseSequence(ctx, types.KeyUpdateTransferOutSequence)
 
 	return prophecy, nil
 }
@@ -230,7 +230,7 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 		k.DeleteBindRequest(ctx, updateBindClaim.Symbol)
 
 		// TODO Distribute fee
-		k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
+		k.IncreaseSequence(ctx, types.KeyUpdateTransferOutSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}
@@ -268,7 +268,7 @@ func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindReques
 	kvStore := ctx.KVStore(k.storeKey)
 	bz := kvStore.Get(key)
 	if bz == nil {
-		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s already exists", symbol))
+		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s doest not exist", symbol))
 	}
 
 	var bindRequest types.BindRequest

@@ -12,9 +12,9 @@ var (
 type (
 	Keeper = keeper.Keeper
 
-	TransferInMsg         = types.TransferInMsg
-	TransferOutTimeoutMsg = types.TransferOutTimeoutMsg
-	TransferOutMsg        = types.TransferOutMsg
-	BindMsg               = types.BindMsg
-	UpdateBindMsg         = types.UpdateBindMsg
+	TransferInMsg        = types.TransferInMsg
+	UpdateTransferOutMsg = types.UpdateTransferOutMsg
+	TransferOutMsg       = types.TransferOutMsg
+	BindMsg              = types.BindMsg
+	UpdateBindMsg        = types.UpdateBindMsg
 )

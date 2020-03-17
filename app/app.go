@@ -303,7 +303,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		swap.RefundHTLTMsg{}.Type(),
 	)
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BSCUpgrade,
-		bridge.TransferOutTimeoutMsg{}.Type(),
+		bridge.UpdateTransferOutMsg{}.Type(),
 		bridge.TransferInMsg{}.Type(),
 		bridge.BindMsg{}.Type(),
 		bridge.TransferOutMsg{}.Type(),

@@ -143,6 +143,7 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 			sequence := viper.GetInt64(flagSequence)
 			senderAddressStr := viper.GetString(flagSenderAddress)
 			amount := viper.GetString(flagAmount)
+			status := viper.GetInt(flagStatus)
 
 			if sequence <= 0 {
 				return errors.New("sequence should not be less than 0")
@@ -171,9 +172,10 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.NewTransferOutTimeoutMsg(senderAddr, sequence,
+			msg := types.NewUpdateTransferOutMsg(senderAddr, sequence,
 				amountToTransfer,
 				fromAddr,
+				types.TransferOutStatus(status),
 			)
 
 			err = msg.ValidateBasic()
@@ -193,6 +195,7 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int64(flagSequence, 0, "sequence of timeout channel")
 	cmd.Flags().String(flagSenderAddress, "", "sender address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
+	cmd.Flags().Int(flagStatus, 0, "transfer out status")
 
 	return cmd
 }
