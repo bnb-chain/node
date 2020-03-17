@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,12 +47,16 @@ func handleTransferInMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferInMsg
 		return err.Result()
 	}
 
-	_, err = bridgeKeeper.ProcessTransferClaim(ctx, claim)
+	_, tags, err := bridgeKeeper.ProcessTransferClaim(ctx, claim)
 	if err != nil {
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	resultTags := sdk.NewTags(
+		types.TransferInSequence, []byte(strconv.Itoa(int(msg.Sequence))),
+	)
+	resultTags = resultTags.AppendTags(tags)
+	return sdk.Result{Tags: resultTags}
 }
 
 func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg TransferOutTimeoutMsg) sdk.Result {
@@ -70,13 +75,21 @@ func handleTransferOutTimeoutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg Trans
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	resultTags := sdk.NewTags(
+		types.TransferOutTimeoutSequence, []byte(strconv.Itoa(int(msg.Sequence))),
+	)
+
+	return sdk.Result{Tags: resultTags}
 }
 
 func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.Result {
 	currentSequence := keeper.GetCurrentSequence(ctx, types.KeyUpdateBindSequence)
 	if msg.Sequence != currentSequence {
 		return types.ErrInvalidSequence(fmt.Sprintf("current sequence is %d", currentSequence)).Result()
+	}
+
+	if _, err := keeper.TokenMapper.GetToken(ctx, msg.Symbol); err != nil {
+		return types.ErrInvalidSymbol(fmt.Sprintf("token %s is not existing", msg.Symbol)).Result()
 	}
 
 	claim, err := types.CreateOracleClaimFromUpdateBindMsg(msg)
@@ -89,7 +102,11 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 		return err.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.UpdateBindSequence, []byte(strconv.Itoa(int(msg.Sequence))),
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
@@ -114,17 +131,11 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
 
-	bindRequest := types.GetBindRequest(msg)
-	sdkErr := keeper.CreateBindRequest(ctx, bindRequest)
-	if sdkErr != nil {
-		return sdkErr.Result()
-	}
-
 	peggyAmount := sdk.Coins{sdk.Coin{Denom: symbol, Amount: msg.Amount}}
 	relayFee := sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}}
 	transferAmount := peggyAmount.Plus(relayFee)
 
-	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
+	_, sdkErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -138,12 +149,26 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
 		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount("can't calibrate bep2 amount to the amount of ERC20").Result()
+			return types.ErrInvalidAmount(fmt.Sprintf("can't calibrate bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
 		}
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
+
+	bindRequest := types.BindRequest{
+		From:             msg.From,
+		Symbol:           msg.Symbol,
+		Amount:           calibratedAmount,
+		ContractAddress:  msg.ContractAddress,
+		ContractDecimals: msg.ContractDecimals,
+		ExpireTime:       msg.ExpireTime,
+	}
+	sdkErr = keeper.CreateBindRequest(ctx, bindRequest)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
 		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
@@ -155,12 +180,18 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
+	bindSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId)
 	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.BindSequence, []byte(strconv.Itoa(int(bindSequence))),
+		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
+	)
+
+	return sdk.Result{Tags: tags}
 }
 
 func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sdk.Result {
@@ -209,10 +240,16 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrGetChannelIdFailed(err.Error()).Result()
 	}
 
+	transferOutSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId)
 	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
 
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.TransferOutSequence, []byte(strconv.Itoa(int(transferOutSequence))),
+		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
+	)
+
+	return sdk.Result{Tags: tags}
 }

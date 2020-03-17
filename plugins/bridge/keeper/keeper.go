@@ -55,13 +55,13 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper
 func (k Keeper) IncreaseSequence(ctx sdk.Context, key string) {
 	currentSequence := k.GetCurrentSequence(ctx, key)
 
-	store := ctx.KVStore(k.storeKey)
-	store.Set([]byte(key), []byte(strconv.FormatInt(currentSequence+1, 10)))
+	kvStore := ctx.KVStore(k.storeKey)
+	kvStore.Set([]byte(key), []byte(strconv.FormatInt(currentSequence+1, 10)))
 }
 
 func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get([]byte(key))
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get([]byte(key))
 	if bz == nil {
 		return types.StartSequence
 	}
@@ -73,71 +73,81 @@ func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
 	return sequence
 }
 
-func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+func (k Keeper) ProcessTransferClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
-		return oracle.Prophecy{}, err
+		return oracle.Prophecy{}, nil, err
 	}
 
-	if prophecy.Status.Text == oracle.SuccessStatusText {
-		transferClaim, err := types.GetTransferClaimFromOracleClaim(prophecy.Status.FinalClaim)
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
-		if errMsg != nil {
-			return oracle.Prophecy{}, sdk.ErrInternal(errMsg.Error())
-		}
-
-		var calibratedAmount sdk.Int
-		if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
-		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
-			if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
-				return oracle.Prophecy{}, types.ErrInvalidAmount("can't calibrate timeout amount")
-			}
-			calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
-		}
-
-		if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-			timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
-				transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
-
-			if err != nil {
-				return oracle.Prophecy{}, types.ErrSerializePackageFailed(err.Error())
-			}
-
-			timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
-			if err != nil {
-				return oracle.Prophecy{}, types.ErrGetChannelIdFailed(err.Error())
-			}
-
-			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
-			if sdkErr != nil {
-				return oracle.Prophecy{}, sdkErr
-			}
-			return prophecy, nil
-		}
-
-		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		// TODO distribute delay fee
-
-		// TODO should we delete prophecy when prophecy succeeds
-
-		// increase sequence
-		k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
-	} else if prophecy.Status.Text == oracle.FailedStatusText {
+	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+		return prophecy, nil, nil
 	}
 
-	return prophecy, nil
+	if prophecy.Status.Text != oracle.SuccessStatusText {
+		return prophecy, nil, nil
+	}
+
+	transferClaim, err := types.GetTransferClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	if err != nil {
+		return oracle.Prophecy{}, nil, err
+	}
+
+	tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferClaim.Amount.Denom)
+	if errMsg != nil {
+		return oracle.Prophecy{}, nil, sdk.ErrInternal(errMsg.Error())
+	}
+
+	var calibratedAmount sdk.Int
+	if tokenInfo.ContractDecimal >= cmmtypes.TokenDecimals {
+		decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimal-cmmtypes.TokenDecimals))
+		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Mul(decimals)
+	} else {
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimal))
+		if !sdk.NewInt(transferClaim.Amount.Amount).Mod(decimals).IsZero() {
+			return oracle.Prophecy{}, nil, types.ErrInvalidAmount("can't calibrate timeout amount")
+		}
+		calibratedAmount = sdk.NewInt(transferClaim.Amount.Amount).Div(decimals)
+	}
+
+	if transferClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
+		timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
+			transferClaim.ContractAddress[:], transferClaim.SenderAddress[:])
+
+		if err != nil {
+			return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
+		}
+
+		timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
+		if err != nil {
+			return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
+		}
+
+		transferInTimeoutSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
+		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
+		if sdkErr != nil {
+			return oracle.Prophecy{}, nil, sdkErr
+		}
+		tags := sdk.NewTags(
+			sdk.TagAction, types.ActionTransferInTimeOut,
+			types.TransferInTimeoutSequence, []byte(strconv.Itoa(int(transferInTimeoutSequence))),
+		)
+
+		return prophecy, tags, nil
+	}
+
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, transferClaim.ReceiverAddress, sdk.Coins{transferClaim.Amount})
+	if err != nil {
+		return oracle.Prophecy{}, nil, err
+	}
+
+	// TODO distribute delay fee
+
+	// TODO should we delete prophecy when prophecy succeeds
+
+	// increase sequence
+	k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
+	return prophecy, nil, nil
 }
 
 func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
@@ -146,21 +156,26 @@ func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle
 		return oracle.Prophecy{}, err
 	}
 
-	if prophecy.Status.Text == oracle.SuccessStatusText {
-		timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
-		if err != nil {
-			return oracle.Prophecy{}, err
-		}
-
-		k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
-	} else if prophecy.Status.Text == oracle.FailedStatusText {
+	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
+		return prophecy, nil
 	}
+	if prophecy.Status.Text != oracle.SuccessStatusText {
+		return prophecy, nil
+	}
+
+	timeoutClaim, err := types.GetTransferOutTimeoutClaimFromOracleClaim(prophecy.Status.FinalClaim)
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, timeoutClaim.SenderAddress, sdk.Coins{timeoutClaim.Amount})
+	if err != nil {
+		return oracle.Prophecy{}, err
+	}
+
+	k.IncreaseSequence(ctx, types.KeyTransferOutTimeoutSequence)
+
 	return prophecy, nil
 }
 
@@ -182,7 +197,7 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 		}
 
 		if bindRequest.Symbol != updateBindClaim.Symbol ||
-			bindRequest.Amount != updateBindClaim.Amount ||
+			!bindRequest.Amount.Equal(updateBindClaim.Amount) ||
 			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() ||
 			bindRequest.ContractDecimals != updateBindClaim.ContractDecimals {
 
@@ -197,8 +212,16 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 				return oracle.Prophecy{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
 			}
 		} else {
+			var calibratedAmount int64
+			if cmmtypes.TokenDecimals > bindRequest.ContractDecimals {
+				decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-bindRequest.ContractDecimals))
+				calibratedAmount = bindRequest.Amount.Mul(decimals).Int64()
+			} else {
+				decimals := sdk.NewIntWithDecimal(1, int(bindRequest.ContractDecimals-cmmtypes.TokenDecimals))
+				calibratedAmount = bindRequest.Amount.Div(decimals).Int64()
+			}
 			_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
-				sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: bindRequest.Amount}})
+				sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: calibratedAmount}})
 			if err != nil {
 				return oracle.Prophecy{}, err
 			}
@@ -217,8 +240,8 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Error {
 	key := types.GetBindRequestKey(req.Symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
 	if bz != nil {
 		return types.ErrBindRequestExists(fmt.Sprintf("bind request of %s already exists", req.Symbol))
 	}
@@ -228,24 +251,24 @@ func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Er
 		return sdk.ErrInternal(fmt.Sprintf("marshal bind request error, err=%s", err.Error()))
 	}
 
-	store.Set(key, reqBytes)
+	kvStore.Set(key, reqBytes)
 	return nil
 }
 
 func (k Keeper) DeleteBindRequest(ctx sdk.Context, symbol string) {
 	key := types.GetBindRequestKey(symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	kvStore.Delete(key)
 }
 
 func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindRequest, sdk.Error) {
 	key := types.GetBindRequestKey(symbol)
 
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(key)
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
 	if bz == nil {
-		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s does not exist", symbol))
+		return types.BindRequest{}, types.ErrBindRequestNotExists(fmt.Sprintf("bind request of %s already exists", symbol))
 	}
 
 	var bindRequest types.BindRequest

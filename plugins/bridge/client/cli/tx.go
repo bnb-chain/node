@@ -293,13 +293,16 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			sequence := viper.GetInt64(flagSequence)
 			contractAddress := viper.GetString(flagContractAddress)
 			contractDecimals := viper.GetInt(flagContractDecimals)
-			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
 			status := viper.GetInt(flagStatus)
 
 			fromAddr, err := cliCtx.GetFromAddress()
 			if err != nil {
 				return err
+			}
+			amount, ok := sdk.NewIntFromString(viper.GetString(flagAmount))
+			if !ok {
+				return fmt.Errorf("invalid amount")
 			}
 
 			msg := types.NewUpdateBindMsg(sequence,
