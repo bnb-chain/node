@@ -106,7 +106,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					levelLimit = l
 				}
 			}
-			levels := keeper.GetOrderBookLevels(pair, levelLimit)
+			levels := keeper.GetOrderBookLevels(pair, levelLimit, false)
 			book := store.OrderBook{
 				Height: height,
 				Levels: levels,

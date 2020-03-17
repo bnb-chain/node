@@ -230,7 +230,7 @@ func GetOrderId(add sdk.AccAddress, seq int64, ctx sdk.Context) string {
 func GetOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 25)
+	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 25, false)
 	for _, l := range orderbooks {
 		if l.BuyPrice != 0 {
 			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})

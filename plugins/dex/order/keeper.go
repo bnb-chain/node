@@ -357,7 +357,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		}
 	}
 	if kp.OrderBookCacheable {
-		engine.BookCache = kp.GetOrderBookLevels(symbol, depthCacheLimit)
+		engine.BookCache = kp.GetOrderBookLevels(symbol, depthCacheLimit, true)
 	}
 }
 
@@ -455,14 +455,14 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int, disableCache bool) []store.OrderBookLevel {
 	orderbook := make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
 		// TODO: check considered bucket splitting?
-		if kp.OrderBookCacheable {
+		if  kp.OrderBookCacheable && !disableCache {
 			if len(eng.BookCache) < maxLevels {
 				copy(orderbook, eng.BookCache)
 			} else {

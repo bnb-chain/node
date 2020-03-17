@@ -56,7 +56,7 @@ func MakeKeeper(cdc *wire.Codec, orderBookCacheable bool) *Keeper {
 	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true, false)
+	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true, orderBookCacheable)
 	return keeper
 }
 
@@ -914,7 +914,7 @@ func TestKeeper_OrderBookCache(t *testing.T) {
 	assert.Equal(int64(1000000), buys[0].Orders[0].CumQty)
 	assert.Equal(int64(96000), buys[1].Price)
 
-	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000)
+	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000, false)
 	assert.Equal(1000, len(orderBookCache))
 	assert.Equal(utils.Fixed8(500000), orderBookCache[0].BuyQty)
 	assert.Equal(utils.Fixed8(1000000), orderBookCache[0].SellQty)
@@ -949,7 +949,7 @@ func TestKeeper_OrderBookCacheAfterReplayOrders(t *testing.T) {
 	assert.Equal(int64(1000000), buys[0].Orders[0].CumQty)
 	assert.Equal(int64(96000), buys[1].Price)
 
-	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000)
+	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000, false)
 	assert.Equal(1000, len(orderBookCache))
 	assert.Equal(utils.Fixed8(500000), orderBookCache[0].BuyQty)
 	assert.Equal(utils.Fixed8(1000000), orderBookCache[0].SellQty)
