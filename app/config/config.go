@@ -53,7 +53,7 @@ BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 BEP9Height = {{ .UpgradeConfig.BEP9Height }}
 # Block height of BEP10 upgrade
 BEP10Height = {{ .UpgradeConfig.BEP10Height }}
-# Block height of BEP19Height upgrade
+# Block height of BEP19 upgrade
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 # Block height of BEP12 upgrade
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
@@ -67,6 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
+# Block height to BEP70 upgrade
+BEP70Height = {{ .UpgradeConfig.BEP70Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -152,6 +154,10 @@ logFileRoot = "{{ .LogConfig.LogFileRoot }}"
 logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
+
+[dex]
+# The suffixed symbol of BUSD
+BUSDSymbol = "{{ .DexConfig.BUSDSymbol }}"
 `
 
 type BinanceChainContext struct {
@@ -178,6 +184,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
+	*DexConfig         `mapstructure:"dex"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -188,6 +195,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
+		DexConfig:         defaultGovConfig(),
 	}
 }
 
@@ -358,7 +366,9 @@ type UpgradeConfig struct {
 	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
-	BEP3Height int64 `mapstructure:"BEP3Height"`
+	BEP3Height  int64 `mapstructure:"BEP3Height"`
+	BEP70Height int64 `mapstructure:"BEP70Height"`
+
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
@@ -375,6 +385,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
+		BEP70Height:                1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
@@ -389,6 +400,16 @@ type QueryConfig struct {
 func defaultQueryConfig() *QueryConfig {
 	return &QueryConfig{
 		ABCIQueryBlackList: nil,
+	}
+}
+
+type DexConfig struct {
+	BUSDSymbol string `mapstructure:"BUSDSymbol"`
+}
+
+func defaultGovConfig() *DexConfig {
+	return &DexConfig{
+		BUSDSymbol: "",
 	}
 }
 
