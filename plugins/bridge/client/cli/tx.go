@@ -171,7 +171,7 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.NewTimeoutMsg(senderAddr, sequence,
+			msg := types.NewTransferOutTimeoutMsg(senderAddr, sequence,
 				amountToTransfer,
 				fromAddr,
 			)

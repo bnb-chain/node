@@ -121,7 +121,7 @@ type TransferOutTimeoutMsg struct {
 	ValidatorAddress sdk.AccAddress `json:"validator_address"`
 }
 
-func NewTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TransferOutTimeoutMsg {
+func NewTransferOutTimeoutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin, validatorAddr sdk.AccAddress) TransferOutTimeoutMsg {
 	return TransferOutTimeoutMsg{
 		SenderAddress:    senderAddr,
 		Sequence:         sequence,
@@ -328,7 +328,7 @@ func NewTransferOutMsg(from sdk.AccAddress, to EthereumAddress, amount sdk.Coin,
 func (msg TransferOutMsg) Route() string { return RouteBridge }
 func (msg TransferOutMsg) Type() string  { return TransferOutMsgType }
 func (msg TransferOutMsg) String() string {
-	return fmt.Sprintf("Transfer{%v#%s#%s#%d}", msg.From, msg.To.String(), msg.Amount.String(), msg.ExpireTime)
+	return fmt.Sprintf("TransferOut{%v#%s#%s#%d}", msg.From, msg.To.String(), msg.Amount.String(), msg.ExpireTime)
 }
 func (msg TransferOutMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetSigners() }
 func (msg TransferOutMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }

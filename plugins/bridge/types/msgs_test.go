@@ -76,19 +76,19 @@ func TestTimeoutMsg(t *testing.T) {
 		expectedPass bool
 	}{
 		{
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			true,
 		}, {
-			NewTimeoutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewTransferOutTimeoutMsg(sdk.AccAddress{1}, 1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, addrs[0]),
+			NewTransferOutTimeoutMsg(addrs[0], -1, sdk.Coin{"BNB", 10}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, addrs[0]),
+			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 0}, addrs[0]),
 			false,
 		}, {
-			NewTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.AccAddress{1, 2}),
+			NewTransferOutTimeoutMsg(addrs[0], 1, sdk.Coin{"BNB", 10}, sdk.AccAddress{1, 2}),
 			true,
 		},
 	}
