@@ -4,15 +4,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
 	MaxDecimal                  int8 = 18
-	MinTransferOutExpireTimeGap      = 600
-	MinBindExpireTimeGap             = 600
+	MinTransferOutExpireTimeGap      = 60 * time.Second
+	MinBindExpireTimeGap             = 600 * time.Second
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 
@@ -247,21 +247,6 @@ const (
 	BindStatusTimeout          BindStatus = 2
 	BindStatusInvalidParameter BindStatus = 3
 )
-
-func ParseBindStatus(input string) (BindStatus, error) {
-	switch strings.ToLower(input) {
-	case "success":
-		return BindStatusSuccess, nil
-	case "reject":
-		return BindStatusRejected, nil
-	case "timeout":
-		return BindStatusTimeout, nil
-	case "invalid":
-		return BindStatusInvalidParameter, nil
-	default:
-		return BindStatusInvalidParameter, fmt.Errorf("unsupported bind status")
-	}
-}
 
 type UpdateBindMsg struct {
 	Sequence         int64           `json:"sequence"`

@@ -125,7 +125,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().String(flagReceiverAddress, "", "receiver address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
 	cmd.Flags().String(flagRelayFee, "", "amount of relay fee")
-	cmd.Flags().Int64(flagExpireTime, 0, "expire period, counted by second")
+	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
 
 	return cmd
 }
@@ -291,13 +291,8 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 			sequence := viper.GetInt64(flagSequence)
-<<<<<<< HEAD
-=======
-			symbol := viper.GetString(flagSymbol)
->>>>>>> fix bug in update bind handler
 			contractAddress := viper.GetString(flagContractAddress)
 			contractDecimals := viper.GetInt(flagContractDecimals)
-			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
 			status := viper.GetInt(flagStatus)
 
@@ -333,21 +328,12 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-<<<<<<< HEAD
 	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
 	cmd.Flags().String(flagContractAddress, "", "contract address")
 	cmd.Flags().Int(flagContractDecimals, 0, "contract token decimals")
 	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
 	cmd.Flags().Int(flagStatus, 0, "status")
-=======
-	cmd.Flags().String(flagAmount, "", "bind amount")
-	cmd.Flags().String(flagContractAddress, "", "ERC20 contract address")
-	cmd.Flags().Int(flagContractDecimals, 0, "ERC20 token decimals")
-	cmd.Flags().String(flagSymbol, "", "bep2 token symbol")
-	cmd.Flags().Int64(flagSequence, 0, "sequence of bind status channel")
-	cmd.Flags().String(flagStatus, "", "bind status")
->>>>>>> fix bug in update bind handler
 
 	return cmd
 }

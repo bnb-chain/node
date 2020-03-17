@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -109,9 +110,9 @@ func handleUpdateBindMsg(ctx sdk.Context, keeper Keeper, msg UpdateBindMsg) sdk.
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
-	if msg.ExpireTime < types.MinBindExpireTimeGap {
-		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time %d is less than minimum expire time gap %d )",
-			msg.ExpireTime, types.MinBindExpireTimeGap)).Result()
+	if !time.Unix(msg.ExpireTime, 0).After(ctx.BlockHeader().Time.Add(types.MinBindExpireTimeGap)) {
+		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time should be %d seconds after now(%s)",
+			types.MinBindExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
 	}
 
 	symbol := strings.ToUpper(msg.Symbol)
@@ -168,9 +169,8 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdkErr.Result()
 	}
 
-	expireTime := msg.ExpireTime + ctx.BlockHeader().Time.Unix()
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
-		calibratedTotalSupply, calibratedAmount, expireTime, calibratedRelayFee)
+		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
@@ -188,16 +188,16 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	tags := sdk.NewTags(
 		types.BindSequence, []byte(strconv.Itoa(int(bindSequence))),
-		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
+		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
 	)
 
 	return sdk.Result{Tags: tags}
 }
 
 func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sdk.Result {
-	if msg.ExpireTime < types.MinTransferOutExpireTimeGap {
-		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time %d is less than minimum expire time gap %d )",
-			msg.ExpireTime, types.MinTransferOutExpireTimeGap)).Result()
+	if !time.Unix(msg.ExpireTime, 0).After(ctx.BlockHeader().Time.Add(types.MinTransferOutExpireTimeGap)) {
+		return types.ErrInvalidExpireTime(fmt.Sprintf("expire time should be %d seconds after now(%s)",
+			types.MinTransferOutExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
 	}
 
 	symbol := strings.ToUpper(msg.Amount.Denom)
@@ -229,9 +229,8 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
-	expireTime := msg.ExpireTime + ctx.BlockHeader().Time.Unix()
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
-		calibratedAmount, expireTime, calibratedRelayFee)
+		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
@@ -249,7 +248,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	tags := sdk.NewTags(
 		types.TransferOutSequence, []byte(strconv.Itoa(int(transferOutSequence))),
-		types.ExpireTime, []byte(strconv.Itoa(int(expireTime))),
+		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
 	)
 
 	return sdk.Result{Tags: tags}
