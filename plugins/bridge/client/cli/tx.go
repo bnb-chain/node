@@ -4,6 +4,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/binance-chain/node/wire"
+
+	"github.com/binance-chain/node/plugins/oracle"
+
+	"github.com/binance-chain/node/common"
+
 	"github.com/binance-chain/node/common/client"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -30,6 +36,8 @@ const (
 	flagToAddress        = "to"
 	flagStatus           = "status"
 	flagExpireTime       = "expire-time"
+
+	flagChannelId = "channel-id"
 )
 
 func TransferInCmd(cdc *codec.Codec) *cobra.Command {
@@ -337,6 +345,54 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
 	cmd.Flags().Int(flagStatus, 0, "status")
+
+	return cmd
+}
+
+func QueryProphecy(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "query-prophecy",
+		Short: "query prophecy",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			sequence := viper.GetInt64(flagSequence)
+			channelId := viper.GetInt(flagChannelId)
+
+			key := types.GetClaimId(uint8(channelId), sequence)
+			res, err := cliCtx.QueryStore([]byte(key), common.OracleStoreName)
+			if err != nil {
+				return err
+			}
+
+			if len(res) == 0 {
+				fmt.Printf("No such claim exists\n")
+				return nil
+			}
+
+			dbProphecy := new(oracle.DBProphecy)
+			err = cdc.UnmarshalBinaryBare(res, &dbProphecy)
+			if err != nil {
+				return err
+			}
+
+			prophecy, err := dbProphecy.DeserializeFromDB()
+			if err != nil {
+				return err
+			}
+
+			output, err := wire.MarshalJSONIndent(cdc, prophecy)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(output))
+
+			return nil
+		},
+	}
+
+	cmd.Flags().Int64(flagSequence, 0, "sequence of channel")
+	cmd.Flags().Int(flagChannelId, 0, "channel id")
 
 	return cmd
 }

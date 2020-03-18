@@ -150,7 +150,7 @@ func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (ora
 	return prophecy, nil, nil
 }
 
-func (k Keeper) ProcessTimeoutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+func (k Keeper) ProcessUpdateTransferOutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
 		return oracle.Prophecy{}, err

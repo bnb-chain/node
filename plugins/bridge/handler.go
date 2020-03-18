@@ -70,7 +70,7 @@ func handleUpdateTransferOutMsg(ctx sdk.Context, bridgeKeeper Keeper, msg Update
 		return err.Result()
 	}
 
-	_, err = bridgeKeeper.ProcessTimeoutClaim(ctx, claim)
+	_, err = bridgeKeeper.ProcessUpdateTransferOutClaim(ctx, claim)
 	if err != nil {
 		return err.Result()
 	}

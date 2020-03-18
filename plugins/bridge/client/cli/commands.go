@@ -25,7 +25,8 @@ func AddCommands(cmd *cobra.Command, cdc *codec.Codec) {
 	bridgeCmd.AddCommand(client.LineBreak)
 
 	bridgeCmd.AddCommand(
-		client.GetCommands()...,
+		client.GetCommands(
+			QueryProphecy(cdc))...,
 	)
 	cmd.AddCommand(bridgeCmd)
 }

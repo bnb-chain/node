@@ -66,12 +66,12 @@ type UpdateTransferOutClaim struct {
 func CreateOracleClaimFromUpdateTransferOutMsg(msg UpdateTransferOutMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(UpdateTransferOutChannelId, msg.Sequence)
 
-	transferOutTimeoutClaim := UpdateTransferOutClaim{
+	updateTransferOutClaim := UpdateTransferOutClaim{
 		SenderAddress: msg.SenderAddress,
 		Amount:        msg.Amount,
 		Status:        msg.Status,
 	}
-	claimBytes, err := json.Marshal(transferOutTimeoutClaim)
+	claimBytes, err := json.Marshal(updateTransferOutClaim)
 	if err != nil {
 		return oracle.Claim{}, ErrInvalidTransferMsg(err.Error())
 	}
@@ -80,12 +80,12 @@ func CreateOracleClaimFromUpdateTransferOutMsg(msg UpdateTransferOutMsg) (oracle
 }
 
 func GetUpdateTransferOutClaimFromOracleClaim(claim string) (UpdateTransferOutClaim, sdk.Error) {
-	transferOutTimeoutClaim := UpdateTransferOutClaim{}
-	err := json.Unmarshal([]byte(claim), &transferOutTimeoutClaim)
+	updateTransferOutClaim := UpdateTransferOutClaim{}
+	err := json.Unmarshal([]byte(claim), &updateTransferOutClaim)
 	if err != nil {
 		return UpdateTransferOutClaim{}, ErrInvalidTransferMsg(err.Error())
 	}
-	return transferOutTimeoutClaim, nil
+	return updateTransferOutClaim, nil
 }
 
 type UpdateBindClaim struct {
