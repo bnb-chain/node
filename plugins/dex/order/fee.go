@@ -44,16 +44,18 @@ var (
 )
 
 type FeeManager struct {
-	cdc       *wire.Codec
-	logger    tmlog.Logger
-	FeeConfig FeeConfig
+	cdc                 *wire.Codec
+	logger              tmlog.Logger
+	FeeConfig           FeeConfig
+	GovSupportedSymbols []string
 }
 
-func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
+func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, sybmols []string, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
-		cdc:       cdc,
-		logger:    logger,
-		FeeConfig: NewFeeConfig(),
+		cdc:                 cdc,
+		logger:              logger,
+		FeeConfig:           NewFeeConfig(),
+		GovSupportedSymbols: sybmols,
 	}
 }
 
@@ -156,7 +158,7 @@ func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[str
 		} else {
 			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
 			if sdk.IsUpgrade(upgrade.BEP_BUSD) {
-				for _, symbol := range types.GetSupportedListAgainstSymbols() {
+				for _, symbol := range m.GovSupportedSymbols {
 					var foundFirstPair, foundSecondPair bool
 					var intermediateAmount = big.NewInt(0)
 
@@ -297,7 +299,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 		} else {
 			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
 			if sdk.IsUpgrade(upgrade.BEP_BUSD) {
-				for _, symbol := range types.GetSupportedListAgainstSymbols() {
+				for _, symbol := range m.GovSupportedSymbols {
 					var foundFirstPair, foundSecondPair bool
 					var intermediateAmount = big.NewInt(0)
 

@@ -170,7 +170,3 @@ func splitSuffixedTokenSymbol(suffixed string) ([]string, error) {
 
 	return split, nil
 }
-
-func GetSupportedListAgainstSymbols() []string {
-	return []string{"BUSD-BD1"}
-}

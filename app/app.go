@@ -95,6 +95,8 @@ type BinanceChain struct {
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
 
+	govConfig *config.GovConfig
+
 	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
 	// check nil-ness to know whether metrics collection is turn on
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -119,6 +121,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:      ServerContext.UpgradeConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
+		govConfig:          ServerContext.GovConfig,
 	}
 	// set upgrade config
 	SetUpgradeConfig(app.upgradeConfig)
@@ -263,7 +266,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, upgradeConfig.BEPXHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, upgradeConfig.BEP_BUSDHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -303,7 +306,8 @@ func (app *BinanceChain) initRunningMode() {
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency,
+		app.govConfig.SupportedListAgainstSymbols, app.Codec,
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 

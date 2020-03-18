@@ -67,6 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
+# Block height to BEP_BUSD upgrade
+BEP_BUSDHeight = {{ .UpgradeConfig.BEP_BUSDHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -178,6 +180,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
+	*GovConfig         `mapstructure:"gov"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -188,6 +191,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
+		GovConfig:         defaultGovConfig(),
 	}
 }
 
@@ -358,8 +362,8 @@ type UpgradeConfig struct {
 	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
-	BEP3Height int64 `mapstructure:"BEP3Height"`
-	BEPXHeight int64 `mapstructure:"BEPXHeight"`
+	BEP3Height     int64 `mapstructure:"BEP3Height"`
+	BEP_BUSDHeight int64 `mapstructure:"BEP_BUSDHeight"`
 
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
@@ -377,7 +381,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
-		BEPXHeight:                 1,
+		BEP_BUSDHeight:             1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
@@ -392,6 +396,16 @@ type QueryConfig struct {
 func defaultQueryConfig() *QueryConfig {
 	return &QueryConfig{
 		ABCIQueryBlackList: nil,
+	}
+}
+
+type GovConfig struct {
+	SupportedListAgainstSymbols []string `mapstructure:"SupportedListAgainstSymbols"`
+}
+
+func defaultGovConfig() *GovConfig {
+	return &GovConfig{
+		SupportedListAgainstSymbols: nil,
 	}
 }
 

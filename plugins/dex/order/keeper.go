@@ -57,6 +57,7 @@ type Keeper struct {
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
+	GovSupportedSymbols        []string
 	logger                     tmlog.Logger
 }
 
@@ -66,7 +67,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
+	concurrency uint, symbols []string, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
 		PairMapper:                 tradingPairMapper,
@@ -83,8 +84,9 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
+		GovSupportedSymbols:        symbols,
 		cdc:                        cdc,
-		FeeManager:                 NewFeeManager(cdc, key, logger),
+		FeeManager:                 NewFeeManager(cdc, key, symbols, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 	}
@@ -1053,7 +1055,7 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 	}
 
 	if sdk.IsUpgrade(upgrade.BEP_BUSD) {
-		for _, symbol := range types.GetSupportedListAgainstSymbols() {
+		for _, symbol := range kp.GovSupportedSymbols {
 			if baseAsset == symbol || quoteAsset == symbol {
 				if kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, symbol) ||
 					kp.PairMapper.Exists(ctx, symbol, types.NativeTokenSymbol) {
