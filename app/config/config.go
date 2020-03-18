@@ -46,7 +46,7 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 # Days count back for breathe block
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 #enable Order Book Cache for depth query
-orderBookCacheable =  {{ .BaseConfig.OrderBookCacheable }}
+orderBookCrossable =  {{ .BaseConfig.OrderBookCrossable }}
 
 [upgrade]
 # Block height of BEP6 upgrade
@@ -338,7 +338,7 @@ type BaseConfig struct {
 	BreatheBlockInterval      int   `mapstructure:"breatheBlockInterval"`
 	OrderKeeperConcurrency    uint  `mapstructure:"orderKeeperConcurrency"`
 	BreatheBlockDaysCountBack int   `mapstructure:"breatheBlockDaysCountBack"`
-	OrderBookCacheable        bool  `mapstructure:"orderBookCacheable"`
+	OrderBookCrossable        bool  `mapstructure:"orderBookCrossable"`
 }
 
 func defaultBaseConfig() *BaseConfig {
@@ -349,7 +349,7 @@ func defaultBaseConfig() *BaseConfig {
 		BreatheBlockInterval:      0,
 		OrderKeeperConcurrency:    2,
 		BreatheBlockDaysCountBack: 7,
-		OrderBookCacheable:        false,
+		OrderBookCrossable:        true,
 	}
 }
 

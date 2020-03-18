@@ -22,7 +22,7 @@ var (
 
 func initKeeper() *Keeper {
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	return keeper
 }
 

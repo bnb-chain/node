@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +34,7 @@ const (
 	numPricesStored  = 2000
 	pricesStoreEvery = 1000
 	minimalNumPrices = 500
-	depthCacheLimit  = 1000
+	underscore       = "_"
 )
 
 type FeeHandler func(map[string]*types.Fee)
@@ -53,12 +54,13 @@ type Keeper struct {
 	OrderInfosForPub           OrderInfoForPublish              // for publication usage
 	roundOrders                map[string][]string              // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
-	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
-	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
+	roundPriceLevelOrders      map[string]map[string][]string // limit to the total tx number in a block. symbol -> side_price -> [] order Id
+	RoundOrderFees             FeeHolder                      // order (and trade) related fee of this round, str of addr bytes -> fee
+	poolSize                   uint                           // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
-	OrderBookCacheable         bool
+	OrderBookCrossable         bool
 	logger                     tmlog.Logger
 }
 
@@ -67,7 +69,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 }
 
 // NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool, orderBookCacheable bool) *Keeper {
+func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool, orderBookCrossable bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
 		PairMapper:                 tradingPairMapper,
@@ -82,12 +84,13 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
+		roundPriceLevelOrders:      make(map[string]map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		OrderBookCacheable:         orderBookCacheable,
+		OrderBookCrossable:         orderBookCrossable,
 		logger:                     logger,
 	}
 }
@@ -219,6 +222,9 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
+	if !kp.OrderBookCrossable {
+		kp.InsertRoundPriceLevelOrder(symbol, info.Side, info.Price, info.Id)
+	}
 	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
@@ -242,7 +248,9 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, postCancelHandler func(o
 	if err != nil {
 		return err
 	}
-
+	if !kp.OrderBookCrossable {
+		kp.removeRoundPriceLevelOrder(symbol, ordMsg.Side, ordMsg.Price, id)
+	}
 	if postCancelHandler != nil {
 		postCancelHandler(ord)
 	}
@@ -356,9 +364,6 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			}
 		}
 	}
-	if kp.OrderBookCacheable {
-		engine.BookCache = kp.GetOrderBookLevels(symbol, depthCacheLimit, true)
-	}
 }
 
 func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
@@ -455,33 +460,47 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int, disableCache bool) []store.OrderBookLevel {
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int, includeRoundOrders bool) []store.OrderBookLevel {
 	orderbook := make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
-
 	if eng, ok := kp.engines[pair]; ok {
 		// TODO: check considered bucket splitting?
-		if  kp.OrderBookCacheable && !disableCache {
-			if len(eng.BookCache) < maxLevels {
-				copy(orderbook, eng.BookCache)
-			} else {
-				orderbook = eng.BookCache[:maxLevels]
+		deductRoundOrders := !kp.OrderBookCrossable && (!includeRoundOrders) && len(kp.roundOrders[pair]) > 0
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
+			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
+			if deductRoundOrders {
+				orderbook[i].BuyQty = orderbook[i].BuyQty - kp.sumRoundQty(pair, Side.BUY, p.Price)
 			}
-		} else {
-			eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
-				orderbook[i].BuyPrice = utils.Fixed8(p.Price)
-				orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
-				i++
-			},
-				func(p *me.PriceLevel) {
-					orderbook[j].SellPrice = utils.Fixed8(p.Price)
-					orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
-					j++
-				})
-		}
+			i++
+		},
+			func(p *me.PriceLevel) {
+				orderbook[j].SellPrice = utils.Fixed8(p.Price)
+				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
+				if deductRoundOrders {
+					orderbook[i].SellQty = orderbook[i].SellQty - kp.sumRoundQty(pair, Side.SELL, p.Price)
+				}
+				j++
+			})
+
 	}
 	return orderbook
+}
+
+func (kp *Keeper) sumRoundQty(symbol string, side int8, price int64) utils.Fixed8 {
+	key := buildSidePriceKey(side, price)
+	totalQty := int64(0)
+	if perSymbol, ok := kp.roundPriceLevelOrders[symbol]; ok {
+		if orderIds, ok := perSymbol[key]; ok {
+			for _, orderId := range orderIds {
+				if orderInfo, ok := kp.OrderExists(symbol, orderId); ok {
+					totalQty += orderInfo.Quantity - orderInfo.CumQty
+				}
+			}
+		}
+	}
+	return utils.Fixed8(totalQty)
 }
 
 func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
@@ -591,6 +610,9 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 func (kp *Keeper) clearAfterMatch() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
+	if !kp.OrderBookCrossable {
+		kp.roundPriceLevelOrders = make(map[string]map[string][]string, 256)
+	}
 }
 
 func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
@@ -985,6 +1007,9 @@ func (kp *Keeper) ClearOrders() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
+	if !kp.OrderBookCrossable {
+		kp.roundPriceLevelOrders = make(map[string]map[string][]string, 256)
+	}
 }
 
 func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler) {
@@ -1117,4 +1142,44 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	return nil
+}
+
+func buildSidePriceKey(side int8, price int64) string {
+	var keyBuilder strings.Builder
+	keyBuilder.WriteString(strconv.Itoa(int(side)))
+	keyBuilder.WriteString(underscore)
+	keyBuilder.WriteString(strconv.FormatInt(price, 10))
+	key := keyBuilder.String()
+	return key
+}
+
+func (kp *Keeper) InsertRoundPriceLevelOrder(symbol string, side int8, price int64, orderId string) {
+	priceLevel, ok := kp.roundPriceLevelOrders[symbol]
+	if !ok {
+		priceLevel = make(map[string][]string)
+		kp.roundPriceLevelOrders[symbol] = priceLevel
+	}
+	key := buildSidePriceKey(side, price)
+	orderIds, ok := priceLevel[key]
+	if !ok {
+		orderIds = make([]string, 0, 16)
+		kp.roundPriceLevelOrders[symbol][key] = orderIds
+	}
+	kp.roundPriceLevelOrders[symbol][key] = append(orderIds, orderId)
+}
+
+func (kp *Keeper) removeRoundPriceLevelOrder(symbol string, side int8, price int64, id string) bool {
+	key := buildSidePriceKey(side, price)
+	if perSymbol, ok := kp.roundPriceLevelOrders[symbol]; ok {
+		if orderIds, ok := perSymbol[key]; ok {
+			for index, orderId := range orderIds {
+				if orderId == id {
+					orderIds = append(orderIds[:index], orderIds[index+1:]...)
+					perSymbol[key] = orderIds
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

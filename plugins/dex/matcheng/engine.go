@@ -3,8 +3,6 @@ package matcheng
 import (
 	"math"
 
-	"github.com/binance-chain/node/plugins/dex/store"
-
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/log"
@@ -28,7 +26,6 @@ type MatchEng struct {
 	leastSurplus    SurplusIndex
 	Trades          []Trade
 	LastTradePrice  int64
-	BookCache       []store.OrderBookLevel
 	logger          tmlog.Logger
 }
 
@@ -46,7 +43,6 @@ func NewMatchEng(pairSymbol string, basePrice, lotSize int64, priceLimit float64
 		leastSurplus:    SurplusIndex{LevelIndex{math.MaxInt64, make([]int, 8)}, make([]int64, 8)},
 		Trades:          make([]Trade, 0, 64),
 		LastTradePrice:  basePrice,
-		BookCache:       make([]store.OrderBookLevel, 0),
 		logger:          log.With("module", "matcheng", "pair", pairSymbol),
 	}
 }

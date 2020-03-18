@@ -52,11 +52,11 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func MakeKeeper(cdc *wire.Codec, orderBookCacheable bool) *Keeper {
+func MakeKeeper(cdc *wire.Codec, orderBookCrossable bool) *Keeper {
 	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true, orderBookCacheable)
+	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true, orderBookCrossable)
 	return keeper
 }
 
@@ -75,7 +75,7 @@ func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
 func TestKeeper_MatchFailure(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -121,7 +121,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 func TestKeeper_MarkBreatheBlock(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -193,7 +193,7 @@ func effectedStoredKVPairs(keeper *Keeper, ctx sdk.Context, keys []string) map[s
 func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -228,7 +228,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
-	keeper2 := MakeKeeper(cdc, false)
+	keeper2 := MakeKeeper(cdc, true)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(7, len(keeper2.allOrders["XYZ-000_BNB"]))
 	o123459 := keeper2.allOrders["XYZ-000_BNB"]["123459"]
@@ -253,7 +253,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -278,7 +278,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
-	keeper2 := MakeKeeper(cdc, false)
+	keeper2 := MakeKeeper(cdc, true)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(2, len(keeper2.allOrders["XYZ-000_BNB"]))
 	assert.Equal(int64(102000), keeper2.allOrders["XYZ-000_BNB"]["123456"].Price)
@@ -301,7 +301,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -321,7 +321,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 
-	keeper2 := MakeKeeper(cdc, false)
+	keeper2 := MakeKeeper(cdc, true)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(int64(43), h)
 	assert.Equal(0, len(keeper2.allOrders["XYZ-000_BNB"]))
@@ -333,7 +333,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -460,7 +460,7 @@ func GenerateBlocksAndSave(storedb db.DB, withInvalidTx bool, cdc *wire.Codec) (
 func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	memDB := db.NewMemDB()
 	blockStore, stateDB := GenerateBlocksAndSave(memDB, false, cdc)
 	logger := log.NewTMLogger(os.Stdout)
@@ -484,7 +484,7 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	memDB := db.NewMemDB()
 	blockStore, stateDB := GenerateBlocksAndSave(memDB, true, cdc)
 	logger := log.NewTMLogger(os.Stdout)
@@ -507,7 +507,7 @@ func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
 func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	memDB := db.NewMemDB()
 	blockStore, stateDB := GenerateBlocksAndSave(memDB, false, cdc)
 	logger := log.NewTMLogger(os.Stdout)
@@ -517,7 +517,7 @@ func TestKeeper_InitOrderBookDay1(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	keeper2 := MakeKeeper(cdc, false)
+	keeper2 := MakeKeeper(cdc, true)
 	//blockStore := tmstore.NewBlockStore(memDB)
 	ctx = sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
 	keeper2.PairMapper.AddTradingPair(ctx, tradingPair)
@@ -546,7 +546,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	accountCache := getAccountCache(cdc, ms, capKey)
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false, false)
+	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false, true)
 	return
 }
 
@@ -673,7 +673,7 @@ func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
 func TestKeeper_UpdateLotSize(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, false)
+	keeper := MakeKeeper(cdc, true)
 	logger := log.NewTMLogger(os.Stdout)
 	cms := MakeCMS(nil)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -890,7 +890,7 @@ func TestKeeper_CanDelistTradingPair(t *testing.T) {
 	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
 }
 
-func TestKeeper_OrderBookCache(t *testing.T) {
+func TestKeeper_OrderBookNoCross(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 
@@ -913,42 +913,13 @@ func TestKeeper_OrderBookCache(t *testing.T) {
 	assert.Equal(int64(97000), buys[0].Price)
 	assert.Equal(int64(1000000), buys[0].Orders[0].CumQty)
 	assert.Equal(int64(96000), buys[1].Price)
+	msg := NewNewOrderMsg(nil, "123456", Side.BUY, "XYZ-000_BNB", 97000, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(nil, "1234562", Side.BUY, "XYZ-000_BNB", 96000, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 
-	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000, false)
-	assert.Equal(1000, len(orderBookCache))
-	assert.Equal(utils.Fixed8(500000), orderBookCache[0].BuyQty)
-	assert.Equal(utils.Fixed8(1000000), orderBookCache[0].SellQty)
-	assert.Equal(utils.Fixed8(97000), orderBookCache[0].BuyPrice)
-	assert.Equal(utils.Fixed8(98000), orderBookCache[0].SellPrice)
-	assert.Equal(utils.Fixed8(2500000), orderBookCache[1].BuyQty)
-	assert.Equal(utils.Fixed8(0), orderBookCache[1].SellQty)
-	assert.Equal(utils.Fixed8(96000), orderBookCache[1].BuyPrice)
-	assert.Equal(utils.Fixed8(0), orderBookCache[1].SellPrice)
-}
-
-func TestKeeper_OrderBookCacheAfterReplayOrders(t *testing.T) {
-	assert := assert.New(t)
-	cdc := MakeCodec()
-	keeper := MakeKeeper(cdc, true)
-	memDB := db.NewMemDB()
-	blockStore, stateDB := GenerateBlocksAndSave(memDB, false, cdc)
-	logger := log.NewTMLogger(os.Stdout)
-	cms := MakeCMS(nil)
-	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
-	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
-	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
-	keeper.AddEngine(tradingPair)
-
-	err := keeper.ReplayOrdersFromBlock(ctx, blockStore, stateDB, int64(3), int64(1), auth.DefaultTxDecoder(cdc))
-	assert.Nil(err)
-	buys, sells := keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
-	assert.Equal(2, len(buys))
-	assert.Equal(1, len(sells))
-	assert.Equal(int64(98000), sells[0].Price)
-	assert.Equal(int64(97000), buys[0].Price)
-	assert.Equal(int64(1000000), buys[0].Orders[0].CumQty)
-	assert.Equal(int64(96000), buys[1].Price)
-
+	//keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}, false)
+	//keeper.RemoveOrder(msg.Id, msg.Symbol, nil)
 	orderBookCache := keeper.GetOrderBookLevels("XYZ-000_BNB", 1000, false)
 	assert.Equal(1000, len(orderBookCache))
 	assert.Equal(utils.Fixed8(500000), orderBookCache[0].BuyQty)
