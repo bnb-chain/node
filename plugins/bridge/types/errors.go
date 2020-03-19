@@ -24,6 +24,7 @@ const (
 	CodeBindRequestNotExists    sdk.CodeType = 13
 	CodeBindRequestNotIdentical sdk.CodeType = 14
 	CodeInvalidStatus           sdk.CodeType = 15
+	CodeTokenBound              sdk.CodeType = 16
 )
 
 //----------------------------------------
@@ -87,4 +88,8 @@ func ErrBindRequestNotIdentical(msg string) sdk.Error {
 
 func ErrInvalidStatus(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidStatus, msg)
+}
+
+func ErrTokenBound(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeTokenBound, msg)
 }

@@ -230,7 +230,7 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 		k.DeleteBindRequest(ctx, updateBindClaim.Symbol)
 
 		// TODO Distribute fee
-		k.IncreaseSequence(ctx, types.KeyUpdateTransferOutSequence)
+		k.IncreaseSequence(ctx, types.KeyUpdateBindSequence)
 	} else if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
 	}

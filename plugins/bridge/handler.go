@@ -127,6 +127,10 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
 
+	if token.ContractAddress != "" {
+		return types.ErrTokenBound(fmt.Sprintf("token %s is already bound", symbol)).Result()
+	}
+
 	if !token.IsOwner(msg.From) {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
