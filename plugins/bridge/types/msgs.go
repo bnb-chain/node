@@ -16,9 +16,9 @@ const (
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 
-	BindChannelName        = "bind"
-	TransferOutChannelName = "transferOut"
-	TimeoutChannelName     = "timeout"
+	BindChannelName             = "bind"
+	TransferOutChannelName      = "transferOut"
+	TransferInFailedChannelName = "transferInFailed"
 
 	RouteBridge = "bridge"
 
@@ -36,7 +36,7 @@ type TransferInMsg struct {
 	ContractAddress   EthereumAddress   `json:"contract_address"`
 	RefundAddresses   []EthereumAddress `json:"refund_addresses"`
 	ReceiverAddresses []sdk.AccAddress  `json:"receiver_addresses"`
-	Amounts           []sdk.Int         `json:"amounts"`
+	Amounts           []int64           `json:"amounts"`
 	Symbol            string            `json:"symbol"`
 	RelayFee          sdk.Coin          `json:"relay_fee"`
 	ValidatorAddress  sdk.AccAddress    `json:"validator_address"`
@@ -44,7 +44,7 @@ type TransferInMsg struct {
 }
 
 func NewTransferInMsg(sequence int64, contractAddr EthereumAddress,
-	refundAddresses []EthereumAddress, receiverAddresses []sdk.AccAddress, amounts []sdk.Int, symbol string,
+	refundAddresses []EthereumAddress, receiverAddresses []sdk.AccAddress, amounts []int64, symbol string,
 	relayFee sdk.Coin, validatorAddr sdk.AccAddress, expireTime int64) TransferInMsg {
 	return TransferInMsg{
 		Sequence:          sequence,

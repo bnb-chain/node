@@ -26,7 +26,7 @@ type TransferInClaim struct {
 	ContractAddress   EthereumAddress   `json:"contract_address"`
 	RefundAddresses   []EthereumAddress `json:"refund_addresses"`
 	ReceiverAddresses []sdk.AccAddress  `json:"receiver_addresses"`
-	Amounts           []sdk.Int         `json:"amounts"`
+	Amounts           []int64           `json:"amounts"`
 	Symbol            string            `json:"symbol"`
 	RelayFee          sdk.Coin          `json:"relay_fee"`
 	ExpireTime        int64             `json:"expire_time"`

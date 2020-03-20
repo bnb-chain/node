@@ -99,43 +99,48 @@ func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (ora
 	}
 
 	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-		//timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
-		//	transferInClaim.ContractAddress[:], transferInClaim.RefundAddresses[:])
-		//
-		//if err != nil {
-		//	return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
-		//}
-		//
-		//timeoutChannelId, err := sdk.GetChannelID(types.TimeoutChannelName)
-		//if err != nil {
-		//	return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
-		//}
-		//
-		//transferInTimeoutSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
-		//sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
-		//if sdkErr != nil {
-		//	return oracle.Prophecy{}, nil, sdkErr
-		//}
-		//tags := sdk.NewTags(
-		//	sdk.TagAction, types.ActionTransferInTimeOut,
-		//	types.TransferInTimeoutSequence, []byte(strconv.Itoa(int(transferInTimeoutSequence))),
-		//)
-		//
-		//return prophecy, tags, nil
+		tags := sdk.NewTags(sdk.TagAction, types.ActionTransferInFailed)
+
+		for idx, refundAddr := range transferInClaim.RefundAddresses {
+			var calibratedAmount sdk.Int
+			if tokenInfo.ContractDecimals >= cmmtypes.TokenDecimals {
+				decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
+				calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Mul(decimals)
+			} else {
+				decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
+				if !sdk.NewInt(transferInClaim.Amounts[idx]).Mod(decimals).IsZero() {
+					return oracle.Prophecy{}, nil, types.ErrInvalidAmount("can't calibrate timeout amount")
+				}
+				calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Div(decimals)
+			}
+
+			timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
+				transferInClaim.ContractAddress[:], refundAddr[:])
+
+			if err != nil {
+				return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
+			}
+
+			timeoutChannelId, err := sdk.GetChannelID(types.TransferInFailedChannelName)
+			if err != nil {
+				return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
+			}
+
+			transferInTimeoutSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
+			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
+			if sdkErr != nil {
+				return oracle.Prophecy{}, nil, sdkErr
+			}
+			tags.AppendTags(sdk.NewTags(
+				types.TransferInTimeoutSequence, []byte(strconv.Itoa(int(transferInTimeoutSequence))),
+			))
+		}
+		return prophecy, tags, nil
 	}
 
 	for idx, receiverAddr := range transferInClaim.ReceiverAddresses {
-		var calibratedAmount int64
-		if cmmtypes.TokenDecimals > tokenInfo.ContractDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
-			calibratedAmount = transferInClaim.Amounts[idx].Mul(decimals).Int64()
-		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
-			calibratedAmount = transferInClaim.Amounts[idx].Div(decimals).Int64()
-		}
-
 		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr,
-			sdk.Coins{sdk.Coin{Denom: transferInClaim.Symbol, Amount: calibratedAmount}})
+			sdk.Coins{sdk.Coin{Denom: transferInClaim.Symbol, Amount: transferInClaim.Amounts[idx]}})
 		if err != nil {
 			return oracle.Prophecy{}, nil, err
 		}

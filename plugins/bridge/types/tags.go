@@ -7,7 +7,7 @@ import (
 var (
 	Action = sdk.TagAction
 
-	ActionTransferInTimeOut  = []byte("TransferInTimeout")
+	ActionTransferInFailed = []byte("TransferInFailed")
 
 	ExpireTime                 = "ExpireTime"
 	BindSequence               = "BindSequence"
