@@ -32,7 +32,7 @@ type Mapper interface {
 	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
 	// we do not provide the updateToken method
 	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
-	UpdateBind(ctx sdk.Context, symbol string, contractAddress string, decimal int8) error
+	UpdateBind(ctx sdk.Context, symbol string, contractAddress string, decimals int8) error
 }
 
 var _ Mapper = mapper{}
@@ -139,7 +139,7 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 	return nil
 }
 
-func (m mapper) UpdateBind(ctx sdk.Context, symbol string, contractAddress string, decimal int8) error {
+func (m mapper) UpdateBind(ctx sdk.Context, symbol string, contractAddress string, decimals int8) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
 	}
@@ -152,7 +152,7 @@ func (m mapper) UpdateBind(ctx sdk.Context, symbol string, contractAddress strin
 	}
 
 	toBeUpdated := m.decodeToken(bz)
-	toBeUpdated.ContractDecimal = decimal
+	toBeUpdated.ContractDecimals = decimals
 	toBeUpdated.ContractAddress = contractAddress
 
 	store.Set(key, m.encodeToken(toBeUpdated))

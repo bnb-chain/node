@@ -221,10 +221,10 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 
 	var calibratedAmount sdk.Int
-	if token.ContractDecimal >= cmmtypes.TokenDecimals {
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimal-cmmtypes.TokenDecimals)))
+	if token.ContractDecimals >= cmmtypes.TokenDecimals {
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimals-cmmtypes.TokenDecimals)))
 	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimal))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimals))
 		if !sdk.NewInt(msg.Amount.Amount).Mod(decimals).IsZero() {
 			return types.ErrInvalidAmount("can't calibrate transfer amount to the amount of ERC20").Result()
 		}

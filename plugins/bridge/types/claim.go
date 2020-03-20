@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -22,23 +23,25 @@ func GetClaimId(channel uint8, sequence int64) string {
 }
 
 type TransferInClaim struct {
-	ContractAddress EthereumAddress `json:"contract_address"`
-	SenderAddress   EthereumAddress `json:"sender_address"`
-	ReceiverAddress sdk.AccAddress  `json:"receiver_address"`
-	Amount          sdk.Coin        `json:"amount"`
-	RelayFee        sdk.Coin        `json:"relay_fee"`
-	ExpireTime      int64           `json:"expire_time"`
+	ContractAddress   EthereumAddress   `json:"contract_address"`
+	RefundAddresses   []EthereumAddress `json:"refund_addresses"`
+	ReceiverAddresses []sdk.AccAddress  `json:"receiver_addresses"`
+	Amounts           []sdk.Int         `json:"amounts"`
+	Symbol            string            `json:"symbol"`
+	RelayFee          sdk.Coin          `json:"relay_fee"`
+	ExpireTime        int64             `json:"expire_time"`
 }
 
 func CreateOracleClaimFromTransferInMsg(msg TransferInMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(TransferInChannelId, msg.Sequence)
 	transferClaim := TransferInClaim{
-		ContractAddress: msg.ContractAddress,
-		SenderAddress:   msg.SenderAddress,
-		ReceiverAddress: msg.ReceiverAddress,
-		Amount:          msg.Amount,
-		RelayFee:        msg.RelayFee,
-		ExpireTime:      msg.ExpireTime,
+		ContractAddress:   msg.ContractAddress,
+		RefundAddresses:   msg.RefundAddresses,
+		ReceiverAddresses: msg.ReceiverAddresses,
+		Amounts:           msg.Amounts,
+		Symbol:            strings.ToUpper(msg.Symbol),
+		RelayFee:          msg.RelayFee,
+		ExpireTime:        msg.ExpireTime,
 	}
 	claimBytes, err := json.Marshal(transferClaim)
 	if err != nil {

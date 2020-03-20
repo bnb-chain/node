@@ -9,64 +9,65 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTransferMsg(t *testing.T) {
-	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
-
-	nonEmptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{1}))
-	emptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{0}))
-
-	tests := []struct {
-		transferMsg  TransferInMsg
-		expectedPass bool
-	}{
-		{
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			true,
-		},
-		{
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 0),
-			false,
-		}, {
-			NewTransferInMsg(-1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, emptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, nonEmptyEthAddr, emptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, sdk.AccAddress{},
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 0}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 0}, addrs[0], 1000),
-			false,
-		}, {
-			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
-				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, sdk.AccAddress{}, 1000),
-			false,
-		},
-	}
-
-	for i, test := range tests {
-		if test.expectedPass {
-			require.Nil(t, test.transferMsg.ValidateBasic(), "test: %v", i)
-		} else {
-			require.NotNil(t, test.transferMsg.ValidateBasic(), "test: %v", i)
-		}
-	}
-}
+//
+//func TestTransferMsg(t *testing.T) {
+//	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
+//
+//	nonEmptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{1}))
+//	emptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{0}))
+//
+//	tests := []struct {
+//		transferMsg  TransferInMsg
+//		expectedPass bool
+//	}{
+//		{
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			true,
+//		},
+//		{
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 0),
+//			false,
+//		}, {
+//			NewTransferInMsg(-1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, emptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, nonEmptyEthAddr, emptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, sdk.AccAddress{},
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 0}, sdk.Coin{Denom: "BNB", Amount: 2}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 0}, addrs[0], 1000),
+//			false,
+//		}, {
+//			NewTransferInMsg(1, nonEmptyEthAddr, nonEmptyEthAddr, addrs[0],
+//				sdk.Coin{Denom: "BNB", Amount: 2}, sdk.Coin{Denom: "BNB", Amount: 2}, sdk.AccAddress{}, 1000),
+//			false,
+//		},
+//	}
+//
+//	for i, test := range tests {
+//		if test.expectedPass {
+//			require.Nil(t, test.transferMsg.ValidateBasic(), "test: %v", i)
+//		} else {
+//			require.NotNil(t, test.transferMsg.ValidateBasic(), "test: %v", i)
+//		}
+//	}
+//}
 
 func TestTimeoutMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
