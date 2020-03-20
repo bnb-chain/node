@@ -3,6 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/binance-chain/node/wire"
 
@@ -27,15 +29,16 @@ import (
 const (
 	flagSequence         = "channel-sequence"
 	flagContractAddress  = "contract-address"
-	flagSenderAddress    = "sender-address"
-	flagReceiverAddress  = "receiver-address"
+	flagRefundAddress    = "sender-address"
+	flagRecipientAddress = "recipient-address"
 	flagAmount           = "amount"
 	flagSymbol           = "symbol"
 	flagRelayFee         = "relay-fee"
 	flagContractDecimals = "contract-decimals"
 	flagToAddress        = "to"
-	flagStatus           = "status"
+	flagBindStatus       = "bind-status"
 	flagExpireTime       = "expire-time"
+	flagRefundReason     = "refund-reason"
 
 	flagChannelId = "channel-id"
 )
@@ -45,94 +48,100 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 		Use:   "transfer-in",
 		Short: "transfer smart chain token to binance chain receiver",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
-			//txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
-			//cliCtx := context.NewCLIContext().
-			//	WithCodec(cdc).
-			//	WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
-			//
-			//sequence := viper.GetInt64(flagSequence)
-			//contractAddress := viper.GetString(flagContractAddress)
-			//senderAddress := viper.GetString(flagSenderAddress)
-			//receiverAddressStr := viper.GetString(flagReceiverAddress)
-			//amount := viper.GetString(flagAmount)
-			//relayFeeStr := viper.GetString(flagRelayFee)
-			//expireTime := viper.GetInt64(flagExpireTime)
-			//
-			//if sequence <= 0 {
-			//	return errors.New("sequence should not be less than 0")
-			//}
-			//
-			//if contractAddress == "" {
-			//	return errors.New("contract address should not be empty")
-			//}
-			//
-			//if senderAddress == "" {
-			//	return errors.New("sender address should not be empty")
-			//}
-			//
-			//if receiverAddressStr == "" {
-			//	return errors.New("receiver address should not be empty")
-			//}
-			//
-			//if amount == "" {
-			//	return errors.New("amount should not be empty")
-			//}
-			//
-			//if relayFeeStr == "" {
-			//	return errors.New("relay fee should not be empty")
-			//}
-			//
-			//receiverAddr, err := sdk.AccAddressFromBech32(receiverAddressStr)
-			//if err != nil {
-			//	println(err.Error())
-			//	return err
-			//}
-			//
-			//fromAddr, err := cliCtx.GetFromAddress()
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//amountToTransfer, err := sdk.ParseCoin(amount)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//relayFee, err := sdk.ParseCoin(relayFeeStr)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//msg := types.NewTransferInMsg(sequence,
-			//	types.NewEthereumAddress(contractAddress),
-			//	types.NewEthereumAddress(senderAddress),
-			//	receiverAddr,
-			//	amountToTransfer,
-			//	relayFee,
-			//	fromAddr,
-			//	expireTime,
-			//)
-			//
-			//err = msg.ValidateBasic()
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//if cliCtx.GenerateOnly {
-			//	return utils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
-			//}
-			//
-			//cliCtx.PrintResponse = true
-			//return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			sequence := viper.GetInt64(flagSequence)
+			contractAddress := viper.GetString(flagContractAddress)
+			refundAddressStr := viper.GetString(flagRefundAddress)
+			recipientAddressStr := viper.GetString(flagRecipientAddress)
+			amountStr := viper.GetString(flagAmount)
+			relayFeeStr := viper.GetString(flagRelayFee)
+			expireTime := viper.GetInt64(flagExpireTime)
+			symbol := viper.GetString(flagSymbol)
+
+			if sequence <= 0 {
+				return errors.New("sequence should not be less than 0")
+			}
+
+			if contractAddress == "" {
+				return errors.New("contract address should not be empty")
+			}
+
+			if relayFeeStr == "" {
+				return errors.New("relay fee should not be empty")
+			}
+
+			fromAddr, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			relayFee, err := sdk.ParseCoin(relayFeeStr)
+			if err != nil {
+				return err
+			}
+
+			var refundAddressList []types.EthereumAddress
+			var recipientAddressList []sdk.AccAddress
+			var transferAmountList []int64
+			refundAddressStrList := strings.Split(refundAddressStr, ",")
+			recipientAddressStrList := strings.Split(recipientAddressStr, ",")
+			amountToTransferStrList := strings.Split(amountStr, ",")
+			if len(refundAddressStrList) != len(recipientAddressStrList) || len(refundAddressStrList) != len(amountToTransferStrList) {
+				return fmt.Errorf("the length of refund address array, recipient address array and transfer amount array must be the same")
+			}
+			for _, str := range refundAddressStrList {
+				refundAddressList = append(refundAddressList, types.NewEthereumAddress(str))
+			}
+			for _, str := range recipientAddressStrList {
+				addr , err := sdk.AccAddressFromBech32(str)
+				if err != nil {
+					return err
+				}
+				recipientAddressList = append(recipientAddressList, addr)
+			}
+			for _, str := range amountToTransferStrList {
+				amount, err := strconv.Atoi(str)
+				if err != nil {
+					return err
+				}
+				transferAmountList = append(transferAmountList, int64(amount))
+			}
+
+			msg := types.NewTransferInMsg(sequence,
+				types.NewEthereumAddress(contractAddress),
+				refundAddressList,
+				recipientAddressList,
+				transferAmountList,
+				symbol,
+				relayFee,
+				fromAddr,
+				expireTime,
+			)
+
+			err = msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			if cliCtx.GenerateOnly {
+				return utils.PrintUnsignedStdTx(txBldr, cliCtx, []sdk.Msg{msg})
+			}
+
+			cliCtx.PrintResponse = true
+			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
 
 	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
 	cmd.Flags().String(flagContractAddress, "", "contract address")
-	cmd.Flags().String(flagSenderAddress, "", "sender address")
-	cmd.Flags().String(flagReceiverAddress, "", "receiver address")
-	cmd.Flags().String(flagAmount, "", "amount of transfer token")
+	cmd.Flags().String(flagRefundAddress, "", "array of refund address")
+	cmd.Flags().String(flagRecipientAddress, "", "array of recipient address")
+	cmd.Flags().String(flagAmount, "", "array of transfer")
+	cmd.Flags().String(flagSymbol, "", "symbol")
 	cmd.Flags().String(flagRelayFee, "", "amount of relay fee")
 	cmd.Flags().Int64(flagExpireTime, 0, "expire timestamp(s)")
 
@@ -141,8 +150,8 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 
 func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "transfer-out-timeout",
-		Short: "Transfer out timeout",
+		Use:   "update-transfer-out",
+		Short: "update transfer out",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -150,15 +159,15 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 			sequence := viper.GetInt64(flagSequence)
-			senderAddressStr := viper.GetString(flagSenderAddress)
+			refundAddressStr := viper.GetString(flagRefundAddress)
 			amount := viper.GetString(flagAmount)
-			status := viper.GetInt(flagStatus)
+			refundReason := types.ParseRefundStatus(viper.GetString(flagBindStatus))
 
 			if sequence <= 0 {
 				return errors.New("sequence should not be less than 0")
 			}
 
-			if senderAddressStr == "" {
+			if refundAddressStr == "" {
 				return errors.New("sender address should not be empty")
 			}
 
@@ -166,7 +175,7 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				return errors.New("amount should not be empty")
 			}
 
-			senderAddr, err := sdk.AccAddressFromBech32(viper.GetString(senderAddressStr))
+			refundAddr, err := sdk.AccAddressFromBech32(viper.GetString(refundAddressStr))
 			if err != nil {
 				return err
 			}
@@ -181,10 +190,10 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := types.NewUpdateTransferOutMsg(senderAddr, sequence,
+			msg := types.NewUpdateTransferOutMsg(refundAddr, sequence,
 				amountToTransfer,
 				fromAddr,
-				types.TransferOutStatus(status),
+				refundReason,
 			)
 
 			err = msg.ValidateBasic()
@@ -202,9 +211,9 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Int64(flagSequence, 0, "sequence of timeout channel")
-	cmd.Flags().String(flagSenderAddress, "", "sender address")
+	cmd.Flags().String(flagRefundAddress, "", "sender address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
-	cmd.Flags().Int(flagStatus, 0, "transfer out status")
+	cmd.Flags().String(flagRefundReason, "", "refund reason: unboundToken, timeout, insufficientBalance")
 
 	return cmd
 }
@@ -306,7 +315,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			contractAddress := viper.GetString(flagContractAddress)
 			contractDecimals := viper.GetInt(flagContractDecimals)
 			symbol := viper.GetString(flagSymbol)
-			status := viper.GetInt(flagStatus)
+			status := types.ParseBindStatus(viper.GetString(flagBindStatus))
 
 			fromAddr, err := cliCtx.GetFromAddress()
 			if err != nil {
@@ -323,7 +332,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 				amount,
 				types.NewEthereumAddress(contractAddress),
 				int8(contractDecimals),
-				types.BindStatus(status),
+				status,
 			)
 
 			err = msg.ValidateBasic()
@@ -343,9 +352,9 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 	cmd.Flags().Int64(flagSequence, 0, "sequence of transfer channel")
 	cmd.Flags().String(flagContractAddress, "", "contract address")
 	cmd.Flags().Int(flagContractDecimals, 0, "contract token decimals")
-	cmd.Flags().Int64(flagAmount, 0, "amount to bind")
+	cmd.Flags().String(flagAmount, "", "amount to bind")
 	cmd.Flags().String(flagSymbol, "", "symbol")
-	cmd.Flags().Int(flagStatus, 0, "status")
+	cmd.Flags().String(flagBindStatus, "", "bind status: success, timeout, rejected, invalidParameter")
 
 	return cmd
 }

@@ -32,8 +32,8 @@ func RegisterChannels() {
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannelName, err.Error()))
 	}
-	err = sdk.RegisterNewCrossChainChannel(types.TransferInFailureChannelName)
+	err = sdk.RegisterNewCrossChainChannel(types.RefundChannelName)
 	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferInFailureChannelName, err.Error()))
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannelName, err.Error()))
 	}
 }

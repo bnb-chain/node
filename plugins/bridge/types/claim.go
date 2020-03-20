@@ -61,18 +61,18 @@ func GetTransferInClaimFromOracleClaim(claim string) (TransferInClaim, sdk.Error
 }
 
 type UpdateTransferOutClaim struct {
-	SenderAddress sdk.AccAddress    `json:"sender_address"`
-	Amount        sdk.Coin          `json:"amount"`
-	Status        TransferOutStatus `json:"status"`
+	RefundAddress sdk.AccAddress `json:"refund_address"`
+	Amount        sdk.Coin       `json:"amount"`
+	RefundReason  RefundReason   `json:"refund_reason"`
 }
 
 func CreateOracleClaimFromUpdateTransferOutMsg(msg UpdateTransferOutMsg) (oracle.Claim, sdk.Error) {
 	claimId := GetClaimId(UpdateTransferOutChannelId, msg.Sequence)
 
 	updateTransferOutClaim := UpdateTransferOutClaim{
-		SenderAddress: msg.SenderAddress,
+		RefundAddress: msg.RefundAddress,
 		Amount:        msg.Amount,
-		Status:        msg.Status,
+		RefundReason:  msg.RefundReason,
 	}
 	claimBytes, err := json.Marshal(updateTransferOutClaim)
 	if err != nil {
