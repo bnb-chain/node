@@ -13,7 +13,7 @@ var (
 	BindSequence               = "BindSequence"
 	UpdateBindSequence         = "UpdateBindSequence"
 	TransferInSequence         = "TransferInSequence"
-	TransferInTimeoutSequence  = "TransferInTimeoutSequence"
+	TransferInFailureSequence  = "TransferInFailureSequence"
 	TransferOutSequence        = "TransferOutSequence"
 	TransferOutTimeoutSequence = "TransferOutTimeoutSequence"
 )

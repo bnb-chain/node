@@ -114,25 +114,25 @@ func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (ora
 				calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Div(decimals)
 			}
 
-			timeOutPackage, err := types.SerializeTimeoutPackage(calibratedAmount,
+			transferInFailurePackage, err := types.SerializeTransferInFailurePackage(calibratedAmount,
 				transferInClaim.ContractAddress[:], refundAddr[:])
 
 			if err != nil {
 				return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
 			}
 
-			timeoutChannelId, err := sdk.GetChannelID(types.TransferInFailedChannelName)
+			transferInFailureChannelId, err := sdk.GetChannelID(types.TransferInFailureChannelName)
 			if err != nil {
 				return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
 			}
 
-			transferInTimeoutSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId)
-			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), timeoutChannelId, timeOutPackage)
+			transferInFailureSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), transferInFailureChannelId)
+			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), transferInFailureChannelId, transferInFailurePackage)
 			if sdkErr != nil {
 				return oracle.Prophecy{}, nil, sdkErr
 			}
 			tags.AppendTags(sdk.NewTags(
-				types.TransferInTimeoutSequence, []byte(strconv.Itoa(int(transferInTimeoutSequence))),
+				types.TransferInFailureSequence, []byte(strconv.Itoa(int(transferInFailureSequence))),
 			))
 		}
 		return prophecy, tags, nil

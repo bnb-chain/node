@@ -16,9 +16,9 @@ const (
 	// TODO change relay reward, relay reward should have 18 decimals
 	RelayReward int64 = 1e6
 
-	BindChannelName             = "bind"
-	TransferOutChannelName      = "transferOut"
-	TransferInFailedChannelName = "transferInFailed"
+	BindChannelName              = "bind"
+	TransferOutChannelName       = "transferOut"
+	TransferInFailureChannelName = "transferInFailure"
 
 	RouteBridge = "bridge"
 
@@ -460,7 +460,7 @@ func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
         address payable refundAddr; // 20 52:72
     }
 */
-func SerializeTimeoutPackage(refundAmount sdk.Int, contractAddr []byte, refundAddr []byte) ([]byte, error) {
+func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte, refundAddr []byte) ([]byte, error) {
 	serializedBytes := make([]byte, 32+20+20)
 	if len(contractAddr) != 20 || len(refundAddr) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
