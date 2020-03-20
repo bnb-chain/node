@@ -120,14 +120,14 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	}
 
 	for _, amount := range msg.Amounts {
-		if !amount.GT(sdk.NewInt(0)) {
+		if amount <= 0 {
 			return ErrInvalidAmount("amount to send should be positive")
 		}
 	}
 
 	if len(msg.RefundAddresses) != len(msg.ReceiverAddresses) ||
 		len(msg.RefundAddresses) != len(msg.Amounts) {
-		return ErrInvalidLength("lenght of RefundAddresses, ReceiverAddresses, Amounts should be the same")
+		return ErrInvalidLength("length of RefundAddresses, ReceiverAddresses, Amounts should be the same")
 	}
 
 	if len(msg.Symbol) == 0 {
