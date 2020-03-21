@@ -165,6 +165,7 @@ func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, tran
 		}
 		tags = tags.AppendTags(sdk.NewTags(
 			types.TransferInRefundSequence, []byte(strconv.Itoa(int(refundSequence))),
+			types.TransferOutRefundReason, []byte(refundReason.String()),
 		))
 	}
 

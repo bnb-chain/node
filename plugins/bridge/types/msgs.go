@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/types"
 	"strings"
 	"time"
 
@@ -38,8 +39,8 @@ const (
 	InsufficientBalance RefundReason = 3
 )
 
-func (status RefundReason) String() string {
-	switch status {
+func (reason RefundReason) String() string {
+	switch reason {
 	case UnboundToken:
 		return "UnboundToken"
 	case Timeout:
@@ -128,7 +129,7 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if msg.ExpireTime <= 0 {
 		return ErrInvalidExpireTime("expire time should be larger than 0")
 	}
-	if msg.ContractAddress.IsEmpty() {
+	if msg.Symbol != types.NativeTokenSymbol && msg.ContractAddress.IsEmpty() {
 		return ErrInvalidEthereumAddress("contract address should not be empty")
 	}
 	if len(msg.RefundAddresses) == 0 {
@@ -519,7 +520,7 @@ func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
     }
 */
 func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte, refundAddr []byte, refundReason RefundReason) ([]byte, error) {
-	serializedBytes := make([]byte, 32+20+20)
+	serializedBytes := make([]byte, 32+20+20+2)
 	if len(contractAddr) != 20 || len(refundAddr) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
 	}

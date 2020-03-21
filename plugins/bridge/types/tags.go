@@ -14,6 +14,7 @@ var (
 	UpdateBindSequence         = "UpdateBindSequence"
 	TransferInSequence         = "TransferInSequence"
 	TransferInRefundSequence   = "TransferInRefundSequence"
+	TransferInRefundReason     = "TransferInRefundReason"
 	TransferOutSequence        = "TransferOutSequence"
 	TransferOutRefundSequence  = "TransferOutRefundSequence"
 	TransferOutRefundReason    = "TransferOutRefundReason"
