@@ -51,7 +51,7 @@ func (status RefundReason) String() string {
 	}
 }
 
-func ParseRefundStatus(input string) RefundReason {
+func ParseRefundReason(input string) RefundReason {
 	switch strings.ToLower(input) {
 	case "unboundtoken":
 		return UnboundToken
@@ -540,14 +540,14 @@ func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte
 	struct CrossChainTransferPackage {
         bytes32 bep2TokenSymbol;    // 32 0:32
         address contractAddr;       // 20 32:52
-        address sender;             // 20 52:72
+        address refundAddr;         // 20 52:72
         address payable recipient;  // 20 72:92
         uint256 amount;             // 32 92:124
         uint64  expireTime;         // 8  124:132
         uint256 relayReward;        // 32 132:164
     }
 */
-func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, sender []byte, recipient []byte,
+func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, refundAddr []byte, recipient []byte,
 	amount sdk.Int, expireTime int64, relayReward sdk.Int) ([]byte, error) {
 	serializedBytes := make([]byte, 32+20+20+20+32+8+32)
 	if len(bep2TokenSymbol) > 32 {
@@ -555,11 +555,11 @@ func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, se
 	}
 	copy(serializedBytes[0:32], bep2TokenSymbol)
 
-	if len(contractAddr) != 20 || len(sender) != 20 || len(recipient) != 20 {
+	if len(contractAddr) != 20 || len(refundAddr) != 20 || len(recipient) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
 	}
 	copy(serializedBytes[32:52], contractAddr)
-	copy(serializedBytes[52:72], sender)
+	copy(serializedBytes[52:72], refundAddr)
 	copy(serializedBytes[72:92], recipient)
 
 	if amount.BigInt().BitLen() > 255 || relayReward.BigInt().BitLen() > 255 {

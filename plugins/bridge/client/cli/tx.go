@@ -29,7 +29,7 @@ import (
 const (
 	flagSequence         = "channel-sequence"
 	flagContractAddress  = "contract-address"
-	flagRefundAddress    = "sender-address"
+	flagRefundAddress    = "refund-address"
 	flagRecipientAddress = "recipient-address"
 	flagAmount           = "amount"
 	flagSymbol           = "symbol"
@@ -62,7 +62,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 			expireTime := viper.GetInt64(flagExpireTime)
 			symbol := viper.GetString(flagSymbol)
 
-			if sequence <= 0 {
+			if sequence < 0 {
 				return errors.New("sequence should not be less than 0")
 			}
 
@@ -148,7 +148,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
+func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-transfer-out",
 		Short: "update transfer out",
@@ -159,25 +159,24 @@ func TransferOutTimeoutCmd(cdc *codec.Codec) *cobra.Command {
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 			sequence := viper.GetInt64(flagSequence)
-			refundAddressStr := viper.GetString(flagRefundAddress)
 			amount := viper.GetString(flagAmount)
-			refundReason := types.ParseRefundStatus(viper.GetString(flagBindStatus))
+			refundReasonStr := viper.GetString(flagRefundReason)
+			if len(refundReasonStr) == 0 {
+				return fmt.Errorf("empty refund reason")
+			}
+			refundReason := types.ParseRefundReason(refundReasonStr)
 
-			if sequence <= 0 {
-				return errors.New("sequence should not be less than 0")
+			refundAddr, err := sdk.AccAddressFromBech32(viper.GetString(flagRefundAddress))
+			if err != nil {
+				return err
 			}
 
-			if refundAddressStr == "" {
-				return errors.New("sender address should not be empty")
+			if sequence < 0 {
+				return errors.New("sequence should be no less than 0")
 			}
 
 			if amount == "" {
 				return errors.New("amount should not be empty")
-			}
-
-			refundAddr, err := sdk.AccAddressFromBech32(viper.GetString(refundAddressStr))
-			if err != nil {
-				return err
 			}
 
 			fromAddr, err := cliCtx.GetFromAddress()

@@ -264,6 +264,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
 		app.StateSyncHelper.Init(lastBreatheBlockHeight)
 	}
+	app.registerInitFuncForUpgrade()
+
 	return app
 }
 
@@ -309,6 +311,15 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		bridge.UpdateBindMsg{}.Type(),
 	)
+}
+
+func (app *BinanceChain)registerInitFuncForUpgrade() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BSCUpgrade, func(ctx sdk.Context) {
+		err := app.TokenMapper.UpdateBind(ctx, types.NativeTokenSymbol, "0x0000000000000000000000000000000000000000", 18)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
