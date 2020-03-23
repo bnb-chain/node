@@ -1,0 +1,153 @@
+package types
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/utils"
+)
+
+const (
+	MiniTokenSymbolMaxLen    = 8
+	MiniTokenSymbolMinLen    = 3
+	MiniTokenSymbolSuffixLen = 4 // probably enough. if it collides (unlikely) the issuer can just use another tx.
+	MiniTokenSymbolMSuffix   = "M"
+
+	MiniTokenDecimals       int8  = 8
+	MiniTokenMaxTotalSupply int64 = 10000000000000 // 90 billions with 8 decimal digits
+
+	MiniTokenSupplyRange1UpperBound int64 = 1000000000000
+)
+
+type MiniToken struct {
+	Name           string         `json:"name"`
+	Symbol         string         `json:"symbol"`
+	OrigSymbol     string         `json:"original_symbol"`
+	MaxTotalSupply utils.Fixed8   `json:"max_total_supply"`
+	TotalSupply    utils.Fixed8   `json:"total_supply"`
+	Owner          sdk.AccAddress `json:"owner"`
+	Mintable       bool           `json:"mintable"`
+	TokenURI       string         `json:"token_uri"` //TODO set max length
+}
+
+func NewMiniToken(name, symbol string, maxTotalSupply int64, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
+	// double check that the symbol is suffixed
+	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
+		return nil, err
+	}
+	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+	return &MiniToken{
+		Name:           name,
+		Symbol:         symbol,
+		OrigSymbol:     parts[0],
+		MaxTotalSupply: utils.Fixed8(maxTotalSupply),
+		TotalSupply:    utils.Fixed8(totalSupply),
+		Owner:          owner,
+		Mintable:       mintable,
+		TokenURI:       tokenURI,
+	}, nil
+}
+
+func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
+func (token MiniToken) String() string {
+	return fmt.Sprintf("{Name: %v, Symbol: %v, MaxTotalSupply: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
+		token.Name, token.Symbol, token.MaxTotalSupply, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
+}
+
+// Token Validation
+
+func ValidateMiniToken(token MiniToken) error {
+	if err := ValidateMapperMiniTokenSymbol(token.Symbol); err != nil {
+		return err
+	}
+	if err := ValidateIssueMsgMiniTokenSymbol(token.OrigSymbol); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateIssueMsgMiniTokenSymbol(symbol string) error {
+	if len(symbol) == 0 {
+		return errors.New("token symbol cannot be empty")
+	}
+
+	// check len without suffix
+	if symbolLen := len(symbol); symbolLen > MiniTokenSymbolMaxLen || symbolLen < MiniTokenSymbolMinLen {
+		return errors.New("length of token symbol is limited to 3~8")
+	}
+
+	if !utils.IsAlphaNum(symbol) {
+		return errors.New("token symbol should be alphanumeric")
+	}
+
+	return nil
+}
+
+func ValidateMapperMiniTokenSymbol(symbol string) error {
+	if len(symbol) == 0 {
+		return errors.New("suffixed token symbol cannot be empty")
+	}
+
+	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if err != nil {
+		return err
+	}
+
+	symbolPart := parts[0]
+
+	// check len without suffix
+	if len(symbolPart) < MiniTokenSymbolMinLen {
+		return fmt.Errorf("mini token symbol part is too short, got %d chars", len(symbolPart))
+	}
+	if len(symbolPart) > MiniTokenSymbolMaxLen {
+		return fmt.Errorf("mini token symbol part is too long, got %d chars", len(symbolPart))
+	}
+
+	if !utils.IsAlphaNum(symbolPart) {
+		return errors.New("mini token symbol part should be alphanumeric")
+	}
+
+	suffixPart := parts[1]
+
+	if len(suffixPart) != MiniTokenSymbolSuffixLen {
+		return fmt.Errorf("mini token symbol suffix must be %d chars in length, got %d", MiniTokenSymbolSuffixLen, len(suffixPart))
+	}
+
+	if suffixPart[len(suffixPart)-1:] != "M" {
+		return fmt.Errorf("mini token symbol suffix must end with M")
+	}
+
+	// prohibit non-hexadecimal chars in the suffix part
+	isHex, err := regexp.MatchString(fmt.Sprintf("[0-9A-F]{%d}M", MiniTokenSymbolSuffixLen-1), suffixPart)
+	if err != nil {
+		return err
+	}
+	if !isHex {
+		return fmt.Errorf("mini token symbol tx hash suffix must be hex with a length of %d", MiniTokenSymbolSuffixLen-1)
+	}
+
+	return nil
+}
+
+func splitSuffixedMiniTokenSymbol(suffixed string) ([]string, error) {
+
+	split := strings.SplitN(suffixed, "-", 2)
+
+	if len(split) != 2 {
+		return nil, errors.New("suffixed mini token symbol must contain a hyphen ('-')")
+	}
+
+	if strings.Contains(split[1], "-") {
+		return nil, errors.New("suffixed mini token symbol must contain just one hyphen ('-')")
+	}
+
+	return split, nil
+}
