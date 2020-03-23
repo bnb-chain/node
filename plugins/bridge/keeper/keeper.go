@@ -73,115 +73,129 @@ func (k Keeper) GetCurrentSequence(ctx sdk.Context, key string) int64 {
 	return sequence
 }
 
-func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
+func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (sdk.Tags, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
-		return oracle.Prophecy{}, nil, err
+		return nil, err
 	}
 
 	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
-		return prophecy, nil, nil
+		return nil, nil
 	}
 
 	if prophecy.Status.Text != oracle.SuccessStatusText {
-		return prophecy, nil, nil
+		return nil, nil
 	}
+
+	// increase sequence
+	k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
 
 	transferInClaim, err := types.GetTransferInClaimFromOracleClaim(prophecy.Status.FinalClaim)
 	if err != nil {
-		return oracle.Prophecy{}, nil, err
+		return nil, err
 	}
 
 	tokenInfo, errMsg := k.TokenMapper.GetToken(ctx, transferInClaim.Symbol)
 	if errMsg != nil {
-		return oracle.Prophecy{}, nil, sdk.ErrInternal(errMsg.Error())
+		return nil, sdk.ErrInternal(errMsg.Error())
 	}
 
+	if tokenInfo.ContractAddress != transferInClaim.ContractAddress.String() {
+		return k.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
+	}
 	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-		tags := sdk.NewTags(sdk.TagAction, types.ActionTransferInFailed)
+		return k.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.Timeout)
+	}
 
-		for idx, refundAddr := range transferInClaim.RefundAddresses {
-			var calibratedAmount sdk.Int
-			if tokenInfo.ContractDecimals >= cmmtypes.TokenDecimals {
-				decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
-				calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Mul(decimals)
-			} else {
-				decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
-				if !sdk.NewInt(transferInClaim.Amounts[idx]).Mod(decimals).IsZero() {
-					return oracle.Prophecy{}, nil, types.ErrInvalidAmount("can't calibrate timeout amount")
-				}
-				calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Div(decimals)
-			}
-
-			transferInFailurePackage, err := types.SerializeTransferInFailurePackage(calibratedAmount,
-				transferInClaim.ContractAddress[:], refundAddr[:])
-
-			if err != nil {
-				return oracle.Prophecy{}, nil, types.ErrSerializePackageFailed(err.Error())
-			}
-
-			transferInFailureChannelId, err := sdk.GetChannelID(types.TransferInFailureChannelName)
-			if err != nil {
-				return oracle.Prophecy{}, nil, types.ErrGetChannelIdFailed(err.Error())
-			}
-
-			transferInFailureSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), transferInFailureChannelId)
-			sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), transferInFailureChannelId, transferInFailurePackage)
-			if sdkErr != nil {
-				return oracle.Prophecy{}, nil, sdkErr
-			}
-			tags.AppendTags(sdk.NewTags(
-				types.TransferInFailureSequence, []byte(strconv.Itoa(int(transferInFailureSequence))),
-			))
-		}
-		return prophecy, tags, nil
+	balance := k.BankKeeper.GetCoins(ctx, types.PegAccount)
+	var totalTransferInAmount sdk.Coins
+	for idx, _ := range transferInClaim.ReceiverAddresses {
+		amount := sdk.NewCoin(transferInClaim.Symbol, transferInClaim.Amounts[idx])
+		totalTransferInAmount = sdk.Coins{amount}.Plus(totalTransferInAmount)
+	}
+	if !balance.IsGTE(totalTransferInAmount) {
+		return k.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.InsufficientBalance)
 	}
 
 	for idx, receiverAddr := range transferInClaim.ReceiverAddresses {
-		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr,
-			sdk.Coins{sdk.Coin{Denom: transferInClaim.Symbol, Amount: transferInClaim.Amounts[idx]}})
+		amount := sdk.NewCoin(transferInClaim.Symbol, transferInClaim.Amounts[idx])
+		_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
 		if err != nil {
-			return oracle.Prophecy{}, nil, err
+			return nil, err
 		}
 	}
-
-	// TODO distribute delay fee
+	// TODO distribute relay fee
 
 	// TODO should we delete prophecy when prophecy succeeds
-
-	// increase sequence
-	k.IncreaseSequence(ctx, types.KeyCurrentTransferInSequence)
-	return prophecy, nil, nil
+	return nil, nil
 }
 
-func (k Keeper) ProcessUpdateTransferOutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {
+func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, transferInClaim types.TransferInClaim, refundReason types.RefundReason) (sdk.Tags, sdk.Error) {
+	tags := sdk.NewTags(sdk.TagAction, types.ActionTransferInFailed)
+
+	for idx, refundAddr := range transferInClaim.RefundAddresses {
+		var calibratedAmount sdk.Int
+		if tokenInfo.ContractDecimals >= cmmtypes.TokenDecimals {
+			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
+			calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Mul(decimals)
+		} else {
+			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
+			if !sdk.NewInt(transferInClaim.Amounts[idx]).Mod(decimals).IsZero() {
+				return nil, types.ErrInvalidAmount("can't calibrate timeout amount")
+			}
+			calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Div(decimals)
+		}
+		transferInFailurePackage, err := types.SerializeTransferInFailurePackage(calibratedAmount,
+			transferInClaim.ContractAddress[:], refundAddr[:], refundReason)
+
+		if err != nil {
+			return nil, types.ErrSerializePackageFailed(err.Error())
+		}
+
+		refundSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel)
+		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel, transferInFailurePackage)
+		if sdkErr != nil {
+			return nil, sdkErr
+		}
+		tags = tags.AppendTags(sdk.NewTags(
+			types.TransferInRefundSequence, []byte(strconv.Itoa(int(refundSequence))),
+			types.TransferOutRefundReason, []byte(refundReason.String()),
+		))
+	}
+
+	return tags, nil
+}
+
+func (k Keeper) ProcessUpdateTransferOutClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Tags, sdk.Error) {
 	prophecy, err := k.oracleKeeper.ProcessClaim(ctx, claim)
 	if err != nil {
-		return oracle.Prophecy{}, err
+		return oracle.Prophecy{}, nil, err
 	}
 
 	if prophecy.Status.Text == oracle.FailedStatusText {
 		k.oracleKeeper.DeleteProphecy(ctx, prophecy.ID)
-		return prophecy, nil
+		return prophecy, nil, nil
 	}
 	if prophecy.Status.Text != oracle.SuccessStatusText {
-		return prophecy, nil
+		return prophecy, nil, nil
 	}
 
 	updateTransferOutClaim, err := types.GetUpdateTransferOutClaimFromOracleClaim(prophecy.Status.FinalClaim)
 	if err != nil {
-		return oracle.Prophecy{}, err
+		return oracle.Prophecy{}, nil, err
 	}
 
-	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, updateTransferOutClaim.SenderAddress, sdk.Coins{updateTransferOutClaim.Amount})
+	_, err = k.BankKeeper.SendCoins(ctx, types.PegAccount, updateTransferOutClaim.RefundAddress, sdk.Coins{updateTransferOutClaim.Amount})
 	if err != nil {
-		return oracle.Prophecy{}, err
+		return oracle.Prophecy{}, nil, err
 	}
 
 	k.IncreaseSequence(ctx, types.KeyUpdateTransferOutSequence)
 
-	return prophecy, nil
+	tags := sdk.NewTags(types.TransferOutRefundReason, []byte(updateTransferOutClaim.RefundReason.String()))
+
+	return prophecy, tags, nil
 }
 
 func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (oracle.Prophecy, sdk.Error) {

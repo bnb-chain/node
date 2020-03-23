@@ -4,21 +4,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"time"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
-	MaxDecimal                  int8 = 18
-	MinTransferOutExpireTimeGap      = 60 * time.Second
-	MinBindExpireTimeGap             = 600 * time.Second
-	// TODO change relay reward, relay reward should have 18 decimals
-	RelayReward int64 = 1e6
-
-	BindChannelName              = "bind"
-	TransferOutChannelName       = "transferOut"
-	TransferInFailureChannelName = "transferInFailure"
+	MaxDecimal int8 = 18
 
 	RouteBridge = "bridge"
 
@@ -28,6 +22,40 @@ const (
 	TransferOutMsgType       = "crossTransferOut"
 	UpdateBindMsgType        = "crossUpdateBind"
 )
+
+type RefundReason uint16
+
+const (
+	UnboundToken        RefundReason = 1
+	Timeout             RefundReason = 2
+	InsufficientBalance RefundReason = 3
+)
+
+func (reason RefundReason) String() string {
+	switch reason {
+	case UnboundToken:
+		return "UnboundToken"
+	case Timeout:
+		return "Timeout"
+	case InsufficientBalance:
+		return "InsufficientBalance"
+	default:
+		return ""
+	}
+}
+
+func ParseRefundReason(input string) RefundReason {
+	switch strings.ToLower(input) {
+	case "unboundtoken":
+		return UnboundToken
+	case "timeout":
+		return Timeout
+	case "insufficientbalance":
+		return InsufficientBalance
+	default:
+		panic("unrecognized refund status")
+	}
+}
 
 var _ sdk.Msg = TransferInMsg{}
 
@@ -93,7 +121,7 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	if msg.ExpireTime <= 0 {
 		return ErrInvalidExpireTime("expire time should be larger than 0")
 	}
-	if msg.ContractAddress.IsEmpty() {
+	if msg.Symbol != types.NativeTokenSymbol && msg.ContractAddress.IsEmpty() {
 		return ErrInvalidEthereumAddress("contract address should not be empty")
 	}
 	if len(msg.RefundAddresses) == 0 {
@@ -146,30 +174,22 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 
 var _ sdk.Msg = UpdateTransferOutMsg{}
 
-type TransferOutStatus int8
-
-const (
-	TransferOutStatusRejected         TransferOutStatus = 1
-	TransferOutStatusTimeout          TransferOutStatus = 2
-	TransferOutStatusInvalidParameter TransferOutStatus = 3
-)
-
 type UpdateTransferOutMsg struct {
-	SenderAddress    sdk.AccAddress    `json:"sender_address"`
-	Sequence         int64             `json:"sequence"`
-	Amount           sdk.Coin          `json:"amount"`
-	Status           TransferOutStatus `json:"status"`
-	ValidatorAddress sdk.AccAddress    `json:"validator_address"`
+	RefundAddress    sdk.AccAddress `json:"refund_address"`
+	Sequence         int64          `json:"sequence"`
+	Amount           sdk.Coin       `json:"amount"`
+	RefundReason     RefundReason   `json:"refund_reason"`
+	ValidatorAddress sdk.AccAddress `json:"validator_address"`
 }
 
-func NewUpdateTransferOutMsg(senderAddr sdk.AccAddress, sequence int64, amount sdk.Coin,
-	validatorAddr sdk.AccAddress, status TransferOutStatus) UpdateTransferOutMsg {
+func NewUpdateTransferOutMsg(refundAddr sdk.AccAddress, sequence int64, amount sdk.Coin,
+	validatorAddr sdk.AccAddress, refundReason RefundReason) UpdateTransferOutMsg {
 	return UpdateTransferOutMsg{
-		SenderAddress:    senderAddr,
+		RefundAddress:    refundAddr,
 		Sequence:         sequence,
 		Amount:           amount,
 		ValidatorAddress: validatorAddr,
-		Status:           status,
+		RefundReason:     refundReason,
 	}
 }
 
@@ -181,7 +201,7 @@ func (msg UpdateTransferOutMsg) GetSigners() []sdk.AccAddress {
 }
 func (msg UpdateTransferOutMsg) String() string {
 	return fmt.Sprintf("UpdateTransferOut{%s#%d#%s#%s}",
-		msg.SenderAddress.String(), msg.Sequence, msg.Amount.String(), msg.ValidatorAddress.String())
+		msg.RefundAddress.String(), msg.Sequence, msg.Amount.String(), msg.ValidatorAddress.String())
 }
 
 // GetSignBytes - Get the bytes for the message signer to sign on
@@ -199,8 +219,8 @@ func (msg UpdateTransferOutMsg) GetInvolvedAddresses() []sdk.AccAddress {
 
 // ValidateBasic is used to quickly disqualify obviously invalid messages quickly
 func (msg UpdateTransferOutMsg) ValidateBasic() sdk.Error {
-	if len(msg.SenderAddress) != sdk.AddrLen {
-		return sdk.ErrInvalidAddress(msg.SenderAddress.String())
+	if len(msg.RefundAddress) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(msg.RefundAddress.String())
 	}
 	if msg.Sequence < 0 {
 		return ErrInvalidSequence("sequence should not be less than 0")
@@ -211,10 +231,10 @@ func (msg UpdateTransferOutMsg) ValidateBasic() sdk.Error {
 	if !msg.Amount.IsPositive() {
 		return ErrInvalidAmount("amount to send should be positive")
 	}
-	if msg.Status != TransferOutStatusRejected &&
-		msg.Status != TransferOutStatusTimeout &&
-		msg.Status != TransferOutStatusInvalidParameter {
-		return ErrInvalidStatus(fmt.Sprintf("status(%d) does not exist", msg.Status))
+	if msg.RefundReason != UnboundToken &&
+		msg.RefundReason != Timeout &&
+		msg.RefundReason != InsufficientBalance {
+		return ErrInvalidStatus(fmt.Sprintf("status(%d) does not exist", msg.RefundReason))
 	}
 	return nil
 }
@@ -266,8 +286,8 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidContractAddress("contract address should not be empty")
 	}
 
-	if msg.ContractDecimals < 0 {
-		return ErrInvalidDecimal("decimal should be no less than 0")
+	if msg.ContractDecimals < 0 || msg.ContractDecimals > MaxDecimal {
+		return ErrInvalidDecimal(fmt.Sprintf("decimal should be in [0, %d]", MaxDecimal))
 	}
 
 	if msg.ExpireTime <= 0 {
@@ -295,6 +315,36 @@ const (
 	BindStatusTimeout          BindStatus = 2
 	BindStatusInvalidParameter BindStatus = 3
 )
+
+func (status BindStatus) String() string {
+	switch status {
+	case BindStatusSuccess:
+		return "UnboundToken"
+	case BindStatusRejected:
+		return "Timeout"
+	case BindStatusTimeout:
+		return "InsufficientBalance"
+	case BindStatusInvalidParameter:
+		return "InsufficientBalance"
+	default:
+		return ""
+	}
+}
+
+func ParseBindStatus(input string) BindStatus {
+	switch strings.ToLower(input) {
+	case "success":
+		return BindStatusSuccess
+	case "rejected":
+		return BindStatusRejected
+	case "timeout":
+		return BindStatusTimeout
+	case "invalidparameter":
+		return BindStatusInvalidParameter
+	default:
+		panic("unrecognized bind status")
+	}
+}
 
 type UpdateBindMsg struct {
 	Sequence         int64           `json:"sequence"`
@@ -454,14 +504,15 @@ func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
 }
 
 /*
-	struct TimeoutPackage {
+	struct RefundPackage {
         uint256 refundAmount;       // 32 0:32
         address contractAddr;       // 20 32:52
         address payable refundAddr; // 20 52:72
+		uint16 refundReason         // 2  72:74
     }
 */
-func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte, refundAddr []byte) ([]byte, error) {
-	serializedBytes := make([]byte, 32+20+20)
+func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte, refundAddr []byte, refundReason RefundReason) ([]byte, error) {
+	serializedBytes := make([]byte, 32+20+20+2)
 	if len(contractAddr) != 20 || len(refundAddr) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
 	}
@@ -472,7 +523,8 @@ func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte
 	copy(serializedBytes[32-length:32], refundAmount.BigInt().Bytes())
 
 	copy(serializedBytes[32:52], contractAddr)
-	copy(serializedBytes[52:], refundAddr)
+	copy(serializedBytes[52:72], refundAddr)
+	binary.BigEndian.PutUint16(serializedBytes[72:74], uint16(refundReason))
 
 	return serializedBytes, nil
 }
@@ -481,14 +533,14 @@ func SerializeTransferInFailurePackage(refundAmount sdk.Int, contractAddr []byte
 	struct CrossChainTransferPackage {
         bytes32 bep2TokenSymbol;    // 32 0:32
         address contractAddr;       // 20 32:52
-        address sender;             // 20 52:72
+        address refundAddr;         // 20 52:72
         address payable recipient;  // 20 72:92
         uint256 amount;             // 32 92:124
         uint64  expireTime;         // 8  124:132
         uint256 relayReward;        // 32 132:164
     }
 */
-func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, sender []byte, recipient []byte,
+func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, refundAddr []byte, recipient []byte,
 	amount sdk.Int, expireTime int64, relayReward sdk.Int) ([]byte, error) {
 	serializedBytes := make([]byte, 32+20+20+20+32+8+32)
 	if len(bep2TokenSymbol) > 32 {
@@ -496,11 +548,11 @@ func SerializeTransferOutPackage(bep2TokenSymbol string, contractAddr []byte, se
 	}
 	copy(serializedBytes[0:32], bep2TokenSymbol)
 
-	if len(contractAddr) != 20 || len(sender) != 20 || len(recipient) != 20 {
+	if len(contractAddr) != 20 || len(refundAddr) != 20 || len(recipient) != 20 {
 		return nil, fmt.Errorf("length of address must be 20")
 	}
 	copy(serializedBytes[32:52], contractAddr)
-	copy(serializedBytes[52:72], sender)
+	copy(serializedBytes[52:72], refundAddr)
 	copy(serializedBytes[72:92], recipient)
 
 	if amount.BigInt().BitLen() > 255 || relayReward.BigInt().BitLen() > 255 {
