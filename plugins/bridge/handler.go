@@ -138,7 +138,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	}
 
 	peggyAmount := sdk.Coins{sdk.Coin{Denom: symbol, Amount: msg.Amount}}
-	relayFee := sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}}
+	relayFee := sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayFee}}
 	transferAmount := peggyAmount.Plus(relayFee)
 
 	_, sdkErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
@@ -160,7 +160,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
-	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
+	calibratedRelayFee := sdk.NewInt(types.RelayFee).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	bindRequest := types.BindRequest{
 		From:             msg.From,
@@ -181,13 +181,8 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	bindChannelId, err := sdk.GetChannelID(types.BindChannelName)
-	if err != nil {
-		return types.ErrGetChannelIdFailed(err.Error()).Result()
-	}
-
-	bindSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId)
-	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), bindChannelId, bindPackage)
+	bindSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), types.BindChannel)
+	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), types.BindChannel, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -216,7 +211,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrTokenNotBound(fmt.Sprintf("token %s is not bound", symbol)).Result()
 	}
 
-	transferAmount := sdk.Coins{msg.Amount}.Plus(sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayReward}})
+	transferAmount := sdk.Coins{msg.Amount}.Plus(sdk.Coins{sdk.Coin{Denom: cmmtypes.NativeTokenSymbol, Amount: types.RelayFee}})
 	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
 	if cErr != nil {
 		return cErr.Result()
@@ -232,7 +227,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		}
 		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(decimals)
 	}
-	calibratedRelayFee := sdk.NewInt(types.RelayReward).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
+	calibratedRelayFee := sdk.NewInt(types.RelayFee).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	contractAddr := types.NewEthereumAddress(token.ContractAddress)
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
@@ -241,13 +236,8 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	transferChannelId, err := sdk.GetChannelID(types.TransferOutChannelName)
-	if err != nil {
-		return types.ErrGetChannelIdFailed(err.Error()).Result()
-	}
-
-	transferOutSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId)
-	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), transferChannelId, transferPackage)
+	transferOutSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), types.TransferOutChannel)
+	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), types.TransferOutChannel, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}

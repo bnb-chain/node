@@ -4,23 +4,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/common/types"
 	"strings"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
-	MaxDecimal                  int8 = 18
-	MinTransferOutExpireTimeGap      = 60 * time.Second
-	MinBindExpireTimeGap             = 600 * time.Second
-	// TODO change relay reward, relay reward should have 18 decimals
-	RelayReward int64 = 1e6
-
-	BindChannelName        = "bind"
-	TransferOutChannelName = "transferOut"
-	RefundChannelName      = "refund"
+	MaxDecimal int8 = 18
 
 	RouteBridge = "bridge"
 
@@ -294,8 +286,8 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidContractAddress("contract address should not be empty")
 	}
 
-	if msg.ContractDecimals < 0 {
-		return ErrInvalidDecimal("decimal should be no less than 0")
+	if msg.ContractDecimals < 0 || msg.ContractDecimals > MaxDecimal {
+		return ErrInvalidDecimal(fmt.Sprintf("decimal should be in [0, %d]", MaxDecimal))
 	}
 
 	if msg.ExpireTime <= 0 {

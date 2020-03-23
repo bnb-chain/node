@@ -19,21 +19,21 @@ func InitPlugin(appp app.ChainApp, keeper Keeper) {
 }
 
 func RegisterChainId(keeper Keeper) {
-	sdk.InitCrossChainID(sdk.CrossChainID(keeper.SourceChainId))
+	sdk.SetSourceChainID(sdk.CrossChainID(keeper.SourceChainId))
 }
 
 func RegisterChannels() {
 	// NOTE: sequence matters, do not change the sequence of channels
-	err := sdk.RegisterNewCrossChainChannel(types.BindChannelName)
+	err := sdk.RegisterNewCrossChainChannel(types.BindChannel, types.BindChannelID)
 	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannelName, err.Error()))
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
 	}
-	err = sdk.RegisterNewCrossChainChannel(types.TransferOutChannelName)
+	err = sdk.RegisterNewCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
 	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannelName, err.Error()))
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
 	}
-	err = sdk.RegisterNewCrossChainChannel(types.RefundChannelName)
+	err = sdk.RegisterNewCrossChainChannel(types.RefundChannel, types.RefundChannelID)
 	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannelName, err.Error()))
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
 	}
 }
