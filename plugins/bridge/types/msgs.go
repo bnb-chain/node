@@ -23,40 +23,6 @@ const (
 	UpdateBindMsgType        = "crossUpdateBind"
 )
 
-type RefundReason uint16
-
-const (
-	UnboundToken        RefundReason = 1
-	Timeout             RefundReason = 2
-	InsufficientBalance RefundReason = 3
-)
-
-func (reason RefundReason) String() string {
-	switch reason {
-	case UnboundToken:
-		return "UnboundToken"
-	case Timeout:
-		return "Timeout"
-	case InsufficientBalance:
-		return "InsufficientBalance"
-	default:
-		return ""
-	}
-}
-
-func ParseRefundReason(input string) RefundReason {
-	switch strings.ToLower(input) {
-	case "unboundtoken":
-		return UnboundToken
-	case "timeout":
-		return Timeout
-	case "insufficientbalance":
-		return InsufficientBalance
-	default:
-		panic("unrecognized refund status")
-	}
-}
-
 var _ sdk.Msg = TransferInMsg{}
 
 type TransferInMsg struct {
@@ -172,6 +138,40 @@ func (msg TransferInMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
+type RefundReason uint16
+
+const (
+	UnboundToken        RefundReason = 1
+	Timeout             RefundReason = 2
+	InsufficientBalance RefundReason = 3
+)
+
+func (reason RefundReason) String() string {
+	switch reason {
+	case UnboundToken:
+		return "UnboundToken"
+	case Timeout:
+		return "Timeout"
+	case InsufficientBalance:
+		return "InsufficientBalance"
+	default:
+		return ""
+	}
+}
+
+func ParseRefundReason(input string) RefundReason {
+	switch strings.ToLower(input) {
+	case "unboundtoken":
+		return UnboundToken
+	case "timeout":
+		return Timeout
+	case "insufficientbalance":
+		return InsufficientBalance
+	default:
+		panic("unrecognized refund status")
+	}
+}
+
 var _ sdk.Msg = UpdateTransferOutMsg{}
 
 type UpdateTransferOutMsg struct {
@@ -234,7 +234,7 @@ func (msg UpdateTransferOutMsg) ValidateBasic() sdk.Error {
 	if msg.RefundReason != UnboundToken &&
 		msg.RefundReason != Timeout &&
 		msg.RefundReason != InsufficientBalance {
-		return ErrInvalidStatus(fmt.Sprintf("status(%d) does not exist", msg.RefundReason))
+		return ErrInvalidStatus(fmt.Sprintf("refund reason(%d) does not exist", msg.RefundReason))
 	}
 	return nil
 }
@@ -286,8 +286,8 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidContractAddress("contract address should not be empty")
 	}
 
-	if msg.ContractDecimals < 0 || msg.ContractDecimals > MaxDecimal {
-		return ErrInvalidDecimal(fmt.Sprintf("decimal should be in [0, %d]", MaxDecimal))
+	if msg.ContractDecimals < 0 {
+		return ErrInvalidDecimal(fmt.Sprintf("decimals should be larger than 0"))
 	}
 
 	if msg.ExpireTime <= 0 {
@@ -401,13 +401,13 @@ func (msg UpdateBindMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.ContractDecimals < 0 {
-		return ErrInvalidDecimal("decimal should be no less than 0")
+		return ErrInvalidDecimal("decimals should be no less than 0")
 	}
 
 	return nil
 }
 func (msg UpdateBindMsg) GetSignBytes() []byte {
-	b, err := json.Marshal(msg) // XXX: ensure some canonical form
+	b, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)
 	}
