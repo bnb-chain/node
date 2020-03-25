@@ -12,6 +12,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
+	miniIssue "github.com/binance-chain/node/plugins/miniTokens/issue"
 )
 
 var transferOnlyModeBlackList = []string{
@@ -25,6 +26,7 @@ var transferOnlyModeBlackList = []string{
 	timelock.TimeLockMsg{}.Type(),
 	timelock.TimeUnlockMsg{}.Type(),
 	timelock.TimeRelockMsg{}.Type(),
+	miniIssue.IssueMsg{}.Type(),
 }
 
 var TxBlackList = map[runtime.Mode][]string{

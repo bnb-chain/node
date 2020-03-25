@@ -16,10 +16,12 @@ const (
 	MiniTokenSymbolMaxLen    = 8
 	MiniTokenSymbolMinLen    = 3
 	MiniTokenSymbolSuffixLen = 4 // probably enough. if it collides (unlikely) the issuer can just use another tx.
+	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolMSuffix   = "M"
 
-	MiniTokenDecimals       int8  = 8
-	MiniTokenMaxTotalSupply int64 = 10000000000000 // 90 billions with 8 decimal digits
+	MiniTokenDecimals                 int8  = 8
+	MiniTokenMinTotalSupply           int64 = 100000000      // 100k with 8 decimal digits
+	MiniTokenMaxTotalSupplyUpperBound int64 = 10000000000000 // 100k with 8 decimal digits
 
 	MiniTokenSupplyRange1UpperBound int64 = 1000000000000
 )
@@ -54,6 +56,13 @@ func NewMiniToken(name, symbol string, maxTotalSupply int64, totalSupply int64, 
 		Mintable:       mintable,
 		TokenURI:       tokenURI,
 	}, nil
+}
+
+func IsMiniTokenSymbol(symbol string) bool{
+	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
+		return false
+	}
+	return true
 }
 
 func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
@@ -126,12 +135,12 @@ func ValidateMapperMiniTokenSymbol(symbol string) error {
 	}
 
 	// prohibit non-hexadecimal chars in the suffix part
-	isHex, err := regexp.MatchString(fmt.Sprintf("[0-9A-F]{%d}M", MiniTokenSymbolSuffixLen-1), suffixPart)
+	isHex, err := regexp.MatchString(fmt.Sprintf("[0-9A-F]{%d}M", MiniTokenSymbolTxHashSuffixLen), suffixPart)
 	if err != nil {
 		return err
 	}
 	if !isHex {
-		return fmt.Errorf("mini token symbol tx hash suffix must be hex with a length of %d", MiniTokenSymbolSuffixLen-1)
+		return fmt.Errorf("mini token symbol tx hash suffix must be hex with a length of %d", MiniTokenSymbolTxHashSuffixLen)
 	}
 
 	return nil

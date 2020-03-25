@@ -14,9 +14,9 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-type Tokens []types.Token
+type MiniTokens []types.MiniToken
 
-func (t Tokens) GetSymbols() *[]string {
+func (t MiniTokens) GetSymbols() *[]string {
 	var symbols []string
 	for _, token := range t {
 		symbols = append(symbols, token.Symbol)
@@ -24,31 +24,32 @@ func (t Tokens) GetSymbols() *[]string {
 	return &symbols
 }
 
-type Mapper interface {
-	NewToken(ctx sdk.Context, token types.Token) error
+type MiniTokenMapper interface {
+	NewToken(ctx sdk.Context, token types.MiniToken) error
 	Exists(ctx sdk.Context, symbol string) bool
 	ExistsCC(ctx context.CLIContext, symbol string) bool
-	GetTokenList(ctx sdk.Context, showZeroSupplyTokens bool) Tokens
-	GetToken(ctx sdk.Context, symbol string) (types.Token, error)
+	GetTokenList(ctx sdk.Context, showZeroSupplyMiniTokens bool) MiniTokens
+	GetToken(ctx sdk.Context, symbol string) (types.MiniToken, error)
 	// we do not provide the updateToken method
 	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
+	UpdateTokenURI(ctx sdk.Context, symbol string, uri string) error
 }
 
-var _ Mapper = mapper{}
+var _ MiniTokenMapper = mapper{}
 
 type mapper struct {
 	key sdk.StoreKey
 	cdc *wire.Codec
 }
 
-func NewMapper(cdc *wire.Codec, key sdk.StoreKey) mapper {
+func NewMiniTokenMapper(cdc *wire.Codec, key sdk.StoreKey) MiniTokenMapper {
 	return mapper{
 		key: key,
 		cdc: cdc,
 	}
 }
 
-func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
+func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.MiniToken, error) {
 	store := ctx.KVStore(m.key)
 	key := []byte(strings.ToUpper(symbol))
 
@@ -57,29 +58,29 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.Token, error) {
 		return m.decodeToken(bz), nil
 	}
 
-	return types.Token{}, fmt.Errorf("token(%v) not found", symbol)
+	return types.MiniToken{}, fmt.Errorf("token(%v) not found", symbol)
 }
 
-func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.Token, error) {
+func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.MiniToken, error) {
 	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, err := ctx.QueryStore(key, common.MiniTokenStoreName)
 	if err != nil {
-		return types.Token{}, err
+		return types.MiniToken{}, err
 	}
 	if bz != nil {
 		return m.decodeToken(bz), nil
 	}
-	return types.Token{}, fmt.Errorf("token(%v) not found", symbol)
+	return types.MiniToken{}, fmt.Errorf("token(%v) not found", symbol)
 }
 
-func (m mapper) GetTokenList(ctx sdk.Context, showZeroSupplyTokens bool) Tokens {
-	var res Tokens
+func (m mapper) GetTokenList(ctx sdk.Context, showZeroSupplyMiniTokens bool) MiniTokens {
+	var res MiniTokens
 	store := ctx.KVStore(m.key)
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		token := m.decodeToken(iter.Value())
-		if !showZeroSupplyTokens && token.TotalSupply.ToInt64() == 0 {
+		if !showZeroSupplyMiniTokens && token.TotalSupply.ToInt64() == 0 {
 			continue
 		}
 		res = append(res, token)
@@ -95,7 +96,7 @@ func (m mapper) Exists(ctx sdk.Context, symbol string) bool {
 
 func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
+	bz, err := ctx.QueryStore(key, common.MiniTokenStoreName)
 	if err != nil {
 		return false
 	}
@@ -105,9 +106,9 @@ func (m mapper) ExistsCC(ctx context.CLIContext, symbol string) bool {
 	return false
 }
 
-func (m mapper) NewToken(ctx sdk.Context, token types.Token) error {
+func (m mapper) NewToken(ctx sdk.Context, token types.MiniToken) error {
 	symbol := token.Symbol
-	if err := types.ValidateToken(token); err != nil {
+	if err := types.ValidateMiniToken(token); err != nil {
 		return err
 	}
 	key := []byte(strings.ToUpper(symbol))
@@ -138,7 +139,7 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 	return nil
 }
 
-func (m mapper) encodeToken(token types.Token) []byte {
+func (m mapper) encodeToken(token types.MiniToken) []byte {
 	bz, err := m.cdc.MarshalBinaryBare(token)
 	if err != nil {
 		panic(err)
@@ -146,10 +147,41 @@ func (m mapper) encodeToken(token types.Token) []byte {
 	return bz
 }
 
-func (m mapper) decodeToken(bz []byte) (token types.Token) {
+func (m mapper) decodeToken(bz []byte) (token types.MiniToken) {
 	err := m.cdc.UnmarshalBinaryBare(bz, &token)
 	if err != nil {
 		panic(err)
 	}
 	return
 }
+
+
+func (m mapper) UpdateTokenURI(ctx sdk.Context, symbol string, uri string) error {
+	if len(symbol) == 0 {
+		return errors.New("symbol cannot be empty")
+	}
+
+	if len(uri) == 0 {
+		return errors.New("uri cannot be empty")
+	}
+
+	if len(uri) > 2048 {
+		return errors.New("uri length cannot be larger than 2048")
+	}
+
+	key := []byte(strings.ToUpper(symbol))
+	store := ctx.KVStore(m.key)
+	bz := store.Get(key)
+	if bz == nil {
+		return errors.New("token does not exist")
+	}
+
+	toBeUpdated := m.decodeToken(bz)
+
+	if toBeUpdated.TokenURI != uri {
+		toBeUpdated.TokenURI = uri
+		store.Set(key, m.encodeToken(toBeUpdated))
+	}
+	return nil
+}
+

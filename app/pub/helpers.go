@@ -17,6 +17,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	miniIssue "github.com/binance-chain/node/plugins/miniTokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
@@ -128,6 +129,8 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 		case freeze.UnfreezeMsg:
 			txAsset = msg.Symbol
 			// will not cover timelock, timeUnlock, timeRelock, atomic Swap
+		case miniIssue.IssueMsg:
+			txAsset = msg.Symbol
 		}
 		transactionsToPublish = append(transactionsToPublish, Transaction{
 			TxHash:    txhash,
