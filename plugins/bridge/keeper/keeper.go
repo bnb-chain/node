@@ -216,9 +216,7 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 		}
 
 		if bindRequest.Symbol != updateBindClaim.Symbol ||
-			!bindRequest.Amount.Equal(updateBindClaim.Amount) ||
-			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() ||
-			bindRequest.ContractDecimals != updateBindClaim.ContractDecimals {
+			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() {
 
 			return oracle.Prophecy{}, types.ErrBindRequestNotIdentical("update bind claim is not identical to bind request")
 		}
