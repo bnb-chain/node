@@ -27,7 +27,7 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 
 	cmd.Flags().String(flagTokenName, "", "name of the new token")
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the new token")
-	cmd.Flags().Int64P(flagMaxTotalSupply, "n", 0, "max total supply of the new token")
+	cmd.Flags().Int64P(flagMaxTotalSupply, "m", 0, "max total supply of the new token")
 	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
 	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
 	cmd.Flags().String(flagTokenUri, "", "uri of the token information")
@@ -62,7 +62,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateIssueMsgTokenSymbol(symbol)
+	err = types.ValidateIssueMsgMiniTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateMapperTokenSymbol(symbol)
+	err = types.ValidateMapperMiniTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}

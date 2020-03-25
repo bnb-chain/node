@@ -69,28 +69,28 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 
 	if msg.MaxTotalSupply < common.MiniTokenMinTotalSupply {
 		logger.Info(errLogMsg, "reason", "max total supply doesn't reach the min supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too small, the min amount is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too small, the min amount is %d",
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 	if msg.MaxTotalSupply > common.MiniTokenMaxTotalSupplyUpperBound {
 		logger.Info(errLogMsg, "reason", "max total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too large, the max total supply upper bound is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too large, the max total supply upper bound is %d",
 			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
 	}
 	if msg.TotalSupply < common.MiniTokenMinTotalSupply {
 		logger.Info(errLogMsg, "reason", "total supply doesn't reach the min supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too small, the min amount is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too small, the min amount is %d",
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 	if msg.TotalSupply > msg.MaxTotalSupply {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply is %d",
 			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
 	}
 
 	if msg.TotalSupply > common.MiniTokenMaxTotalSupplyUpperBound {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply upperbound is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply upperbound is %d",
 			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
 	}
 	// the symbol is suffixed with the first n bytes of the tx hash
@@ -169,19 +169,19 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKee
 
 	if msg.Amount < common.MiniTokenMinTotalSupply {
 		logger.Info(errLogMsg, "reason", "mint amount doesn't reach the min supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too small, the min amount is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too small, the min amount is %d",
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 	// use minus to prevent overflow
 	if msg.Amount > token.MaxTotalSupply.ToInt64() -token.TotalSupply.ToInt64() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %d",
 			token.MaxTotalSupply)).Result()
 	}
 
 	if msg.Amount > common.MiniTokenMaxTotalSupplyUpperBound-token.TotalSupply.ToInt64() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply upper bound")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply upper bound is %ds",
+		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply upper bound is %d",
 			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
 	}
 	newTotalSupply := token.TotalSupply.ToInt64() + msg.Amount

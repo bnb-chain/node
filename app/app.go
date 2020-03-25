@@ -219,6 +219,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.MiniTokenStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -257,7 +258,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP69Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP69, upgradeConfig.BEP69Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
@@ -758,6 +759,7 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
+	miniTokens.RegisterWire(cdc)
 	return cdc
 }
 
