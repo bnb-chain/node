@@ -154,8 +154,7 @@ func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, tran
 			return nil, types.ErrSerializePackageFailed(err.Error())
 		}
 
-		refundSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel)
-		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel, transferInFailurePackage)
+		refundSequence, sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, cmmtypes.BSCChain, cmmtypes.RefundChannel, transferInFailurePackage)
 		if sdkErr != nil {
 			return nil, sdkErr
 		}

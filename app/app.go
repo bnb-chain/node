@@ -166,7 +166,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, ibc.DefaultCodespace)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.crossChainConfig.SourceChainId, app.crossChainConfig.DestinationChainId)
+		app.ibcKeeper, app.crossChainConfig.SourceChainId, app.crossChainConfig.BSCChainId)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
@@ -258,6 +258,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.initDex(tradingPairMapper)
 	app.initGovHooks()
 	app.initPlugins()
+	app.initCrossChain()
 	app.initParams()
 	if ServerContext.Config.StateSyncReactor {
 		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
@@ -372,6 +373,30 @@ func (app *BinanceChain) initPlugins() {
 	account.InitPlugin(app, app.AccountKeeper)
 	oracle.InitPlugin(app.oracleKeeper)
 	bridge.InitPlugin(app, app.bridgeKeeper)
+}
+
+func (app *BinanceChain) initCrossChain() {
+	// set up cross chainID for BBC
+	sdk.SetSourceChainID(sdk.CrossChainID(app.crossChainConfig.SourceChainId))
+	// set up cross chainID for BSC
+	err := sdk.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
+	}
+	// register cross chain channel
+	err = sdk.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
+	}
+	err = sdk.RegisterCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
+	}
+	err = sdk.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
+	}
+
 }
 
 func (app *BinanceChain) initGovHooks() {

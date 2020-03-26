@@ -181,8 +181,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	bindSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), types.BindChannel)
-	sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), types.BindChannel, bindPackage)
+	bindSequence, sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, cmmtypes.BSCChain, cmmtypes.BindChannel, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -236,8 +235,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	transferOutSequence := keeper.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(keeper.DestChainId), types.TransferOutChannel)
-	sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(keeper.DestChainId), types.TransferOutChannel, transferPackage)
+	transferOutSequence, sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, cmmtypes.BSCChain, cmmtypes.TransferOutChannel, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}

@@ -158,7 +158,7 @@ logBuffSize = {{ .LogConfig.LogBuffSize }}
 [cross_chain]
 
 sourceChainId = {{ .CrossChainConfig.SourceChainId }}
-destinationChainId = {{ .CrossChainConfig.DestinationChainId }}
+bscChainId = {{ .CrossChainConfig.BSCChainId }}
 
 `
 
@@ -324,14 +324,14 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 }
 
 type CrossChainConfig struct {
-	SourceChainId      uint16 `mapstructure:"sourceChainId"`
-	DestinationChainId uint16 `mapstructure:"destinationChainId"`
+	SourceChainId uint16 `mapstructure:"sourceChainId"`
+	BSCChainId    uint16 `mapstructure:"bscChainId"`
 }
 
 func defaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{
-		SourceChainId:      0,
-		DestinationChainId: 0,
+		SourceChainId: 0,
+		BSCChainId:    0,
 	}
 }
 
