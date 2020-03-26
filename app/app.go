@@ -91,6 +91,7 @@ type BinanceChain struct {
 
 	baseConfig         *config.BaseConfig
 	upgradeConfig      *config.UpgradeConfig
+	crossChainConfig   *config.CrossChainConfig
 	abciQueryBlackList map[string]bool
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
@@ -117,6 +118,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
 		upgradeConfig:      ServerContext.UpgradeConfig,
+		crossChainConfig:   ServerContext.CrossChainConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
 	}
@@ -332,6 +334,30 @@ func (app *BinanceChain) initPlugins() {
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
+}
+
+func (app *BinanceChain) initCrossChain() {
+	// set up cross chainID for BBC
+	sdk.SetSourceChainID(sdk.CrossChainID(app.crossChainConfig.SourceChainId))
+	// set up cross chainID for BSC
+	err := sdk.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
+	}
+	// register cross chain channel
+	err = sdk.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
+	}
+	err = sdk.RegisterCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
+	}
+	err = sdk.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
+	}
+
 }
 
 func (app *BinanceChain) initGovHooks() {
