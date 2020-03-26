@@ -104,6 +104,7 @@ func (k Keeper) ProcessTransferInClaim(ctx sdk.Context, claim oracle.Claim) (sdk
 	if tokenInfo.ContractAddress != transferInClaim.ContractAddress.String() {
 		return k.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
 	}
+
 	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
 		return k.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.Timeout)
 	}
@@ -215,13 +216,13 @@ func (k Keeper) ProcessUpdateBindClaim(ctx sdk.Context, claim oracle.Claim) (ora
 			return oracle.Prophecy{}, err
 		}
 
+		isIdentical := true
 		if bindRequest.Symbol != updateBindClaim.Symbol ||
 			bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() {
-
-			return oracle.Prophecy{}, types.ErrBindRequestNotIdentical("update bind claim is not identical to bind request")
+			isIdentical = false
 		}
 
-		if updateBindClaim.Status == types.BindStatusSuccess {
+		if isIdentical && updateBindClaim.Status == types.BindStatusSuccess {
 			stdError := k.TokenMapper.UpdateBind(ctx, updateBindClaim.Symbol,
 				updateBindClaim.ContractAddress.String(), updateBindClaim.ContractDecimals)
 
