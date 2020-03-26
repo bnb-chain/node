@@ -67,12 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
-# Block height of BEP8 upgrade
-BEP8Height = {{ .UpgradeConfig.BEP8Height }}
-# Block height of BEP67 upgrade
-BEP67Height = {{ .UpgradeConfig.BEP67Height }}
-# Block height of BEP70 upgrade
-BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+# Block height of smart chain upgrade
+LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -159,9 +155,14 @@ logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
 
-[dex]
-# The suffixed symbol of BUSD
-BUSDSymbol = "{{ .DexConfig.BUSDSymbol }}"
+[cross_chain]
+# IBC chain-id for current chain
+IBCChainId = {{ .CrossChainConfig.IBCChainId }}
+# chain-id for bsc chain
+bscChainId = {{ .CrossChainConfig.BSCChainId }}
+# IBC chain-id for bsc chain
+bscIBCChainId = {{ .CrossChainConfig.BSCIBCChainId }}
+
 `
 
 type BinanceChainContext struct {
@@ -188,7 +189,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
-	*DexConfig         `mapstructure:"dex"`
+	*CrossChainConfig  `mapstructure:"cross_chain"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -199,7 +200,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
-		DexConfig:         defaultGovConfig(),
+		CrossChainConfig:  defaultCrossChainConfig(),
 	}
 }
 
@@ -325,6 +326,22 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishBlock
 }
 
+type CrossChainConfig struct {
+	IBCChainId    uint16 `mapstructure:"ibcChainId"`
+
+	BSCChainId    string `mapstructure:"bscChainId"`
+	BSCIBCChainId uint16 `mapstructure:"bscIBCChainId"`
+}
+
+func defaultCrossChainConfig() *CrossChainConfig {
+	return &CrossChainConfig{
+		IBCChainId:    0,
+
+		BSCChainId:    "ibc",
+		BSCIBCChainId: 0,
+	}
+}
+
 type LogConfig struct {
 	LogToConsole bool   `mapstructure:"logToConsole"`
 	LogFileRoot  string `mapstructure:"logFileRoot"`
@@ -378,11 +395,7 @@ type UpgradeConfig struct {
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
-
-	// TODO: add upgrade name
-	BEP8Height  int64 `mapstructure:"BEP8Height"`
-	BEP67Height int64 `mapstructure:"BEP67Height"`
-	BEP70Height int64 `mapstructure:"BEP70Height"`
+	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgrade"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -398,9 +411,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
-		BEP8Height:                 math.MaxInt64,
-		BEP67Height:                math.MaxInt64,
-		BEP70Height:                math.MaxInt64,
+		LaunchBscUpgradeHeight:     math.MaxInt64,
 	}
 }
 
