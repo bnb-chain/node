@@ -921,6 +921,30 @@ func TestKeeper_CanListTradingPair_SupportBUSD(t *testing.T) {
 
 	err = keeper.CanListTradingPair(ctx, "BUSD-BD1", "AAA-000")
 	require.Nil(t, err)
+
+	//upgraded, ABC-XYZ pair listing is still dependent on ABC-BNB and XYZ-BNB pairs
+	//BUSD-ABC or XYZ-BUSD pairs will be no help at this case
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "AAA-000", 1e8))
+	require.Nil(t, err)
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "XYZ-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against XYZ-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "AAA-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token XYZ-000 should be listed against BNB before listing AAA-000 against XYZ-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "XYZ-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.Nil(t, err)
 }
 
 func TestKeeper_CanDelistTradingPair_SupportBUSD(t *testing.T) {
@@ -931,5 +955,12 @@ func TestKeeper_CanDelistTradingPair_SupportBUSD(t *testing.T) {
 
 	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "AAA-000", 1e8))
 	err = keeper.CanDelistTradingPair(ctx, "BUSD-BD1", "AAA-000")
+	require.Nil(t, err)
+
+	// delisting AAA-XYZ will not depends on BUSD-AAA or BUSD-XYZ
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "AAA-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "XYZ-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "XYZ-000", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000", "XYZ-000")
 	require.Nil(t, err)
 }
