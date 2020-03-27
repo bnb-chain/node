@@ -15,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -338,22 +339,22 @@ func (app *BinanceChain) initPlugins() {
 
 func (app *BinanceChain) initCrossChain() {
 	// set up cross chainID for BBC
-	sdk.SetSourceChainID(sdk.CrossChainID(app.crossChainConfig.SourceChainId))
+	ibc.SetSourceChainID(sdk.CrossChainID(app.crossChainConfig.SourceChainId))
 	// set up cross chainID for BSC
-	err := sdk.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
+	err := ibc.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
 	}
 	// register cross chain channel
-	err = sdk.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
+	err = ibc.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
 	}
-	err = sdk.RegisterCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
+	err = ibc.RegisterCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
 	}
-	err = sdk.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
+	err = ibc.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
 	}
