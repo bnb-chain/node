@@ -11,6 +11,7 @@ import (
 const (
 	flagSymbol = "symbol"
 	flagAmount = "amount"
+	flagURI    = "uri"
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
@@ -24,8 +25,13 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	cmdr := Commander{Cdc: cdc}
 	miniTokenCmd.AddCommand(
 		client.PostCommands(
+			getTokenInfoCmd(cmdr),
 			issueMiniTokenCmd(cmdr),
-			mintMiniTokenCmd(cmdr))...)
+			mintMiniTokenCmd(cmdr),
+			freezeMiniTokenCmd(cmdr),
+			unfreezeMiniTokenCmd(cmdr),
+			burnTokenCmd(cmdr),
+			setTokenURICmd(cmdr),)...)
 
 	miniTokenCmd.AddCommand(client.LineBreak)
 

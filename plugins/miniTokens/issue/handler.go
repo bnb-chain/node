@@ -3,6 +3,7 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/miniTokens/store"
 )
@@ -33,20 +33,24 @@ func NewHandler(tokenMapper store.MiniTokenMapper, keeper bank.Keeper) sdk.Handl
 }
 
 func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
-	errLogMsg := "issue token failed"
+	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
+	logger := log.With("module", "miniToken", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
 	var suffix string
+
+	if !sdk.IsUpgrade(upgrade.BEP69) {
+		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height")).Result()
+	}
 
 	// TxHashKey is set in BaseApp's runMsgs
 	txHash := ctx.Value(baseapp.TxHashKey)
 	if txHashStr, ok := txHash.(string); ok {
-		if len(txHashStr) >= types.MiniTokenSymbolTxHashSuffixLen {
-			suffix = txHashStr[:types.MiniTokenSymbolTxHashSuffixLen] + types.MiniTokenSymbolMSuffix
+		if len(txHashStr) >= common.MiniTokenSymbolTxHashSuffixLen {
+			suffix = txHashStr[:common.MiniTokenSymbolTxHashSuffixLen] + common.MiniTokenSymbolMSuffix
 		} else {
 			logger.Error(errLogMsg,
 				"reason", fmt.Sprintf("%s on Context had a length of %d, expected >= %d",
-					baseapp.TxHashKey, len(txHashStr), types.MiniTokenSymbolTxHashSuffixLen))
+					baseapp.TxHashKey, len(txHashStr), common.MiniTokenSymbolTxHashSuffixLen))
 			return sdk.ErrInternal(fmt.Sprintf("unable to get the %s from Context", baseapp.TxHashKey)).Result()
 		}
 	} else {
@@ -55,16 +59,16 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 		return sdk.ErrInternal(fmt.Sprintf("unable to get the %s from Context", baseapp.TxHashKey)).Result()
 	}
 
-	if msg.MaxTotalSupply % types.MiniTokenMinTotalSupply !=0 {
+	if msg.MaxTotalSupply % common.MiniTokenMinTotalSupply !=0 {
 		logger.Info(errLogMsg, "reason", "max total supply is not integer")
 		return sdk.ErrInvalidCoins(
-			fmt.Sprintf("max total supply should be a multiple of %v", types.MiniTokenMinTotalSupply)).Result()
+			fmt.Sprintf("max total supply should be a multiple of %v", common.MiniTokenMinTotalSupply)).Result()
 	}
 
-	if msg.TotalSupply % types.MiniTokenMinTotalSupply !=0 {
+	if msg.TotalSupply % common.MiniTokenMinTotalSupply !=0 {
 		logger.Info(errLogMsg, "reason", "total supply is not integer")
 		return sdk.ErrInvalidCoins(
-			fmt.Sprintf("total supply should be a multiple of %v", types.MiniTokenMinTotalSupply)).Result()
+			fmt.Sprintf("total supply should be a multiple of %v", common.MiniTokenMinTotalSupply)).Result()
 	}
 
 	if msg.MaxTotalSupply < common.MiniTokenMinTotalSupply {
@@ -96,9 +100,9 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
 
-	if !types.IsMiniTokenSymbol(symbol) {
+	if !common.IsMiniTokenSymbol(symbol) {
 		logger.Info(errLogMsg, "reason", "symbol not valid")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) is not valid for mini token", symbol)).Result()
+		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) is not valid for mini-token", symbol)).Result()
 	}
 
 	if exists := tokenMapper.Exists(ctx, symbol); exists {
@@ -140,12 +144,12 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 	}
 }
 
-func handleMintToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
+func handleMintToken(ctx sdk.Context, miniTokenMapper store.MiniTokenMapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "token", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)
+	logger := log.With("module", "miniToken", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)
 
 	errLogMsg := "mint token failed"
-	token, err := tokenMapper.GetToken(ctx, symbol)
+	token, err := miniTokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
@@ -161,10 +165,10 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKee
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can mint token %s", msg.Symbol)).Result()
 	}
 
-	if msg.Amount % types.MiniTokenMinTotalSupply !=0 {
+	if msg.Amount % common.MiniTokenMinTotalSupply !=0 {
 		logger.Info(errLogMsg, "reason", "mint amount is not integer")
 		return sdk.ErrInvalidCoins(
-			fmt.Sprintf("amount should be a multiple of %v", types.MiniTokenMinTotalSupply)).Result()
+			fmt.Sprintf("amount should be a multiple of %v", common.MiniTokenMinTotalSupply)).Result()
 	}
 
 	if msg.Amount < common.MiniTokenMinTotalSupply {
@@ -185,7 +189,7 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKee
 			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
 	}
 	newTotalSupply := token.TotalSupply.ToInt64() + msg.Amount
-	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
+	err = miniTokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "update total supply failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("update total supply failed")).Result()

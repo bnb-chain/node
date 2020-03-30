@@ -2,6 +2,7 @@ package timelock
 
 import (
 	"fmt"
+	"github.com/binance-chain/node/common/types"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,6 +25,10 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result {
+	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+	if symbolError != nil {
+		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	}
 	record, err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, time.Unix(msg.LockTime, 0))
 	if err != nil {
 		return err.Result()
@@ -36,6 +41,10 @@ func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result 
 }
 
 func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Result {
+	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+	if symbolError != nil {
+		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	}
 	newRecord := TimeLockRecord{
 		Description: msg.Description,
 		Amount:      msg.Amount,

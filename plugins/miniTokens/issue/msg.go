@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/binance-chain/node/common/types"
 )
 
@@ -17,7 +16,6 @@ const (
 	MintMsgType     = "miniMintMsg"
 
 	maxTokenNameLength = 32
-	maxTokenURILength  = 2048
 )
 
 var _ sdk.Msg = IssueMsg{}
@@ -59,8 +57,8 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token name should have 1 ~ %v characters", maxTokenNameLength))
 	}
 
-	if len(msg.TokenURI) > maxTokenURILength {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not exceed %v characters", maxTokenURILength))
+	if len(msg.TokenURI) > types.MaxTokenURILength {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not exceed %v characters", types.MaxTokenURILength))
 	}
 
 	if msg.MaxTotalSupply%types.MiniTokenMinTotalSupply != 0 {

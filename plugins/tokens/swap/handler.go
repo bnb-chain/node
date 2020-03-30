@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/binance-chain/node/common/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -27,6 +28,10 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
+	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+	if symbolError != nil {
+		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	}
 	blockTime := ctx.BlockHeader().Time.Unix()
 	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
 		return ErrInvalidTimestamp(fmt.Sprintf("Timestamp (%d) can neither be 15 minutes ahead of the current time (%d), nor 30 minutes later", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
@@ -61,6 +66,10 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
+	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+	if symbolError != nil {
+		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	}
 	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
 		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()

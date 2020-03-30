@@ -108,5 +108,5 @@ func TestHandleMintToken(t *testing.T) {
 
 	// mint native token
 	invalidMintMsg = NewMintMsg(acc.GetAddress(), "BNB", 10000e8)
-	require.Contains(t, invalidMintMsg.ValidateBasic().Error(), "suffixed mini token symbol must contain a hyphen")
+	require.Contains(t, invalidMintMsg.ValidateBasic().Error(), "suffixed mini-token symbol must contain a hyphen")
 }

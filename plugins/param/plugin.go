@@ -13,7 +13,10 @@ import (
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	miniBurn "github.com/binance-chain/node/plugins/miniTokens/burn"
+	miniFreeze "github.com/binance-chain/node/plugins/miniTokens/freeze"
 	miniIssue "github.com/binance-chain/node/plugins/miniTokens/issue"
+	miniURI "github.com/binance-chain/node/plugins/miniTokens/uri"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -66,6 +69,9 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: miniIssue.IssueMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniIssue.AdvIssueMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniIssue.MintMsg{}.Type(), Fee: MiniMintFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: miniFreeze.FreezeMsg{}.Type(), Fee: MiniFreezeFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: miniBurn.BurnMsg{}.Type(), Fee: MiniBurnFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
 	})
@@ -104,5 +110,8 @@ func init() {
 		miniIssue.IssueMsgType:            fees.FixedFeeCalculatorGen,
 		miniIssue.AdvIssueMsgType:         fees.FixedFeeCalculatorGen,
 		miniIssue.MintMsgType:             fees.FixedFeeCalculatorGen,
+		miniFreeze.FreezeRoute:            fees.FixedFeeCalculatorGen,
+		miniBurn.BurnRoute:                fees.FixedFeeCalculatorGen,
+		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
 	}
 }

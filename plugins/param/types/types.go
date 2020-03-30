@@ -41,9 +41,12 @@ var (
 		"claimHTLT":   {},
 		"refundHTLT":  {},
 
-		"miniIssueMsg":    {},
-		"advMiniIssueMsg": {},
-		"miniMintMsg":     {},
+		"miniIssueMsg":     {},
+		"advMiniIssueMsg":  {},
+		"miniMintMsg":      {},
+		"miniTokensFreeze": {},
+		"miniTokensBurn":   {},
+		"miniTokensSetURI": {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

@@ -93,6 +93,16 @@ func ValidateIssueMsgTokenSymbol(symbol string) error {
 	return nil
 }
 
+func ValidateMapperTokenCoins(coins sdk.Coins) error {
+	for _, coin := range coins {
+		err := ValidateMapperTokenSymbol(coin.Denom)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ValidateMapperTokenSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("suffixed token symbol cannot be empty")

@@ -21,7 +21,7 @@ const (
 func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "issue",
-		Short: "issue a new mini token",
+		Short: "issue a new mini-token",
 		RunE:  cmdr.issueToken,
 	}
 
@@ -128,13 +128,6 @@ func checkSupplyAmount(amount, maxAmount int64) error {
 	}
 	if maxAmount > 0 && amount > maxAmount {
 		return errors.New("supply amount cannot exceed max supply amount")
-	}
-	return nil
-}
-
-func validateTokenURI(uri string) error {
-	if len(uri) > 2048 {
-		return errors.New("uri cannot be longer than 2048 characters")
 	}
 	return nil
 }

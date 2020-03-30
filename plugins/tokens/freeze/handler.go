@@ -1,6 +1,7 @@
 package freeze
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -52,6 +53,12 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	unfreezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
+
+	_, err := tokenMapper.GetToken(ctx, symbol)
+	if err != nil {
+		logger.Info("unfreeze token failed", "reason", "symbol not exist")
+		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
+	}
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	if frozenAmount < unfreezeAmount {

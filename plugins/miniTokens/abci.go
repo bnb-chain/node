@@ -19,7 +19,7 @@ func createAbciQueryHandler(mapper MiniTokenMapper) app.AbciQueryHandler {
 			return nil
 		}
 		switch path[1] {
-		case "info": // args: ["tokens", "info", <symbol>]
+		case "info": // args: ["miniTokens", "info", <symbol>]
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
