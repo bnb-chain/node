@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"io"
 	"sort"
 	"strings"
@@ -170,9 +171,16 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 		symbol := strings.ToUpper(m.Symbol)
 		kp.allOrders[symbol][m.Id] = &orderHolder
 		if m.CreatedHeight == height {
-			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
-			if m.TimeInForce == TimeInForce.IOC {
-				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
+			if dexUtils.IsMiniTokenTradingPair(symbol) {
+				kp.roundOrdersMini[symbol] = append(kp.roundOrdersMini[symbol], m.Id)
+				if m.TimeInForce == TimeInForce.IOC {
+					kp.roundIOCOrdersMini[symbol] = append(kp.roundIOCOrdersMini[symbol], m.Id)
+				}
+			} else {
+				kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
+				if m.TimeInForce == TimeInForce.IOC {
+					kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
+				}
 			}
 		}
 		if kp.CollectOrderInfoForPublish {

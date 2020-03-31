@@ -17,7 +17,7 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	miniIssue "github.com/binance-chain/node/plugins/miniTokens/issue"
+	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
@@ -262,9 +262,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 	return
 }
 
-func MatchAndAllocateAllForPublish(
-	dexKeeper *orderPkg.Keeper,
-	ctx sdk.Context) []*Trade {
+func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.Keeper, ctx sdk.Context, matchAllMiniSymbols bool) []*Trade {
 	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
@@ -284,7 +282,7 @@ func MatchAndAllocateAllForPublish(
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler)
+	dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler, matchAllMiniSymbols)
 	close(iocExpireFeeHolderCh)
 
 	tradeIdx := 0

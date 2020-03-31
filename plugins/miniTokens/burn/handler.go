@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/plugins/miniTokens/store"
+	"github.com/binance-chain/node/plugins/minitokens/store"
 )
 
 func NewHandler(tokenMapper store.MiniTokenMapper, keeper bank.Keeper) sdk.Handler {

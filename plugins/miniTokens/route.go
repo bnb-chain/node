@@ -1,11 +1,11 @@
-package miniTokens
+package minitokens
 
 import (
-	"github.com/binance-chain/node/plugins/miniTokens/burn"
-	"github.com/binance-chain/node/plugins/miniTokens/freeze"
-	"github.com/binance-chain/node/plugins/miniTokens/issue"
-	"github.com/binance-chain/node/plugins/miniTokens/store"
-	"github.com/binance-chain/node/plugins/miniTokens/uri"
+	"github.com/binance-chain/node/plugins/minitokens/burn"
+	"github.com/binance-chain/node/plugins/minitokens/freeze"
+	"github.com/binance-chain/node/plugins/minitokens/issue"
+	"github.com/binance-chain/node/plugins/minitokens/store"
+	"github.com/binance-chain/node/plugins/minitokens/uri"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"

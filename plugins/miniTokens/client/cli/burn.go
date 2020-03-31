@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/binance-chain/node/plugins/miniTokens/burn"
+	"github.com/binance-chain/node/plugins/minitokens/burn"
 )
 
 func burnTokenCmd(cmdr Commander) *cobra.Command {

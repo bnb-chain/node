@@ -3,7 +3,7 @@ package commands
 import (
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/miniTokens/uri"
+	"github.com/binance-chain/node/plugins/minitokens/uri"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

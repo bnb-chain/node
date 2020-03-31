@@ -40,8 +40,8 @@ import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
-	"github.com/binance-chain/node/plugins/miniTokens"
-	miniTkstore "github.com/binance-chain/node/plugins/miniTokens/store"
+	"github.com/binance-chain/node/plugins/minitokens"
+	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -335,7 +335,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
-	miniTokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
+	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
@@ -530,9 +530,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
 		} else {
-			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			app.DexKeeper.MatchAndAllocateAll(ctx, nil, isBreatheBlock)
 		}
 	}
 
@@ -759,7 +759,7 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
-	miniTokens.RegisterWire(cdc)
+	minitokens.RegisterWire(cdc)
 	return cdc
 }
 

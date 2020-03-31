@@ -24,6 +24,8 @@ type TradingPairMapper interface {
 	GetTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) (types.TradingPair, error)
 	DeleteTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
+	ListAllBEP2TradingPairs(ctx sdk.Context) []types.TradingPair
+	ListAllMiniTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
 }
@@ -43,6 +45,25 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 }
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
+	baseAsset := pair.BaseAssetSymbol
+	if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
+		return err
+	}
+	quoteAsset := pair.QuoteAssetSymbol
+	if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
+		return err
+	}
+
+	tradeSymbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	key := []byte(tradeSymbol)
+	store := ctx.KVStore(m.key)
+	value := m.encodeTradingPair(pair)
+	store.Set(key, value)
+	ctx.Logger().Info("Added trading pair", "pair", tradeSymbol)
+	return nil
+}
+
+func (m mapper) AddMiniTokenTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
 	if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
 		return err
@@ -110,6 +131,16 @@ func (m mapper) ListAllTradingPairs(ctx sdk.Context) (res []types.TradingPair) {
 	}
 
 	return res
+}
+
+func (m mapper) ListAllBEP2TradingPairs(ctx sdk.Context) []types.TradingPair {
+	//todo "implement me"
+	return nil
+}
+
+func (m mapper) ListAllMiniTradingPairs(ctx sdk.Context) []types.TradingPair {
+	//todo "implement me"
+	return nil
 }
 
 func (m mapper) getRecentPricesSeq(height, pricesStoreEvery, numPricesStored int64) int64 {

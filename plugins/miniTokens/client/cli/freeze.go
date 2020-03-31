@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/plugins/miniTokens/freeze"
+	"github.com/binance-chain/node/plugins/minitokens/freeze"
 )
 
 func freezeMiniTokenCmd(cmdr Commander) *cobra.Command {

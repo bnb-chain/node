@@ -12,7 +12,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
-	miniIssue "github.com/binance-chain/node/plugins/miniTokens/issue"
+	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 )
 
 var transferOnlyModeBlackList = []string{

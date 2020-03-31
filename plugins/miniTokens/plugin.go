@@ -1,4 +1,4 @@
-package miniTokens
+package minitokens
 
 import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -7,7 +7,7 @@ import (
 	app "github.com/binance-chain/node/common/types"
 )
 
-const abciQueryPrefix = "miniTokens"
+const abciQueryPrefix = "minitokens"
 
 // InitPlugin initializes the plugin.
 func InitPlugin(

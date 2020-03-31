@@ -199,7 +199,7 @@ func Test_Match(t *testing.T) {
 	buys, sells := getOrderBook("BTC-000_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
-	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
+	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil, false)
 	buys, sells = getOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
@@ -254,7 +254,7 @@ func Test_Match(t *testing.T) {
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
-	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil)
+	testApp.DexKeeper.MatchAndAllocateAll(ctx, nil, false)
 	buys, sells = getOrderBook("ETH-000_BNB")
 	t.Logf("buys: %v", buys)
 	t.Logf("sells: %v", sells)

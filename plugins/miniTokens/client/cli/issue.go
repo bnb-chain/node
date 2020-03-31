@@ -7,7 +7,7 @@ import (
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/miniTokens/issue"
+	"github.com/binance-chain/node/plugins/minitokens/issue"
 )
 
 const (

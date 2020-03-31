@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"math"
 	"strings"
 	"sync"
@@ -30,9 +31,11 @@ import (
 )
 
 const (
-	numPricesStored  = 2000
-	pricesStoreEvery = 1000
-	minimalNumPrices = 500
+	numPricesStored               = 2000
+	pricesStoreEvery              = 1000
+	minimalNumPrices              = 500
+	defaultMiniBlockMatchInterval = 16
+	defaultActiveMiniSymbolCount  = 8
 )
 
 type FeeHandler func(map[string]*types.Fee)
@@ -52,8 +55,12 @@ type Keeper struct {
 	OrderInfosForPub           OrderInfoForPublish              // for publication usage
 	roundOrders                map[string][]string              // limit to the total tx number in a block
 	roundIOCOrders             map[string][]string
-	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
-	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
+	roundOrdersMini            map[string][]string // round orders for mini token which could be kept for several blocks
+	roundIOCOrdersMini         map[string][]string
+	matchedMiniSymbols         []string          //mini token pairs matched in this round
+	miniSymbolsHash            map[string]uint32 //mini token pairs -> hash value for Round-Robin
+	RoundOrderFees             FeeHolder         // order (and trade) related fee of this round, str of addr bytes -> fee
+	poolSize                   uint              // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
@@ -81,6 +88,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
+		roundOrdersMini:            make(map[string][]string, 256),
+		roundIOCOrdersMini:         make(map[string][]string, 256),
+		matchedMiniSymbols:         make([]string, 0, 256),
+		miniSymbolsHash:            make(map[string]uint32, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
@@ -101,6 +112,12 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
+	if sdk.IsUpgrade(upgrade.BEP69) {
+		baseSymbol := strings.ToUpper(pair.BaseAssetSymbol)
+		if types.IsMiniTokenSymbol(baseSymbol) {
+			kp.miniSymbolsHash[symbol] = crc32.ChecksumIEEE([]byte(symbol))
+		}
+	}
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
@@ -208,6 +225,17 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
+
+	if (!sdk.IsUpgrade(upgrade.BEP69)) || !dexUtils.IsMiniTokenTradingPair(symbol) {
+		kp.addBEP2RoundOrders(symbol, info)
+	} else {
+		kp.addMiniRoundOrders(symbol, info)
+	}
+	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
+	return nil
+}
+
+func (kp *Keeper) addBEP2RoundOrders(symbol string, info OrderInfo) {
 	if ids, ok := kp.roundOrders[symbol]; ok {
 		kp.roundOrders[symbol] = append(ids, info.Id)
 	} else {
@@ -217,8 +245,18 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 	if info.TimeInForce == TimeInForce.IOC {
 		kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], info.Id)
 	}
-	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
-	return nil
+}
+
+func (kp *Keeper) addMiniRoundOrders(symbol string, info OrderInfo) {
+	if ids, ok := kp.roundOrdersMini[symbol]; ok {
+		kp.roundOrdersMini[symbol] = append(ids, info.Id)
+	} else {
+		newIds := make([]string, 0, 16)
+		kp.roundOrdersMini[symbol] = append(newIds, info.Id)
+	}
+	if info.TimeInForce == TimeInForce.IOC {
+		kp.roundIOCOrdersMini[symbol] = append(kp.roundIOCOrdersMini[symbol], info.Id)
+	}
 }
 
 func orderNotFound(symbol, id string) error {
@@ -339,7 +377,11 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		}
 		return // no need to handle IOC
 	}
-	iocIDs := kp.roundIOCOrders[symbol]
+	var iocIDs []string
+	iocIDs = kp.roundIOCOrders[symbol]
+	if sdk.IsUpgrade(upgrade.BEP69) && len(iocIDs) == 0 {
+		iocIDs = kp.roundIOCOrdersMini[symbol]
+	}
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			delete(orders, id)
@@ -402,7 +444,7 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 }
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64, matchAllMiniSymbols bool) ([]chan Transfer) {
 	size := len(kp.roundOrders)
 	// size is the number of pairs that have new orders, i.e. it should call match()
 	if size == 0 {
@@ -412,10 +454,29 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
+
+	if sdk.IsUpgrade(upgrade.BEP69) {
+		if matchAllMiniSymbols {
+			for symbol := range kp.roundOrdersMini {
+				kp.matchedMiniSymbols = append(kp.matchedMiniSymbols, symbol)
+			}
+		} else {
+			kp.selectMiniSymbolsToMatch(height, func(miniSymbols map[string]struct{}) {
+				for symbol := range miniSymbols {
+					kp.matchedMiniSymbols = append(kp.matchedMiniSymbols, symbol)
+				}
+			})
+		}
+	}
 	if distributeTrade {
 		ordNum := 0
 		for _, perSymbol := range kp.roundOrders {
 			ordNum += len(perSymbol)
+		}
+		if sdk.IsUpgrade(upgrade.BEP69) {
+			for _, symbol := range kp.matchedMiniSymbols {
+				ordNum += len(kp.roundOrdersMini[symbol])
+			}
 		}
 		for i := range tradeOuts {
 			//assume every new order would have 2 trades and generate 4 transfer
@@ -427,6 +488,11 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	producer := func() {
 		for symbol := range kp.roundOrders {
 			symbolCh <- symbol
+		}
+		if sdk.IsUpgrade(upgrade.BEP69) {
+			for _, symbol := range kp.matchedMiniSymbols {
+				symbolCh <- symbol
+			}
 		}
 		close(symbolCh)
 	}
@@ -578,6 +644,11 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 func (kp *Keeper) clearAfterMatch() {
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
+	for _, symbol := range kp.matchedMiniSymbols {
+		delete(kp.roundOrdersMini, symbol)
+		delete(kp.roundIOCOrdersMini, symbol)
+	}
+	kp.matchedMiniSymbols = make([]string, 0, 256)
 }
 
 func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
@@ -789,7 +860,7 @@ func (kp *Keeper) allocateAndCalcFee(
 
 // MatchAll will only concurrently match but do not allocate into accounts
 func (kp *Keeper) MatchAll(height, timestamp int64) {
-	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp) //only match
+	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp, false) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
@@ -799,13 +870,10 @@ func (kp *Keeper) MatchAll(height, timestamp int64) {
 // MatchAndAllocateAll() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
 // Return whether match has been done in this height
-func (kp *Keeper) MatchAndAllocateAll(
-	ctx sdk.Context,
-	postAlloTransHandler TransferHandler,
-) {
+func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllMiniSymbols bool) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp, matchAllMiniSymbols)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
@@ -971,6 +1039,9 @@ func (kp *Keeper) ClearOrders() {
 	kp.allOrders = make(map[string]map[string]*OrderInfo, 256)
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
+	kp.roundOrdersMini = make(map[string][]string, 256)
+	kp.roundIOCOrdersMini = make(map[string][]string, 256)
+	kp.matchedMiniSymbols = make([]string, 0, 256)
 	kp.OrderInfosForPub = make(OrderInfoForPublish)
 }
 
@@ -1104,4 +1175,24 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	return nil
+}
+
+func (kp *Keeper) selectMiniSymbolsToMatch(height int64, postSelect func(map[string]struct{})) {
+	symbolsToMatch := make(map[string]struct{}, 256)
+	selectActiveMiniSymbols(&symbolsToMatch, &kp.roundOrdersMini, defaultActiveMiniSymbolCount)
+	selectMiniSymbolsRoundRobin(&symbolsToMatch, &kp.miniSymbolsHash, height)
+	postSelect(symbolsToMatch)
+}
+
+func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, topK int) {
+	//TODO use quick select to select top k symbols
+}
+
+func selectMiniSymbolsRoundRobin(symbolsToMatch *map[string]struct{}, miniSymbolsHash *map[string]uint32, height int64) {
+	m := height % defaultMiniBlockMatchInterval
+	for symbol, symbolHash := range *miniSymbolsHash {
+		if int64(symbolHash%defaultMiniBlockMatchInterval) == m {
+			(*symbolsToMatch)[symbol] = struct{}{}
+		}
+	}
 }

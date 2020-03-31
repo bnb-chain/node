@@ -7,7 +7,7 @@ const (
 	AccountStoreName    = "acc"
 	ValAddrStoreName    = "val"
 	TokenStoreName      = "tokens"
-	MiniTokenStoreName  = "miniTokens"
+	MiniTokenStoreName  = "minitokens"
 	DexStoreName        = "dex"
 	PairStoreName       = "pairs"
 	StakeStoreName      = "stake"

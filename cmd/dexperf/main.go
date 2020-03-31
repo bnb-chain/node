@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/binance-chain/node/plugins/miniTokens"
+	"github.com/binance-chain/node/plugins/minitokens"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -545,7 +545,7 @@ func MakeCodec() *wire.Codec {
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
-	miniTokens.RegisterWire(cdc)
+	minitokens.RegisterWire(cdc)
 	return cdc
 }
 

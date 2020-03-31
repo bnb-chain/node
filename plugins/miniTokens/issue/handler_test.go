@@ -15,7 +15,7 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/miniTokens/store"
+	"github.com/binance-chain/node/plugins/minitokens/store"
 	"github.com/binance-chain/node/wire"
 )
 
