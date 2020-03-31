@@ -12,15 +12,10 @@ const (
 	BindChannel        = "bind"
 	TransferOutChannel = "transferOut"
 	RefundChannel      = "refund"
+	StakingChannel     = "staking"
 
 	BindChannelID        sdk.ChannelID = 1
 	TransferOutChannelID sdk.ChannelID = 2
 	RefundChannelID      sdk.ChannelID = 3
+	StakingChannelID     sdk.ChannelID = 4
 )
-
-func IsDestChainRegistered(chainName string) bool {
-	if chainName == BSCChain {
-		return true
-	}
-	return false
-}

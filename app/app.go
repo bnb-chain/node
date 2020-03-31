@@ -344,7 +344,7 @@ func (app *BinanceChain) initCrossChain() {
 	// set up cross chainID for BSC
 	err := ibc.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
 	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
+		panic(fmt.Sprintf("register destination chainID error, chainName=%s, err=%s", types.BSCChain, err.Error()))
 	}
 	// register cross chain channel
 	err = ibc.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
@@ -356,6 +356,10 @@ func (app *BinanceChain) initCrossChain() {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
 	}
 	err = ibc.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
+	if err != nil {
+		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
+	}
+	err = ibc.RegisterCrossChainChannel(types.StakingChannel, types.StakingChannelID)
 	if err != nil {
 		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
 	}
