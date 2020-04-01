@@ -123,4 +123,9 @@ type ExpireHolder struct {
 	Fee     string
 }
 
+type SymbolWithOrderNumber struct {
+	symbol         string
+	numberOfOrders int
+}
+
 type FeeHolder map[string]*types.Fee

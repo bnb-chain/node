@@ -1184,8 +1184,18 @@ func (kp *Keeper) selectMiniSymbolsToMatch(height int64, postSelect func(map[str
 	postSelect(symbolsToMatch)
 }
 
-func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, topK int) {
-	//TODO use quick select to select top k symbols
+func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, k int) {
+	//use quick select to select top k symbols
+	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(*roundOrdersMini))
+	i:=0
+	for symbol, orders := range *roundOrdersMini {
+		symbolOrderNumsSlice[i] = &SymbolWithOrderNumber{symbol,len(orders)}
+	}
+	topKSymbolOrderNums := findTopKLargest(symbolOrderNumsSlice, k)
+
+	for _, selected := range topKSymbolOrderNums{
+		(*symbolsToMatch)[selected.symbol] = struct{}{}
+	}
 }
 
 func selectMiniSymbolsRoundRobin(symbolsToMatch *map[string]struct{}, miniSymbolsHash *map[string]uint32, height int64) {
