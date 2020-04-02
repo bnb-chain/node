@@ -32,7 +32,9 @@ func (me *MatchEng) Match(height int64) bool {
 		me.logger.Error("dropRedundantQty failed", "error", err)
 		return false
 	}
-	takerSide, err := me.determineTakerSide(height, index)
+	//If order height >= the last Match height, then it's maker.
+	// Block Height cannot be used here since mini-token is not matched in every block
+	takerSide, err := me.determineTakerSide(me.LastMatchHeight, index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
@@ -115,10 +117,10 @@ func dropRedundantQty(orders []OrderPart, toDropQty, lotSize int64) error {
 	return nil
 }
 
-func findTakerStartIdx(height int64, orders []OrderPart) (idx int, makerTotal int64) {
+func findTakerStartIdx(lastMatchHeight int64, orders []OrderPart) (idx int, makerTotal int64) {
 	i, k := 0, len(orders)
 	for ; i < k; i++ {
-		if orders[i].Time >= height {
+		if orders[i].Time >= lastMatchHeight {
 			return i, makerTotal
 		} else {
 			makerTotal += orders[i].nxtTrade
@@ -127,11 +129,11 @@ func findTakerStartIdx(height int64, orders []OrderPart) (idx int, makerTotal in
 	return i, makerTotal
 }
 
-func (me *MatchEng) determineTakerSide(height int64, tradePriceIdx int) (int8, error) {
+func (me *MatchEng) determineTakerSide(lastMatchHeight int64, tradePriceIdx int) (int8, error) {
 	makerSide := UNKNOWN
 	for i := 0; i <= tradePriceIdx; i++ {
 		l := &me.overLappedLevel[i]
-		l.BuyTakerStartIdx, l.BuyMakerTotal = findTakerStartIdx(height, l.BuyOrders)
+		l.BuyTakerStartIdx, l.BuyMakerTotal = findTakerStartIdx(lastMatchHeight, l.BuyOrders)
 		if l.HasBuyMaker() {
 			makerSide = BUYSIDE
 		}
@@ -139,7 +141,7 @@ func (me *MatchEng) determineTakerSide(height int64, tradePriceIdx int) (int8, e
 
 	for i := len(me.overLappedLevel) - 1; i >= tradePriceIdx; i-- {
 		l := &me.overLappedLevel[i]
-		l.SellTakerStartIdx, l.SellMakerTotal = findTakerStartIdx(height, l.SellOrders)
+		l.SellTakerStartIdx, l.SellMakerTotal = findTakerStartIdx(lastMatchHeight, l.SellOrders)
 		if l.HasSellMaker() {
 			if makerSide == BUYSIDE {
 				return UNKNOWN, errors.New("both buy side and sell side have maker orders.")
