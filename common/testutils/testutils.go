@@ -13,20 +13,27 @@ import (
 )
 
 func SetupMultiStoreForUnitTest() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
-	_, ms, capKey, capKey2 := SetupMultiStoreWithDBForUnitTest()
+	_, ms, capKey, capKey2, _ := SetupMultiStoreWithDBForUnitTest()
 	return ms, capKey, capKey2
 }
 
-func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
+func SetupThreeMultiStoreForUnitTest() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
+	_, ms, capKey, capKey2, capKey3 := SetupMultiStoreWithDBForUnitTest()
+	return ms, capKey, capKey2, capKey3
+}
+
+func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 	db := dbm.NewMemDB()
 	capKey := sdk.NewKVStoreKey("capkey")
 	capKey2 := sdk.NewKVStoreKey("capkey2")
+	capKey3 := sdk.NewKVStoreKey("capkey3")
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(capKey, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(capKey2, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(capKey3, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, db)
 	ms.LoadLatestVersion()
-	return db, ms, capKey, capKey2
+	return db, ms, capKey, capKey2, capKey3
 }
 
 // coins to more than cover the fee

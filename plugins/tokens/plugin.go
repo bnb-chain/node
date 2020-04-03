@@ -12,16 +12,17 @@ import (
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
+	miniToken "github.com/binance-chain/node/plugins/minitokens"
 )
 
 const abciQueryPrefix = "tokens"
 
 // InitPlugin initializes the plugin.
 func InitPlugin(
-	appp app.ChainApp, mapper Mapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
+	appp app.ChainApp, mapper Mapper, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
 	timeLockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
 	// add msg handlers
-	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper, swapKeeper) {
+	for route, handler := range Routes(mapper, miniTokenMapper, accKeeper, coinKeeper, timeLockKeeper, swapKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

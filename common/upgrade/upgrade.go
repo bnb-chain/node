@@ -8,7 +8,7 @@ var Mgr = sdk.UpgradeMgr
 // bugfix: fix
 // improvement: (maybe bep ?)
 const (
-	BEP69  = "BEP69" //FIXME placeholder
+	BEP8 = "BEP8" //FIXME placeholder
 	// Galileo Upgrade
 	BEP6  = "BEP6"  // https://github.com/binance-chain/BEPs/pull/6
 	BEP9  = "BEP9"  // https://github.com/binance-chain/BEPs/pull/9

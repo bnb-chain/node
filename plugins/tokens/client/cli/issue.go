@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"strings"
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
@@ -83,15 +84,22 @@ func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateMapperTokenSymbol(symbol)
-	if err != nil {
-		return err
-	}
-
 	amount := viper.GetInt64(flagAmount)
-	err = checkSupplyAmount(amount)
-	if err != nil {
-		return err
+
+	if types.IsMiniTokenSymbol(strings.ToUpper(symbol)) {
+		err = checkMiniTokenSupplyAmount(amount)
+		if err != nil {
+			return err
+		}
+	}else {
+		err = types.ValidateMapperTokenSymbol(symbol)
+		if err != nil {
+			return err
+		}
+		err = checkSupplyAmount(amount)
+		if err != nil {
+			return err
+		}
 	}
 
 	msg := issue.NewMintMsg(from, symbol, amount)
@@ -102,5 +110,12 @@ func checkSupplyAmount(amount int64) error {
 	if amount <= 0 || amount > types.TokenMaxTotalSupply {
 		return errors.New("invalid supply amount")
 	}
+	return nil
+}
+func checkMiniTokenSupplyAmount(amount int64) error {
+	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
+		return errors.New("invalid supply amount")
+	}
+
 	return nil
 }

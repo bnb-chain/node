@@ -36,19 +36,6 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func mintMiniTokenCmd(cmdr Commander) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "mint",
-		Short: "mint mini tokens for an existing token",
-		RunE:  cmdr.mintToken,
-	}
-
-	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the token")
-	cmd.Flags().Int64P(flagAmount, "n", 0, "amount to mint")
-	cmd.MarkFlagRequired(flagAmount)
-	return cmd
-}
-
 func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 	from, err := cliCtx.GetFromAddress()
@@ -92,29 +79,6 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
-func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
-	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
-	from, err := cliCtx.GetFromAddress()
-	if err != nil {
-		return err
-	}
-
-	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateMapperMiniTokenSymbol(symbol)
-	if err != nil {
-		return err
-	}
-
-	amount := viper.GetInt64(flagAmount)
-	err = checkSupplyAmount(amount, 0)
-	if err != nil {
-		return err
-	}
-
-	msg := issue.NewMintMsg(from, symbol, amount)
-	return client.SendOrPrintTx(cliCtx, txBldr, msg)
-}
-
 func checkMaxSupplyAmount(amount int64) error {
 	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
 		return errors.New("invalid max supply amount")
@@ -126,7 +90,7 @@ func checkSupplyAmount(amount, maxAmount int64) error {
 	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
 		return errors.New("invalid supply amount")
 	}
-	if maxAmount > 0 && amount > maxAmount {
+	if amount > maxAmount {
 		return errors.New("supply amount cannot exceed max supply amount")
 	}
 	return nil

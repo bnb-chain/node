@@ -1,4 +1,4 @@
-package list
+package listmini
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 )
 
-const ListMiniRoute = "dexListMini"
+const Route = "dexListMini"
 
 var _ sdk.Msg = ListMiniMsg{}
 
@@ -29,8 +29,8 @@ func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string
 	}
 }
 
-func (msg ListMiniMsg) Route() string                { return ListMiniRoute }
-func (msg ListMiniMsg) Type() string                 { return ListMiniRoute }
+func (msg ListMiniMsg) Route() string                { return Route }
+func (msg ListMiniMsg) Type() string                 { return Route }
 func (msg ListMiniMsg) String() string               { return fmt.Sprintf("MsgListMini{%#v}", msg) }
 func (msg ListMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 

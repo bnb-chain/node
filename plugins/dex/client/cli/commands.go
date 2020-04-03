@@ -22,6 +22,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	dexCmd.AddCommand(
 		client.PostCommands(
 			listTradingPairCmd(cdc),
+			listMiniTradingPairCmd(cdc),
 			client.LineBreak,
 			newOrderCmd(cdc),
 			cancelOrderCmd(cdc))...)

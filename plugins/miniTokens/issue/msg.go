@@ -13,7 +13,6 @@ const (
 	Route           = "miniTokensIssue"
 	IssueMsgType    = "miniIssueMsg"
 	AdvIssueMsgType = "advMiniIssueMsg" //For max total supply in range 2
-	MintMsgType     = "miniMintMsg"
 
 	maxTokenNameLength = 32
 )
@@ -58,15 +57,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 	}
 
 	if len(msg.TokenURI) > types.MaxTokenURILength {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not exceed %v characters", types.MaxTokenURILength))
-	}
-
-	if msg.MaxTotalSupply%types.MiniTokenMinTotalSupply != 0 {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply should be a multiple of %v", types.MiniTokenMinTotalSupply))
-	}
-
-	if msg.TotalSupply%types.MiniTokenMinTotalSupply != 0 {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be a multiple of %v", types.MiniTokenMinTotalSupply))
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token seturi should not exceed %v characters", types.MaxTokenURILength))
 	}
 
 	if msg.MaxTotalSupply < types.MiniTokenMinTotalSupply || msg.MaxTotalSupply > types.MiniTokenMaxTotalSupplyUpperBound {
@@ -99,60 +90,5 @@ func (msg IssueMsg) GetSignBytes() []byte {
 	return b
 }
 func (msg IssueMsg) GetInvolvedAddresses() []sdk.AccAddress {
-	return msg.GetSigners()
-}
-
-type MintMsg struct {
-	From   sdk.AccAddress `json:"from"`
-	Symbol string         `json:"symbol"`
-	Amount int64          `json:"amount"`
-}
-
-func NewMintMsg(from sdk.AccAddress, symbol string, amount int64) MintMsg {
-	return MintMsg{
-		From:   from,
-		Symbol: symbol,
-		Amount: amount,
-	}
-}
-
-func (msg MintMsg) ValidateBasic() sdk.Error {
-	if msg.From == nil {
-		return sdk.ErrInvalidAddress("sender address cannot be empty")
-	}
-
-	if err := types.ValidateMapperMiniTokenSymbol(msg.Symbol); err != nil {
-		return sdk.ErrInvalidCoins(err.Error())
-	}
-
-	if msg.Symbol == types.NativeTokenSymbol {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("cannot mint native token"))
-	}
-
-	if msg.Amount%types.MiniTokenMinTotalSupply != 0 {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("amount should be a multiple of %v", types.MiniTokenMinTotalSupply))
-	}
-
-	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
-	if msg.Amount < types.MiniTokenMinTotalSupply || msg.Amount > types.MiniTokenMaxTotalSupplyUpperBound {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("Mint amount should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.MiniTokenMaxTotalSupplyUpperBound))
-	}
-
-	return nil
-}
-
-// Implements MintMsg.
-func (msg MintMsg) Route() string                { return Route }
-func (msg MintMsg) Type() string                 { return MintMsgType }
-func (msg MintMsg) String() string               { return fmt.Sprintf("MintMsg{%#v}", msg) }
-func (msg MintMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
-func (msg MintMsg) GetSignBytes() []byte {
-	b, err := json.Marshal(msg) // XXX: ensure some canonical form
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-func (msg MintMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }

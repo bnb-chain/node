@@ -40,6 +40,10 @@ func (msg BurnMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAdd
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg BurnMsg) ValidateBasic() sdk.Error {
+
+	if types.IsMiniTokenSymbol(msg.Symbol) {
+		return msg.validateMiniTokenBasic()
+	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
 	err := types.ValidateMapperTokenSymbol(msg.Symbol)
 	if err != nil {
@@ -58,4 +62,15 @@ func (msg BurnMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg BurnMsg) validateMiniTokenBasic() sdk.Error {
+	err := types.ValidateMapperMiniTokenSymbol(msg.Symbol)
+	if err != nil {
+		return sdk.ErrInvalidCoins(err.Error())
+	}
+	if msg.Amount <= 0 {
+		return sdk.ErrInsufficientFunds("amount should be more than 0")
+	}
+	return nil
 }

@@ -112,7 +112,7 @@ func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
 
 func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
-	if sdk.IsUpgrade(upgrade.BEP69) {
+	if sdk.IsUpgrade(upgrade.BEP8) {
 		baseSymbol := strings.ToUpper(pair.BaseAssetSymbol)
 		if types.IsMiniTokenSymbol(baseSymbol) {
 			kp.miniSymbolsHash[symbol] = crc32.ChecksumIEEE([]byte(symbol))
@@ -226,7 +226,7 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 
 	kp.allOrders[symbol][info.Id] = &info
 
-	if (!sdk.IsUpgrade(upgrade.BEP69)) || !dexUtils.IsMiniTokenTradingPair(symbol) {
+	if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(symbol) {
 		kp.addBEP2RoundOrders(symbol, info)
 	} else {
 		kp.addMiniRoundOrders(symbol, info)
@@ -379,7 +379,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	}
 	var iocIDs []string
 	iocIDs = kp.roundIOCOrders[symbol]
-	if sdk.IsUpgrade(upgrade.BEP69) && len(iocIDs) == 0 {
+	if sdk.IsUpgrade(upgrade.BEP8) && len(iocIDs) == 0 {
 		iocIDs = kp.roundIOCOrdersMini[symbol]
 	}
 	for _, id := range iocIDs {
@@ -455,7 +455,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
 
-	if sdk.IsUpgrade(upgrade.BEP69) {
+	if sdk.IsUpgrade(upgrade.BEP8) {
 		if matchAllMiniSymbols {
 			for symbol := range kp.roundOrdersMini {
 				kp.matchedMiniSymbols = append(kp.matchedMiniSymbols, symbol)
@@ -473,7 +473,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		for _, perSymbol := range kp.roundOrders {
 			ordNum += len(perSymbol)
 		}
-		if sdk.IsUpgrade(upgrade.BEP69) {
+		if sdk.IsUpgrade(upgrade.BEP8) {
 			for _, symbol := range kp.matchedMiniSymbols {
 				ordNum += len(kp.roundOrdersMini[symbol])
 			}
@@ -489,7 +489,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		for symbol := range kp.roundOrders {
 			symbolCh <- symbol
 		}
-		if sdk.IsUpgrade(upgrade.BEP69) {
+		if sdk.IsUpgrade(upgrade.BEP8) {
 			for _, symbol := range kp.matchedMiniSymbols {
 				symbolCh <- symbol
 			}

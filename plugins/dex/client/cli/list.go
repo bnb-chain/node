@@ -11,6 +11,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -71,6 +72,56 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().String(flagQuoteAsset, "", "symbol of the quote currency")
 	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
 	cmd.Flags().Int64(flagProposalId, 0, "list proposal id")
+
+	return cmd
+}
+
+func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list-mini",
+		Short: "",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx, txbldr := client.PrepareCtx(cdc)
+
+			from, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			baseAsset := viper.GetString(flagBaseAsset)
+			err = types.ValidateMapperMiniTokenSymbol(baseAsset)
+			if err != nil {
+				return err
+			}
+
+			quoteAsset := viper.GetString(flagQuoteAsset)
+			if quoteAsset != types.NativeTokenSymbol {
+				// TODO BUSD
+				return errors.New("invalid quote asset")
+			}
+
+			baseAsset = strings.ToUpper(baseAsset)
+			quoteAsset = strings.ToUpper(quoteAsset)
+
+			initPriceStr := viper.GetString(flagInitPrice)
+			initPrice, err := utils.ParsePrice(initPriceStr)
+			if err != nil {
+				return err
+			}
+
+			msg := listmini.NewMsg(from, baseAsset, quoteAsset, initPrice)
+			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringP(flagBaseAsset, "s", "", "symbol of the base asset")
+	cmd.Flags().String(flagQuoteAsset, "", "symbol of the quote currency")
+	cmd.Flags().String(flagInitPrice, "", "init price for this pair")
 
 	return cmd
 }

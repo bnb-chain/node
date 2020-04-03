@@ -13,6 +13,7 @@ import (
 	bnclog "github.com/binance-chain/node/common/log"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
+	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
@@ -21,12 +22,12 @@ const DelayedDaysForDelist = 3
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
+	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
 ) {
 	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper, govKeeper) {
+	for route, handler := range Routes(cdc, keeper, tokenMapper, miniTokenMapper, accMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

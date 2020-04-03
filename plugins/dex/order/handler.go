@@ -78,6 +78,20 @@ func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.
 	return nil
 }
 
+func validatorMiniTokenOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.Account, msg NewOrderMsg) error{
+
+	//coins := acc.GetCoins()
+	//
+	//useAllBalance := coins.AmountOf(symbol) == burnAmount
+	//
+	//if burnAmount <= 0 || (!useAllBalance && (burnAmount < common.MiniTokenMinTotalSupply)) {
+	//	logger.Info(errLogMsg, "reason", "unfreeze amount doesn't reach the min supply")
+	//	return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
+	//		common.MiniTokenMinTotalSupply)).Result()
+	//}
+	return nil
+}
+
 func validateQtyAndLockBalance(ctx sdk.Context, keeper *Keeper, acc common.NamedAccount, msg NewOrderMsg) error {
 	symbol := strings.ToUpper(msg.Symbol)
 	baseAssetSymbol, quoteAssetSymbol := utils.TradingPair2AssetsSafe(symbol)
@@ -143,7 +157,15 @@ func handleNewOrder(
 		// 3. trading pair is verified
 		// 4. price/qty may have odd tick size/lot size, but it can be handled as
 		//    other existing orders.
-		err := validateOrder(ctx, keeper.PairMapper, acc, msg)
+		var err error
+		if utils.IsMiniTokenTradingPair(msg.Symbol) {
+			//FIXMe .. use different keeper
+
+			err = validatorMiniTokenOrder(ctx, keeper.PairMapper, acc, msg)
+
+		} else{
+			err = validateOrder(ctx, keeper.PairMapper, acc, msg)
+		}
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 		}

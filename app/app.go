@@ -258,7 +258,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP69, upgradeConfig.BEP69Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
@@ -334,9 +334,9 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }

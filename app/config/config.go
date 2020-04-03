@@ -47,8 +47,8 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
-# Block height of BEP69 upgrade
-BEP69Height = {{ .UpgradeConfig.BEP69Height }}
+# Block height of BEP8 upgrade
+BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP6 upgrade
 BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 # Block height of BEP9 upgrade
@@ -353,7 +353,7 @@ func defaultBaseConfig() *BaseConfig {
 
 type UpgradeConfig struct {
 
-	BEP69Height  int64 `mapstructure:"BEP69Height"`
+	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
@@ -373,7 +373,7 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP69Height:                1,
+		BEP8Height:                 1,
 		BEP6Height:                 1,
 		BEP9Height:                 1,
 		BEP10Height:                1,

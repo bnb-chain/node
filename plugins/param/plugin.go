@@ -1,6 +1,7 @@
 package param
 
 import (
+	"github.com/binance-chain/node/plugins/dex/listmini"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -13,10 +14,8 @@ import (
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
-	miniBurn "github.com/binance-chain/node/plugins/minitokens/burn"
-	miniFreeze "github.com/binance-chain/node/plugins/minitokens/freeze"
 	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
-	miniURI "github.com/binance-chain/node/plugins/minitokens/uri"
+	miniURI "github.com/binance-chain/node/plugins/minitokens/seturi"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -64,14 +63,12 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
-	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP69, func(ctx sdk.Context) {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
 		miniTokenFeeParams := []param.FeeParam{
 			&param.FixedFeeParams{MsgType: miniIssue.IssueMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniIssue.AdvIssueMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: miniIssue.MintMsg{}.Type(), Fee: MiniMintFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: miniFreeze.FreezeMsg{}.Type(), Fee: MiniFreezeFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: miniBurn.BurnMsg{}.Type(), Fee: MiniBurnFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: listmini.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
 	})
@@ -109,9 +106,6 @@ func init() {
 		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
 		miniIssue.IssueMsgType:            fees.FixedFeeCalculatorGen,
 		miniIssue.AdvIssueMsgType:         fees.FixedFeeCalculatorGen,
-		miniIssue.MintMsgType:             fees.FixedFeeCalculatorGen,
-		miniFreeze.FreezeRoute:            fees.FixedFeeCalculatorGen,
-		miniBurn.BurnRoute:                fees.FixedFeeCalculatorGen,
 		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
 	}
 }

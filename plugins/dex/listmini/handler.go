@@ -1,4 +1,4 @@
-package list
+package listmini
 
 import (
 	"fmt"
@@ -13,15 +13,14 @@ import (
 	"github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(keeper *order.Keeper, miniTokenMapper minitokens.MiniTokenMapper,tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
+func NewHandler(keeper *order.Keeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMiniMsg:
-			return handleList(ctx, keeper, miniTokenMapper, tokenMapper, govKeeper, msg)
+			return handleList(ctx, keeper, miniTokenMapper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -29,13 +28,14 @@ func NewHandler(keeper *order.Keeper, miniTokenMapper minitokens.MiniTokenMapper
 	}
 }
 
-func handleList(ctx sdk.Context, keeper *order.Keeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper,govKeeper gov.Keeper,
+func handleList(ctx sdk.Context, keeper *order.Keeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper,
 	msg ListMiniMsg) sdk.Result {
-	if !sdk.IsUpgrade(upgrade.BEP69) {
+	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("list miniToken is not supported at current height")).Result()
 	}
 
 	if err := keeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+		//TODO use miniTradingPair
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
@@ -57,7 +57,7 @@ func handleList(ctx sdk.Context, keeper *order.Keeper, miniTokenMapper minitoken
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 
-	if common.NativeTokenSymbol != msg.QuoteAssetSymbol {//todo permit BUSD
+	if common.NativeTokenSymbol != msg.QuoteAssetSymbol { //todo permit BUSD
 		return sdk.ErrInvalidCoins("quote token: " + err.Error()).Result()
 	}
 

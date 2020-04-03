@@ -40,6 +40,10 @@ func (msg FreezeMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccA
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg FreezeMsg) ValidateBasic() sdk.Error {
+
+	if types.IsMiniTokenSymbol(msg.Symbol) {
+		return msg.validateMiniTokenBasic()
+	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
 	err := types.ValidateMapperTokenSymbol(msg.Symbol)
 	if err != nil {
@@ -58,6 +62,17 @@ func (msg FreezeMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg FreezeMsg) validateMiniTokenBasic() sdk.Error {
+	err := types.ValidateMapperMiniTokenSymbol(msg.Symbol)
+	if err != nil {
+		return sdk.ErrInvalidCoins(err.Error())
+	}
+	if msg.Amount <= 0 {
+		return sdk.ErrInsufficientFunds("amount should be more than 0")
+	}
+	return nil
 }
 
 var _ sdk.Msg = UnfreezeMsg{}
@@ -82,6 +97,10 @@ func (msg UnfreezeMsg) GetInvolvedAddresses() []sdk.AccAddress { return msg.GetS
 func (msg UnfreezeMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAddress{msg.From} }
 
 func (msg UnfreezeMsg) ValidateBasic() sdk.Error {
+
+	if types.IsMiniTokenSymbol(msg.Symbol) {
+		return msg.validateMiniTokenBasic()
+	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
 	err := types.ValidateMapperTokenSymbol(msg.Symbol)
 	if err != nil {
@@ -100,4 +119,16 @@ func (msg UnfreezeMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
+}
+
+func (msg UnfreezeMsg) validateMiniTokenBasic() sdk.Error {
+	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
+	err := types.ValidateMapperMiniTokenSymbol(msg.Symbol)
+	if err != nil {
+		return sdk.ErrInvalidCoins(err.Error())
+	}
+	if msg.Amount <= 0 {
+		return sdk.ErrInsufficientFunds("amount should be more than 0")
+	}
+	return nil
 }
