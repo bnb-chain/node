@@ -22,7 +22,6 @@ const (
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
-	BSCUpgrade           = "BSCUpgrade"
 )
 
 func UpgradeBEP10(before func(), after func()) {

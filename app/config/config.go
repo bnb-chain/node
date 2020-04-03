@@ -68,7 +68,7 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
-BSCHeight = {{ .UpgradeConfig.BSCHeight }}
+LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -156,8 +156,12 @@ logFilePath = "{{ .LogConfig.LogFilePath }}"
 logBuffSize = {{ .LogConfig.LogBuffSize }}
 
 [cross_chain]
-sourceChainId = {{ .CrossChainConfig.SourceChainId }}
+# IBC chain-id for current chain
+IBCChainId = {{ .CrossChainConfig.IBCChainId }}
+# chain-id for bsc chain
 bscChainId = {{ .CrossChainConfig.BSCChainId }}
+# IBC chain-id for bsc chain
+bscIBCChainId = {{ .CrossChainConfig.BSCIBCChainId }}
 
 `
 
@@ -323,14 +327,18 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 }
 
 type CrossChainConfig struct {
-	SourceChainId uint16 `mapstructure:"sourceChainId"`
-	BSCChainId    uint16 `mapstructure:"bscChainId"`
+	IBCChainId    uint16 `mapstructure:"ibcChainId"`
+
+	BSCChainId    string `mapstructure:"bscChainId"`
+	BSCIBCChainId uint16 `mapstructure:"bscIBCChainId"`
 }
 
 func defaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{
-		SourceChainId: 0,
-		BSCChainId:    0,
+		IBCChainId:    0,
+
+		BSCChainId:    "ibc",
+		BSCIBCChainId: 0,
 	}
 }
 
@@ -385,7 +393,7 @@ type UpgradeConfig struct {
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
-	BSCHeight 				   int64 `mapstructure:"BSCHeight"`
+	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgrade"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -401,7 +409,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
-		BSCHeight:                  math.MaxInt64,
+		LaunchBscUpgradeHeight:     math.MaxInt64,
 	}
 }
 

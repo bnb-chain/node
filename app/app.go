@@ -87,6 +87,7 @@ type BinanceChain struct {
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
+	ibcKeeper      ibc.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -134,11 +135,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, ibc.DefaultCodespace)
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
-		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
+		app.CoinKeeper, app.ibcKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -266,11 +268,12 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BSCUpgrade, upgradeConfig.BSCHeight)
+	upgrade.Mgr.AddUpgradeHeight(sdk.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(sdk.LaunchBscUpgrade, common.IbcStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -338,32 +341,14 @@ func (app *BinanceChain) initPlugins() {
 	account.InitPlugin(app, app.AccountKeeper)
 }
 
-func (app *BinanceChain) initCrossChain() {
-	// set up cross chainID for BBC
-	ibc.SetSourceChainID(sdk.CrossChainID(app.crossChainConfig.SourceChainId))
-	// set up cross chainID for BSC
-	err := ibc.RegisterDestChainID(types.BSCChain, sdk.CrossChainID(app.crossChainConfig.BSCChainId))
+func (app *BinanceChain) initIBCChainID() {
+	// set up IBC chainID for BBC
+	app.ibcKeeper.SetSrcIbcChainID(sdk.IbcChainID(app.crossChainConfig.IBCChainId))
+	// set up IBC chainID for BSC
+	err := app.ibcKeeper.RegisterDestChain(app.crossChainConfig.BSCChainId, sdk.IbcChainID(app.crossChainConfig.BSCIBCChainId))
 	if err != nil {
-		panic(fmt.Sprintf("register destination chainID error, chainName=%s, err=%s", types.BSCChain, err.Error()))
+		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", app.crossChainConfig.BSCChainId, err.Error()))
 	}
-	// register cross chain channel
-	err = ibc.RegisterCrossChainChannel(types.BindChannel, types.BindChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
-	}
-	err = ibc.RegisterCrossChainChannel(types.TransferOutChannel, types.TransferOutChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
-	}
-	err = ibc.RegisterCrossChainChannel(types.RefundChannel, types.RefundChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
-	}
-	err = ibc.RegisterCrossChainChannel(types.StakingChannel, types.StakingChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
-	}
-
 }
 
 func (app *BinanceChain) initGovHooks() {
@@ -429,7 +414,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 					panic(res.Log)
 				}
 			}
-			validators = app.stakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
+			_, validators = app.stakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
 		}
 
 		// sanity check
@@ -588,9 +573,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
+	var stakeTag sdk.Tags
 	if isBreatheBlock || ctx.RouterCallRecord()["stake"] {
 		// some endblockers without fees will execute after publish to make publication run as early as possible.
-		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
+		validatorUpdates, completedUbd, stakeTag = stake.EndBlocker(ctx, app.stakeKeeper)
 		if len(validatorUpdates) != 0 {
 			app.ValAddrCache.ClearCache()
 		}
@@ -614,6 +600,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
+	tags = tags.AppendTags(stakeTag)
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           tags.ToEvents(),
