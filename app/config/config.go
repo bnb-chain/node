@@ -154,6 +154,10 @@ logFileRoot = "{{ .LogConfig.LogFileRoot }}"
 logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
+
+[dex]
+# The suffixed symbol of BUSD
+BUSDSymbol = "{{ .DexConfig.BUSDSymbol }}"
 `
 
 type BinanceChainContext struct {
@@ -180,7 +184,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
-	*GovConfig         `mapstructure:"gov"`
+	*DexConfig         `mapstructure:"dex"`
 }
 
 func DefaultBinanceChainConfig() *BinanceChainConfig {
@@ -191,7 +195,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
-		GovConfig:         defaultGovConfig(),
+		DexConfig:         defaultGovConfig(),
 	}
 }
 
@@ -399,13 +403,13 @@ func defaultQueryConfig() *QueryConfig {
 	}
 }
 
-type GovConfig struct {
-	SupportedListAgainstSymbols []string `mapstructure:"SupportedListAgainstSymbols"`
+type DexConfig struct {
+	BUSDSymbol string `mapstructure:"BUSDSymbol"`
 }
 
-func defaultGovConfig() *GovConfig {
-	return &GovConfig{
-		SupportedListAgainstSymbols: nil,
+func defaultGovConfig() *DexConfig {
+	return &DexConfig{
+		BUSDSymbol: "",
 	}
 }
 

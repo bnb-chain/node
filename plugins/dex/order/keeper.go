@@ -57,7 +57,7 @@ type Keeper struct {
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
-	GovSupportedSymbols        []string
+	BUSDSymbol                 string
 	logger                     tmlog.Logger
 }
 
@@ -67,7 +67,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, symbols []string, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
+	concurrency uint, busdSymbol string, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
 		PairMapper:                 tradingPairMapper,
@@ -84,9 +84,9 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
-		GovSupportedSymbols:        symbols,
+		BUSDSymbol:                 busdSymbol,
 		cdc:                        cdc,
-		FeeManager:                 NewFeeManager(cdc, key, symbols, logger),
+		FeeManager:                 NewFeeManager(cdc, key, busdSymbol, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 	}
@@ -1054,19 +1054,18 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		return errors.New("trading pair exists")
 	}
 
-	if sdk.IsUpgrade(upgrade.BEP_BUSD) {
-		for _, symbol := range kp.GovSupportedSymbols {
-			if baseAsset == symbol || quoteAsset == symbol {
-				if kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, symbol) ||
-					kp.PairMapper.Exists(ctx, symbol, types.NativeTokenSymbol) {
+	if baseAsset != types.NativeTokenSymbol &&
+		quoteAsset != types.NativeTokenSymbol {
+
+		// support busd pair listing
+		if sdk.IsUpgrade(upgrade.BEP_BUSD) {
+			if baseAsset == kp.BUSDSymbol || quoteAsset == kp.BUSDSymbol {
+				if kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, kp.BUSDSymbol) ||
+					kp.PairMapper.Exists(ctx, kp.BUSDSymbol, types.NativeTokenSymbol) {
 					return nil
 				}
 			}
 		}
-	}
-
-	if baseAsset != types.NativeTokenSymbol &&
-		quoteAsset != types.NativeTokenSymbol {
 
 		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
 			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {

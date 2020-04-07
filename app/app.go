@@ -95,7 +95,7 @@ type BinanceChain struct {
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
 
-	govConfig *config.GovConfig
+	dexConfig *config.DexConfig
 
 	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
 	// check nil-ness to know whether metrics collection is turn on
@@ -121,7 +121,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:      ServerContext.UpgradeConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
-		govConfig:          ServerContext.GovConfig,
+		dexConfig:          ServerContext.DexConfig,
 	}
 	// set upgrade config
 	SetUpgradeConfig(app.upgradeConfig)
@@ -307,7 +307,7 @@ func (app *BinanceChain) initRunningMode() {
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency,
-		app.govConfig.SupportedListAgainstSymbols, app.Codec,
+		app.dexConfig.BUSDSymbol, app.Codec,
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 
