@@ -39,8 +39,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -138,8 +136,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.TokenMapper = tokens.NewMapper(cdc, common.TokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
-	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, ibc.DefaultCodespace)
+	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
@@ -247,10 +244,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	// remaining plugin init
-	app.initDex(tradingPairMapper)
-	app.initGovHooks()
 	app.initPlugins()
-	app.initParams()
+
 	if ServerContext.Config.StateSyncReactor {
 		lastBreatheBlockHeight := app.getLastBreatheBlockHeight()
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
@@ -272,7 +267,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
-	upgrade.Mgr.AddUpgradeHeight(sdk.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
@@ -281,7 +276,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(sdk.LaunchBscUpgrade, common.IbcStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -289,8 +284,6 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		timelock.TimeRelockMsg{}.Type(),
 		timelock.TimeUnlockMsg{}.Type(),
 	)
-
-	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP12, account.SetAccountFlagsMsg{}.Type())
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP3,
 		swap.HTLTMsg{}.Type(),
@@ -298,12 +291,12 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		swap.ClaimHTLTMsg{}.Type(),
 		swap.RefundHTLTMsg{}.Type(),
 	)
-	// register msg types of upgrade
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
-		issue.IssueMiniMsg{}.Type(),
-		issue.IssueTinyMsg{}.Type(),
-		seturi.SetURIMsg{}.Type(),
-		dextypes.ListMiniMsg{}.Type(),
+	upgrade.Mgr.RegisterMsgTypes(upgrade.LaunchBscUpgrade,
+		stake.MsgCreateSideChainValidator{}.Type(),
+		stake.MsgEditSideChainValidator{}.Type(),
+		stake.MsgSideChainDelegate{}.Type(),
+		stake.MsgSideChainRedelegate{}.Type(),
+		stake.MsgSideChainUndelegate{}.Type(),
 	)
 }
 
@@ -322,9 +315,11 @@ func (app *BinanceChain) initRunningMode() {
 	}
 }
 
-func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
-
-	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper, app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec, app.publicationConfig.ShouldPublishAny())
+func (app *BinanceChain) initDex() {
+	pairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
 
@@ -351,19 +346,41 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
+	app.initIbc()
+	app.initDex()
+	app.initGovHooks()
+	app.initStaking()
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
+	app.initParams()
 }
 
-func (app *BinanceChain) initIBCChainID() {
+func (app *BinanceChain) initStaking() {
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		bscStorePrefix := []byte{0x99}
+		app.stakeKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
+		newCtx := ctx.WithSideChainKeyPrefix(bscStorePrefix)
+		app.stakeKeeper.SetParams(newCtx, stake.Params{
+			UnbondingTime: 60 * 60 * 24 * time.Second, // 1 day
+			MaxValidators: 21,
+			BondDenom:     types.NativeTokenSymbol,
+		})
+		app.stakeKeeper.SetPool(newCtx, stake.Pool{
+			// TODO: optimize these parameters
+			LooseTokens: sdk.NewDec(5e15),
+		})
+	})
+}
+
+func (app *BinanceChain) initIbc() {
 	// set up IBC chainID for BBC
-	app.ibcKeeper.SetSrcIbcChainID(sdk.IbcChainID(app.crossChainConfig.IBCChainId))
+	app.ibcKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
 	// set up IBC chainID for BSC
-	err := app.ibcKeeper.RegisterDestChain(app.crossChainConfig.BSCChainId, sdk.IbcChainID(app.crossChainConfig.BSCIBCChainId))
+	err := app.ibcKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
 	if err != nil {
-		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", app.crossChainConfig.BSCChainId, err.Error()))
+		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", ServerContext.BscChainId, err.Error()))
 	}
 }
 
@@ -566,12 +583,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.Logger.Info("Start Breathe Block Handling",
 			"height", height, "lastBlockTime", lastBlockTime, "newBlockTime", blockTime)
 		app.takeSnapshotHeight = height
-		icoDone := ico.EndBlockAsync(ctx)
+		fmt.Println(ctx.BlockHeight())
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
-		// other end blockers
-		<-icoDone
+
 	} else {
 		app.Logger.Debug("normal block", "height", height)
 	}
@@ -582,20 +598,20 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
-
 	if app.publicationConfig.PublishOrderUpdates {
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
-	var stakeTag sdk.Tags
-	if isBreatheBlock || ctx.RouterCallRecord()["stake"] {
-		// some endblockers without fees will execute after publish to make publication run as early as possible.
-		validatorUpdates, completedUbd, stakeTag = stake.EndBlocker(ctx, app.stakeKeeper)
-		if len(validatorUpdates) != 0 {
-			app.ValAddrCache.ClearCache()
-		}
+	var stakingTags sdk.Tags
+	if isBreatheBlock {
+		validatorUpdates, completedUbd, stakingTags = stake.EndBreatheBlock(ctx, app.stakeKeeper)
+	} else if ctx.RouterCallRecord()["stake"] {
+		validatorUpdates, completedUbd, stakingTags = stake.EndBlocker(ctx, app.stakeKeeper)
+	}
+	if len(validatorUpdates) != 0 {
+		app.ValAddrCache.ClearCache()
 	}
 
 	if app.publicationConfig.ShouldPublishAny() &&
@@ -616,7 +632,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
-	tags = tags.AppendTags(stakeTag)
+	tags = tags.AppendTags(stakingTags)
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           tags.ToEvents(),

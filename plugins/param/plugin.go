@@ -61,14 +61,15 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
-	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
-		miniTokenFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: TinyIssueFee, FeeFor: types.FeeForAll},
-			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForAll},
-			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: dextypes.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForAll},
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
+		stakingFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: stake.MsgCreateSideChainValidator{}.Type(), Fee: CreateSideChainValidatorFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgEditSideChainValidator{}.Type(), Fee: EditSideChainValidatorFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainDelegate{}.Type(), Fee: SideChainDelegateFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainRedelegate{}.Type(), Fee: SideChainRedelegateFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainUndelegate{}.Type(), Fee: SideChainUndelegateFee, FeeFor: types.FeeForProposer},
 		}
-		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
+		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
 }
 
@@ -81,30 +82,31 @@ func init() {
 	// CalculatorsGen is defined in a common package which can't import app package.
 	// Reasonable to init here, since fee param drive the calculator.
 	fees.CalculatorsGen = map[string]fees.FeeCalculatorGenerator{
-		gov.MsgSubmitProposal{}.Type():    fees.FixedFeeCalculatorGen,
-		gov.MsgDeposit{}.Type():           fees.FixedFeeCalculatorGen,
-		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
-		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		stake.MsgRemoveValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		dextypes.ListMsg{}.Type():         fees.FixedFeeCalculatorGen,
-		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
-		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
-		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
-		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
-		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
-		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
-		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
-		swap.HTLT:                         fees.FixedFeeCalculatorGen,
-		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
-		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
-		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
-		issue.IssueTinyMsgType:            fees.FixedFeeCalculatorGen,
-		issue.IssueMiniMsgType:            fees.FixedFeeCalculatorGen,
-		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
-		dextypes.ListMiniMsg{}.Type():     fees.FixedFeeCalculatorGen,
+		gov.MsgSubmitProposal{}.Type():             fees.FixedFeeCalculatorGen,
+		gov.MsgDeposit{}.Type():                    fees.FixedFeeCalculatorGen,
+		gov.MsgVote{}.Type():                       fees.FixedFeeCalculatorGen,
+		stake.MsgCreateValidator{}.Type():          fees.FixedFeeCalculatorGen,
+		stake.MsgRemoveValidator{}.Type():          fees.FixedFeeCalculatorGen,
+		stake.MsgCreateSideChainValidator{}.Type(): fees.FixedFeeCalculatorGen,
+		stake.MsgEditSideChainValidator{}.Type():   fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainDelegate{}.Type():        fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainRedelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainUndelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		list.Route:                                 fees.FixedFeeCalculatorGen,
+		order.RouteNewOrder:                        fees.FixedFeeCalculatorGen,
+		order.RouteCancelOrder:                     fees.FixedFeeCalculatorGen,
+		issue.IssueMsgType:                         fees.FixedFeeCalculatorGen,
+		issue.MintMsgType:                          fees.FixedFeeCalculatorGen,
+		burn.BurnRoute:                             fees.FixedFeeCalculatorGen,
+		account.SetAccountFlagsMsgType:             fees.FixedFeeCalculatorGen,
+		freeze.FreezeRoute:                         fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():              fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type():            fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type():            fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():                      tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                                  fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                           fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                             fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                            fees.FixedFeeCalculatorGen,
 	}
 }

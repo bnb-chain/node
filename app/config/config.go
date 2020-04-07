@@ -157,11 +157,11 @@ logBuffSize = {{ .LogConfig.LogBuffSize }}
 
 [cross_chain]
 # IBC chain-id for current chain
-IBCChainId = {{ .CrossChainConfig.IBCChainId }}
+ibcChainId = {{ .CrossChainConfig.IbcChainId }}
 # chain-id for bsc chain
-bscChainId = {{ .CrossChainConfig.BSCChainId }}
+bscChainId = "{{ .CrossChainConfig.BscChainId }}"
 # IBC chain-id for bsc chain
-bscIBCChainId = {{ .CrossChainConfig.BSCIBCChainId }}
+bscIbcChainId = {{ .CrossChainConfig.BscIbcChainId }}
 
 `
 
@@ -327,18 +327,18 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 }
 
 type CrossChainConfig struct {
-	IBCChainId    uint16 `mapstructure:"ibcChainId"`
+	IbcChainId uint16 `mapstructure:"ibcChainId"`
 
-	BSCChainId    string `mapstructure:"bscChainId"`
-	BSCIBCChainId uint16 `mapstructure:"bscIBCChainId"`
+	BscChainId    string `mapstructure:"bscChainId"`
+	BscIbcChainId uint16 `mapstructure:"bscIBCChainId"`
 }
 
 func defaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{
-		IBCChainId:    0,
+		IbcChainId: 0,
 
-		BSCChainId:    "ibc",
-		BSCIBCChainId: 0,
+		BscChainId:    "bsc",
+		BscIbcChainId: 0,
 	}
 }
 
@@ -389,13 +389,13 @@ type UpgradeConfig struct {
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
 	BEP3Height int64 `mapstructure:"BEP3Height"`
-
-	// TODO: add upgrade name
+	// Heisenberg Upgrade
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
-	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgrade"`
+	// TODO: add upgrade name
+	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgradeHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -407,10 +407,10 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: math.MaxInt64,
-		LotSizeUpgradeHeight:       math.MaxInt64,
-		ListingRuleUpgradeHeight:   math.MaxInt64,
-		FixZeroBalanceHeight:       math.MaxInt64,
+		FixSignBytesOverflowHeight: 1,
+		LotSizeUpgradeHeight:       1,
+		ListingRuleUpgradeHeight:   1,
+		FixZeroBalanceHeight:       1,
 		LaunchBscUpgradeHeight:     math.MaxInt64,
 	}
 }
