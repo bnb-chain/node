@@ -57,6 +57,12 @@ const (
 	FeeRateNative      = 400
 	IOCExpireFee       = 25e3
 	IOCExpireFeeNative = 5e3
+
+	// cross chain
+	CrossBindFee             = 1e6
+	CrossTransferOutFee      = 1e6
+	CrossTransferOutRelayFee = 1e6
+	CrossBindRelayFee        = 1e6
 )
 
 var DefaultGenesisState = param.GenesisState{

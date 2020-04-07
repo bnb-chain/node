@@ -14,6 +14,8 @@ const (
 	GovStoreName        = "gov"
 	TimeLockStoreName   = "time_lock"
 	AtomicSwapStoreName = "atomic_swap"
+	BridgeStoreName     = "bridge"
+	OracleStoreName     = "oracle"
 	IbcStoreName        = "ibc"
 
 	StakeTransientStoreName  = "transient_stake"
@@ -33,23 +35,29 @@ var (
 	GovStoreKey        = sdk.NewKVStoreKey(GovStoreName)
 	TimeLockStoreKey   = sdk.NewKVStoreKey(TimeLockStoreName)
 	AtomicSwapStoreKey = sdk.NewKVStoreKey(AtomicSwapStoreName)
+	BridgeStoreKey     = sdk.NewKVStoreKey(BridgeStoreName)
+	OracleStoreKey     = sdk.NewKVStoreKey(OracleStoreName)
 	IbcStoreKey        = sdk.NewKVStoreKey(IbcStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
 
 	StoreKeyNameMap = map[string]sdk.StoreKey{
-		MainStoreName:            MainStoreKey,
-		AccountStoreName:         AccountStoreKey,
-		ValAddrStoreName:         ValAddrStoreKey,
-		TokenStoreName:           TokenStoreKey,
-		DexStoreName:             DexStoreKey,
-		PairStoreName:            PairStoreKey,
-		StakeStoreName:           StakeStoreKey,
-		ParamsStoreName:          ParamsStoreKey,
-		GovStoreName:             GovStoreKey,
-		TimeLockStoreName:        TimeLockStoreKey,
-		AtomicSwapStoreName:      AtomicSwapStoreKey,
+		MainStoreName:       MainStoreKey,
+		AccountStoreName:    AccountStoreKey,
+		ValAddrStoreName:    ValAddrStoreKey,
+		TokenStoreName:      TokenStoreKey,
+		DexStoreName:        DexStoreKey,
+		PairStoreName:       PairStoreKey,
+		StakeStoreName:      StakeStoreKey,
+		ParamsStoreName:     ParamsStoreKey,
+		GovStoreName:        GovStoreKey,
+		TimeLockStoreName:   TimeLockStoreKey,
+		AtomicSwapStoreName: AtomicSwapStoreKey,
+		BridgeStoreName:     BridgeStoreKey,
+		OracleStoreName:     OracleStoreKey,
+		IbcStoreName:        IbcStoreKey,
+
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 	}

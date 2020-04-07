@@ -29,6 +29,7 @@ function prepare_node() {
 
     $(cd "./${home}/config" && sed -i -e "s/BEP12Height = 9223372036854775807/BEP12Height = 1/g" app.toml)
     $(cd "./${home}/config" && sed -i -e "s/BEP3Height = 9223372036854775807/BEP3Height = 1/g" app.toml)
+    $(cd "./${home}/config" && sed -i -e "s/BSCHeight = 9223372036854775807/BSCHeight = 1/g" app.toml)
     $(cd "./${home}/config" && sed -i -e "s/timeout_commit = \"1s\"/timeout_commit = \"500ms\"/g" config.toml)
 	#$(cd "./${home}/config" && sed -i -e "s/skip_timeout_commit = false/skip_timeout_commit = true/g" config.toml)
 	#$(cd "./${home}/config" && sed -i -e "s/db_backend = \"goleveldb\"/db_backend = \"boltdb\"/g" config.toml)
@@ -88,11 +89,14 @@ echo ${bob_addr}
 result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"100000000000000:BNB\"},{\"to\":\"${alice_addr}\",\"amount\":\"100000000000000:BNB\"}]")
 check_operation "Multi Send Token" "${result}" "${chain_operation_words}"
 
+
 sleep 1s
 # issue token
 result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
 btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
 check_operation "Issue Token" "${result}" "${chain_operation_words}"
+
+exit 1
 
 sleep 1s
 # mint token

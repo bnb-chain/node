@@ -37,9 +37,11 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/oracle"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -86,6 +88,8 @@ type BinanceChain struct {
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
+	oracleKeeper   oracle.Keeper
+	bridgeKeeper   bridge.Keeper
 	ibcKeeper      ibc.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
@@ -157,6 +161,11 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
+	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
+	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, ibc.DefaultCodespace)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
+		app.ibcKeeper, app.Pool, app.crossChainConfig.IbcChainId, app.crossChainConfig.BscIbcChainId)
+
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
@@ -218,6 +227,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.BridgeStoreKey,
+		common.OracleStoreKey,
+		common.IbcStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -248,6 +260,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
 		app.StateSyncHelper.Init(lastBreatheBlockHeight)
 	}
+	app.registerInitFuncForUpgrade()
+
 	return app
 }
 
@@ -269,6 +283,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.BridgeStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.OracleStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name())
 
 	// register msg types of upgrade
@@ -290,7 +306,21 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgSideChainDelegate{}.Type(),
 		stake.MsgSideChainRedelegate{}.Type(),
 		stake.MsgSideChainUndelegate{}.Type(),
+		bridge.UpdateTransferOutMsg{}.Type(),
+		bridge.TransferInMsg{}.Type(),
+		bridge.BindMsg{}.Type(),
+		bridge.TransferOutMsg{}.Type(),
+		bridge.UpdateBindMsg{}.Type(),
 	)
+}
+
+func (app *BinanceChain) registerInitFuncForUpgrade() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
+		err := app.TokenMapper.UpdateBind(ctx, types.NativeTokenSymbol, "0x0000000000000000000000000000000000000000", 18)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
@@ -346,6 +376,8 @@ func (app *BinanceChain) initPlugins() {
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 	app.initParams()
+	oracle.InitPlugin(app.oracleKeeper)
+	bridge.InitPlugin(app, app.bridgeKeeper)
 }
 
 func (app *BinanceChain) initStaking() {
@@ -794,6 +826,8 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
+	bridge.RegisterWire(cdc)
+	oracle.RegisterWire(cdc)
 	return cdc
 }
 
