@@ -164,7 +164,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, ibc.DefaultCodespace)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, app.crossChainConfig.IbcChainId, app.crossChainConfig.BscIbcChainId)
+		app.ibcKeeper, app.Pool, app.crossChainConfig.BscChainId)
 
 	// legacy bank route (others moved to plugin init funcs)
 	app.Router().

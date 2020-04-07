@@ -11,9 +11,9 @@ const (
 	TransferOutChannel = "transferOut"
 	RefundChannel      = "refund"
 
-	BindChannelID        sdk.ChannelID = 1
-	TransferOutChannelID sdk.ChannelID = 2
-	RefundChannelID      sdk.ChannelID = 3
+	BindChannelID        sdk.IbcChannelID = 1
+	TransferOutChannelID sdk.IbcChannelID = 2
+	RefundChannelID      sdk.IbcChannelID = 3
 
 	RelayFee int64 = 1e6 // 0.01BNB
 

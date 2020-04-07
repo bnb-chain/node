@@ -6,6 +6,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/x/ibc"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func getMockApp(t *testing.T, numGenAccs int) (*mock.App, bank.BaseKeeper, Keepe
 
 	pk := params.NewKeeper(mapp.Cdc, keyGlobalParams, tkeyGlobalParams)
 	ck := bank.NewBaseKeeper(mapp.AccountKeeper)
-	sk := stake.NewKeeper(mapp.Cdc, keyStake, tkeyStake, ck, nil, pk.Subspace(stake.DefaultParamspace), mapp.RegisterCodespace(stake.DefaultCodespace))
+	sk := stake.NewKeeper(mapp.Cdc, keyStake, tkeyStake, ck, ibc.Keeper{}, nil, pk.Subspace(stake.DefaultParamspace), mapp.RegisterCodespace(stake.DefaultCodespace))
 
 	mapp.SetInitChainer(getInitChainer(mapp, sk))
 

@@ -28,8 +28,7 @@ type Keeper struct {
 
 	Pool *sdk.Pool
 
-	SourceChainId uint16
-	DestChainId   uint16
+	DestChainId string
 
 	// The reference to the CoinKeeper to modify balances
 	BankKeeper bank.Keeper
@@ -41,17 +40,16 @@ type Keeper struct {
 
 // NewKeeper creates new instances of the bridge Keeper
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper oracle.Keeper,
-	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, sourceChainId, destChainId uint16) Keeper {
+	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId string) Keeper {
 	return Keeper{
-		cdc:           cdc,
-		storeKey:      storeKey,
-		Pool:          pool,
-		BankKeeper:    bankKeeper,
-		TokenMapper:   tokenMapper,
-		IbcKeeper:     ibcKeeper,
-		SourceChainId: sourceChainId,
-		DestChainId:   destChainId,
-		oracleKeeper:  oracleKeeper,
+		cdc:          cdc,
+		storeKey:     storeKey,
+		Pool:         pool,
+		BankKeeper:   bankKeeper,
+		TokenMapper:  tokenMapper,
+		IbcKeeper:    ibcKeeper,
+		DestChainId:  destChainId,
+		oracleKeeper: oracleKeeper,
 	}
 }
 
@@ -177,13 +175,12 @@ func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, tran
 			return nil, types.ErrSerializePackageFailed(err.Error())
 		}
 
-		refundSequence := k.IbcKeeper.GetNextSequence(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel)
-		sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, sdk.CrossChainID(k.DestChainId), types.RefundChannel, transferInFailurePackage)
+		seq, sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, k.DestChainId, types.RefundChannel, transferInFailurePackage)
 		if sdkErr != nil {
 			return nil, sdkErr
 		}
 		tags = tags.AppendTags(sdk.NewTags(
-			types.TransferInRefundSequence, []byte(strconv.Itoa(int(refundSequence))),
+			types.TransferInRefundSequence, []byte(strconv.Itoa(int(seq))),
 			types.TransferOutRefundReason, []byte(refundReason.String()),
 		))
 	}

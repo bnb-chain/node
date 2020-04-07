@@ -12,7 +12,7 @@ func InitPlugin(keeper Keeper) {
 }
 
 func RegisterUpgradeBeginBlocker(keeper Keeper) {
-	upgrade.Mgr.RegisterBeginBlocker(upgrade.BSCUpgrade, func(ctx sdk.Context) {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
 		keeper.SetProphecyParams(ctx, types.ProphecyParams{ConsensusNeeded: types.DefaultConsensusNeeded})
 	})
 }
