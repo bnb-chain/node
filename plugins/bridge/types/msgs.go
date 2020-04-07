@@ -468,13 +468,14 @@ func (msg TransferOutMsg) GetSignBytes() []byte {
 		address contractAddr;    // 20 32:52
 		uint256 totalSupply;     // 32 52:84
 		uint256 peggyAmount;     // 32 84:116
-		uint64  expireTime;      // 8  116:124
-		uint256 relayReward;     // 32 124:156
+		uint256 erc20Decimals;   // 8  116:117
+		uint64  expireTime;      // 8  117:125
+		uint256 relayReward;     // 32 125:157
 	}
 */
 func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
-	totalSupply sdk.Int, peggyAmount sdk.Int, expireTime int64, relayReward sdk.Int) ([]byte, error) {
-	serializedBytes := make([]byte, 32+20+32+32+8+32)
+	totalSupply sdk.Int, peggyAmount sdk.Int, decimals int8, expireTime int64, relayReward sdk.Int) ([]byte, error) {
+	serializedBytes := make([]byte, 32+20+32+32+1+8+32)
 	if len(bep2TokenSymbol) > 32 {
 		return nil, fmt.Errorf("bep2 token symbol length should be no more than 32")
 	}
@@ -493,10 +494,12 @@ func SerializeBindPackage(bep2TokenSymbol string, contractAddr []byte,
 	length = len(peggyAmount.BigInt().Bytes())
 	copy(serializedBytes[116-length:116], peggyAmount.BigInt().Bytes())
 
-	binary.BigEndian.PutUint64(serializedBytes[116:124], uint64(expireTime))
+	copy(serializedBytes[116:117], []byte{byte(decimals)})
+
+	binary.BigEndian.PutUint64(serializedBytes[117:125], uint64(expireTime))
 
 	length = len(relayReward.BigInt().Bytes())
-	copy(serializedBytes[156-length:156], relayReward.BigInt().Bytes())
+	copy(serializedBytes[157-length:157], relayReward.BigInt().Bytes())
 
 	return serializedBytes, nil
 }

@@ -179,7 +179,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	}
 
 	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
-		calibratedTotalSupply, calibratedAmount, msg.ExpireTime, calibratedRelayFee)
+		calibratedTotalSupply, calibratedAmount, msg.ContractDecimals, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
