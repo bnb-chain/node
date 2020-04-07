@@ -450,8 +450,8 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, maxLevels)
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook []store.OrderBookLevel, pendingMatch bool) {
+	orderbook = make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
@@ -467,8 +467,9 @@ func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBo
 				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
+		pendingMatch = len(kp.roundOrders[pair]) > 0
 	}
-	return orderbook
+	return orderbook, pendingMatch
 }
 
 func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
