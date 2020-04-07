@@ -559,6 +559,32 @@ func TestOrderBookOnULList_RemoveOrders(t *testing.T) {
 	require.Len(t, sells, 0)
 }
 
+func TestOrderBookOnULList_RemoveOrdersBiasedly(t *testing.T) {
+	book := NewOrderBookOnULList(16, 4)
+	book.InsertOrder("1", BUYSIDE, 10000, 1000, 10000)
+	book.InsertOrder("2", BUYSIDE, 10001, 1000, 10000)
+	book.InsertOrder("3", BUYSIDE, 10002, 1000, 10000)
+	err := book.RemoveOrdersBasedOnPriceLevel(9999, 10001, 10, BUYSIDE, nil)
+	require.NoError(t, err)
+	buys, sells := book.GetAllLevels()
+	//t.Log(buys)
+	//t.Log(sells)
+	require.Len(t, buys, 1)
+	require.Len(t, buys[0].Orders, 2)
+	require.Len(t, sells, 0)
+	err = book.RemoveOrdersBasedOnPriceLevel(10003, 10001, 10, BUYSIDE, nil)
+	require.NoError(t, err)
+	buys, sells = book.GetAllLevels()
+	require.Len(t, buys, 1)
+	require.Len(t, buys[0].Orders, 2)
+	require.Len(t, sells, 0)
+	err = book.RemoveOrdersBasedOnPriceLevel(10003, 10003, 10, BUYSIDE, nil)
+	require.NoError(t, err)
+	buys, sells = book.GetAllLevels()
+	require.Len(t, buys, 0)
+	require.Len(t, sells, 0)
+}
+
 func TestOrderBookOnULList_GetOverlappedRange(t *testing.T) {
 	overlap := make([]OverLappedLevel, 4)
 	buyBuf := make([]PriceLevel, 16)

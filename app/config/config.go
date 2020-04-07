@@ -67,8 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
-# Block height to BEP70 upgrade
-BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+# Block height of BEP67 upgrade
+BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -374,6 +374,8 @@ type UpgradeConfig struct {
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
+
+	BEP67Height int64 `mapstructure:"BEP67Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -390,6 +392,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
+		BEP67Height:                1,
 	}
 }
 

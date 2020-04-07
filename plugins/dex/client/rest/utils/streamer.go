@@ -78,6 +78,10 @@ func StreamDepthResponse(w io.Writer, ob *store.OrderBook, limit int) error {
 		i++
 	}
 
-	// end streamed json with height
-	return write(w, fmt.Sprintf("],\"height\":%d}", ob.Height))
+	// pass 3 - height
+	if err := write(w, fmt.Sprintf("],\"height\":%d", ob.Height)); err != nil {
+		return err
+	}
+	// end streamed json with pendingMatch flag
+	return write(w, fmt.Sprintf(",\"pendingMatch\":%t}", ob.PendingMatch))
 }

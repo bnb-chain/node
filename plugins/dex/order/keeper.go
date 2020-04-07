@@ -30,9 +30,10 @@ import (
 )
 
 const (
-	numPricesStored  = 2000
-	pricesStoreEvery = 1000
-	minimalNumPrices = 500
+	numPricesStored      = 2000
+	pricesStoreEvery     = 1000
+	minimalNumPrices     = 500
+	preferencePriceLevel = 500
 )
 
 var BUSDSymbol string
@@ -501,25 +502,26 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	return tradeOuts
 }
 
-func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, maxLevels)
+func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook []store.OrderBookLevel, pendingMatch bool) {
+	orderbook = make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
 		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel, levelIndex int) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
 			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
 			i++
 		},
-			func(p *me.PriceLevel) {
+			func(p *me.PriceLevel, levelIndex int) {
 				orderbook[j].SellPrice = utils.Fixed8(p.Price)
 				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
+		pendingMatch = len(kp.roundOrders[pair]) > 0
 	}
-	return orderbook
+	return orderbook, pendingMatch
 }
 
 func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
@@ -554,9 +556,9 @@ func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 		res[pair] = ChangedPriceLevelsPerSymbol{buys, sells}
 
 		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel, levelIndex int) {
 			buys[p.Price] = p.TotalLeavesQty()
-		}, func(p *me.PriceLevel) {
+		}, func(p *me.PriceLevel, levelIndex int) {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
@@ -873,12 +875,8 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 		return nil
 	}
 
-	// TODO: make effectiveDays configurable
-	const effectiveDays = 3
-	expireHeight, err := kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
+	expireHeight, forceExpireHeight, err := kp.getExpireHeight(ctx, blockTime)
 	if err != nil {
-		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
-		kp.logger.Info(err.Error())
 		return nil
 	}
 
@@ -895,7 +893,7 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 	}
 
 	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
-		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
+		removeCallback := func(ord me.OrderPart) {
 			// gen transfer
 			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
 				h := channelHash(ordMsg.Sender, concurrency)
@@ -905,7 +903,12 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 			} else {
 				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
 			}
-		})
+		}
+		if !sdk.IsUpgrade(upgrade.BEP67) {
+			engine.Book.RemoveOrders(expireHeight, side, removeCallback)
+		} else {
+			engine.Book.RemoveOrdersBasedOnPriceLevel(expireHeight, forceExpireHeight, preferencePriceLevel, side, removeCallback)
+		}
 	}
 
 	symbolCh := make(chan string, concurrency)
@@ -929,6 +932,30 @@ func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime int64) []chan Transfer
 		})
 
 	return transferChs
+}
+
+func (kp *Keeper) getExpireHeight(ctx sdk.Context, blockTime time.Time) (expireHeight, forceExpireHeight int64, noBreatheBlock error) {
+	const effectiveDays = 3
+	expireHeight, noBreatheBlock = kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
+	if noBreatheBlock != nil {
+		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
+		kp.logger.Error(noBreatheBlock.Error())
+		return -1, -1, noBreatheBlock
+	}
+
+	if sdk.IsUpgrade(upgrade.BEP67) {
+		const forceExpireDays = 30
+		var err error
+		forceExpireHeight, err = kp.GetBreatheBlockHeight(ctx, blockTime, forceExpireDays)
+		if err != nil {
+			//if breathe block of 30 days ago not found, the breathe block of 3 days ago still can be processed, so return err=nil
+			kp.logger.Error(err.Error())
+			return expireHeight, -1, nil
+		}
+	} else {
+		forceExpireHeight = -1
+	}
+	return expireHeight, forceExpireHeight, nil
 }
 
 func (kp *Keeper) ExpireOrders(

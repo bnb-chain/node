@@ -453,7 +453,7 @@ func TestULList_UpdateForEach(t *testing.T) {
 	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
 	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
 	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
-	l.UpdateForEach(func(pl *PriceLevel) {
+	l.UpdateForEach(func(pl *PriceLevel, levelIndex int) {
 		if pl.Price <= 1003 {
 			pl.Orders = pl.Orders[:0]
 		}
@@ -467,7 +467,7 @@ func TestULList_UpdateForEach(t *testing.T) {
 	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
 	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
 	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
-	l.UpdateForEach(func(pl *PriceLevel) {
+	l.UpdateForEach(func(pl *PriceLevel, levelIndex int) {
 		if pl.Price <= 1006 {
 			pl.Orders = pl.Orders[:0]
 		}
@@ -536,7 +536,7 @@ func TestULList_Iterate(t *testing.T) {
 				allBuckets: tt.fields.allBuckets,
 			}
 			result := make([]PriceLevel, 0)
-			fillRes := func(p *PriceLevel) {
+			fillRes := func(p *PriceLevel, levelIndex int) {
 				result = append(result, *p)
 			}
 			if ull.Iterate(tt.args.maxLevel, fillRes); !reflect.DeepEqual(result, tt.want) {
@@ -545,4 +545,63 @@ func TestULList_Iterate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestULList_UpdateForEachBiasedly(t *testing.T) {
+	l := NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel, levelIndex int) {
+		t.Logf("Iterate preferred item: %v", pl)
+		if pl.Price <= 1003 {
+			pl.Orders = pl.Orders[:0]
+		}
+	})
+	require.Len(t, l.begin.elements, 1)
+	require.Equal(t, l.dend, l.begin.next)
+	require.Equal(t, int64(1006), l.begin.elements[0].Price)
+
+	l = NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "4", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel, levelIndex int) {
+		if levelIndex < 2 {
+			if pl.Price <= 1002 {
+				pl.Orders = pl.Orders[:0]
+			}
+		} else {
+			if pl.Price <= 1003 {
+				pl.Orders = pl.Orders[:0]
+			}
+		}
+	})
+	require.Len(t, l.begin.elements, 1)
+	require.Equal(t, l.dend, l.begin.next.next)
+	require.Equal(t, int64(1006), l.begin.elements[0].Price)
+	require.Equal(t, int64(1003), l.begin.next.elements[0].Price)
+
+	l = NewULList(5, 2, compareBuy)
+	l.AddPriceLevel(&PriceLevel{Price: 1006, Orders: []OrderPart{{Id: "1", Time: 10000}, {Id: "2", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1003, Orders: []OrderPart{{Id: "3", Time: 10000}, {Id: "4", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1002, Orders: []OrderPart{{Id: "5", Time: 10000}}})
+	l.AddPriceLevel(&PriceLevel{Price: 1001, Orders: []OrderPart{{Id: "6", Time: 10000}, {Id: "7", Time: 10000}, {Id: "8", Time: 10000}}})
+	l.UpdateForEach(func(pl *PriceLevel, levelIndex int) {
+		if levelIndex < 2 {
+			if len(pl.Orders) > 1 {
+				pl.Orders = pl.Orders[:1]
+			}
+		} else {
+			if len(pl.Orders) > 2 {
+				pl.Orders = pl.Orders[:2]
+			}
+		}
+	})
+	require.Len(t, l.begin.elements[0].Orders, 1)
+	require.Len(t, l.begin.elements[1].Orders, 1)
+	require.Len(t, l.begin.next.elements[0].Orders, 1)
+	require.Len(t, l.begin.next.elements[1].Orders, 2)
 }

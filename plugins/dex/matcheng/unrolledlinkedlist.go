@@ -331,7 +331,7 @@ func (ull *ULList) Iterate(levelNum int, iter LevelIter) {
 			if curLevel >= levelNum {
 				return
 			}
-			iter(&b.elements[i])
+			iter(&b.elements[i], curLevel)
 			curLevel += 1
 		}
 	}
@@ -394,6 +394,7 @@ func (ull *ULList) GetPriceLevel(p float64) *PriceLevel {
 func (ull *ULList) UpdateForEach(updater LevelIter) {
 	b := ull.begin
 	var last *bucket
+	levelIndex := 0
 	for b != ull.dend {
 		for i := 0; ; {
 			k := len(b.elements)
@@ -403,7 +404,8 @@ func (ull *ULList) UpdateForEach(updater LevelIter) {
 				break
 			}
 			pl := &b.elements[i]
-			updater(pl)
+			updater(pl, levelIndex)
+			levelIndex++
 			if len(pl.Orders) == 0 {
 				b.deleteElement(i)
 			} else {
