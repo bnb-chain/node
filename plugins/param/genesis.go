@@ -35,8 +35,13 @@ const (
 	RefundHTLTFee  = 37500
 
 	// stake fee
-	CreateValidatorFee = 10e8
-	RemoveValidatorFee = 1e8
+	CreateValidatorFee          = 10e8
+	RemoveValidatorFee          = 1e8
+	CreateSideChainValidatorFee = 10e8
+	EditSideChainValidatorFee   = 1e8
+	SideChainDelegateFee        = 1e5
+	SideChainRedelegateFee      = 3e5
+	SideChainUndelegateFee      = 2e5
 
 	// Transfer fee
 	TransferFee       = 62500

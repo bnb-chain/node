@@ -60,6 +60,16 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
+		stakingFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: stake.MsgCreateSideChainValidator{}.Type(), Fee: CreateSideChainValidatorFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgEditSideChainValidator{}.Type(), Fee: EditSideChainValidatorFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainDelegate{}.Type(), Fee: SideChainDelegateFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainRedelegate{}.Type(), Fee: SideChainRedelegateFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainUndelegate{}.Type(), Fee: SideChainUndelegateFee, FeeFor: types.FeeForProposer},
+		}
+		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
@@ -71,26 +81,31 @@ func init() {
 	// CalculatorsGen is defined in a common package which can't import app package.
 	// Reasonable to init here, since fee param drive the calculator.
 	fees.CalculatorsGen = map[string]fees.FeeCalculatorGenerator{
-		gov.MsgSubmitProposal{}.Type():    fees.FixedFeeCalculatorGen,
-		gov.MsgDeposit{}.Type():           fees.FixedFeeCalculatorGen,
-		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
-		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		stake.MsgRemoveValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		list.Route:                        fees.FixedFeeCalculatorGen,
-		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
-		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
-		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
-		issue.MintMsgType:                 fees.FixedFeeCalculatorGen,
-		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
-		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
-		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
-		swap.HTLT:                         fees.FixedFeeCalculatorGen,
-		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
-		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
-		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
+		gov.MsgSubmitProposal{}.Type():             fees.FixedFeeCalculatorGen,
+		gov.MsgDeposit{}.Type():                    fees.FixedFeeCalculatorGen,
+		gov.MsgVote{}.Type():                       fees.FixedFeeCalculatorGen,
+		stake.MsgCreateValidator{}.Type():          fees.FixedFeeCalculatorGen,
+		stake.MsgRemoveValidator{}.Type():          fees.FixedFeeCalculatorGen,
+		stake.MsgCreateSideChainValidator{}.Type(): fees.FixedFeeCalculatorGen,
+		stake.MsgEditSideChainValidator{}.Type():   fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainDelegate{}.Type():        fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainRedelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		stake.MsgSideChainUndelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		list.Route:                                 fees.FixedFeeCalculatorGen,
+		order.RouteNewOrder:                        fees.FixedFeeCalculatorGen,
+		order.RouteCancelOrder:                     fees.FixedFeeCalculatorGen,
+		issue.IssueMsgType:                         fees.FixedFeeCalculatorGen,
+		issue.MintMsgType:                          fees.FixedFeeCalculatorGen,
+		burn.BurnRoute:                             fees.FixedFeeCalculatorGen,
+		account.SetAccountFlagsMsgType:             fees.FixedFeeCalculatorGen,
+		freeze.FreezeRoute:                         fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():              fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type():            fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type():            fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():                      tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                                  fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                           fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                             fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                            fees.FixedFeeCalculatorGen,
 	}
 }
