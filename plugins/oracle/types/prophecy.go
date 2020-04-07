@@ -114,11 +114,24 @@ func (prophecy Prophecy) FindHighestClaim(ctx sdk.Context, stakeKeeper StakingKe
 
 // AddClaim adds a given claim to this prophecy
 func (prophecy Prophecy) AddClaim(validator sdk.ValAddress, claim string) {
-	claimValidators := prophecy.ClaimValidators[claim]
-	prophecy.ClaimValidators[claim] = append(claimValidators, validator)
-
 	validatorBech32 := validator.String()
 	prophecy.ValidatorClaims[validatorBech32] = claim
+
+	if _, ok := prophecy.ValidatorClaims[validatorBech32]; ok {
+		// if validator claimed, rebuild claim validators
+		var claimValidators = map[string][]sdk.ValAddress{}
+		for addr, claim := range prophecy.ValidatorClaims {
+			valAddr, err := sdk.ValAddressFromBech32(addr)
+			if err != nil {
+				panic(fmt.Errorf("unmarshal validator address err, address=%s", addr))
+			}
+			claimValidators[claim] = append(claimValidators[claim], valAddr)
+		}
+		prophecy.ClaimValidators = claimValidators
+	} else {
+		claimValidators := prophecy.ClaimValidators[claim]
+		prophecy.ClaimValidators[claim] = append(claimValidators, validator)
+	}
 }
 
 // NewProphecy returns a new Prophecy, initialized in pending status with an initial claim

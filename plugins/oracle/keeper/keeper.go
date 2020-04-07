@@ -120,10 +120,6 @@ func (k Keeper) ProcessClaim(ctx sdk.Context, claim types.Claim) (types.Prophecy
 		return types.Prophecy{}, types.ErrProphecyFinalized()
 	}
 
-	if prophecy.ValidatorClaims[claim.ValidatorAddress.String()] != "" {
-		return types.Prophecy{}, types.ErrDuplicateMessage()
-	}
-
 	prophecy.AddClaim(claim.ValidatorAddress, claim.Content)
 	prophecy = k.processCompletion(ctx, prophecy)
 
