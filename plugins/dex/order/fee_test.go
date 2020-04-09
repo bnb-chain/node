@@ -290,7 +290,7 @@ func TestFeeManager_CalcFixedFee(t *testing.T) {
 }
 
 func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
 
 	// existing BNB -> BUSD trading pair
 	ctx, am, keeper := setup()
@@ -374,7 +374,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 }
 
 func TestFeeManager_CalcFixedFee_SupportBUSD(t *testing.T) {
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
 
 	// existing BNB -> BUSD trading pair
 	ctx, am, keeper := setup()

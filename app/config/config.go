@@ -53,7 +53,7 @@ BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 BEP9Height = {{ .UpgradeConfig.BEP9Height }}
 # Block height of BEP10 upgrade
 BEP10Height = {{ .UpgradeConfig.BEP10Height }}
-# Block height of BEP19Height upgrade
+# Block height of BEP19 upgrade
 BEP19Height = {{ .UpgradeConfig.BEP19Height }}
 # Block height of BEP12 upgrade
 BEP12Height = {{ .UpgradeConfig.BEP12Height }}
@@ -67,8 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
-# Block height to BEP_BUSD upgrade
-BEP_BUSDHeight = {{ .UpgradeConfig.BEP_BUSDHeight }}
+# Block height to BEP70 upgrade
+BEP70Height = {{ .UpgradeConfig.BEP70Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -366,8 +366,8 @@ type UpgradeConfig struct {
 	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
-	BEP3Height     int64 `mapstructure:"BEP3Height"`
-	BEP_BUSDHeight int64 `mapstructure:"BEP_BUSDHeight"`
+	BEP3Height  int64 `mapstructure:"BEP3Height"`
+	BEP70Height int64 `mapstructure:"BEP70Height"`
 
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
@@ -385,7 +385,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
-		BEP_BUSDHeight:             1,
+		BEP70Height:                1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,

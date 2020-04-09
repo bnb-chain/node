@@ -1050,7 +1050,7 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
 	}
 
-	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+	if kp.pairExistsBetween(ctx, baseAsset, quoteAsset) {
 		return errors.New("trading pair exists")
 	}
 
@@ -1058,23 +1058,20 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		quoteAsset != types.NativeTokenSymbol {
 
 		// support busd pair listing
-		if sdk.IsUpgrade(upgrade.BEP_BUSD) {
+		if sdk.IsUpgrade(upgrade.BEP70) {
 			if baseAsset == kp.BUSDSymbol || quoteAsset == kp.BUSDSymbol {
-				if kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, kp.BUSDSymbol) ||
-					kp.PairMapper.Exists(ctx, kp.BUSDSymbol, types.NativeTokenSymbol) {
+				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, kp.BUSDSymbol) {
 					return nil
 				}
 			}
 		}
 
-		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, baseAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before against %s",
 				baseAsset, quoteAsset)
 		}
 
-		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, quoteAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
 				quoteAsset, baseAsset, quoteAsset)
 		}
@@ -1116,4 +1113,9 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	return nil
+}
+
+// Check whether there is trading pair between two symbols
+func (kp *Keeper) pairExistsBetween(ctx sdk.Context, symbolA, symbolB string) bool {
+	return kp.PairMapper.Exists(ctx, symbolA, symbolB) || kp.PairMapper.Exists(ctx, symbolB, symbolA)
 }

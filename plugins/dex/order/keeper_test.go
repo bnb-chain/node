@@ -903,7 +903,7 @@ func TestKeeper_CanListTradingPair_SupportBUSD(t *testing.T) {
 	require.Contains(t, err.Error(), "token BUSD-BD1 should be listed against BNB before against AAA-000")
 
 	// upgraded, but BNB-BUSD pair does not exist
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP_BUSD, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
 	err = keeper.CanListTradingPair(ctx, "AAA-000", "BUSD-BD1")
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against BUSD-BD1")
