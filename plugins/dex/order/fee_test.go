@@ -305,9 +305,9 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in BUSD-BD1
 	tran := Transfer{
 		inAsset:  "BUSD-BD1",
-		in:       1000,
+		in:       1e3,
 		outAsset: "ABC-000",
-		out:      100,
+		out:      1e4,
 	}
 	fee := keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5e2}}, fee.Tokens)
@@ -315,7 +315,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in ABC-000
 	tran = Transfer{
 		inAsset:  "ABC-000",
-		in:       1000,
+		in:       1e3,
 		outAsset: "BUSD-BD1",
 		out:      100,
 	}
@@ -325,9 +325,9 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in XYZ-999
 	tran = Transfer{
 		inAsset:  "XYZ-999",
-		in:       1000,
+		in:       1e3,
 		outAsset: "BUSD-BD1",
-		out:      100,
+		out:      1e5,
 	}
 	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5e4}}, fee.Tokens)
@@ -345,9 +345,9 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in BUSD-BD1
 	tran = Transfer{
 		inAsset:  "BUSD-BD1",
-		in:       10000,
+		in:       1e4,
 		outAsset: "ABC-000",
-		out:      100,
+		out:      1e5,
 	}
 	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
@@ -355,9 +355,9 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in ABC-000
 	tran = Transfer{
 		inAsset:  "ABC-000",
-		in:       1000000,
+		in:       1e6,
 		outAsset: "BUSD-BD1",
-		out:      100,
+		out:      1e5,
 	}
 	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 50}}, fee.Tokens)
@@ -365,9 +365,9 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// transferred in XYZ-999
 	tran = Transfer{
 		inAsset:  "XYZ-999",
-		in:       1000,
+		in:       1e3,
 		outAsset: "BUSD-BD1",
-		out:      100,
+		out:      1e5,
 	}
 	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 50}}, fee.Tokens)
