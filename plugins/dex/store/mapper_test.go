@@ -24,7 +24,7 @@ func setup() (TradingPairMapper, sdk.Context) {
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
 	cdc.RegisterConcrete(RecentPrice{}, "dex/RecentPrice", nil)
-	return NewTradingPairMapper(cdc, key), ctx
+	return NewTradingPairMapper(cdc, key, false), ctx
 }
 
 func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey) {

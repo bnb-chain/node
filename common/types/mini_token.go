@@ -20,7 +20,7 @@ const (
 	MiniTokenSymbolMSuffix   = "M"
 
 	MiniTokenDecimals                 int8  = 8
-	MiniTokenMinTotalSupply           int64 = 100000000      // 100k with 8 decimal digits
+	MiniTokenMinTotalSupply           int64 = 100000000      // 1 with 8 decimal digits
 	MiniTokenMaxTotalSupplyUpperBound int64 = 10000000000000 // 100k with 8 decimal digits
 
 	MiniTokenSupplyRange1UpperBound int64 = 1000000000000
@@ -131,7 +131,7 @@ func ValidateMapperMiniTokenSymbol(symbol string) error {
 		return fmt.Errorf("mini-token symbol suffix must be %d chars in length, got %d", MiniTokenSymbolSuffixLen, len(suffixPart))
 	}
 
-	if suffixPart[len(suffixPart)-1:] != "M" {
+	if suffixPart[len(suffixPart)-1:] != MiniTokenSymbolMSuffix {
 		return fmt.Errorf("mini-token symbol suffix must end with M")
 	}
 

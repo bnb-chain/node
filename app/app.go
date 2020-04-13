@@ -79,16 +79,17 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper     bank.Keeper
-	DexKeeper      *dex.DexKeeper
-	AccountKeeper  auth.AccountKeeper
-	TokenMapper    tkstore.Mapper
-	MiniTokenMapper miniTkstore.MiniTokenMapper
-	ValAddrCache   *ValAddrCache
-	stakeKeeper    stake.Keeper
-	govKeeper      gov.Keeper
-	timeLockKeeper timelock.Keeper
-	swapKeeper     swap.Keeper
+	CoinKeeper         bank.Keeper
+	DexKeeper          *dex.DexKeeper
+	DexMiniTokenKeeper *dex.DexMiniTokenKeeper
+	AccountKeeper      auth.AccountKeeper
+	TokenMapper        tkstore.Mapper
+	MiniTokenMapper    miniTkstore.MiniTokenMapper
+	ValAddrCache       *ValAddrCache
+	stakeKeeper        stake.Keeper
+	govKeeper          gov.Keeper
+	timeLockKeeper     timelock.Keeper
+	swapKeeper         swap.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -134,7 +135,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MiniTokenMapper = miniTkstore.NewMiniTokenMapper(cdc, common.MiniTokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
-	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
+	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey, false)
+	miniTokenTradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.MiniTokenPairStoreKey, true)
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
@@ -243,7 +245,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	// remaining plugin init
-	app.initDex(tradingPairMapper)
+	app.initDex(tradingPairMapper, miniTokenTradingPairMapper)
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
@@ -306,11 +308,16 @@ func (app *BinanceChain) initRunningMode() {
 	}
 }
 
-func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
+func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMapper dex.TradingPairMapper) {
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
+
+	app.DexMiniTokenKeeper = dex.NewMiniKeeper(common.DexMiniStoreKey, app.AccountKeeper, miniPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.publicationConfig.ShouldPublishAny())
+	app.DexMiniTokenKeeper.SubscribeParamChange(app.ParamHub)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
@@ -331,12 +338,21 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 		stateDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
+
+	app.DexMiniTokenKeeper.Init(
+		app.CheckState.Ctx,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack,
+		blockStore,
+		stateDB,
+		app.LastBlockHeight(),
+		app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.DexMiniTokenKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }
@@ -527,12 +543,16 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	var tradesToPublish []*pub.Trade
-
+	var miniTradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
+			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
+			miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexMiniTokenKeeper, ctx, isBreatheBlock)
 		} else {
+			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
 			app.DexKeeper.MatchAndAllocateAll(ctx, nil, isBreatheBlock)
+			app.DexMiniTokenKeeper.MatchAndAllocateAll(ctx, nil, isBreatheBlock)
 		}
 	}
 
@@ -543,6 +563,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
+		dex.EndBreatheBlock(ctx, app.DexMiniTokenKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 		// other end blockers
@@ -552,6 +573,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
+	app.DexMiniTokenKeeper.StoreTradePrices(ctx)
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
@@ -576,12 +598,14 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var stakeUpdates pub.StakeUpdates
 		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, miniTradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
+		app.DexMiniTokenKeeper.ClearOrderChanges()
+		app.DexMiniTokenKeeper.ClearRoundFee()
 	}
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
@@ -763,18 +787,21 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
 	var transferToPublish *pub.Transfers
 	var blockToPublish *pub.Block
 	var latestPriceLevels order.ChangedPriceLevelsMap
+	var miniLatestPriceLevels order.ChangedPriceLevelsMap
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
 			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish)
+			miniTradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexMiniTokenKeeper, miniTradesToPublish)
+			tradeRelatedAccounts= append(tradeRelatedAccounts,miniTradeRelatedAccounts...)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,
@@ -793,6 +820,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		}
 		if app.publicationConfig.PublishOrderBook {
 			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+			miniLatestPriceLevels = app.DexMiniTokenKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 		}
 	})
 
@@ -804,6 +832,9 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
 		len(app.DexKeeper.OrderChanges),
+		"numOfMiniTrades", len(miniTradesToPublish),
+		"numOfMiniOrders", // the order num we collected here doesn't include trade related orders
+		len(app.DexMiniTokenKeeper.OrderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
@@ -811,16 +842,22 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		"numOfAccounts",
 		len(accountsToPublish))
 	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	pub.ToRemoveMiniOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+
 	pub.ToPublishCh <- pub.NewBlockInfoToPublish(
 		height,
 		blockTime,
 		tradesToPublish,
+		miniTradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
 		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexMiniTokenKeeper.OrderChanges,
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexMiniTokenKeeper.OrderInfosForPub,
 		accountsToPublish,
 		latestPriceLevels,
+		miniLatestPriceLevels,
 		blockFee,
 		app.DexKeeper.RoundOrderFees,
 		transferToPublish,
@@ -830,6 +867,11 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
 		delete(app.DexKeeper.OrderInfosForPub, id)
+		delete(app.DexMiniTokenKeeper.OrderInfosForPub, id)
+	}
+	for id := range pub.ToRemoveMiniOrderIdCh {
+		pub.Logger.Debug("delete mini order from order changes map", "orderId", id)
+		delete(app.DexMiniTokenKeeper.OrderInfosForPub, id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

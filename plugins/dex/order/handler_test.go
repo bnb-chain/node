@@ -35,7 +35,7 @@ func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context) {
 	var cdc = wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
-	pairMapper := store.NewTradingPairMapper(cdc, key)
+	pairMapper := store.NewTradingPairMapper(cdc, key, false)
 	accMapper := auth.NewAccountKeeper(cdc, key2, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, key2)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)

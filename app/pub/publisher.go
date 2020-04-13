@@ -23,6 +23,7 @@ var (
 	Cfg               *config.PublicationConfig
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
+	ToRemoveMiniOrderIdCh chan string // order ids to remove from keeper.miniOrderInfoForPublish
 	IsLive            bool
 )
 
@@ -50,22 +51,21 @@ func Publish(
 			// they can assign buyer/seller address into trade before persist into DB
 			var opensToPublish []*Order
 			var closedToPublish []*Order
+			var miniOpensToPublish []*Order
+			var miniClosedToPublish []*Order
 			var feeToPublish map[string]string
 			if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-				opensToPublish, closedToPublish, feeToPublish = collectOrdersToPublish(
+				opensToPublish, closedToPublish, miniOpensToPublish, miniClosedToPublish, feeToPublish = collectOrdersToPublish(
 					marketData.tradesToPublish,
 					marketData.orderChanges,
 					marketData.orderInfos,
 					marketData.feeHolder,
-					marketData.timestamp)
-				for _, o := range closedToPublish {
-					if ToRemoveOrderIdCh != nil {
-						Logger.Debug(
-							"going to delete order from order changes map",
-							"orderId", o.OrderId, "status", o.Status)
-						ToRemoveOrderIdCh <- o.OrderId
-					}
-				}
+					marketData.timestamp,
+					marketData.miniTradesToPublish,
+					marketData.miniOrderChanges,
+					marketData.miniOrderInfos)
+				addClosedOrder(closedToPublish, ToRemoveOrderIdCh)
+				addClosedOrder(miniClosedToPublish, ToRemoveMiniOrderIdCh)
 			}
 
 			// ToRemoveOrderIdCh would be only used in production code
@@ -73,8 +73,12 @@ func Publish(
 			if ToRemoveOrderIdCh != nil {
 				close(ToRemoveOrderIdCh)
 			}
+			if ToRemoveMiniOrderIdCh != nil {
+				close(ToRemoveMiniOrderIdCh)
+			}
 
 			ordersToPublish := append(opensToPublish, closedToPublish...)
+			miniOrdersToPublish := append(miniOpensToPublish, miniClosedToPublish...)
 			if cfg.PublishOrderUpdates {
 				duration := Timer(Logger, "publish all orders", func() {
 					publishExecutionResult(
@@ -84,7 +88,9 @@ func Publish(
 						ordersToPublish,
 						marketData.tradesToPublish,
 						marketData.proposalsToPublish,
-						marketData.stakeUpdates)
+						marketData.stakeUpdates,
+						miniOrdersToPublish,
+						marketData.miniTradesToPublish, )
 				})
 
 				if metrics != nil {
@@ -106,9 +112,10 @@ func Publish(
 			}
 
 			if cfg.PublishOrderBook {
-				var changedPrices orderPkg.ChangedPriceLevelsMap
+				var changedPrices = make(orderPkg.ChangedPriceLevelsMap)
 				duration := Timer(Logger, "prepare order books to publish", func() {
-					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
+					filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels, changedPrices)
+					filterChangedOrderBooksByOrders(miniOrdersToPublish, marketData.miniLatestPriceLevels, changedPrices)
 				})
 				if metrics != nil {
 					numOfChangedPrices := 0
@@ -172,6 +179,17 @@ func Publish(
 	}
 }
 
+func addClosedOrder(closedToPublish []*Order, toRemoveOrderIdCh chan string) {
+	for _, o := range closedToPublish {
+		if toRemoveOrderIdCh != nil {
+			Logger.Debug(
+				"going to delete order from order changes map",
+				"orderId", o.OrderId, "status", o.Status)
+			toRemoveOrderIdCh <- o.OrderId
+		}
+	}
+}
+
 func Stop(publisher MarketDataPublisher) {
 	if IsLive == false {
 		Logger.Error("publication module has already been stopped")
@@ -184,16 +202,22 @@ func Stop(publisher MarketDataPublisher) {
 	if ToRemoveOrderIdCh != nil {
 		close(ToRemoveOrderIdCh)
 	}
+	if ToRemoveMiniOrderIdCh != nil {
+		close(ToRemoveMiniOrderIdCh)
+	}
 
 	publisher.Stop()
 }
 
-func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals, stakeUpdates *StakeUpdates) {
+func publishExecutionResult(publisher MarketDataPublisher, height int64, timestamp int64, os []*Order, tradesToPublish []*Trade, proposalsToPublish *Proposals, stakeUpdates *StakeUpdates,
+	miniOrders []*Order, miniTrades []*Trade) {
 	numOfOrders := len(os)
 	numOfTrades := len(tradesToPublish)
 	numOfProposals := proposalsToPublish.NumOfMsgs
 	numOfStakeUpdatedAccounts := stakeUpdates.NumOfMsgs
-	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals + numOfStakeUpdatedAccounts}
+	numOfMiniOrders := len(miniOrders)
+	numOfMiniTrades := len(miniTrades)
+	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals + numOfStakeUpdatedAccounts + numOfMiniTrades + numOfMiniOrders }
 	if numOfOrders > 0 {
 		executionResultsMsg.Orders = Orders{numOfOrders, os}
 	}
@@ -205,6 +229,12 @@ func publishExecutionResult(publisher MarketDataPublisher, height int64, timesta
 	}
 	if numOfStakeUpdatedAccounts > 0 {
 		executionResultsMsg.StakeUpdates = *stakeUpdates
+	}
+	if numOfMiniOrders > 0 {
+		executionResultsMsg.miniOrders = Orders{numOfOrders, miniOrders}
+	}
+	if numOfMiniTrades > 0 {
+		executionResultsMsg.miniTrades = trades{numOfTrades, miniTrades}
 	}
 
 	publisher.publish(&executionResultsMsg, executionResultTpe, height, timestamp)

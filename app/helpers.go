@@ -195,6 +195,14 @@ func (app *BinanceChain) reInitChain() error {
 		snapshot.Manager().GetStateDB(),
 		app.LastBlockHeight(),
 		app.TxDecoder)
+	app.DexMiniTokenKeeper.Init(
+		app.CheckState.Ctx,
+		app.baseConfig.BreatheBlockInterval,
+		app.baseConfig.BreatheBlockDaysCountBack,
+		snapshot.Manager().GetBlockStore(),
+		snapshot.Manager().GetStateDB(),
+		app.LastBlockHeight(),
+		app.TxDecoder)
 	app.initParams()
 
 	// init app cache

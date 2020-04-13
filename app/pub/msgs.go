@@ -55,7 +55,7 @@ func (this msgType) String() string {
 var latestSchemaVersions = map[msgType]int{
 	accountsTpe:        1,
 	booksTpe:           0,
-	executionResultTpe: 1,
+	executionResultTpe: 2,
 	blockFeeTpe:        0,
 	transferTpe:        1,
 	blockTpe:           0,
@@ -98,6 +98,8 @@ type ExecutionResults struct {
 	Orders       Orders
 	Proposals    Proposals
 	StakeUpdates StakeUpdates
+	miniTrades   trades
+	miniOrders   Orders
 }
 
 func (msg *ExecutionResults) String() string {
@@ -121,13 +123,21 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	if msg.StakeUpdates.NumOfMsgs > 0 {
 		native["stakeUpdates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
 	}
+	if msg.miniTrades.NumOfMsgs > 0 {
+		native["miniTrades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.miniTrades.ToNativeMap()}
+	}
+	if msg.miniOrders.NumOfMsgs > 0 {
+		native["miniOrders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.miniOrders.ToNativeMap()}
+	}
 	return native
 }
 
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\n", msg.Height, msg.Timestamp, orders)
+	miniOrders := msg.miniOrders.EssentialMsg()
+	//TODO output other fields: trades, stakeUpdate etc.
+	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\nminiOrders:\n%s\n", msg.Height, msg.Timestamp, orders, miniOrders)
 }
 
 func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
@@ -137,15 +147,23 @@ func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
 			nonExpiredOrders = append(nonExpiredOrders, order)
 		}
 	}
+	var nonExpiredMiniOrders []*Order
+	for _, order := range msg.miniOrders.Orders {
+		if order.Status != orderPkg.Expired {
+			nonExpiredMiniOrders = append(nonExpiredMiniOrders, order)
+		}
+	}
 
 	return &ExecutionResults{
 		msg.Height,
 		msg.Timestamp,
-		msg.Proposals.NumOfMsgs + msg.StakeUpdates.NumOfMsgs + len(nonExpiredOrders),
+		msg.Proposals.NumOfMsgs + msg.StakeUpdates.NumOfMsgs + len(nonExpiredOrders) + len(nonExpiredMiniOrders),
 		trades{}, // no trades on breathe block
 		Orders{len(nonExpiredOrders), nonExpiredOrders},
 		msg.Proposals,
 		msg.StakeUpdates,
+		trades{}, // no trades on breathe block
+		Orders{len(nonExpiredMiniOrders), nonExpiredMiniOrders},
 	}
 }
 

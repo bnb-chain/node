@@ -7,7 +7,7 @@ import (
 	app "github.com/binance-chain/node/common/types"
 )
 
-const abciQueryPrefix = "minitokens"
+const abciQueryPrefix = "mini-tokens"
 
 // InitPlugin initializes the plugin.
 func InitPlugin(

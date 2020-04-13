@@ -11,8 +11,11 @@ import (
 
 type TradingPairMapper = store.TradingPairMapper
 type DexKeeper = order.Keeper
+type DexMiniTokenKeeper = order.MiniKeeper
+type DexOrderKeeper = order.DexOrderKeeper
 
 var NewTradingPairMapper = store.NewTradingPairMapper
 var NewOrderKeeper = order.NewKeeper
+var NewMiniKeeper = order.NewMiniKeeper
 
 const DefaultCodespace = types.DefaultCodespace

@@ -92,8 +92,8 @@ func handleBurnMiniToken(ctx sdk.Context, tokenMapper miniToken.MiniTokenMapper,
 	useAllBalance := coins.AmountOf(symbol) == burnAmount
 
 	if burnAmount <= 0 || (!useAllBalance && (burnAmount < common.MiniTokenMinTotalSupply)) {
-		logger.Info(errLogMsg, "reason", "unfreeze amount doesn't reach the min supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
+		logger.Info(errLogMsg, "reason", "burn amount doesn't reach the min supply")
+		return sdk.ErrInvalidCoins(fmt.Sprintf("burn amount is too small, the min amount is %d or total free balance",
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 

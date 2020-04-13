@@ -65,10 +65,6 @@ func (msg BurnMsg) GetSignBytes() []byte {
 }
 
 func (msg BurnMsg) validateMiniTokenBasic() sdk.Error {
-	err := types.ValidateMapperMiniTokenSymbol(msg.Symbol)
-	if err != nil {
-		return sdk.ErrInvalidCoins(err.Error())
-	}
 	if msg.Amount <= 0 {
 		return sdk.ErrInsufficientFunds("amount should be more than 0")
 	}

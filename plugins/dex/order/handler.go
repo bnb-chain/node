@@ -15,7 +15,6 @@ import (
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
@@ -26,13 +25,15 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, accKeeper auth.AccountKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, k, msg)
+			orderKeeper, _ := selectKeeper(msg, dexKeeper, dexMiniKeeper)
+			return handleNewOrder(ctx, cdc, orderKeeper, msg)
 		case CancelOrderMsg:
-			return handleCancelOrder(ctx, k, msg)
+			orderKeeper, _ := selectKeeper(msg, dexKeeper, dexMiniKeeper)
+			return handleCancelOrder(ctx, orderKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -40,59 +41,27 @@ func NewHandler(cdc *wire.Codec, k *Keeper, accKeeper auth.AccountKeeper) sdk.Ha
 	}
 }
 
-func validateOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.Account, msg NewOrderMsg) error {
-	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
-	if err != nil {
-		return err
+func selectKeeper(msg sdk.Msg, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper) (DexOrderKeeper, error) {
+	var orderKeeper DexOrderKeeper
+	var symbol string
+	switch v := msg.(type) {
+	case NewOrderMsg:
+		symbol = strings.ToUpper(v.Symbol)
+	case CancelOrderMsg:
+		symbol = strings.ToUpper(v.Symbol)
+	default:
+		err := fmt.Errorf("unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
+		return nil, err
 	}
-
-	seq := acc.GetSequence()
-	expectedID := GenerateOrderID(seq, msg.Sender)
-	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
+	if (!sdk.IsUpgrade(upgrade.BEP8)) || !utils.IsMiniTokenTradingPair(symbol) {
+		orderKeeper = dexKeeper
+	} else {
+		orderKeeper = dexMiniKeeper
 	}
-
-	pair, err := pairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
-	if err != nil {
-		return err
-	}
-
-	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
-		return fmt.Errorf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64())
-	}
-
-	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
-		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
-	}
-
-	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
-		if utils.IsUnderMinNotional(msg.Price, msg.Quantity) {
-			return errors.New("notional value of the order is too small")
-		}
-	}
-
-	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
-		return errors.New("notional value of the order is too large(cannot fit in int64)")
-	}
-
-	return nil
+	return orderKeeper, nil
 }
 
-func validatorMiniTokenOrder(ctx sdk.Context, pairMapper store.TradingPairMapper, acc sdk.Account, msg NewOrderMsg) error{
-
-	//coins := acc.GetCoins()
-	//
-	//useAllBalance := coins.AmountOf(symbol) == burnAmount
-	//
-	//if burnAmount <= 0 || (!useAllBalance && (burnAmount < common.MiniTokenMinTotalSupply)) {
-	//	logger.Info(errLogMsg, "reason", "unfreeze amount doesn't reach the min supply")
-	//	return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
-	//		common.MiniTokenMinTotalSupply)).Result()
-	//}
-	return nil
-}
-
-func validateQtyAndLockBalance(ctx sdk.Context, keeper *Keeper, acc common.NamedAccount, msg NewOrderMsg) error {
+func validateQtyAndLockBalance(ctx sdk.Context, keeper DexOrderKeeper, acc common.NamedAccount, msg NewOrderMsg) error {
 	symbol := strings.ToUpper(msg.Symbol)
 	baseAssetSymbol, quoteAssetSymbol := utils.TradingPair2AssetsSafe(symbol)
 	notional := utils.CalBigNotionalInt64(msg.Price, msg.Quantity)
@@ -135,12 +104,12 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *Keeper, acc common.Named
 
 	acc.SetCoins(freeBalance.Minus(toLockCoins))
 	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
-	keeper.am.SetAccount(ctx, acc)
+	keeper.getAccountKeeper().SetAccount(ctx, acc)
 	return nil
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper *Keeper, msg NewOrderMsg,
+	ctx sdk.Context, cdc *wire.Codec, keeper DexOrderKeeper, msg NewOrderMsg,
 ) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	// this check costs least.
@@ -149,7 +118,7 @@ func handleNewOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 	}
 
-	acc := keeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
+	acc := keeper.getAccountKeeper().GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	if !ctx.IsReCheckTx() {
 		//for recheck:
 		// 1. sequence is verified in anteHandler
@@ -157,15 +126,8 @@ func handleNewOrder(
 		// 3. trading pair is verified
 		// 4. price/qty may have odd tick size/lot size, but it can be handled as
 		//    other existing orders.
-		var err error
-		if utils.IsMiniTokenTradingPair(msg.Symbol) {
-			//FIXMe .. use different keeper
+		err := keeper.validateOrder(ctx, acc, msg)
 
-			err = validatorMiniTokenOrder(ctx, keeper.PairMapper, acc, msg)
-
-		} else{
-			err = validateOrder(ctx, keeper.PairMapper, acc, msg)
-		}
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 		}
@@ -190,7 +152,7 @@ func handleNewOrder(
 				if txSrc, ok := ctx.Value(baseapp.TxSourceKey).(int64); ok {
 					txSource = txSrc
 				} else {
-					keeper.logger.Error("cannot get txSource from ctx")
+					keeper.getLogger().Error("cannot get txSource from ctx")
 				}
 			})
 			msg := OrderInfo{
@@ -198,7 +160,9 @@ func handleNewOrder(
 				height, timestamp,
 				height, timestamp,
 				0, txHash, txSource}
+
 			err := keeper.AddOrder(msg, false)
+
 			if err != nil {
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
 			}
@@ -222,7 +186,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper *Keeper, msg CancelOrderMsg,
+	ctx sdk.Context, keeper DexOrderKeeper, msg CancelOrderMsg,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -249,10 +213,10 @@ func handleCancelOrder(
 	}
 	fee := common.Fee{}
 	if !transfer.FeeFree() {
-		acc := keeper.am.GetAccount(ctx, msg.Sender)
-		fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.engines)
+		acc := keeper.getAccountKeeper().GetAccount(ctx, msg.Sender)
+		fee = keeper.getFeeManager().CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.getEngines())
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-		keeper.am.SetAccount(ctx, acc)
+		keeper.getAccountKeeper().SetAccount(ctx, acc)
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
@@ -265,9 +229,9 @@ func handleCancelOrder(
 		}
 		//remove order from cache and order book
 		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
-			if keeper.CollectOrderInfoForPublish {
+			if keeper.ShouldPublishOrder() {
 				change := OrderChange{msg.RefId, Canceled, fee.String(), nil}
-				keeper.OrderChanges = append(keeper.OrderChanges, change)
+				keeper.UpdateOrderChange(change)
 				keeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}
 		})

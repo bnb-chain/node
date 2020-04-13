@@ -60,7 +60,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	accountCache := getAccountCache(cdc, ms, capKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger).WithAccountCache(accountCache)
 
-	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
+	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey, false)
 	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
 	tradingPair := dextypes.NewTradingPair("XYZ-000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
@@ -120,7 +120,7 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	require.Len(keeper.OrderChanges, 1)
 	require.Len(keeper.OrderInfosForPub, 1)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
 
 	require.Len(keeper.OrderChanges, 2)
 	require.Len(keeper.OrderInfosForPub, 1)
@@ -206,7 +206,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
 
 	require.Len(keeper.OrderChanges, 3)
 	require.Len(keeper.OrderInfosForPub, 2)
@@ -246,7 +246,7 @@ func Test_GTEPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -297,7 +297,7 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("s-2", orderChange2.Id)
 	assert.Equal(orderPkg.Ack, orderChange2.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
