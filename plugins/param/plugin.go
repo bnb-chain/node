@@ -1,7 +1,6 @@
 package param
 
 import (
-	"github.com/binance-chain/node/plugins/dex/listmini"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -13,6 +12,7 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
 	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	miniURI "github.com/binance-chain/node/plugins/minitokens/seturi"

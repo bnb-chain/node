@@ -2,12 +2,14 @@ package seturi
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/minitokens/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"reflect"
-	"strings"
 )
 
 func NewHandler(tokenMapper store.MiniTokenMapper) sdk.Handler {

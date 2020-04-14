@@ -8,7 +8,6 @@ var Mgr = sdk.UpgradeMgr
 // bugfix: fix
 // improvement: (maybe bep ?)
 const (
-	BEP8 = "BEP8" //FIXME placeholder
 	// Galileo Upgrade
 	BEP6  = "BEP6"  // https://github.com/binance-chain/BEPs/pull/6
 	BEP9  = "BEP9"  // https://github.com/binance-chain/BEPs/pull/9
@@ -23,6 +22,8 @@ const (
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
+	//FIXME upgrade version placeholder
+	BEP8 = "BEP8"
 )
 
 func UpgradeBEP10(before func(), after func()) {

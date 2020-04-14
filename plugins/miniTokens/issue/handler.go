@@ -3,7 +3,6 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/common/upgrade"
 	"reflect"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/minitokens/store"
 )
 

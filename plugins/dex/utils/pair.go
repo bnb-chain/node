@@ -2,11 +2,11 @@ package utils
 
 import (
 	"fmt"
-	"github.com/binance-chain/node/common/types"
 	"math"
 	"math/big"
 	"strings"
 
+	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 )
 

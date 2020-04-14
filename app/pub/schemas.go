@@ -147,80 +147,8 @@ const (
                         }
                     ]
                 }], "default": null },
-               { "name": "miniTrades", "type": ["null", {
-                    "type": "record",
-                    "name": "Trades",
-                    "namespace": "org.binance.dex.model.avro",
-                    "fields": [
-                        { "name": "numOfMsgs", "type": "int" },
-                        { "name": "trades", "type": {
-                            "type": "array",
-                            "items":
-                                {
-                                    "type": "record",
-                                    "name": "Trade",
-                                    "namespace": "org.binance.dex.model.avro",
-                                    "fields": [
-                                        { "name": "symbol", "type": "string" },
-                                        { "name": "id", "type": "string" },
-                                        { "name": "price", "type": "long" },
-                                        { "name": "qty", "type": "long"    },
-                                        { "name": "sid", "type": "string" },
-                                        { "name": "bid", "type": "string" },
-                                        { "name": "sfee", "type": "string" },
-                                        { "name": "bfee", "type": "string" },
-                                        { "name": "saddr", "type": "string" },
-                                        { "name": "baddr", "type": "string" },
-                                        { "name": "ssrc", "type": "long" },
-                                        { "name": "bsrc", "type": "long" },
-                                        { "name": "ssinglefee", "type": "string" },
-                                        { "name": "bsinglefee", "type": "string" },
-                                        { "name": "tickType", "type": "int" }
-                                    ]
-                                }
-                            }
-                        }
-                    ]
-                }], "default": null },
-                { "name": "miniOrders", "type": ["null", {
-                    "type": "record",
-                    "name": "Orders",
-                    "namespace": "org.binance.dex.model.avro",
-                    "fields": [
-                        { "name": "numOfMsgs", "type": "int" },
-                        { "name": "orders", "type": {
-                            "type": "array",
-                            "items":
-                            {
-                                "type": "record",
-                                "name": "Order",
-                                "namespace": "org.binance.dex.model.avro",
-                                "fields": [
-                                    { "name": "symbol", "type": "string" },
-                                    { "name": "status", "type": "string" },
-                                    { "name": "orderId", "type": "string" },
-                                    { "name": "tradeId", "type": "string" },
-                                    { "name": "owner", "type": "string" },
-                                    { "name": "side", "type": "int" },
-                                    { "name": "orderType", "type": "int" },
-                                    { "name": "price", "type": "long" },
-                                    { "name": "qty", "type": "long" },
-                                    { "name": "lastExecutedPrice", "type": "long" },
-                                    { "name": "lastExecutedQty", "type": "long" },
-                                    { "name": "cumQty", "type": "long" },
-                                    { "name": "fee", "type": "string" }, 
-                                    { "name": "orderCreationTime", "type": "long" },
-                                    { "name": "transactionTime", "type": "long" },
-                                    { "name": "timeInForce", "type": "int" },
-                                    { "name": "currentExecutionType", "type": "string" },
-                                    { "name": "txHash", "type": "string" },
-                                    { "name": "singlefee", "type": "string" }
-                                ]
-                            }
-                           }
-                        }
-                    ]
-                }], "default": null }
+               { "name": "miniTrades", "type": ["null", "org.binance.dex.model.avro.Trades"], "default": null },
+				{ "name": "miniOrders", "type": ["null", "org.binance.dex.model.avro.Orders"], "default": null }
             ]
         }
     `

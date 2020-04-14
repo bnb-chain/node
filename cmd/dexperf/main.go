@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/binance-chain/node/plugins/minitokens"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -38,6 +37,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
 )

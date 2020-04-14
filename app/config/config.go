@@ -47,8 +47,6 @@ orderKeeperConcurrency = {{ .BaseConfig.OrderKeeperConcurrency }}
 breatheBlockDaysCountBack = {{ .BaseConfig.BreatheBlockDaysCountBack }}
 
 [upgrade]
-# Block height of BEP8 upgrade
-BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP6 upgrade
 BEP6Height = {{ .UpgradeConfig.BEP6Height }}
 # Block height of BEP9 upgrade
@@ -69,7 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
-
+# Block height of BEP8 upgrade
+BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
 ABCIQueryBlackList = {{ .QueryConfig.ABCIQueryBlackList }}
@@ -353,7 +352,6 @@ func defaultBaseConfig() *BaseConfig {
 
 type UpgradeConfig struct {
 
-	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
@@ -368,12 +366,14 @@ type UpgradeConfig struct {
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
+
+	// TODO: add upgrade name
+	BEP8Height  int64 `mapstructure:"BEP8Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP8Height:                 1,
 		BEP6Height:                 1,
 		BEP9Height:                 1,
 		BEP10Height:                1,
@@ -384,6 +384,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
+		BEP8Height:                 1,
 	}
 }
 

@@ -41,6 +41,8 @@ import (
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/minitokens"
+	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
+	"github.com/binance-chain/node/plugins/minitokens/seturi"
 	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
@@ -260,7 +262,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 // setUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP9, upgradeConfig.BEP9Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP10, upgradeConfig.BEP10Height)
@@ -271,10 +272,13 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
-
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
+
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenPairStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -290,6 +294,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		swap.DepositHTLTMsg{}.Type(),
 		swap.ClaimHTLTMsg{}.Type(),
 		swap.RefundHTLTMsg{}.Type(),
+	)
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
+		miniIssue.IssueMsg{}.Type(),
+		seturi.SetURIMsg{}.Type(),
 	)
 }
 
@@ -801,7 +810,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
 			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish)
 			miniTradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexMiniTokenKeeper, miniTradesToPublish)
-			tradeRelatedAccounts= append(tradeRelatedAccounts,miniTradeRelatedAccounts...)
+			tradeRelatedAccounts = append(tradeRelatedAccounts, miniTradeRelatedAccounts...)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,
@@ -851,7 +860,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 		miniTradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
-		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.OrderChanges, // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexMiniTokenKeeper.OrderChanges,
 		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
 		app.DexMiniTokenKeeper.OrderInfosForPub,
