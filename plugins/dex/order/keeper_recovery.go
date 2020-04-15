@@ -245,7 +245,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, state
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	kp.MatchAll(height, t) //no need to check result
+	kp.MatchSymbols(height, t) //no need to check result
 }
 
 func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,

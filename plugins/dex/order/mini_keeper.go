@@ -3,13 +3,6 @@ package order
 import (
 	"errors"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"hash/crc32"
-	"strings"
-	"sync"
-
-	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
@@ -17,6 +10,10 @@ import (
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"strings"
+	"sync"
 )
 
 const (
@@ -26,9 +23,7 @@ const (
 
 //order keeper for mini-token
 type MiniKeeper struct {
-	Keeper                               //use dex order keeper as base keeper
-	matchedMiniSymbols []string          //mini token pairs matched in this round
-	miniSymbolsHash    map[string]uint32 //mini token pairs -> hash value for Round-Robin
+	Keeper //use dex order keeper as base keeper
 }
 
 var _ DexOrderKeeper = &MiniKeeper{}
@@ -55,9 +50,10 @@ func NewMiniKeeper(dexMiniKey sdk.StoreKey, am auth.AccountKeeper, miniPairMappe
 			cdc:                        cdc,
 			FeeManager:                 NewFeeManager(cdc, dexMiniKey, logger),
 			CollectOrderInfoForPublish: collectOrderInfoForPublish,
-			logger:                     logger},
-		make([]string, 0, 256),
-		make(map[string]uint32, 256),
+			logger:                     logger,
+			symbolSelector:             &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
+			clearAfterMatch: clearAfterMatchMini},
+
 	}
 }
 
@@ -65,103 +61,26 @@ func NewMiniKeeper(dexMiniKey sdk.StoreKey, am auth.AccountKeeper, miniPairMappe
 func (kp *MiniKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := kp.Keeper.AddEngine(pair)
 	symbol := strings.ToUpper(pair.GetSymbol())
-	kp.miniSymbolsHash[symbol] = crc32.ChecksumIEEE([]byte(symbol))
+	kp.symbolSelector.AddSymbolHash(symbol)
 	return eng
 }
 
-// override
-// please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func (kp *MiniKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64, matchAllMiniSymbols bool) ([]chan Transfer) {
-	size := len(kp.roundOrders)
-	// size is the number of pairs that have new orders, i.e. it should call match()
-	if size == 0 {
-		kp.logger.Info("No new orders for any pair, give up matching")
-		return nil
-	}
-
-	concurrency := 1 << kp.poolSize
-	tradeOuts := make([]chan Transfer, concurrency)
-
-	if matchAllMiniSymbols {
-		for symbol := range kp.roundOrders {
-			kp.matchedMiniSymbols = append(kp.matchedMiniSymbols, symbol)
-		}
-	} else {
-		kp.selectMiniSymbolsToMatch(height, func(miniSymbols map[string]struct{}) {
-			for symbol := range miniSymbols {
-				kp.matchedMiniSymbols = append(kp.matchedMiniSymbols, symbol)
-			}
-		})
-	}
-
-	if distributeTrade {
-		ordNum := 0
-		for _, perSymbol := range kp.matchedMiniSymbols {
-			ordNum += len(perSymbol)
-		}
-		for i := range tradeOuts {
-			//assume every new order would have 2 trades and generate 4 transfer
-			tradeOuts[i] = make(chan Transfer, ordNum*4/concurrency)
-		}
-	}
-
-	symbolCh := make(chan string, concurrency)
-	producer := func() {
-		for _, symbol := range kp.matchedMiniSymbols {
-			symbolCh <- symbol
-		}
-		close(symbolCh)
-	}
-	matchWorker := func() {
-		i := 0
-		for symbol := range symbolCh {
-			i++
-			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
-		}
-	}
-
-	if distributeTrade {
-		utils.ConcurrentExecuteAsync(concurrency, producer, matchWorker, func() {
-			for _, tradeOut := range tradeOuts {
-				close(tradeOut)
-			}
-		})
-	} else {
-		utils.ConcurrentExecuteSync(concurrency, producer, matchWorker)
-	}
-	return tradeOuts
-}
-
-// override
-func (kp *MiniKeeper) clearAfterMatch() {
-	for _, symbol := range kp.matchedMiniSymbols {
+func clearAfterMatchMini(kp *Keeper)  {
+	kp.logger.Debug("clearAfterMatchMini...")
+	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
 		delete(kp.roundOrders, symbol)
 		delete(kp.roundIOCOrders, symbol)
 	}
-	kp.matchedMiniSymbols = make([]string, 0, 256)
-}
-
-// MatchAndAllocateAll() is concurrently matching and allocating across
-// all the symbols' order books, among all the clients
-// Return whether match has been done in this height
-func (kp *MiniKeeper) MatchAndAllocateAll(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
-	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
-	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp, matchAllSymbols)
-	if tradeOuts == nil {
-		kp.logger.Info("No order comes in for the block")
-	}
-
-	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
-	fees.Pool.AddAndCommitFee("MATCH", totalFee)
-	kp.clearAfterMatch()
+	emptyRoundMatchSymbols := make([]string, 0, 256)
+	kp.symbolSelector.SetRoundMatchSymbol(emptyRoundMatchSymbols)
 }
 
 // used by state sync to clear memory order book after we synced latest breathe block
 //TODO check usage
 func (kp *MiniKeeper) ClearOrders() {
 	kp.Keeper.ClearOrders()
-	kp.matchedMiniSymbols = make([]string, 0, 256)
+	emptyRoundMatchSymbols := make([]string, 0, 256)
+	kp.symbolSelector.SetRoundMatchSymbol(emptyRoundMatchSymbols)
 }
 
 //override
@@ -200,36 +119,6 @@ func (kp *MiniKeeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsse
 	}
 
 	return nil
-}
-
-func (kp *MiniKeeper) selectMiniSymbolsToMatch(height int64, postSelect func(map[string]struct{})) {
-	symbolsToMatch := make(map[string]struct{}, 256)
-	selectActiveMiniSymbols(&symbolsToMatch, &kp.roundOrders, defaultActiveMiniSymbolCount)
-	selectMiniSymbolsRoundRobin(&symbolsToMatch, &kp.miniSymbolsHash, height)
-	postSelect(symbolsToMatch)
-}
-
-func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, k int) {
-	//use quick select to select top k symbols
-	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(*roundOrdersMini))
-	i := 0
-	for symbol, orders := range *roundOrdersMini {
-		symbolOrderNumsSlice[i] = &SymbolWithOrderNumber{symbol, len(orders)}
-	}
-	topKSymbolOrderNums := findTopKLargest(symbolOrderNumsSlice, k)
-
-	for _, selected := range topKSymbolOrderNums {
-		(*symbolsToMatch)[selected.symbol] = struct{}{}
-	}
-}
-
-func selectMiniSymbolsRoundRobin(symbolsToMatch *map[string]struct{}, miniSymbolsHash *map[string]uint32, height int64) {
-	m := height % defaultMiniBlockMatchInterval
-	for symbol, symbolHash := range *miniSymbolsHash {
-		if int64(symbolHash%defaultMiniBlockMatchInterval) == m {
-			(*symbolsToMatch)[symbol] = struct{}{}
-		}
-	}
 }
 
 // override

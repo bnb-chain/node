@@ -275,7 +275,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(3, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
-	keeper.MatchAll(42, 0)
+	keeper.MatchSymbols(42, 0)
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
@@ -716,7 +716,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(1, len(res))
 
 	// match existing two orders
-	keeper.MatchAll(43, 86)
+	keeper.MatchSymbols(43, 86)
 
 	// after match, the original buy order's cumQty and latest updated fields should be updated
 	res = keeper.GetOpenOrders("NNB_BNB", zc)
@@ -750,7 +750,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(int64(88), res[0].LastUpdatedTimestamp)
 
 	// match existing two orders
-	keeper.MatchAll(44, 88)
+	keeper.MatchSymbols(44, 88)
 
 	// after match, all orders should be closed
 	res = keeper.GetOpenOrders("NNB_BNB", zc)

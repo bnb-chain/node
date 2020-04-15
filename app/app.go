@@ -560,8 +560,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 			miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexMiniTokenKeeper, ctx, isBreatheBlock)
 		} else {
 			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
-			app.DexKeeper.MatchAndAllocateAll(ctx, nil, isBreatheBlock)
-			app.DexMiniTokenKeeper.MatchAndAllocateAll(ctx, nil, isBreatheBlock)
+			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
+			app.DexMiniTokenKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
 		}
 	}
 

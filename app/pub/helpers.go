@@ -284,7 +284,7 @@ func MatchAndAllocateAllForPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Co
 		}
 	}
 
-	dexKeeper.MatchAndAllocateAll(ctx, postAlloTransHandler, matchAllMiniSymbols)
+	dexKeeper.MatchAndAllocateSymbols(ctx, postAlloTransHandler, matchAllMiniSymbols)
 	close(iocExpireFeeHolderCh)
 
 	tradeIdx := 0

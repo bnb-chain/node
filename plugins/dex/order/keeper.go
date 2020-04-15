@@ -59,8 +59,8 @@ type DexOrderKeeper interface {
 	ClearOrderBook(pair string)
 	ClearOrderChanges()
 	StoreTradePrices(ctx sdk.Context)
-	MatchAll(height, timestamp int64)
-	MatchAndAllocateAll(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool)
+	MatchSymbols(height, timestamp int64)
+	MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool)
 	ExpireOrders(ctx sdk.Context, blockTime time.Time, postAlloTransHandler TransferHandler)
 	MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time)
 	GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) (int64, error)
@@ -109,6 +109,8 @@ type Keeper struct {
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
 	logger                     tmlog.Logger
+	symbolSelector             SymbolSelector
+	clearAfterMatch func(*Keeper)
 }
 
 func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
@@ -138,6 +140,8 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
+		symbolSelector:             &BEP2SymbolSelector{},
+		clearAfterMatch: clearAfterMatchBEP2,
 	}
 }
 
@@ -459,21 +463,18 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 }
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) ([]chan Transfer) {
-	size := len(kp.roundOrders)
-	// size is the number of pairs that have new orders, i.e. it should call match()
-	if size == 0 {
-		kp.logger.Info("No new orders for any pair, give up matching")
+func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64, symbolsToMatch []string) []chan Transfer {
+	if len(symbolsToMatch) == 0 {
+		kp.logger.Info("No symbols to match in the block")
 		return nil
 	}
-
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
 
 	if distributeTrade {
 		ordNum := 0
-		for _, perSymbol := range kp.roundOrders {
-			ordNum += len(perSymbol)
+		for _, symbol := range symbolsToMatch {
+			ordNum += len(kp.roundOrders[symbol])
 		}
 		for i := range tradeOuts {
 			//assume every new order would have 2 trades and generate 4 transfer
@@ -483,7 +484,7 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 
 	symbolCh := make(chan string, concurrency)
 	producer := func() {
-		for symbol := range kp.roundOrders {
+		for _, symbol := range symbolsToMatch {
 			symbolCh <- symbol
 		}
 		close(symbolCh)
@@ -633,7 +634,8 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	return nil
 }
 
-func (kp *Keeper) clearAfterMatch() {
+func clearAfterMatchBEP2(kp *Keeper)  {
+	kp.logger.Debug("clearAfterMatchBEP2...")
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
@@ -845,29 +847,31 @@ func (kp *Keeper) allocateAndCalcFee(
 	return totalFee
 }
 
-// MatchAll will only concurrently match but do not allocate into accounts
-func (kp *Keeper) MatchAll(height, timestamp int64) {
-	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp) //only match
+func (kp *Keeper) MatchSymbols(height, timestamp int64) {
+	symbolsToMatch := kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, timestamp, false)
+	kp.logger.Debug("symbols to match", "symbols", symbolsToMatch)
+	tradeOuts := kp.matchAndDistributeTrades(false, height, timestamp, symbolsToMatch) //only match
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
-	kp.clearAfterMatch()
+	kp.clearAfterMatch(kp)
 }
 
-// MatchAndAllocateAll() is concurrently matching and allocating across
+// MatchAndAllocateSymbols() is concurrently matching and allocating across
 // all the symbols' order books, among all the clients
 // Return whether match has been done in this height
-func (kp *Keeper) MatchAndAllocateAll(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
+func (kp *Keeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(kp.roundOrders))
 	timestamp := ctx.BlockHeader().Time.UnixNano()
-	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
+
+	symbolsToMatch := kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, ctx.BlockHeader().Height, timestamp, false)
+	tradeOuts := kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp, symbolsToMatch)
 	if tradeOuts == nil {
 		kp.logger.Info("No order comes in for the block")
 	}
-
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
-	fees.Pool.AddAndCommitFee("MATCH", totalFee)
-	kp.clearAfterMatch()
+	fees.Pool.AddAndCommitFee("MATCH_MINI", totalFee)
+	kp.clearAfterMatch(kp)
 }
 
 func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {
