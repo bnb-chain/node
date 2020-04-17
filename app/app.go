@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
+	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -87,6 +88,7 @@ type BinanceChain struct {
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
 	ibcKeeper      ibc.Keeper
+	scKeeper       sidechain.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -134,11 +136,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
+	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey)
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
-		app.CoinKeeper, app.ibcKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
+		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -218,6 +221,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.IbcStoreKey,
+		common.SideChainStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -269,7 +274,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -337,6 +342,7 @@ func (app *BinanceChain) initDex() {
 }
 
 func (app *BinanceChain) initPlugins() {
+	app.initSideChain()
 	app.initIbc()
 	app.initDex()
 	app.initGovHooks()
@@ -348,11 +354,19 @@ func (app *BinanceChain) initPlugins() {
 	app.initParams()
 }
 
-func (app *BinanceChain) initStaking() {
+func (app *BinanceChain) initSideChain() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		bscStorePrefix := []byte{0x99}
-		app.stakeKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
-		newCtx := ctx.WithSideChainKeyPrefix(bscStorePrefix)
+		app.scKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
+	})
+}
+
+func (app *BinanceChain) initStaking() {
+	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
 			UnbondingTime: 60 * 60 * 24 * time.Second, // 1 day
 			MaxValidators: 21,
@@ -558,10 +572,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	lastBlockTime := app.CheckState.Ctx.BlockHeader().Time
 	blockTime := ctx.BlockHeader().Time
 	height := ctx.BlockHeader().Height
-
+	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-	var tradesToPublish []*pub.Trade
 
+	var tradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
@@ -579,7 +593,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
-
 	} else {
 		app.Logger.Debug("normal block", "height", height)
 	}
@@ -595,11 +608,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
-	var stakingTags sdk.Tags
 	if isBreatheBlock {
-		validatorUpdates, completedUbd, stakingTags = stake.EndBreatheBlock(ctx, app.stakeKeeper)
+		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
 	} else if ctx.RouterCallRecord()["stake"] {
-		validatorUpdates, completedUbd, stakingTags = stake.EndBlocker(ctx, app.stakeKeeper)
+		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
@@ -623,10 +635,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
 	//future TODO: add failure info.
-	tags = tags.AppendTags(stakingTags)
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
-		Events:           tags.ToEvents(),
+		Events:           append(tags.ToEvents(), ctx.EventManager().ABCIEvents()...),
 	}
 }
 
