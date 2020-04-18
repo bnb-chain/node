@@ -160,20 +160,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
 
-	// legacy bank route (others moved to plugin init funcs)
-	app.Router().
-		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
-		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper))
-
-	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
-	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
-	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
-	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
-
-	app.RegisterQueryHandler("account", app.AccountHandler)
-	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
-
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	}
@@ -352,6 +338,22 @@ func (app *BinanceChain) initPlugins() {
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 	app.initParams()
+
+	// add handlers from bnc-cosmos-sdk (others moved to plugin init funcs)
+	// we need to add handlers after all keepers initialized
+	app.Router().
+		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
+		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
+		AddRoute("gov", gov.NewHandler(app.govKeeper))
+
+	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
+	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, app.Codec))
+	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
+	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
+
+	app.RegisterQueryHandler("account", app.AccountHandler)
+	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
+
 }
 
 func (app *BinanceChain) initSideChain() {
