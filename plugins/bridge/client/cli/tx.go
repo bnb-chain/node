@@ -320,7 +320,6 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 
 			sequence := viper.GetInt64(flagSequence)
 			contractAddress := viper.GetString(flagContractAddress)
-			contractDecimals := viper.GetInt(flagContractDecimals)
 			symbol := viper.GetString(flagSymbol)
 			status := types.ParseBindStatus(viper.GetString(flagBindStatus))
 
@@ -334,11 +333,10 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			claim := types.UpdateBindClaim{
-				Status:           status,
-				Symbol:           strings.ToUpper(symbol),
-				Amount:           amount,
-				ContractAddress:  types.NewEthereumAddress(contractAddress),
-				ContractDecimals: int8(contractDecimals),
+				Status:          status,
+				Symbol:          strings.ToUpper(symbol),
+				Amount:          amount,
+				ContractAddress: types.NewEthereumAddress(contractAddress),
 			}
 
 			claimBz, err := json.Marshal(claim)

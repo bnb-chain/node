@@ -53,11 +53,10 @@ func GetUpdateTransferOutClaimFromOracleClaim(claim string) (UpdateTransferOutCl
 }
 
 type UpdateBindClaim struct {
-	Status           BindStatus      `json:"status"`
-	Symbol           string          `json:"symbol"`
-	Amount           sdk.Int         `json:"amount"`
-	ContractAddress  EthereumAddress `json:"contract_address"`
-	ContractDecimals int8            `json:"contract_decimals"`
+	Status          BindStatus      `json:"status"`
+	Symbol          string          `json:"symbol"`
+	Amount          sdk.Int         `json:"amount"`
+	ContractAddress EthereumAddress `json:"contract_address"`
 }
 
 func GetUpdateBindClaimFromOracleClaim(claim string) (UpdateBindClaim, sdk.Error) {

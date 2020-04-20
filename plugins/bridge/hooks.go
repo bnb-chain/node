@@ -129,8 +129,8 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	}
 
 	if isIdentical && updateBindClaim.Status == types.BindStatusSuccess {
-		sdkErr := hooks.bridgeKeeper.TokenMapper.UpdateBind(ctx, updateBindClaim.Symbol,
-			updateBindClaim.ContractAddress.String(), updateBindClaim.ContractDecimals)
+		sdkErr := hooks.bridgeKeeper.TokenMapper.UpdateBind(ctx, bindRequest.Symbol,
+			bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 
 		if sdkErr != nil {
 			return sdk.Tags{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
