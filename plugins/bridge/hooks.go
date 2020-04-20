@@ -96,10 +96,6 @@ func (hooks *UpdateBindClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk
 		return types.ErrInvalidContractAddress("contract address should not be empty")
 	}
 
-	if updateBindClaim.ContractDecimals < 0 {
-		return types.ErrInvalidDecimal("decimals should be no less than 0")
-	}
-
 	if updateBindClaim.Symbol == cmmtypes.NativeTokenSymbol {
 		return types.ErrInvalidSymbol(fmt.Sprintf("can not bind native token(%s)", updateBindClaim.Symbol))
 	}
