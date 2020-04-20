@@ -9,6 +9,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
 	"github.com/spf13/cobra"
 
@@ -89,6 +90,7 @@ func main() {
 	paramcmd.AddCommands(rootCmd, cdc)
 
 	stakecmd.AddCommands(rootCmd, cdc)
+	slashingcmd.AddCommands(rootCmd, cdc)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 

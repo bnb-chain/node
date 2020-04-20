@@ -43,6 +43,10 @@ const (
 	SideChainRedelegateFee      = 3e5
 	SideChainUndelegateFee      = 2e5
 
+	// slashing fee
+	BscSubmitEvidenceFee = 10e8
+	SideChainUnjail      = 1e8
+
 	// Transfer fee
 	TransferFee       = 62500
 	MultiTransferFee  = 50000 // discount 80%

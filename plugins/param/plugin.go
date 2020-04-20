@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
@@ -67,6 +68,9 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: stake.MsgSideChainDelegate{}.Type(), Fee: SideChainDelegateFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: stake.MsgSideChainRedelegate{}.Type(), Fee: SideChainRedelegateFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: stake.MsgSideChainUndelegate{}.Type(), Fee: SideChainUndelegateFee, FeeFor: types.FeeForProposer},
+
+			&param.FixedFeeParams{MsgType: slashing.MsgBscSubmitEvidence{}.Type(), Fee: BscSubmitEvidenceFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: slashing.MsgSideChainUnjail{}.Type(), Fee: SideChainUnjail, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
@@ -91,6 +95,8 @@ func init() {
 		stake.MsgSideChainDelegate{}.Type():        fees.FixedFeeCalculatorGen,
 		stake.MsgSideChainRedelegate{}.Type():      fees.FixedFeeCalculatorGen,
 		stake.MsgSideChainUndelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		slashing.MsgBscSubmitEvidence{}.Type():     fees.FixedFeeCalculatorGen,
+		slashing.MsgSideChainUnjail{}.Type():       fees.FixedFeeCalculatorGen,
 		list.Route:                                 fees.FixedFeeCalculatorGen,
 		order.RouteNewOrder:                        fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:                     fees.FixedFeeCalculatorGen,

@@ -42,10 +42,13 @@ var (
 		"refundHTLT":  {},
 
 		"side_create_validator": {},
-		"side_edit_validator": {},
-		"side_delegate": {},
-		"side_redelegate": {},
-		"side_undelegate": {},
+		"side_edit_validator":   {},
+		"side_delegate":         {},
+		"side_redelegate":       {},
+		"side_undelegate":       {},
+
+		"submit_side_chain_evidence": {},
+		"side_chain_unjail":          {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
