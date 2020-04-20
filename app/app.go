@@ -647,6 +647,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else if ctx.RouterCallRecord()["stake"] {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
+	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
 	}
