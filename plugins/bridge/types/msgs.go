@@ -218,7 +218,7 @@ func (msg TransferOutMsg) GetSignBytes() []byte {
 		address contractAddr;    // 20 32:52
 		uint256 totalSupply;     // 32 52:84
 		uint256 peggyAmount;     // 32 84:116
-		uint256 erc20Decimals;   // 8  116:117
+		uint8   erc20Decimals;   // 1  116:117
 		uint64  expireTime;      // 8  117:125
 		uint256 relayReward;     // 32 125:157
 	}
