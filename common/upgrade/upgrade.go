@@ -22,6 +22,8 @@ const (
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
+
+	BEP67 = "BEP67" // https://github.com/binance-chain/BEPs/pull/67
 )
 
 func UpgradeBEP10(before func(), after func()) {

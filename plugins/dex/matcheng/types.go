@@ -190,7 +190,7 @@ func (overlapped *OverLappedLevel) HasSellTaker() bool {
 	return overlapped.SellTakerStartIdx < len(overlapped.SellOrders)
 }
 
-type LevelIter func(*PriceLevel)
+type LevelIter func(priceLevel *PriceLevel, levelIndex int)
 
 type MergedPriceLevel struct {
 	price    int64
