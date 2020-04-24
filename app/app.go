@@ -307,9 +307,9 @@ func (app *BinanceChain) initRunningMode() {
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency,
-		app.dexConfig.BUSDSymbol, app.Codec,
-		app.publicationConfig.ShouldPublishAny())
+		app.Codec, app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
+	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {

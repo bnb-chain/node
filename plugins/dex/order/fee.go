@@ -44,18 +44,16 @@ var (
 )
 
 type FeeManager struct {
-	cdc        *wire.Codec
-	logger     tmlog.Logger
-	FeeConfig  FeeConfig
-	BUSDSymbol string
+	cdc       *wire.Codec
+	logger    tmlog.Logger
+	FeeConfig FeeConfig
 }
 
-func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, busdSymbol string, logger tmlog.Logger) *FeeManager {
+func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
-		cdc:        cdc,
-		logger:     logger,
-		FeeConfig:  NewFeeConfig(),
-		BUSDSymbol: busdSymbol,
+		cdc:       cdc,
+		logger:    logger,
+		FeeConfig: NewFeeConfig(),
 	}
 }
 
@@ -159,18 +157,18 @@ func (m *FeeManager) calcTranValueMeasureBySymbol(symbol string, tran *Transfer,
 			return notional
 		} else {
 			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD_XYZ
-			if sdk.IsUpgrade(upgrade.BEP70) {
+			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
 				var busdQty = big.NewInt(0)
-				if market, ok := m.getEngine(engines, symbol, m.BUSDSymbol); ok {
+				if market, ok := m.getEngine(engines, symbol, BUSDSymbol); ok {
 					var tmp big.Int
 					busdQty = tmp.Div(tmp.Mul(
 						big.NewInt(1),
 						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, m.BUSDSymbol, symbol); ok {
+				} else if market, ok := m.getEngine(engines, BUSDSymbol, symbol); ok {
 					busdQty = utils.CalBigNotional(market.LastTradePrice, 1)
 				}
-				return busdQty.Mul(busdQty, m.calcTranValueMeasureBySymbol(m.BUSDSymbol, tran, engines))
+				return busdQty.Mul(busdQty, m.calcTranValueMeasureBySymbol(BUSDSymbol, tran, engines))
 			}
 		}
 	}
@@ -266,15 +264,15 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 			amount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
 		} else {
 			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
-			if sdk.IsUpgrade(upgrade.BEP70) {
+			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
 				var intermediateAmount = big.NewInt(0)
-				if market, ok := m.getEngine(engines, m.BUSDSymbol, types.NativeTokenSymbol); ok {
+				if market, ok := m.getEngine(engines, BUSDSymbol, types.NativeTokenSymbol); ok {
 					var tmp big.Int
 					intermediateAmount = tmp.Div(tmp.Mul(
 						big.NewInt(feeAmount),
 						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, types.NativeTokenSymbol, m.BUSDSymbol); ok {
+				} else if market, ok := m.getEngine(engines, types.NativeTokenSymbol, BUSDSymbol); ok {
 					intermediateAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
 				}
 
@@ -284,13 +282,13 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 				} else {
 					intermediateAmountTmp = math.MaxInt64
 				}
-				if market, ok := m.getEngine(engines, inAsset, m.BUSDSymbol); ok {
+				if market, ok := m.getEngine(engines, inAsset, BUSDSymbol); ok {
 					var tmp big.Int
 					amount = tmp.Div(tmp.Mul(
 						big.NewInt(intermediateAmountTmp),
 						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, m.BUSDSymbol, inAsset); ok {
+				} else if market, ok := m.getEngine(engines, BUSDSymbol, inAsset); ok {
 					amount = utils.CalBigNotional(market.LastTradePrice, intermediateAmountTmp)
 				}
 			}

@@ -35,6 +35,8 @@ const (
 	minimalNumPrices = 500
 )
 
+var BUSDSymbol string
+
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
@@ -57,7 +59,6 @@ type Keeper struct {
 	cdc                        *wire.Codec
 	FeeManager                 *FeeManager
 	CollectOrderInfoForPublish bool
-	BUSDSymbol                 string
 	logger                     tmlog.Logger
 }
 
@@ -67,7 +68,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 
 // NewKeeper - Returns the Keeper
 func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, busdSymbol string, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
+	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &Keeper{
 		PairMapper:                 tradingPairMapper,
@@ -84,12 +85,15 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
-		BUSDSymbol:                 busdSymbol,
 		cdc:                        cdc,
-		FeeManager:                 NewFeeManager(cdc, key, busdSymbol, logger),
+		FeeManager:                 NewFeeManager(cdc, key, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 	}
+}
+
+func (kp *Keeper) SetBUSDSymbol(symbol string) {
+	BUSDSymbol = symbol
 }
 
 func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
@@ -1059,8 +1063,8 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 
 		// support busd pair listing
 		if sdk.IsUpgrade(upgrade.BEP70) {
-			if baseAsset == kp.BUSDSymbol || quoteAsset == kp.BUSDSymbol {
-				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, kp.BUSDSymbol) {
+			if baseAsset == BUSDSymbol || quoteAsset == BUSDSymbol {
+				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, BUSDSymbol) {
 					return nil
 				}
 			}

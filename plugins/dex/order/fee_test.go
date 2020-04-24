@@ -291,10 +291,11 @@ func TestFeeManager_CalcFixedFee(t *testing.T) {
 
 func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
-
-	// existing BNB -> BUSD trading pair
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.SetBUSDSymbol("BUSD-BD1")
+
+	// existing BNB -> BUSD trading pair
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BUSD-BD1", 1e5))
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BUSD-BD1", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("BUSD-BD1", "XYZ-999", 1e6))
@@ -375,10 +376,11 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 
 func TestFeeManager_CalcFixedFee_SupportBUSD(t *testing.T) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
-
-	// existing BNB -> BUSD trading pair
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.SetBUSDSymbol("BUSD-BD1")
+
+	// existing BNB -> BUSD trading pair
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BUSD-BD1", 1e5))
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BUSD-BD1", 1e7))
