@@ -183,16 +183,16 @@ func handleMintMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenMap
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 	// use minus to prevent overflow
-	if msg.Amount > token.MaxTotalSupply.ToInt64()-token.TotalSupply.ToInt64() {
+	if msg.Amount > token.TokenType.UpperBound()-token.TotalSupply.ToInt64() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %d",
-			token.MaxTotalSupply)).Result()
+			token.TokenType.UpperBound())).Result()
 	}
 
-	if msg.Amount > common.MiniTokenMaxTotalSupplyUpperBound-token.TotalSupply.ToInt64() {
+	if msg.Amount > common.MiniTokenSupplyUpperBound-token.TotalSupply.ToInt64() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply upper bound")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply upper bound is %d",
-			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
+			common.MiniTokenSupplyUpperBound)).Result()
 	}
 	newTotalSupply := token.TotalSupply.ToInt64() + msg.Amount
 	err = miniTokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)

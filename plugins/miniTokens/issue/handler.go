@@ -56,31 +56,16 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 		return sdk.ErrInternal(fmt.Sprintf("unable to get the %s from Context", baseapp.TxHashKey)).Result()
 	}
 
-	if msg.MaxTotalSupply < common.MiniTokenMinTotalSupply {
-		logger.Info(errLogMsg, "reason", "max total supply doesn't reach the min supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too small, the min amount is %d",
-			common.MiniTokenMinTotalSupply)).Result()
-	}
-	if msg.MaxTotalSupply > common.MiniTokenMaxTotalSupplyUpperBound {
-		logger.Info(errLogMsg, "reason", "max total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply is too large, the max total supply upper bound is %d",
-			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
-	}
 	if msg.TotalSupply < common.MiniTokenMinTotalSupply {
 		logger.Info(errLogMsg, "reason", "total supply doesn't reach the min supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too small, the min amount is %d",
 			common.MiniTokenMinTotalSupply)).Result()
 	}
-	if msg.TotalSupply > msg.MaxTotalSupply {
-		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply is %d",
-			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
-	}
 
-	if msg.TotalSupply > common.MiniTokenMaxTotalSupplyUpperBound {
+	if msg.TotalSupply > common.MiniTokenSupplyUpperBound {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply upperbound is %d",
-			common.MiniTokenMaxTotalSupplyUpperBound)).Result()
+			common.MiniTokenSupplyUpperBound)).Result()
 	}
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
@@ -95,7 +80,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) already exists", msg.Symbol)).Result()
 	}
 
-	token, err := common.NewMiniToken(msg.Name, symbol, msg.MaxTotalSupply, msg.TotalSupply, msg.From, msg.Mintable, msg.TokenURI)
+	token, err := common.NewMiniToken(msg.Name, symbol, msg.TokenType, msg.TotalSupply, msg.From, msg.Mintable, msg.TokenURI)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "create token failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()

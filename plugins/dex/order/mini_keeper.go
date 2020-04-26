@@ -52,8 +52,7 @@ func NewMiniKeeper(dexMiniKey sdk.StoreKey, am auth.AccountKeeper, miniPairMappe
 			CollectOrderInfoForPublish: collectOrderInfoForPublish,
 			logger:                     logger,
 			symbolSelector:             &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
-			clearAfterMatch: clearAfterMatchMini},
-
+			clearAfterMatch:            clearAfterMatchMini},
 	}
 }
 
@@ -65,7 +64,7 @@ func (kp *MiniKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	return eng
 }
 
-func clearAfterMatchMini(kp *Keeper)  {
+func clearAfterMatchMini(kp *Keeper) {
 	kp.logger.Debug("clearAfterMatchMini...")
 	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
 		delete(kp.roundOrders, symbol)

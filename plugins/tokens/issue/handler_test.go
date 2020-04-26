@@ -137,12 +137,12 @@ func TestHandleMintMiniToken(t *testing.T) {
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, "mint amount is too large")
 
-	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", types.MiniTokenMaxTotalSupplyUpperBound)
+	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", types.MiniTokenSupplyUpperBound)
 	sdkResult = handler(ctx, invalidMintMsg)
 	require.Contains(t, sdkResult.Log, "mint amount is too large")
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
-	invalidMintMsg = NewMintMsg(acc2.GetAddress(), "NNB-000M", types.MiniTokenMaxTotalSupplyUpperBound)
+	invalidMintMsg = NewMintMsg(acc2.GetAddress(), "NNB-000M", types.MiniTokenSupplyUpperBound)
 	sdkResult = handler(ctx, invalidMintMsg)
 	require.Contains(t, sdkResult.Log, "only the owner can mint token NNB")
 

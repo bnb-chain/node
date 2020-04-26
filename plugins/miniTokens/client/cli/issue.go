@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -11,7 +12,7 @@ import (
 )
 
 const (
-	flagMaxTotalSupply = "max-total-supply"
+	flagTokenType = "token-type"
 	flagTotalSupply = "total-supply"
 	flagTokenName   = "token-name"
 	flagMintable    = "mintable"
@@ -27,11 +28,11 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 
 	cmd.Flags().String(flagTokenName, "", "name of the new token")
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the new token")
-	cmd.Flags().Int64P(flagMaxTotalSupply, "m", 0, "max total supply of the new token")
+	cmd.Flags().Int8P(flagTokenType, "t", 0, "token type - 1 = tiny token, of which max supply is 10k; - 2 = mini token, of which max supply is 100k")
 	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
 	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
 	cmd.Flags().String(flagTokenUri, "", "uri of the token information")
-	cmd.MarkFlagRequired(flagMaxTotalSupply)
+	cmd.MarkFlagRequired(flagTokenType)
 	cmd.MarkFlagRequired(flagTotalSupply)
 	return cmd
 }
@@ -54,14 +55,14 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	maxSupply := viper.GetInt64(flagMaxTotalSupply)
-	err = checkMaxSupplyAmount(maxSupply)
+	tokenType := viper.GetInt(flagTokenType)
+	err = checkTokenType(tokenType)
 	if err != nil {
 		return err
 	}
 
 	supply := viper.GetInt64(flagTotalSupply)
-	err = checkSupplyAmount(supply, maxSupply)
+	err = checkSupplyAmount(supply, int8(tokenType))
 	if err != nil {
 		return err
 	}
@@ -75,23 +76,23 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := issue.NewIssueMsg(from, name, symbol, maxSupply, supply, mintable, tokenURI)
+	msg := issue.NewIssueMsg(from, name, symbol, int8(tokenType), supply, mintable, tokenURI)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
-func checkMaxSupplyAmount(amount int64) error {
-	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
-		return errors.New("invalid max supply amount")
+func checkTokenType(tokenType int) error {
+	if tokenType != int(types.SupplyRange.TINY) || tokenType != int(types.SupplyRange.MINI) {
+		return errors.New("invalid token type")
 	}
 	return nil
 }
 
-func checkSupplyAmount(amount, maxAmount int64) error {
-	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
+func checkSupplyAmount(amount int64, tokenType int8) error {
+	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenSupplyUpperBound {
 		return errors.New("invalid supply amount")
 	}
-	if amount > maxAmount {
-		return errors.New("supply amount cannot exceed max supply amount")
+	if amount > types.SupplyRangeType(tokenType).UpperBound() {
+		return errors.New(fmt.Sprintf("supply amount cannot exceed max supply amount of %s - %d",types.SupplyRangeType(tokenType).String(),types.SupplyRangeType(tokenType).UpperBound()))
 	}
 	return nil
 }

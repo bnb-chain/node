@@ -41,8 +41,8 @@ var (
 		"claimHTLT":   {},
 		"refundHTLT":  {},
 
-		"miniIssueMsg":     {},
-		"advMiniIssueMsg":  {},
+		"tinyIssueMsg":     {},
+		"miniIssueMsg":  {},
 		"miniTokensSetURI": {},
 		"dexListMini":      {},
 	}

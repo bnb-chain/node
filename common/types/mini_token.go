@@ -13,32 +13,62 @@ import (
 )
 
 const (
-	MiniTokenSymbolMaxLen    = 8
-	MiniTokenSymbolMinLen    = 3
-	MiniTokenSymbolSuffixLen = 4 // probably enough. if it collides (unlikely) the issuer can just use another tx.
+	MiniTokenSymbolMaxLen          = 8
+	MiniTokenSymbolMinLen          = 3
+	MiniTokenSymbolSuffixLen       = 4 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
-	MiniTokenSymbolMSuffix   = "M"
+	MiniTokenSymbolMSuffix         = "M"
 
-	MiniTokenDecimals                 int8  = 8
-	MiniTokenMinTotalSupply           int64 = 100000000      // 1 with 8 decimal digits
-	MiniTokenMaxTotalSupplyUpperBound int64 = 10000000000000 // 100k with 8 decimal digits
+	MiniTokenMinTotalSupply   int64 = 100000000      // 1 with 8 decimal digits
+	MiniTokenSupplyUpperBound int64 = 10000000000000 // 100k with 8 decimal digits
+	TinyTokenSupplyUpperBound int64 = 1000000000000
+	MaxTokenURILength               = 2048
 
-	MiniTokenSupplyRange1UpperBound int64 = 1000000000000
-	MaxTokenURILength  = 2048
+	TinyRangeType SupplyRangeType = 1
+	MiniRangeType SupplyRangeType = 2
 )
 
-type MiniToken struct {
-	Name           string         `json:"name"`
-	Symbol         string         `json:"symbol"`
-	OrigSymbol     string         `json:"original_symbol"`
-	MaxTotalSupply utils.Fixed8   `json:"max_total_supply"`
-	TotalSupply    utils.Fixed8   `json:"total_supply"`
-	Owner          sdk.AccAddress `json:"owner"`
-	Mintable       bool           `json:"mintable"`
-	TokenURI       string         `json:"token_uri"` //TODO set max length
+type SupplyRangeType int8
+
+func (t SupplyRangeType) UpperBound() int64 {
+	switch t {
+	case TinyRangeType:
+		return TinyTokenSupplyUpperBound
+	case MiniRangeType:
+		return MiniTokenSupplyUpperBound
+	default:
+		return -1
+	}
 }
 
-func NewMiniToken(name, symbol string, maxTotalSupply int64, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
+func (t SupplyRangeType) String() string {
+	switch t {
+	case TinyRangeType:
+		return "Tiny"
+	case MiniRangeType:
+		return "Mini"
+	default:
+		return "Unknown"
+	}
+}
+
+var SupplyRange = struct {
+	TINY SupplyRangeType
+	MINI SupplyRangeType
+}{MiniRangeType, TinyRangeType}
+
+type MiniToken struct {
+	Name        string          `json:"name"`
+	Symbol      string          `json:"symbol"`
+	OrigSymbol  string          `json:"original_symbol"`
+	TokenType   SupplyRangeType `json:"token_type"`
+	TotalSupply utils.Fixed8    `json:"total_supply"`
+	Owner       sdk.AccAddress  `json:"owner"`
+	Mintable    bool            `json:"mintable"`
+	TokenURI    string          `json:"token_uri"` //TODO set max length
+}
+
+func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
 	// double check that the symbol is suffixed
 	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
 		return nil, err
@@ -48,18 +78,18 @@ func NewMiniToken(name, symbol string, maxTotalSupply int64, totalSupply int64, 
 		return nil, err
 	}
 	return &MiniToken{
-		Name:           name,
-		Symbol:         symbol,
-		OrigSymbol:     parts[0],
-		MaxTotalSupply: utils.Fixed8(maxTotalSupply),
-		TotalSupply:    utils.Fixed8(totalSupply),
-		Owner:          owner,
-		Mintable:       mintable,
-		TokenURI:       tokenURI,
+		Name:        name,
+		Symbol:      symbol,
+		OrigSymbol:  parts[0],
+		TokenType:   SupplyRangeType(supplyRangeType),
+		TotalSupply: utils.Fixed8(totalSupply),
+		Owner:       owner,
+		Mintable:    mintable,
+		TokenURI:    tokenURI,
 	}, nil
 }
 
-func IsMiniTokenSymbol(symbol string) bool{
+func IsMiniTokenSymbol(symbol string) bool {
 	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
 		return false
 	}
@@ -68,8 +98,8 @@ func IsMiniTokenSymbol(symbol string) bool{
 
 func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
 func (token MiniToken) String() string {
-	return fmt.Sprintf("{Name: %v, Symbol: %v, MaxTotalSupply: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
-		token.Name, token.Symbol, token.MaxTotalSupply, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
+	return fmt.Sprintf("{Name: %v, Symbol: %v, TokenType: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
+		token.Name, token.Symbol, token.TokenType, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
 }
 
 // Token Validation

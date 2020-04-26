@@ -114,7 +114,7 @@ func checkSupplyAmount(amount int64) error {
 	return nil
 }
 func checkMiniTokenSupplyAmount(amount int64) error {
-	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenMaxTotalSupplyUpperBound {
+	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenSupplyUpperBound {
 		return errors.New("invalid supply amount")
 	}
 

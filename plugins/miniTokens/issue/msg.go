@@ -12,34 +12,33 @@ import (
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
 const (
-	Route           = "miniTokensIssue"
-	IssueMsgType    = "miniIssueMsg"
-	AdvIssueMsgType = "advMiniIssueMsg" //For max total supply in range 2
-
+	Route              = "miniTokensIssue"
+	IssueTinyMsgType   = "tinyIssueMsg"
+	IssueMiniMsgType   = "miniIssueMsg" //For max total supply in range 2
 	maxTokenNameLength = 32
 )
 
 var _ sdk.Msg = IssueMsg{}
 
 type IssueMsg struct {
-	From           sdk.AccAddress `json:"from"`
-	Name           string         `json:"name"`
-	Symbol         string         `json:"symbol"`
-	MaxTotalSupply int64          `json:"max_total_supply"`
-	TotalSupply    int64          `json:"total_supply"`
-	Mintable       bool           `json:"mintable"`
-	TokenURI       string         `json:"token_uri"`
+	From        sdk.AccAddress `json:"from"`
+	Name        string         `json:"name"`
+	Symbol      string         `json:"symbol"`
+	TokenType   int8           `json:"token_type"`
+	TotalSupply int64          `json:"total_supply"`
+	Mintable    bool           `json:"mintable"`
+	TokenURI    string         `json:"token_uri"`
 }
 
-func NewIssueMsg(from sdk.AccAddress, name, symbol string, maxTotalSupply, supply int64, mintable bool, tokenURI string) IssueMsg {
+func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, supply int64, mintable bool, tokenURI string) IssueMsg {
 	return IssueMsg{
-		From:           from,
-		Name:           name,
-		Symbol:         symbol,
-		MaxTotalSupply: maxTotalSupply,
-		TotalSupply:    supply,
-		Mintable:       mintable,
-		TokenURI:       tokenURI,
+		From:        from,
+		Name:        name,
+		Symbol:      symbol,
+		TokenType:   tokenType,
+		TotalSupply: supply,
+		Mintable:    mintable,
+		TokenURI:    tokenURI,
 	}
 }
 
@@ -62,12 +61,12 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token seturi should not exceed %v characters", types.MaxTokenURILength))
 	}
 
-	if msg.MaxTotalSupply < types.MiniTokenMinTotalSupply || msg.MaxTotalSupply > types.MiniTokenMaxTotalSupplyUpperBound {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("max total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.MiniTokenMaxTotalSupplyUpperBound))
+	if msg.TokenType != int8(types.SupplyRange.MINI) || msg.TokenType != int8(types.SupplyRange.TINY) {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token type should be %d or %d", int8(types.SupplyRange.MINI), int8(types.SupplyRange.TINY)))
 	}
 
-	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > msg.MaxTotalSupply {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply, msg.MaxTotalSupply))
+	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.SupplyRangeType(msg.TokenType).UpperBound() {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply,  types.SupplyRangeType(msg.TokenType).UpperBound()))
 	}
 
 	return nil
@@ -76,10 +75,13 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 // Implements IssueMsg.
 func (msg IssueMsg) Route() string { return Route }
 func (msg IssueMsg) Type() string {
-	if msg.MaxTotalSupply > types.MiniTokenSupplyRange1UpperBound {
-		return AdvIssueMsgType
-	} else {
-		return IssueMsgType
+	switch types.SupplyRangeType(msg.TokenType) {
+	case types.SupplyRange.TINY:
+		return IssueTinyMsgType
+	case types.SupplyRange.MINI:
+		return IssueMiniMsgType
+	default:
+		return IssueMiniMsgType
 	}
 }
 func (msg IssueMsg) String() string               { return fmt.Sprintf("IssueMsg{%#v}", msg) }

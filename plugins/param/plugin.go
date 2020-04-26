@@ -65,8 +65,8 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
 		miniTokenFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: miniIssue.IssueMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: miniIssue.AdvIssueMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: miniIssue.IssueTinyMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: miniIssue.IssueMiniMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: listmini.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForProposer},
 		}
@@ -96,16 +96,16 @@ func init() {
 		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
 		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
 		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
-		swap.HTLT:                         fees.FixedFeeCalculatorGen,
-		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
-		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
-		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
-		miniIssue.IssueMsgType:            fees.FixedFeeCalculatorGen,
-		miniIssue.AdvIssueMsgType:         fees.FixedFeeCalculatorGen,
-		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():           tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                       fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
+		miniIssue.IssueTinyMsgType:      fees.FixedFeeCalculatorGen,
+		miniIssue.IssueMiniMsgType:      fees.FixedFeeCalculatorGen,
+		miniURI.SetURIRoute:             fees.FixedFeeCalculatorGen,
 	}
 }

@@ -110,7 +110,7 @@ type Keeper struct {
 	CollectOrderInfoForPublish bool
 	logger                     tmlog.Logger
 	symbolSelector             SymbolSelector
-	clearAfterMatch func(*Keeper)
+	clearAfterMatch            func(*Keeper)
 }
 
 func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
@@ -141,7 +141,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 		symbolSelector:             &BEP2SymbolSelector{},
-		clearAfterMatch: clearAfterMatchBEP2,
+		clearAfterMatch:            clearAfterMatchBEP2,
 	}
 }
 
@@ -634,7 +634,7 @@ func (kp *Keeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
 	return nil
 }
 
-func clearAfterMatchBEP2(kp *Keeper)  {
+func clearAfterMatchBEP2(kp *Keeper) {
 	kp.logger.Debug("clearAfterMatchBEP2...")
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)

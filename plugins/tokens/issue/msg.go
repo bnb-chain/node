@@ -128,8 +128,8 @@ func (msg MintMsg) validateMiniTokenBasic() sdk.Error {
 	}
 
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
-	if msg.Amount < types.MiniTokenMinTotalSupply || msg.Amount > types.MiniTokenMaxTotalSupplyUpperBound {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("Mint amount should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.MiniTokenMaxTotalSupplyUpperBound))
+	if msg.Amount < types.MiniTokenMinTotalSupply || msg.Amount > types.MiniTokenSupplyUpperBound {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("Mint amount should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.MiniTokenSupplyUpperBound))
 	}
 
 	return nil
