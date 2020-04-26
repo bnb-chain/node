@@ -80,7 +80,7 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	}
 	tradeTransfers.Sort()
 	for _, tran := range tradeTransfers {
-		fee := m.calcTradeFeeForSingleTransfer(balances, tran, engines)
+		fee := m.calcTradeFeeFromTransfer(balances, tran, engines)
 		tran.Fee = fee
 		if tran.IsBuyer() {
 			tran.Trade.BuyerFee = &fee
@@ -111,71 +111,77 @@ func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEvent
 	return fees
 }
 
-func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) calcTradeFeeFromTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) types.Fee {
 	var feeToken sdk.Coin
 
 	nativeFee, isOverflow := m.calcNativeFee(tran, engines)
+	if tran.IsNativeIn() {
+		// special case, in this case, we always have
+		// 1. the fee is paid by native token
+		// 2. the balance is enough to pay the fee.
+		// 3. never have int64 overflow
+		return dexFeeWrap(sdk.NewCoin(types.NativeTokenSymbol, nativeFee))
+	}
 
 	if isOverflow || nativeFee == 0 || nativeFee > balances.AmountOf(types.NativeTokenSymbol) {
 		// 1. if the fee is too low and round to 0, we charge by inAsset
 		// 2. no enough NativeToken, use the received tokens as fee
-		feeToken = sdk.NewCoin(tran.inAsset, m.calcTradeFee(big.NewInt(tran.in), FeeByTradeToken).Int64())
+		feeToken = sdk.NewCoin(tran.inAsset, m.TradeFee(big.NewInt(tran.in), FeeByTradeToken).Int64())
 		m.logger.Debug("No enough native token to pay trade fee", "feeToken", feeToken)
 	} else {
 		// have sufficient native token to pay the fees
 		feeToken = sdk.NewCoin(types.NativeTokenSymbol, nativeFee)
 	}
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	return dexFeeWrap(feeToken)
 }
 
 func (m *FeeManager) calcNativeFee(tran *Transfer, engines map[string]*matcheng.MatchEng) (fee int64, isOverflow bool) {
-	tranNativeValue := m.calcTranValueMeasureBySymbol(types.NativeTokenSymbol, tran, engines)
-	nativeFee := m.calcTradeFee(tranNativeValue, FeeByNativeToken)
+	var nativeFee *big.Int
+	if tran.IsNativeIn() {
+		nativeFee = m.TradeFee(big.NewInt(tran.in), FeeByNativeToken)
+	} else if tran.IsNativeOut() {
+		nativeFee = m.TradeFee(big.NewInt(tran.out), FeeByNativeToken)
+	} else {
+		// pair pattern: ABC_XYZ/XYZ_ABC, inAsset: ABC
+		// must exist ABC/BNB. or ABC/BUSD after upgrade
+		notional, pairExist := m.calcNotional(tran.inAsset, tran.in, types.NativeTokenSymbol, engines)
+		if !pairExist {
+			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
+				// must be ABC_BUSD pair, we just use BUSD_BNB price to get the notional
+				var qty int64
+				if tran.inAsset == BUSDSymbol {
+					qty = tran.in
+				} else {
+					// outAsset is BUSD
+					qty = tran.out
+				}
+
+				notional, pairExist = m.calcNotional(BUSDSymbol, qty, types.NativeTokenSymbol, engines)
+				if pairExist {
+					// must not happen
+					m.logger.Error(BUSDSymbol + " must be listed against " + types.NativeTokenSymbol)
+				}
+			}
+		}
+		nativeFee = m.TradeFee(notional, FeeByNativeToken)
+	}
 	if nativeFee.IsInt64() {
 		return nativeFee.Int64(), false
 	}
 	return 0, true
 }
 
-// calculate transfer value measured by giving symbol, e.g., BNB
-func (m *FeeManager) calcTranValueMeasureBySymbol(symbol string, tran *Transfer, engines map[string]*matcheng.MatchEng) *big.Int {
-	if symbol == tran.inAsset {
-		return big.NewInt(tran.in)
-	} else if symbol == tran.outAsset {
-		return big.NewInt(tran.out)
+func (m *FeeManager) calcNotional(asset string, qty int64, quoteAsset string, engines map[string]*matcheng.MatchEng) (notional *big.Int, engineFound bool) {
+	if engine, ok := m.getEngine(engines, asset, quoteAsset); ok {
+		notional = utils.CalBigNotional(engine.LastTradePrice, qty)
+	} else if engine, ok = m.getEngine(engines, quoteAsset, asset); ok {
+		var amt big.Int
+		notional = amt.Div(amt.Mul(big.NewInt(qty), big.NewInt(cmnUtils.Fixed8One.ToInt64())), big.NewInt(engine.LastTradePrice))
 	} else {
-		var notional *big.Int
-		if engine, ok := m.getEngine(engines, tran.inAsset, symbol); ok {
-			// e.g., XYZ_BNB
-			notional = utils.CalBigNotional(engine.LastTradePrice, tran.in)
-			return notional
-		} else if engine, ok := m.getEngine(engines, symbol, tran.inAsset); ok {
-			// BNB_XYZ
-			var amount big.Int
-			notional = amount.Div(
-				amount.Mul(
-					big.NewInt(tran.in),
-					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
-				big.NewInt(engine.LastTradePrice))
-			return notional
-		} else {
-			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD_XYZ
-			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
-				var busdQty = big.NewInt(0)
-				if market, ok := m.getEngine(engines, symbol, BUSDSymbol); ok {
-					var tmp big.Int
-					busdQty = tmp.Div(tmp.Mul(
-						big.NewInt(1),
-						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
-						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, BUSDSymbol, symbol); ok {
-					busdQty = utils.CalBigNotional(market.LastTradePrice, 1)
-				}
-				return busdQty.Mul(busdQty, m.calcTranValueMeasureBySymbol(BUSDSymbol, tran, engines))
-			}
-		}
+		return notional, false
 	}
-	return big.NewInt(0)
+
+	return notional, true
 }
 
 // DEPRECATED
@@ -193,7 +199,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
 	if inSymbol == types.NativeTokenSymbol {
-		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByNativeToken).Int64())
+		feeToken = sdk.NewCoin(types.NativeTokenSymbol, m.TradeFee(big.NewInt(inAmt), FeeByNativeToken).Int64())
 	} else {
 		// price against native token,
 		// both `amountOfNativeToken` and `feeByNativeToken` may overflow when it's a non-BNB pair like ABC_XYZ
@@ -211,7 +217,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 					big.NewInt(cmnUtils.Fixed8One.ToInt64())),
 				big.NewInt(market.LastTradePrice))
 		}
-		feeByNativeToken := m.calcTradeFee(amountOfNativeToken, FeeByNativeToken)
+		feeByNativeToken := m.TradeFee(amountOfNativeToken, FeeByNativeToken)
 		if feeByNativeToken.IsInt64() && feeByNativeToken.Int64() != 0 &&
 			feeByNativeToken.Int64() <= balances.AmountOf(types.NativeTokenSymbol) {
 			// 1. if the fee is too low and round to 0, we charge by inAsset
@@ -219,12 +225,12 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 			feeToken = sdk.NewCoin(types.NativeTokenSymbol, feeByNativeToken.Int64())
 		} else {
 			// no enough NativeToken, use the received tokens as fee
-			feeToken = sdk.NewCoin(inSymbol, m.calcTradeFee(big.NewInt(inAmt), FeeByTradeToken).Int64())
+			feeToken = sdk.NewCoin(inSymbol, m.TradeFee(big.NewInt(inAmt), FeeByTradeToken).Int64())
 			m.logger.Debug("No enough native token to pay trade fee", "feeToken", feeToken)
 		}
 	}
 
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	return dexFeeWrap(feeToken)
 }
 
 // Note: the result of `CalcFixedFee` depends on the balances of the acc,
@@ -247,79 +253,51 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 		return types.Fee{}
 	}
 
-	var feeToken sdk.Coin
 	nativeTokenBalance := balances.AmountOf(types.NativeTokenSymbol)
 	if nativeTokenBalance >= feeAmountNative || inAsset == types.NativeTokenSymbol {
-		feeToken = sdk.NewCoin(types.NativeTokenSymbol, cmnUtils.MinInt(feeAmountNative, nativeTokenBalance))
-	} else {
-		// the amount may overflow int64, so use big.Int instead.
-		// TODO: (perf) may remove the big.Int use to improve the performance
-		var amount = big.NewInt(0)
-		if market, ok := m.getEngine(engines, inAsset, types.NativeTokenSymbol); ok {
-			// XYZ_BNB
-			var tmp big.Int
-			amount = tmp.Div(tmp.Mul(
-				big.NewInt(feeAmount),
-				big.NewInt(cmnUtils.Fixed8One.ToInt64())),
-				big.NewInt(market.LastTradePrice))
-		} else if market, ok := m.getEngine(engines, types.NativeTokenSymbol, inAsset); ok {
-			// BNB_XYZ
-			amount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
-		} else {
-			// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
-			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
-				var intermediateAmount = big.NewInt(0)
-				if market, ok := m.getEngine(engines, BUSDSymbol, types.NativeTokenSymbol); ok {
-					var tmp big.Int
-					intermediateAmount = tmp.Div(tmp.Mul(
-						big.NewInt(feeAmount),
-						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
-						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, types.NativeTokenSymbol, BUSDSymbol); ok {
-					intermediateAmount = utils.CalBigNotional(market.LastTradePrice, feeAmount)
+		return dexFeeWrap(sdk.NewCoin(types.NativeTokenSymbol, cmnUtils.MinInt(feeAmountNative, nativeTokenBalance)))
+	}
+
+	// the amount may overflow int64, so use big.Int instead.
+	// TODO: (perf) may remove the big.Int use to improve the performance
+	amount, nativePairExist := m.calcNotional(types.NativeTokenSymbol, feeAmount, inAsset, engines)
+	if !nativePairExist {
+		// for BUSD pairs, it is possible that there is no trading pair between BNB and inAsset, e.g., BUSD -> XYZ
+		if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
+			busdAmount, busdPairExist := m.calcNotional(types.NativeTokenSymbol, feeAmount, BUSDSymbol, engines)
+			if busdPairExist {
+				var busdAmountInt64 int64
+				if !busdAmount.IsInt64() {
+					m.logger.Error("fixed fee is too high", "eventType", eventType, "fee", feeAmount)
+					busdAmountInt64 = math.MaxInt64
+				} else {
+					busdAmountInt64 = busdAmount.Int64()
 				}
 
-				var intermediateAmountTmp int64
-				if intermediateAmount.IsInt64() {
-					intermediateAmountTmp = intermediateAmount.Int64()
-				} else {
-					intermediateAmountTmp = math.MaxInt64
+				var pairExist bool
+				amount, pairExist = m.calcNotional(BUSDSymbol, busdAmountInt64, inAsset, engines)
+				if !pairExist {
+					// must exist
+					m.logger.Error(inAsset + " must be listed against " + BUSDSymbol)
 				}
-				if market, ok := m.getEngine(engines, inAsset, BUSDSymbol); ok {
-					var tmp big.Int
-					amount = tmp.Div(tmp.Mul(
-						big.NewInt(intermediateAmountTmp),
-						big.NewInt(cmnUtils.Fixed8One.ToInt64())),
-						big.NewInt(market.LastTradePrice))
-				} else if market, ok := m.getEngine(engines, BUSDSymbol, inAsset); ok {
-					amount = utils.CalBigNotional(market.LastTradePrice, intermediateAmountTmp)
-				}
+			} else {
+				m.logger.Error(BUSDSymbol + " must be listed against " + types.NativeTokenSymbol)
 			}
 		}
-
-		if amount.IsInt64() {
-			feeAmount = amount.Int64()
-		} else {
-			feeAmount = math.MaxInt64
-		}
-		feeAmount = cmnUtils.MinInt(feeAmount, balances.AmountOf(inAsset))
-		feeToken = sdk.NewCoin(inAsset, feeAmount)
 	}
 
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	if amount.IsInt64() {
+		feeAmount = amount.Int64()
+	} else {
+		feeAmount = math.MaxInt64
+	}
+	feeAmount = cmnUtils.MinInt(feeAmount, balances.AmountOf(inAsset))
+	return dexFeeWrap(sdk.NewCoin(inAsset, feeAmount))
 }
 
-func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {
-	var feeRate int64
-	if feeType == FeeByNativeToken {
-		feeRate = m.FeeConfig.FeeRateNative
-	} else if feeType == FeeByTradeToken {
-		feeRate = m.FeeConfig.FeeRate
-	}
-
-	// TODO: (Perf) find a more efficient way to replace the big.Int solution.
-	var fee big.Int
-	return fee.Div(fee.Mul(amount, big.NewInt(feeRate)), FeeRateMultiplier)
+// for each trade, the fee only contains one kind of token. And distribution type is always FeeForProposer
+func dexFeeWrap(fee sdk.Coin) types.Fee {
+	return types.NewFee(sdk.Coins{fee}, types.FeeForProposer)
 }
 
 func isNativeToken(symbol string) bool {
@@ -336,6 +314,19 @@ func (m *FeeManager) IOCExpireFees() (int64, int64) {
 
 func (m *FeeManager) CancelFees() (int64, int64) {
 	return m.FeeConfig.CancelFeeNative, m.FeeConfig.CancelFee
+}
+
+func (m *FeeManager) TradeFee(amount *big.Int, feeType FeeType) *big.Int {
+	var feeRate int64
+	if feeType == FeeByNativeToken {
+		feeRate = m.FeeConfig.FeeRateNative
+	} else if feeType == FeeByTradeToken {
+		feeRate = m.FeeConfig.FeeRate
+	}
+
+	// TODO: (Perf) find a more efficient way to replace the big.Int solution.
+	var fee big.Int
+	return fee.Div(fee.Mul(amount, big.NewInt(feeRate)), FeeRateMultiplier)
 }
 
 func (m *FeeManager) ExpireFee(feeType FeeType) int64 {
