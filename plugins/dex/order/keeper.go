@@ -1107,7 +1107,7 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		quoteAsset != types.NativeTokenSymbol {
 
 		// support busd pair listing
-		if sdk.IsUpgrade(upgrade.BEP70) {
+		if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
 			if baseAsset == BUSDSymbol || quoteAsset == BUSDSymbol {
 				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, BUSDSymbol) {
 					return nil
