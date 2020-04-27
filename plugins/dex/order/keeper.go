@@ -36,6 +36,8 @@ const (
 	preferencePriceLevel = 500
 )
 
+var BUSDSymbol string
+
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
@@ -89,6 +91,10 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		logger:                     logger,
 	}
+}
+
+func (kp *Keeper) SetBUSDSymbol(symbol string) {
+	BUSDSymbol = symbol
 }
 
 func (kp *Keeper) Init(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
@@ -1075,21 +1081,28 @@ func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset stri
 		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
 	}
 
-	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+	if kp.pairExistsBetween(ctx, baseAsset, quoteAsset) {
 		return errors.New("trading pair exists")
 	}
 
 	if baseAsset != types.NativeTokenSymbol &&
 		quoteAsset != types.NativeTokenSymbol {
 
-		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+		// support busd pair listing
+		if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
+			if baseAsset == BUSDSymbol || quoteAsset == BUSDSymbol {
+				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, BUSDSymbol) {
+					return nil
+				}
+			}
+		}
+
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, baseAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before against %s",
 				baseAsset, quoteAsset)
 		}
 
-		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, quoteAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
 				quoteAsset, baseAsset, quoteAsset)
 		}
@@ -1131,4 +1144,9 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	return nil
+}
+
+// Check whether there is trading pair between two symbols
+func (kp *Keeper) pairExistsBetween(ctx sdk.Context, symbolA, symbolB string) bool {
+	return kp.PairMapper.Exists(ctx, symbolA, symbolB) || kp.PairMapper.Exists(ctx, symbolB, symbolA)
 }

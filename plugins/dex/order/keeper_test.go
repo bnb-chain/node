@@ -936,3 +936,77 @@ func TestKeeper_CanDelistTradingPair(t *testing.T) {
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "trading pair BBB-000_AAA-000 should not exist before delisting BNB_BBB-000")
 }
+
+func TestKeeper_CanListTradingPair_SupportBUSD(t *testing.T) {
+	ctx, _, keeper := setup()
+	// before upgrade
+	err := keeper.CanListTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against BUSD-BD1")
+
+	err = keeper.CanListTradingPair(ctx, "BUSD-BD1", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token BUSD-BD1 should be listed against BNB before against AAA-000")
+
+	// upgraded, but BNB-BUSD pair does not exist
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against BUSD-BD1")
+
+	err = keeper.CanListTradingPair(ctx, "BUSD-BD1", "AAA-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token BUSD-BD1 should be listed against BNB before against AAA-000")
+
+	//upgraded, BNB-BUSD pair does exist
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", types.NativeTokenSymbol, 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "BUSD-BD1", "AAA-000")
+	require.Nil(t, err)
+
+	//upgraded, ABC-XYZ pair listing is still dependent on ABC-BNB and XYZ-BNB pairs
+	//BUSD-ABC or XYZ-BUSD pairs will be no help at this case
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "AAA-000", 1e8))
+	require.Nil(t, err)
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "XYZ-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against XYZ-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "AAA-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "token XYZ-000 should be listed against BNB before listing AAA-000 against XYZ-000")
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "XYZ-000", 1e8))
+	require.Nil(t, err)
+
+	err = keeper.CanListTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.Nil(t, err)
+}
+
+func TestKeeper_CanDelistTradingPair_SupportBUSD(t *testing.T) {
+	ctx, _, keeper := setup()
+	err := keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "BUSD-BD1", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "AAA-000", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "BUSD-BD1", "AAA-000")
+	require.Nil(t, err)
+
+	// delisting AAA-XYZ will not depends on BUSD-AAA or BUSD-XYZ
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "AAA-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "XYZ-000", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "XYZ-000", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000", "XYZ-000")
+	require.Nil(t, err)
+}
