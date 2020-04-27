@@ -30,8 +30,8 @@ github.com/binance-chain/bnc-cosmos-sdk v0.25.0-binance.20 h1:KwluEf2oheva5zdqeO
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-binance.20/go.mod h1:Qd+w7Vm2WGxOqPquawShZ8KsHtA8PVDnx6XvZobloYg=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:yaElUUxWtv/TC/ldGtlKAvS1vKwokxgJ1d97I+6is80=
-github.com/binance-chain/bnc-tendermint v0.31.5-binance.2.0.20200427020224-fd1cd3215932 h1:ZVxUAAVbxF5TlP8PK8rSMrJNQrVWMkYunuKGvor4PpE=
-github.com/binance-chain/bnc-tendermint v0.31.5-binance.2.0.20200427020224-fd1cd3215932/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
+github.com/binance-chain/bnc-tendermint v0.31.5-binance.2.0.20200427025205-aee50ec05d01 h1:NIzxgnwN7Yy3D3tqhCwX1AJ4k72cWBupQoI7tUniZMg=
+github.com/binance-chain/bnc-tendermint v0.31.5-binance.2.0.20200427025205-aee50ec05d01/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
 github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.3 h1:OyTJet9aGz+c2WKpTf5cAvJNiQeqVFYP4AV9cPpro2M=
 github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.3/go.mod h1:Zmh8GRdNJB8DULIOBar3JCZp6tSpcvM1NGKfE9U2EzA=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.3 h1:FFpFbkzlP2HUyxQCm0eoU6mkfgMNynfqZRbeWqlaLdQ=
