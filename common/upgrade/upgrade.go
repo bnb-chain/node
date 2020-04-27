@@ -17,8 +17,7 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
-	// BUSD Pair Upgrade
-	BEP70 = "BEP70" // supporting listing and trading BUSD pairs
+
 
 	// TODO: add upgrade name
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
@@ -27,6 +26,8 @@ const (
 	FixZeroBalance       = "FixZeroBalance"
 
 	BEP67 = "BEP67" // https://github.com/binance-chain/BEPs/pull/67
+	// BUSD Pair Upgrade
+	BEP70 = "BEP70" // https://github.com/binance-chain/BEPs/pull/70
 )
 
 func UpgradeBEP10(before func(), after func()) {

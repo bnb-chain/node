@@ -369,7 +369,6 @@ type UpgradeConfig struct {
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
 	BEP3Height  int64 `mapstructure:"BEP3Height"`
-	BEP70Height int64 `mapstructure:"BEP70Height"`
 
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
@@ -378,6 +377,7 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 
 	BEP67Height int64 `mapstructure:"BEP67Height"`
+	BEP70Height int64 `mapstructure:"BEP70Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -389,12 +389,12 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
-		BEP70Height:                1,
 		FixSignBytesOverflowHeight: math.MaxInt64,
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
 		BEP67Height:                1,
+		BEP70Height:                1,
 	}
 }
 
