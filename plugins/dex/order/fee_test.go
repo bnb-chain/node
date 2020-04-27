@@ -303,14 +303,22 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 	// enough BNB, BNB will be collected
 	_, acc := testutils.NewAccount(ctx, am, 1e5)
 
-	// transferred in BUSD-BD1
+	// transferred in BNB
 	tran := Transfer{
+		inAsset: "BNB",
+		in:      2e3,
+	}
+	fee := keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
+	require.Equal(t, sdk.Coins{{"BNB", 1}}, fee.Tokens)
+
+	// transferred in BUSD-BD1
+	tran = Transfer{
 		inAsset:  "BUSD-BD1",
 		in:       1e3,
 		outAsset: "ABC-000",
 		out:      1e4,
 	}
-	fee := keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5e2}}, fee.Tokens)
 
 	// transferred in ABC-000
