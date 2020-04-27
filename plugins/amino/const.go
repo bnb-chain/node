@@ -3,7 +3,7 @@ package amino
 const (
 	QueryRoute = "amino"
 
-	encodeTx  = "encodeTx"
-	decodeTx  = "decodeTx"
-	decodeAcc = "decodeAcc"
+	EncodeTx  = "encodeTx"
+	DecodeTx  = "decodeTx"
+	DecodeAcc = "decodeAcc"
 )

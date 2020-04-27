@@ -13,13 +13,12 @@ import (
 
 func NewQuerier(codec *codec.Codec) sdk.Querier {
 	return func(ctx sdk.Context, path []string, req abci.RequestQuery) (res []byte, err sdk.Error) {
-		fmt.Println(path)
 		switch path[0] {
-		case encodeTx:
+		case EncodeTx:
 			return txEncoder(codec, req)
-		case decodeTx:
+		case DecodeTx:
 			return txDecoder(codec, req)
-		case decodeAcc:
+		case DecodeAcc:
 			return accDecoder(codec, req)
 		default:
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("unknown encoder query endpoint %s", path[0]))
@@ -62,7 +61,7 @@ func txDecoder(codec *codec.Codec, req abci.RequestQuery) ([]byte, sdk.Error) {
 func accDecoder(codec *codec.Codec, req abci.RequestQuery) ([]byte, sdk.Error) {
 	var acc cmmtypes.AppAccount
 
-	err := codec.UnmarshalBinaryLengthPrefixed(req.Data, &acc)
+	err := codec.UnmarshalBinaryBare(req.Data, &acc)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(err.Error())
 	}
