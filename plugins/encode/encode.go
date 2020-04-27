@@ -1,7 +1,6 @@
 package encode
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -25,10 +24,9 @@ func NewQuerier(codec *codec.Codec) sdk.Querier {
 func encodeTx(ctx sdk.Context, codec *codec.Codec, req abci.RequestQuery) ([]byte, sdk.Error) {
 	var stdTx auth.StdTx
 
-	fmt.Println("node encode input: "+hex.EncodeToString(req.Data))
 	err := codec.UnmarshalJSON(req.Data, &stdTx)
 	if err != nil {
-		return nil, sdk.ErrInternal(err.Error())
+		return nil, sdk.ErrUnknownRequest(err.Error())
 	}
 
 	txBytes, err := codec.MarshalBinaryLengthPrefixed(req)
