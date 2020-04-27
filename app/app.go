@@ -39,7 +39,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/encode"
+	"github.com/binance-chain/node/plugins/encoder"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
@@ -165,7 +165,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, cdc))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
 	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
-	app.QueryRouter().AddRoute("encode", encode.NewQuerier(app.Codec))
+	app.QueryRouter().AddRoute(encoder.QueryRoute, encoder.NewQuerier(app.Codec))
 
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
