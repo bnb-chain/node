@@ -106,10 +106,11 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 					levelLimit = l
 				}
 			}
-			levels := keeper.GetOrderBookLevels(pair, levelLimit)
+			levels, pendingMatch := keeper.GetOrderBookLevels(pair, levelLimit)
 			book := store.OrderBook{
-				Height: height,
-				Levels: levels,
+				Height:       height,
+				Levels:       levels,
+				PendingMatch: pendingMatch,
 			}
 			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(book)
 			if err != nil {

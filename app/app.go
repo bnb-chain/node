@@ -267,6 +267,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
+
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
