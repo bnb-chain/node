@@ -41,10 +41,10 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100,
 	}
 	// no enough bnb or native fee rounding to 0
-	fee := keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee := keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1}}, fee.Tokens)
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1}}, fee.Tokens)
 
 	tran = Transfer{
@@ -54,10 +54,10 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      10000,
 	}
 	_, acc = testutils.NewAccount(ctx, am, 1)
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1000}}, fee.Tokens)
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 
 	tran = Transfer{
@@ -67,7 +67,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      1000,
 	}
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 0}}, fee.Tokens)
 
 	tran = Transfer{
@@ -76,7 +76,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		outAsset: "ABC-000",
 		out:      100000,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 
 	tran = Transfer{
@@ -86,7 +86,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100000,
 	}
 	acc.SetCoins(sdk.Coins{{"ABC-000", 1000000}, {"BNB", 100}})
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 	tran = Transfer{
 		inAsset:  "XYZ-111",
@@ -95,7 +95,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100000,
 	}
 	acc.SetCoins(sdk.Coins{{"XYZ-111", 1000000}, {"BNB", 1000}})
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 500}}, fee.Tokens)
 }
 
@@ -310,7 +310,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "ABC-000",
 		out:      1e4,
 	}
-	fee := keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee := keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5e2}}, fee.Tokens)
 
 	// transferred in ABC-000
@@ -320,7 +320,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "BUSD-BD1",
 		out:      100,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 50}}, fee.Tokens)
 
 	// transferred in XYZ-999
@@ -330,7 +330,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "BUSD-BD1",
 		out:      1e5,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5e4}}, fee.Tokens)
 
 	// existing BUSD -> BNB trading pair
@@ -350,7 +350,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "ABC-000",
 		out:      1e5,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 
 	// transferred in ABC-000
@@ -360,7 +360,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "BUSD-BD1",
 		out:      1e5,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 50}}, fee.Tokens)
 
 	// transferred in XYZ-999
@@ -370,7 +370,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 		outAsset: "BUSD-BD1",
 		out:      1e5,
 	}
-	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeFromTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 50}}, fee.Tokens)
 }
 
