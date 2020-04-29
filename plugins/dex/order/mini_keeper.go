@@ -52,26 +52,16 @@ func NewMiniKeeper(dexMiniKey sdk.StoreKey, am auth.AccountKeeper, miniPairMappe
 			CollectOrderInfoForPublish: collectOrderInfoForPublish,
 			logger:                     logger,
 			symbolSelector:             &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
-			clearAfterMatch:            clearAfterMatchMini},
+			},
 	}
 }
 
 // override
 func (kp *MiniKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := kp.Keeper.AddEngine(pair)
+	eng := kp.AddEngine(pair)
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.symbolSelector.AddSymbolHash(symbol)
 	return eng
-}
-
-func clearAfterMatchMini(kp *Keeper) {
-	kp.logger.Debug("clearAfterMatchMini...")
-	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
-		delete(kp.roundOrders, symbol)
-		delete(kp.roundIOCOrders, symbol)
-	}
-	emptyRoundMatchSymbols := make([]string, 0, 256)
-	kp.symbolSelector.SetRoundMatchSymbol(emptyRoundMatchSymbols)
 }
 
 // used by state sync to clear memory order book after we synced latest breathe block

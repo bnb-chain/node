@@ -556,8 +556,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
 			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
-			miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexMiniTokenKeeper, ctx, isBreatheBlock)
+			tradesToPublish, miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.DexMiniTokenKeeper, ctx, isBreatheBlock)
+			//miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexMiniTokenKeeper, ctx, isBreatheBlock)
 		} else {
 			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
 			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)

@@ -59,6 +59,13 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	return nil
 }
 
+
+func Init(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	initOrderBook(dexKeeper, dexMiniKeeper, ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
+	dexKeeper.InitRecentPrices(ctx)
+	dexMiniKeeper.InitRecentPrices(ctx)
+}
+
 func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
 	effectedStoreKeys = make([]string, 0)
@@ -259,7 +266,7 @@ func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore,
 	return nil
 }
 
-func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func initOrderBook(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	var timeOfLatestBlock time.Time
 	if lastHeight == 0 {
 		timeOfLatestBlock = utils.Now()
@@ -267,7 +274,8 @@ func (kp *Keeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, bl
 		block := blockStore.LoadBlock(lastHeight)
 		timeOfLatestBlock = block.Time
 	}
-	height, err := kp.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
+	height, err := dexKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
+	height, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
 	if err != nil {
 		panic(err)
 	}

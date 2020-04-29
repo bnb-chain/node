@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/plugins/dex"
 	"strconv"
 	"sync"
 	"time"
@@ -264,15 +265,16 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 	return
 }
 
-func MatchAndAllocateAllForPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Context, matchAllMiniSymbols bool) []*Trade {
+func MatchAndAllocateAllForPublish(dexKeeper *dex.DexKeeper, dexMiniKeeper *dex.DexMiniTokenKeeper, ctx sdk.Context, matchAllMiniSymbols bool) ([]*Trade,[]*Trade) {
 	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
-	wg.Add(1)
+	wg.Add(2)
 
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
+	go updateExpireFeeForPublish(dexMiniKeeper, &wg, iocExpireFeeHolderCh)
 	var postAlloTransHandler = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
 			if tran.IsExpiredWithFee() {
@@ -284,12 +286,20 @@ func MatchAndAllocateAllForPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Co
 		}
 	}
 
-	dexKeeper.MatchAndAllocateSymbols(ctx, postAlloTransHandler, matchAllMiniSymbols)
+	orderPkg.MatchAndAllocateSymbols(dexKeeper, dexMiniKeeper, ctx, postAlloTransHandler, matchAllMiniSymbols, Logger)
 	close(iocExpireFeeHolderCh)
 
 	tradeIdx := 0
-	tradesToPublish := make([]*Trade, 0)
+
 	tradeHeight := ctx.BlockHeight()
+	tradesToPublish := extractTradesToPublish(dexKeeper, ctx, tradeHeight, &tradeIdx)
+	miniTradesToPublish := extractTradesToPublish(dexMiniKeeper, ctx, tradeHeight, &tradeIdx)
+	wg.Wait()
+	return tradesToPublish, miniTradesToPublish
+}
+
+func extractTradesToPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Context, tradeHeight int64, tradeIdx *int) []*Trade {
+	tradesToPublish := make([]*Trade, 0)
 	for _, pair := range dexKeeper.GetPairMapper().ListAllTradingPairs(ctx) {
 		symbol := pair.GetSymbol()
 		matchEngTrades, _ := dexKeeper.GetLastTrades(tradeHeight, symbol)
@@ -316,12 +326,10 @@ func MatchAndAllocateAllForPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Co
 				BSingleFee: bsinglefee,
 				TickType:   int(trade.TickType),
 			}
-			tradeIdx += 1
+			*tradeIdx += 1
 			tradesToPublish = append(tradesToPublish, t)
 		}
 	}
-
-	wg.Wait()
 	return tradesToPublish
 }
 
