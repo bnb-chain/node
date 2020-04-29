@@ -414,6 +414,7 @@ func (app *BinanceChain) initSlashing() {
 			DoubleSignSlashAmount:    1000e8,
 			SubmitterReward:          100e8,
 			DowntimeSlashAmount:      1000e8,
+			DowntimeSlashFee:         100e8,
 			BscSideChainId:           ServerContext.BscChainId,
 		})
 	})
