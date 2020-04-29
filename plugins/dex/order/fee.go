@@ -68,8 +68,8 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
 }
 
-func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) types.Fee {
-	var fees types.Fee
+func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) sdk.Fee {
+	var fees sdk.Fee
 	if tradeTransfers == nil {
 		return fees
 	}
@@ -88,8 +88,8 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	return fees
 }
 
-func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng, expireTransferHandler func(tran Transfer)) types.Fee {
-	var fees types.Fee
+func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng, expireTransferHandler func(tran Transfer)) sdk.Fee {
+	var fees sdk.Fee
 	if expireTransfers == nil {
 		return fees
 	}
@@ -106,7 +106,7 @@ func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEvent
 	return fees
 }
 
-func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeToken sdk.Coin
 
 	var nativeFee int64
@@ -114,7 +114,7 @@ func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Tra
 	if tran.IsNativeIn() {
 		// always have enough balance to pay the fee.
 		nativeFee = m.calcTradeFee(big.NewInt(tran.in), FeeByNativeToken).Int64()
-		return types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, nativeFee)}, types.FeeForProposer)
+		return sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, nativeFee)}, sdk.FeeForProposer)
 	} else if tran.IsNativeOut() {
 		nativeFee, isOverflow = m.calcNativeFee(types.NativeTokenSymbol, tran.out, engines)
 	} else {
@@ -130,7 +130,7 @@ func (m *FeeManager) calcTradeFeeForSingleTransfer(balances sdk.Coins, tran *Tra
 		// have sufficient native token to pay the fees
 		feeToken = sdk.NewCoin(types.NativeTokenSymbol, nativeFee)
 	}
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	return sdk.NewFee(sdk.Coins{feeToken}, sdk.FeeForProposer)
 }
 
 func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[string]*matcheng.MatchEng) (fee int64, isOverflow bool) {
@@ -172,7 +172,7 @@ func (m *FeeManager) calcNativeFee(inSymbol string, inQty int64, engines map[str
 // Note2: even though the function is called in multiple threads,
 // `engines` map would stay the same as no other function may change it in fee calculation stage,
 // so no race condition concern
-func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
@@ -208,7 +208,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 		}
 	}
 
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	return sdk.NewFee(sdk.Coins{feeToken}, sdk.FeeForProposer)
 }
 
 // Note: the result of `CalcFixedFee` depends on the balances of the acc,
@@ -216,7 +216,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeAmountNative int64
 	var feeAmount int64
 	if eventType == eventFullyExpire {
@@ -228,7 +228,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	} else {
 		// should not be here
 		m.logger.Error("Invalid expire eventType", "eventType", eventType)
-		return types.Fee{}
+		return sdk.Fee{}
 	}
 
 	var feeToken sdk.Coin
@@ -261,7 +261,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 		feeToken = sdk.NewCoin(inAsset, feeAmount)
 	}
 
-	return types.NewFee(sdk.Coins{feeToken}, types.FeeForProposer)
+	return sdk.NewFee(sdk.Coins{feeToken}, sdk.FeeForProposer)
 }
 
 func (m *FeeManager) calcTradeFee(amount *big.Int, feeType FeeType) *big.Int {

@@ -15,7 +15,7 @@ import (
 
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
@@ -329,7 +329,7 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 		return sdk.ErrInternal("calculate fees error").Result()
 	}
 
-	if fee.Type != types.FeeFree && !fee.Tokens.IsZero() {
+	if fee.Type != sdk.FeeFree && !fee.Tokens.IsZero() {
 		fee.Tokens.Sort()
 		res := deductFees(ctx, acc, fee, am)
 		if !res.IsOK() {
@@ -339,20 +339,20 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 
 	if ctx.IsDeliverTx() {
 		// add fee to pool, even it's free
-		fees.Pool.AddFee(txHash, fee)
+		sdkfees.Pool.AddFee(txHash, fee)
 	}
 	return sdk.Result{}
 }
 
-func calculateFees(msg sdk.Msg) (types.Fee, error) {
+func calculateFees(msg sdk.Msg) (sdk.Fee, error) {
 	calculator := fees.GetCalculator(msg.Type())
 	if calculator == nil {
-		return types.Fee{}, errors.New("missing calculator for msgType:" + msg.Type())
+		return sdk.Fee{}, errors.New("missing calculator for msgType:" + msg.Type())
 	}
 	return calculator(msg), nil
 }
 
-func checkSufficientFunds(acc sdk.Account, fee types.Fee) sdk.Result {
+func checkSufficientFunds(acc sdk.Account, fee sdk.Fee) sdk.Result {
 	coins := acc.GetCoins()
 
 	newCoins := coins.Minus(fee.Tokens.Sort())
@@ -364,7 +364,7 @@ func checkSufficientFunds(acc sdk.Account, fee types.Fee) sdk.Result {
 	return sdk.Result{}
 }
 
-func deductFees(ctx sdk.Context, acc sdk.Account, fee types.Fee, am auth.AccountKeeper) sdk.Result {
+func deductFees(ctx sdk.Context, acc sdk.Account, fee sdk.Fee, am auth.AccountKeeper) sdk.Result {
 	if res := checkSufficientFunds(acc, fee); !res.IsOK() {
 		return res
 	}

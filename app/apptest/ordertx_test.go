@@ -11,10 +11,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/utils"
 	o "github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 type level struct {

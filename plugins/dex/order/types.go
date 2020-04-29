@@ -3,7 +3,7 @@ package order
 import (
 	"fmt"
 
-	"github.com/binance-chain/node/common/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // The types here are shared between order and pub package
@@ -123,4 +123,4 @@ type ExpireHolder struct {
 	Fee     string
 }
 
-type FeeHolder map[string]*types.Fee
+type FeeHolder map[string]*sdk.Fee

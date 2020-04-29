@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkstore "github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -23,7 +24,6 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
@@ -586,10 +586,10 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Len(t, buys[0].Orders, 1)
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
 	require.Len(t, keeper.allOrders["XYZ-000_BNB"], 1)
-	expectFees := types.NewFee(sdk.Coins{
+	expectFees := sdk.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 6e4),
 		sdk.NewCoin("ABC-000", 1e7),
-	}.Sort(), types.FeeForProposer)
+	}.Sort(), sdk.FeeForProposer)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 	acc = am.GetAccount(ctx, acc.GetAddress())
 	require.Equal(t, sdk.Coins{
@@ -808,10 +808,10 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	assert.Equal(0, len(keeper.allOrders))
 	assert.Equal(0, len(keeper.engines))
 
-	expectFees := types.NewFee(sdk.Coins{
+	expectFees := sdk.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),
 		sdk.NewCoin("XYZ-000", 4e5),
-	}.Sort(), types.FeeForProposer)
+	}.Sort(), sdk.FeeForProposer)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 }
 
@@ -834,7 +834,7 @@ func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
 	assert.Equal(0, len(keeper.allOrders))
 	assert.Equal(0, len(keeper.engines))
 
-	expectFees := types.NewFee(sdk.Coins(nil), types.ZeroFee)
+	expectFees := sdk.NewFee(sdk.Coins(nil), sdk.ZeroFee)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 }
 

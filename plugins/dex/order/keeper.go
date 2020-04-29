@@ -15,7 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
@@ -27,6 +26,7 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 	minimalNumPrices = 500
 )
 
-type FeeHandler func(map[string]*types.Fee)
+type FeeHandler func(map[string]*sdk.Fee)
 type TransferHandler func(Transfer)
 
 // in the future, this may be distributed via Sharding
@@ -81,7 +81,7 @@ func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.
 		OrderInfosForPub:           make(OrderInfoForPublish),
 		roundOrders:                make(map[string][]string, 256),
 		roundIOCOrders:             make(map[string][]string, 256),
-		RoundOrderFees:             make(map[string]*types.Fee, 256),
+		RoundOrderFees:             make(map[string]*sdk.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		FeeManager:                 NewFeeManager(cdc, key, logger),
@@ -598,7 +598,7 @@ func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
 }
 
 func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
-	types.Fee, map[string]*types.Fee) {
+	sdk.Fee, map[string]*sdk.Fee) {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
@@ -610,7 +610,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 	expireTransfers := make(map[string]ExpireTransfers)
 	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
 	var expireEventType transferEventType
-	var totalFee types.Fee
+	var totalFee sdk.Fee
 	for tran := range tranCh {
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
@@ -638,7 +638,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 		}
 	}
 
-	feesPerAcc := make(map[string]*types.Fee)
+	feesPerAcc := make(map[string]*sdk.Fee)
 	for addrStr, trans := range tradeTransfers {
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
@@ -672,7 +672,7 @@ func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocate
 
 // DEPRECATED
 func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
-	types.Fee, map[string]*types.Fee) {
+	sdk.Fee, map[string]*sdk.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
@@ -680,7 +680,7 @@ func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer,
 	expireInAsset := make(map[string]*sortedAsset)
 	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
 	var expireEventType transferEventType
-	var totalFee types.Fee
+	var totalFee sdk.Fee
 	for tran := range tranCh {
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
@@ -708,13 +708,13 @@ func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer,
 		}
 	}
 
-	feesPerAcc := make(map[string]*types.Fee)
-	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc sdk.Account, in sdk.Coin) types.Fee) {
+	feesPerAcc := make(map[string]*sdk.Fee)
+	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc sdk.Account, in sdk.Coin) sdk.Fee) {
 		for addrStr, assets := range assetsMap {
 			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
 
-			var fees types.Fee
+			var fees sdk.Fee
 			if exists, ok := feesPerAcc[addrStr]; ok {
 				fees = *exists
 			}
@@ -734,14 +734,14 @@ func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer,
 			}
 		}
 	}
-	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
+	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) sdk.Fee {
 		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
-	collectFee(expireInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
+	collectFee(expireInAsset, func(acc sdk.Account, in sdk.Coin) sdk.Fee {
 		var i int64 = 0
-		var fees types.Fee
+		var fees sdk.Fee
 		for ; i < in.Amount; i++ {
 			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.engines)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
@@ -756,12 +756,12 @@ func (kp *Keeper) allocateAndCalcFee(
 	ctx sdk.Context,
 	tradeOuts []chan Transfer,
 	postAlloTransHandler TransferHandler,
-) types.Fee {
+) sdk.Fee {
 	concurrency := len(tradeOuts)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
-	feesPerCh := make([]types.Fee, concurrency)
-	feesPerAcc := make([]map[string]*types.Fee, concurrency)
+	feesPerCh := make([]sdk.Fee, concurrency)
+	feesPerAcc := make([]map[string]*sdk.Fee, concurrency)
 	allocatePerCh := func(index int, tranCh <-chan Transfer) {
 		defer wg.Done()
 		fee, feeByAcc := kp.allocate(ctx, tranCh, postAlloTransHandler)
@@ -773,7 +773,7 @@ func (kp *Keeper) allocateAndCalcFee(
 		go allocatePerCh(i, tradeTranCh)
 	}
 	wg.Wait()
-	totalFee := types.Fee{}
+	totalFee := sdk.Fee{}
 	for i := 0; i < concurrency; i++ {
 		totalFee.AddFee(feesPerCh[i])
 	}
@@ -953,7 +953,7 @@ func (kp *Keeper) GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight i
 
 // deliberately make `fee` parameter not a pointer
 // in case we modify the original fee (which will be referenced when distribute to validator)
-func (kp *Keeper) updateRoundOrderFee(addr string, fee types.Fee) {
+func (kp *Keeper) updateRoundOrderFee(addr string, fee sdk.Fee) {
 	if existingFee, ok := kp.RoundOrderFees[addr]; ok {
 		existingFee.AddFee(fee)
 	} else {
@@ -962,7 +962,7 @@ func (kp *Keeper) updateRoundOrderFee(addr string, fee types.Fee) {
 }
 
 func (kp *Keeper) ClearRoundFee() {
-	kp.RoundOrderFees = make(map[string]*types.Fee, 256)
+	kp.RoundOrderFees = make(map[string]*sdk.Fee, 256)
 }
 
 // used by state sync to clear memory order book after we synced latest breathe block

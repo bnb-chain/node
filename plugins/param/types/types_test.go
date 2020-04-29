@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/binance-chain/node/common/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func TestFixedFeeParamTypeCheck(t *testing.T) {
@@ -13,11 +13,11 @@ func TestFixedFeeParamTypeCheck(t *testing.T) {
 		fp          FixedFeeParams
 		expectError bool
 	}{
-		{FixedFeeParams{"send", 0, types.FeeForProposer}, true},
-		{FixedFeeParams{"submit_proposal", 0, types.FeeForProposer}, false},
+		{FixedFeeParams{"send", 0, sdk.FeeForProposer}, true},
+		{FixedFeeParams{"submit_proposal", 0, sdk.FeeForProposer}, false},
 		{FixedFeeParams{"remove_validator", 0, 0}, true},
-		{FixedFeeParams{"tokensBurn", -1, types.FeeForProposer}, true},
-		{FixedFeeParams{"tokensBurn", 100, types.FeeForProposer}, false},
+		{FixedFeeParams{"tokensBurn", -1, sdk.FeeForProposer}, true},
+		{FixedFeeParams{"tokensBurn", 100, sdk.FeeForProposer}, false},
 	}
 	for _, testCase := range testCases {
 		err := testCase.fp.Check()
@@ -34,10 +34,10 @@ func TestTransferFeeParamTypeCheck(t *testing.T) {
 		fp          TransferFeeParam
 		expectError bool
 	}{
-		{TransferFeeParam{FixedFeeParams{"send", 100, types.FeeForProposer}, 1, 2}, false},
-		{TransferFeeParam{FixedFeeParams{"wrong type", 100, types.FeeForProposer}, 1, 2}, true},
-		{TransferFeeParam{FixedFeeParams{"send", -1, types.FeeForProposer}, 1, 2}, true},
-		{TransferFeeParam{FixedFeeParams{"send", 100, types.FeeForProposer}, 1, 1}, true},
+		{TransferFeeParam{FixedFeeParams{"send", 100, sdk.FeeForProposer}, 1, 2}, false},
+		{TransferFeeParam{FixedFeeParams{"wrong type", 100, sdk.FeeForProposer}, 1, 2}, true},
+		{TransferFeeParam{FixedFeeParams{"send", -1, sdk.FeeForProposer}, 1, 2}, true},
+		{TransferFeeParam{FixedFeeParams{"send", 100, sdk.FeeForProposer}, 1, 1}, true},
 	}
 	for _, testCase := range testCases {
 		err := testCase.fp.Check()
@@ -72,8 +72,8 @@ func TestFeeChangeParamsCheck(t *testing.T) {
 		fp          FeeChangeParams
 		expectError bool
 	}{
-		{FeeChangeParams{FeeParams: []FeeParam{&DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}, &TransferFeeParam{FixedFeeParams{"send", 100, types.FeeForProposer}, 1, 2}}}, false},
-		{FeeChangeParams{FeeParams: []FeeParam{&DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}, &FixedFeeParams{"send", 100, types.FeeForProposer}}}, true},
+		{FeeChangeParams{FeeParams: []FeeParam{&DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}, &TransferFeeParam{FixedFeeParams{"send", 100, sdk.FeeForProposer}, 1, 2}}}, false},
+		{FeeChangeParams{FeeParams: []FeeParam{&DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}, &FixedFeeParams{"send", 100, sdk.FeeForProposer}}}, true},
 		{FeeChangeParams{FeeParams: []FeeParam{&DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}, &DexFeeParam{[]DexFeeField{{"ExpireFee", 1000}}}}}, true},
 	}
 	for _, testCase := range testCases {

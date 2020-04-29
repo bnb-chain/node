@@ -22,11 +22,11 @@ import (
 
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/testutils"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (

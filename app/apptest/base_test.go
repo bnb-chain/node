@@ -27,6 +27,7 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 type TestClient struct {
@@ -43,7 +44,7 @@ func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
 			// add fee to pool, even it's free
 			stdTx := tx.(auth.StdTx)
 			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinaryLengthPrefixed(stdTx))).String()
-			fees.Pool.AddFee(txHash, fee)
+			sdkfees.Pool.AddFee(txHash, fee)
 		}
 
 		return newCtx, sdk.Result{}, false

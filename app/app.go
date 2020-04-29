@@ -32,7 +32,6 @@ import (
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
@@ -49,6 +48,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
@@ -410,9 +410,10 @@ func (app *BinanceChain) initSlashing() {
 			MaxEvidenceAge:           60 * 60 * 24 * time.Second,     // 1 day
 			DoubleSignUnbondDuration: 60 * 60 * 24 * 7 * time.Second, // 7 days
 			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
-			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second, // 1 day
-			SlashAmount:              1000e8,
+			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
+			DoubleSignSlashAmount:    1000e8,
 			SubmitterReward:          100e8,
+			DowntimeSlashAmount:      1000e8,
 			BscSideChainId:           ServerContext.BscChainId,
 		})
 	})
