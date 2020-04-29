@@ -145,6 +145,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.SlashingStoreKey, &app.stakeKeeper,
 		app.ParamHub.Subspace(slashing.DefaultParamspace),
 		app.RegisterCodespace(slashing.DefaultCodespace),
+		app.CoinKeeper,
 	)
 
 	app.stakeKeeper = stake.NewKeeper(
@@ -386,9 +387,10 @@ func (app *BinanceChain) initStaking() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime: 60 * 60 * 24 * time.Second, // 1 day
-			MaxValidators: 21,
-			BondDenom:     types.NativeTokenSymbol,
+			UnbondingTime:     60 * 60 * 24 * time.Second, // 1 day
+			MaxValidators:     21,
+			BondDenom:         types.NativeTokenSymbol,
+			MinSelfDelegation: 10000e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
 			// TODO: optimize these parameters
@@ -418,6 +420,7 @@ func (app *BinanceChain) initSlashing() {
 			BscSideChainId:           ServerContext.BscChainId,
 		})
 	})
+	// todo register oracle claim
 }
 
 func (app *BinanceChain) initIbc() {

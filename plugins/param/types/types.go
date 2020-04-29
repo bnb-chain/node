@@ -47,8 +47,8 @@ var (
 		"side_redelegate":       {},
 		"side_undelegate":       {},
 
-		"submit_side_chain_evidence": {},
-		"side_chain_unjail":          {},
+		"bsc_submit_evidence": {},
+		"side_chain_unjail":   {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
