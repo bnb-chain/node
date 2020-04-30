@@ -61,12 +61,12 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token seturi should not exceed %v characters", types.MaxTokenURILength))
 	}
 
-	if msg.TokenType != int8(types.SupplyRange.MINI) || msg.TokenType != int8(types.SupplyRange.TINY) {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("token type should be %d or %d", int8(types.SupplyRange.MINI), int8(types.SupplyRange.TINY)))
+	if msg.TokenType != int8(types.SupplyRange.MINI) && msg.TokenType != int8(types.SupplyRange.TINY) {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token type should be %d or %d, got %d", int8(types.SupplyRange.MINI), int8(types.SupplyRange.TINY), msg.TokenType))
 	}
 
 	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.SupplyRangeType(msg.TokenType).UpperBound() {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply,  types.SupplyRangeType(msg.TokenType).UpperBound()))
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.SupplyRangeType(msg.TokenType).UpperBound()))
 	}
 
 	return nil

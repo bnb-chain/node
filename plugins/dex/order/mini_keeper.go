@@ -3,6 +3,11 @@ package order
 import (
 	"errors"
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
+	"strings"
+	"sync"
+	"time"
+
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
@@ -11,9 +16,6 @@ import (
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"strings"
-	"sync"
 )
 
 const (
@@ -29,30 +31,27 @@ type MiniKeeper struct {
 var _ DexOrderKeeper = &MiniKeeper{}
 
 // NewKeeper - Returns the MiniToken Keeper
-func NewMiniKeeper(dexMiniKey sdk.StoreKey, am auth.AccountKeeper, miniPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *MiniKeeper {
+func NewMiniKeeper(dexMiniKey sdk.StoreKey, miniPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
+	concurrency uint, cdc *wire.Codec, globalKeeper *GlobalKeeper) *MiniKeeper {
 	logger := bnclog.With("module", "dexkeeper")
 	return &MiniKeeper{
 		Keeper{PairMapper: miniPairMapper,
-			am:                         am,
-			storeKey:                   dexMiniKey,
-			codespace:                  codespace,
-			engines:                    make(map[string]*me.MatchEng),
-			recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
-			allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
-			OrderChangesMtx:            &sync.Mutex{},
-			OrderChanges:               make(OrderChanges, 0),
-			OrderInfosForPub:           make(OrderInfoForPublish),
-			roundOrders:                make(map[string][]string, 256),
-			roundIOCOrders:             make(map[string][]string, 256),
-			RoundOrderFees:             make(map[string]*types.Fee, 256),
-			poolSize:                   concurrency,
-			cdc:                        cdc,
-			FeeManager:                 NewFeeManager(cdc, dexMiniKey, logger),
-			CollectOrderInfoForPublish: collectOrderInfoForPublish,
-			logger:                     logger,
-			symbolSelector:             &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
-			},
+			storeKey:         dexMiniKey,
+			codespace:        codespace,
+			engines:          make(map[string]*me.MatchEng),
+			recentPrices:     make(map[string]*utils.FixedSizeRing, 256),
+			allOrders:        make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
+			OrderChangesMtx:  &sync.Mutex{},
+			OrderChanges:     make(OrderChanges, 0),
+			OrderInfosForPub: make(OrderInfoForPublish),
+			roundOrders:      make(map[string][]string, 256),
+			roundIOCOrders:   make(map[string][]string, 256),
+			poolSize:         concurrency,
+			cdc:              cdc,
+			logger:           logger,
+			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
+			GlobalKeeper:     globalKeeper,
+		},
 	}
 }
 
@@ -130,4 +129,16 @@ func (kp *MiniKeeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrd
 			types.MiniTokenMinTotalSupply)
 	}
 	return nil
+}
+
+// override
+func (kp *MiniKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
+	lastBreatheBlockHeight := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
+	upgradeHeight := sdk.UpgradeMgr.GetUpgradeHeight(upgrade.BEP8)
+	kp.logger.Info("Loaded MiniKeeper orderbook ", "lastBreatheBlockHeight", lastBreatheBlockHeight, "upgradeHeight", upgradeHeight)
+	if lastBreatheBlockHeight < upgradeHeight {
+		return lastBreatheBlockHeight, nil
+	} else {
+		return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
+	}
 }

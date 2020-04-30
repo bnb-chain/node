@@ -214,7 +214,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 
 func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	assert, require, app, buyerAcc, sellerAcc := setupAppTest(t)
-	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper)
+	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper, app.DexGlobalKeeper)
 	ctx := app.DeliverState.Ctx
 
 	// ==== Place a to-be-matched sell order and a to-be-cancelled buy order (in different symbol)

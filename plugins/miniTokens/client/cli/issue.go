@@ -81,7 +81,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 }
 
 func checkTokenType(tokenType int) error {
-	if tokenType != int(types.SupplyRange.TINY) || tokenType != int(types.SupplyRange.MINI) {
+	if tokenType != int(types.SupplyRange.TINY) && tokenType != int(types.SupplyRange.MINI) {
 		return errors.New("invalid token type")
 	}
 	return nil

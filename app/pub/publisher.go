@@ -13,18 +13,19 @@ import (
 const (
 	// TODO(#66): revisit the setting / whole thread model here,
 	// do we need better way to make main thread less possibility to block
-	TransferCollectionChannelSize = 4000
-	ToRemoveOrderIdChannelSize    = 1000
-	MaxOrderBookLevel             = 100
+	TransferCollectionChannelSize     = 4000
+	MiniTransferCollectionChannelSize = 1000
+	ToRemoveOrderIdChannelSize        = 1000
+	MaxOrderBookLevel                 = 100
 )
 
 var (
-	Logger            tmlog.Logger
-	Cfg               *config.PublicationConfig
-	ToPublishCh       chan BlockInfoToPublish
-	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
+	Logger                tmlog.Logger
+	Cfg                   *config.PublicationConfig
+	ToPublishCh           chan BlockInfoToPublish
+	ToRemoveOrderIdCh     chan string // order ids to remove from keeper.OrderInfoForPublish
 	ToRemoveMiniOrderIdCh chan string // order ids to remove from keeper.miniOrderInfoForPublish
-	IsLive            bool
+	IsLive                bool
 )
 
 type MarketDataPublisher interface {
@@ -217,7 +218,7 @@ func publishExecutionResult(publisher MarketDataPublisher, height int64, timesta
 	numOfStakeUpdatedAccounts := stakeUpdates.NumOfMsgs
 	numOfMiniOrders := len(miniOrders)
 	numOfMiniTrades := len(miniTrades)
-	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals + numOfStakeUpdatedAccounts + numOfMiniTrades + numOfMiniOrders }
+	executionResultsMsg := ExecutionResults{Height: height, Timestamp: timestamp, NumOfMsgs: numOfTrades + numOfOrders + numOfProposals + numOfStakeUpdatedAccounts + numOfMiniTrades + numOfMiniOrders}
 	if numOfOrders > 0 {
 		executionResultsMsg.Orders = Orders{numOfOrders, os}
 	}

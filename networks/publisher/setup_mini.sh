@@ -80,3 +80,29 @@ result=$(expect ${scripthome}/recover.exp "${secret}" "zc" "${clipath}" "${cliho
 result=$(expect ${scripthome}/add_key.exp "zz" "${clipath}" "${clihome}")
 zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnb[0-9a-zA-Z]*" | grep -v "bnbp")
 
+
+# issue&list NNB and ZCB for ordergen
+result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id})
+nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
+echo ${nnb_symbol}
+sleep 5
+((expire_time=$(date '+%s')+1000))
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${nnb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time ${expire_time} --voting-period 5 --json
+sleep 2
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 1 --option Yes --json
+sleep 6
+${cli} dex list -s=${nnb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 1
+sleep 1
+result=$(${cli} token issue --from=zc --token-name="ZC Coin" --symbol=ZCB --total-supply=2000000000000000 --chain-id ${chain_id})
+zcb_symbol=$(echo "${result}" | tail -n 1 | grep -o "ZCB-[0-9A-Z]*")
+echo ${zcb_symbol}
+sleep 5
+((expire_time=$(date '+%s')+1000))
+${cli} gov submit-list-proposal --chain-id ${chain_id} --from zc --deposit 200000000000:BNB --base-asset-symbol ${zcb_symbol} --quote-asset-symbol BNB --init-price 1000000000 --title "list NNB/BNB" --description "list NNB/BNB" --expire-time ${expire_time} --voting-period 5 --json
+sleep 2
+${cli} gov vote --from zc --chain-id ${chain_id} --proposal-id 2 --option Yes --json
+sleep 6
+${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 2
+sleep 1
+${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000:BNB --chain-id ${chain_id}
+sleep 5

@@ -13,9 +13,12 @@ type TradingPairMapper = store.TradingPairMapper
 type DexKeeper = order.Keeper
 type DexMiniTokenKeeper = order.MiniKeeper
 type DexOrderKeeper = order.DexOrderKeeper
+type DexGlobalKeeper = order.GlobalKeeper
+
 
 var NewTradingPairMapper = store.NewTradingPairMapper
 var NewOrderKeeper = order.NewKeeper
 var NewMiniKeeper = order.NewMiniKeeper
+var NewGlobalKeeper = order.NewGlobalKeeper
 
 const DefaultCodespace = types.DefaultCodespace

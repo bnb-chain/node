@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 ########################### SETUP #########################
-src='/Users/zhaocong/go/src/github.com/binance-chain/node'
-home='/Users/zhaocong'
-deamonhome='/Users/zhaocong/.bnbchaind'
-witnesshome='/Users/zhaocong/.bnbchaind_publisher'
-clihome='/Users/zhaocong/.bnbcli'
+src='/Users/luerheng/go/src/github.com/binance-chain/node'
+home='/Users/luerheng'
+deamonhome='/Users/luerheng/.bnbchaind'
+witnesshome='/Users/luerheng/.bnbchaind_publisher'
+clihome='/Users/luerheng/.bnbcli'
 chain_id='test-chain-n4b735'
 
 key_seed_path="${home}"

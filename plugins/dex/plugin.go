@@ -30,12 +30,12 @@ const (
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, dexKeeper *DexKeeper, dexMiniKeeper *DexMiniTokenKeeper, tokenMapper tkstore.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
+	appp app.ChainApp, dexKeeper *DexKeeper, dexMiniKeeper *DexMiniTokenKeeper, dexGlobalKeeper *DexGlobalKeeper, tokenMapper tkstore.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
 ) {
 	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, dexKeeper, dexMiniKeeper, tokenMapper, miniTokenMapper, accMapper, govKeeper) {
+	for route, handler := range Routes(cdc, dexKeeper, dexMiniKeeper, dexGlobalKeeper, tokenMapper, miniTokenMapper, accMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

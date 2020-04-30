@@ -24,6 +24,7 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -58,7 +59,6 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	kv.Set([]byte(key), compressedBytes)
 	return nil
 }
-
 
 func Init(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	initOrderBook(dexKeeper, dexMiniKeeper, ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
@@ -177,12 +177,12 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 		symbol := strings.ToUpper(m.Symbol)
 		kp.allOrders[symbol][m.Id] = &orderHolder
 		if m.CreatedHeight == height {
-				kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
-				if m.TimeInForce == TimeInForce.IOC {
-					kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
-				}
+			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
+			if m.TimeInForce == TimeInForce.IOC {
+				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
+			}
 		}
-		if kp.CollectOrderInfoForPublish {
+		if kp.GlobalKeeper.CollectOrderInfoForPublish {
 			if _, exists := kp.OrderInfosForPub[m.Id]; !exists {
 				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
 				kp.OrderInfosForPub[m.Id] = &orderHolder
@@ -193,7 +193,7 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 	return height, nil
 }
 
-func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, stateDB dbm.DB, txDecoder sdk.TxDecoder,
+func replayOneBlocks(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, logger log.Logger, block *tmtypes.Block, stateDB dbm.DB, txDecoder sdk.TxDecoder,
 	height int64, timestamp time.Time) {
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
@@ -208,6 +208,7 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, state
 	}
 	// the time we replay should be consistent with ctx.BlockHeader().Time
 	t := timestamp.UnixNano()
+	var orderKeeper DexOrderKeeper
 	for idx, txBytes := range block.Txs {
 		if abciRes.DeliverTx[idx].IsErr() {
 			logger.Info("Skip tx when replay", "height", height, "idx", idx)
@@ -235,13 +236,23 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, state
 					height, t,
 					height, t,
 					0, txHash.String(), txSource}
-				kp.AddOrder(orderInfo, true)
+				if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(msg.Symbol) {
+					orderKeeper = dexKeeper
+				} else {
+					orderKeeper = dexMiniKeeper
+				}
+				orderKeeper.AddOrder(orderInfo, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
-					if kp.CollectOrderInfoForPublish {
+				if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(msg.Symbol) {
+					orderKeeper = dexKeeper
+				} else {
+					orderKeeper = dexMiniKeeper
+				}
+				err := orderKeeper.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
+					if orderKeeper.GetGlobalKeeper().CollectOrderInfoForPublish {
 						bnclog.Debug("deleted order from order changes map", "orderId", msg.RefId, "isRecovery", true)
-						delete(kp.OrderInfosForPub, msg.RefId)
+						delete(orderKeeper.GetOrderInfosForPub(), msg.RefId)
 					}
 				})
 				if err != nil {
@@ -252,16 +263,16 @@ func (kp *Keeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, state
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	kp.MatchSymbols(height, t) //no need to check result
+	MatchSymbols(height, t, dexKeeper, dexMiniKeeper, false, logger) //no need to check result
 }
 
-func (kp *Keeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,
+func ReplayOrdersFromBlock(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		ctx.Logger().Info("Relaying block for order book", "height", i)
 		upgrade.Mgr.SetHeight(i)
-		kp.replayOneBlocks(ctx.Logger(), block, stateDb, txDecoder, i, block.Time)
+		replayOneBlocks(dexKeeper, dexMiniKeeper, ctx.Logger(), block, stateDb, txDecoder, i, block.Time)
 	}
 	return nil
 }
@@ -275,13 +286,15 @@ func initOrderBook(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context
 		timeOfLatestBlock = block.Time
 	}
 	height, err := dexKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
-	height, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		_, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
+	}
 	if err != nil {
 		panic(err)
 	}
 	logger := ctx.Logger().With("module", "dex")
-	logger.Info("Initialized Block Store for replay", "toHeight", lastHeight)
-	err = kp.ReplayOrdersFromBlock(ctx.WithLogger(logger), blockStore, stateDB, lastHeight, height, txDecoder)
+	logger.Info("Initialized Block Store for replay", "fromHeight", height, "toHeight", lastHeight)
+	err = ReplayOrdersFromBlock(dexKeeper, dexMiniKeeper, ctx.WithLogger(logger), blockStore, stateDB, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}

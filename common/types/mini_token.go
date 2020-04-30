@@ -55,7 +55,7 @@ func (t SupplyRangeType) String() string {
 var SupplyRange = struct {
 	TINY SupplyRangeType
 	MINI SupplyRangeType
-}{MiniRangeType, TinyRangeType}
+}{TinyRangeType, MiniRangeType }
 
 type MiniToken struct {
 	Name        string          `json:"name"`

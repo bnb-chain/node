@@ -84,6 +84,7 @@ type BinanceChain struct {
 	CoinKeeper         bank.Keeper
 	DexKeeper          *dex.DexKeeper
 	DexMiniTokenKeeper *dex.DexMiniTokenKeeper
+	DexGlobalKeeper    *dex.DexGlobalKeeper
 	AccountKeeper      auth.AccountKeeper
 	TokenMapper        tkstore.Mapper
 	MiniTokenMapper    miniTkstore.MiniTokenMapper
@@ -223,7 +224,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
+		common.DexMiniStoreKey,
 		common.MiniTokenStoreKey,
+		common.MiniTokenPairStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -277,6 +280,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.DexMiniStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenPairStoreKey.Name())
 
@@ -318,15 +322,17 @@ func (app *BinanceChain) initRunningMode() {
 }
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMapper dex.TradingPairMapper) {
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
-		app.publicationConfig.ShouldPublishAny())
-	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 
-	app.DexMiniTokenKeeper = dex.NewMiniKeeper(common.DexMiniStoreKey, app.AccountKeeper, miniPairMapper,
+	app.DexGlobalKeeper = dex.NewGlobalKeeper(app.Codec, app.AccountKeeper, app.publicationConfig.ShouldPublishAny())
+	app.DexGlobalKeeper.SubscribeParamChange(app.ParamHub)
+
+	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, pairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
-		app.publicationConfig.ShouldPublishAny())
-	app.DexMiniTokenKeeper.SubscribeParamChange(app.ParamHub)
+		app.DexGlobalKeeper)
+
+	app.DexMiniTokenKeeper = dex.NewMiniKeeper(common.DexMiniStoreKey, miniPairMapper,
+		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
+		app.DexGlobalKeeper)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
@@ -339,7 +345,9 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMappe
 	stateDB := baseapp.LoadStateDB()
 	defer stateDB.Close()
 
-	app.DexKeeper.Init(
+	order.Init(
+		app.DexKeeper,
+		app.DexMiniTokenKeeper,
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
@@ -348,20 +356,12 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMappe
 		app.LastBlockHeight(),
 		app.TxDecoder)
 
-	app.DexMiniTokenKeeper.Init(
-		app.CheckState.Ctx,
-		app.baseConfig.BreatheBlockInterval,
-		app.baseConfig.BreatheBlockDaysCountBack,
-		blockStore,
-		stateDB,
-		app.LastBlockHeight(),
-		app.TxDecoder)
 }
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.DexMiniTokenKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.DexMiniTokenKeeper, app.DexGlobalKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }
@@ -555,13 +555,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var miniTradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
 			tradesToPublish, miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.DexMiniTokenKeeper, ctx, isBreatheBlock)
-			//miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexMiniTokenKeeper, ctx, isBreatheBlock)
 		} else {
-			//todo parallel run, extract fees.Pool.AddAndCommitFee("MATCH", totalFee)
-			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
-			app.DexMiniTokenKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
+			order.MatchAndAllocateSymbols(app.DexKeeper, app.DexMiniTokenKeeper, ctx, nil, isBreatheBlock, app.Logger)
 		}
 	}
 
@@ -572,7 +568,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
-		dex.EndBreatheBlock(ctx, app.DexMiniTokenKeeper, app.govKeeper, height, blockTime)
+		if sdk.IsUpgrade(upgrade.BEP8) {
+			dex.EndBreatheBlock(ctx, app.DexMiniTokenKeeper, app.govKeeper, height, blockTime)
+		}
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 		// other end blockers
@@ -582,7 +580,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
-	app.DexMiniTokenKeeper.StoreTradePrices(ctx)
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		app.DexMiniTokenKeeper.StoreTradePrices(ctx)
+	}
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
@@ -612,9 +612,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
-		app.DexKeeper.ClearRoundFee()
-		app.DexMiniTokenKeeper.ClearOrderChanges()
-		app.DexMiniTokenKeeper.ClearRoundFee()
+		if sdk.IsUpgrade(upgrade.BEP8) {
+			app.DexMiniTokenKeeper.ClearOrderChanges()
+		}
+		app.DexGlobalKeeper.ClearRoundFee()
 	}
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
@@ -868,7 +869,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 		latestPriceLevels,
 		miniLatestPriceLevels,
 		blockFee,
-		app.DexKeeper.RoundOrderFees,
+		app.DexGlobalKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
 		transferToPublish,
 		blockToPublish)
 

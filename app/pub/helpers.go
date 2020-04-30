@@ -4,7 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/common/upgrade"
+	"github.com/binance-chain/node/plugins/dex/utils"
 	"strconv"
 	"sync"
 	"time"
@@ -265,35 +266,48 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 	return
 }
 
-func MatchAndAllocateAllForPublish(dexKeeper *dex.DexKeeper, dexMiniKeeper *dex.DexMiniTokenKeeper, ctx sdk.Context, matchAllMiniSymbols bool) ([]*Trade,[]*Trade) {
+func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.Keeper, dexMiniKeeper *orderPkg.MiniKeeper, ctx sdk.Context, matchAllMiniSymbols bool) ([]*Trade, []*Trade) {
 	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
+	miniIocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, MiniTransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
 	go updateExpireFeeForPublish(dexKeeper, &wg, iocExpireFeeHolderCh)
-	go updateExpireFeeForPublish(dexMiniKeeper, &wg, iocExpireFeeHolderCh)
+	go updateExpireFeeForPublish(dexMiniKeeper, &wg, miniIocExpireFeeHolderCh)
 	var postAlloTransHandler = func(tran orderPkg.Transfer) {
+		var receiver chan orderPkg.ExpireHolder
+		if utils.IsMiniTokenTradingPair(tran.Symbol) {
+			receiver = miniIocExpireFeeHolderCh
+		} else {
+			receiver = iocExpireFeeHolderCh
+		}
 		if tran.IsExpire() {
 			if tran.IsExpiredWithFee() {
 				// we only got expire of Ioc here, gte orders expire is handled in breathe block
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill, tran.Fee.String()}
+				receiver <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill, tran.Fee.String()}
 			} else {
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire, tran.Fee.String()}
+				receiver <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire, tran.Fee.String()}
 			}
 		}
 	}
 
 	orderPkg.MatchAndAllocateSymbols(dexKeeper, dexMiniKeeper, ctx, postAlloTransHandler, matchAllMiniSymbols, Logger)
 	close(iocExpireFeeHolderCh)
+	close(miniIocExpireFeeHolderCh)
 
 	tradeIdx := 0
 
 	tradeHeight := ctx.BlockHeight()
 	tradesToPublish := extractTradesToPublish(dexKeeper, ctx, tradeHeight, &tradeIdx)
-	miniTradesToPublish := extractTradesToPublish(dexMiniKeeper, ctx, tradeHeight, &tradeIdx)
+	var miniTradesToPublish []*Trade
+	if !sdk.IsUpgrade(upgrade.BEP8) {
+		miniTradesToPublish = make([]*Trade, 0)
+	} else {
+		miniTradesToPublish = extractTradesToPublish(dexMiniKeeper, ctx, tradeHeight, &tradeIdx)
+	}
 	wg.Wait()
 	return tradesToPublish, miniTradesToPublish
 }
@@ -518,7 +532,7 @@ func collectOrdersToPublish(
 	feeHolder orderPkg.FeeHolder,
 	timestamp int64, miniTrades []*Trade,
 	miniOrderChanges orderPkg.OrderChanges,
-	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order,feeToPublish map[string]string, ) {
+	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order, feeToPublish map[string]string, ) {
 	opensToPublish = make([]*Order, 0)
 	closedToPublish = make([]*Order, 0)
 	miniOpensToPublish = make([]*Order, 0)

@@ -25,7 +25,7 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, accKeeper auth.AccountKeeper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, dexGlobalKeeper *GlobalKeeper, accKeeper auth.AccountKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
@@ -33,7 +33,7 @@ func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, a
 			return handleNewOrder(ctx, cdc, orderKeeper, msg)
 		case CancelOrderMsg:
 			orderKeeper, _ := selectKeeper(msg, dexKeeper, dexMiniKeeper)
-			return handleCancelOrder(ctx, orderKeeper, msg)
+			return handleCancelOrder(ctx, orderKeeper, dexGlobalKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -186,7 +186,7 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper DexOrderKeeper, msg CancelOrderMsg,
+	ctx sdk.Context, keeper DexOrderKeeper, dexGlobalKeeper *GlobalKeeper, msg CancelOrderMsg,
 ) sdk.Result {
 	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
 
@@ -207,7 +207,7 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
 	transfer := TransferFromCanceled(ord, origOrd, false)
-	sdkError := keeper.doTransfer(ctx, &transfer)
+	sdkError := dexGlobalKeeper.doTransfer(ctx, &transfer)
 	if sdkError != nil {
 		return sdkError.Result()
 	}
@@ -232,7 +232,7 @@ func handleCancelOrder(
 			if keeper.ShouldPublishOrder() {
 				change := OrderChange{msg.RefId, Canceled, fee.String(), nil}
 				keeper.UpdateOrderChange(change)
-				keeper.updateRoundOrderFee(string(msg.Sender), fee)
+				dexGlobalKeeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}
 		})
 		if err != nil {

@@ -59,6 +59,7 @@ var (
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 		MiniTokenStoreName:       MiniTokenStoreKey,
+		MiniTokenPairStoreName:   MiniTokenPairStoreKey,
 	}
 
 	NonTransientStoreKeyNames = []string{
@@ -75,6 +76,7 @@ var (
 		TimeLockStoreName,
 		AtomicSwapStoreName,
 		MiniTokenStoreName,
+		MiniTokenPairStoreName,
 	}
 )
 
