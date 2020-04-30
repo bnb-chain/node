@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
-	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (

@@ -9,6 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	common "github.com/binance-chain/node/common/types"
@@ -18,7 +19,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
-	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 type NewOrderResponse struct {

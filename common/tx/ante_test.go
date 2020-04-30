@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -21,7 +24,6 @@ import (
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/wire"
-	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {

@@ -7,13 +7,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -26,7 +29,6 @@ import (
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
-	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (

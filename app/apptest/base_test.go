@@ -4,15 +4,18 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/stretchr/testify/require"
+
 	abcicli "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	. "github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -27,7 +30,6 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
-	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 type TestClient struct {
@@ -138,7 +140,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
 	genaccs := make([]app.GenesisAccount, len(accs))
 	for i, acc := range accs {
-		pk := ed25519.GenPrivKey().PubKey()
+		pk := GenPrivKey().PubKey()
 		valAddr := pk.Address()
 		genaccs[i] = app.NewGenesisAccount(acc, valAddr)
 	}

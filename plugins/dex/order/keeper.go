@@ -13,6 +13,7 @@ import (
 	tmstore "github.com/tendermint/tendermint/store"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	bnclog "github.com/binance-chain/node/common/log"
@@ -26,7 +27,6 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
-	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (

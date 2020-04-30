@@ -272,7 +272,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(), common.SlashingStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -359,7 +359,7 @@ func (app *BinanceChain) initPlugins() {
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
-		AddRoute("slashing", slashing.NewSlashingHandler(app.slashKeeper)).
+		AddRoute("slashing", slashing.NewHandler(app.slashKeeper)).
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
@@ -390,7 +390,7 @@ func (app *BinanceChain) initStaking() {
 			UnbondingTime:     60 * 60 * 24 * time.Second, // 1 day
 			MaxValidators:     21,
 			BondDenom:         types.NativeTokenSymbol,
-			MinSelfDelegation: 10000e8,
+			MinSelfDelegation: 20000e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
 			// TODO: optimize these parameters

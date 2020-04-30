@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sort"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	bt "github.com/google/btree"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
