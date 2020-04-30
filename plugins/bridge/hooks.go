@@ -178,10 +178,7 @@ func (hooks *UpdateTransferOutClaimHooks) CheckClaim(ctx sdk.Context, claim stri
 		return types.ErrInvalidAmount("amount to send should be positive")
 	}
 
-	if updateTransferOutClaim.RefundReason != types.UnboundToken &&
-		updateTransferOutClaim.RefundReason != types.Timeout &&
-		updateTransferOutClaim.RefundReason != types.InsufficientBalance &&
-		updateTransferOutClaim.RefundReason != types.Unknown {
+	if updateTransferOutClaim.RefundReason.String() == "" {
 		return types.ErrInvalidStatus(fmt.Sprintf("refund reason(%d) does not exist", updateTransferOutClaim.RefundReason))
 	}
 
