@@ -21,7 +21,8 @@ func InitPlugin(
 	appp app.ChainApp, mapper Mapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
 	timeLockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
 	// add msg handlers
-	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper, swapKeeper) {
+	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper,
+		swapKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

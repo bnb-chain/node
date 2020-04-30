@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
+	"github.com/cosmos/cosmos-sdk/x/oracle"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
@@ -29,6 +30,8 @@ import (
 	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/cosmos/cosmos-sdk/types/fees"
+
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
@@ -39,6 +42,7 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -49,7 +53,6 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
-	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
@@ -90,6 +93,8 @@ type BinanceChain struct {
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
+	oracleKeeper   oracle.Keeper
+	bridgeKeeper   bridge.Keeper
 	ibcKeeper      ibc.Keeper
 	scKeeper       sidechain.Keeper
 	// keeper to process param store and update
@@ -171,6 +176,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		timelock.DefaultCodespace)
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
+	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
+		app.ibcKeeper, app.Pool, app.crossChainConfig.BscChainId)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -220,8 +228,10 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
-		common.IbcStoreKey,
 		common.SideChainStoreKey,
+		common.BridgeStoreKey,
+		common.OracleStoreKey,
+		common.IbcStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -252,6 +262,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.StateSyncHelper = store.NewStateSyncHelper(app.Logger.With("module", "statesync"), db, app.GetCommitMultiStore(), app.Codec)
 		app.StateSyncHelper.Init(lastBreatheBlockHeight)
 	}
+	app.registerInitFuncForUpgrade()
+
 	return app
 }
 
@@ -273,7 +285,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(), common.SlashingStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
+		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -296,7 +309,19 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgSideChainUndelegate{}.Type(),
 		slashing.MsgBscSubmitEvidence{}.Type(),
 		slashing.MsgSideChainUnjail{}.Type(),
+		bridge.BindMsg{}.Type(),
+		bridge.TransferOutMsg{}.Type(),
+		oracle.ClaimMsg{}.Type(),
 	)
+}
+
+func (app *BinanceChain) registerInitFuncForUpgrade() {
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
+		err := app.TokenMapper.UpdateBind(ctx, types.NativeTokenSymbol, "0x0000000000000000000000000000000000000000", 18)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
@@ -349,6 +374,7 @@ func (app *BinanceChain) initPlugins() {
 	app.initGovHooks()
 	app.initStaking()
 	app.initSlashing()
+	app.initOracle()
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
@@ -361,7 +387,8 @@ func (app *BinanceChain) initPlugins() {
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
 		AddRoute("slashing", slashing.NewHandler(app.slashKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper))
+		AddRoute("gov", gov.NewHandler(app.govKeeper)).
+		AddRoute(oracle.RouteOracle, oracle.NewHandler(app.oracleKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, app.Codec))
@@ -372,6 +399,7 @@ func (app *BinanceChain) initPlugins() {
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
+	bridge.InitPlugin(app, app.bridgeKeeper)
 }
 
 func (app *BinanceChain) initSideChain() {
@@ -382,6 +410,10 @@ func (app *BinanceChain) initSideChain() {
 			BscSideChainId: ServerContext.BscChainId,
 		})
 	})
+}
+
+func (app *BinanceChain) initOracle() {
+	oracle.RegisterUpgradeBeginBlocker(app.oracleKeeper)
 }
 
 func (app *BinanceChain) initStaking() {
@@ -658,6 +690,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else if ctx.RouterCallRecord()["stake"] {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
+	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
 	}
@@ -851,6 +884,8 @@ func MakeCodec() *wire.Codec {
 	slashing.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
+	bridge.RegisterWire(cdc)
+	oracle.RegisterWire(cdc)
 	return cdc
 }
 
