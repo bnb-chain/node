@@ -34,7 +34,7 @@ type Transfer struct {
 	outAsset   string
 	out        int64
 	unlock     int64
-	Fee        types.Fee
+	Fee        sdk.Fee
 	Trade      *me.Trade
 	Symbol     string
 }
@@ -92,7 +92,7 @@ func TransferFromTrade(trade *me.Trade, symbol string, orderMap map[string]*Orde
 			outAsset:   baseAsset,
 			out:        trade.LastQty,
 			unlock:     trade.LastQty,
-			Fee:        types.Fee{},
+			Fee:        sdk.Fee{},
 			Trade:      trade,
 			Symbol:     symbol,
 		}, Transfer{
@@ -104,7 +104,7 @@ func TransferFromTrade(trade *me.Trade, symbol string, orderMap map[string]*Orde
 			outAsset:   quoteAsset,
 			out:        quoteQty,
 			unlock:     unlock,
-			Fee:        types.Fee{},
+			Fee:        sdk.Fee{},
 			Trade:      trade,
 			Symbol:     symbol,
 		}

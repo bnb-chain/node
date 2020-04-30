@@ -4,10 +4,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
@@ -39,34 +39,37 @@ func createQueryHandler(keeper *paramhub.Keeper) app.AbciQueryHandler {
 func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP9, func(ctx sdk.Context) {
 		timeLockFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: timelock.TimeLockMsg{}.Type(), Fee: TimeLockFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: TimeUnlockFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: TimeRelockFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: timelock.TimeLockMsg{}.Type(), Fee: TimeLockFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: timelock.TimeUnlockMsg{}.Type(), Fee: TimeUnlockFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: timelock.TimeRelockMsg{}.Type(), Fee: TimeRelockFee, FeeFor: sdk.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, timeLockFeeParams)
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP12, func(ctx sdk.Context) {
 		accountFlagsFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: account.SetAccountFlagsMsg{}.Type(), Fee: SetAccountFlagsFee, FeeFor: sdk.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, accountFlagsFeeParams)
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP3, func(ctx sdk.Context) {
 		swapFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: swap.HTLTMsg{}.Type(), Fee: HTLTFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.DepositHTLTMsg{}.Type(), Fee: DepositHTLTFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.ClaimHTLTMsg{}.Type(), Fee: ClaimHTLTFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: swap.RefundHTLTMsg{}.Type(), Fee: RefundHTLTFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.HTLTMsg{}.Type(), Fee: HTLTFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.DepositHTLTMsg{}.Type(), Fee: DepositHTLTFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.ClaimHTLTMsg{}.Type(), Fee: ClaimHTLTFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: swap.RefundHTLTMsg{}.Type(), Fee: RefundHTLTFee, FeeFor: sdk.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, swapFeeParams)
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
 		stakingFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: stake.MsgCreateSideChainValidator{}.Type(), Fee: CreateSideChainValidatorFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: stake.MsgEditSideChainValidator{}.Type(), Fee: EditSideChainValidatorFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: stake.MsgSideChainDelegate{}.Type(), Fee: SideChainDelegateFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: stake.MsgSideChainRedelegate{}.Type(), Fee: SideChainRedelegateFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: stake.MsgSideChainUndelegate{}.Type(), Fee: SideChainUndelegateFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgCreateSideChainValidator{}.Type(), Fee: CreateSideChainValidatorFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgEditSideChainValidator{}.Type(), Fee: EditSideChainValidatorFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainDelegate{}.Type(), Fee: SideChainDelegateFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainRedelegate{}.Type(), Fee: SideChainRedelegateFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: stake.MsgSideChainUndelegate{}.Type(), Fee: SideChainUndelegateFee, FeeFor: sdk.FeeForProposer},
+
+			&param.FixedFeeParams{MsgType: slashing.MsgBscSubmitEvidence{}.Type(), Fee: BscSubmitEvidenceFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: slashing.MsgSideChainUnjail{}.Type(), Fee: SideChainUnjail, FeeFor: sdk.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
@@ -91,6 +94,8 @@ func init() {
 		stake.MsgSideChainDelegate{}.Type():        fees.FixedFeeCalculatorGen,
 		stake.MsgSideChainRedelegate{}.Type():      fees.FixedFeeCalculatorGen,
 		stake.MsgSideChainUndelegate{}.Type():      fees.FixedFeeCalculatorGen,
+		slashing.MsgBscSubmitEvidence{}.Type():     fees.FixedFeeCalculatorGen,
+		slashing.MsgSideChainUnjail{}.Type():       fees.FixedFeeCalculatorGen,
 		list.Route:                                 fees.FixedFeeCalculatorGen,
 		order.RouteNewOrder:                        fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:                     fees.FixedFeeCalculatorGen,

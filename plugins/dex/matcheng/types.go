@@ -6,7 +6,7 @@ import (
 
 	bt "github.com/google/btree"
 
-	"github.com/binance-chain/node/common/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -41,8 +41,8 @@ type Trade struct {
 	SellCumQty int64  // cumulative executed quantity for the sell order
 	Bid        string // buy order Id
 	TickType   int8
-	SellerFee  *types.Fee // seller's fee
-	BuyerFee   *types.Fee // buyer's fee
+	SellerFee  *sdk.Fee // seller's fee
+	BuyerFee   *sdk.Fee // buyer's fee
 }
 
 type OrderPart struct {

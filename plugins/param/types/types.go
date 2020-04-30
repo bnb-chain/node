@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/binance-chain/node/common/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -42,10 +42,13 @@ var (
 		"refundHTLT":  {},
 
 		"side_create_validator": {},
-		"side_edit_validator": {},
-		"side_delegate": {},
-		"side_redelegate": {},
-		"side_undelegate": {},
+		"side_edit_validator":   {},
+		"side_delegate":         {},
+		"side_redelegate":       {},
+		"side_undelegate":       {},
+
+		"bsc_submit_evidence": {},
+		"side_chain_unjail":   {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
@@ -83,9 +86,9 @@ type MsgFeeParams interface {
 var _ MsgFeeParams = (*FixedFeeParams)(nil)
 
 type FixedFeeParams struct {
-	MsgType string                  `json:"msg_type"`
-	Fee     int64                   `json:"fee"`
-	FeeFor  types.FeeDistributeType `json:"fee_for"`
+	MsgType string                `json:"msg_type"`
+	Fee     int64                 `json:"fee"`
+	FeeFor  sdk.FeeDistributeType `json:"fee_for"`
 }
 
 func (p *FixedFeeParams) GetParamType() string {
@@ -97,7 +100,7 @@ func (p *FixedFeeParams) GetMsgType() string {
 }
 
 func (p *FixedFeeParams) Check() error {
-	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
+	if p.FeeFor != sdk.FeeForProposer && p.FeeFor != sdk.FeeForAll && p.FeeFor != sdk.FeeFree {
 		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
 	}
 	if p.Fee < 0 {
@@ -122,7 +125,7 @@ func (p *TransferFeeParam) GetParamType() string {
 }
 
 func (p *TransferFeeParam) Check() error {
-	if p.FeeFor != types.FeeForProposer && p.FeeFor != types.FeeForAll && p.FeeFor != types.FeeFree {
+	if p.FeeFor != sdk.FeeForProposer && p.FeeFor != sdk.FeeForAll && p.FeeFor != sdk.FeeFree {
 		return fmt.Errorf("fee_for %d is invalid", p.FeeFor)
 	}
 	if p.Fee <= 0 || p.MultiTransferFee <= 0 {

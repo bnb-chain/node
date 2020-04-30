@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -31,7 +32,6 @@ import (
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
 	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
@@ -48,6 +48,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
@@ -84,6 +85,7 @@ type BinanceChain struct {
 	TokenMapper    tkstore.Mapper
 	ValAddrCache   *ValAddrCache
 	stakeKeeper    stake.Keeper
+	slashKeeper    slashing.Keeper
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
@@ -138,12 +140,21 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
 	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey)
 
+	app.slashKeeper = slashing.NewKeeper(
+		cdc,
+		common.SlashingStoreKey, &app.stakeKeeper,
+		app.ParamHub.Subspace(slashing.DefaultParamspace),
+		app.RegisterCodespace(slashing.DefaultCodespace),
+		app.CoinKeeper,
+	)
+
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
+
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
 
 	app.govKeeper = gov.NewKeeper(
@@ -204,6 +215,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.PairStoreKey,
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
+		common.SlashingStoreKey,
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
@@ -260,7 +272,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(), common.SlashingStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -281,6 +293,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgSideChainDelegate{}.Type(),
 		stake.MsgSideChainRedelegate{}.Type(),
 		stake.MsgSideChainUndelegate{}.Type(),
+		slashing.MsgBscSubmitEvidence{}.Type(),
+		slashing.MsgSideChainUnjail{}.Type(),
 	)
 }
 
@@ -333,6 +347,7 @@ func (app *BinanceChain) initPlugins() {
 	app.initDex()
 	app.initGovHooks()
 	app.initStaking()
+	app.initSlashing()
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
@@ -344,10 +359,12 @@ func (app *BinanceChain) initPlugins() {
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
+		AddRoute("slashing", slashing.NewHandler(app.slashKeeper)).
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
 	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, app.Codec))
+	app.QueryRouter().AddRoute("slashing", slashing.NewQuerier(app.slashKeeper, app.Codec))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
 	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
 
@@ -370,15 +387,40 @@ func (app *BinanceChain) initStaking() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime: 60 * 60 * 24 * time.Second, // 1 day
-			MaxValidators: 21,
-			BondDenom:     types.NativeTokenSymbol,
+			UnbondingTime:     60 * 60 * 24 * time.Second, // 1 day
+			MaxValidators:     21,
+			BondDenom:         types.NativeTokenSymbol,
+			MinSelfDelegation: 20000e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
 			// TODO: optimize these parameters
 			LooseTokens: sdk.NewDec(5e15),
 		})
 	})
+	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+}
+
+func (app *BinanceChain) initSlashing() {
+	app.slashKeeper.SetSideChain(&app.scKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.slashKeeper.SetParams(ctx, slashing.Params{
+			BscSideChainId: ServerContext.BscChainId,
+		})
+		app.slashKeeper.SetParams(newCtx, slashing.Params{
+			MaxEvidenceAge:           60 * 60 * 24 * time.Second,     // 1 day
+			DoubleSignUnbondDuration: 60 * 60 * 24 * 7 * time.Second, // 7 days
+			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
+			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
+			DoubleSignSlashAmount:    1000e8,
+			SubmitterReward:          100e8,
+			DowntimeSlashAmount:      1000e8,
+			DowntimeSlashFee:         100e8,
+			BscSideChainId:           ServerContext.BscChainId,
+		})
+	})
+	// todo register oracle claim
 }
 
 func (app *BinanceChain) initIbc() {
@@ -805,6 +847,7 @@ func MakeCodec() *wire.Codec {
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
 	stake.RegisterCodec(cdc)
+	slashing.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
 	return cdc

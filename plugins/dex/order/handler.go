@@ -9,9 +9,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
@@ -225,7 +225,7 @@ func handleCancelOrder(
 	if sdkError != nil {
 		return sdkError.Result()
 	}
-	fee := common.Fee{}
+	fee := sdk.Fee{}
 	if !transfer.FeeFree() {
 		acc := keeper.am.GetAccount(ctx, msg.Sender)
 		fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.engines)

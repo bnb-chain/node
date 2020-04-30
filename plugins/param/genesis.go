@@ -1,11 +1,11 @@
 package param
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	sdk "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	param "github.com/binance-chain/node/plugins/param/types"
@@ -42,6 +42,10 @@ const (
 	SideChainDelegateFee        = 1e5
 	SideChainRedelegateFee      = 3e5
 	SideChainUndelegateFee      = 2e5
+
+	// slashing fee
+	BscSubmitEvidenceFee = 10e8
+	SideChainUnjail      = 1e8
 
 	// Transfer fee
 	TransferFee       = 62500
