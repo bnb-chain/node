@@ -8,8 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/go-sdk/common/types"
-
 	"github.com/binance-chain/node/common/fees"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
@@ -75,11 +73,11 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: slashing.MsgBscSubmitEvidence{}.Type(), Fee: BscSubmitEvidenceFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: slashing.MsgSideChainUnjail{}.Type(), Fee: SideChainUnjail, FeeFor: sdk.FeeForProposer},
 
-			&param.FixedFeeParams{MsgType: bridge.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: bridge.BindRelayFeeName, Fee: CrossBindRelayFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: bridge.TransferOutFeeName, Fee: CrossTransferOutRelayFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: oracle.ClaimMsg{}.Type(), Fee: app.ZeroFee, FeeFor: types.FeeFree},
+			&param.FixedFeeParams{MsgType: bridge.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.BindRelayFeeName, Fee: CrossBindRelayFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.TransferOutFeeName, Fee: CrossTransferOutRelayFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: oracle.ClaimMsg{}.Type(), Fee: sdk.ZeroFee, FeeFor: sdk.FeeFree},
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})

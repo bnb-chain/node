@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -29,8 +30,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
-
-	"github.com/cosmos/cosmos-sdk/types/fees"
 
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
@@ -453,7 +452,11 @@ func (app *BinanceChain) initSlashing() {
 			DowntimeSlashFee:         10e8,
 		})
 	})
-	// todo register oracle claim
+
+	err := app.slashKeeper.ClaimRegister(app.oracleKeeper)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (app *BinanceChain) initIbc() {

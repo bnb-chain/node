@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 
-	"github.com/binance-chain/node/common/fees"
 	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
@@ -329,12 +329,13 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		hooks.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 
 		nextSeq := hooks.bridgeKeeper.OracleKeeper.GetCurrentSequence(ctx, types.ClaimTypeTransferIn)
+
 		// add fee
-		fees.Pool.AddFee(
+		fees.Pool.AddAndCommitFee(
 			fmt.Sprintf("cross_transfer_in:%d", nextSeq-1),
-			cmmtypes.Fee{
+			sdk.Fee{
 				Tokens: relayFee,
-				Type:   cmmtypes.FeeForProposer,
+				Type:   sdk.FeeForProposer,
 			},
 		)
 	}
