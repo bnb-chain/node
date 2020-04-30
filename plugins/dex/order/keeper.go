@@ -16,7 +16,10 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 	tmstore "github.com/tendermint/tendermint/store"
 
-	"github.com/binance-chain/node/common/fees"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
@@ -36,16 +39,7 @@ const (
 	preferencePriceLevel = 500
 )
 
-type SymbolPairType int8
-
-var PairType = struct {
-	BEP2 SymbolPairType
-	MINI SymbolPairType
-}{BEP2TypeValue, MiniTypeValue}
-
-var BUSDSymbol string
-
-type FeeHandler func(map[string]*types.Fee)
+type FeeHandler func(map[string]*sdk.Fee)
 type TransferHandler func(Transfer)
 
 type DexKeeper struct {
@@ -78,12 +72,13 @@ func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper sto
 		storeKey:                   key,
 		codespace:                  codespace,
 		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
-		am:                         am,
-		RoundOrderFees:             make(map[string]*types.Fee, 256),
-		FeeManager:                 NewFeeManager(cdc, logger),
-		CollectOrderInfoForPublish: collectOrderInfoForPublish,
-		engines:                    make(map[string]*me.MatchEng),
-		pairsType:                  make(map[string]SymbolPairType),
+		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
+		OrderChangesMtx:            &sync.Mutex{},
+		OrderChanges:               make(OrderChanges, 0),
+		OrderInfosForPub:           make(OrderInfoForPublish),
+		roundOrders:                make(map[string][]string, 256),
+		roundIOCOrders:             make(map[string][]string, 256),
+		RoundOrderFees:             make(map[string]*sdk.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		logger:                     logger,
@@ -566,8 +561,8 @@ func (kp *DexKeeper) StoreTradePrices(ctx sdk.Context) {
 	}
 }
 
-func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
-	types.Fee, map[string]*types.Fee) {
+func (kp *Keeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+	sdk.Fee, map[string]*sdk.Fee) {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
@@ -579,7 +574,7 @@ func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAlloc
 	expireTransfers := make(map[string]ExpireTransfers)
 	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
 	var expireEventType transferEventType
-	var totalFee types.Fee
+	var totalFee sdk.Fee
 	for tran := range tranCh {
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
@@ -607,7 +602,7 @@ func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAlloc
 		}
 	}
 
-	feesPerAcc := make(map[string]*types.Fee)
+	feesPerAcc := make(map[string]*sdk.Fee)
 	for addrStr, trans := range tradeTransfers {
 		addr := sdk.AccAddress(addrStr)
 		acc := kp.am.GetAccount(ctx, addr)
@@ -640,8 +635,8 @@ func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAlloc
 }
 
 // DEPRECATED
-func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
-	types.Fee, map[string]*types.Fee) {
+func (kp *Keeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
+	sdk.Fee, map[string]*sdk.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
 	tradeInAsset := make(map[string]*sortedAsset)
@@ -649,7 +644,7 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 	expireInAsset := make(map[string]*sortedAsset)
 	// we need to distinguish different expire event, IOCExpire or Expire. only one of the two will exist.
 	var expireEventType transferEventType
-	var totalFee types.Fee
+	var totalFee sdk.Fee
 	for tran := range tranCh {
 		kp.doTransfer(ctx, &tran)
 		if !tran.FeeFree() {
@@ -677,13 +672,13 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 		}
 	}
 
-	feesPerAcc := make(map[string]*types.Fee)
-	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc sdk.Account, in sdk.Coin) types.Fee) {
+	feesPerAcc := make(map[string]*sdk.Fee)
+	collectFee := func(assetsMap map[string]*sortedAsset, calcFeeAndDeduct func(acc sdk.Account, in sdk.Coin) sdk.Fee) {
 		for addrStr, assets := range assetsMap {
 			addr := sdk.AccAddress(addrStr)
 			acc := kp.am.GetAccount(ctx, addr)
 
-			var fees types.Fee
+			var fees sdk.Fee
 			if exists, ok := feesPerAcc[addrStr]; ok {
 				fees = *exists
 			}
@@ -703,14 +698,14 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 			}
 		}
 	}
-	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
+	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) sdk.Fee {
 		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
-	collectFee(expireInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
+	collectFee(expireInAsset, func(acc sdk.Account, in sdk.Coin) sdk.Fee {
 		var i int64 = 0
-		var fees types.Fee
+		var fees sdk.Fee
 		for ; i < in.Amount; i++ {
 			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.engines)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
@@ -724,12 +719,13 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 func (kp *DexKeeper) allocateAndCalcFee(
 	ctx sdk.Context,
 	tradeOuts []chan Transfer,
-	postAlloTransHandler TransferHandler) types.Fee {
+	postAlloTransHandler TransferHandler,
+) sdk.Fee {
 	concurrency := len(tradeOuts)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
-	feesPerCh := make([]types.Fee, concurrency)
-	feesPerAcc := make([]map[string]*types.Fee, concurrency)
+	feesPerCh := make([]sdk.Fee, concurrency)
+	feesPerAcc := make([]map[string]*sdk.Fee, concurrency)
 	allocatePerCh := func(index int, tranCh <-chan Transfer) {
 		defer wg.Done()
 		fee, feeByAcc := kp.allocate(ctx, tranCh, postAlloTransHandler)
@@ -741,7 +737,7 @@ func (kp *DexKeeper) allocateAndCalcFee(
 		go allocatePerCh(i, tradeTranCh)
 	}
 	wg.Wait()
-	totalFee := types.Fee{}
+	totalFee := sdk.Fee{}
 	for i := 0; i < concurrency; i++ {
 		totalFee.AddFee(feesPerCh[i])
 	}
@@ -924,7 +920,7 @@ func (kp *DexKeeper) GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeigh
 
 // deliberately make `fee` parameter not a pointer
 // in case we modify the original fee (which will be referenced when distribute to validator)
-func (kp *DexKeeper) updateRoundOrderFee(addr string, fee types.Fee) {
+func (kp *Keeper) updateRoundOrderFee(addr string, fee sdk.Fee) {
 	if existingFee, ok := kp.RoundOrderFees[addr]; ok {
 		existingFee.AddFee(fee)
 	} else {
@@ -932,8 +928,8 @@ func (kp *DexKeeper) updateRoundOrderFee(addr string, fee types.Fee) {
 	}
 }
 
-func (kp *DexKeeper) ClearRoundFee() {
-	kp.RoundOrderFees = make(map[string]*types.Fee, 256)
+func (kp *Keeper) ClearRoundFee() {
+	kp.RoundOrderFees = make(map[string]*sdk.Fee, 256)
 }
 
 func (kp *DexKeeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {

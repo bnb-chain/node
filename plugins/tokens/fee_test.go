@@ -21,9 +21,9 @@ func newAddr() sdk.AccAddress {
 	return addr
 }
 
-func checkFee(t *testing.T, fee common.Fee, expected int64) {
+func checkFee(t *testing.T, fee sdk.Fee, expected int64) {
 	require.Equal(t,
-		common.NewFee(sdk.Coins{sdk.NewCoin(common.NativeTokenSymbol, expected)}, common.FeeForProposer),
+		sdk.NewFee(sdk.Coins{sdk.NewCoin(common.NativeTokenSymbol, expected)}, sdk.FeeForProposer),
 		fee)
 }
 
@@ -32,7 +32,7 @@ func TestTransferFeeGen(t *testing.T) {
 		FixedFeeParams: types.FixedFeeParams{
 			MsgType: bank.MsgSend{}.Type(),
 			Fee:     1e6,
-			FeeFor:  common.FeeForProposer,
+			FeeFor:  sdk.FeeForProposer,
 		},
 		MultiTransferFee:  8e5,
 		LowerLimitAsMulti: 2,
@@ -100,7 +100,7 @@ func TestTransferFeeParams_JsonFormat(t *testing.T) {
 		FixedFeeParams: types.FixedFeeParams{
 			MsgType: bank.MsgSend{}.Type(),
 			Fee:     250000,
-			FeeFor:  common.FeeForProposer,
+			FeeFor:  sdk.FeeForProposer,
 		},
 		MultiTransferFee:  200000,
 		LowerLimitAsMulti: 2,

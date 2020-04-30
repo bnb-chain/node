@@ -16,7 +16,7 @@ var TransferFeeCalculatorGen = fees.FeeCalculatorGenerator(func(params param.Fee
 		panic("Generator received unexpected param type")
 	}
 
-	return fees.FeeCalculator(func(msg sdk.Msg) types.Fee {
+	return fees.FeeCalculator(func(msg sdk.Msg) sdk.Fee {
 		transferMsg, ok := msg.(bank.MsgSend)
 		if !ok {
 			panic("unexpected msg for TransferFeeCalculator")
@@ -39,6 +39,6 @@ var TransferFeeCalculatorGen = fees.FeeCalculatorGenerator(func(params param.Fee
 				totalFee = transferFeeParam.MultiTransferFee * num
 			}
 		}
-		return types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, totalFee)}, transferFeeParam.FeeFor)
+		return sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, totalFee)}, transferFeeParam.FeeFor)
 	})
 })

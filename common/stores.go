@@ -10,6 +10,7 @@ const (
 	DexStoreName        = "dex"
 	PairStoreName       = "pairs"
 	StakeStoreName      = "stake"
+	SlashingStoreName   = "slashing"
 	ParamsStoreName     = "params"
 	GovStoreName        = "gov"
 	TimeLockStoreName   = "time_lock"
@@ -30,6 +31,7 @@ var (
 	DexStoreKey        = sdk.NewKVStoreKey(DexStoreName)
 	PairStoreKey       = sdk.NewKVStoreKey(PairStoreName)
 	StakeStoreKey      = sdk.NewKVStoreKey(StakeStoreName)
+	SlashingStoreKey   = sdk.NewKVStoreKey(SlashingStoreName)
 	ParamsStoreKey     = sdk.NewKVStoreKey(ParamsStoreName)
 	GovStoreKey        = sdk.NewKVStoreKey(GovStoreName)
 	TimeLockStoreKey   = sdk.NewKVStoreKey(TimeLockStoreName)
@@ -48,6 +50,7 @@ var (
 		DexStoreName:             DexStoreKey,
 		PairStoreName:            PairStoreKey,
 		StakeStoreName:           StakeStoreKey,
+		SlashingStoreName:        SlashingStoreKey,
 		ParamsStoreName:          ParamsStoreKey,
 		GovStoreName:             GovStoreKey,
 		TimeLockStoreName:        TimeLockStoreKey,
@@ -66,6 +69,7 @@ var (
 		DexStoreName,
 		PairStoreName,
 		StakeStoreName,
+		SlashingStoreName,
 		ParamsStoreName,
 		GovStoreName,
 		TimeLockStoreName,

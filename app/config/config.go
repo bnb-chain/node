@@ -395,7 +395,7 @@ type UpgradeConfig struct {
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
-	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
