@@ -16,8 +16,8 @@ func MatchAndAllocateSymbols(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx s
 	timestamp := ctx.BlockHeader().Time.UnixNano()
 
 	symbolsToMatch := dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, ctx.BlockHeader().Height, timestamp, matchAllSymbols)
-	symbolsToMatch = append(symbolsToMatch, dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, ctx.BlockHeader().Height, timestamp, matchAllSymbols)...)
-	logger.Debug("symbols to match", "symbols", symbolsToMatch)
+	symbolsToMatch = append(symbolsToMatch, dexMiniKeeper.symbolSelector.SelectSymbolsToMatch(dexMiniKeeper.roundOrders, ctx.BlockHeader().Height, timestamp, matchAllSymbols)...)
+	logger.Info("symbols to match", "symbols", symbolsToMatch) //todo debug
 
 	tradeOuts := matchAndDistributeTrades(dexKeeper, dexMiniKeeper, true, ctx.BlockHeader().Height, timestamp, symbolsToMatch, logger)
 	if tradeOuts == nil {
