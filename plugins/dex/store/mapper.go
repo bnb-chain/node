@@ -72,25 +72,6 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	return nil
 }
 
-func (m mapper) AddMiniTokenTradingPair(ctx sdk.Context, pair types.TradingPair) error {
-	baseAsset := pair.BaseAssetSymbol
-	if err := cmn.ValidateMapperMiniTokenSymbol(baseAsset); err != nil {
-		return err
-	}
-	quoteAsset := pair.QuoteAssetSymbol
-	if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
-		return err
-	}
-
-	tradeSymbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
-	key := []byte(tradeSymbol)
-	store := ctx.KVStore(m.key)
-	value := m.encodeTradingPair(pair)
-	store.Set(key, value)
-	ctx.Logger().Info("Added mini-token trading pair", "pair", tradeSymbol)
-	return nil
-}
-
 func (m mapper) DeleteTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
 	symbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 	key := []byte(symbol)

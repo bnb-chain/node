@@ -38,6 +38,7 @@ import (
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
+	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/minitokens"
@@ -303,6 +304,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		miniIssue.IssueMsg{}.Type(),
 		seturi.SetURIMsg{}.Type(),
+		listmini.ListMiniMsg{}.Type(),
 	)
 }
 

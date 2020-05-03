@@ -18,7 +18,8 @@ import (
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
-const AbciQueryPrefix = "dex"
+const DexAbciQueryPrefix = "dex"
+const DexMiniAbciQueryPrefix = "dex_mini"
 const DelayedDaysForDelist = 3
 
 type DexKeeperType int8
@@ -40,13 +41,15 @@ func InitPlugin(
 	}
 
 	// add abci handlers
-	handler := createQueryHandler(dexKeeper)
-	appp.RegisterQueryHandler(AbciQueryPrefix, handler)
-	//TODO dex mini handler
+	dexHandler := createQueryHandler(dexKeeper, DexAbciQueryPrefix)
+	appp.RegisterQueryHandler(DexAbciQueryPrefix, dexHandler)
+	//dex mini handler
+	dexMiniHandler := createQueryHandler(dexKeeper, DexMiniAbciQueryPrefix)
+	appp.RegisterQueryHandler(DexMiniAbciQueryPrefix, dexMiniHandler)
 }
 
-func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
-	return createAbciQueryHandler(keeper)
+func createQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQueryHandler {
+	return createAbciQueryHandler(keeper, abciQueryPrefix)
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.

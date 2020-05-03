@@ -91,9 +91,8 @@ func selectMiniSymbolsToMatch(roundOrders map[string][]string, miniSymbolsHash m
 func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, k int) {
 	//use quick select to select top k symbols
 	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(*roundOrdersMini))
-	i := 0
 	for symbol, orders := range *roundOrdersMini {
-		symbolOrderNumsSlice[i] = &SymbolWithOrderNumber{symbol, len(orders)}
+		symbolOrderNumsSlice = append(symbolOrderNumsSlice, &SymbolWithOrderNumber{symbol, len(orders)})
 	}
 	topKSymbolOrderNums := findTopKLargest(symbolOrderNumsSlice, k)
 

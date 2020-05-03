@@ -101,7 +101,7 @@ func issueMustSuccessQuery(pair string, address sdk.AccAddress, assert *assert.A
 }
 
 func issueQuery(pair string, address string) abci.ResponseQuery {
-	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.AbciQueryPrefix, pair, address)
+	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.DexAbciQueryPrefix, pair, address)
 	query := abci.RequestQuery{
 		Path: path,
 		Data: []byte(""),

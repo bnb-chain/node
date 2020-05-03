@@ -286,9 +286,7 @@ func initOrderBook(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context
 		timeOfLatestBlock = block.Time
 	}
 	height, err := dexKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
-	if sdk.IsUpgrade(upgrade.BEP8) {
-		_, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
-	}
+	_, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
 	if err != nil {
 		panic(err)
 	}

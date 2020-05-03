@@ -3,7 +3,6 @@ package order
 import (
 	"errors"
 	"fmt"
-	"github.com/binance-chain/node/common/upgrade"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ var _ DexOrderKeeper = &MiniKeeper{}
 // NewKeeper - Returns the MiniToken Keeper
 func NewMiniKeeper(dexMiniKey sdk.StoreKey, miniPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec, globalKeeper *GlobalKeeper) *MiniKeeper {
-	logger := bnclog.With("module", "dexkeeper")
+	logger := bnclog.With("module", "dexMiniKeeper")
 	return &MiniKeeper{
 		Keeper{PairMapper: miniPairMapper,
 			storeKey:         dexMiniKey,
@@ -57,7 +56,7 @@ func NewMiniKeeper(dexMiniKey sdk.StoreKey, miniPairMapper store.TradingPairMapp
 
 // override
 func (kp *MiniKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := kp.AddEngine(pair)
+	eng := kp.Keeper.AddEngine(pair)
 	symbol := strings.ToUpper(pair.GetSymbol())
 	kp.symbolSelector.AddSymbolHash(symbol)
 	return eng
@@ -133,12 +132,15 @@ func (kp *MiniKeeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrd
 
 // override
 func (kp *MiniKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
-	lastBreatheBlockHeight := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
-	upgradeHeight := sdk.UpgradeMgr.GetUpgradeHeight(upgrade.BEP8)
-	kp.logger.Info("Loaded MiniKeeper orderbook ", "lastBreatheBlockHeight", lastBreatheBlockHeight, "upgradeHeight", upgradeHeight)
-	if lastBreatheBlockHeight < upgradeHeight {
-		return lastBreatheBlockHeight, nil
-	} else {
-		return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
-	}
+	//TODO review
+	//lastBreatheBlockHeight := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
+	//upgradeHeight := sdk.UpgradeMgr.GetUpgradeHeight(upgrade.BEP8)
+	//kp.logger.Info("Loaded MiniKeeper orderbook ", "lastBreatheBlockHeight", lastBreatheBlockHeight, "upgradeHeight", upgradeHeight)
+	//if lastBreatheBlockHeight < upgradeHeight {
+	//	return lastBreatheBlockHeight, nil
+	//} else {
+	//	return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
+	//}
+
+	return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
 }
