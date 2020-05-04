@@ -705,7 +705,7 @@ func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset st
 	}
 
 	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	for _, pair := range tradingPairs {
+	for _, pair := range tradingPairs { //TODO
 		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
 			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
 			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",

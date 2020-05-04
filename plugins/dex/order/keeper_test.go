@@ -56,8 +56,19 @@ func MakeKeeper(cdc *wire.Codec) *Keeper {
 	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey, false)
-	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	globalKeeper := NewGlobalKeeper(cdc, accKeeper, true)
+	keeper := NewKeeper(common.DexStoreKey, pairMapper,
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, globalKeeper)
+	return keeper
+}
+
+func MakeMiniKeeper(cdc *wire.Codec) *MiniKeeper {
+	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+	codespacer := sdk.NewCodespacer()
+	pairMapper := store.NewTradingPairMapper(cdc, common.MiniTokenPairStoreKey, true)
+	globalKeeper := NewGlobalKeeper(cdc, accKeeper, true)
+	keeper := NewMiniKeeper(common.DexMiniStoreKey, pairMapper,
+		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, globalKeeper)
 	return keeper
 }
 
@@ -77,6 +88,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
+	miniKeeper := MakeMiniKeeper(cdc)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -107,7 +119,8 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 99000, 15000000)
 	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
-	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0, false)
+	symbolsToMatch := keeper.symbolSelector.SelectSymbolsToMatch(keeper.roundOrders, ctx.BlockHeader().Height, 0, false)
+	tradeOuts := matchAndDistributeTrades(keeper, miniKeeper, true, 42, 0, symbolsToMatch, logger)
 	c := channelHash(accAdd, 4)
 	i := 0
 	for tr := range tradeOuts[c] {
@@ -255,6 +268,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
+	miniKeeper := MakeMiniKeeper(cdc)
 	cms := MakeCMS(nil)
 	logger := log.NewTMLogger(os.Stdout)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
@@ -275,7 +289,7 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(3, len(keeper.allOrders["XYZ-000_BNB"]))
 	assert.Equal(1, len(keeper.engines))
 
-	keeper.MatchSymbols(42, 0)
+	MatchSymbols(42, 0, keeper, miniKeeper,false,logger)
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
@@ -547,7 +561,9 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	accountCache := getAccountCache(cdc, ms, capKey)
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey, false)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+
+	globalKeeper := NewGlobalKeeper(cdc, mapper, false)
+	keeper = NewKeeper(capKey2, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, globalKeeper)
 	return
 }
 

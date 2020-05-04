@@ -112,7 +112,7 @@ func matchAndDistributeTrades(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, dist
 
 func MatchSymbols(height, timestamp int64, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, matchAllSymbols bool, logger tmlog.Logger) {
 	symbolsToMatch := dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, height, timestamp, matchAllSymbols)
-	symbolsToMatch = append(symbolsToMatch, dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, height, timestamp, matchAllSymbols)...)
+	symbolsToMatch = append(symbolsToMatch, dexMiniKeeper.symbolSelector.SelectSymbolsToMatch(dexMiniKeeper.roundOrders, height, timestamp, matchAllSymbols)...)
 	logger.Debug("symbols to match", "symbols", symbolsToMatch)
 
 	tradeOuts := matchAndDistributeTrades(dexKeeper, dexMiniKeeper, true, height, timestamp, symbolsToMatch, logger)
@@ -130,7 +130,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 	concurrency := len(tradeOuts)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
-	if engine.Match(height) {
+	if engine.Match(height, dexUtils.IsMiniTokenTradingPair(symbol)) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for i := range engine.Trades {
 			t := &engine.Trades[i]

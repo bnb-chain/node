@@ -314,6 +314,7 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.Keeper, dexMiniKeeper *or
 
 func extractTradesToPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Context, tradeHeight int64, tradeIdx *int) []*Trade {
 	tradesToPublish := make([]*Trade, 0)
+	//TODO reduce call of ListAllTradingPairs
 	for _, pair := range dexKeeper.GetPairMapper().ListAllTradingPairs(ctx) {
 		symbol := pair.GetSymbol()
 		matchEngTrades, _ := dexKeeper.GetLastTrades(tradeHeight, symbol)
@@ -330,7 +331,7 @@ func extractTradesToPublish(dexKeeper orderPkg.DexOrderKeeper, ctx sdk.Context, 
 			}
 
 			t := &Trade{
-				Id:         fmt.Sprintf("%d-%d", tradeHeight, tradeIdx),
+				Id:         fmt.Sprintf("%d-%d", tradeHeight, *tradeIdx),
 				Symbol:     symbol,
 				Sid:        trade.Sid,
 				Bid:        trade.Bid,

@@ -12,7 +12,7 @@ import (
 	"github.com/binance-chain/node/common/utils"
 )
 
-func (me *MatchEng) Match(height int64) bool {
+func (me *MatchEng) Match(height int64, isMini bool) bool {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return me.MatchBeforeGalileo(height)
 	}
@@ -32,9 +32,15 @@ func (me *MatchEng) Match(height int64) bool {
 		me.logger.Error("dropRedundantQty failed", "error", err)
 		return false
 	}
-	//If order height >= the last Match height, then it's maker.
+	//If order height > the last Match height, then it's maker.
 	// Block Height cannot be used here since mini-token is not matched in every block
-	takerSide, err := me.determineTakerSide(me.LastMatchHeight, index)
+	var lastMatchHeight int64
+	if isMini {
+		lastMatchHeight = me.LastMatchHeight
+	}else{
+		lastMatchHeight = height -1 //Every block is deemed as performed matching for all BEP2 symbols
+	}
+	takerSide, err := me.determineTakerSide(lastMatchHeight, index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
@@ -120,10 +126,10 @@ func dropRedundantQty(orders []OrderPart, toDropQty, lotSize int64) error {
 func findTakerStartIdx(lastMatchHeight int64, orders []OrderPart) (idx int, makerTotal int64) {
 	i, k := 0, len(orders)
 	for ; i < k; i++ {
-		if orders[i].Time >= lastMatchHeight {
-			return i, makerTotal
-		} else {
+		if orders[i].Time <= lastMatchHeight {
 			makerTotal += orders[i].nxtTrade
+		} else {
+			return i, makerTotal
 		}
 	}
 	return i, makerTotal

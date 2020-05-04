@@ -132,15 +132,5 @@ func (kp *MiniKeeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrd
 
 // override
 func (kp *MiniKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
-	//TODO review
-	//lastBreatheBlockHeight := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
-	//upgradeHeight := sdk.UpgradeMgr.GetUpgradeHeight(upgrade.BEP8)
-	//kp.logger.Info("Loaded MiniKeeper orderbook ", "lastBreatheBlockHeight", lastBreatheBlockHeight, "upgradeHeight", upgradeHeight)
-	//if lastBreatheBlockHeight < upgradeHeight {
-	//	return lastBreatheBlockHeight, nil
-	//} else {
-	//	return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
-	//}
-
 	return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
 }
