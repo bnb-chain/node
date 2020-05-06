@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Shopify/sarama v1.21.0
-	github.com/cosmos/cosmos-sdk v0.38.0
+	github.com/cosmos/cosmos-sdk v0.25.0
 	github.com/deathowl/go-metrics-prometheus v0.0.0-20170731161557-091131e49c33
 	github.com/eapache/go-resiliency v1.1.0
 	github.com/ethereum/go-ethereum v1.9.10
@@ -26,7 +26,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tendermint/go-amino v0.15.1
 	github.com/tendermint/iavl v0.12.4
-	github.com/tendermint/tendermint v0.33.0
+	github.com/tendermint/tendermint v0.32.3
 	go.uber.org/ratelimit v0.1.0
 	google.golang.org/grpc v1.26.0 // indirect
 	gopkg.in/linkedin/goavro.v1 v1.0.5 // indirect

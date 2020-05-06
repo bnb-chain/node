@@ -153,7 +153,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-transfer-out",
-		Short: "update transfer out",
+		Short: "refund tokens to sender if transfer to smart chain failed",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -311,7 +311,7 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-bind",
-		Short: "update bind",
+		Short: "update bind request when events from smart chain received",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -367,7 +367,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 func QueryProphecy(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query-prophecy",
-		Short: "query prophecy",
+		Short: "query oracle prophecy",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 

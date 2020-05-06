@@ -20,20 +20,14 @@ import (
 type Keeper struct {
 	cdc *codec.Codec // The wire codec for binary encoding/decoding.
 
-	OracleKeeper types.OracleKeeper
-
-	storeKey sdk.StoreKey // The key used to access the store from the Context.
-
-	Pool *sdk.Pool
-
+	storeKey    sdk.StoreKey
+	Pool        *sdk.Pool
 	DestChainId string
 
-	// The reference to the CoinKeeper to modify balances
-	BankKeeper bank.Keeper
-
-	TokenMapper store.Mapper
-
-	IbcKeeper ibc.Keeper
+	OracleKeeper types.OracleKeeper
+	BankKeeper   bank.Keeper
+	TokenMapper  store.Mapper
+	IbcKeeper    ibc.Keeper
 }
 
 // NewKeeper creates new instances of the bridge Keeper
