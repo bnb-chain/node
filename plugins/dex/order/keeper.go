@@ -43,18 +43,15 @@ type TransferHandler func(Transfer)
 
 // in the future, this may be distributed via Sharding
 type Keeper struct {
-	PairMapper                 store.TradingPairMapper
-	am                         auth.AccountKeeper
-	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
-	codespace                  sdk.CodespaceType
-	engines                    map[string]*me.MatchEng
-	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
-	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
-	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
-	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
-	OrderInfosForPub           OrderInfoForPublish              // for publication usage
-	roundOrders                map[string][]string              // limit to the total tx number in a block
-	roundIOCOrders             map[string][]string
+	orderKeepers []OrderKeeper
+
+	PairMapper   store.TradingPairMapper
+	am           auth.AccountKeeper
+	storeKey     sdk.StoreKey // The key used to access the store from the Context.
+	codespace    sdk.CodespaceType
+	engines      map[string]*me.MatchEng
+	recentPrices map[string]*utils.FixedSizeRing // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
+
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
 	poolSize                   uint      // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
@@ -71,19 +68,15 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 func NewKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
 	concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *Keeper {
 	logger := bnclog.With("module", "dexkeeper")
+	orderKeepers := []OrderKeeper{NewBEP2OrderKeeper()}
 	return &Keeper{
+		orderKeepers:               orderKeepers,
 		PairMapper:                 tradingPairMapper,
 		am:                         am,
 		storeKey:                   key,
 		codespace:                  codespace,
 		engines:                    make(map[string]*me.MatchEng),
 		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
-		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
-		OrderChangesMtx:            &sync.Mutex{},
-		OrderChanges:               make(OrderChanges, 0),
-		OrderInfosForPub:           make(OrderInfoForPublish),
-		roundOrders:                make(map[string][]string, 256),
-		roundIOCOrders:             make(map[string][]string, 256),
 		RoundOrderFees:             make(map[string]*types.Fee, 256),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
@@ -110,7 +103,7 @@ func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
-	kp.allOrders[symbol] = map[string]*OrderInfo{}
+
 	return eng
 }
 
@@ -289,10 +282,11 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 	return sum % bucketNumber
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, timestamp int64, orders map[string]*OrderInfo,
+func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, orderKeeper OrderKeeper, height, timestamp int64,
 	distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
+	orders := orderKeeper.GetAllOrdersForPair(symbol)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
 	if engine.Match(height) {
@@ -302,7 +296,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
 			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 			if distributeTrade {
-				t1, t2 := TransferFromTrade(t, symbol, kp.allOrders[symbol])
+				t1, t2 := TransferFromTrade(t, symbol, orders)
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
 				c = channelHash(t2.accAddress, concurrency)
@@ -322,7 +316,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
-		thisRoundIds := kp.roundOrders[symbol]
+		thisRoundIds := orderKeeper.GetRoundOrdersForPair(symbol)
 		for _, id := range thisRoundIds {
 			msg := orders[id]
 			delete(orders, id)
@@ -339,14 +333,12 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			// let the order status publisher publish these abnormal
 			// order status change outs.
 			if kp.CollectOrderInfoForPublish {
-				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, "", nil})
-				kp.OrderChangesMtx.Unlock()
+				orderKeeper.AppendOrderChange(OrderChange{id, FailedMatching, "", nil})
 			}
 		}
 		return // no need to handle IOC
 	}
-	iocIDs := kp.roundIOCOrders[symbol]
+	iocIDs := orderKeeper.GetRoundIOCOrdersForPair(symbol)
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			delete(orders, id)
@@ -408,11 +400,20 @@ func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
 	order.LastUpdatedTimestamp = timestamp
 }
 
+type symbolKeeper struct {
+	symbol      string
+	orderKeeper OrderKeeper
+}
+
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
-	size := len(kp.roundOrders)
-	// size is the number of pairs that have new orders, i.e. it should call match()
-	if size == 0 {
+	// roundPairsNum is the number of pairs that have new orders, i.e. it should call match()
+	roundPairsNum := 0
+	for i := range kp.orderKeepers {
+		roundPairsNum += kp.orderKeepers[i].GetRoundPairsNum()
+	}
+
+	if roundPairsNum == 0 {
 		kp.logger.Info("No new orders for any pair, give up matching")
 		return nil
 	}
@@ -421,8 +422,8 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 	tradeOuts := make([]chan Transfer, concurrency)
 	if distributeTrade {
 		ordNum := 0
-		for _, perSymbol := range kp.roundOrders {
-			ordNum += len(perSymbol)
+		for i := range kp.orderKeepers {
+			ordNum += kp.orderKeepers[i].GetRoundOrdersNum()
 		}
 		for i := range tradeOuts {
 			//assume every new order would have 2 trades and generate 4 transfer
@@ -430,18 +431,18 @@ func (kp *Keeper) matchAndDistributeTrades(distributeTrade bool, height, timesta
 		}
 	}
 
-	symbolCh := make(chan string, concurrency)
+	symbolCh := make(chan symbolKeeper, concurrency)
 	producer := func() {
-		for symbol := range kp.roundOrders {
-			symbolCh <- symbol
+		for i := range kp.orderKeepers {
+			kp.orderKeepers[i].IterateRoundPairs(func(symbol string) {
+				symbolCh <- symbolKeeper{symbol: symbol, orderKeeper: kp.orderKeepers[i]}
+			})
 		}
 		close(symbolCh)
 	}
 	matchWorker := func() {
-		i := 0
-		for symbol := range symbolCh {
-			i++
-			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, kp.allOrders[symbol], distributeTrade, tradeOuts)
+		for s := range symbolCh {
+			kp.matchAndDistributeTradesForSymbol(s.symbol, s.orderKeeper, height, timestamp, distributeTrade, tradeOuts)
 		}
 	}
 
