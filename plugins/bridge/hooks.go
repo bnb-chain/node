@@ -1,7 +1,6 @@
 package bridge
 
 import (
-	"encoding/json"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -22,8 +21,7 @@ func NewSkipSequenceClaimHooks(bridgeKeeper Keeper) *SkipSequenceClaimHooks {
 }
 
 func (hooks *SkipSequenceClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	var skipSequenceClaim SkipSequenceClaim
-	err := json.Unmarshal([]byte(claim), &skipSequenceClaim)
+	skipSequenceClaim, err := types.GetSkipSequenceClaimFromOracleClaim(claim)
 	if err != nil {
 		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal skip sequence claim error, claim=%s", claim))
 	}
@@ -49,8 +47,7 @@ func (hooks *SkipSequenceClaimHooks) CheckClaim(ctx sdk.Context, claim string) s
 }
 
 func (hooks *SkipSequenceClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
-	var skipSequenceClaim SkipSequenceClaim
-	err := json.Unmarshal([]byte(claim), &skipSequenceClaim)
+	skipSequenceClaim, err := types.GetSkipSequenceClaimFromOracleClaim(claim)
 	if err != nil {
 		return sdk.Tags{}, types.ErrInvalidClaim(fmt.Sprintf("unmarshal claim error, claim=%s", claim))
 	}
@@ -71,8 +68,7 @@ func NewUpdateBindClaimHooks(bridgeKeeper Keeper) *UpdateBindClaimHooks {
 }
 
 func (hooks *UpdateBindClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	var updateBindClaim UpdateBindClaim
-	err := json.Unmarshal([]byte(claim), &updateBindClaim)
+	updateBindClaim, err := types.GetUpdateBindClaimFromOracleClaim(claim)
 	if err != nil {
 		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal update bind claim error, claim=%s", claim))
 	}
@@ -164,8 +160,7 @@ func NewUpdateTransferOutClaimHooks(bridgeKeeper Keeper) *UpdateTransferOutClaim
 }
 
 func (hooks *UpdateTransferOutClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	var updateTransferOutClaim UpdateTransferOutClaim
-	err := json.Unmarshal([]byte(claim), &updateTransferOutClaim)
+	updateTransferOutClaim, err := types.GetUpdateTransferOutClaimFromOracleClaim(claim)
 	if err != nil {
 		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal update transfer out claim error, claim=%s", claim))
 	}
@@ -217,8 +212,7 @@ func NewTransferInClaimHooks(bridgeKeeper Keeper) *TransferInClaimHooks {
 }
 
 func (hooks *TransferInClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	var transferInClaim TransferInClaim
-	err := json.Unmarshal([]byte(claim), &transferInClaim)
+	transferInClaim, err := types.GetTransferInClaimFromOracleClaim(claim)
 	if err != nil {
 		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal transfer in claim error, claim=%s", claim))
 	}

@@ -71,3 +71,12 @@ type SkipSequenceClaim struct {
 	ClaimType sdk.ClaimType `json:"claim_type"`
 	Sequence  int64         `json:"sequence"`
 }
+
+func GetSkipSequenceClaimFromOracleClaim(claim string) (SkipSequenceClaim, sdk.Error) {
+	skipSequenceClaim := SkipSequenceClaim{}
+	err := json.Unmarshal([]byte(claim), &skipSequenceClaim)
+	if err != nil {
+		return SkipSequenceClaim{}, ErrInvalidClaim(err.Error())
+	}
+	return skipSequenceClaim, nil
+}
