@@ -384,6 +384,7 @@ func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
+		stake.MigrateDelegation(ctx, app.stakeKeeper)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
