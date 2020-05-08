@@ -10,15 +10,16 @@ import (
 // type TradingPair = types.TradingPair
 
 type TradingPairMapper = store.TradingPairMapper
-type DexKeeper = order.Keeper
-type DexMiniTokenKeeper = order.MiniKeeper
-type DexOrderKeeper = order.DexOrderKeeper
-type DexGlobalKeeper = order.GlobalKeeper
-
+type BEP2OrderKeeper = order.BEP2OrderKeeper
+type MiniOrderKeeper = order.MiniOrderKeeper
+type IDexOrderKeeper = order.IDexOrderKeeper
+type DexKeeper = order.DexKeeper
+type SymbolPairType = order.SymbolPairType
 
 var NewTradingPairMapper = store.NewTradingPairMapper
-var NewOrderKeeper = order.NewKeeper
-var NewMiniKeeper = order.NewMiniKeeper
-var NewGlobalKeeper = order.NewGlobalKeeper
+var NewOrderKeeper = order.NewBEP2OrderKeeper
+var NewMiniOrderKeeper = order.NewMiniOrderKeeper
+var NewDexKeeper = order.NewDexKeeper
+var PairType = order.PairType
 
 const DefaultCodespace = types.DefaultCodespace

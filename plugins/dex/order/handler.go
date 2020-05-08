@@ -9,7 +9,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
@@ -25,15 +24,13 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, dexGlobalKeeper *GlobalKeeper, accKeeper auth.AccountKeeper) sdk.Handler {
+func NewHandler(cdc *wire.Codec, dexKeeper *DexKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			orderKeeper, _ := selectKeeper(msg, dexKeeper, dexMiniKeeper)
-			return handleNewOrder(ctx, cdc, orderKeeper, msg)
+			return handleNewOrder(ctx, cdc, dexKeeper, msg)
 		case CancelOrderMsg:
-			orderKeeper, _ := selectKeeper(msg, dexKeeper, dexMiniKeeper)
-			return handleCancelOrder(ctx, orderKeeper, dexGlobalKeeper, msg)
+			return handleCancelOrder(ctx, dexKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -41,27 +38,7 @@ func NewHandler(cdc *wire.Codec, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, d
 	}
 }
 
-func selectKeeper(msg sdk.Msg, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper) (DexOrderKeeper, error) {
-	var orderKeeper DexOrderKeeper
-	var symbol string
-	switch v := msg.(type) {
-	case NewOrderMsg:
-		symbol = strings.ToUpper(v.Symbol)
-	case CancelOrderMsg:
-		symbol = strings.ToUpper(v.Symbol)
-	default:
-		err := fmt.Errorf("unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
-		return nil, err
-	}
-	if (!sdk.IsUpgrade(upgrade.BEP8)) || !utils.IsMiniTokenTradingPair(symbol) {
-		orderKeeper = dexKeeper
-	} else {
-		orderKeeper = dexMiniKeeper
-	}
-	return orderKeeper, nil
-}
-
-func validateQtyAndLockBalance(ctx sdk.Context, keeper DexOrderKeeper, acc common.NamedAccount, msg NewOrderMsg) error {
+func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.NamedAccount, msg NewOrderMsg) error {
 	symbol := strings.ToUpper(msg.Symbol)
 	baseAssetSymbol, quoteAssetSymbol := utils.TradingPair2AssetsSafe(symbol)
 	notional := utils.CalBigNotionalInt64(msg.Price, msg.Quantity)
@@ -109,16 +86,16 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper DexOrderKeeper, acc commo
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, keeper DexOrderKeeper, msg NewOrderMsg,
+	ctx sdk.Context, cdc *wire.Codec, dexKeeper *DexKeeper, msg NewOrderMsg,
 ) sdk.Result {
 	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
 	// this check costs least.
-	if _, ok := keeper.OrderExists(msg.Symbol, msg.Id); ok {
+	if _, ok := dexKeeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
 		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 	}
 
-	acc := keeper.getAccountKeeper().GetAccount(ctx, msg.Sender).(common.NamedAccount)
+	acc := dexKeeper.getAccountKeeper().GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	if !ctx.IsReCheckTx() {
 		//for recheck:
 		// 1. sequence is verified in anteHandler
@@ -126,7 +103,7 @@ func handleNewOrder(
 		// 3. trading pair is verified
 		// 4. price/qty may have odd tick size/lot size, but it can be handled as
 		//    other existing orders.
-		err := keeper.validateOrder(ctx, acc, msg)
+		err := dexKeeper.ValidateOrder(ctx, acc, msg)
 
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
@@ -134,7 +111,7 @@ func handleNewOrder(
 	}
 
 	// the following is done in the app's checkstate / deliverstate, so it's safe to ignore isCheckTx
-	err := validateQtyAndLockBalance(ctx, keeper, acc, msg)
+	err := validateQtyAndLockBalance(ctx, dexKeeper, acc, msg)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
 	}
@@ -152,7 +129,7 @@ func handleNewOrder(
 				if txSrc, ok := ctx.Value(baseapp.TxSourceKey).(int64); ok {
 					txSource = txSrc
 				} else {
-					keeper.getLogger().Error("cannot get txSource from ctx")
+					dexKeeper.getLogger().Error("cannot get txSource from ctx")
 				}
 			})
 			msg := OrderInfo{
@@ -161,7 +138,7 @@ func handleNewOrder(
 				height, timestamp,
 				0, txHash, txSource}
 
-			err := keeper.AddOrder(msg, false)
+			err := dexKeeper.AddOrder(msg, false)
 
 			if err != nil {
 				return sdk.NewError(types.DefaultCodespace, types.CodeFailInsertOrder, err.Error()).Result()
@@ -186,9 +163,9 @@ func handleNewOrder(
 
 // Handle CancelOffer -
 func handleCancelOrder(
-	ctx sdk.Context, keeper DexOrderKeeper, dexGlobalKeeper *GlobalKeeper, msg CancelOrderMsg,
+	ctx sdk.Context, dexKeeper *DexKeeper, msg CancelOrderMsg,
 ) sdk.Result {
-	origOrd, ok := keeper.OrderExists(msg.Symbol, msg.RefId)
+	origOrd, ok := dexKeeper.OrderExists(msg.Symbol, msg.RefId)
 
 	//only check whether there exists order to cancel
 	if !ok {
@@ -202,21 +179,21 @@ func handleCancelOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, errString).Result()
 	}
 
-	ord, err := keeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
+	ord, err := dexKeeper.GetOrder(origOrd.Id, origOrd.Symbol, origOrd.Side, origOrd.Price)
 	if err != nil {
 		return sdk.NewError(types.DefaultCodespace, types.CodeFailLocateOrderToCancel, err.Error()).Result()
 	}
 	transfer := TransferFromCanceled(ord, origOrd, false)
-	sdkError := dexGlobalKeeper.doTransfer(ctx, &transfer)
+	sdkError := dexKeeper.doTransfer(ctx, &transfer)
 	if sdkError != nil {
 		return sdkError.Result()
 	}
 	fee := common.Fee{}
 	if !transfer.FeeFree() {
-		acc := keeper.getAccountKeeper().GetAccount(ctx, msg.Sender)
-		fee = keeper.getFeeManager().CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, keeper.getEngines())
+		acc := dexKeeper.getAccountKeeper().GetAccount(ctx, msg.Sender)
+		fee = dexKeeper.getFeeManager().CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, dexKeeper.GetEngines())
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-		keeper.getAccountKeeper().SetAccount(ctx, acc)
+		dexKeeper.getAccountKeeper().SetAccount(ctx, acc)
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
@@ -228,11 +205,11 @@ func handleCancelOrder(
 			fees.Pool.AddFee(txHash, fee)
 		}
 		//remove order from cache and order book
-		err := keeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
-			if keeper.ShouldPublishOrder() {
+		err := dexKeeper.RemoveOrder(origOrd.Id, origOrd.Symbol, func(ord me.OrderPart) {
+			if dexKeeper.ShouldPublishOrder() {
 				change := OrderChange{msg.RefId, Canceled, fee.String(), nil}
-				keeper.UpdateOrderChange(change)
-				dexGlobalKeeper.updateRoundOrderFee(string(msg.Sender), fee)
+				dexKeeper.UpdateOrderChangeSync(change, msg.Symbol)
+				dexKeeper.updateRoundOrderFee(string(msg.Sender), fee)
 			}
 		})
 		if err != nil {

@@ -28,7 +28,7 @@ func NewTestFeeConfig() FeeConfig {
 
 func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.GlobalKeeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "XYZ-111", 1e7))
 	_, acc := testutils.NewAccount(ctx, am, 0)
@@ -39,10 +39,10 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100,
 	}
 	// no enough bnb or native fee rounding to 0
-	fee := keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee := keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1}}, fee.Tokens)
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1}}, fee.Tokens)
 
 	tran = Transfer{
@@ -52,10 +52,10 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      10000,
 	}
 	_, acc = testutils.NewAccount(ctx, am, 1)
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"ABC-000", 1000}}, fee.Tokens)
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 
 	tran = Transfer{
@@ -65,7 +65,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      1000,
 	}
 	_, acc = testutils.NewAccount(ctx, am, 100)
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 0}}, fee.Tokens)
 
 	tran = Transfer{
@@ -74,7 +74,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		outAsset: "ABC-000",
 		out:      100000,
 	}
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 
 	tran = Transfer{
@@ -84,7 +84,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100000,
 	}
 	acc.SetCoins(sdk.Coins{{"ABC-000", 1000000}, {"BNB", 100}})
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 5}}, fee.Tokens)
 	tran = Transfer{
 		inAsset:  "XYZ-111",
@@ -93,13 +93,13 @@ func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
 		out:      100000,
 	}
 	acc.SetCoins(sdk.Coins{{"XYZ-111", 1000000}, {"BNB", 1000}})
-	fee = keeper.GlobalKeeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
+	fee = keeper.FeeManager.calcTradeFeeForSingleTransfer(acc.GetCoins(), &tran, keeper.engines)
 	require.Equal(t, sdk.Coins{{"BNB", 500}}, fee.Tokens)
 }
 
 func TestFeeManager_CalcTradesFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.GlobalKeeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("XYZ-111", "BNB", 2e7))
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BTC", 1e4))
@@ -126,7 +126,7 @@ func TestFeeManager_CalcTradesFee(t *testing.T) {
 		{"BTC", 10e8},
 		{"XYZ-000", 100e8},
 	})
-	fees := keeper.GlobalKeeper.FeeManager.CalcTradesFee(acc.GetCoins(), tradeTransfers, keeper.engines)
+	fees := keeper.FeeManager.CalcTradesFee(acc.GetCoins(), tradeTransfers, keeper.engines)
 	require.Equal(t, "ABC-000:8000;BNB:15251305;BTC:100000;XYZ-111:2000", fees.String())
 	require.Equal(t, "BNB:250000", tradeTransfers[0].Fee.String())
 	require.Equal(t, "BNB:15000000", tradeTransfers[1].Fee.String())
@@ -148,7 +148,7 @@ func TestFeeManager_CalcTradesFee(t *testing.T) {
 
 func TestFeeManager_CalcExpiresFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.GlobalKeeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("XYZ-111", "BNB", 2e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC", 5e5))
@@ -173,7 +173,7 @@ func TestFeeManager_CalcExpiresFee(t *testing.T) {
 		{"BTC", 10e8},
 		{"XYZ-111", 800000},
 	})
-	fees := keeper.GlobalKeeper.FeeManager.CalcExpiresFee(acc.GetCoins(), eventFullyExpire, expireTransfers, keeper.engines, nil)
+	fees := keeper.FeeManager.CalcExpiresFee(acc.GetCoins(), eventFullyExpire, expireTransfers, keeper.engines, nil)
 	require.Equal(t, "ABC-000:1000000;BNB:120000;BTC:500;XYZ-111:800000", fees.String())
 	require.Equal(t, "BNB:20000", expireTransfers[0].Fee.String())
 	require.Equal(t, "BNB:20000", expireTransfers[1].Fee.String())
@@ -195,17 +195,17 @@ func TestFeeManager_CalcExpiresFee(t *testing.T) {
 
 func TestFeeManager_CalcTradeFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.GlobalKeeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	// BNB
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	// the tradeIn amount is large enough to make the fee > 0
 	tradeIn := sdk.NewCoin(types.NativeTokenSymbol, 100e8)
-	fee := keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee := keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e6)}, fee.Tokens)
 	// small tradeIn amount
 	tradeIn = sdk.NewCoin(types.NativeTokenSymbol, 100)
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 0)}, fee.Tokens)
 
 	// !BNB
@@ -213,11 +213,11 @@ func TestFeeManager_CalcTradeFee(t *testing.T) {
 	// has enough bnb
 	tradeIn = sdk.NewCoin("ABC-000", 1000e8)
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e8)})
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e6)}, fee.Tokens)
 	// no enough bnb
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e6)})
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e8)}, fee.Tokens)
 
 	// very high price to produce int64 overflow
@@ -225,64 +225,64 @@ func TestFeeManager_CalcTradeFee(t *testing.T) {
 	// has enough bnb
 	tradeIn = sdk.NewCoin("ABC-000", 1000e8)
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e16)})
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 5e15)}, fee.Tokens)
 	// no enough bnb, fee is within int64
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e15)})
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e8)}, fee.Tokens)
 	// no enough bnb, even the fee overflows
 	tradeIn = sdk.NewCoin("ABC-000", 1e16)
-	fee = keeper.GlobalKeeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
+	fee = keeper.FeeManager.CalcTradeFee(acc.GetCoins(), tradeIn, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e13)}, fee.Tokens)
 }
 
 func TestFeeManager_CalcFixedFee(t *testing.T) {
 	ctx, am, keeper := setup()
-	keeper.GlobalKeeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 1e4)
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC-000", 1e5))
 	// in BNB
 	// no enough BNB, but inAsset == BNB
-	fee := keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, types.NativeTokenSymbol, keeper.engines)
+	fee := keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, types.NativeTokenSymbol, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e4)}, fee.Tokens)
 	// enough BNB
 	acc.SetCoins(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 3e4)})
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, types.NativeTokenSymbol, keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, types.NativeTokenSymbol, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2e4)}, fee.Tokens)
 
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventIOCFullyExpire, types.NativeTokenSymbol, keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventIOCFullyExpire, types.NativeTokenSymbol, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 1e4)}, fee.Tokens)
 
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyCancel, types.NativeTokenSymbol, keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyCancel, types.NativeTokenSymbol, keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2e4)}, fee.Tokens)
 
 	// ABC-000_BNB, sell ABC-000
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2e4)}, fee.Tokens)
 
 	// No enough native token, but enough ABC-000
 	acc.SetCoins(sdk.Coins{{Denom: types.NativeTokenSymbol, Amount: 1e4}, {Denom: "ABC-000", Amount: 1e8}})
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e6)}, fee.Tokens)
 
 	// No enough native token and ABC-000
 	acc.SetCoins(sdk.Coins{{Denom: types.NativeTokenSymbol, Amount: 1e4}, {Denom: "ABC-000", Amount: 1e5}})
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e5)}, fee.Tokens)
 
 	// BNB_BTC-000, sell BTC-000
 	acc.SetCoins(sdk.Coins{{Denom: "BTC-000", Amount: 1e4}})
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC-000", 1e2)}, fee.Tokens)
 
 	// extreme prices
 	keeper.AddEngine(dextype.NewTradingPair("ABC-000", "BNB", 1))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC-000", 1e16))
 	acc.SetCoins(sdk.Coins{{Denom: "ABC-000", Amount: 1e16}, {Denom: "BTC-000", Amount: 1e16}})
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "ABC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("ABC-000", 1e13)}, fee.Tokens)
-	fee = keeper.GlobalKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC-000", keeper.engines)
+	fee = keeper.FeeManager.CalcFixedFee(acc.GetCoins(), eventFullyExpire, "BTC-000", keeper.engines)
 	require.Equal(t, sdk.Coins{sdk.NewCoin("BTC-000", 1e13)}, fee.Tokens)
 }

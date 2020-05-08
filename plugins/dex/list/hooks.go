@@ -14,11 +14,11 @@ import (
 )
 
 type ListHooks struct {
-	orderKeeper *order.Keeper
+	orderKeeper *order.DexKeeper
 	tokenMapper tokens.Mapper
 }
 
-func NewListHooks(orderKeeper *order.Keeper, tokenMapper tokens.Mapper) ListHooks {
+func NewListHooks(orderKeeper *order.DexKeeper, tokenMapper tokens.Mapper) ListHooks {
 	return ListHooks{
 		orderKeeper: orderKeeper,
 		tokenMapper: tokenMapper,
@@ -74,10 +74,10 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 }
 
 type DelistHooks struct {
-	orderKeeper *order.Keeper
+	orderKeeper *order.DexKeeper
 }
 
-func NewDelistHooks(orderKeeper *order.Keeper) DelistHooks {
+func NewDelistHooks(orderKeeper *order.DexKeeper) DelistHooks {
 	return DelistHooks{
 		orderKeeper: orderKeeper,
 	}

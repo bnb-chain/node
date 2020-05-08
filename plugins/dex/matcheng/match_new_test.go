@@ -486,7 +486,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 		l.BuyTakerStartIdx, l.BuyMakerTotal, l.SellTakerStartIdx, l.SellMakerTotal = 0, 0, 0, 0
 	}
 
-	takerSide, err := me.determineTakerSide(100, 0)
+	takerSide, err := me.determineTakerSide(99, 0)
 	assert.NoError(err)
 	assert.Equal(BUYSIDE, takerSide)
 	checkAndClear(&me.overLappedLevel[0], 0, 0, 2, 200)
@@ -494,7 +494,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 	checkAndClear(&me.overLappedLevel[2], 0, 0, 0, 0)
 	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
 
-	takerSide, err = me.determineTakerSide(100, 1)
+	takerSide, err = me.determineTakerSide(99, 1)
 	assert.NoError(err)
 	assert.Equal(BUYSIDE, takerSide)
 	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
@@ -502,7 +502,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 	checkAndClear(&me.overLappedLevel[2], 0, 0, 0, 0)
 	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
 
-	takerSide, err = me.determineTakerSide(100, 2)
+	takerSide, err = me.determineTakerSide(99, 2)
 	assert.NoError(err)
 	assert.Equal(SELLSIDE, takerSide)
 	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
@@ -510,7 +510,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 	checkAndClear(&me.overLappedLevel[2], 2, 200, 0, 0)
 	checkAndClear(&me.overLappedLevel[3], 0, 0, 0, 0)
 
-	takerSide, err = me.determineTakerSide(100, 3)
+	takerSide, err = me.determineTakerSide(99, 3)
 	assert.NoError(err)
 	assert.Equal(SELLSIDE, takerSide)
 	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
@@ -527,7 +527,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 			{"2", 100, 100, 0, 100},
 		},
 	}}
-	takerSide, err = me.determineTakerSide(100, 0)
+	takerSide, err = me.determineTakerSide(99, 0)
 	assert.NoError(err)
 	assert.Equal(BUYSIDE, takerSide)
 	checkAndClear(&me.overLappedLevel[0], 0, 0, 0, 0)
@@ -541,7 +541,7 @@ func TestMatchEng_determineTakerSide(t *testing.T) {
 			{"2", 99, 100, 0, 100},
 		},
 	}}
-	takerSide, err = me.determineTakerSide(100, 0)
+	takerSide, err = me.determineTakerSide(99, 0)
 	assert.EqualError(err, "both buy side and sell side have maker orders.")
 	assert.Equal(UNKNOWN, takerSide)
 }

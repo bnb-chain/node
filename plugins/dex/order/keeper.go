@@ -3,23 +3,17 @@ package order
 import (
 	"errors"
 	"fmt"
-	"math"
-	"strings"
 	"sync"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
-	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
 )
@@ -33,200 +27,75 @@ const (
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
-type DexOrderKeeper interface {
-	InitRecentPrices(ctx sdk.Context)
-	AddEngine(pair dexTypes.TradingPair) *me.MatchEng
-	UpdateTickSizeAndLotSize(ctx sdk.Context)
-	DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, price int64) (lotSize int64)
-	UpdateLotSize(symbol string, lotSize int64)
-	AddOrder(info OrderInfo, isRecovery bool) (err error)
-	RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error)
-	GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error)
-	OrderExists(symbol, id string) (OrderInfo, bool)
-	GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel
-	GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
-	GetOrderBooks(maxLevels int) ChangedPriceLevelsMap
-	GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel
-	GetLastTrades(height int64, pair string) ([]me.Trade, int64)
-	GetLastTradesForPair(pair string) ([]me.Trade, int64)
-	ClearOrderBook(pair string)
-	ClearOrderChanges()
-	StoreTradePrices(ctx sdk.Context)
-	ExpireOrders(ctx sdk.Context, blockTime time.Time, postAlloTransHandler TransferHandler)
-	MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time)
-	GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) (int64, error)
-	GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight int64, timeNow time.Time, blockInterval, daysBack int) int64
-	ClearOrders()
-	DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler)
-	CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
-	CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
-	SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error)
-	LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error)
-	GetPairMapper() store.TradingPairMapper
-	GetOrderChanges() OrderChanges
-	GetOrderInfosForPub() OrderInfoForPublish
-	GetGlobalKeeper() *GlobalKeeper
-	getAccountKeeper() *auth.AccountKeeper
-	getLogger() tmlog.Logger
-	getFeeManager() *FeeManager
-	getEngines() map[string]*me.MatchEng
-	ShouldPublishOrder() bool
-	UpdateOrderChange(change OrderChange)
-	validateOrder(context sdk.Context, account sdk.Account, msg NewOrderMsg) error
+type IDexOrderKeeper interface {
+	addOrder(symbol string, info OrderInfo, collectOrderInfoForPublish bool, isRecovery bool)
+	removeOrder(dexKeeper *DexKeeper, id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error)
+	orderExists(symbol, id string) (OrderInfo, bool)
+	getOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
+	getAllOrders() map[string]map[string]*OrderInfo
+	deleteOrdersForPair(pair string)
+	clearOrderChanges()
+	getOrderChanges() OrderChanges
+	getOrderInfosForPub() OrderInfoForPublish
+	appendOrderChange(change OrderChange)
+	initOrders(symbol string)
+	support(pair string) bool
+	supportUpgradeVersion() bool
+	supportPairType(pairType SymbolPairType) bool
+	validateOrder(dexKeeper *DexKeeper, context sdk.Context, account sdk.Account, msg NewOrderMsg) error
+	iterateRoundPairs(func(string))
+	iterateAllOrders(func(symbol string, id string))
+	reloadOrder(symbol string, orderInfo *OrderInfo, height int64, collectOrderInfoForPublish bool)
+	getRoundPairsNum() int
+	getRoundOrdersNum() int
+	getAllOrdersForPair(pair string) map[string]*OrderInfo
+	getRoundOrdersForPair(pair string) []string
+	getRoundIOCOrdersForPair(pair string) []string
+	clearAfterMatch()
+	selectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string
+	appendOrderChangeSync(change OrderChange)
 }
 
-var _ DexOrderKeeper = &Keeper{}
+type BEP2OrderKeeper struct {
+	BaseOrderKeeper
+}
+
+var _ IDexOrderKeeper = &BEP2OrderKeeper{}
 // in the future, this may be distributed via Sharding
-type Keeper struct {
-	PairMapper                 store.TradingPairMapper
-	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
-	codespace                  sdk.CodespaceType
-	engines                    map[string]*me.MatchEng
-	recentPrices               map[string]*utils.FixedSizeRing  // symbol -> latest "numPricesStored" prices per "pricesStoreEvery" blocks
-	allOrders                  map[string]map[string]*OrderInfo // symbol -> order ID -> order
-	OrderChangesMtx            *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
-	OrderChanges               OrderChanges                     // order changed in this block, will be cleaned before matching for new block
-	OrderInfosForPub           OrderInfoForPublish              // for publication usage
-	roundOrders                map[string][]string              // limit to the total tx number in a block
-	roundIOCOrders             map[string][]string
-	poolSize                   uint // number of concurrent channels, counted in the pow of 2
-	cdc                        *wire.Codec
-	logger                     tmlog.Logger
-	symbolSelector             SymbolSelector
-	GlobalKeeper               *GlobalKeeper
+type BaseOrderKeeper struct {
+	allOrders        map[string]map[string]*OrderInfo // symbol -> order ID -> order
+	OrderChangesMtx  *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
+	OrderChanges     OrderChanges                     // order changed in this block, will be cleaned before matching for new block
+	OrderInfosForPub OrderInfoForPublish              // for publication usage
+	roundOrders      map[string][]string              // limit to the total tx number in a block
+	roundIOCOrders   map[string][]string
+	poolSize         uint // number of concurrent channels, counted in the pow of 2
+	cdc              *wire.Codec
+	logger           tmlog.Logger
+	symbolSelector   SymbolSelector
 }
 
-func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
-	return me.NewMatchEng(pairSymbol, basePrice, lotSize, 0.05)
-}
-
-// NewKeeper - Returns the Keeper
-func NewKeeper(key sdk.StoreKey, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec, globalKeeper *GlobalKeeper) *Keeper {
-	logger := bnclog.With("module", "dexkeeper")
-	return &Keeper{
-		PairMapper:                 tradingPairMapper,
-		storeKey:                   key,
-		codespace:                  codespace,
-		engines:                    make(map[string]*me.MatchEng),
-		recentPrices:               make(map[string]*utils.FixedSizeRing, 256),
-		allOrders:                  make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
-		OrderChangesMtx:            &sync.Mutex{},
-		OrderChanges:               make(OrderChanges, 0),
-		OrderInfosForPub:           make(OrderInfoForPublish),
-		roundOrders:                make(map[string][]string, 256),
-		roundIOCOrders:             make(map[string][]string, 256),
-		poolSize:                   concurrency,
-		cdc:                        cdc,
-		logger:                     logger,
-		symbolSelector:             &BEP2SymbolSelector{},
-		GlobalKeeper:               globalKeeper,
+// NewBEP2OrderKeeper - Returns the BEP2OrderKeeper
+func NewBEP2OrderKeeper() IDexOrderKeeper {
+	logger := bnclog.With("module", "Bep2OrderKeeper")
+	return &BEP2OrderKeeper{
+		BaseOrderKeeper{
+			allOrders: make(map[string]map[string]*OrderInfo, 256),
+			// need to init the nested map when a new symbol added.
+			OrderChangesMtx:  &sync.Mutex{},
+			OrderChanges:     make(OrderChanges, 0),
+			OrderInfosForPub: make(OrderInfoForPublish),
+			roundOrders:      make(map[string][]string, 256),
+			roundIOCOrders:   make(map[string][]string, 256),
+			logger:           logger,
+			symbolSelector:   &BEP2SymbolSelector{},
+		},
 	}
 }
 
-func (kp *Keeper) InitRecentPrices(ctx sdk.Context) {
-	kp.recentPrices = kp.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)
-}
+func (kp *BaseOrderKeeper) addOrder(symbol string, info OrderInfo, collectOrderInfoForPublish bool, isRecovery bool) {
 
-func (kp *Keeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	symbol := strings.ToUpper(pair.GetSymbol())
-	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
-	kp.engines[symbol] = eng
-	kp.allOrders[symbol] = map[string]*OrderInfo{}
-	return eng
-}
-
-func (kp *Keeper) UpdateTickSizeAndLotSize(ctx sdk.Context) {
-	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	lotSizeCache := make(map[string]int64) // baseAsset -> lotSize
-	for _, pair := range tradingPairs {
-		if prices, ok := kp.recentPrices[pair.GetSymbol()]; ok && prices.Count() >= minimalNumPrices {
-			priceWMA := dexUtils.CalcPriceWMA(prices)
-			tickSize, lotSize := kp.determineTickAndLotSize(pair, priceWMA, lotSizeCache)
-			if tickSize != pair.TickSize.ToInt64() ||
-				lotSize != pair.LotSize.ToInt64() {
-				ctx.Logger().Info("Updating tick/lotsize",
-					"pair", pair.GetSymbol(), "old_ticksize", pair.TickSize, "new_ticksize", tickSize,
-					"old_lotsize", pair.LotSize, "new_lotsize", lotSize)
-				pair.TickSize = utils.Fixed8(tickSize)
-				pair.LotSize = utils.Fixed8(lotSize)
-				kp.PairMapper.AddTradingPair(ctx, pair)
-			}
-			kp.UpdateLotSize(pair.GetSymbol(), lotSize)
-		} else {
-			// keep the current tick_size/lot_size
-			continue
-		}
-	}
-}
-
-func (kp *Keeper) determineTickAndLotSize(pair dexTypes.TradingPair, priceWMA int64, lotSizeCache map[string]int64) (tickSize, lotSize int64) {
-	tickSize = dexUtils.CalcTickSize(priceWMA)
-	if !sdk.IsUpgrade(upgrade.LotSizeOptimization) {
-		lotSize = dexUtils.CalcLotSize(priceWMA)
-		return
-	}
-	if lotSize, cached := lotSizeCache[pair.BaseAssetSymbol]; cached {
-		return tickSize, lotSize
-	}
-
-	lotSize = kp.DetermineLotSize(pair.BaseAssetSymbol, pair.QuoteAssetSymbol, priceWMA)
-	lotSizeCache[pair.BaseAssetSymbol] = lotSize
-	return
-}
-
-func (kp *Keeper) DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, price int64) (lotSize int64) {
-	var priceAgainstNative int64
-	if baseAssetSymbol == types.NativeTokenSymbol {
-		// price of BNB/BNB is 1e8
-		priceAgainstNative = 1e8
-	} else if quoteAssetSymbol == types.NativeTokenSymbol {
-		priceAgainstNative = price
-	} else {
-		if ps, ok := kp.recentPrices[dexUtils.Assets2TradingPair(baseAssetSymbol, types.NativeTokenSymbol)]; ok {
-			priceAgainstNative = dexUtils.CalcPriceWMA(ps)
-		} else if ps, ok = kp.recentPrices[dexUtils.Assets2TradingPair(types.NativeTokenSymbol, baseAssetSymbol)]; ok {
-			wma := dexUtils.CalcPriceWMA(ps)
-			priceAgainstNative = 1e16 / wma
-		} else {
-			// the recentPrices still have not collected any price yet, iff the native pair is listed for less than kp.pricesStoreEvery blocks
-			if engine, ok := kp.engines[dexUtils.Assets2TradingPair(baseAssetSymbol, types.NativeTokenSymbol)]; ok {
-				priceAgainstNative = engine.LastTradePrice
-			} else if engine, ok = kp.engines[dexUtils.Assets2TradingPair(types.NativeTokenSymbol, baseAssetSymbol)]; ok {
-				priceAgainstNative = 1e16 / engine.LastTradePrice
-			} else {
-				// should not happen
-				kp.logger.Error("DetermineLotSize failed because no native pair found", "base", baseAssetSymbol, "quote", quoteAssetSymbol)
-			}
-		}
-	}
-	lotSize = dexUtils.CalcLotSize(priceAgainstNative)
-	return lotSize
-}
-
-func (kp *Keeper) UpdateLotSize(symbol string, lotSize int64) {
-	eng, ok := kp.engines[symbol]
-	if !ok {
-		panic(fmt.Sprintf("match engine of symbol %s doesn't exist", symbol))
-	}
-	eng.LotSize = lotSize
-}
-
-func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
-	//try update order book first
-	symbol := strings.ToUpper(info.Symbol)
-	eng, ok := kp.engines[symbol]
-	if !ok {
-		err = fmt.Errorf("match engine of symbol %s doesn't exist", symbol)
-		return
-	}
-
-	_, err = eng.Book.InsertOrder(info.Id, info.Side, info.CreatedHeight, info.Price, info.Quantity)
-	if err != nil {
-		return err
-	}
-
-	if kp.GlobalKeeper.CollectOrderInfoForPublish {
+	if collectOrderInfoForPublish {
 		change := OrderChange{info.Id, Ack, "", nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
@@ -238,12 +107,9 @@ func (kp *Keeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 
 	kp.allOrders[symbol][info.Id] = &info
 	kp.addRoundOrders(symbol, info)
-
-	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
-	return nil
 }
 
-func (kp *Keeper) addRoundOrders(symbol string, info OrderInfo) {
+func (kp *BaseOrderKeeper) addRoundOrders(symbol string, info OrderInfo) {
 	if ids, ok := kp.roundOrders[symbol]; ok {
 		kp.roundOrders[symbol] = append(ids, info.Id)
 	} else {
@@ -255,17 +121,22 @@ func (kp *Keeper) addRoundOrders(symbol string, info OrderInfo) {
 	}
 }
 
-func orderNotFound(symbol, id string) error {
-	return fmt.Errorf("Failed to find order [%v] on symbol [%v]", id, symbol)
+func (kp *BaseOrderKeeper) orderExists(symbol, id string) (OrderInfo, bool) {
+	if orders, ok := kp.allOrders[symbol]; ok {
+		if msg, ok := orders[id]; ok {
+			return *msg, ok
+		}
+	}
+	return OrderInfo{}, false
 }
 
-func (kp *Keeper) RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
-	symbol = strings.ToUpper(symbol)
-	ordMsg, ok := kp.OrderExists(symbol, id)
+func (kp *BaseOrderKeeper) removeOrder(dexKeeper *DexKeeper, id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
+
+	ordMsg, ok := kp.orderExists(symbol, id)
 	if !ok {
 		return orderNotFound(symbol, id)
 	}
-	eng, ok := kp.engines[symbol]
+	eng, ok := dexKeeper.engines[symbol]
 	if !ok {
 		return orderNotFound(symbol, id)
 	}
@@ -281,478 +152,11 @@ func (kp *Keeper) RemoveOrder(id string, symbol string, postCancelHandler func(o
 	return nil
 }
 
-func (kp *Keeper) GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error) {
-	symbol = strings.ToUpper(symbol)
-	_, ok := kp.OrderExists(symbol, id)
-	if !ok {
-		return me.OrderPart{}, orderNotFound(symbol, id)
-	}
-	eng, ok := kp.engines[symbol]
-	if !ok {
-		return me.OrderPart{}, orderNotFound(symbol, id)
-	}
-	return eng.Book.GetOrder(id, side, price)
+func (kp *BaseOrderKeeper) deleteOrdersForPair(pair string) {
+	delete(kp.allOrders, pair)
 }
 
-func (kp *Keeper) OrderExists(symbol, id string) (OrderInfo, bool) {
-	if orders, ok := kp.allOrders[symbol]; ok {
-		if msg, ok := orders[id]; ok {
-			return *msg, ok
-		}
-	}
-	return OrderInfo{}, false
-}
-
-// channelHash() will choose a channel for processing by moding
-// the sum of the last 7 bytes of address by bucketNumber.
-// It may not be fully even.
-// TODO: there is still concern on peroformance and evenness.
-func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
-	l := len(accAddress)
-	sum := 0
-	for i := l - 7; i < l; i++ {
-		sum += int(accAddress[i])
-	}
-	return sum % bucketNumber
-}
-
-// Run as postConsume procedure of async, no concurrent updates of orders map
-func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
-	order.CumQty = cumQty
-	order.LastUpdatedHeight = height
-	order.LastUpdatedTimestamp = timestamp
-}
-
-func (kp *Keeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, maxLevels)
-
-	i, j := 0, 0
-
-	if eng, ok := kp.engines[pair]; ok {
-		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
-			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
-			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
-			i++
-		},
-			func(p *me.PriceLevel) {
-				orderbook[j].SellPrice = utils.Fixed8(p.Price)
-				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
-				j++
-			})
-	}
-	return orderbook
-}
-
-func (kp *Keeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
-	openOrders := make([]store.OpenOrder, 0)
-
-	for _, order := range kp.allOrders[pair] {
-		if string(order.Sender.Bytes()) == string(addr.Bytes()) {
-			openOrders = append(
-				openOrders,
-				store.OpenOrder{
-					order.Id,
-					pair,
-					utils.Fixed8(order.Price),
-					utils.Fixed8(order.Quantity),
-					utils.Fixed8(order.CumQty),
-					order.CreatedHeight,
-					order.CreatedTimestamp,
-					order.LastUpdatedHeight,
-					order.LastUpdatedTimestamp,
-				})
-		}
-	}
-
-	return openOrders
-}
-
-func (kp *Keeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
-	var res = make(ChangedPriceLevelsMap)
-	for pair, eng := range kp.engines {
-		buys := make(map[int64]int64)
-		sells := make(map[int64]int64)
-		res[pair] = ChangedPriceLevelsPerSymbol{buys, sells}
-
-		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
-			buys[p.Price] = p.TotalLeavesQty()
-		}, func(p *me.PriceLevel) {
-			sells[p.Price] = p.TotalLeavesQty()
-		})
-	}
-
-	return res
-}
-
-func (kp *Keeper) GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel {
-	if eng, ok := kp.engines[pair]; ok {
-		return eng.Book.GetPriceLevel(price, side)
-	} else {
-		return nil
-	}
-}
-
-func (kp *Keeper) GetLastTrades(height int64, pair string) ([]me.Trade, int64) {
-	if eng, ok := kp.engines[pair]; ok {
-		if eng.LastMatchHeight == height {
-			return eng.Trades, eng.LastTradePrice
-		}
-	}
-	return nil, 0
-}
-
-// !!! FOR TEST USE ONLY
-func (kp *Keeper) GetLastTradesForPair(pair string) ([]me.Trade, int64) {
-	if eng, ok := kp.engines[pair]; ok {
-		return eng.Trades, eng.LastTradePrice
-	}
-	return nil, 0
-}
-
-func (kp *Keeper) ClearOrderBook(pair string) {
-	if eng, ok := kp.engines[pair]; ok {
-		eng.Book.Clear()
-	}
-}
-
-func (kp *Keeper) ClearOrderChanges() {
-	kp.OrderChanges = kp.OrderChanges[:0]
-}
-
-func (kp *Keeper) StoreTradePrices(ctx sdk.Context) {
-	// TODO: check block height != 0
-	if ctx.BlockHeight()%pricesStoreEvery == 0 {
-		lastTradePrices := make(map[string]int64, len(kp.engines))
-		for symbol, engine := range kp.engines {
-			lastTradePrices[symbol] = engine.LastTradePrice
-			if _, ok := kp.recentPrices[symbol]; !ok {
-				kp.recentPrices[symbol] = utils.NewFixedSizedRing(numPricesStored)
-			}
-			kp.recentPrices[symbol].Push(engine.LastTradePrice)
-		}
-		if len(lastTradePrices) != 0 {
-			kp.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
-		}
-	}
-}
-
-
-func (kp *Keeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan Transfer {
-	size := len(kp.allOrders)
-	if size == 0 {
-		kp.logger.Info("No orders to expire")
-		return nil
-	}
-
-	// TODO: make effectiveDays configurable
-	const effectiveDays = 3
-	expireHeight, err := kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
-	if err != nil {
-		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
-		kp.logger.Info(err.Error())
-		return nil
-	}
-
-	channelSize := size >> kp.poolSize
-	concurrency := 1 << kp.poolSize
-	if size%concurrency != 0 {
-		channelSize += 1
-	}
-
-	transferChs := make([]chan Transfer, concurrency)
-	for i := range transferChs {
-		// TODO: channelSize is enough for buffer to facilitate ?
-		transferChs[i] = make(chan Transfer, channelSize*2)
-	}
-
-	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
-		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
-			// gen transfer
-			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
-				h := channelHash(ordMsg.Sender, concurrency)
-				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
-				// delete from allOrders
-				delete(orders, ord.Id)
-			} else {
-				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
-			}
-		})
-	}
-
-	symbolCh := make(chan string, concurrency)
-	utils.ConcurrentExecuteAsync(concurrency,
-		func() {
-			for symbol := range kp.allOrders {
-				symbolCh <- symbol
-			}
-			close(symbolCh)
-		}, func() {
-			for symbol := range symbolCh {
-				engine := kp.engines[symbol]
-				orders := kp.allOrders[symbol]
-				expire(orders, engine, me.BUYSIDE)
-				expire(orders, engine, me.SELLSIDE)
-			}
-		}, func() {
-			for _, transferCh := range transferChs {
-				close(transferCh)
-			}
-		})
-
-	return transferChs
-}
-
-func (kp *Keeper) ExpireOrders(
-	ctx sdk.Context,
-	blockTime time.Time,
-	postAlloTransHandler TransferHandler,
-) {
-	transferChs := kp.expireOrders(ctx, blockTime)
-	if transferChs == nil {
-		return
-	}
-
-	totalFee := kp.GlobalKeeper.allocateAndCalcFee(ctx, transferChs, postAlloTransHandler, kp.engines)
-	fees.Pool.AddAndCommitFee("EXPIRE", totalFee)
-}
-
-func (kp *Keeper) MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time) {
-	key := utils.Int642Bytes(blockTime.Unix() / utils.SecondsPerDay)
-	store := ctx.KVStore(kp.storeKey)
-	bz, err := kp.cdc.MarshalBinaryBare(height)
-	if err != nil {
-		panic(err)
-	}
-	kp.logger.Debug(fmt.Sprintf("mark breathe block for key: %v (blockTime: %d), value: %v\n", key, blockTime.Unix(), bz))
-	store.Set([]byte(key), bz)
-}
-
-func (kp *Keeper) GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) (int64, error) {
-	store := ctx.KVStore(kp.storeKey)
-	t := timeNow.AddDate(0, 0, -daysBack).Unix()
-	day := t / utils.SecondsPerDay
-	bz := store.Get(utils.Int642Bytes(day))
-	if bz == nil {
-		return 0, fmt.Errorf("breathe block not found for day %v", day)
-	}
-
-	var height int64
-	err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-	if err != nil {
-		panic(err)
-	}
-	return height, nil
-}
-
-func (kp *Keeper) GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight int64, timeNow time.Time, blockInterval, daysBack int) int64 {
-	if blockInterval != 0 {
-		return (latestBlockHeight / int64(blockInterval)) * int64(blockInterval)
-	} else {
-		store := ctx.KVStore(kp.storeKey)
-		bz := []byte(nil)
-		for i := 0; i <= daysBack; i++ {
-			t := timeNow.AddDate(0, 0, -i).Unix()
-			key := utils.Int642Bytes(t / utils.SecondsPerDay)
-			bz = store.Get([]byte(key))
-			if bz != nil {
-				kp.logger.Info("Located day to load breathe block height", "epochDay", key)
-				break
-			}
-		}
-		if bz == nil {
-			kp.logger.Error("Failed to load the latest breathe block height from", "timeNow", timeNow)
-			return 0
-		}
-		var height int64
-		err := kp.cdc.UnmarshalBinaryBare(bz, &height)
-		if err != nil {
-			panic(err)
-		}
-		kp.logger.Info("Loaded breathe block height", "height", height)
-		return height
-	}
-}
-
-// used by state sync to clear memory order book after we synced latest breathe block
-func (kp *Keeper) ClearOrders() {
-	kp.engines = make(map[string]*me.MatchEng)
-	kp.allOrders = make(map[string]map[string]*OrderInfo, 256)
-	kp.roundOrders = make(map[string][]string, 256)
-	kp.roundIOCOrders = make(map[string][]string, 256)
-	kp.OrderInfosForPub = make(OrderInfoForPublish)
-}
-
-func (kp *Keeper) DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler) {
-	_, ok := kp.engines[symbol]
-	if !ok {
-		kp.logger.Error("delist symbol does not exist", "symbol", symbol)
-		return
-	}
-
-	transferChs := kp.expireAllOrders(ctx, symbol)
-	if transferChs != nil {
-		totalFee := kp.GlobalKeeper.allocateAndCalcFee(ctx, transferChs, postAllocTransHandler, kp.engines)
-		fees.Pool.AddAndCommitFee(fmt.Sprintf("DELIST_%s", symbol), totalFee)
-	}
-
-	delete(kp.engines, symbol)
-	delete(kp.allOrders, symbol)
-	delete(kp.recentPrices, symbol)
-
-	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
-	err := kp.PairMapper.DeleteTradingPair(ctx, baseAsset, quoteAsset)
-	if err != nil {
-		kp.logger.Error("delete trading pair error", "err", err.Error())
-	}
-}
-
-func (kp *Keeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
-	orderNum := len(kp.allOrders[symbol])
-	if orderNum == 0 {
-		kp.logger.Info("no orders to expire", "symbol", symbol)
-		return nil
-	}
-
-	concurrency := 1 << kp.poolSize
-	channelSize := orderNum / concurrency
-
-	transferChs := make([]chan Transfer, concurrency)
-	for i := range transferChs {
-		transferChs[i] = make(chan Transfer, channelSize)
-	}
-
-	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
-		_ = engine.Book.RemoveOrders(math.MaxInt64, side, func(ord me.OrderPart) {
-			// gen transfer
-			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
-				h := channelHash(ordMsg.Sender, concurrency)
-				transferChs[h] <- TransferFromExpired(ord, *ordMsg)
-			} else {
-				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
-			}
-		})
-	}
-
-	go func() {
-		engine := kp.engines[symbol]
-		orders := kp.allOrders[symbol]
-		expire(orders, engine, me.BUYSIDE)
-		expire(orders, engine, me.SELLSIDE)
-
-		for _, transferCh := range transferChs {
-			close(transferCh)
-		}
-	}()
-
-	return transferChs
-}
-
-func (kp *Keeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
-	// trading pair against native token should exist if quote token is not native token
-	baseAsset = strings.ToUpper(baseAsset)
-	quoteAsset = strings.ToUpper(quoteAsset)
-
-	if baseAsset == quoteAsset {
-		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
-	}
-
-	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
-		return errors.New("trading pair exists")
-	}
-
-	if baseAsset != types.NativeTokenSymbol &&
-		quoteAsset != types.NativeTokenSymbol {
-
-		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
-			return fmt.Errorf("token %s should be listed against BNB before against %s",
-				baseAsset, quoteAsset)
-		}
-
-		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
-			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
-				quoteAsset, baseAsset, quoteAsset)
-		}
-	}
-	return nil
-}
-
-func (kp *Keeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
-	// trading pair against native token should not be delisted if there is any other trading pair exist
-	baseAsset = strings.ToUpper(baseAsset)
-	quoteAsset = strings.ToUpper(quoteAsset)
-
-	if baseAsset == quoteAsset {
-		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
-	}
-
-	if !kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
-		return fmt.Errorf("trading pair %s_%s does not exist", baseAsset, quoteAsset)
-	}
-
-	if baseAsset != types.NativeTokenSymbol && quoteAsset != types.NativeTokenSymbol {
-		return nil
-	}
-
-	var symbolToCheck string
-	if baseAsset != types.NativeTokenSymbol {
-		symbolToCheck = baseAsset
-	} else {
-		symbolToCheck = quoteAsset
-	}
-
-	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	for _, pair := range tradingPairs { //TODO
-		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
-			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
-			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
-				pair.BaseAssetSymbol, pair.QuoteAssetSymbol, baseAsset, quoteAsset)
-		}
-	}
-
-	return nil
-}
-
-func (kp *Keeper) GetPairMapper() store.TradingPairMapper {
-	return kp.PairMapper
-}
-
-func (kp *Keeper) GetOrderChanges() OrderChanges {
-	return kp.OrderChanges
-}
-
-func (kp *Keeper) GetOrderInfosForPub() OrderInfoForPublish {
-	return kp.OrderInfosForPub
-}
-
-func (kp *Keeper) getAccountKeeper() *auth.AccountKeeper {
-	return &kp.GlobalKeeper.am
-}
-
-func (kp *Keeper) getLogger() tmlog.Logger {
-	return kp.logger
-}
-
-func (kp *Keeper) getFeeManager() *FeeManager {
-	return kp.GlobalKeeper.FeeManager
-}
-
-func (kp *Keeper) ShouldPublishOrder() bool {
-	return kp.GlobalKeeper.CollectOrderInfoForPublish
-}
-
-func (kp *Keeper) getEngines() map[string]*me.MatchEng {
-	return kp.engines
-}
-
-func (kp *Keeper) UpdateOrderChange(change OrderChange) {
-	kp.OrderChanges = append(kp.OrderChanges, change)
-}
-
-func (kp *Keeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
+func (kp *BaseOrderKeeper) validateOrder(dexKeeper *DexKeeper, ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
 	baseAsset, quoteAsset, err := dexUtils.TradingPair2Assets(msg.Symbol)
 	if err != nil {
 		return err
@@ -764,7 +168,7 @@ func (kp *Keeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrderMs
 		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
 	}
 
-	pair, err := kp.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
+	pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
 	if err != nil {
 		return err
 	}
@@ -790,6 +194,136 @@ func (kp *Keeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrderMs
 	return nil
 }
 
-func (kp *Keeper) GetGlobalKeeper() *GlobalKeeper {
-	return kp.GlobalKeeper
+func (kp *BaseOrderKeeper) getOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
+	openOrders := make([]store.OpenOrder, 0)
+
+	for _, order := range kp.allOrders[pair] {
+		if string(order.Sender.Bytes()) == string(addr.Bytes()) {
+			openOrders = append(
+				openOrders,
+				store.OpenOrder{
+					order.Id,
+					pair,
+					utils.Fixed8(order.Price),
+					utils.Fixed8(order.Quantity),
+					utils.Fixed8(order.CumQty),
+					order.CreatedHeight,
+					order.CreatedTimestamp,
+					order.LastUpdatedHeight,
+					order.LastUpdatedTimestamp,
+				})
+		}
+	}
+
+	return openOrders
 }
+
+func (kp *BaseOrderKeeper) clearOrderChanges() {
+	kp.OrderChanges = kp.OrderChanges[:0]
+}
+
+func (kp *BaseOrderKeeper) getAllOrders() map[string]map[string]*OrderInfo {
+	return kp.allOrders
+}
+
+func (kp *BaseOrderKeeper) getOrderChanges() OrderChanges {
+	return kp.OrderChanges
+}
+
+func (kp *BaseOrderKeeper) getOrderInfosForPub() OrderInfoForPublish {
+	return kp.OrderInfosForPub
+}
+
+func (kp *BaseOrderKeeper) appendOrderChange(change OrderChange) {
+	kp.OrderChanges = append(kp.OrderChanges, change)
+}
+
+func (kp *BaseOrderKeeper) getRoundOrdersForPair(pair string) []string {
+	return kp.roundOrders[pair]
+}
+
+func (kp *BaseOrderKeeper) getRoundIOCOrdersForPair(pair string) []string {
+	return kp.roundIOCOrders[pair]
+}
+
+func (kp *BaseOrderKeeper) getAllOrdersForPair(pair string) map[string]*OrderInfo {
+	return kp.allOrders[pair]
+}
+
+func (kp *BaseOrderKeeper) selectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string {
+	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, timestamp, matchAllSymbols)
+}
+
+func (kp *BaseOrderKeeper) appendOrderChangeSync(change OrderChange) {
+	kp.OrderChangesMtx.Lock()
+	kp.OrderChanges = append(kp.OrderChanges, change)
+	kp.OrderChangesMtx.Unlock()
+}
+
+func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
+	//TODO
+	for symbol, orders := range kp.allOrders {
+		for orderId := range orders{
+			iter(symbol,orderId)
+		}
+	}
+}
+
+//------  BEP2OrderKeeper methods -----
+
+func (kp *BEP2OrderKeeper) support(pair string) bool {
+	return !dexUtils.IsMiniTokenTradingPair(pair)
+}
+
+func (kp *BEP2OrderKeeper) supportUpgradeVersion() bool {
+	return true
+}
+
+func (kp *BEP2OrderKeeper) supportPairType(pairType SymbolPairType) bool {
+	return PairType.BEP2 == pairType
+}
+
+func (kp *BEP2OrderKeeper) initOrders(symbol string) {
+	kp.allOrders[symbol] = map[string]*OrderInfo{}
+}
+
+func (kp *BEP2OrderKeeper) clearAfterMatch() {
+	kp.logger.Debug("clearAfterMatchBEP2...")
+	kp.roundOrders = make(map[string][]string, 256)
+	kp.roundIOCOrders = make(map[string][]string, 256)
+}
+
+func (kp *BEP2OrderKeeper) iterateRoundPairs(iter func(string)) {
+	for symbol := range kp.roundOrders {
+		iter(symbol)
+	}
+}
+
+func (kp *BEP2OrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64, collectOrderInfoForPublish bool) {
+	kp.allOrders[symbol][orderInfo.Id] = orderInfo
+	if orderInfo.CreatedHeight == height {
+		kp.roundOrders[symbol] = append(kp.roundOrders[symbol], orderInfo.Id)
+		if orderInfo.TimeInForce == TimeInForce.IOC {
+			kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], orderInfo.Id)
+		}
+	}
+	if collectOrderInfoForPublish {
+		if _, exists := kp.OrderInfosForPub[orderInfo.Id]; !exists {
+			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)
+			kp.OrderInfosForPub[orderInfo.Id] = orderInfo
+		}
+	}
+}
+
+func (kp *BEP2OrderKeeper) getRoundPairsNum() int {
+	return len(kp.roundOrders)
+}
+
+func (kp *BEP2OrderKeeper) getRoundOrdersNum() int {
+	n := 0
+	for _, orders := range kp.roundOrders {
+		n += len(orders)
+	}
+	return n
+}
+

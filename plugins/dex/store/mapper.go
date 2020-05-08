@@ -10,7 +10,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	cmn "github.com/binance-chain/node/common/types"
-	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
@@ -34,30 +33,23 @@ var _ TradingPairMapper = mapper{}
 type mapper struct {
 	key sdk.StoreKey
 	cdc *wire.Codec
-	forMiniPair bool
 }
 
-func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey, forMiniPair bool) TradingPairMapper {
+func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 	return mapper{
 		key: key,
-		cdc: cdc,
-		forMiniPair: forMiniPair}
+		cdc: cdc}
 }
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
 	quoteAsset := pair.QuoteAssetSymbol
-	if m.forMiniPair{
-		if err := cmn.ValidateMapperMiniTokenSymbol(baseAsset); err != nil {
-			return err
-		}
-		if quoteAsset!= common.NativeTokenSymbol{ //todo permit BUSD
-			return errors.New("quote token is not valid")
-		}
-	}else {
+	if !cmn.IsMiniTokenSymbol(baseAsset) {
 		if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
 			return err
 		}
+	}
+	if !cmn.IsMiniTokenSymbol(quoteAsset) {
 		if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
 			return err
 		}

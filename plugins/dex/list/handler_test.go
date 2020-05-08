@@ -42,7 +42,7 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 
-func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *order.Keeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
+func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *order.BEP2OrderKeeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
 	accKey := sdk.NewKVStoreKey("acc")
 	pairKey := sdk.NewKVStoreKey("pair")
 	tokenKey := sdk.NewKVStoreKey("token")
@@ -65,7 +65,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 	accKeeper := auth.NewAccountKeeper(cdc, accKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, pairKey, false)
-	orderKeeper = order.NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
+	orderKeeper = order.NewBEP2OrderKeeper(common.DexStoreKey, accKeeper, pairMapper,
 		codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
 
 	tokenMapper = tokenStore.NewMapper(cdc, tokenKey)

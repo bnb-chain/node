@@ -1,99 +1,82 @@
 package order
 
 import (
-	"github.com/binance-chain/node/plugins/dex/matcheng"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/utils"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
-func MatchAndAllocateSymbols(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool, logger tmlog.Logger) {
-	logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height, "symbolNum", len(dexKeeper.roundOrders))
-	timestamp := ctx.BlockHeader().Time.UnixNano()
 
-	symbolsToMatch := dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, ctx.BlockHeader().Height, timestamp, matchAllSymbols)
-	symbolsToMatch = append(symbolsToMatch, dexMiniKeeper.symbolSelector.SelectSymbolsToMatch(dexMiniKeeper.roundOrders, ctx.BlockHeader().Height, timestamp, matchAllSymbols)...)
-	logger.Info("symbols to match", "symbols", symbolsToMatch) //todo debug
-
-	tradeOuts := matchAndDistributeTrades(dexKeeper, dexMiniKeeper, true, ctx.BlockHeader().Height, timestamp, symbolsToMatch, logger)
-	if tradeOuts == nil {
-		logger.Info("No order comes in for the block")
-	}
-	globalKeeper := dexKeeper.GlobalKeeper
-	totalFee := globalKeeper.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler, mergeMatchEngineMap(dexKeeper.engines, dexMiniKeeper.engines))
-	fees.Pool.AddAndCommitFee("MATCH", totalFee)
-	clearAfterMatchBEP2(dexKeeper)
-	clearAfterMatchMini(dexMiniKeeper)
-}
-
-func mergeMatchEngineMap(ms ...map[string]*matcheng.MatchEng) map[string]*matcheng.MatchEng {
-	res := make(map[string]*matcheng.MatchEng)
-	for _, m := range ms {
-		for k, v := range m {
-			res[k] = v
+func (kp *DexKeeper) SelectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string {
+	symbolsToMatch := make([]string, 0, 256)
+	for _, orderKeeper := range kp.OrderKeepers {
+		if orderKeeper.supportUpgradeVersion() {
+			symbolsToMatch = append(symbolsToMatch, orderKeeper.selectSymbolsToMatch(height, timestamp, matchAllSymbols)...)
 		}
 	}
-	return res
+	return symbolsToMatch
 }
 
-func clearAfterMatchBEP2(kp *Keeper) {
-	kp.logger.Debug("clearAfterMatchBEP2...")
-	kp.roundOrders = make(map[string][]string, 256)
-	kp.roundIOCOrders = make(map[string][]string, 256)
-}
 
-func clearAfterMatchMini(kp *MiniKeeper) {
-	kp.logger.Debug("clearAfterMatchMini...")
-	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
-		delete(kp.roundOrders, symbol)
-		delete(kp.roundIOCOrders, symbol)
-	}
-	emptyRoundMatchSymbols := make([]string, 0, 256)
-	kp.symbolSelector.SetRoundMatchSymbol(emptyRoundMatchSymbols)
-}
+func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
+	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height)
+	timestamp := ctx.BlockHeader().Time.UnixNano()
 
-// please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-func matchAndDistributeTrades(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, distributeTrade bool, height, timestamp int64, symbolsToMatch []string, logger tmlog.Logger) []chan Transfer {
+	symbolsToMatch := kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols)
+	kp.logger.Info("symbols to match", "symbols", symbolsToMatch)
+	var tradeOuts []chan Transfer
 	if len(symbolsToMatch) == 0 {
-		logger.Info("No symbols to match in the block")
-		return nil
+		kp.logger.Info("No order comes in for the block")
+	}else{
+		tradeOuts = kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	}
-	concurrency := 1 << dexUtils.MaxOf(dexKeeper.poolSize, dexMiniKeeper.poolSize)
+
+	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
+	fees.Pool.AddAndCommitFee("MATCH", totalFee)
+	kp.ClearAfterMatch()
+}
+
+type symbolKeeper struct {
+	symbol      string
+	orderKeeper IDexOrderKeeper
+}
+// please note if distributeTrade this method will work in async mode, otherwise in sync mode.
+// Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols) before matchAndDistributeTrades
+func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+
+	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
 
 	if distributeTrade {
 		ordNum := 0
-		for _, symbol := range symbolsToMatch {
-			if dexUtils.IsMiniTokenTradingPair(symbol) {
-				ordNum += len(dexMiniKeeper.roundOrders[symbol])
-			} else {
-				ordNum += len(dexKeeper.roundOrders[symbol])
-			}
+
+		for i := range kp.OrderKeepers {
+			ordNum += kp.OrderKeepers[i].getRoundOrdersNum()
 		}
+
 		for i := range tradeOuts {
 			//assume every new order would have 2 trades and generate 4 transfer
 			tradeOuts[i] = make(chan Transfer, ordNum*4/concurrency)
 		}
 	}
 
-	symbolCh := make(chan string, concurrency)
+	symbolCh := make(chan symbolKeeper, concurrency)
 	producer := func() {
-		for _, symbol := range symbolsToMatch {
-			symbolCh <- symbol
+		//for _, symbol := range symbolsToMatch {
+		//	symbolCh <- symbol
+		//}
+		for i := range kp.OrderKeepers {
+			kp.OrderKeepers[i].iterateRoundPairs(func(symbol string) {
+				symbolCh <- symbolKeeper{symbol: symbol, orderKeeper: kp.OrderKeepers[i]}
+			})
 		}
 		close(symbolCh)
 	}
 	matchWorker := func() {
-		for symbol := range symbolCh {
-			if dexUtils.IsMiniTokenTradingPair(symbol) {
-				dexMiniKeeper.matchAndDistributeTradesForSymbol(symbol, height, timestamp, dexMiniKeeper.allOrders[symbol], distributeTrade, tradeOuts)
-			} else {
-				dexKeeper.matchAndDistributeTradesForSymbol(symbol, height, timestamp, dexKeeper.allOrders[symbol], distributeTrade, tradeOuts)
-			}
+		for sk := range symbolCh {
+			kp.matchAndDistributeTradesForSymbol(sk.symbol, sk.orderKeeper, height, timestamp, distributeTrade, tradeOuts)
 		}
 
 	}
@@ -110,24 +93,24 @@ func matchAndDistributeTrades(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, dist
 	return tradeOuts
 }
 
-func MatchSymbols(height, timestamp int64, dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, matchAllSymbols bool, logger tmlog.Logger) {
-	symbolsToMatch := dexKeeper.symbolSelector.SelectSymbolsToMatch(dexKeeper.roundOrders, height, timestamp, matchAllSymbols)
-	symbolsToMatch = append(symbolsToMatch, dexMiniKeeper.symbolSelector.SelectSymbolsToMatch(dexMiniKeeper.roundOrders, height, timestamp, matchAllSymbols)...)
-	logger.Debug("symbols to match", "symbols", symbolsToMatch)
+func (kp *DexKeeper) MatchSymbols(height, timestamp int64, matchAllSymbols bool) {
+	symbolsToMatch := kp.SelectSymbolsToMatch(height, timestamp, matchAllSymbols)
+	kp.logger.Debug("symbols to match", "symbols", symbolsToMatch)
 
-	tradeOuts := matchAndDistributeTrades(dexKeeper, dexMiniKeeper, true, height, timestamp, symbolsToMatch, logger)
-
-	if tradeOuts == nil {
-		logger.Info("No order comes in for the block")
+	if len(symbolsToMatch) == 0 {
+		kp.logger.Info("No order comes in for the block")
+	}else {
+		kp.matchAndDistributeTrades(false, height, timestamp)
 	}
-	clearAfterMatchBEP2(dexKeeper)
-	clearAfterMatchMini(dexMiniKeeper)
+
+	kp.ClearAfterMatch()
 }
 
-func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, timestamp int64, orders map[string]*OrderInfo,
+func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, orderKeeper IDexOrderKeeper, height, timestamp int64,
 	distributeTrade bool, tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
+	orders := orderKeeper.getAllOrdersForPair(symbol)
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
 	if engine.Match(height, dexUtils.IsMiniTokenTradingPair(symbol)) {
@@ -137,7 +120,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			updateOrderMsg(orders[t.Bid], t.BuyCumQty, height, timestamp)
 			updateOrderMsg(orders[t.Sid], t.SellCumQty, height, timestamp)
 			if distributeTrade {
-				t1, t2 := TransferFromTrade(t, symbol, kp.allOrders[symbol])
+				t1, t2 := TransferFromTrade(t, symbol, orders)
 				c := channelHash(t1.accAddress, concurrency)
 				tradeOuts[c] <- t1
 				c = channelHash(t2.accAddress, concurrency)
@@ -157,7 +140,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
-		thisRoundIds := kp.roundOrders[symbol]
+		thisRoundIds := orderKeeper.getRoundOrdersForPair(symbol)
 		for _, id := range thisRoundIds {
 			msg := orders[id]
 			delete(orders, id)
@@ -173,16 +156,14 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 
 			// let the order status publisher publish these abnormal
 			// order status change outs.
-			if kp.GlobalKeeper.CollectOrderInfoForPublish {
-				kp.OrderChangesMtx.Lock()
-				kp.OrderChanges = append(kp.OrderChanges, OrderChange{id, FailedMatching, "", nil})
-				kp.OrderChangesMtx.Unlock()
+			if kp.CollectOrderInfoForPublish {
+				orderKeeper.appendOrderChangeSync(OrderChange{id, FailedMatching, "", nil})
 			}
 		}
 		return // no need to handle IOC
 	}
 	var iocIDs []string
-	iocIDs = kp.roundIOCOrders[symbol]
+	iocIDs = orderKeeper.getRoundIOCOrdersForPair(symbol)
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			delete(orders, id)
@@ -197,4 +178,12 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 			}
 		}
 	}
+}
+
+
+// Run as postConsume procedure of async, no concurrent updates of orders map
+func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {
+	order.CumQty = cumQty
+	order.LastUpdatedHeight = height
+	order.LastUpdatedTimestamp = timestamp
 }

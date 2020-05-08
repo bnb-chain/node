@@ -15,11 +15,11 @@ import (
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(miniKeeper *order.MiniKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper) sdk.Handler {
+func NewHandler(dexKeeper *order.DexKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMiniMsg:
-			return handleList(ctx, miniKeeper, miniTokenMapper, tokenMapper, msg)
+			return handleList(ctx, dexKeeper, miniTokenMapper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -27,13 +27,13 @@ func NewHandler(miniKeeper *order.MiniKeeper, miniTokenMapper minitokens.MiniTok
 	}
 }
 
-func handleList(ctx sdk.Context, miniKeeper *order.MiniKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper,
+func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper,
 	msg ListMiniMsg) sdk.Result {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("list mini-token is not supported at current height")).Result()
 	}
 
-	if err := miniKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
+	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
@@ -57,19 +57,19 @@ func handleList(ctx sdk.Context, miniKeeper *order.MiniKeeper, miniTokenMapper m
 
 	var lotSize int64
 	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
-		lotSize = miniKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
+		lotSize = dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
 	} else {
 		lotSize = utils.CalcLotSize(msg.InitPrice)
 	}
 	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
-	err = miniKeeper.PairMapper.AddTradingPair(ctx, pair)
+	err = dexKeeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {
 		return sdk.ErrInternal(err.Error()).Result()
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsDeliverTx() { // only add engine during DeliverTx
-		miniKeeper.AddEngine(pair)
+		dexKeeper.AddEngine(pair)
 		log.With("module", "dex").Info("List new mini-token Pair and created new match engine", "pair", pair)
 	}
 

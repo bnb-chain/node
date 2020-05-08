@@ -14,13 +14,13 @@ import (
 )
 
 // Routes exports dex message routes
-func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, dexMiniKeeper *DexMiniTokenKeeper, dexGlobalKeeper *DexGlobalKeeper, tokenMapper tokens.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper,
+func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper,
 	accKeeper auth.AccountKeeper, govKeeper gov.Keeper) map[string]sdk.Handler {
 	routes := make(map[string]sdk.Handler)
-	orderHandler := order.NewHandler(cdc, dexKeeper, dexMiniKeeper, dexGlobalKeeper, accKeeper)
+	orderHandler := order.NewHandler(cdc, dexKeeper)
 	routes[order.RouteNewOrder] = orderHandler
 	routes[order.RouteCancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
-	routes[listmini.Route] = listmini.NewHandler(dexMiniKeeper, miniTokenMapper, tokenMapper)
+	routes[listmini.Route] = listmini.NewHandler(dexKeeper, miniTokenMapper, tokenMapper)
 	return routes
 }

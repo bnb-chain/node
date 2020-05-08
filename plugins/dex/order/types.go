@@ -121,6 +121,7 @@ type ExpireHolder struct {
 	OrderId string
 	Reason  ChangeType
 	Fee     string
+	Symbol  string
 }
 
 type SymbolWithOrderNumber struct {

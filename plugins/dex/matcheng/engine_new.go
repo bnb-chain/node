@@ -20,16 +20,19 @@ func (me *MatchEng) Match(height int64, isMini bool) bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
+		me.LastMatchHeight = height
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
 	tradePrice, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.LastTradePrice, me.PriceLimitPct)
 	if index < 0 {
+		me.LastMatchHeight = height
 		return false
 	}
 
 	if err := me.dropRedundantQty(index); err != nil {
 		me.logger.Error("dropRedundantQty failed", "error", err)
+		me.LastMatchHeight = height
 		return false
 	}
 	//If order height > the last Match height, then it's maker.

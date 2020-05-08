@@ -1,20 +1,14 @@
 package order
 
 import (
-	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
-
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
-	dexTypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/binance-chain/node/common/upgrade"
+	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
+	"sync"
 )
 
 const (
@@ -23,95 +17,55 @@ const (
 )
 
 //order keeper for mini-token
-type MiniKeeper struct {
-	Keeper //use dex order keeper as base keeper
+type MiniOrderKeeper struct {
+	BaseOrderKeeper
 }
 
-var _ DexOrderKeeper = &MiniKeeper{}
+var _ IDexOrderKeeper = &MiniOrderKeeper{}
 
-// NewKeeper - Returns the MiniToken Keeper
-func NewMiniKeeper(dexMiniKey sdk.StoreKey, miniPairMapper store.TradingPairMapper, codespace sdk.CodespaceType,
-	concurrency uint, cdc *wire.Codec, globalKeeper *GlobalKeeper) *MiniKeeper {
+// NewBEP2OrderKeeper - Returns the MiniToken BEP2OrderKeeper
+func NewMiniOrderKeeper() IDexOrderKeeper {
 	logger := bnclog.With("module", "dexMiniKeeper")
-	return &MiniKeeper{
-		Keeper{PairMapper: miniPairMapper,
-			storeKey:         dexMiniKey,
-			codespace:        codespace,
-			engines:          make(map[string]*me.MatchEng),
-			recentPrices:     make(map[string]*utils.FixedSizeRing, 256),
+	return &MiniOrderKeeper{
+		BaseOrderKeeper{
 			allOrders:        make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
 			OrderChangesMtx:  &sync.Mutex{},
 			OrderChanges:     make(OrderChanges, 0),
 			OrderInfosForPub: make(OrderInfoForPublish),
 			roundOrders:      make(map[string][]string, 256),
 			roundIOCOrders:   make(map[string][]string, 256),
-			poolSize:         concurrency,
-			cdc:              cdc,
 			logger:           logger,
-			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},
-			GlobalKeeper:     globalKeeper,
-		},
+			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},},
 	}
-}
-
-// override
-func (kp *MiniKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
-	eng := kp.Keeper.AddEngine(pair)
-	symbol := strings.ToUpper(pair.GetSymbol())
-	kp.symbolSelector.AddSymbolHash(symbol)
-	return eng
-}
-
-// used by state sync to clear memory order book after we synced latest breathe block
-//TODO check usage
-func (kp *MiniKeeper) ClearOrders() {
-	kp.Keeper.ClearOrders()
-	emptyRoundMatchSymbols := make([]string, 0, 256)
-	kp.symbolSelector.SetRoundMatchSymbol(emptyRoundMatchSymbols)
 }
 
 //override
-func (kp *MiniKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
-	// trading pair against native token should exist if quote token is not native token
-	baseAsset = strings.ToUpper(baseAsset)
-	quoteAsset = strings.ToUpper(quoteAsset)
-
-	if baseAsset == quoteAsset {
-		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
+func (kp *MiniOrderKeeper) support(pair string) bool {
+	if !sdk.IsUpgradeHeight(upgrade.BEP8) {
+		return false
 	}
-
-	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
-		return errors.New("trading pair exists")
-	}
-
-	if types.NativeTokenSymbol != quoteAsset { //todo permit BUSD
-		return errors.New("quote token is not valid: " + quoteAsset)
-	}
-
-	return nil
+	return dexUtils.IsMiniTokenTradingPair(pair)
 }
 
-//override TODO check
-func (kp *MiniKeeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error {
-	// trading pair against native token should not be delisted if there is any other trading pair exist
-	baseAsset = strings.ToUpper(baseAsset)
-	quoteAsset = strings.ToUpper(quoteAsset)
+//override
+func (kp *MiniOrderKeeper) supportUpgradeVersion() bool {
+	return sdk.IsUpgradeHeight(upgrade.BEP8)
+}
 
-	if baseAsset == quoteAsset {
-		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
-	}
-
-	if !kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
-		return fmt.Errorf("trading pair %s_%s does not exist", baseAsset, quoteAsset)
-	}
-
-	return nil
+func (kp *MiniOrderKeeper) supportPairType(pairType SymbolPairType) bool {
+	return PairType.MINI == pairType
 }
 
 // override
-func (kp *MiniKeeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
+func (kp *MiniOrderKeeper) initOrders(symbol string) {
+	kp.allOrders[symbol] = map[string]*OrderInfo{}
+	kp.symbolSelector.AddSymbolHash(symbol)
+}
 
-	err := kp.Keeper.validateOrder(ctx, acc, msg)
+// override
+func (kp *MiniOrderKeeper) validateOrder(dexKeeper *DexKeeper, ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
+
+	err := kp.BaseOrderKeeper.validateOrder(dexKeeper, ctx, acc, msg)
 	if err != nil {
 		return err
 	}
@@ -130,7 +84,41 @@ func (kp *MiniKeeper) validateOrder(ctx sdk.Context, acc sdk.Account, msg NewOrd
 	return nil
 }
 
-// override
-func (kp *MiniKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
-	return kp.Keeper.LoadOrderBookSnapshot(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
+func (kp *MiniOrderKeeper) clearAfterMatch() {
+	kp.logger.Debug("clearAfterMatchMini...")
+	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
+		delete(kp.roundOrders, symbol)
+		delete(kp.roundIOCOrders, symbol)
+	}
+	clearedRoundMatchSymbols := make([]string, 0)
+	kp.symbolSelector.SetRoundMatchSymbol(clearedRoundMatchSymbols)
+}
+
+func (kp *MiniOrderKeeper) iterateRoundPairs(iter func(string)) {
+	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
+		iter(symbol)
+	}
+}
+
+func (kp *MiniOrderKeeper) getRoundPairsNum() int {
+	return len(*kp.symbolSelector.GetRoundMatchSymbol())
+}
+
+func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
+	n := 0
+	kp.iterateRoundPairs(func(symbol string) {
+		n += len(kp.roundOrders[symbol])
+	})
+	return n
+}
+
+func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64, collectOrderInfoForPublish bool) {
+	kp.allOrders[symbol][orderInfo.Id] = orderInfo
+	//TODO confirm no active orders for mini symbol
+	if collectOrderInfoForPublish {
+		if _, exists := kp.OrderInfosForPub[orderInfo.Id]; !exists {
+			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)
+			kp.OrderInfosForPub[orderInfo.Id] = orderInfo
+		}
+	}
 }

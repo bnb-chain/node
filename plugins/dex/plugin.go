@@ -2,7 +2,6 @@ package dex
 
 import (
 	"encoding/json"
-	"reflect"
 	"strings"
 	"time"
 
@@ -22,21 +21,14 @@ const DexAbciQueryPrefix = "dex"
 const DexMiniAbciQueryPrefix = "dex_mini"
 const DelayedDaysForDelist = 3
 
-type DexKeeperType int8
-
-const (
-	KeeperType          DexKeeperType = 0
-	MiniTokenKeeperType DexKeeperType = 1
-)
-
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, dexKeeper *DexKeeper, dexMiniKeeper *DexMiniTokenKeeper, dexGlobalKeeper *DexGlobalKeeper, tokenMapper tkstore.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
+	appp app.ChainApp, dexKeeper *DexKeeper, tokenMapper tkstore.Mapper, miniTokenMapper miniTkstore.MiniTokenMapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
 ) {
 	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, dexKeeper, dexMiniKeeper, dexGlobalKeeper, tokenMapper, miniTokenMapper, accMapper, govKeeper) {
+	for route, handler := range Routes(cdc, dexKeeper, tokenMapper, miniTokenMapper, accMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 
@@ -53,7 +45,7 @@ func createQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQuery
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
-func EndBreatheBlock(ctx sdk.Context, dexKeeper DexOrderKeeper, govKeeper gov.Keeper, height int64, blockTime time.Time) {
+func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper, height int64, blockTime time.Time) {
 	logger := bnclog.With("module", "dex")
 
 	logger.Info("Delist trading pairs", "blockHeight", height)
@@ -78,19 +70,9 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper DexOrderKeeper, govKeeper gov.Ke
 	return
 }
 
-func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper DexOrderKeeper, blockTime time.Time) {
+func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {
 	logger := bnclog.With("module", "dex")
-	var dexKeeperType DexKeeperType
-	switch dexKeeper.(type) {
-	case *DexKeeper:
-		dexKeeperType = KeeperType
-	case *DexMiniTokenKeeper:
-		dexKeeperType = MiniTokenKeeperType
-	default:
-		logger.Error("unknown dexKeeper type", "dexKeeper", reflect.TypeOf(dexKeeper))
-		return
-	}
-	symbolsToDelist := getSymbolsToDelist(ctx, govKeeper, blockTime, dexKeeperType)
+	symbolsToDelist := getSymbolsToDelist(ctx, govKeeper, blockTime)
 
 	for _, symbol := range symbolsToDelist {
 		logger.Info("Delist trading pair", "symbol", symbol)
@@ -109,7 +91,7 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper DexOrde
 	}
 }
 
-func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time, dexKeeperType DexKeeperType) []string {
+func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time) []string {
 	logger := bnclog.With("module", "dex")
 
 	symbols := make([]string, 0)
@@ -137,9 +119,6 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 			timeToDelist := passedTime.Add(DelayedDaysForDelist * 24 * time.Hour)
 			if timeToDelist.Before(blockTime) {
 				symbol := utils.Assets2TradingPair(strings.ToUpper(delistParam.BaseAssetSymbol), strings.ToUpper(delistParam.QuoteAssetSymbol))
-				if (dexKeeperType == MiniTokenKeeperType) != utils.IsMiniTokenTradingPair(symbol) {
-					return false
-				}
 				symbols = append(symbols, symbol)
 				// update proposal delisted status
 				delistParam.IsExecuted = true

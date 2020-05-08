@@ -18,7 +18,7 @@ import (
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
+func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMsg:
@@ -74,7 +74,7 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error
 	return nil
 }
 
-func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
+func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
 	msg ListMsg) sdk.Result {
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()

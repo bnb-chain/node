@@ -39,7 +39,7 @@ func newTestFeeConfig() orderPkg.FeeConfig {
 	return feeConfig
 }
 
-var keeper *orderPkg.Keeper
+var keeper *orderPkg.BEP2OrderKeeper
 var buyer sdk.AccAddress
 var seller sdk.AccAddress
 var am auth.AccountKeeper
@@ -61,7 +61,7 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger).WithAccountCache(accountCache)
 
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey, false)
-	keeper = orderPkg.NewKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	keeper = orderPkg.NewBEP2OrderKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
 	tradingPair := dextypes.NewTradingPair("XYZ-000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)

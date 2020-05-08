@@ -140,7 +140,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 
 	ctx := app.DeliverState.Ctx
 	msg := orderPkg.NewNewOrderMsg(buyerAcc.GetAddress(), orderPkg.GenerateOrderID(1, buyerAcc.GetAddress()), orderPkg.Side.BUY, "XYZ-000_BNB", 102000, 300000000)
-	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper)
+	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper)
 	app.DeliverState.Ctx = app.DeliverState.Ctx.WithBlockHeight(41).WithBlockTime(time.Unix(0, 100))
 	buyerAcc.SetSequence(1)
 	app.AccountKeeper.SetAccount(ctx, buyerAcc)
@@ -214,7 +214,7 @@ func TestAppPub_MatchOrder(t *testing.T) {
 
 func TestAppPub_MatchAndCancelFee(t *testing.T) {
 	assert, require, app, buyerAcc, sellerAcc := setupAppTest(t)
-	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper, app.AccountKeeper, app.DexGlobalKeeper)
+	handler := orderPkg.NewHandler(app.GetCodec(), app.DexKeeper)
 	ctx := app.DeliverState.Ctx
 
 	// ==== Place a to-be-matched sell order and a to-be-cancelled buy order (in different symbol)

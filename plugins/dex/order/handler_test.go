@@ -32,17 +32,16 @@ func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.K
 	return ms, key, key2, key3
 }
 
-func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context, DexOrderKeeper) {
+func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context, *DexKeeper) {
 	ms, key, key2, key3 := setupMultiStore()
 	var cdc = wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
-	pairMapper := store.NewTradingPairMapper(cdc, key, false)
+	pairMapper := store.NewTradingPairMapper(cdc, key)
 	accMapper := auth.NewAccountKeeper(cdc, key2, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, key2)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	globalKeeper := NewGlobalKeeper(cdc, accMapper, false)
-	keeper := NewKeeper(key3, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, globalKeeper)
+	keeper := NewDexKeeper(key3, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), cdc,accMapper, false, 2)
 	return pairMapper, accMapper, ctx, keeper
 }
 
@@ -80,13 +79,13 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.validateOrder(ctx, acc, msg)
+	err = keeper.ValidateOrder(ctx, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("trading pair not found: %s", msg.Symbol), err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
-	pairMapper, _, ctx, keeper := setupMappers()
+	_, _, ctx, keeper := setupMappers()
 
 	msgs := []NewOrderMsg{
 		{
@@ -107,7 +106,7 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	}
 
 	for _, msg := range msgs {
-		err := keeper.validateOrder(ctx, pairMapper, nil, msg)
+		err := keeper.ValidateOrder(ctx, nil, msg)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", msg.Symbol), err.Error())
 	}
@@ -129,7 +128,7 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.validateOrder(ctx, acc, msg)
+	err = keeper.ValidateOrder(ctx, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()), err.Error())
 }
@@ -150,7 +149,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.validateOrder(ctx, acc, msg)
+	err = keeper.ValidateOrder(ctx, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()), err.Error())
 }
@@ -170,7 +169,7 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.validateOrder(ctx, acc, msg)
+	err = keeper.ValidateOrder(ctx, acc, msg)
 	require.NoError(t, err)
 }
 
@@ -189,7 +188,7 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.validateOrder(ctx, acc, msg)
+	err = keeper.ValidateOrder(ctx, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, "notional value of the order is too large(cannot fit in int64)", err.Error())
 }

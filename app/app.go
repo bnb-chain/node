@@ -84,8 +84,6 @@ type BinanceChain struct {
 	// keepers
 	CoinKeeper         bank.Keeper
 	DexKeeper          *dex.DexKeeper
-	DexMiniTokenKeeper *dex.DexMiniTokenKeeper
-	DexGlobalKeeper    *dex.DexGlobalKeeper
 	AccountKeeper      auth.AccountKeeper
 	TokenMapper        tkstore.Mapper
 	MiniTokenMapper    miniTkstore.MiniTokenMapper
@@ -139,8 +137,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.MiniTokenMapper = miniTkstore.NewMiniTokenMapper(cdc, common.MiniTokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
-	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey, false)
-	miniTokenTradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.MiniTokenPairStoreKey, true)
+	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
@@ -225,9 +222,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
-		common.DexMiniStoreKey,
 		common.MiniTokenStoreKey,
-		common.MiniTokenPairStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -251,7 +246,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	// remaining plugin init
-	app.initDex(tradingPairMapper, miniTokenTradingPairMapper)
+	app.initDex(tradingPairMapper)
 	app.initGovHooks()
 	app.initPlugins()
 	app.initParams()
@@ -281,9 +276,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 
-	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.DexMiniStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenPairStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -323,18 +316,10 @@ func (app *BinanceChain) initRunningMode() {
 	}
 }
 
-func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMapper dex.TradingPairMapper) {
+func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
-	app.DexGlobalKeeper = dex.NewGlobalKeeper(app.Codec, app.AccountKeeper, app.publicationConfig.ShouldPublishAny())
-	app.DexGlobalKeeper.SubscribeParamChange(app.ParamHub)
-
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, pairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
-		app.DexGlobalKeeper)
-
-	app.DexMiniTokenKeeper = dex.NewMiniKeeper(common.DexMiniStoreKey, miniPairMapper,
-		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
-		app.DexGlobalKeeper)
+	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, pairMapper, app.RegisterCodespace(dex.DefaultCodespace), app.Codec, app.AccountKeeper, app.publicationConfig.ShouldPublishAny(), app.baseConfig.OrderKeeperConcurrency)
+	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
@@ -349,7 +334,6 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMappe
 
 	order.Init(
 		app.DexKeeper,
-		app.DexMiniTokenKeeper,
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,
@@ -363,7 +347,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper, miniPairMappe
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.DexMiniTokenKeeper, app.DexGlobalKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }
@@ -557,9 +541,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var miniTradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			tradesToPublish, miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, app.DexMiniTokenKeeper, ctx, isBreatheBlock)
+			tradesToPublish, miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
 		} else {
-			order.MatchAndAllocateSymbols(app.DexKeeper, app.DexMiniTokenKeeper, ctx, nil, isBreatheBlock, app.Logger)
+			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
 		}
 	}
 
@@ -570,9 +554,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.takeSnapshotHeight = height
 		icoDone := ico.EndBlockAsync(ctx)
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
-		if sdk.IsUpgrade(upgrade.BEP8) {
-			dex.EndBreatheBlock(ctx, app.DexMiniTokenKeeper, app.govKeeper, height, blockTime)
-		}
 		param.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 		// other end blockers
@@ -582,9 +563,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
-	if sdk.IsUpgrade(upgrade.BEP8) {
-		app.DexMiniTokenKeeper.StoreTradePrices(ctx)
-	}
+
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
@@ -614,10 +593,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
-		if sdk.IsUpgrade(upgrade.BEP8) {
-			app.DexMiniTokenKeeper.ClearOrderChanges()
-		}
-		app.DexGlobalKeeper.ClearRoundFee()
+		app.DexKeeper.ClearRoundFee()
 	}
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
@@ -811,8 +787,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
-			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish)
-			miniTradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexMiniTokenKeeper, miniTradesToPublish)
+			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish, dex.PairType.BEP2)
+			miniTradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, miniTradesToPublish, dex.PairType.MINI)
 			tradeRelatedAccounts = append(tradeRelatedAccounts, miniTradeRelatedAccounts...)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
@@ -831,8 +807,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 			blockToPublish = pub.GetBlockPublished(app.Pool, header, blockHash)
 		}
 		if app.publicationConfig.PublishOrderBook {
-			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
-			miniLatestPriceLevels = app.DexMiniTokenKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
+			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel, dex.PairType.BEP2)
+			miniLatestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel, dex.PairType.MINI)
 		}
 	})
 
@@ -843,10 +819,10 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 	pub.Logger.Info("start to publish", "height", height,
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
-		len(app.DexKeeper.OrderChanges),
+		len(app.DexKeeper.GetOrderChanges(dex.PairType.BEP2)),
 		"numOfMiniTrades", len(miniTradesToPublish),
 		"numOfMiniOrders", // the order num we collected here doesn't include trade related orders
-		len(app.DexMiniTokenKeeper.OrderChanges),
+		len(app.DexKeeper.GetOrderChanges(dex.PairType.MINI)),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
@@ -863,27 +839,26 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 		miniTradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
-		app.DexKeeper.OrderChanges, // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexMiniTokenKeeper.OrderChanges,
-		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexMiniTokenKeeper.OrderInfosForPub,
+		app.DexKeeper.GetOrderChanges(dex.PairType.BEP2), // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.GetOrderChanges(dex.PairType.MINI),
+		app.DexKeeper.GetOrderInfosForPub(dex.PairType.BEP2), // thread-safety is guarded by the signal from RemoveDoneCh
+		app.DexKeeper.GetOrderInfosForPub(dex.PairType.MINI),
 		accountsToPublish,
 		latestPriceLevels,
 		miniLatestPriceLevels,
 		blockFee,
-		app.DexGlobalKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
+		app.DexKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
 		transferToPublish,
 		blockToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.OrderInfosForPub, id)
-		delete(app.DexMiniTokenKeeper.OrderInfosForPub, id)
+		delete(app.DexKeeper.GetOrderInfosForPub(dex.PairType.BEP2), id) //TODO change to removeOrderInfosForPub method
 	}
 	for id := range pub.ToRemoveMiniOrderIdCh {
 		pub.Logger.Debug("delete mini order from order changes map", "orderId", id)
-		delete(app.DexMiniTokenKeeper.OrderInfosForPub, id)
+		delete(app.DexKeeper.GetOrderInfosForPub(dex.PairType.MINI), id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

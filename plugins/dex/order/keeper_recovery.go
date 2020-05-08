@@ -29,9 +29,10 @@ import (
 )
 
 type OrderBookSnapshot struct {
-	Buys           []me.PriceLevel `json:"buys"`
-	Sells          []me.PriceLevel `json:"sells"`
-	LastTradePrice int64           `json:"lasttradeprice"`
+	Buys            []me.PriceLevel `json:"buys"`
+	Sells           []me.PriceLevel `json:"sells"`
+	LastTradePrice  int64           `json:"lasttradeprice"`
+	LastMatchHeight int64           `json:"lastmatchheight"`
 }
 
 type ActiveOrders struct {
@@ -60,18 +61,22 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	return nil
 }
 
-func Init(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	initOrderBook(dexKeeper, dexMiniKeeper, ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
+func Init(dexKeeper *DexKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	dexKeeper.initOrderBook(ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
 	dexKeeper.InitRecentPrices(ctx)
-	dexMiniKeeper.InitRecentPrices(ctx)
 }
 
-func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
+func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
 	kvstore := ctx.KVStore(kp.storeKey)
 	effectedStoreKeys = make([]string, 0)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
-		snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
+		var snapshot OrderBookSnapshot
+		if sdk.IsUpgradeHeight(upgrade.BEP8) {
+			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice, LastMatchHeight: eng.LastMatchHeight}
+		} else {
+			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
+		}
 		key := genOrderBookSnapshotKey(height, pair)
 		effectedStoreKeys = append(effectedStoreKeys, key)
 		err := compressAndSave(snapshot, kp.cdc, key, kvstore)
@@ -83,7 +88,8 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 
 	msgKeys := make([]string, 0)
 	idSymbolMap := make(map[string]string)
-	for symbol, orderMap := range kp.allOrders {
+	allOrders := kp.GetAllOrders()
+	for symbol, orderMap := range allOrders {
 		for id := range orderMap {
 			idSymbolMap[id] = symbol
 			msgKeys = append(msgKeys, id)
@@ -92,7 +98,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 	sort.Strings(msgKeys)
 	msgs := make([]OrderInfo, len(msgKeys), len(msgKeys))
 	for i, key := range msgKeys {
-		msgs[i] = *kp.allOrders[idSymbolMap[key]][key]
+		msgs[i] = *allOrders[idSymbolMap[key]][key]
 	}
 
 	snapshot := ActiveOrders{Orders: msgs}
@@ -102,7 +108,7 @@ func (kp *Keeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStor
 	return effectedStoreKeys, compressAndSave(snapshot, kp.cdc, key, kvstore)
 }
 
-func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
+func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error) {
 	height := kp.GetLastBreatheBlockHeight(ctx, latestBlockHeight, timeOfLatestBlock, blockInterval, daysBack)
 	ctx.Logger().Info("Loading order book snapshot from last breathe block", "blockHeight", height)
 	allPairs := kp.PairMapper.ListAllTradingPairs(ctx)
@@ -152,7 +158,9 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
-		eng.LastMatchHeight = height
+		if sdk.IsUpgradeHeight(upgrade.BEP8) {
+			eng.LastMatchHeight = ob.LastMatchHeight
+		}
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}
 	key := genActiveOrdersSnapshotKey(height)
@@ -176,25 +184,13 @@ func (kp *Keeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64
 	for _, m := range ao.Orders {
 		orderHolder := m
 		symbol := strings.ToUpper(m.Symbol)
-		kp.allOrders[symbol][m.Id] = &orderHolder
-		if m.CreatedHeight == height {
-			kp.roundOrders[symbol] = append(kp.roundOrders[symbol], m.Id)
-			if m.TimeInForce == TimeInForce.IOC {
-				kp.roundIOCOrders[symbol] = append(kp.roundIOCOrders[symbol], m.Id)
-			}
-		}
-		if kp.GlobalKeeper.CollectOrderInfoForPublish {
-			if _, exists := kp.OrderInfosForPub[m.Id]; !exists {
-				bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", m.Id)
-				kp.OrderInfosForPub[m.Id] = &orderHolder
-			}
-		}
+		kp.ReloadOrder(symbol, &orderHolder, height)
 	}
 	ctx.Logger().Info("Recovered active orders. Snapshot is fully loaded")
 	return height, nil
 }
 
-func replayOneBlocks(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, logger log.Logger, block *tmtypes.Block, stateDB dbm.DB, txDecoder sdk.TxDecoder,
+func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, stateDB dbm.DB, txDecoder sdk.TxDecoder,
 	height int64, timestamp time.Time) {
 	if block == nil {
 		logger.Error("No block is loaded. Ignore replay for orderbook")
@@ -209,7 +205,6 @@ func replayOneBlocks(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, logger log.Lo
 	}
 	// the time we replay should be consistent with ctx.BlockHeader().Time
 	t := timestamp.UnixNano()
-	var orderKeeper DexOrderKeeper
 	for idx, txBytes := range block.Txs {
 		if abciRes.DeliverTx[idx].IsErr() {
 			logger.Info("Skip tx when replay", "height", height, "idx", idx)
@@ -237,23 +232,14 @@ func replayOneBlocks(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, logger log.Lo
 					height, t,
 					height, t,
 					0, txHash.String(), txSource}
-				if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(msg.Symbol) {
-					orderKeeper = dexKeeper
-				} else {
-					orderKeeper = dexMiniKeeper
-				}
-				orderKeeper.AddOrder(orderInfo, true)
+				kp.AddOrder(orderInfo, true)
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
-				if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(msg.Symbol) {
-					orderKeeper = dexKeeper
-				} else {
-					orderKeeper = dexMiniKeeper
-				}
-				err := orderKeeper.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
-					if orderKeeper.GetGlobalKeeper().CollectOrderInfoForPublish {
+				symbolPairType := selectPairType(msg.Symbol)
+				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {
+					if kp.CollectOrderInfoForPublish {
 						bnclog.Debug("deleted order from order changes map", "orderId", msg.RefId, "isRecovery", true)
-						delete(orderKeeper.GetOrderInfosForPub(), msg.RefId)
+						delete(kp.GetOrderInfosForPub(symbolPairType), msg.RefId)
 					}
 				})
 				if err != nil {
@@ -264,21 +250,32 @@ func replayOneBlocks(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, logger log.Lo
 		}
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
-	MatchSymbols(height, t, dexKeeper, dexMiniKeeper, false, logger) //no need to check result
+	kp.MatchSymbols(height, t, false) //no need to check result
 }
 
-func ReplayOrdersFromBlock(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,
+func selectPairType(symbol string) SymbolPairType {
+	var pairType SymbolPairType
+
+	if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(symbol) {
+		pairType = PairType.BEP2
+	} else {
+		pairType = PairType.MINI
+	}
+	return pairType
+}
+
+func (kp *DexKeeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,
 	txDecoder sdk.TxDecoder) error {
 	for i := breatheHeight + 1; i <= lastHeight; i++ {
 		block := bc.LoadBlock(i)
 		ctx.Logger().Info("Relaying block for order book", "height", i)
 		upgrade.Mgr.SetHeight(i)
-		replayOneBlocks(dexKeeper, dexMiniKeeper, ctx.Logger(), block, stateDb, txDecoder, i, block.Time)
+		kp.replayOneBlocks(ctx.Logger(), block, stateDb, txDecoder, i, block.Time)
 	}
 	return nil
 }
 
-func initOrderBook(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+func (kp *DexKeeper) initOrderBook(ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
 	var timeOfLatestBlock time.Time
 	if lastHeight == 0 {
 		timeOfLatestBlock = utils.Now()
@@ -286,14 +283,13 @@ func initOrderBook(dexKeeper *Keeper, dexMiniKeeper *MiniKeeper, ctx sdk.Context
 		block := blockStore.LoadBlock(lastHeight)
 		timeOfLatestBlock = block.Time
 	}
-	height, err := dexKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
-	_, err = dexMiniKeeper.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
+	height, err := kp.LoadOrderBookSnapshot(ctx, lastHeight, timeOfLatestBlock, blockInterval, daysBack)
 	if err != nil {
 		panic(err)
 	}
 	logger := ctx.Logger().With("module", "dex")
 	logger.Info("Initialized Block Store for replay", "fromHeight", height, "toHeight", lastHeight)
-	err = ReplayOrdersFromBlock(dexKeeper, dexMiniKeeper, ctx.WithLogger(logger), blockStore, stateDB, lastHeight, height, txDecoder)
+	err = kp.ReplayOrdersFromBlock(ctx.WithLogger(logger), blockStore, stateDB, lastHeight, height, txDecoder)
 	if err != nil {
 		panic(err)
 	}

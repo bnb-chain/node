@@ -41,15 +41,18 @@ func (bss *BEP2SymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 }
 
 type MiniSymbolSelector struct {
-	miniSymbolsHash map[string]uint32 //mini token pairs -> hash value for Round-Robin
-	matchedMiniSymbols []string          //mini token pairs matched in this round
+	miniSymbolsHash  map[string]uint32 //mini token pairs -> hash value for Round-Robin
+	roundMiniSymbols []string          //mini token pairs to match in this round
 }
 
-var _ SymbolSelector = &MiniSymbolSelector{}
+var _ SymbolSelector = &MiniSymbolSelector{
+	make(map[string]uint32),
+	make([]string, 0),
+}
 
 
 func (mss *MiniSymbolSelector) GetRoundMatchSymbol() *[]string {
-	return &mss.matchedMiniSymbols
+	return &mss.roundMiniSymbols
 }
 
 func (mss *MiniSymbolSelector) AddSymbolHash(symbol string) {
@@ -57,7 +60,7 @@ func (mss *MiniSymbolSelector) AddSymbolHash(symbol string) {
 }
 
 func (mss *MiniSymbolSelector) SetRoundMatchSymbol(symbols []string) {
-	mss.matchedMiniSymbols = symbols
+	mss.roundMiniSymbols = symbols
 }
 
 func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height, timestamp int64, matchAllSymbols bool) []string {
@@ -77,7 +80,7 @@ func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 			}
 		})
 	}
-	mss.matchedMiniSymbols = symbolsToMatch
+	mss.roundMiniSymbols = symbolsToMatch
 	return symbolsToMatch
 }
 
