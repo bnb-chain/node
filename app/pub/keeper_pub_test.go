@@ -92,7 +92,7 @@ func TestKeeper_AddOrder(t *testing.T) {
 	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
 	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
 	// verify order0 - and the order in orderchanges slice
-	orderChange0 := keeper.GetOrderChanges()[0]
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
 	assert.Equal("1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
 
@@ -117,17 +117,18 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.IOC}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE", 0}, false)
 
-	require.Len(keeper.OrderChanges, 1)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 1)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
-	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
+	trades, miniTrades := MatchAndAllocateAllForPublish(keeper, ctx, false)
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 	require.Len(trades, 0)
+	require.Len(miniTrades, 0)
 
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
 	// verify orderChange0 - Ack
 	assert.Equal("1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
@@ -143,17 +144,17 @@ func TestKeeper_ExpireWithFee(t *testing.T) {
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTE}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE", 0}, false)
 
-	require.Len(keeper.OrderChanges, 1)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 1)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
 	breathTime := prepareExpire(int64(43))
 	ExpireOrdersForPublish(keeper, ctx, breathTime)
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
 	// verify orderChange0 - Ack
 	assert.Equal("1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
@@ -168,16 +169,16 @@ func TestKeeper_DelistWithFee(t *testing.T) {
 	msg := orderPkg.NewOrderMsg{buyer, "1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.BUY, 102000, 3000000, orderPkg.TimeInForce.GTE}
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 42, 100, 42, 100, 0, "08E19B16880CF70D59DDD996E3D75C66CD0405DE", 0}, false)
 
-	require.Len(keeper.OrderChanges, 1)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 1)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
 	DelistTradingPairForPublish(ctx, keeper, "XYZ-000_BNB")
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 1)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
 
 	// verify orderChange0 - Ack
 	assert.Equal("1", orderChange0.Id)
@@ -195,10 +196,10 @@ func Test_IOCPartialExpire(t *testing.T) {
 	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 100000000, orderPkg.TimeInForce.GTE}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, "", 0}, false)
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 2)
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
 	// verify orderChange0 - Ack
 	assert.Equal("b-1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
@@ -206,10 +207,10 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
 
-	require.Len(keeper.OrderChanges, 3)
-	require.Len(keeper.OrderInfosForPub, 2)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 3)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -219,7 +220,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("s-1", trade0.Sid)
 	assert.Equal("b-1", trade0.Bid)
 
-	orderChange2 := keeper.OrderChanges[2]
+	orderChange2 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[2]
 	assert.Equal("b-1", orderChange2.Id)
 	assert.Equal(orderPkg.IocExpire, orderChange2.Tpe)
 
@@ -235,10 +236,10 @@ func Test_GTEPartialExpire(t *testing.T) {
 	msg2 := orderPkg.NewOrderMsg{seller, "s-1", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 300000000, orderPkg.TimeInForce.GTE}
 	keeper.AddOrder(orderPkg.OrderInfo{msg2, 42, 100, 42, 100, 0, "", 0}, false)
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 2)
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
 	// verify orderChange0 - Ack
 	assert.Equal("b-1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
@@ -246,7 +247,7 @@ func Test_GTEPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -259,15 +260,15 @@ func Test_GTEPartialExpire(t *testing.T) {
 	assert.Equal("BNB:50000", keeper.RoundOrderFees[string(buyer.Bytes())].String())
 	assert.Equal("BNB:50000", keeper.RoundOrderFees[string(seller.Bytes())].String())
 
-	require.Len(keeper.OrderChanges, 2) // for GTE order, fully fill is not derived from transfer (will be generated by trade)
-	require.Len(keeper.OrderInfosForPub, 2)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2) // for GTE order, fully fill is not derived from transfer (will be generated by trade)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
 
 	// let the sell order expire
 	breathTime := prepareExpire(int64(43))
 	ExpireOrdersForPublish(keeper, ctx, breathTime)
 
-	require.Len(keeper.OrderChanges, 3)
-	orderChange2 := keeper.OrderChanges[2]
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 3)
+	orderChange2 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[2]
 	assert.Equal("s-1", orderChange2.Id)
 	assert.Equal(orderPkg.Expired, orderChange2.Tpe)
 }
@@ -282,11 +283,11 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	msg3 := orderPkg.NewOrderMsg{seller, "s-2", "XYZ-000_BNB", orderPkg.OrderType.LIMIT, orderPkg.Side.SELL, 100000000, 200000000, orderPkg.TimeInForce.GTE}
 	keeper.AddOrder(orderPkg.OrderInfo{msg3, 42, 100, 42, 100, 0, "", 0}, false)
 
-	require.Len(keeper.OrderChanges, 3)
-	require.Len(keeper.OrderInfosForPub, 3)
-	orderChange0 := keeper.OrderChanges[0]
-	orderChange1 := keeper.OrderChanges[1]
-	orderChange2 := keeper.OrderChanges[2]
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 3)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 3)
+	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
+	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
+	orderChange2 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[2]
 	// verify orderChange0 - Ack
 	assert.Equal("b-1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
@@ -297,7 +298,7 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("s-2", orderChange2.Id)
 	assert.Equal(orderPkg.Ack, orderChange2.Tpe)
 
-	trades := MatchAndAllocateAllForPublish(keeper, nil, ctx, false)
+	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)

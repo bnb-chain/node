@@ -24,7 +24,7 @@ type MiniOrderKeeper struct {
 
 var _ IDexOrderKeeper = &MiniOrderKeeper{}
 
-// NewBEP2OrderKeeper - Returns the MiniToken BEP2OrderKeeper
+// NewBEP2OrderKeeper - Returns the MiniToken orderKeeper
 func NewMiniOrderKeeper() IDexOrderKeeper {
 	logger := bnclog.With("module", "dexMiniKeeper")
 	return &MiniOrderKeeper{

@@ -62,10 +62,10 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 
-	if msg.TotalSupply > common.MiniTokenSupplyUpperBound {
+	if msg.TotalSupply > common.SupplyRangeType(msg.TokenType).UpperBound() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply upperbound is %d",
-			common.MiniTokenSupplyUpperBound)).Result()
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply is %d",
+			common.SupplyRangeType(msg.TokenType).UpperBound())).Result()
 	}
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)

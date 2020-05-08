@@ -114,11 +114,11 @@ func TestHandleMintMiniToken(t *testing.T) {
 	defer resetChainVersion()
 	ctx, handler, miniTokenHandler, accountKeeper, tokenMapper, miniTokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
-	mintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 10000e8)
+	mintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 1001e8)
 	sdkResult := handler(ctx, mintMsg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB-000M) does not exist")
 
-	issueMsg := miniIssue.NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 100000e8, 90000e8, true, "http://www.xyz.com/nnb.json")
+	issueMsg := miniIssue.NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 1, 9000e8, true, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	sdkResult = miniTokenHandler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
@@ -126,7 +126,7 @@ func TestHandleMintMiniToken(t *testing.T) {
 	sdkResult = handler(ctx, mintMsg)
 	token, err := miniTokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 100000e8, 100000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
+	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, token)
 
 	_, err = tokenMapper.GetToken(ctx, "NNB-000M")
@@ -137,22 +137,25 @@ func TestHandleMintMiniToken(t *testing.T) {
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, "mint amount is too large")
 
-	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", types.MiniTokenSupplyUpperBound)
-	sdkResult = handler(ctx, invalidMintMsg)
-	require.Contains(t, sdkResult.Log, "mint amount is too large")
+	validMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 1000e8)
+	sdkResult = handler(ctx, validMintMsg)
+	require.Equal(t, true, sdkResult.Code.IsOK())
+	token, err = miniTokenMapper.GetToken(ctx, "NNB-000M")
+	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
+	require.Equal(t, *expectedToken, token)
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
-	invalidMintMsg = NewMintMsg(acc2.GetAddress(), "NNB-000M", types.MiniTokenSupplyUpperBound)
+	invalidMintMsg := NewMintMsg(acc2.GetAddress(), "NNB-000M", 100e8)
 	sdkResult = handler(ctx, invalidMintMsg)
 	require.Contains(t, sdkResult.Log, "only the owner can mint token NNB")
 
 	// issue a non-mintable token
-	issueMsg = miniIssue.NewIssueMsg(acc.GetAddress(), "New BNB2", "NNB2", 100000e8, 100000e8, false, "http://www.xyz.com/nnb.json")
+	issueMsg = miniIssue.NewIssueMsg(acc.GetAddress(), "New BNB2", "NNB2", 1, 9000e8, false, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	sdkResult = miniTokenHandler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
-	mintMsg = NewMintMsg(acc.GetAddress(), "NNB2-000M", 10000e8)
+	mintMsg = NewMintMsg(acc.GetAddress(), "NNB2-000M", 1000e8)
 	sdkResult = handler(ctx, mintMsg)
 	require.Contains(t, sdkResult.Log, "token(NNB2-000M) cannot be minted")
 

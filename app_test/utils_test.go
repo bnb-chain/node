@@ -24,7 +24,7 @@ import (
 
 // this file has to named with suffix _test, this is a golang bug: https://github.com/golang/go/issues/24895
 var (
-	keeper *orderPkg.BEP2OrderKeeper
+	keeper *orderPkg.DexKeeper
 	buyer  sdk.AccAddress
 	seller sdk.AccAddress
 	am     auth.AccountKeeper

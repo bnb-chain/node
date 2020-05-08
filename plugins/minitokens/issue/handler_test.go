@@ -52,27 +52,37 @@ func TestHandleIssueToken(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg := NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 100001e8, 100000e8, false, "http://www.xyz.com/nnb.json")
+	msg := NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8+100, false, "http://www.xyz.com/nnb.json")
 	sdkResult := handler(ctx, msg)
 	require.Equal(t, false, sdkResult.Code.IsOK())
-	require.Contains(t, sdkResult.Log, "max total supply is too large")
+	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg = NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, 10000e8+100, false, "http://www.xyz.com/nnb.json")
-	sdkResult = handler(ctx, msg)
-	require.Equal(t, false, sdkResult.Code.IsOK())
-	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply is")
-
-	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg = NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 100000e8, 100000e8, false, "http://www.xyz.com/nnb.json")
+	msg = NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
 	sdkResult = handler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 100000e8, 100000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, token)
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
+
+	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
+	msg = NewIssueMsg(acc.GetAddress(), "New BB", "NBB", 2, 100000e8+100, false, "http://www.xyz.com/nnb.json")
+	sdkResult = handler(ctx, msg)
+	require.Equal(t, false, sdkResult.Code.IsOK())
+	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
+
+	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
+	msg = NewIssueMsg(acc.GetAddress(), "New BB", "NBB", 2, 10000e8+100, false, "http://www.xyz.com/nnb.json")
+	sdkResult = handler(ctx, msg)
+	require.Equal(t, true, sdkResult.Code.IsOK())
+
+	token, err = tokenMapper.GetToken(ctx, "NBB-002M")
+	require.NoError(t, err)
+	expectedToken, err = types.NewMiniToken("New BB", "NBB-002M", 2, 10000e8+100, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, *expectedToken, token)
 }

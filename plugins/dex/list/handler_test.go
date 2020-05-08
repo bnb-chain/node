@@ -42,7 +42,7 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 
-func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *order.BEP2OrderKeeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
+func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *order.DexKeeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
 	accKey := sdk.NewKVStoreKey("acc")
 	pairKey := sdk.NewKVStoreKey("pair")
 	tokenKey := sdk.NewKVStoreKey("token")
@@ -64,9 +64,9 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 
 	accKeeper := auth.NewAccountKeeper(cdc, accKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
-	pairMapper := store.NewTradingPairMapper(cdc, pairKey, false)
-	orderKeeper = order.NewBEP2OrderKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
+	pairMapper := store.NewTradingPairMapper(cdc, pairKey)
+	dexKeeper = order.NewDexKeeper(common.DexStoreKey, pairMapper,
+		codespacer.RegisterNext(dexTypes.DefaultCodespace), cdc, accKeeper, false, 2)
 
 	tokenMapper = tokenStore.NewMapper(cdc, tokenKey)
 
@@ -85,7 +85,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 		gov.DefaultCodespace,
 		new(sdk.Pool))
 
-	return ms, orderKeeper, tokenMapper, govKeeper
+	return ms, dexKeeper, tokenMapper, govKeeper
 }
 
 func getProposal(lowerCase bool, baseAssetSymbol string, quoteAssetSymbol string) gov.Proposal {

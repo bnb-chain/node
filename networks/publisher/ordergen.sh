@@ -38,7 +38,7 @@ function random()
 while :
 do
     side=$(random 1 2)
-    price=$(random 1 2)
+    price=$(random 1 4)
     qty=$(random 1 2)
     pause=$(random 5 7)
     symbolNum=$(random 1 10)

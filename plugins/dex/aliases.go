@@ -10,8 +10,6 @@ import (
 // type TradingPair = types.TradingPair
 
 type TradingPairMapper = store.TradingPairMapper
-type BEP2OrderKeeper = order.BEP2OrderKeeper
-type MiniOrderKeeper = order.MiniOrderKeeper
 type IDexOrderKeeper = order.IDexOrderKeeper
 type DexKeeper = order.DexKeeper
 type SymbolPairType = order.SymbolPairType
