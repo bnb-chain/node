@@ -43,15 +43,15 @@ do
     pause=$(random 5 7)
     symbolNum=$(random 1 10)
 
-    symbol="ZCB-51A_BNB"
+    symbol="NNB-5D4_BNB"
     if [ $symbolNum -lt 4 ]
     then
-        symbol="ZCB-51A_BNB"
+        symbol="NNB-5D4_BNB"
     elif [ $symbolNum -lt 6 ]
     then
-        symbol="ZCB-51A_BNB"
+        symbol="NNB-5D4_BNB"
     else [ $symbolNum -lt 8 ]
-        symbol="ZCB-51A_BNB"
+        symbol="NNB-5D4_BNB"
     fi
     from="zc"
     if [ $side == 1 ]
