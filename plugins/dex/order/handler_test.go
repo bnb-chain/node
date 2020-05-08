@@ -41,7 +41,7 @@ func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context, *
 	accMapper := auth.NewAccountKeeper(cdc, key2, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, key2)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper := NewDexKeeper(key3, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), cdc,accMapper, false, 2)
+	keeper := NewDexKeeper(key3, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), cdc, accMapper, false, 2)
 	return pairMapper, accMapper, ctx, keeper
 }
 
@@ -155,7 +155,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 }
 
 func TestHandler_ValidateOrder_Normal(t *testing.T) {
-	pairMapper, accMapper, ctx, keeper:= setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
 

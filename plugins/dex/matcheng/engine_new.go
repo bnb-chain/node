@@ -40,8 +40,8 @@ func (me *MatchEng) Match(height int64, isMini bool) bool {
 	var lastMatchHeight int64
 	if isMini {
 		lastMatchHeight = me.LastMatchHeight
-	}else{
-		lastMatchHeight = height -1 //Every block is deemed as performed matching for all BEP2 symbols
+	} else {
+		lastMatchHeight = height - 1 //Every block is deemed as performed matching for all BEP2 symbols
 	}
 	takerSide, err := me.determineTakerSide(lastMatchHeight, index)
 	if err != nil {

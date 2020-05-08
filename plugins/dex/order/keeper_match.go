@@ -8,7 +8,6 @@ import (
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
-
 func (kp *DexKeeper) SelectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string {
 	symbolsToMatch := make([]string, 0, 256)
 	for _, orderKeeper := range kp.OrderKeepers {
@@ -19,7 +18,6 @@ func (kp *DexKeeper) SelectSymbolsToMatch(height, timestamp int64, matchAllSymbo
 	return symbolsToMatch
 }
 
-
 func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height)
 	timestamp := ctx.BlockHeader().Time.UnixNano()
@@ -29,7 +27,7 @@ func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandl
 	var tradeOuts []chan Transfer
 	if len(symbolsToMatch) == 0 {
 		kp.logger.Info("No order comes in for the block")
-	}else{
+	} else {
 		tradeOuts = kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
 	}
 
@@ -42,6 +40,7 @@ type symbolKeeper struct {
 	symbol      string
 	orderKeeper IDexOrderKeeper
 }
+
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 // Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols) before matchAndDistributeTrades
 func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
@@ -99,7 +98,7 @@ func (kp *DexKeeper) MatchSymbols(height, timestamp int64, matchAllSymbols bool)
 
 	if len(symbolsToMatch) == 0 {
 		kp.logger.Info("No order comes in for the block")
-	}else {
+	} else {
 		kp.matchAndDistributeTrades(false, height, timestamp)
 	}
 
@@ -179,7 +178,6 @@ func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, orderKeepe
 		}
 	}
 }
-
 
 // Run as postConsume procedure of async, no concurrent updates of orders map
 func updateOrderMsg(order *OrderInfo, cumQty, height, timestamp int64) {

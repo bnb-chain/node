@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -12,7 +13,7 @@ import (
 )
 
 const (
-	flagTokenType = "token-type"
+	flagTokenType   = "token-type"
 	flagTotalSupply = "total-supply"
 	flagTokenName   = "token-name"
 	flagMintable    = "mintable"
@@ -92,7 +93,7 @@ func checkSupplyAmount(amount int64, tokenType int8) error {
 		return errors.New("invalid supply amount")
 	}
 	if amount > types.SupplyRangeType(tokenType).UpperBound() {
-		return errors.New(fmt.Sprintf("supply amount cannot exceed max supply amount of %s - %d",types.SupplyRangeType(tokenType).String(),types.SupplyRangeType(tokenType).UpperBound()))
+		return errors.New(fmt.Sprintf("supply amount cannot exceed max supply amount of %s - %d", types.SupplyRangeType(tokenType).String(), types.SupplyRangeType(tokenType).UpperBound()))
 	}
 	return nil
 }

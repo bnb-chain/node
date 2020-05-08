@@ -50,7 +50,6 @@ var _ SymbolSelector = &MiniSymbolSelector{
 	make([]string, 0),
 }
 
-
 func (mss *MiniSymbolSelector) GetRoundMatchSymbol() *[]string {
 	return &mss.roundMiniSymbols
 }

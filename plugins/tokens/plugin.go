@@ -10,9 +10,9 @@ import (
 
 	bnclog "github.com/binance-chain/node/common/log"
 	app "github.com/binance-chain/node/common/types"
+	miniToken "github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
-	miniToken "github.com/binance-chain/node/plugins/minitokens"
 )
 
 const abciQueryPrefix = "tokens"

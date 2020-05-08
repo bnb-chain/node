@@ -82,16 +82,16 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper         bank.Keeper
-	DexKeeper          *dex.DexKeeper
-	AccountKeeper      auth.AccountKeeper
-	TokenMapper        tkstore.Mapper
-	MiniTokenMapper    miniTkstore.MiniTokenMapper
-	ValAddrCache       *ValAddrCache
-	stakeKeeper        stake.Keeper
-	govKeeper          gov.Keeper
-	timeLockKeeper     timelock.Keeper
-	swapKeeper         swap.Keeper
+	CoinKeeper      bank.Keeper
+	DexKeeper       *dex.DexKeeper
+	AccountKeeper   auth.AccountKeeper
+	TokenMapper     tkstore.Mapper
+	MiniTokenMapper miniTkstore.MiniTokenMapper
+	ValAddrCache    *ValAddrCache
+	stakeKeeper     stake.Keeper
+	govKeeper       gov.Keeper
+	timeLockKeeper  timelock.Keeper
+	swapKeeper      swap.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 

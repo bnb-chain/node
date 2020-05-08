@@ -92,7 +92,7 @@ func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-	}else {
+	} else {
 		err = types.ValidateMapperTokenSymbol(symbol)
 		if err != nil {
 			return err

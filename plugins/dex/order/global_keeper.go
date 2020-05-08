@@ -3,13 +3,14 @@ package order
 import (
 	"errors"
 	"fmt"
-	"github.com/binance-chain/node/common/fees"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/store"
 	"math"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex/store"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -1036,7 +1037,6 @@ func (kp *DexKeeper) ClearAfterMatch() {
 	}
 }
 
-
 func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
 	allOrders := make(map[string]map[string]*OrderInfo) //TODO replace by iterator
 	for _, orderKeeper := range kp.OrderKeepers {
@@ -1047,7 +1047,7 @@ func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
 	return allOrders
 }
 
-func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo{
+func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo {
 	ordersOfSymbol := make(map[string]*OrderInfo)
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.support(symbol) {
@@ -1066,7 +1066,6 @@ func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int
 		}
 	}
 }
-
 
 func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
 	if sdk.IsUpgradeHeight(upgrade.BEP8) {

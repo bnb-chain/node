@@ -3,10 +3,11 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/common/upgrade"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/binance-chain/node/common/upgrade"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"

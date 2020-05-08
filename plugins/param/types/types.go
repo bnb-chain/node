@@ -42,7 +42,7 @@ var (
 		"refundHTLT":  {},
 
 		"tinyIssueMsg":     {},
-		"miniIssueMsg":  {},
+		"miniIssueMsg":     {},
 		"miniTokensSetURI": {},
 		"dexListMini":      {},
 	}

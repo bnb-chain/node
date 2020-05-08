@@ -14,21 +14,21 @@ const SetURIRoute = "miniTokensSetURI"
 var _ sdk.Msg = SetURIMsg{}
 
 type SetURIMsg struct {
-	From   sdk.AccAddress `json:"from"`
-	Symbol string         `json:"symbol"`
-	TokenURI string          `json:"token_uri"`
+	From     sdk.AccAddress `json:"from"`
+	Symbol   string         `json:"symbol"`
+	TokenURI string         `json:"token_uri"`
 }
 
 func NewSetUriMsg(from sdk.AccAddress, symbol string, tokenURI string) SetURIMsg {
 	return SetURIMsg{
-		From:   from,
-		Symbol: symbol,
+		From:     from,
+		Symbol:   symbol,
 		TokenURI: tokenURI,
 	}
 }
 
 func (msg SetURIMsg) ValidateBasic() sdk.Error {
-	if msg.From == nil || len(msg.From) == 0{
+	if msg.From == nil || len(msg.From) == 0 {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 

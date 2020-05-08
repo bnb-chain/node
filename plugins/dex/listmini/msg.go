@@ -40,7 +40,7 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
-	if types.NativeTokenSymbol != msg.QuoteAssetSymbol {//todo permit BUSD
+	if types.NativeTokenSymbol != msg.QuoteAssetSymbol { //todo permit BUSD
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
 	}
 	if msg.InitPrice <= 0 {

@@ -155,7 +155,6 @@ func (m mapper) decodeToken(bz []byte) (token types.MiniToken) {
 	return
 }
 
-
 func (m mapper) UpdateTokenURI(ctx sdk.Context, symbol string, uri string) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
@@ -184,4 +183,3 @@ func (m mapper) UpdateTokenURI(ctx sdk.Context, symbol string, uri string) error
 	}
 	return nil
 }
-

@@ -53,7 +53,6 @@ func handleSetURI(ctx sdk.Context, miniTokenMapper store.MiniTokenMapper, msg Se
 		return sdk.ErrInternal(fmt.Sprintf("update token uri failed")).Result()
 	}
 
-
 	logger.Info("finished update token uri")
 	return sdk.Result{
 		Data: []byte(msg.TokenURI),

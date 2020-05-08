@@ -8,11 +8,11 @@ import (
 
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/plugins/dex/order"
+	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
-	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 )
 
 var transferOnlyModeBlackList = []string{

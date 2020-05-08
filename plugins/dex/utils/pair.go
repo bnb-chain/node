@@ -87,7 +87,7 @@ func Assets2TradingPair(baseAsset, quoteAsset string) (symbol string) {
 
 func IsMiniTokenTradingPair(symbol string) bool {
 	baseAsset, quoteAsset, err := TradingPair2Assets(symbol)
-	if err != nil{
+	if err != nil {
 		return false
 	}
 	return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)

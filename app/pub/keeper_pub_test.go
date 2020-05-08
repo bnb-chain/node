@@ -39,7 +39,7 @@ func newTestFeeConfig() orderPkg.FeeConfig {
 	return feeConfig
 }
 
-var keeper *orderPkg.BEP2OrderKeeper
+var keeper *orderPkg.DexKeeper
 var buyer sdk.AccAddress
 var seller sdk.AccAddress
 var am auth.AccountKeeper
@@ -60,8 +60,8 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	accountCache := getAccountCache(cdc, ms, capKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, logger).WithAccountCache(accountCache)
 
-	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey, false)
-	keeper = orderPkg.NewBEP2OrderKeeper(capKey2, am, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
+	keeper = orderPkg.NewDexKeeper(capKey2, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), cdc, am, true, 2)
 	tradingPair := dextypes.NewTradingPair("XYZ-000", types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
@@ -89,15 +89,15 @@ func TestKeeper_AddOrder(t *testing.T) {
 	msg = orderPkg.NewNewOrderMsg(buyer, "2", orderPkg.Side.BUY, "XYZ-000_BNB", 101000, 1000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 43, 105, 43, 105, 0, "0D42245EB2BF574A5B9D485404E0E61B1A2397A9", 0}, false)
 
-	require.Len(keeper.OrderChanges, 2)
-	require.Len(keeper.OrderInfosForPub, 2)
+	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
+	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
 	// verify order0 - and the order in orderchanges slice
-	orderChange0 := keeper.OrderChanges[0]
+	orderChange0 := keeper.GetOrderChanges()[0]
 	assert.Equal("1", orderChange0.Id)
 	assert.Equal(orderPkg.Ack, orderChange0.Tpe)
 
 	// verify order1 - make sure the fields are correct
-	orderInfo1 := keeper.OrderInfosForPub["2"]
+	orderInfo1 := keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2)["2"]
 	assert.Equal(buyer, orderInfo1.Sender)
 	assert.Equal("2", orderInfo1.Id)
 	assert.Equal("XYZ-000_BNB", orderInfo1.Symbol)

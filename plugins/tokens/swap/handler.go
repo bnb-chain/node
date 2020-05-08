@@ -6,7 +6,9 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/binance-chain/node/common/types"
+
 )
 
 func NewHandler(kp Keeper) sdk.Handler {

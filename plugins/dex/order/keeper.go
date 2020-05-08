@@ -61,6 +61,7 @@ type BEP2OrderKeeper struct {
 }
 
 var _ IDexOrderKeeper = &BEP2OrderKeeper{}
+
 // in the future, this may be distributed via Sharding
 type BaseOrderKeeper struct {
 	allOrders        map[string]map[string]*OrderInfo // symbol -> order ID -> order
@@ -263,8 +264,8 @@ func (kp *BaseOrderKeeper) appendOrderChangeSync(change OrderChange) {
 func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
 	//TODO
 	for symbol, orders := range kp.allOrders {
-		for orderId := range orders{
-			iter(symbol,orderId)
+		for orderId := range orders {
+			iter(symbol, orderId)
 		}
 	}
 }
@@ -326,4 +327,3 @@ func (kp *BEP2OrderKeeper) getRoundOrdersNum() int {
 	}
 	return n
 }
-

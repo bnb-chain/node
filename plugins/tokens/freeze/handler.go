@@ -103,9 +103,9 @@ func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenM
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	useAllBalance := coins.AmountOf(symbol) ==  freezeAmount
+	useAllBalance := coins.AmountOf(symbol) == freezeAmount
 
-	if msg.Amount<=0 || (!useAllBalance && (msg.Amount < common.MiniTokenMinTotalSupply)){
+	if msg.Amount <= 0 || (!useAllBalance && (msg.Amount < common.MiniTokenMinTotalSupply)) {
 		logger.Info(errLogMsg, "reason", "freeze amount doesn't reach the min supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total account balance",
 			common.MiniTokenMinTotalSupply)).Result()
@@ -127,7 +127,7 @@ func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniToke
 	logger := log.With("module", "miniToken", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
-	useAllFrozenBalance := frozenAmount ==  unfreezeAmount
+	useAllFrozenBalance := frozenAmount == unfreezeAmount
 	errLogMsg := "unfreeze token failed"
 
 	_, err := miniTokenMapper.GetToken(ctx, symbol)
@@ -136,7 +136,7 @@ func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniToke
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
 
-	if unfreezeAmount<=0 || (!useAllFrozenBalance && (unfreezeAmount < common.MiniTokenMinTotalSupply)) {
+	if unfreezeAmount <= 0 || (!useAllFrozenBalance && (unfreezeAmount < common.MiniTokenMinTotalSupply)) {
 		logger.Info(errLogMsg, "reason", "unfreeze amount doesn't reach the min supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
 			common.MiniTokenMinTotalSupply)).Result()
@@ -156,4 +156,3 @@ func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniToke
 	logger.Debug("finish unfreezing token", "NewFrozenToken", newFrozenTokens, "NewFreeTokens", newFreeTokens)
 	return sdk.Result{}
 }
-

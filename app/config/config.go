@@ -368,7 +368,7 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 
 	// TODO: add upgrade name
-	BEP8Height  int64 `mapstructure:"BEP8Height"`
+	BEP8Height int64 `mapstructure:"BEP8Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {

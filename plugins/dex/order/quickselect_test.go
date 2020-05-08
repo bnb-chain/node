@@ -2,8 +2,9 @@ package order
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_findKthLargest(t *testing.T) {

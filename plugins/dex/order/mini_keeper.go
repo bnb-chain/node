@@ -2,13 +2,14 @@ package order
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"strings"
-	"sync"
 )
 
 const (
@@ -35,7 +36,7 @@ func NewMiniOrderKeeper() IDexOrderKeeper {
 			roundOrders:      make(map[string][]string, 256),
 			roundIOCOrders:   make(map[string][]string, 256),
 			logger:           logger,
-			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)},},
+			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)}},
 	}
 }
 

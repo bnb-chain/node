@@ -1,8 +1,9 @@
 package issue
 
 import (
-	"github.com/binance-chain/node/common/upgrade"
 	"testing"
+
+	"github.com/binance-chain/node/common/upgrade"
 
 	"github.com/stretchr/testify/require"
 

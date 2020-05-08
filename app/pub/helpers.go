@@ -268,7 +268,7 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
-	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize + MiniTransferCollectionChannelSize)
+	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize+MiniTransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -324,7 +324,7 @@ func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, trad
 				TickType:   int(trade.TickType),
 			}
 			tradeIdx += 1
-			if types.IsMiniTokenSymbol(symbol){
+			if types.IsMiniTokenSymbol(symbol) {
 				miniTradesToPublish = append(miniTradesToPublish, t)
 			}
 			tradesToPublish = append(tradesToPublish, t)
@@ -518,7 +518,7 @@ func collectOrdersToPublish(
 	feeHolder orderPkg.FeeHolder,
 	timestamp int64, miniTrades []*Trade,
 	miniOrderChanges orderPkg.OrderChanges,
-	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order, feeToPublish map[string]string, ) {
+	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order, feeToPublish map[string]string) {
 	opensToPublish = make([]*Order, 0)
 	closedToPublish = make([]*Order, 0)
 	miniOpensToPublish = make([]*Order, 0)

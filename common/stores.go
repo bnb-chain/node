@@ -3,18 +3,18 @@ package common
 import sdk "github.com/cosmos/cosmos-sdk/types"
 
 const (
-	MainStoreName          = "main"
-	AccountStoreName       = "acc"
-	ValAddrStoreName       = "val"
-	TokenStoreName         = "tokens"
-	MiniTokenStoreName     = "minitokens"
-	DexStoreName           = "dex"
-	PairStoreName          = "pairs"
-	StakeStoreName         = "stake"
-	ParamsStoreName        = "params"
-	GovStoreName           = "gov"
-	TimeLockStoreName      = "time_lock"
-	AtomicSwapStoreName    = "atomic_swap"
+	MainStoreName       = "main"
+	AccountStoreName    = "acc"
+	ValAddrStoreName    = "val"
+	TokenStoreName      = "tokens"
+	MiniTokenStoreName  = "minitokens"
+	DexStoreName        = "dex"
+	PairStoreName       = "pairs"
+	StakeStoreName      = "stake"
+	ParamsStoreName     = "params"
+	GovStoreName        = "gov"
+	TimeLockStoreName   = "time_lock"
+	AtomicSwapStoreName = "atomic_swap"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -37,7 +37,7 @@ var (
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
 
-	MiniTokenStoreKey     = sdk.NewKVStoreKey(MiniTokenStoreName)
+	MiniTokenStoreKey = sdk.NewKVStoreKey(MiniTokenStoreName)
 
 	StoreKeyNameMap = map[string]sdk.StoreKey{
 		MainStoreName:            MainStoreKey,

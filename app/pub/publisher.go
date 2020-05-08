@@ -91,7 +91,7 @@ func Publish(
 						marketData.proposalsToPublish,
 						marketData.stakeUpdates,
 						miniOrdersToPublish,
-						marketData.miniTradesToPublish, )
+						marketData.miniTradesToPublish)
 				})
 
 				if metrics != nil {

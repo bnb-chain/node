@@ -17,8 +17,6 @@ type DexKeeper = order.DexKeeper
 type SymbolPairType = order.SymbolPairType
 
 var NewTradingPairMapper = store.NewTradingPairMapper
-var NewOrderKeeper = order.NewBEP2OrderKeeper
-var NewMiniOrderKeeper = order.NewMiniOrderKeeper
 var NewDexKeeper = order.NewDexKeeper
 var PairType = order.PairType
 

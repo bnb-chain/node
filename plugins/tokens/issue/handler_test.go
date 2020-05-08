@@ -1,8 +1,9 @@
 package issue
 
 import (
-	"github.com/binance-chain/node/common/upgrade"
 	"testing"
+
+	"github.com/binance-chain/node/common/upgrade"
 
 	"github.com/stretchr/testify/require"
 
@@ -108,7 +109,6 @@ func TestHandleMintToken(t *testing.T) {
 	require.Contains(t, invalidMintMsg.ValidateBasic().Error(), "cannot mint native token")
 }
 
-
 func TestHandleMintMiniToken(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
@@ -130,7 +130,7 @@ func TestHandleMintMiniToken(t *testing.T) {
 	require.Equal(t, *expectedToken, token)
 
 	_, err = tokenMapper.GetToken(ctx, "NNB-000M")
-	require.NotNil(t,err)
+	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "token(NNB-000M) not found")
 
 	sdkResult = handler(ctx, mintMsg)
@@ -160,4 +160,3 @@ func TestHandleMintMiniToken(t *testing.T) {
 	invalidMintMsg = NewMintMsg(acc.GetAddress(), "BNB", 10000e8)
 	require.Contains(t, invalidMintMsg.ValidateBasic().Error(), "cannot mint native token")
 }
-

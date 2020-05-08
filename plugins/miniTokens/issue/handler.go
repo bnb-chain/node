@@ -113,5 +113,3 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 		Log:  fmt.Sprintf("Issued %s", token.Symbol),
 	}
 }
-
-
