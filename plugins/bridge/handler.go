@@ -82,7 +82,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	bindRequest := types.BindRequest{
 		From:             msg.From,
-		Symbol:           msg.Symbol,
+		Symbol:           symbol,
 		Amount:           calibratedAmount,
 		ContractAddress:  msg.ContractAddress,
 		ContractDecimals: msg.ContractDecimals,
@@ -122,7 +122,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 			types.MinTransferOutExpireTimeGap, ctx.BlockHeader().Time.UTC().String())).Result()
 	}
 
-	symbol := strings.ToUpper(msg.Amount.Denom)
+	symbol := msg.Amount.Denom
 	token, err := keeper.TokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", symbol)).Result()

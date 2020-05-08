@@ -45,8 +45,8 @@ func InitOracle(keeper Keeper) {
 		panic(err)
 	}
 
-	updateTransferOutClaimHooks := NewUpdateTransferOutClaimHooks(keeper)
-	err = keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeUpdateTransferOut, types.ClaimTypeUpdateTransferOutName, updateTransferOutClaimHooks)
+	transferOutRefundClaimHooks := NewTransferOutRefundClaimHooks(keeper)
+	err = keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeTransferOutRefund, types.ClaimTypeTransferOutRefundName, transferOutRefundClaimHooks)
 	if err != nil {
 		panic(err)
 	}

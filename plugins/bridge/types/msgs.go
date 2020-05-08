@@ -40,18 +40,18 @@ func (reason RefundReason) String() string {
 	}
 }
 
-func ParseRefundReason(input string) RefundReason {
+func ParseRefundReason(input string) (RefundReason, error) {
 	switch strings.ToLower(input) {
 	case "unboundtoken":
-		return UnboundToken
+		return UnboundToken, nil
 	case "timeout":
-		return Timeout
+		return Timeout, nil
 	case "insufficientbalance":
-		return InsufficientBalance
+		return InsufficientBalance, nil
 	case "unknown":
-		return Unknown
+		return Unknown, nil
 	default:
-		panic("unrecognized refund status")
+		return RefundReason(0), fmt.Errorf("unrecognized refund reason")
 	}
 }
 
@@ -103,7 +103,7 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.ContractDecimals < 0 {
-		return ErrInvalidDecimal(fmt.Sprintf("decimals should be larger than 0"))
+		return ErrInvalidDecimal(fmt.Sprintf("decimals should be no less than 0"))
 	}
 
 	if msg.ExpireTime <= 0 {
@@ -145,18 +145,18 @@ func (status BindStatus) String() string {
 	}
 }
 
-func ParseBindStatus(input string) BindStatus {
+func ParseBindStatus(input string) (BindStatus, error) {
 	switch strings.ToLower(input) {
 	case "success":
-		return BindStatusSuccess
+		return BindStatusSuccess, nil
 	case "rejected":
-		return BindStatusRejected
+		return BindStatusRejected, nil
 	case "timeout":
-		return BindStatusTimeout
+		return BindStatusTimeout, nil
 	case "invalidparameter":
-		return BindStatusInvalidParameter
+		return BindStatusInvalidParameter, nil
 	default:
-		panic("unrecognized bind status")
+		return BindStatus(-1), fmt.Errorf("unrecognized bind status")
 	}
 }
 

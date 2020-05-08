@@ -17,7 +17,7 @@ type (
 
 	SkipSequenceClaim      = types.SkipSequenceClaim
 	UpdateBindClaim        = types.UpdateBindClaim
-	UpdateTransferOutClaim = types.UpdateTransferOutClaim
+	TransferOutRefundClaim = types.TransferOutRefundClaim
 	TransferInClaim        = types.TransferInClaim
 )
 

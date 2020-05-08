@@ -24,14 +24,14 @@ type Keeper struct {
 	Pool        *sdk.Pool
 	DestChainId string
 
-	OracleKeeper types.OracleKeeper
+	OracleKeeper sdk.OracleKeeper
 	BankKeeper   bank.Keeper
 	TokenMapper  store.Mapper
 	IbcKeeper    ibc.Keeper
 }
 
 // NewKeeper creates new instances of the bridge Keeper
-func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper types.OracleKeeper,
+func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper, oracleKeeper sdk.OracleKeeper,
 	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId string) Keeper {
 	return Keeper{
 		cdc:          cdc,

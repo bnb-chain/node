@@ -149,54 +149,54 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	return nil, nil
 }
 
-type UpdateTransferOutClaimHooks struct {
+type TransferOutRefundClaimHooks struct {
 	bridgeKeeper Keeper
 }
 
-func NewUpdateTransferOutClaimHooks(bridgeKeeper Keeper) *UpdateTransferOutClaimHooks {
-	return &UpdateTransferOutClaimHooks{
+func NewTransferOutRefundClaimHooks(bridgeKeeper Keeper) *TransferOutRefundClaimHooks {
+	return &TransferOutRefundClaimHooks{
 		bridgeKeeper: bridgeKeeper,
 	}
 }
 
-func (hooks *UpdateTransferOutClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	updateTransferOutClaim, err := types.GetUpdateTransferOutClaimFromOracleClaim(claim)
+func (hooks *TransferOutRefundClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
+	refundClaim, err := types.GetTransferOutRefundClaimFromOracleClaim(claim)
 	if err != nil {
-		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal update transfer out claim error, claim=%s", claim))
+		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal transfer out refund claim error, claim=%s", claim))
 	}
 
-	if len(updateTransferOutClaim.RefundAddress) != sdk.AddrLen {
-		return sdk.ErrInvalidAddress(updateTransferOutClaim.RefundAddress.String())
+	if len(refundClaim.RefundAddress) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(refundClaim.RefundAddress.String())
 	}
 
-	if !updateTransferOutClaim.Amount.IsPositive() {
-		return types.ErrInvalidAmount("amount to send should be positive")
+	if !refundClaim.Amount.IsPositive() {
+		return types.ErrInvalidAmount("amount to refund should be positive")
 	}
 
-	if updateTransferOutClaim.RefundReason.String() == "" {
-		return types.ErrInvalidStatus(fmt.Sprintf("refund reason(%d) does not exist", updateTransferOutClaim.RefundReason))
+	if refundClaim.RefundReason.String() == "" {
+		return types.ErrInvalidStatus(fmt.Sprintf("refund reason(%d) does not exist", refundClaim.RefundReason))
 	}
 
 	return nil
 }
 
-func (hooks *UpdateTransferOutClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
-	updateTransferOutClaim, sdkErr := types.GetUpdateTransferOutClaimFromOracleClaim(claim)
+func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
+	refundClaim, sdkErr := types.GetTransferOutRefundClaimFromOracleClaim(claim)
 	if sdkErr != nil {
 		return nil, sdkErr
 	}
 
-	_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, updateTransferOutClaim.RefundAddress, sdk.Coins{updateTransferOutClaim.Amount})
+	_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, refundClaim.RefundAddress, sdk.Coins{refundClaim.Amount})
 	if sdkErr != nil {
 		return nil, sdkErr
 	}
 
 	if ctx.IsDeliverTx() {
-		hooks.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, updateTransferOutClaim.RefundAddress})
+		hooks.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundClaim.RefundAddress})
 	}
 
 	tags := sdk.NewTags(
-		types.TransferOutRefundReason, []byte(updateTransferOutClaim.RefundReason.String()),
+		types.TransferOutRefundReason, []byte(refundClaim.RefundReason.String()),
 	)
 	return tags, nil
 }

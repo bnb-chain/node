@@ -9,12 +9,12 @@ import (
 const (
 	ClaimTypeSkipSequence      sdk.ClaimType = 0x1
 	ClaimTypeUpdateBind        sdk.ClaimType = 0x2
-	ClaimTypeUpdateTransferOut sdk.ClaimType = 0x3
+	ClaimTypeTransferOutRefund sdk.ClaimType = 0x3
 	ClaimTypeTransferIn        sdk.ClaimType = 0x4
 
 	ClaimTypeSkipSequenceName      = "SkipSequence"
 	ClaimTypeUpdateBindName        = "UpdateBind"
-	ClaimTypeUpdateTransferOutName = "UpdateTransferOut"
+	ClaimTypeTransferOutRefundName = "TransferOutRefund"
 	ClaimTypeTransferInName        = "TransferIn"
 )
 
@@ -37,19 +37,19 @@ func GetTransferInClaimFromOracleClaim(claim string) (TransferInClaim, sdk.Error
 	return transferClaim, nil
 }
 
-type UpdateTransferOutClaim struct {
+type TransferOutRefundClaim struct {
 	RefundAddress sdk.AccAddress `json:"refund_address"`
 	Amount        sdk.Coin       `json:"amount"`
 	RefundReason  RefundReason   `json:"refund_reason"`
 }
 
-func GetUpdateTransferOutClaimFromOracleClaim(claim string) (UpdateTransferOutClaim, sdk.Error) {
-	updateTransferOutClaim := UpdateTransferOutClaim{}
-	err := json.Unmarshal([]byte(claim), &updateTransferOutClaim)
+func GetTransferOutRefundClaimFromOracleClaim(claim string) (TransferOutRefundClaim, sdk.Error) {
+	refundClaim := TransferOutRefundClaim{}
+	err := json.Unmarshal([]byte(claim), &refundClaim)
 	if err != nil {
-		return UpdateTransferOutClaim{}, ErrInvalidTransferMsg(err.Error())
+		return TransferOutRefundClaim{}, ErrInvalidTransferMsg(err.Error())
 	}
-	return updateTransferOutClaim, nil
+	return refundClaim, nil
 }
 
 type UpdateBindClaim struct {

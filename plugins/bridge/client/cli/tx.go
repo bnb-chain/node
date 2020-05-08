@@ -150,9 +150,9 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
+func TransferOutRefundCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update-transfer-out",
+		Use:   "transfer-out-refund",
 		Short: "refund tokens to sender if transfer to smart chain failed",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
@@ -166,7 +166,10 @@ func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
 			if len(refundReasonStr) == 0 {
 				return fmt.Errorf("empty refund reason")
 			}
-			refundReason := types.ParseRefundReason(refundReasonStr)
+			refundReason, err := types.ParseRefundReason(refundReasonStr)
+			if err != nil {
+				return err
+			}
 
 			refundAddr, err := sdk.AccAddressFromBech32(viper.GetString(flagRefundAddress))
 			if err != nil {
@@ -191,7 +194,7 @@ func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			claim := types.UpdateTransferOutClaim{
+			claim := types.TransferOutRefundClaim{
 				RefundAddress: refundAddr,
 				Amount:        amountToTransfer,
 				RefundReason:  refundReason,
@@ -201,7 +204,7 @@ func UpdateTransferOutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := oracle.NewClaimMsg(types.ClaimTypeUpdateTransferOut, sequence, string(claimBz), fromAddr)
+			msg := oracle.NewClaimMsg(types.ClaimTypeTransferOutRefund, sequence, string(claimBz), fromAddr)
 
 			err = msg.ValidateBasic()
 			if err != nil {
@@ -321,7 +324,10 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			sequence := viper.GetInt64(flagSequence)
 			contractAddress := viper.GetString(flagContractAddress)
 			symbol := viper.GetString(flagSymbol)
-			status := types.ParseBindStatus(viper.GetString(flagBindStatus))
+			status, err := types.ParseBindStatus(viper.GetString(flagBindStatus))
+			if err != nil {
+				return err
+			}
 
 			fromAddr, err := cliCtx.GetFromAddress()
 			if err != nil {
