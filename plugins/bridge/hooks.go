@@ -110,11 +110,8 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		return sdk.Tags{}, sdkErr
 	}
 
-	isIdentical := true
-	if bindRequest.Symbol != updateBindClaim.Symbol ||
-		bindRequest.ContractAddress.String() != updateBindClaim.ContractAddress.String() {
-		isIdentical = false
-	}
+	isIdentical := bindRequest.Symbol == updateBindClaim.Symbol &&
+		bindRequest.ContractAddress.String() == updateBindClaim.ContractAddress.String()
 
 	if isIdentical && updateBindClaim.Status == types.BindStatusSuccess {
 		sdkErr := hooks.bridgeKeeper.TokenMapper.UpdateBind(ctx, bindRequest.Symbol,
