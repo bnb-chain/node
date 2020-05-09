@@ -6,12 +6,16 @@
 # TODO: support two validator without docker in same machine
 
 ########################### SETUP #########################
-src='/Users/luerheng/go/src/github.com/binance-chain/node'
-home='/Users/luerheng'
-deamonhome='/Users/luerheng/.bnbchaind'
-witnesshome='/Users/luerheng/.bnbchaind_witness'
-clihome='/Users/luerheng/.bnbcli'
+home=$HOME
+src="${home}/go/src/github.com/binance-chain/node"
+deamonhome="${home}/.bnbchaind"
+witnesshome="${home}/.bnbchaind_witness"
+clihome="${home}/.bnbcli"
 chain_id='test-chain-n4b735'
+echo $src
+echo $deamonhome
+echo $witnesshome
+echo $clihome
 
 key_seed_path="${home}"
 executable="${src}/build/bnbchaind"

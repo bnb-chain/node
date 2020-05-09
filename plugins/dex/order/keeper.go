@@ -1001,7 +1001,6 @@ func (kp *DexKeeper) ValidateOrder(context sdk.Context, account sdk.Account, msg
 	return fmt.Errorf("symbol:%s is not supported", msg.Symbol)
 }
 
-
 func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportPairType(pairType) {
