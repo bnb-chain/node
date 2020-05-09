@@ -1,0 +1,462 @@
+package paramhub_test
+
+import (
+	"bytes"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	abcicli "github.com/tendermint/tendermint/abci/client"
+	"github.com/tendermint/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkFees "github.com/cosmos/cosmos-sdk/types/fees"
+	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/mock"
+	otypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
+	"github.com/cosmos/cosmos-sdk/x/stake"
+
+	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/common/fees"
+	ctypes "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex"
+	"github.com/binance-chain/node/plugins/param"
+	"github.com/binance-chain/node/plugins/param/paramhub"
+	ptypes "github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/binance-chain/node/wire"
+)
+
+// util objects
+var (
+	memDB                             = dbm.NewMemDB()
+	logger                            = log.NewTMLogger(os.Stdout)
+	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
+	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
+		sdk.Coins{sdk.NewCoin("BNB", 500000e8), sdk.NewCoin("BTC-000", 200e8)})
+	testClient = NewTestClient(testApp)
+)
+
+func TestCSCParamUpdatesSuccess(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+
+	cscParam := ptypes.CSCParamChange{
+		Key:    "testa",
+		Value:  []byte("testValue"),
+		Target: cmn.RandBytes(20),
+	}
+	cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
+	proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+	_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+	assert.NoError(t, err, "failed to submit side chain parameters change")
+
+	voteMsg := gov.NewMsgSideChainVote(sideValAddr, 1, gov.OptionYes, "bsc")
+	_, err = testClient.DeliverTxSync(&voteMsg, testApp.Codec)
+	assert.NoError(t, err, "failed to vote side chain parameters change")
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	ctx = UpdateContext(valAddr, ctx, 4, tNow.AddDate(0, 0, 1).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	packageBz, err := testApp.IbcKeeper.GetIBCPackage(ctx, "bsc", paramhub.IbcChannelName, uint64(0))
+	expectedBz := cscParam.Serialize()
+	assert.NoError(t, err)
+	assert.True(t, bytes.Compare(expectedBz, packageBz) == 0, "package bytes not equal")
+}
+
+func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	cscParams := []ptypes.CSCParamChange{
+		{
+			Key:    "testA",
+			Value:  []byte("testValueA"),
+			Target: cmn.RandBytes(20),
+		},
+		{
+			Key:    "testB",
+			Value:  []byte("testValueB"),
+			Target: cmn.RandBytes(20),
+		},
+		{
+			Key:    "testC",
+			Value:  []byte("testValueC"),
+			Target: cmn.RandBytes(20),
+		},
+	}
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	for idx, cscParam := range cscParams {
+		cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to submit side chain parameters change")
+
+		voteMsg := gov.NewMsgSideChainVote(sideValAddr, int64(idx+1), gov.OptionYes, "bsc")
+		_, err = testClient.DeliverTxSync(&voteMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to vote side chain parameters change")
+	}
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	ctx = UpdateContext(valAddr, ctx, 4, tNow.AddDate(0, 0, 1).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	for idx, cscParam := range cscParams {
+		packageBz, err := testApp.IbcKeeper.GetIBCPackage(ctx, "bsc", paramhub.IbcChannelName, uint64(idx))
+		expectedBz := cscParam.Serialize()
+		assert.NoError(t, err)
+		assert.True(t, bytes.Compare(expectedBz, packageBz) == 0, "package bytes not equal")
+	}
+
+	// expire proposal
+	ctx = UpdateContext(valAddr, ctx, 5, tNow.AddDate(0, 0, 1).Add(6*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(6 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	for _, cscParam := range cscParams {
+		cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to submit side chain parameters change")
+	}
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	ctx = UpdateContext(valAddr, ctx, 6, tNow.AddDate(0, 0, 1).Add(10*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(10 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	packageBz, err := testApp.IbcKeeper.GetIBCPackage(ctx, "bsc", paramhub.IbcChannelName, uint64(3))
+	assert.NoError(t, err)
+	assert.True(t, len(packageBz) == 0, "write package unexpected")
+
+	// still in order
+
+	ctx = UpdateContext(valAddr, ctx, 7, tNow.AddDate(0, 0, 1).Add(12*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(12 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	for idx, cscParam := range cscParams {
+		cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to submit side chain parameters change")
+
+		voteMsg := gov.NewMsgSideChainVote(sideValAddr, int64(idx+7), gov.OptionYes, "bsc")
+		_, err = testClient.DeliverTxSync(&voteMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to vote side chain parameters change")
+	}
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	ctx = UpdateContext(valAddr, ctx, 8, tNow.AddDate(0, 0, 1).Add(15*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(15 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	for idx, cscParam := range cscParams {
+		packageBz, err := testApp.IbcKeeper.GetIBCPackage(ctx, "bsc", paramhub.IbcChannelName, uint64(idx+3))
+		expectedBz := cscParam.Serialize()
+		assert.NoError(t, err)
+		assert.True(t, bytes.Compare(expectedBz, packageBz) == 0, "package bytes not equal")
+	}
+}
+
+func TestSubmitCSCParamUpdatesFail(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+
+	cscParams := []ptypes.CSCParamChange{
+		{
+			Key:    "",
+			Value:  []byte("testValue"),
+			Target: cmn.RandBytes(20),
+		},
+		{
+			Key:    "testKey",
+			Value:  []byte(""),
+			Target: cmn.RandBytes(20),
+		},
+		{
+			Key:    "testKey",
+			Value:  []byte("testValue"),
+			Target: cmn.RandBytes(10),
+		},
+		{
+			Key:    cmn.RandStr(256),
+			Value:  []byte("testValue"),
+			Target: cmn.RandBytes(20),
+		},
+	}
+
+	for _, cscParam := range cscParams {
+		cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		resp, err := testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to submit side chain parameters change")
+		assert.True(t, strings.Contains(resp.Log, "Invalid proposal"))
+	}
+}
+
+func TestSCParamUpdatesSuccess(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+
+	scParams := ptypes.SCChangeParams{
+		SCParams: []ptypes.SCParam{
+			&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}},
+			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}},
+		}}
+	scParamsBz, err := app.Codec.MarshalJSON(scParams)
+	proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(scParamsBz), gov.ProposalTypeSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+	_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+	assert.NoError(t, err, "failed to submit side chain parameters change")
+
+	voteMsg := gov.NewMsgSideChainVote(sideValAddr, 1, gov.OptionYes, "bsc")
+	_, err = testClient.DeliverTxSync(&voteMsg, testApp.Codec)
+	assert.NoError(t, err, "failed to vote side chain parameters change")
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// endblock
+	ctx = UpdateContext(valAddr, ctx, 4, tNow.AddDate(0, 0, 1).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// breath block
+	ctx = UpdateContext(valAddr, ctx, 5, tNow.AddDate(0, 0, 2).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// TODO, open the check when add_oracle branch is merged.
+	//p := testApp.OracleKeeper.GetProphecyParams(ctx)
+	//fmt.Println(p.ConsensusNeeded.String())
+	//assert.True(t, p.ConsensusNeeded.Equal(sdk.NewDecWithPrec(9, 1)))
+	//storePrefix := testApp.ScKeeper.GetSideChainStorePrefix(ctx, app.ServerContext.BscChainId)
+	//sideChainCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+	//s := testApp.StakeKeeper.GetParams(sideChainCtx)
+	//assert.True(t, s.Equal(scParams.SCParams[1].Value().(stake.Params)))
+}
+
+func TestSCParamMultiUpdatesSuccess(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+
+	scParamses := []ptypes.SCChangeParams{
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}},
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(8, 1)}}}},
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}}}},
+	}
+	for idx, scParams := range scParamses {
+		scParamsBz, err := app.Codec.MarshalJSON(scParams)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(scParamsBz), gov.ProposalTypeSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to submit side chain parameters change")
+
+		voteMsg := gov.NewMsgSideChainVote(sideValAddr, int64(idx+1), gov.OptionYes, "bsc")
+		_, err = testClient.DeliverTxSync(&voteMsg, testApp.Codec)
+		assert.NoError(t, err, "failed to vote side chain parameters change")
+	}
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// endblock
+	ctx = UpdateContext(valAddr, ctx, 4, tNow.AddDate(0, 0, 1).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// breath block
+	ctx = UpdateContext(valAddr, ctx, 5, tNow.AddDate(0, 0, 2).Add(5*time.Second))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1).Add(5 * time.Second)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
+
+	// TODO, open the check when add_oracle branch is merged.
+	//p := testApp.OracleKeeper.GetProphecyParams(ctx)
+	//assert.True(t, p.ConsensusNeeded.Equal(sdk.NewDecWithPrec(9, 1)))
+}
+
+func TestSCParamUpdatesFail(t *testing.T) {
+	valAddr, ctx, accounts := setupTest()
+	sideValAddr := accounts[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, 1)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+
+	scParamses := []ptypes.SCChangeParams{
+		{SCParams: []ptypes.SCParam{
+			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "", MinSelfDelegation: 100e8}},
+		}},
+		{SCParams: []ptypes.SCParam{
+			&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(2, 0)}},
+		}},
+		{SCParams: []ptypes.SCParam{
+			nil,
+		}},
+		{SCParams: nil},
+	}
+	for _, scParams := range scParamses {
+		scParamsBz, err := app.Codec.MarshalJSON(scParams)
+		proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(scParamsBz), gov.ProposalTypeSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
+		res, err := testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
+		assert.NoError(t, err)
+		assert.True(t, strings.Contains(res.Log, "Invalid proposal"))
+	}
+
+}
+
+// ===========  setup for test cases ====
+
+func NewTestClient(a *app.BinanceChain) *TestClient {
+	a.SetDeliverState(types.Header{})
+	a.SetAnteHandler(newMockAnteHandler(a.Codec)) // clear AnteHandler to skip the signature verification step
+	return &TestClient{abcicli.NewLocalClient(nil, a), app.MakeCodec()}
+}
+
+type TestClient struct {
+	cl  abcicli.Client
+	cdc *wire.Codec
+}
+
+func (tc *TestClient) DeliverTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.ResponseDeliverTx, error) {
+	stdtx := auth.NewStdTx([]sdk.Msg{msg}, nil, "test", 0, nil)
+	tx, _ := tc.cdc.MarshalBinaryLengthPrefixed(stdtx)
+
+	return tc.cl.DeliverTxSync(abci.RequestDeliverTx{Tx: tx})
+}
+
+func newMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
+	return func(ctx sdk.Context, tx sdk.Tx, runTxMode sdk.RunTxMode) (sdk.Context, sdk.Result, bool) {
+		msg := tx.GetMsgs()[0]
+		fee := fees.GetCalculator(msg.Type())(msg)
+
+		if ctx.IsDeliverTx() {
+			// add fee to pool, even it's free
+			stdTx := tx.(auth.StdTx)
+			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinaryLengthPrefixed(stdTx))).String()
+			sdkFees.Pool.AddFee(txHash, fee)
+		}
+		return ctx, sdk.Result{}, false
+	}
+}
+
+func UpdateContext(addr crypto.Address, ctx sdk.Context, height int64, tNow time.Time) sdk.Context {
+	ctx = ctx.WithBlockHeader(abci.Header{ProposerAddress: addr, Height: height, Time: tNow}).WithVoteInfos([]abci.VoteInfo{
+		{Validator: abci.Validator{Address: addr, Power: 10}, SignedLastBlock: true},
+	}).WithBlockHash([]byte("testhash"))
+
+	testApp.DeliverState.Ctx = ctx
+	return ctx
+}
+
+func setupTest() (crypto.Address, sdk.Context, []sdk.Account) {
+	// for old match engine
+	addr := secp256k1.GenPrivKey().PubKey().Address()
+	accAddr := sdk.AccAddress(addr)
+	baseAcc := auth.BaseAccount{Address: accAddr}
+	genTokens := []tokens.GenesisToken{{"BNB", "BNB", 100000000e8, accAddr, false}}
+	appAcc := &ctypes.AppAccount{baseAcc, "baseAcc", sdk.Coins(nil), sdk.Coins(nil), 0}
+	genAccs := make([]app.GenesisAccount, 1)
+	valAddr := ed25519.GenPrivKey().PubKey().Address()
+	genAccs[0] = app.NewGenesisAccount(appAcc, valAddr)
+	genesisState := app.GenesisState{
+		Tokens:       genTokens,
+		Accounts:     genAccs,
+		DexGenesis:   dex.DefaultGenesis,
+		ParamGenesis: param.DefaultGenesisState,
+	}
+	stateBytes, err := wire.MarshalJSONIndent(testApp.Codec, genesisState)
+	if err != nil {
+		panic(err)
+	}
+	testApp.SetCheckState(abci.Header{})
+	testApp.InitChain(abci.RequestInitChain{
+		Validators:    []abci.ValidatorUpdate{},
+		AppStateBytes: stateBytes})
+	// it is required in fee distribution during end block
+	testApp.ValAddrCache.SetAccAddr(sdk.ConsAddress(valAddr), appAcc.Address)
+	ctx := testApp.DeliverState.Ctx
+	coins := sdk.Coins{sdk.NewCoin("BNB", 1e13)}
+	var accs []sdk.Account
+	for i := 0; i < 10; i++ {
+		privKey := ed25519.GenPrivKey()
+		pubKey := privKey.PubKey()
+		addr := sdk.AccAddress(pubKey.Address())
+		acc := &auth.BaseAccount{
+			Address: addr,
+			Coins:   coins,
+		}
+		appAcc := &ctypes.AppAccount{BaseAccount: *acc}
+		if testApp.AccountKeeper.GetAccount(ctx, acc.GetAddress()) == nil {
+			appAcc.BaseAccount.AccountNumber = testApp.AccountKeeper.GetNextAccountNumber(ctx)
+		}
+		testApp.AccountKeeper.SetAccount(ctx, appAcc)
+		accs = append(accs, acc)
+	}
+
+	sideValAddr := accs[0].GetAddress().Bytes()
+	tNow := time.Now()
+
+	// empty first block
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -2)})
+	ctx = UpdateContext(valAddr, ctx, 1, tNow.AddDate(0, 0, -2))
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+
+	// second breath block to create side chain validator
+	ctx = UpdateContext(valAddr, ctx, 2, tNow)
+	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -2)})
+	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
+	msg := stake.NewMsgCreateSideChainValidator(sdk.ValAddress(sideValAddr), sdk.NewCoin("BNB", 2000000000000),
+		stake.NewDescription("m", "i", "w", "d"),
+		stake.NewCommissionMsg(sdk.NewDecWithPrec(1, 4), sdk.NewDecWithPrec(1, 4), sdk.NewDecWithPrec(1, 4)),
+		"bsc", sideValAddr, sideValAddr)
+
+	_, err = testClient.DeliverTxSync(&msg, testApp.Codec)
+	if err != nil {
+		panic(err)
+	}
+	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
+	return valAddr, ctx, accs
+}

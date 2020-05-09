@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/binance-chain/node/plugins/param"
+	"github.com/binance-chain/node/wire"
 	"io/ioutil"
 	"time"
 
@@ -19,22 +21,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/types"
-	"github.com/binance-chain/node/wire"
 )
 
 const (
-	//Fee flag
-	flagFeeParamFile = "fee-param-file"
-	flagFormat       = "format"
+	flagSCParamFile = "sc-param-file"
 )
 
-func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
-	feeParam := types.FeeChangeParams{[]types.FeeParam{}, ""}
+func SubmitSCParamChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
+	scParams := types.SCChangeParams{}
 	cmd := &cobra.Command{
-		Use:   "submit-fee-change-proposal",
-		Short: "Submit a fee or fee rate change proposal",
+		Use:   "submit-sc-change-proposal",
+		Short: "Submit a side chain param change proposal",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -42,22 +40,26 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 			title := viper.GetString(flagTitle)
 			initialDeposit := viper.GetString(flagDeposit)
-			feeParamFile := viper.GetString(flagFeeParamFile)
-			feeParam.Description = viper.GetString(flagDescription)
+			scParamFile := viper.GetString(flagSCParamFile)
+			scParams.Description = viper.GetString(flagDescription)
 			votingPeriodInSeconds := viper.GetInt64(flagVotingPeriod)
-			if feeParamFile == "" {
-				return errors.New("fee-param-file is missing")
+			sideChainId := viper.GetString(flagSideChainId)
+			if sideChainId == "" {
+				return fmt.Errorf("missing side-chain-id")
+			}
+			if scParamFile == "" {
+				return errors.New("sc-param-file is missing")
 			}
 
-			bz, err := ioutil.ReadFile(feeParamFile)
+			bz, err := ioutil.ReadFile(scParamFile)
 			if err != nil {
 				return err
 			}
-			err = cdc.UnmarshalJSON(bz, &(feeParam.FeeParams))
+			err = cdc.UnmarshalJSON(bz, &(scParams.SCParams))
 			if err != nil {
 				return err
 			}
-			err = feeParam.Check()
+			err = scParams.Check()
 			if err != nil {
 				return err
 			}
@@ -69,8 +71,8 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// feeParam get interface field, use amino
-			feeParamsBz, err := app.Codec.MarshalJSON(feeParam)
+			// scParams get interface field, use amino
+			scParamsBz, err := app.Codec.MarshalJSON(scParams)
 			if err != nil {
 				return err
 			}
@@ -84,7 +86,7 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("voting period should less than %d seconds", gov.MaxVotingPeriod/time.Second)
 			}
 
-			msg := gov.NewMsgSubmitProposal(title, string(feeParamsBz), gov.ProposalTypeFeeChange, fromAddr, amount, votingPeriod)
+			msg := gov.NewMsgSideChainSubmitProposal(title, string(scParamsBz), gov.ProposalTypeSCParamsChange, fromAddr, amount, votingPeriod, sideChainId)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -96,20 +98,24 @@ func SubmitFeeChangeProposalCmd(cdc *codec.Codec) *cobra.Command {
 			return utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
 		},
 	}
-	cmd.Flags().String(flagFeeParamFile, "", "the file of fee params (json format)")
+	cmd.Flags().String(flagSCParamFile, "", "the file of Side Chain params (json format)")
 	cmd.Flags().String(flagTitle, "", "title of proposal")
 	cmd.Flags().Int64(flagVotingPeriod, 7*24*60*60, "voting period in seconds")
 	cmd.Flags().String(flagDescription, "", "description of proposal")
 	cmd.Flags().String(flagDeposit, "", "deposit of proposal")
+	cmd.Flags().String(flagSideChainId, "", "the id of side chain")
 	return cmd
 }
 
-func ShowFeeParamsCmd(cdc *wire.Codec) *cobra.Command {
+func ShowSideChainParamsCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "show-fees",
-		Short: "Show order book of the listed currency pair",
+		Use:   "side-params",
+		Short: "Show the params of the side chain",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			sideChainId := viper.GetString(flagSideChainId)
+			if sideChainId == "" {
+				return fmt.Errorf("missing side-chain-id")
+			}
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
@@ -122,17 +128,17 @@ func ShowFeeParamsCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var fees []types.FeeParam
-			err = cdc.UnmarshalBinaryLengthPrefixed(bz, &fees)
+			var params []types.SCParam
+			err = cdc.UnmarshalBinaryLengthPrefixed(bz, &params)
 			if err != nil {
 				return err
 			}
 
 			var output []byte
 			if format == types.JSONFORMAT {
-				output, err = json.MarshalIndent(fees, "", "\t")
+				output, err = json.MarshalIndent(params, "", "\t")
 			} else if format == types.AMINOFORMAT {
-				output, err = cdc.MarshalJSONIndent(fees, "", "\t")
+				output, err = cdc.MarshalJSONIndent(params, "", "\t")
 			}
 			if err != nil {
 				return err
@@ -143,5 +149,6 @@ func ShowFeeParamsCmd(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagFormat, types.AMINOFORMAT, fmt.Sprintf("the response format, options: [%s, %s]", types.AMINOFORMAT, types.JSONFORMAT))
+	cmd.Flags().String(flagSideChainId, "", "the id of side chain")
 	return cmd
 }

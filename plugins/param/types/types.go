@@ -1,10 +1,16 @@
 package types
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	oTypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	sType "github.com/cosmos/cosmos-sdk/x/stake/types"
+	"math"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
@@ -49,6 +55,10 @@ var (
 
 		"bsc_submit_evidence": {},
 		"side_chain_unjail":   {},
+
+		"side_submit_proposal": {},
+		"side_deposit":         {},
+		"side_vote":            {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{
@@ -197,6 +207,164 @@ func checkFeeParams(fees []FeeParam) error {
 	}
 	if numDexFeeParams > 1 {
 		return fmt.Errorf("have more than one DexFeeParam, actural %d", numDexFeeParams)
+	}
+	return nil
+}
+
+// ---------   Definition cross side chain prams change ------------------- //
+type CSCParamChanges struct {
+	Changes []CSCParamChange
+	ChainID string
+}
+
+type CSCParamChange struct {
+	Key    string `json:"key"` // the name of the parameter
+	Value  string `json:"value"`
+	Target string `json:"target"`
+
+	// Since byte slice is not friendly to show in proposal description, omit it.
+	ValueBytes  []byte `json:"-"` // the value of the parameter
+	TargetBytes []byte `json:"-"` // the address of the target contract
+}
+
+func (c *CSCParamChange) Check() error {
+	targetBytes, err := hex.DecodeString(c.Target)
+	if err != nil {
+		return fmt.Errorf("target is not hex encoded, err %v", err)
+	}
+	c.TargetBytes = targetBytes
+
+	valueBytes, err := hex.DecodeString(c.Value)
+	if err != nil {
+		return fmt.Errorf("value is not hex encoded, err %v", err)
+	}
+	c.ValueBytes = valueBytes
+	keyBytes := []byte(c.Key)
+	if len(keyBytes) <= 0 || len(keyBytes) > math.MaxUint8 {
+		return fmt.Errorf("the length of key exceed the limitation")
+	}
+	if len(c.ValueBytes) <= 0 || len(c.ValueBytes) > math.MaxUint8 {
+		return fmt.Errorf("the length of value exceed the limitation")
+	}
+	if len(c.TargetBytes) != sdk.AddrLen {
+		return fmt.Errorf("the length of target address is not %d", sdk.AddrLen)
+	}
+	return nil
+}
+
+//| Proposal type | key length | bytes of  key  | value length | value  | target addr |
+//|      1 byte   | 1 byte     |     N bytes    |   1 byte     | M bytes|  20 byte    |
+func (c *CSCParamChange) Serialize() []byte {
+	keyBytes := []byte(c.Key)
+	keyLength := uint8(len(keyBytes))
+	value := c.ValueBytes
+	valueLength := uint8(len(value))
+	totalLen := 3 + sdk.AddrLen + int(keyLength) + int(valueLength)
+
+	bz := make([]byte, totalLen)
+	// prepare the proposal type
+	start := 0
+	bz[start] = 0x00
+	start += 1
+	bz[start] = keyLength
+	start += 1
+	copy(bz[start:start+int(keyLength)], keyBytes)
+	start += int(keyLength)
+	bz[start] = valueLength
+	start += 1
+	copy(bz[start:start+int(valueLength)], value)
+	start += int(valueLength)
+	copy(bz[start:start+sdk.AddrLen], c.TargetBytes)
+	return bz
+}
+
+// ---------   Definition side chain prams change ------------------- //
+type SCParam interface {
+	Check() error
+	Value() interface{}
+	// native means weather the parameter stored in native store context or side chain store context
+	GetParamAttribute() (paramType string, native bool, exclusive bool)
+}
+
+type OracleParams struct {
+	oTypes.ProphecyParams
+}
+
+func (p *OracleParams) IsNative() bool {
+	return true
+}
+
+func (p *OracleParams) Value() interface{} {
+	return p.ProphecyParams
+}
+
+func (p *OracleParams) GetParamAttribute() (string, bool, bool) {
+	return "oracle", true, true
+}
+
+func (p *OracleParams) Check() error {
+	return p.ProphecyParams.UpdateCheck()
+}
+
+type StakeParams struct {
+	sType.Params
+}
+
+func (s *StakeParams) Check() error {
+	// only native token support so far, may extend in future.
+	if s.BondDenom != types.NativeTokenSymbol {
+		return fmt.Errorf("only native token is availabe as bond_denom so far")
+	}
+	return s.Params.UpdateCheck()
+}
+
+func (s *StakeParams) Value() interface{} {
+	return s.Params
+}
+
+func (s *StakeParams) GetParamAttribute() (string, bool, bool) {
+	return "stake", false, true
+}
+
+type SlashParams struct {
+	slashing.Params
+}
+
+func (s *SlashParams) Check() error {
+	return s.Params.UpdateCheck()
+}
+
+func (s *SlashParams) Value() interface{} {
+	return s.Params
+}
+
+func (s *SlashParams) GetParamAttribute() (string, bool, bool) {
+	return "slash", false, true
+}
+
+type SCChangeParams struct {
+	SCParams    []SCParam `json:"sc_params"`
+	Description string    `json:"description"`
+}
+
+func (s *SCChangeParams) Check() error {
+	if len(s.SCParams) == 0 {
+		return fmt.Errorf("the sc_params is empty")
+	}
+	paramSet := make(map[string]bool)
+	for _, sc := range s.SCParams {
+		if sc == nil {
+			return fmt.Errorf("sc_params contains empty element")
+		}
+		err := sc.Check()
+		if err != nil {
+			return err
+		}
+		paramType, _, exclusive := sc.GetParamAttribute()
+		if exist := paramSet[paramType]; exist && exclusive {
+			return fmt.Errorf("contains duplicated parmaType %s", paramType)
+		}
+		paramSet[paramType] = true
 	}
 	return nil
 }

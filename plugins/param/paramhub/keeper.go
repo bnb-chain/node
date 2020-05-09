@@ -2,11 +2,14 @@ package paramhub
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/params/subspace"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
@@ -16,30 +19,47 @@ import (
 var (
 	ParamStoreKeyLastFeeChangeProposalID = []byte("lastFeeChangeProposalID")
 	ParamStoreKeyFees                    = []byte("fees")
-	//Add other parameter store key here
+
+	// for side chain
+	ParamStoreKeyCSCLastParamsChangeProposalID = []byte("CSCLastParamsChangeProposalID")
+	ParamStoreKeySCLastParamsChangeProposalID  = []byte("SCLastParamsChangeProposalID")
 )
 
 const (
-	DefaultParamSpace = "paramhub"
+	NativeParamSpace = "paramhub"
+	SideParamSpace   = "sideParamHub"
 )
 
-func ParamTypeTable() params.TypeTable {
+func NativeParamTypeTable() params.TypeTable {
 	return params.NewTypeTable(
 		ParamStoreKeyLastFeeChangeProposalID, types.LastProposalID{},
 		ParamStoreKeyFees, []types.FeeParam{},
 	)
 }
 
+func SideParamTypeTable() params.TypeTable {
+	return params.NewTypeTable(
+		ParamStoreKeyCSCLastParamsChangeProposalID, types.LastProposalID{},
+		ParamStoreKeySCLastParamsChangeProposalID, types.LastProposalID{},
+	)
+}
+
 type Keeper struct {
 	params.Keeper
-	cdc        *codec.Codec
-	paramSpace params.Subspace
-	codespace  sdk.CodespaceType
+	cdc              *codec.Codec
+	nativeParamSpace params.Subspace
+	sideParamSpace   params.Subspace
+	codespace        sdk.CodespaceType
 
-	govKeeper gov.Keeper
+	// just for query
+	subscriberParamSpace []subspace.SubParamSpaceKey
 
-	updateCallbacks  []func(sdk.Context, []interface{})
-	genesisCallbacks []func(sdk.Context, types.GenesisState)
+	govKeeper *gov.Keeper
+	ibcKeeper *ibc.Keeper
+	scKeeper  *sidechain.Keeper
+
+	updateCallbacks  []func([]sdk.Context, []interface{})
+	genesisCallbacks []func(sdk.Context, interface{})
 	loadCallBacks    []func(sdk.Context, interface{})
 
 	logger tmlog.Logger
@@ -50,37 +70,105 @@ func NewKeeper(cdc *codec.Codec, key *sdk.KVStoreKey, tkey *sdk.TransientStoreKe
 	keeper := Keeper{
 		Keeper:           params.NewKeeper(cdc, key, tkey),
 		cdc:              cdc,
-		updateCallbacks:  make([]func(sdk.Context, []interface{}), 0),
-		genesisCallbacks: make([]func(sdk.Context, types.GenesisState), 0),
+		updateCallbacks:  make([]func([]sdk.Context, []interface{}), 0),
+		genesisCallbacks: make([]func(sdk.Context, interface{}), 0),
 		logger:           logger,
 	}
-	keeper.paramSpace = keeper.Subspace(DefaultParamSpace).WithTypeTable(ParamTypeTable())
+	keeper.nativeParamSpace = keeper.Subspace(NativeParamSpace).WithTypeTable(NativeParamTypeTable())
+	keeper.sideParamSpace = keeper.Subspace(SideParamSpace).WithTypeTable(SideParamTypeTable())
 	// Add global callback(belongs to no other plugin) here
 	keeper.registerFeeParamCallBack()
+	keeper.registerCSCParamsCallBack()
 	return &keeper
 }
 
-func (keeper *Keeper) SetGovKeeper(govKeeper gov.Keeper) {
+func (keeper *Keeper) SetGovKeeper(govKeeper *gov.Keeper) {
 	keeper.govKeeper = govKeeper
 }
 
+func (keeper *Keeper) SetupForSideChain(scKeeper *sidechain.Keeper, ibcKeeper *ibc.Keeper) {
+	keeper.scKeeper = scKeeper
+	keeper.ibcKeeper = ibcKeeper
+	keeper.initIbc()
+}
+
+func (keeper Keeper) initIbc() {
+	if keeper.ibcKeeper == nil {
+		return
+	}
+	err := keeper.ibcKeeper.RegisterChannel(IbcChannelName, IbcChannelId)
+	if err != nil {
+		panic(fmt.Sprintf("register ibc channel failed, channel=%s, err=%s", IbcChannelName, err.Error()))
+	}
+}
+
 func (keeper *Keeper) EndBreatheBlock(ctx sdk.Context) {
-	keeper.logger.Info("Sync params proposals.")
+	keeper.logger.Info("Sync breath block params proposals.")
 	changes := make([]interface{}, 0)
+	contexts := make([]sdk.Context, 0)
 	feeChange := keeper.getLastFeeChangeParam(ctx)
 	if feeChange != nil {
 		changes = append(changes, feeChange)
+		contexts = append(contexts, ctx)
 	}
-	// Add other param change here
+	if sdk.IsUpgrade(sdk.LaunchBscUpgrade) {
+		_, storePrefixes := keeper.scKeeper.GetAllSideChainPrefixes(ctx)
+		scChangeItems := make([]types.SCParam, 0)
+		scChangeContexts := make([]sdk.Context, 0)
+		for i := range storePrefixes {
+			sideChainCtx := ctx.WithSideChainKeyPrefix(storePrefixes[i])
+			scParamChanges := keeper.getLastSCParamChanges(sideChainCtx)
+			for _, change := range scParamChanges {
+				if err := change.Check(); err != nil {
+					keeper.logger.Error("scParamChanges check failed will,skip", "scParamChanges", change, "err", err)
+					continue
+				}
+				for _, c := range change.SCParams {
+					scChangeItems = append(scChangeItems, c)
+					if _, native, _ := c.GetParamAttribute(); native {
+						scChangeContexts = append(scChangeContexts, ctx)
+					} else {
+						scChangeContexts = append(scChangeContexts, sideChainCtx)
+					}
+				}
+			}
+		}
+		// reverse
+		for j := len(scChangeItems) - 1; j >= 0; j-- {
+			changes = append(changes, scChangeItems[j].Value())
+			contexts = append(contexts, scChangeContexts[j])
+		}
+	}
 	if len(changes) != 0 {
-		keeper.notifyOnUpdate(ctx, changes)
+		keeper.notifyOnUpdate(contexts, changes)
 	}
 	return
 }
 
-func (keeper *Keeper) notifyOnUpdate(ctx sdk.Context, changes []interface{}) {
+func (keeper *Keeper) EndBlock(ctx sdk.Context) {
+	keeper.logger.Info("Sync params proposals.")
+	changes := make([]interface{}, 0)
+	contexts := make([]sdk.Context, 0)
+	if sdk.IsUpgrade(sdk.LaunchBscUpgrade) && keeper.scKeeper != nil {
+		sideChainIds, storePrefixes := keeper.scKeeper.GetAllSideChainPrefixes(ctx)
+		for i := range storePrefixes {
+			sideChainCtx := ctx.WithSideChainKeyPrefix(storePrefixes[i])
+			cscChanges := keeper.getLastCSCParamChanges(sideChainCtx)
+			if len(cscChanges) > 0 {
+				changes = append(changes, types.CSCParamChanges{Changes: cscChanges, ChainID: sideChainIds[i]})
+				contexts = append(contexts, ctx)
+			}
+		}
+	}
+	if len(changes) != 0 {
+		keeper.notifyOnUpdate(contexts, changes)
+	}
+	return
+}
+
+func (keeper *Keeper) notifyOnUpdate(contexts []sdk.Context, changes []interface{}) {
 	for _, c := range keeper.updateCallbacks {
-		c(ctx, changes)
+		c(contexts, changes)
 	}
 }
 
@@ -90,7 +178,7 @@ func (keeper *Keeper) notifyOnLoad(ctx sdk.Context, load interface{}) {
 	}
 }
 
-func (keeper *Keeper) notifyOnGenesis(ctx sdk.Context, state types.GenesisState) {
+func (keeper *Keeper) notifyOnGenesis(ctx sdk.Context, state interface{}) {
 	for _, c := range keeper.genesisCallbacks {
 		c(ctx, state)
 	}
@@ -102,62 +190,27 @@ func (keeper *Keeper) InitGenesis(ctx sdk.Context, params types.GenesisState) {
 	keeper.setLastFeeChangeProposalId(ctx, types.LastProposalID{0})
 }
 
-// For fee parameters
-func (keeper *Keeper) getLastFeeChangeProposalId(ctx sdk.Context) types.LastProposalID {
-	var id types.LastProposalID
-	keeper.paramSpace.Get(ctx, ParamStoreKeyLastFeeChangeProposalID, &id)
-	return id
-}
-
-func (keeper *Keeper) setLastFeeChangeProposalId(ctx sdk.Context, id types.LastProposalID) {
-	keeper.paramSpace.Set(ctx, ParamStoreKeyLastFeeChangeProposalID, &id)
-	return
-}
-
-func (keeper *Keeper) getLastFeeChangeParam(ctx sdk.Context) []types.FeeParam {
-	var latestProposal *gov.Proposal
-	lastProposalId := keeper.getLastFeeChangeProposalId(ctx)
-	keeper.govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, lastProposalId.ProposalID, true, func(proposal gov.Proposal) bool {
-		if proposal.GetProposalType() == gov.ProposalTypeFeeChange {
-			latestProposal = &proposal
-			return true
-		}
-		return false
-	})
-	if latestProposal != nil {
-		var changeParam types.FeeChangeParams
-		strProposal := (*latestProposal).GetDescription()
-		err := keeper.cdc.UnmarshalJSON([]byte(strProposal), &changeParam)
-		if err != nil {
-			panic(fmt.Sprintf("Get broken data when unmarshal FeeChangeParams msg. %v", err))
-		}
-		// setLastFeeProposal first. If invalid, the proposal before it will not been processed too.
-		keeper.setLastFeeChangeProposalId(ctx, types.LastProposalID{(*latestProposal).GetProposalID()})
-		if err := changeParam.Check(); err != nil {
-			keeper.logger.Error("The latest fee param change proposal is invalid.", "proposalId", (*latestProposal).GetProposalID(), "param", changeParam, "err", err)
-			return nil
-		}
-		return changeParam.FeeParams
-	}
-	return nil
-}
-
 func (keeper *Keeper) Load(ctx sdk.Context) {
 	keeper.loadFeeParam(ctx)
-	// Add other param load here
 }
 
-func (keeper *Keeper) SubscribeParamChange(u func(sdk.Context, []interface{}), g func(sdk.Context, types.GenesisState), l func(sdk.Context, interface{})) {
-	keeper.SubscribeUpdateEvent(u)
-	keeper.SubscribeGenesisEvent(g)
-	keeper.SubscribeLoadEvent(l)
+func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.SubParamSpaceKey, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
+	if u != nil {
+		keeper.SubscribeUpdateEvent(u)
+	}
+	if g != nil {
+		keeper.SubscribeGenesisEvent(g)
+	}
+	if l != nil {
+		keeper.SubscribeLoadEvent(l)
+	}
 }
 
-func (keeper *Keeper) SubscribeUpdateEvent(c func(sdk.Context, []interface{})) {
+func (keeper *Keeper) SubscribeUpdateEvent(c func([]sdk.Context, []interface{})) {
 	keeper.updateCallbacks = append(keeper.updateCallbacks, c)
 }
 
-func (keeper *Keeper) SubscribeGenesisEvent(c func(sdk.Context, types.GenesisState)) {
+func (keeper *Keeper) SubscribeGenesisEvent(c func(sdk.Context, interface{})) {
 	keeper.genesisCallbacks = append(keeper.genesisCallbacks, c)
 }
 

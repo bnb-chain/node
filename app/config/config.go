@@ -2,7 +2,6 @@ package config
 
 import (
 	"bytes"
-	"math"
 	"path/filepath"
 	"text/template"
 
@@ -335,10 +334,10 @@ type CrossChainConfig struct {
 
 func defaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{
-		IbcChainId: 0,
+		IbcChainId: 1,
 
 		BscChainId:    "bsc",
-		BscIbcChainId: 0,
+		BscIbcChainId: 2,
 	}
 }
 
@@ -410,7 +409,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       1,
 		ListingRuleUpgradeHeight:   1,
 		FixZeroBalanceHeight:       1,
-		LaunchBscUpgradeHeight:     math.MaxInt64,
+		LaunchBscUpgradeHeight:     1,
 	}
 }
 

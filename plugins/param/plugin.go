@@ -70,6 +70,10 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 
 			&param.FixedFeeParams{MsgType: slashing.MsgBscSubmitEvidence{}.Type(), Fee: BscSubmitEvidenceFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: slashing.MsgSideChainUnjail{}.Type(), Fee: SideChainUnjail, FeeFor: sdk.FeeForProposer},
+
+			&param.FixedFeeParams{MsgType: gov.MsgSideChainSubmitProposal{}.Type(), Fee: SideProposeFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: gov.MsgSideChainDeposit{}.Type(), Fee: SideDepositFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: gov.MsgSideChainVote{}.Type(), Fee: SideVoteFee, FeeFor: sdk.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
@@ -80,6 +84,11 @@ func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
 	return
 }
 
+func EndBlock(ctx sdk.Context, paramHub *ParamHub) {
+	paramHub.EndBlock(ctx)
+	return
+}
+
 func init() {
 	// CalculatorsGen is defined in a common package which can't import app package.
 	// Reasonable to init here, since fee param drive the calculator.
@@ -87,6 +96,9 @@ func init() {
 		gov.MsgSubmitProposal{}.Type():             fees.FixedFeeCalculatorGen,
 		gov.MsgDeposit{}.Type():                    fees.FixedFeeCalculatorGen,
 		gov.MsgVote{}.Type():                       fees.FixedFeeCalculatorGen,
+		gov.MsgSideChainSubmitProposal{}.Type():    fees.FixedFeeCalculatorGen,
+		gov.MsgSideChainDeposit{}.Type():           fees.FixedFeeCalculatorGen,
+		gov.MsgSideChainVote{}.Type():              fees.FixedFeeCalculatorGen,
 		stake.MsgCreateValidator{}.Type():          fees.FixedFeeCalculatorGen,
 		stake.MsgRemoveValidator{}.Type():          fees.FixedFeeCalculatorGen,
 		stake.MsgCreateSideChainValidator{}.Type(): fees.FixedFeeCalculatorGen,

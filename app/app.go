@@ -43,6 +43,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
+	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
@@ -84,13 +85,13 @@ type BinanceChain struct {
 	AccountKeeper  auth.AccountKeeper
 	TokenMapper    tkstore.Mapper
 	ValAddrCache   *ValAddrCache
-	stakeKeeper    stake.Keeper
+	StakeKeeper    stake.Keeper
 	slashKeeper    slashing.Keeper
 	govKeeper      gov.Keeper
 	timeLockKeeper timelock.Keeper
 	swapKeeper     swap.Keeper
-	ibcKeeper      ibc.Keeper
-	scKeeper       sidechain.Keeper
+	IbcKeeper      ibc.Keeper
+	ScKeeper       sidechain.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -137,34 +138,33 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
-	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
-	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey)
+	app.IbcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
+	app.ScKeeper = sidechain.NewKeeper(common.SideChainStoreKey)
 
 	app.slashKeeper = slashing.NewKeeper(
 		cdc,
-		common.SlashingStoreKey, &app.stakeKeeper,
+		common.SlashingStoreKey, &app.StakeKeeper,
 		app.ParamHub.Subspace(slashing.DefaultParamspace),
 		app.RegisterCodespace(slashing.DefaultCodespace),
 		app.CoinKeeper,
 	)
 
-	app.stakeKeeper = stake.NewKeeper(
+	app.StakeKeeper = stake.NewKeeper(
 		cdc,
 		common.StakeStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
 
-	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
+	app.ValAddrCache = NewValAddrCache(app.StakeKeeper)
 
 	app.govKeeper = gov.NewKeeper(
 		cdc,
 		common.GovStoreKey,
-		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamSpace), app.CoinKeeper, app.stakeKeeper,
+		app.ParamHub.Keeper, app.ParamHub.Subspace(gov.DefaultParamSpace), app.CoinKeeper, app.StakeKeeper,
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
 		timelock.DefaultCodespace)
@@ -295,6 +295,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgSideChainUndelegate{}.Type(),
 		slashing.MsgBscSubmitEvidence{}.Type(),
 		slashing.MsgSideChainUnjail{}.Type(),
+		gov.MsgSideChainSubmitProposal{}.Type(),
+		gov.MsgSideChainDeposit{}.Type(),
+		gov.MsgSideChainVote{}.Type(),
 	)
 }
 
@@ -345,6 +348,7 @@ func (app *BinanceChain) initPlugins() {
 	app.initSideChain()
 	app.initIbc()
 	app.initDex()
+	app.initGov()
 	app.initGovHooks()
 	app.initStaking()
 	app.initSlashing()
@@ -358,12 +362,12 @@ func (app *BinanceChain) initPlugins() {
 	// we need to add handlers after all keepers initialized
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.CoinKeeper)).
-		AddRoute("stake", stake.NewHandler(app.stakeKeeper, app.govKeeper)).
+		AddRoute("stake", stake.NewHandler(app.StakeKeeper, app.govKeeper)).
 		AddRoute("slashing", slashing.NewHandler(app.slashKeeper)).
 		AddRoute("gov", gov.NewHandler(app.govKeeper))
 
 	app.QueryRouter().AddRoute("gov", gov.NewQuerier(app.govKeeper))
-	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.stakeKeeper, app.Codec))
+	app.QueryRouter().AddRoute("stake", stake.NewQuerier(app.StakeKeeper, app.Codec))
 	app.QueryRouter().AddRoute("slashing", slashing.NewQuerier(app.slashKeeper, app.Codec))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
 	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
@@ -376,35 +380,58 @@ func (app *BinanceChain) initPlugins() {
 func (app *BinanceChain) initSideChain() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		bscStorePrefix := []byte{0x99}
-		app.scKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
+		app.ScKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
 	})
 }
 
 func (app *BinanceChain) initStaking() {
-	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
+	app.StakeKeeper.SetupForSideChain(&app.ScKeeper, &app.IbcKeeper)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
-		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
-		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		stake.MigratePowerRankKey(ctx, app.StakeKeeper)
+		storePrefix := app.ScKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
-		app.stakeKeeper.SetParams(newCtx, stake.Params{
+		app.StakeKeeper.SetParams(newCtx, stake.Params{
 			UnbondingTime:       60 * 60 * 24 * time.Second, // 1 day
 			MaxValidators:       21,
 			BondDenom:           types.NativeTokenSymbol,
 			MinSelfDelegation:   20000e8,
 			MinDelegationChange: 1e8,
 		})
-		app.stakeKeeper.SetPool(newCtx, stake.Pool{
+		app.StakeKeeper.SetPool(newCtx, stake.Pool{
 			// TODO: optimize these parameters
 			LooseTokens: sdk.NewDec(5e15),
 		})
 	})
-	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+	app.StakeKeeper.SubscribeParamChange(app.ParamHub)
+	app.StakeKeeper = app.StakeKeeper.WithHooks(app.slashKeeper.Hooks())
+}
+
+func (app *BinanceChain) initGov() {
+	app.govKeeper.SetupForSideChain(&app.ScKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.ScKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		err := app.govKeeper.SetInitialProposalID(newCtx, 1)
+		if err != nil {
+			panic(err)
+		}
+		app.govKeeper.SetDepositParams(newCtx, gov.DepositParams{
+			MinDeposit:       sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2000e8)},
+			MaxDepositPeriod: time.Duration(2*24) * time.Hour, // 2 days
+		})
+		app.govKeeper.SetTallyParams(newCtx, gov.TallyParams{
+			Quorum:    sdk.NewDecWithPrec(5, 1),
+			Threshold: sdk.NewDecWithPrec(5, 1),
+			Veto:      sdk.NewDecWithPrec(334, 3),
+		})
+	})
 }
 
 func (app *BinanceChain) initSlashing() {
-	app.slashKeeper.SetSideChain(&app.scKeeper)
+	app.slashKeeper.SetSideChain(&app.ScKeeper)
+	app.slashKeeper.SubscribeParamChange(app.ParamHub)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
-		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		storePrefix := app.ScKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.slashKeeper.SetParams(ctx, slashing.Params{
 			BscSideChainId: ServerContext.BscChainId,
@@ -426,9 +453,9 @@ func (app *BinanceChain) initSlashing() {
 
 func (app *BinanceChain) initIbc() {
 	// set up IBC chainID for BBC
-	app.ibcKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
+	app.IbcKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
 	// set up IBC chainID for BSC
-	err := app.ibcKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
+	err := app.IbcKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
 	if err != nil {
 		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", ServerContext.BscChainId, err.Error()))
 	}
@@ -437,17 +464,28 @@ func (app *BinanceChain) initIbc() {
 func (app *BinanceChain) initGovHooks() {
 	listHooks := list.NewListHooks(app.DexKeeper, app.TokenMapper)
 	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	cscParamChangeHooks := param.NewCSCParamsChangeHook(app.Codec)
+	scParamChangeHooks := param.NewSCParamsChangeHook(app.Codec)
 	delistHooks := list.NewDelistHooks(app.DexKeeper)
 	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeCSCParamsChange, cscParamChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeSCParamsChange, scParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 }
 
 func (app *BinanceChain) initParams() {
-	if app.CheckState == nil || app.CheckState.Ctx.BlockHeight() == 0 {
-		return
+	app.ParamHub.SetGovKeeper(&app.govKeeper)
+	app.ParamHub.SetupForSideChain(&app.ScKeeper, &app.IbcKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.ScKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.ParamHub.SetLastSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
+		app.ParamHub.SetLastCSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
+	})
+	if app.CheckState != nil && app.CheckState.Ctx.BlockHeight() != 0 {
+		app.ParamHub.Load(app.CheckState.Ctx)
 	}
-	app.ParamHub.Load(app.CheckState.Ctx)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -476,7 +514,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 			selfDelegationAddrs, DefaultSelfDelegationToken.Amount)
 
 		app.ParamHub.InitGenesis(ctx, genesisState.ParamGenesis)
-		validators, err := stake.InitGenesis(ctx, app.stakeKeeper, genesisState.StakeData)
+		validators, err := stake.InitGenesis(ctx, app.StakeKeeper, genesisState.StakeData)
 		gov.InitGenesis(ctx, app.govKeeper, genesisState.GovData)
 
 		if err != nil {
@@ -497,7 +535,7 @@ func (app *BinanceChain) initChainerFn() sdk.InitChainer {
 					panic(res.Log)
 				}
 			}
-			_, validators = app.stakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
+			_, validators = app.StakeKeeper.ApplyAndReturnValidatorSetUpdates(ctx)
 		}
 
 		// sanity check
@@ -645,18 +683,18 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	app.DexKeeper.StoreTradePrices(ctx)
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
-	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
+	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
 	if app.publicationConfig.PublishOrderUpdates {
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
-
+	param.EndBlock(ctx, app.ParamHub)
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
 	if isBreatheBlock {
-		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
+		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.StakeKeeper)
 	} else if ctx.RouterCallRecord()["stake"] {
-		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
+		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.StakeKeeper)
 	}
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
@@ -682,7 +720,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
-		Events:           append(tags.ToEvents(), ctx.EventManager().ABCIEvents()...),
+		Events:           ctx.EventManager().ABCIEvents(),
 	}
 }
 

@@ -7,6 +7,14 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
+const (
+	flagTitle        = "title"
+	flagDescription  = "description"
+	flagDeposit      = "deposit"
+	flagVotingPeriod = "voting-period"
+	flagSideChainId  = "side-chain-id"
+)
+
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 
 	dexCmd := &cobra.Command{
@@ -16,6 +24,12 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	dexCmd.AddCommand(
 		client.PostCommands(
 			SubmitFeeChangeProposalCmd(cdc))...)
+	dexCmd.AddCommand(
+		client.PostCommands(
+			SubmitCSCParamChangeProposalCmd(cdc))...)
+	dexCmd.AddCommand(
+		client.PostCommands(
+			SubmitSCParamChangeProposalCmd(cdc))...)
 	dexCmd.AddCommand(
 		client.GetCommands(
 			ShowFeeParamsCmd(cdc))...)

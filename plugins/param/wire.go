@@ -12,4 +12,10 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(&types.FixedFeeParams{}, "params/FixedFeeParams", nil)
 	cdc.RegisterConcrete(&types.TransferFeeParam{}, "params/TransferFeeParams", nil)
 	cdc.RegisterConcrete(&types.DexFeeParam{}, "params/DexFeeParam", nil)
+
+	cdc.RegisterInterface((*types.SCParam)(nil), nil)
+	cdc.RegisterConcrete(&types.OracleParams{}, "params/OracleParams", nil)
+	cdc.RegisterConcrete(&types.StakeParams{}, "params/StakeParams", nil)
+	cdc.RegisterConcrete(&types.SlashParams{}, "params/SlashParams", nil)
+
 }

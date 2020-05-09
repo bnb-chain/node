@@ -358,7 +358,7 @@ func (kp *Keeper) matchAndDistributeTradesForSymbol(symbol string, height, times
 
 func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
 	hub.SubscribeParamChange(
-		func(ctx sdk.Context, changes []interface{}) {
+		func(_ []sdk.Context, changes []interface{}) {
 			for _, c := range changes {
 				switch change := c.(type) {
 				case []paramTypes.FeeParam:
@@ -371,12 +371,18 @@ func (kp *Keeper) SubscribeParamChange(hub *paramhub.Keeper) {
 				}
 			}
 		},
-		func(context sdk.Context, state paramTypes.GenesisState) {
-			feeConfig := ParamToFeeConfig(state.FeeGenesis)
-			if feeConfig != nil {
-				kp.FeeManager.UpdateConfig(*feeConfig)
-			} else {
-				panic("Genesis with no dex fee config ")
+		nil,
+		func(context sdk.Context, iState interface{}) {
+			switch state := iState.(type) {
+			case paramTypes.GenesisState:
+				feeConfig := ParamToFeeConfig(state.FeeGenesis)
+				if feeConfig != nil {
+					kp.FeeManager.UpdateConfig(*feeConfig)
+				} else {
+					panic("Genesis with no dex fee config ")
+				}
+			default:
+				kp.logger.Debug("Receive param genesis state that not interested.")
 			}
 		},
 		func(context sdk.Context, iLoad interface{}) {
