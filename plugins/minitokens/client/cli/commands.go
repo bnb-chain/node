@@ -17,7 +17,7 @@ const (
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 
 	miniTokenCmd := &cobra.Command{
-		Use:   "miniToken",
+		Use:   "mini-token",
 		Short: "issue or view mini tokens",
 		Long:  ``,
 	}

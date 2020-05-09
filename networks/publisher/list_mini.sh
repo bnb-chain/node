@@ -25,7 +25,7 @@ scripthome="${src}/networks/publisher"
 ############################ END ##########################
 
 #x1mini_symbol="x1mini-ED3"
-result=$(${cli} miniToken issue --from=zc --token-name="Y2NINI Coin" --symbol=Y2N --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
+result=$(${cli} mini-token issue --from=zc --token-name="Y2NINI Coin" --symbol=Y2N --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
 x1mini_symbol=$(echo "${result}" | tail -n 1 | grep -o "Y2N-[0-9A-Z]*")
 echo ${x1mini_symbol}
 sleep 2
