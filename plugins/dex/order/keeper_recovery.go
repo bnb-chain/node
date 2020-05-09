@@ -124,6 +124,7 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 		return height, nil
 	}
 
+	upgrade.Mgr.SetHeight(height)
 	kvStore := ctx.KVStore(kp.storeKey)
 	for _, pair := range allPairs {
 		symbol := pair.GetSymbol()
