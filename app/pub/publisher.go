@@ -232,10 +232,10 @@ func publishExecutionResult(publisher MarketDataPublisher, height int64, timesta
 		executionResultsMsg.StakeUpdates = *stakeUpdates
 	}
 	if numOfMiniOrders > 0 {
-		executionResultsMsg.MiniOrders = Orders{numOfOrders, miniOrders}
+		executionResultsMsg.MiniOrders = Orders{numOfMiniOrders, miniOrders}
 	}
 	if numOfMiniTrades > 0 {
-		executionResultsMsg.MiniTrades = trades{numOfTrades, miniTrades}
+		executionResultsMsg.MiniTrades = trades{numOfMiniTrades, miniTrades}
 	}
 
 	publisher.publish(&executionResultsMsg, executionResultTpe, height, timestamp)
