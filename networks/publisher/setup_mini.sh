@@ -86,7 +86,7 @@ result=$(expect ${scripthome}/recover.exp "${secret}" "zc" "${clipath}" "${cliho
 result=$(expect ${scripthome}/add_key.exp "zz" "${clipath}" "${clihome}")
 zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnb[0-9a-zA-Z]*" | grep -v "bnbp")
 
-#sleep 5
+sleep 5
 ## issue&list NNB and ZCB for ordergen
 #result=$(${cli} token issue --from=zc --token-name="New BNB Coin" --symbol=NNB --total-supply=2000000000000000 --chain-id ${chain_id})
 #nnb_symbol=$(echo "${result}" | tail -n 1 | grep -o "NNB-[0-9A-Z]*")
@@ -110,5 +110,5 @@ zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnb[0-9a-zA-Z]*" | grep
 #sleep 6
 #${cli} dex list -s=${zcb_symbol} --quote-asset-symbol=BNB --init-price=1000000000 --from=zc --chain-id ${chain_id} --proposal-id 2
 #sleep 1
-#${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000:BNB --chain-id ${chain_id}
+${cli} send --from=zc --to=${zz_addr} --amount=1000000000000000:BNB --chain-id ${chain_id}
 #sleep 5

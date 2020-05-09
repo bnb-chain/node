@@ -24,13 +24,13 @@ cli="${clipath} --home ${clihome}"
 scripthome="${src}/networks/publisher"
 ############################ END ##########################
 
-#x1mini_symbol="x1mini-ED3"
-result=$(${cli} mini-token issue --from=zc --token-name="X1M Coin" --symbol=X1M --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
-x1mini_symbol=$(echo "${result}" | tail -n 1 | grep -o "X1M-[0-9A-Z]*")
-echo ${x1mini_symbol}
+#Y2Bini_symbol="Y2Bini-ED3"
+result=$(${cli} mini-token issue --from=zc --token-name="Y2B Coin" --symbol=Y2B --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
+Y2Bini_symbol=$(echo "${result}" | tail -n 1 | grep -o "Y2B-[0-9A-Z]*")
+echo ${Y2Bini_symbol}
 sleep 2
-echo 1234qwerasdf|${cli} dex list-mini -s=${x1mini_symbol} --quote-asset-symbol=BNB --init-price=100000000 --from=zc --chain-id ${chain_id}
+echo 1234qwerasdf|${cli} dex list-mini -s=${Y2Bini_symbol} --quote-asset-symbol=BNB --init-price=100000000 --from=zc --chain-id ${chain_id}
 sleep 1
 zz_addr=$(${cli} keys list | grep "zz.*local" | grep -o "bnb[0-9a-zA-Z]*" | grep -v "bnbp")
-echo 1234qwerasdf|${cli} send --from=zc --to=${zz_addr} --amount=200000000000:${x1mini_symbol} --chain-id ${chain_id}
+echo 1234qwerasdf|${cli} send --from=zc --to=${zz_addr} --amount=200000000000:${Y2Bini_symbol} --chain-id ${chain_id}
 sleep 5
