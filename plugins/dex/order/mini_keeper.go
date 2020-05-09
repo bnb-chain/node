@@ -42,7 +42,7 @@ func NewMiniOrderKeeper() IDexOrderKeeper {
 
 //override
 func (kp *MiniOrderKeeper) support(pair string) bool {
-	if !sdk.IsUpgradeHeight(upgrade.BEP8) {
+	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return false
 	}
 	return dexUtils.IsMiniTokenTradingPair(pair)
@@ -50,7 +50,7 @@ func (kp *MiniOrderKeeper) support(pair string) bool {
 
 //override
 func (kp *MiniOrderKeeper) supportUpgradeVersion() bool {
-	return sdk.IsUpgradeHeight(upgrade.BEP8)
+	return sdk.IsUpgrade(upgrade.BEP8)
 }
 
 func (kp *MiniOrderKeeper) supportPairType(pairType SymbolPairType) bool {

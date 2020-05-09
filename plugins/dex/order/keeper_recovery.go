@@ -72,7 +72,7 @@ func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedS
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
 		var snapshot OrderBookSnapshot
-		if sdk.IsUpgradeHeight(upgrade.BEP8) {
+		if sdk.IsUpgrade(upgrade.BEP8) {
 			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice, LastMatchHeight: eng.LastMatchHeight}
 		} else {
 			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
@@ -158,7 +158,7 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
 		}
 		eng.LastTradePrice = ob.LastTradePrice
-		if sdk.IsUpgradeHeight(upgrade.BEP8) {
+		if sdk.IsUpgrade(upgrade.BEP8) {
 			eng.LastMatchHeight = ob.LastMatchHeight
 		}
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)

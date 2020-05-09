@@ -1081,7 +1081,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 }
 
 func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
-	if sdk.IsUpgradeHeight(upgrade.BEP8) {
+	if sdk.IsUpgrade(upgrade.BEP8) {
 		return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
 	}
 	return false
