@@ -66,7 +66,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.SupplyRangeType(msg.TokenType).UpperBound() {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d ~ %d", types.MiniTokenMinTotalSupply, types.SupplyRangeType(msg.TokenType).UpperBound()))
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinTotalSupply, types.SupplyRangeType(msg.TokenType).UpperBound()))
 	}
 
 	return nil

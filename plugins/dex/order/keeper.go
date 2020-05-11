@@ -1001,7 +1001,6 @@ func (kp *DexKeeper) ValidateOrder(context sdk.Context, account sdk.Account, msg
 	return fmt.Errorf("symbol:%s is not supported", msg.Symbol)
 }
 
-
 func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportPairType(pairType) {
@@ -1081,7 +1080,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 }
 
 func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
-	if sdk.IsUpgradeHeight(upgrade.BEP8) {
+	if sdk.IsUpgrade(upgrade.BEP8) {
 		return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
 	}
 	return false

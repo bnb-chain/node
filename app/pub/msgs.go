@@ -98,8 +98,8 @@ type ExecutionResults struct {
 	Orders       Orders
 	Proposals    Proposals
 	StakeUpdates StakeUpdates
-	miniTrades   trades
-	miniOrders   Orders
+	MiniTrades   trades
+	MiniOrders   Orders
 }
 
 func (msg *ExecutionResults) String() string {
@@ -123,11 +123,11 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 	if msg.StakeUpdates.NumOfMsgs > 0 {
 		native["stakeUpdates"] = map[string]interface{}{"org.binance.dex.model.avro.StakeUpdates": msg.StakeUpdates.ToNativeMap()}
 	}
-	if msg.miniTrades.NumOfMsgs > 0 {
-		native["miniTrades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.miniTrades.ToNativeMap()}
+	if msg.MiniTrades.NumOfMsgs > 0 {
+		native["miniTrades"] = map[string]interface{}{"org.binance.dex.model.avro.Trades": msg.MiniTrades.ToNativeMap()}
 	}
-	if msg.miniOrders.NumOfMsgs > 0 {
-		native["miniOrders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.miniOrders.ToNativeMap()}
+	if msg.MiniOrders.NumOfMsgs > 0 {
+		native["miniOrders"] = map[string]interface{}{"org.binance.dex.model.avro.Orders": msg.MiniOrders.ToNativeMap()}
 	}
 	return native
 }
@@ -135,7 +135,7 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	miniOrders := msg.miniOrders.EssentialMsg()
+	miniOrders := msg.MiniOrders.EssentialMsg()
 	//TODO output other fields: trades, stakeUpdate etc.
 	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\nminiOrders:\n%s\n", msg.Height, msg.Timestamp, orders, miniOrders)
 }
@@ -148,7 +148,7 @@ func (msg *ExecutionResults) EmptyCopy() AvroOrJsonMsg {
 		}
 	}
 	var nonExpiredMiniOrders []*Order
-	for _, order := range msg.miniOrders.Orders {
+	for _, order := range msg.MiniOrders.Orders {
 		if order.Status != orderPkg.Expired {
 			nonExpiredMiniOrders = append(nonExpiredMiniOrders, order)
 		}

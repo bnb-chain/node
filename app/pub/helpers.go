@@ -22,6 +22,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.DexKeeper, tradesToPublish []*Trade, pairType orderPkg.SymbolPairType) []string {
@@ -324,10 +325,11 @@ func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, trad
 				TickType:   int(trade.TickType),
 			}
 			tradeIdx += 1
-			if types.IsMiniTokenSymbol(symbol) {
+			if utils.IsMiniTokenTradingPair(symbol) {
 				miniTradesToPublish = append(miniTradesToPublish, t)
+			}else {
+				tradesToPublish = append(tradesToPublish, t)
 			}
-			tradesToPublish = append(tradesToPublish, t)
 		}
 	}
 	return tradesToPublish, miniTradesToPublish

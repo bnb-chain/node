@@ -4,7 +4,7 @@
 home=$HOME
 src="${home}/go/src/github.com/binance-chain/node"
 deamonhome="${home}/.bnbchaind"
-witnesshome="${home}/.bnbchaind_witness"
+witnesshome="${home}/.bnbchaind_publisher"
 clihome="${home}/.bnbcli"
 chain_id='test-chain-n4b735'
 echo $src

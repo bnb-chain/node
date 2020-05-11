@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 func NewHandler(kp Keeper) sdk.Handler {
@@ -29,9 +30,11 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
-	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
-	if symbolError != nil {
-		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+		}
 	}
 	blockTime := ctx.BlockHeader().Time.Unix()
 	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
@@ -67,9 +70,11 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
-	symbolError := types.ValidateMapperTokenCoins(msg.Amount)
-	if symbolError != nil {
-		return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		symbolError := types.ValidateMapperTokenCoins(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error()).Result()
+		}
 	}
 	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
