@@ -3,11 +3,8 @@ package types
 import (
 	"fmt"
 	"math/big"
-	"reflect"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // SmartChainAddress defines a standard smart chain address
@@ -48,5 +45,10 @@ func (addr SmartChainAddress) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshals an smart chain address
 func (addr *SmartChainAddress) UnmarshalJSON(input []byte) error {
-	return hexutil.UnmarshalFixedJSON(reflect.TypeOf(SmartChainAddress{}), input, addr[:])
+	hexBytes, err := sdk.HexDecode(string(input[1 : len(input)-1]))
+	if err != nil {
+		return err
+	}
+	addr.SetBytes(hexBytes)
+	return nil
 }

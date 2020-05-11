@@ -7,7 +7,6 @@ require (
 	github.com/cosmos/cosmos-sdk v0.25.0
 	github.com/deathowl/go-metrics-prometheus v0.0.0-20170731161557-091131e49c33
 	github.com/eapache/go-resiliency v1.1.0
-	github.com/ethereum/go-ethereum v1.9.10
 	github.com/go-kit/kit v0.9.0
 	github.com/google/btree v1.0.0
 	github.com/gorilla/mux v1.7.3
@@ -18,9 +17,9 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/viper v1.6.2
+	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
-	github.com/tendermint/go-amino v0.15.1
+	github.com/tendermint/go-amino v0.15.0
 	github.com/tendermint/iavl v0.12.4
 	github.com/tendermint/tendermint v0.32.3
 	go.uber.org/ratelimit v0.1.0

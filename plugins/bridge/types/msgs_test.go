@@ -5,15 +5,19 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
 
+func BytesToAddress(b []byte) SmartChainAddress {
+	var a SmartChainAddress
+	a.SetBytes(b)
+	return a
+}
 func TestBindMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
-	nonEmptySmartChainAddr := SmartChainAddress(common.BytesToAddress([]byte{1}))
-	emptySmartChainAddr := SmartChainAddress(common.BytesToAddress([]byte{0}))
+	nonEmptySmartChainAddr := SmartChainAddress(BytesToAddress([]byte{1}))
+	emptySmartChainAddr := SmartChainAddress(BytesToAddress([]byte{0}))
 
 	tests := []struct {
 		bindMsg      BindMsg
