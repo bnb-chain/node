@@ -112,8 +112,11 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 
 	isIdentical := bindRequest.Symbol == updateBindClaim.Symbol &&
 		bindRequest.ContractAddress.String() == updateBindClaim.ContractAddress.String()
+	if !isIdentical {
+		return sdk.Tags{}, types.ErrInvalidClaim("claim is not identical to bind request")
+	}
 
-	if isIdentical && updateBindClaim.Status == types.BindStatusSuccess {
+	if updateBindClaim.Status == types.BindStatusSuccess {
 		sdkErr := hooks.bridgeKeeper.TokenMapper.UpdateBind(ctx, bindRequest.Symbol,
 			bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 
@@ -132,13 +135,12 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 
 		_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
 			sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: calibratedAmount}})
+		if sdkErr != nil {
+			return sdk.Tags{}, sdkErr
+		}
 
 		if ctx.IsDeliverTx() {
 			hooks.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-		}
-
-		if sdkErr != nil {
-			return sdk.Tags{}, sdkErr
 		}
 	}
 
