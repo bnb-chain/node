@@ -32,7 +32,7 @@ func NewHandler(tokenMapper store.MiniTokenMapper, keeper bank.Keeper) sdk.Handl
 func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
 	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "miniToken", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
+	logger := log.With("module", "mini-token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
 	var suffix string
 
 	if !sdk.IsUpgrade(upgrade.BEP8) {

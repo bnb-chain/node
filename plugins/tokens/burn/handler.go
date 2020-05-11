@@ -72,7 +72,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 }
 
 func handleBurnMiniToken(ctx sdk.Context, tokenMapper miniToken.MiniTokenMapper, keeper bank.Keeper, msg BurnMsg) sdk.Result {
-	logger := log.With("module", "miniToken", "symbol", msg.Symbol, "amount", msg.Amount)
+	logger := log.With("module", "mini-token", "symbol", msg.Symbol, "amount", msg.Amount)
 	burnAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	token, err := tokenMapper.GetToken(ctx, symbol)

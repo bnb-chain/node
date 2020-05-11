@@ -26,7 +26,7 @@ func NewHandler(tokenMapper store.MiniTokenMapper) sdk.Handler {
 
 func handleSetURI(ctx sdk.Context, miniTokenMapper store.MiniTokenMapper, msg SetURIMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "miniToken", "symbol", symbol, "tokenURI", msg.TokenURI, "from", msg.From)
+	logger := log.With("module", "mini-token", "symbol", symbol, "tokenURI", msg.TokenURI, "from", msg.From)
 
 	errLogMsg := "set token URI failed"
 	token, err := miniTokenMapper.GetToken(ctx, symbol)

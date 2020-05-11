@@ -26,7 +26,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 			return nil
 		}
 		switch path[1] {
-		case "pairs": // args: ["dex", "pairs", <offset>, <limit>]
+		case "pairs": // args: ["dex" or "dex_mini", "pairs", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -36,7 +36,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				}
 			}
 			ctx := app.GetContextForCheckState()
-			pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
+			pairs := listPairs(keeper, ctx, queryPrefix)
 			var offset, limit, end int
 			var err error
 			if pairs == nil || len(pairs) == 0 {
@@ -82,6 +82,14 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				Value: bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
+			if queryPrefix == DexMiniAbciQueryPrefix {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.ABCICodeOK),
+					Info: fmt.Sprintf(
+						"Unknown `%s` query path: %v",
+						queryPrefix, path),
+				}
+			}
 			//TODO: sync lock, validate pair
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
@@ -124,6 +132,14 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				Value: bz,
 			}
 		case "openorders": // args: ["dex", "openorders", <pair>, <bech32Str>]
+			if queryPrefix == DexMiniAbciQueryPrefix {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.ABCICodeOK),
+					Info: fmt.Sprintf(
+						"Unknown `%s` query path: %v",
+						queryPrefix, path),
+				}
+			}
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -178,4 +194,25 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 			}
 		}
 	}
+}
+
+func listPairs(keeper *DexKeeper, ctx sdk.Context, abciPrefix string) []types.TradingPair {
+	pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
+	rs := make([]types.TradingPair, 0, len(pairs))
+	for _, pair := range pairs {
+		if isMiniPair(pair) {
+			if abciPrefix == DexMiniAbciQueryPrefix {
+				rs = append(rs, pair)
+			}
+		} else {
+			if abciPrefix == DexAbciQueryPrefix {
+				rs = append(rs, pair)
+			}
+		}
+	}
+	return rs
+}
+
+func isMiniPair(pair types.TradingPair) bool {
+	return app.IsMiniTokenSymbol(pair.BaseAssetSymbol) || app.IsMiniTokenSymbol(pair.QuoteAssetSymbol)
 }

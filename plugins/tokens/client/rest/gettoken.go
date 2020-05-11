@@ -14,8 +14,14 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*types.Token, error) {
-	bz, err := ctx.Query(fmt.Sprintf("tokens/info/%s", symbol), nil)
+func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string, isMini bool) (*types.Token, error) {
+	var abciPrefix string
+	if isMini {
+		abciPrefix = "mini-tokens"
+	}else{
+		abciPrefix = "tokens"
+	}
+	bz, err := ctx.Query(fmt.Sprintf("%s/info/%s", abciPrefix, symbol), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +31,7 @@ func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string) (*type
 }
 
 // GetTokenReqHandler creates an http request handler to get info for an individual token
-func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext, isMini bool) http.HandlerFunc {
 	type params struct {
 		symbol string
 	}
@@ -55,7 +61,7 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 			return
 		}
 
-		token, err := getTokenInfo(ctx, cdc, params.symbol)
+		token, err := getTokenInfo(ctx, cdc, params.symbol, isMini)
 		if err != nil {
 			throw(w, http.StatusInternalServerError, err)
 			return

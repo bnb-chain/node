@@ -89,7 +89,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg FreezeMsg) sdk.Result {
 	freezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "miniToken", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
+	logger := log.With("module", "mini-token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	errLogMsg := "freeze token failed"
 	_, err := miniTokenMapper.GetToken(ctx, symbol)
 	if err != nil {
@@ -124,7 +124,7 @@ func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenM
 func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg UnfreezeMsg) sdk.Result {
 	unfreezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
-	logger := log.With("module", "miniToken", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
+	logger := log.With("module", "mini-token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	useAllFrozenBalance := frozenAmount == unfreezeAmount

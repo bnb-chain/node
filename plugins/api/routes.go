@@ -29,7 +29,7 @@ func (s *server) bindRoutes() *server {
 		Methods("POST")
 
 	// dex routes
-	r.HandleFunc(prefix+"/markets", s.handlePairsReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/markets", s.handleBEP2PairsReq(s.cdc, s.ctx)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/depth", s.handleDexDepthReq(s.cdc, s.ctx)).
 		Queries("symbol", "{symbol}", "limit", "{limit:[0-9]+}").
@@ -44,6 +44,9 @@ func (s *server) bindRoutes() *server {
 		Queries("address", "{address}", "symbol", "{symbol}").
 		Methods("GET")
 
+	r.HandleFunc(prefix+"/mini-token/markets", s.handleMiniPairsReq(s.cdc, s.ctx)).
+		Methods("GET")
+
 	// tokens routes
 	r.HandleFunc(prefix+"/tokens", s.handleTokensReq(s.cdc, s.ctx)).
 		Methods("GET")
@@ -52,6 +55,12 @@ func (s *server) bindRoutes() *server {
 	r.HandleFunc(prefix+"/balances/{address}", s.handleBalancesReq(s.cdc, s.ctx, s.tokens)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/balances/{address}/{symbol}", s.handleBalanceReq(s.cdc, s.ctx, s.tokens)).
+		Methods("GET")
+
+	// mini tokens routes
+	r.HandleFunc(prefix+"/mini-token/tokens", s.handleMiniTokensReq(s.cdc, s.ctx)).
+		Methods("GET")
+	r.HandleFunc(prefix+"/mini-token/tokens/{symbol}", s.handleMiniTokenReq(s.cdc, s.ctx)).
 		Methods("GET")
 
 	// fee params
