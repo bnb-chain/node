@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -73,7 +72,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
 		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount(fmt.Sprintf("can't calibrate bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
+			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
 		}
 		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
@@ -99,7 +98,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	bindSequence, sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.BindChannel, bindPackage)
+	_, sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.BindChannel, bindPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -107,13 +106,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 	}
-
-	tags := sdk.NewTags(
-		types.BindSequence, []byte(strconv.Itoa(int(bindSequence))),
-		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
-	)
-
-	return sdk.Result{Tags: tags}
+	return sdk.Result{}
 }
 
 func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sdk.Result {
@@ -149,20 +142,20 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimals))
 		if !sdk.NewInt(msg.Amount.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount("can't calibrate transfer amount to the amount of ERC20").Result()
+			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount %d to ERC20(decimals: %d) amount", msg.Amount.Amount, token.ContractDecimals)).Result()
 		}
 		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(fee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol)).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
-	contractAddr := types.NewEthereumAddress(token.ContractAddress)
+	contractAddr := types.NewSmartChainAddress(token.ContractAddress)
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
 		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	transferOutSequence, sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.TransferOutChannel, transferPackage)
+	_, sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.TransferOutChannel, transferPackage)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
@@ -170,11 +163,5 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 	}
-
-	tags := sdk.NewTags(
-		types.TransferOutSequence, []byte(strconv.Itoa(int(transferOutSequence))),
-		types.ExpireTime, []byte(strconv.Itoa(int(msg.ExpireTime))),
-	)
-
-	return sdk.Result{Tags: tags}
+	return sdk.Result{}
 }

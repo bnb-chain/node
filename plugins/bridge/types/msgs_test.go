@@ -12,30 +12,30 @@ import (
 func TestBindMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
-	nonEmptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{1}))
-	emptyEthAddr := EthereumAddress(common.BytesToAddress([]byte{0}))
+	nonEmptySmartChainAddr := SmartChainAddress(common.BytesToAddress([]byte{1}))
+	emptySmartChainAddr := SmartChainAddress(common.BytesToAddress([]byte{0}))
 
 	tests := []struct {
 		bindMsg      BindMsg
 		expectedPass bool
 	}{
 		{
-			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, 1, 100),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptySmartChainAddr, 1, 100),
 			true,
 		}, {
-			NewBindMsg(addrs[0], "", 1, nonEmptyEthAddr, 1, 100),
+			NewBindMsg(addrs[0], "", 1, nonEmptySmartChainAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 0, nonEmptyEthAddr, 1, 100),
+			NewBindMsg(addrs[0], "BNB", 0, nonEmptySmartChainAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", 1, nonEmptyEthAddr, 1, 100),
+			NewBindMsg(sdk.AccAddress{0, 1}, "BNB", 1, nonEmptySmartChainAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 1, emptyEthAddr, 1, 100),
+			NewBindMsg(addrs[0], "BNB", 1, emptySmartChainAddr, 1, 100),
 			false,
 		}, {
-			NewBindMsg(addrs[0], "BNB", 1, nonEmptyEthAddr, -1, 100),
+			NewBindMsg(addrs[0], "BNB", 1, nonEmptySmartChainAddr, -1, 100),
 			false,
 		},
 	}

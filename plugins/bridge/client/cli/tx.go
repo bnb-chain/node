@@ -83,7 +83,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			var refundAddressList []types.EthereumAddress
+			var refundAddressList []types.SmartChainAddress
 			var recipientAddressList []sdk.AccAddress
 			var transferAmountList []int64
 			refundAddressStrList := strings.Split(refundAddressStr, ",")
@@ -93,7 +93,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("the length of refund address array, recipient address array and transfer amount array must be the same")
 			}
 			for _, str := range refundAddressStrList {
-				refundAddressList = append(refundAddressList, types.NewEthereumAddress(str))
+				refundAddressList = append(refundAddressList, types.NewSmartChainAddress(str))
 			}
 			for _, str := range recipientAddressStrList {
 				addr, err := sdk.AccAddressFromBech32(str)
@@ -111,7 +111,7 @@ func TransferInCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			claim := types.TransferInClaim{
-				ContractAddress:   types.NewEthereumAddress(contractAddress),
+				ContractAddress:   types.NewSmartChainAddress(contractAddress),
 				RefundAddresses:   refundAddressList,
 				ReceiverAddresses: recipientAddressList,
 				Amounts:           transferAmountList,
@@ -250,7 +250,7 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 			expireTime := viper.GetInt64(flagExpireTime)
 
 			// build message
-			msg := types.NewBindMsg(from, symbol, amount, types.NewEthereumAddress(contractAddress), int8(contractDecimals), expireTime)
+			msg := types.NewBindMsg(from, symbol, amount, types.NewSmartChainAddress(contractAddress), int8(contractDecimals), expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -294,7 +294,7 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// build message
-			msg := types.NewTransferOutMsg(from, types.NewEthereumAddress(to), amountToTransfer, expireTime)
+			msg := types.NewTransferOutMsg(from, types.NewSmartChainAddress(to), amountToTransfer, expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -337,7 +337,7 @@ func UpdateBindCmd(cdc *codec.Codec) *cobra.Command {
 			claim := types.UpdateBindClaim{
 				Status:          status,
 				Symbol:          strings.ToUpper(symbol),
-				ContractAddress: types.NewEthereumAddress(contractAddress),
+				ContractAddress: types.NewSmartChainAddress(contractAddress),
 			}
 
 			claimBz, err := json.Marshal(claim)

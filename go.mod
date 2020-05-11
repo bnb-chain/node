@@ -10,25 +10,20 @@ require (
 	github.com/ethereum/go-ethereum v1.9.10
 	github.com/go-kit/kit v0.9.0
 	github.com/google/btree v1.0.0
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/golang-lru v0.5.3
-	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/linkedin/goavro v0.0.0-20180427201934-fa8f6a30176c
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.1.0
-	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
-	github.com/spf13/cobra v0.0.6
+	github.com/pkg/errors v0.8.1
+	github.com/prometheus/client_golang v0.9.3
+	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.6.2
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.4.0
 	github.com/tendermint/go-amino v0.15.1
 	github.com/tendermint/iavl v0.12.4
 	github.com/tendermint/tendermint v0.32.3
 	go.uber.org/ratelimit v0.1.0
-	google.golang.org/grpc v1.26.0 // indirect
 	gopkg.in/linkedin/goavro.v1 v1.0.5 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )

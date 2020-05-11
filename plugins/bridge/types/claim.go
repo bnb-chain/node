@@ -19,13 +19,13 @@ const (
 )
 
 type TransferInClaim struct {
-	ContractAddress   EthereumAddress   `json:"contract_address"`
-	RefundAddresses   []EthereumAddress `json:"refund_addresses"`
-	ReceiverAddresses []sdk.AccAddress  `json:"receiver_addresses"`
-	Amounts           []int64           `json:"amounts"`
-	Symbol            string            `json:"symbol"`
-	RelayFee          sdk.Coin          `json:"relay_fee"`
-	ExpireTime        int64             `json:"expire_time"`
+	ContractAddress   SmartChainAddress   `json:"contract_address"`
+	RefundAddresses   []SmartChainAddress `json:"refund_addresses"`
+	ReceiverAddresses []sdk.AccAddress    `json:"receiver_addresses"`
+	Amounts           []int64             `json:"amounts"`
+	Symbol            string              `json:"symbol"`
+	RelayFee          sdk.Coin            `json:"relay_fee"`
+	ExpireTime        int64               `json:"expire_time"`
 }
 
 func GetTransferInClaimFromOracleClaim(claim string) (TransferInClaim, sdk.Error) {
@@ -53,9 +53,9 @@ func GetTransferOutRefundClaimFromOracleClaim(claim string) (TransferOutRefundCl
 }
 
 type UpdateBindClaim struct {
-	Status          BindStatus      `json:"status"`
-	Symbol          string          `json:"symbol"`
-	ContractAddress EthereumAddress `json:"contract_address"`
+	Status          BindStatus        `json:"status"`
+	Symbol          string            `json:"symbol"`
+	ContractAddress SmartChainAddress `json:"contract_address"`
 }
 
 func GetUpdateBindClaimFromOracleClaim(claim string) (UpdateBindClaim, sdk.Error) {
