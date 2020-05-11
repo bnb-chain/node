@@ -368,6 +368,7 @@ func (app *BinanceChain) initPlugins() {
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
+	bridge.InitPlugin(app, app.bridgeKeeper)
 	app.initParams()
 
 	// add handlers from bnc-cosmos-sdk (others moved to plugin init funcs)
@@ -388,7 +389,6 @@ func (app *BinanceChain) initPlugins() {
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
-	bridge.InitPlugin(app, app.bridgeKeeper)
 }
 
 func (app *BinanceChain) initSideChain() {
