@@ -82,6 +82,8 @@ var (
 		AtomicSwapStoreName,
 		IbcStoreName,
 		SideChainStoreName,
+		BridgeStoreName,
+		OracleStoreName,
 	}
 )
 
