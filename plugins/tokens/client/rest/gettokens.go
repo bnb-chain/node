@@ -17,7 +17,7 @@ const maxTokensLimit = 1000
 const defaultTokensLimit = 100
 const defaultTokensOffset = 0
 
-func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int, showZeroSupplyTokens bool, isMini bool) ([]types.Token, error) {
+func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit int, showZeroSupplyTokens bool, isMini bool) (interface{}, error) {
 	var abciPrefix string
 	if isMini {
 		abciPrefix = "mini-tokens"
@@ -28,9 +28,22 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	if err != nil {
 		return nil, err
 	}
-	tokens := make([]types.Token, 0)
-	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-	return tokens, nil
+	if isMini {
+		tokens := make([]types.MiniToken, 0)
+		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
+		if err!=nil{
+			fmt.Println(err)
+		}
+		return tokens, nil
+	}else{
+		tokens := make([]types.Token, 0)
+		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
+		if err!=nil{
+			fmt.Println(err)
+		}
+		return tokens, nil
+	}
+
 }
 
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper

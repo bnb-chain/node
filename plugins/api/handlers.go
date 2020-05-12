@@ -122,7 +122,7 @@ func (s *server) handleTokenReq(cdc *wire.Codec, ctx context.CLIContext) http.Ha
 }
 
 func (s *server) handleTokensReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return tksapi.GetTokensReqHandler(cdc, ctx, true)
+	return tksapi.GetTokensReqHandler(cdc, ctx, false)
 }
 
 func (s *server) handleMiniTokenReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
