@@ -9,17 +9,16 @@ import (
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(dexKeeper *order.DexKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper) sdk.Handler {
+func NewHandler(dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMiniMsg:
-			return handleList(ctx, dexKeeper, miniTokenMapper, tokenMapper, msg)
+			return handleList(ctx, dexKeeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -27,7 +26,7 @@ func NewHandler(dexKeeper *order.DexKeeper, miniTokenMapper minitokens.MiniToken
 	}
 }
 
-func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, miniTokenMapper minitokens.MiniTokenMapper, tokenMapper tokens.Mapper,
+func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg ListMiniMsg) sdk.Result {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("list mini-token is not supported at current height")).Result()
@@ -37,7 +36,7 @@ func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, miniTokenMapper min
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
-	baseToken, err := miniTokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
+	baseToken, err := tokenMapper.GetMiniToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}

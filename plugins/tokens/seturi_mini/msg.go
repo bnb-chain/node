@@ -1,4 +1,4 @@
-package seturi
+package seturi_mini
 
 import (
 	"encoding/json"

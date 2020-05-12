@@ -58,14 +58,9 @@ var SupplyRange = struct {
 }{TinyRangeType, MiniRangeType}
 
 type MiniToken struct {
-	Name        string          `json:"name"`
-	Symbol      string          `json:"symbol"`
-	OrigSymbol  string          `json:"original_symbol"`
-	TokenType   SupplyRangeType `json:"token_type"`
-	TotalSupply utils.Fixed8    `json:"total_supply"`
-	Owner       sdk.AccAddress  `json:"owner"`
-	Mintable    bool            `json:"mintable"`
-	TokenURI    string          `json:"token_uri"` //TODO set max length
+	Token
+	TokenType SupplyRangeType `json:"token_type"`
+	TokenURI  string          `json:"token_uri"` //TODO set max length
 }
 
 func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
@@ -78,14 +73,15 @@ func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, 
 		return nil, err
 	}
 	return &MiniToken{
-		Name:        name,
-		Symbol:      symbol,
-		OrigSymbol:  parts[0],
-		TokenType:   SupplyRangeType(supplyRangeType),
-		TotalSupply: utils.Fixed8(totalSupply),
-		Owner:       owner,
-		Mintable:    mintable,
-		TokenURI:    tokenURI,
+		Token{Name: name,
+			Symbol:      symbol,
+			OrigSymbol:  parts[0],
+			TotalSupply: utils.Fixed8(totalSupply),
+			Owner:       owner,
+			Mintable:    mintable,
+		},
+		SupplyRangeType(supplyRangeType),
+		tokenURI,
 	}, nil
 }
 

@@ -10,16 +10,15 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	miniToken "github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.Mapper, miniTokenMapper miniToken.MiniTokenMapper, keeper bank.Keeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		if msg, ok := msg.(BurnMsg); ok {
 			symbol := strings.ToUpper(msg.Symbol)
 			if common.IsMiniTokenSymbol(symbol) {
-				return handleBurnMiniToken(ctx, miniTokenMapper, keeper, msg)
+				return handleBurnMiniToken(ctx, tokenMapper, keeper, msg)
 			} else {
 				return handleBurnToken(ctx, tokenMapper, keeper, msg)
 			}
@@ -71,11 +70,11 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	return sdk.Result{}
 }
 
-func handleBurnMiniToken(ctx sdk.Context, tokenMapper miniToken.MiniTokenMapper, keeper bank.Keeper, msg BurnMsg) sdk.Result {
+func handleBurnMiniToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keeper, msg BurnMsg) sdk.Result {
 	logger := log.With("module", "mini-token", "symbol", msg.Symbol, "amount", msg.Amount)
 	burnAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
-	token, err := tokenMapper.GetToken(ctx, symbol)
+	token, err := tokenMapper.GetMiniToken(ctx, symbol)
 	errLogMsg := "burn token failed"
 	if err != nil {
 		logger.Info("burn token failed", "reason", "invalid token symbol")

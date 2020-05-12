@@ -2,21 +2,17 @@ package commands
 
 import (
 	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/minitokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/issue_mini"
 )
 
 const (
 	flagTokenType   = "token-type"
-	flagTotalSupply = "total-supply"
-	flagTokenName   = "token-name"
-	flagMintable    = "mintable"
 	flagTokenUri    = "token-uri"
 )
 
@@ -38,7 +34,7 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
+func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 	from, err := cliCtx.GetFromAddress()
 	if err != nil {
@@ -63,7 +59,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	supply := viper.GetInt64(flagTotalSupply)
-	err = checkSupplyAmount(supply, int8(tokenType))
+	err = checkMiniSupplyAmount(supply, int8(tokenType))
 	if err != nil {
 		return err
 	}
@@ -77,7 +73,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := issue.NewIssueMsg(from, name, symbol, int8(tokenType), supply, mintable, tokenURI)
+	msg := issue_mini.NewIssueMsg(from, name, symbol, int8(tokenType), supply, mintable, tokenURI)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
@@ -88,7 +84,7 @@ func checkTokenType(tokenType int) error {
 	return nil
 }
 
-func checkSupplyAmount(amount int64, tokenType int8) error {
+func checkMiniSupplyAmount(amount int64, tokenType int8) error {
 	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenSupplyUpperBound {
 		return errors.New("invalid supply amount")
 	}

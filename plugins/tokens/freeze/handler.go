@@ -11,25 +11,24 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	miniToken "github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token freeze message handler
-func NewHandler(tokenMapper store.Mapper, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, keeper bank.Keeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
 			symbol := strings.ToUpper(msg.Symbol)
 			if common.IsMiniTokenSymbol(symbol) {
-				return handleFreezeMiniToken(ctx, miniTokenMapper, accKeeper, keeper, msg)
+				return handleFreezeMiniToken(ctx, tokenMapper, accKeeper, keeper, msg)
 			} else {
 				return handleFreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
 			}
 		case UnfreezeMsg:
 			symbol := strings.ToUpper(msg.Symbol)
 			if common.IsMiniTokenSymbol(symbol) {
-				return handleUnfreezeMiniToken(ctx, miniTokenMapper, accKeeper, keeper, msg)
+				return handleUnfreezeMiniToken(ctx, tokenMapper, accKeeper, keeper, msg)
 			} else {
 				return handleUnfreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
 			}
@@ -86,12 +85,12 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	return sdk.Result{}
 }
 
-func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg FreezeMsg) sdk.Result {
+func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg FreezeMsg) sdk.Result {
 	freezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	errLogMsg := "freeze token failed"
-	_, err := miniTokenMapper.GetToken(ctx, symbol)
+	_, err := miniTokenMapper.GetMiniToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
@@ -121,7 +120,7 @@ func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenM
 	return sdk.Result{}
 }
 
-func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniTokenMapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg UnfreezeMsg) sdk.Result {
+func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg UnfreezeMsg) sdk.Result {
 	unfreezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
@@ -130,7 +129,7 @@ func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper miniToken.MiniToke
 	useAllFrozenBalance := frozenAmount == unfreezeAmount
 	errLogMsg := "unfreeze token failed"
 
-	_, err := miniTokenMapper.GetToken(ctx, symbol)
+	_, err := miniTokenMapper.GetMiniToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()

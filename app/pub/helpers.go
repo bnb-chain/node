@@ -18,10 +18,10 @@ import (
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

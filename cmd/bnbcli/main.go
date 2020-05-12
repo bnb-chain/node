@@ -21,7 +21,6 @@ import (
 	accountcmd "github.com/binance-chain/node/plugins/account/client/cli"
 	apiserv "github.com/binance-chain/node/plugins/api"
 	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
-	miniTokencmd "github.com/binance-chain/node/plugins/minitokens/client/cli"
 	paramcmd "github.com/binance-chain/node/plugins/param/client/cli"
 	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
 	"github.com/binance-chain/node/version"
@@ -88,7 +87,6 @@ func main() {
 	accountcmd.AddCommands(rootCmd, cdc)
 	dexcmd.AddCommands(rootCmd, cdc)
 	paramcmd.AddCommands(rootCmd, cdc)
-	miniTokencmd.AddCommands(rootCmd, cdc)
 
 	// stake cmds
 	rootCmd.AddCommand(

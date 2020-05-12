@@ -41,13 +41,11 @@ import (
 	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
-	"github.com/binance-chain/node/plugins/minitokens"
-	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
-	"github.com/binance-chain/node/plugins/minitokens/seturi"
-	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
+	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
+	"github.com/binance-chain/node/plugins/tokens/seturi_mini"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -86,7 +84,6 @@ type BinanceChain struct {
 	DexKeeper       *dex.DexKeeper
 	AccountKeeper   auth.AccountKeeper
 	TokenMapper     tkstore.Mapper
-	MiniTokenMapper miniTkstore.MiniTokenMapper
 	ValAddrCache    *ValAddrCache
 	stakeKeeper     stake.Keeper
 	govKeeper       gov.Keeper
@@ -137,7 +134,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
-	app.MiniTokenMapper = miniTkstore.NewMiniTokenMapper(cdc, common.MiniTokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
@@ -225,7 +221,6 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
 		common.AtomicSwapStoreKey,
-		common.MiniTokenStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -283,8 +278,6 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 
-	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP8, common.MiniTokenStoreKey.Name())
-
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
 		timelock.TimeLockMsg{}.Type(),
@@ -303,7 +296,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		miniIssue.IssueMsg{}.Type(),
-		seturi.SetURIMsg{}.Type(),
+		seturi_mini.SetURIMsg{}.Type(),
 		listmini.ListMiniMsg{}.Type(),
 	)
 }
@@ -353,9 +346,8 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 }
 
 func (app *BinanceChain) initPlugins() {
-	tokens.InitPlugin(app, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
-	minitokens.InitPlugin(app, app.MiniTokenMapper, app.AccountKeeper, app.CoinKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.MiniTokenMapper, app.AccountKeeper, app.govKeeper)
+	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }
@@ -779,7 +771,6 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
 	param.RegisterWire(cdc)
-	minitokens.RegisterWire(cdc)
 	return cdc
 }
 

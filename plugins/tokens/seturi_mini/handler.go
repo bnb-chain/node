@@ -1,4 +1,4 @@
-package seturi
+package seturi_mini
 
 import (
 	"fmt"
@@ -9,10 +9,10 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/minitokens/store"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
-func NewHandler(tokenMapper store.MiniTokenMapper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case SetURIMsg:
@@ -24,12 +24,12 @@ func NewHandler(tokenMapper store.MiniTokenMapper) sdk.Handler {
 	}
 }
 
-func handleSetURI(ctx sdk.Context, miniTokenMapper store.MiniTokenMapper, msg SetURIMsg) sdk.Result {
+func handleSetURI(ctx sdk.Context, tokenMapper store.Mapper, msg SetURIMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "tokenURI", msg.TokenURI, "from", msg.From)
 
 	errLogMsg := "set token URI failed"
-	token, err := miniTokenMapper.GetToken(ctx, symbol)
+	token, err := tokenMapper.GetMiniToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
@@ -47,7 +47,7 @@ func handleSetURI(ctx sdk.Context, miniTokenMapper store.MiniTokenMapper, msg Se
 	if len(msg.TokenURI) > common.MaxTokenURILength {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not exceed %v characters", common.MaxTokenURILength)).Result()
 	}
-	err = miniTokenMapper.UpdateTokenURI(ctx, symbol, msg.TokenURI)
+	err = tokenMapper.UpdateMiniTokenURI(ctx, symbol, msg.TokenURI)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "update token uri failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("update token uri failed")).Result()

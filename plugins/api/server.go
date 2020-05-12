@@ -8,7 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 
 	"github.com/binance-chain/node/common"
-	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
@@ -32,7 +31,6 @@ type server struct {
 
 	accStoreName string
 
-	miniTokens miniTkstore.MiniTokenMapper
 }
 
 // NewServer provides a new server structure.
@@ -50,6 +48,5 @@ func newServer(ctx context.CLIContext, cdc *wire.Codec) *server {
 		keyBase:      kb,
 		tokens:       tkstore.NewMapper(cdc, common.TokenStoreKey),
 		accStoreName: common.AccountStoreName,
-		miniTokens:   miniTkstore.NewMiniTokenMapper(cdc, common.MiniTokenStoreKey),
 	}
 }

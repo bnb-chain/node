@@ -1,4 +1,4 @@
-package issue
+package issue_mini
 
 import (
 	"encoding/json"
@@ -13,11 +13,11 @@ import (
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/minitokens/store"
+	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token issue message handler
-func NewHandler(tokenMapper store.MiniTokenMapper, keeper bank.Keeper) sdk.Handler {
+func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case IssueMsg:
@@ -29,7 +29,7 @@ func NewHandler(tokenMapper store.MiniTokenMapper, keeper bank.Keeper) sdk.Handl
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
+func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
 	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
@@ -86,7 +86,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.MiniTokenMapper, bankKe
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
 
-	if err := tokenMapper.NewToken(ctx, *token); err != nil {
+	if err := tokenMapper.NewMiniToken(ctx, *token); err != nil {
 		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}

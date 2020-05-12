@@ -17,8 +17,8 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
-	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
+	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )

@@ -14,14 +14,14 @@ import (
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
-	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
-	miniURI "github.com/binance-chain/node/plugins/minitokens/seturi"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
+	miniURI "github.com/binance-chain/node/plugins/tokens/seturi_mini"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
@@ -96,17 +96,17 @@ func init() {
 		burn.BurnRoute:                    fees.FixedFeeCalculatorGen,
 		account.SetAccountFlagsMsgType:    fees.FixedFeeCalculatorGen,
 		freeze.FreezeRoute:                fees.FixedFeeCalculatorGen,
-		timelock.TimeLockMsg{}.Type():     fees.FixedFeeCalculatorGen,
-		timelock.TimeUnlockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		timelock.TimeRelockMsg{}.Type():   fees.FixedFeeCalculatorGen,
-		bank.MsgSend{}.Type():             tokens.TransferFeeCalculatorGen,
-		swap.HTLT:                         fees.FixedFeeCalculatorGen,
-		swap.DepositHTLT:                  fees.FixedFeeCalculatorGen,
-		swap.ClaimHTLT:                    fees.FixedFeeCalculatorGen,
-		swap.RefundHTLT:                   fees.FixedFeeCalculatorGen,
-		miniIssue.IssueTinyMsgType:        fees.FixedFeeCalculatorGen,
-		miniIssue.IssueMiniMsgType:        fees.FixedFeeCalculatorGen,
-		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
-		listmini.Route:                    fees.FixedFeeCalculatorGen,
+		timelock.TimeLockMsg{}.Type():   fees.FixedFeeCalculatorGen,
+		timelock.TimeUnlockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		timelock.TimeRelockMsg{}.Type(): fees.FixedFeeCalculatorGen,
+		bank.MsgSend{}.Type():           tokens.TransferFeeCalculatorGen,
+		swap.HTLT:                       fees.FixedFeeCalculatorGen,
+		swap.DepositHTLT:                fees.FixedFeeCalculatorGen,
+		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
+		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
+		miniIssue.IssueTinyMsgType:      fees.FixedFeeCalculatorGen,
+		miniIssue.IssueMiniMsgType:      fees.FixedFeeCalculatorGen,
+		miniURI.SetURIRoute:             fees.FixedFeeCalculatorGen,
+		listmini.Route:                  fees.FixedFeeCalculatorGen,
 	}
 }

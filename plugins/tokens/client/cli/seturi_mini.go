@@ -3,7 +3,7 @@ package commands
 import (
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/minitokens/seturi"
+	"github.com/binance-chain/node/plugins/tokens/seturi_mini"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,6 +39,6 @@ func (c Commander) setTokenURI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	msg := seturi.NewSetUriMsg(from, symbol, tokenURI)
+	msg := seturi_mini.NewSetUriMsg(from, symbol, tokenURI)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }

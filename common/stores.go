@@ -7,7 +7,6 @@ const (
 	AccountStoreName    = "acc"
 	ValAddrStoreName    = "val"
 	TokenStoreName      = "tokens"
-	MiniTokenStoreName  = "minitokens"
 	DexStoreName        = "dex"
 	PairStoreName       = "pairs"
 	StakeStoreName      = "stake"
@@ -37,8 +36,6 @@ var (
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
 
-	MiniTokenStoreKey = sdk.NewKVStoreKey(MiniTokenStoreName)
-
 	StoreKeyNameMap = map[string]sdk.StoreKey{
 		MainStoreName:            MainStoreKey,
 		AccountStoreName:         AccountStoreKey,
@@ -53,7 +50,6 @@ var (
 		AtomicSwapStoreName:      AtomicSwapStoreKey,
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
-		MiniTokenStoreName:       MiniTokenStoreKey,
 	}
 
 	NonTransientStoreKeyNames = []string{
@@ -68,7 +64,6 @@ var (
 		GovStoreName,
 		TimeLockStoreName,
 		AtomicSwapStoreName,
-		MiniTokenStoreName,
 	}
 )
 

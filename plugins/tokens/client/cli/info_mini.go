@@ -15,18 +15,18 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-func getTokenInfoCmd(cmdr Commander) *cobra.Command {
+func getMiniTokenInfoCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info <symbol>",
 		Short: "Query mini-token info",
-		RunE:  cmdr.runGetToken,
+		RunE:  cmdr.runGetMiniToken,
 	}
 
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the mini-token")
 	return cmd
 }
 
-func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
+func (c Commander) runGetMiniToken(cmd *cobra.Command, args []string) error {
 	ctx := context.NewCLIContext().WithCodec(c.Cdc)
 
 	symbol := viper.GetString(flagSymbol)
@@ -34,9 +34,9 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 		return errors.New("you must provide the symbol")
 	}
 
-	key := []byte(strings.ToUpper(symbol))
+	key := calcMiniTokenKey(strings.ToUpper(symbol))
 
-	res, err := ctx.QueryStore(key, common.MiniTokenStoreName)
+	res, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
 		return err
 	}

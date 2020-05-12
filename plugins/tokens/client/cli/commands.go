@@ -11,6 +11,7 @@ import (
 const (
 	flagSymbol = "symbol"
 	flagAmount = "amount"
+	flagURI    = "uri"
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
@@ -54,4 +55,19 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	tokenCmd.AddCommand(client.LineBreak)
 
 	cmd.AddCommand(tokenCmd)
+
+	miniTokenCmd := &cobra.Command{
+		Use:   "mini-token",
+		Short: "issue or update uri or view mini tokens",
+		Long:  ``,
+	}
+
+	miniTokenCmd.AddCommand(
+		client.PostCommands(
+			getMiniTokenInfoCmd(cmdr),
+			issueMiniTokenCmd(cmdr),
+			setTokenURICmd(cmdr))...)
+
+	miniTokenCmd.AddCommand(client.LineBreak)
+	cmd.AddCommand(miniTokenCmd)
 }
