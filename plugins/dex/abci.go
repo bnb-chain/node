@@ -26,7 +26,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 			return nil
 		}
 		switch path[1] {
-		case "pairs": // args: ["dex" or "dex_mini", "pairs", <offset>, <limit>]
+		case "pairs": // args: ["dex" or "dex-mini", "pairs", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -115,10 +115,11 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 					levelLimit = l
 				}
 			}
-			levels := keeper.GetOrderBookLevels(pair, levelLimit)
+			levels, pendingMatch := keeper.GetOrderBookLevels(pair, levelLimit)
 			book := store.OrderBook{
-				Height: height,
-				Levels: levels,
+				Height:       height,
+				Levels:       levels,
+				PendingMatch: pendingMatch,
 			}
 			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(book)
 			if err != nil {

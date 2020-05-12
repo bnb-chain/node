@@ -101,6 +101,8 @@ type BinanceChain struct {
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
 
+	dexConfig *config.DexConfig
+
 	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
 	// check nil-ness to know whether metrics collection is turn on
 	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -125,6 +127,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		upgradeConfig:      ServerContext.UpgradeConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
+		dexConfig:          ServerContext.DexConfig,
 	}
 	// set upgrade config
 	SetUpgradeConfig(app.upgradeConfig)
@@ -271,7 +274,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LotSizeOptimization, upgradeConfig.LotSizeUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
+
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
+
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
@@ -320,6 +327,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
 	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, pairMapper, app.RegisterCodespace(dex.DefaultCodespace), app.Codec, app.AccountKeeper, app.publicationConfig.ShouldPublishAny(), app.baseConfig.OrderKeeperConcurrency)
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
+	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {

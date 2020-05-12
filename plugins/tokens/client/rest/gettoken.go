@@ -25,7 +25,7 @@ func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string, isMini
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if isMini {
 		var token types.MiniToken
 		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &token)

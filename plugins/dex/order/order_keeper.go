@@ -9,7 +9,6 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
@@ -23,9 +22,6 @@ const (
 	pricesStoreEvery = 1000
 	minimalNumPrices = 500
 )
-
-type FeeHandler func(map[string]*types.Fee)
-type TransferHandler func(Transfer)
 
 type IDexOrderKeeper interface {
 	addOrder(symbol string, info OrderInfo, collectOrderInfoForPublish bool, isRecovery bool)

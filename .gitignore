@@ -20,3 +20,9 @@ vendor
 *.swp
 .vscode/*.json
 
+# Test generate tmp files
+app/data
+app/apptest/data
+app_test/data
+plugins/param/data
+plugins/tokens/data

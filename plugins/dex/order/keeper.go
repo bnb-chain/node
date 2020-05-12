@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	BEP2TypeValue = 1
-	MiniTypeValue = 2
+	BEP2TypeValue        = 1
+	MiniTypeValue        = 2
+	preferencePriceLevel = 500
 )
 
 type SymbolPairType int8
@@ -39,6 +40,11 @@ var PairType = struct {
 	BEP2 SymbolPairType
 	MINI SymbolPairType
 }{BEP2TypeValue, MiniTypeValue}
+
+var BUSDSymbol string
+
+type FeeHandler func(map[string]*types.Fee)
+type TransferHandler func(Transfer)
 
 type IDexKeeper interface {
 	InitRecentPrices(ctx sdk.Context)
@@ -50,7 +56,7 @@ type IDexKeeper interface {
 	RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error)
 	GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error)
 	OrderExists(symbol, id string) (OrderInfo, bool)
-	GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel
+	GetOrderBookLevels(pair string, maxLevels int) (orderbook []store.OrderBookLevel, pendingMatch bool)
 	GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
 	GetOrderBooks(maxLevels int, pairType SymbolPairType) ChangedPriceLevelsMap
 	GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel
@@ -120,6 +126,10 @@ func NewDexKeeper(key sdk.StoreKey, tradingPairMapper store.TradingPairMapper, c
 		logger:                     logger,
 		OrderKeepers:               []IDexOrderKeeper{NewBEP2OrderKeeper(), NewMiniOrderKeeper()},
 	}
+}
+
+func (kp *DexKeeper) SetBUSDSymbol(symbol string) {
+	BUSDSymbol = symbol
 }
 
 func (kp *DexKeeper) InitRecentPrices(ctx sdk.Context) {
@@ -327,25 +337,34 @@ func (kp *DexKeeper) SubscribeParamChange(hub *paramhub.Keeper) {
 		})
 }
 
-func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) []store.OrderBookLevel {
-	orderbook := make([]store.OrderBookLevel, maxLevels)
+func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook []store.OrderBookLevel, pendingMatch bool) {
+	orderbook = make([]store.OrderBookLevel, maxLevels)
 
 	i, j := 0, 0
 
 	if eng, ok := kp.engines[pair]; ok {
 		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel, levelIndex int) {
 			orderbook[i].BuyPrice = utils.Fixed8(p.Price)
 			orderbook[i].BuyQty = utils.Fixed8(p.TotalLeavesQty())
 			i++
 		},
-			func(p *me.PriceLevel) {
+			func(p *me.PriceLevel, levelIndex int) {
 				orderbook[j].SellPrice = utils.Fixed8(p.Price)
 				orderbook[j].SellQty = utils.Fixed8(p.TotalLeavesQty())
 				j++
 			})
+		var roundOrders []string
+		for _, orderKeeper := range kp.OrderKeepers {
+			if orderKeeper.support(pair) {
+				roundOrders = orderKeeper.getRoundOrdersForPair(pair)
+				break
+			}
+		}
+
+		pendingMatch = len(roundOrders) > 0
 	}
-	return orderbook
+	return orderbook, pendingMatch
 }
 
 func (kp *DexKeeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
@@ -365,9 +384,9 @@ func (kp *DexKeeper) GetOrderBooks(maxLevels int, pairType SymbolPairType) Chang
 		res[pair] = ChangedPriceLevelsPerSymbol{buys, sells}
 
 		// TODO: check considered bucket splitting?
-		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel) {
+		eng.Book.ShowDepth(maxLevels, func(p *me.PriceLevel, levelIndex int) {
 			buys[p.Price] = p.TotalLeavesQty()
-		}, func(p *me.PriceLevel) {
+		}, func(p *me.PriceLevel, levelIndex int) {
 			sells[p.Price] = p.TotalLeavesQty()
 		})
 	}
@@ -668,12 +687,8 @@ func (kp *DexKeeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan T
 		return nil
 	}
 
-	// TODO: make effectiveDays configurable
-	const effectiveDays = 3
-	expireHeight, err := kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
+	expireHeight, forceExpireHeight, err := kp.getExpireHeight(ctx, blockTime)
 	if err != nil {
-		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
-		kp.logger.Info(err.Error())
 		return nil
 	}
 
@@ -690,7 +705,7 @@ func (kp *DexKeeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan T
 	}
 
 	expire := func(orders map[string]*OrderInfo, engine *me.MatchEng, side int8) {
-		engine.Book.RemoveOrders(expireHeight, side, func(ord me.OrderPart) {
+		removeCallback := func(ord me.OrderPart) {
 			// gen transfer
 			if ordMsg, ok := orders[ord.Id]; ok && ordMsg != nil {
 				h := channelHash(ordMsg.Sender, concurrency)
@@ -700,7 +715,12 @@ func (kp *DexKeeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan T
 			} else {
 				kp.logger.Error("failed to locate order to remove in order book", "oid", ord.Id)
 			}
-		})
+		}
+		if !sdk.IsUpgrade(upgrade.BEP67) {
+			engine.Book.RemoveOrders(expireHeight, side, removeCallback)
+		} else {
+			engine.Book.RemoveOrdersBasedOnPriceLevel(expireHeight, forceExpireHeight, preferencePriceLevel, side, removeCallback)
+		}
 	}
 
 	symbolCh := make(chan string, concurrency)
@@ -724,6 +744,30 @@ func (kp *DexKeeper) expireOrders(ctx sdk.Context, blockTime time.Time) []chan T
 		})
 
 	return transferChs
+}
+
+func (kp *DexKeeper) getExpireHeight(ctx sdk.Context, blockTime time.Time) (expireHeight, forceExpireHeight int64, noBreatheBlock error) {
+	const effectiveDays = 3
+	expireHeight, noBreatheBlock = kp.GetBreatheBlockHeight(ctx, blockTime, effectiveDays)
+	if noBreatheBlock != nil {
+		// breathe block not found, that should only happens in in the first three days, just log it and ignore.
+		kp.logger.Error(noBreatheBlock.Error())
+		return -1, -1, noBreatheBlock
+	}
+
+	if sdk.IsUpgrade(upgrade.BEP67) {
+		const forceExpireDays = 30
+		var err error
+		forceExpireHeight, err = kp.GetBreatheBlockHeight(ctx, blockTime, forceExpireDays)
+		if err != nil {
+			//if breathe block of 30 days ago not found, the breathe block of 3 days ago still can be processed, so return err=nil
+			kp.logger.Error(err.Error())
+			return expireHeight, -1, nil
+		}
+	} else {
+		forceExpireHeight = -1
+	}
+	return expireHeight, forceExpireHeight, nil
 }
 
 func (kp *DexKeeper) ExpireOrders(
@@ -935,21 +979,28 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 		return fmt.Errorf("base asset symbol should not be identical to quote asset symbol")
 	}
 
-	if kp.PairMapper.Exists(ctx, baseAsset, quoteAsset) || kp.PairMapper.Exists(ctx, quoteAsset, baseAsset) {
+	if kp.pairExistsBetween(ctx, baseAsset, quoteAsset) {
 		return errors.New("trading pair exists")
 	}
 
 	if baseAsset != types.NativeTokenSymbol &&
 		quoteAsset != types.NativeTokenSymbol {
 
-		if !kp.PairMapper.Exists(ctx, baseAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, baseAsset) {
+		// support busd pair listing
+		if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
+			if baseAsset == BUSDSymbol || quoteAsset == BUSDSymbol {
+				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, BUSDSymbol) {
+					return nil
+				}
+			}
+		}
+
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, baseAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before against %s",
 				baseAsset, quoteAsset)
 		}
 
-		if !kp.PairMapper.Exists(ctx, quoteAsset, types.NativeTokenSymbol) &&
-			!kp.PairMapper.Exists(ctx, types.NativeTokenSymbol, quoteAsset) {
+		if !kp.pairExistsBetween(ctx, types.NativeTokenSymbol, quoteAsset) {
 			return fmt.Errorf("token %s should be listed against BNB before listing %s against %s",
 				quoteAsset, baseAsset, quoteAsset)
 		}
@@ -1084,4 +1135,9 @@ func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
 		return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
 	}
 	return false
+}
+
+// Check whether there is trading pair between two symbols
+func (kp *DexKeeper) pairExistsBetween(ctx sdk.Context, symbolA, symbolB string) bool {
+	return kp.PairMapper.Exists(ctx, symbolA, symbolB) || kp.PairMapper.Exists(ctx, symbolB, symbolA)
 }

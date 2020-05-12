@@ -20,7 +20,8 @@ type OrderBookInterface interface {
 	GetOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrder(id string, side int8, price int64) (OrderPart, error)
 	RemoveOrders(beforeTime int64, side int8, cb func(OrderPart)) error
-	UpdateForEachPriceLevel(side int8, updater func(*PriceLevel))
+	RemoveOrdersBasedOnPriceLevel(expireTime int64, forceExpireTime int64, priceLevelsToReserve int, side int8, removeCallback func(ord OrderPart)) error
+	UpdateForEachPriceLevel(side int8, updater LevelIter)
 	GetPriceLevel(price int64, side int8) *PriceLevel
 	RemovePriceLevel(price int64, side int8) int
 	ShowDepth(maxLevels int, iterBuy LevelIter, iterSell LevelIter)
@@ -130,14 +131,26 @@ func (ob *OrderBookOnULList) RemoveOrder(id string, side int8, price int64) (Ord
 }
 
 func (ob *OrderBookOnULList) RemoveOrders(beforeTime int64, side int8, cb func(OrderPart)) error {
-	ob.UpdateForEachPriceLevel(side, func(pl *PriceLevel) {
+	ob.UpdateForEachPriceLevel(side, func(pl *PriceLevel, levelIndex int) {
 		pl.removeOrders(beforeTime, cb)
 	})
 
 	return nil
 }
 
-func (ob *OrderBookOnULList) UpdateForEachPriceLevel(side int8, updater func(*PriceLevel)) {
+// order beyond priceLevelsToReserve will be expired if it's placed before expireTime. All orders will be expired if they are placed before forceExpireTime
+func (ob *OrderBookOnULList) RemoveOrdersBasedOnPriceLevel(expireTime int64, forceExpireTime int64, priceLevelsToReserve int, side int8, removeCallback func(ord OrderPart)) error {
+	ob.UpdateForEachPriceLevel(side, func(pl *PriceLevel, levelIndex int) {
+		if levelIndex < priceLevelsToReserve {
+			pl.removeOrders(forceExpireTime, removeCallback)
+		} else {
+			pl.removeOrders(expireTime, removeCallback)
+		}
+	})
+	return nil
+}
+
+func (ob *OrderBookOnULList) UpdateForEachPriceLevel(side int8, updater LevelIter) {
 	q := ob.getSideQueue(side)
 	q.UpdateForEach(updater)
 }
@@ -174,11 +187,11 @@ func (ob *OrderBookOnULList) GetAllLevels() ([]PriceLevel, []PriceLevel) {
 	buys := make([]PriceLevel, 0, ob.buyQueue.capacity)
 	sells := make([]PriceLevel, 0, ob.sellQueue.capacity)
 	ob.buyQueue.Iterate(ob.buyQueue.capacity,
-		func(p *PriceLevel) {
+		func(p *PriceLevel, levelIndex int) {
 			buys = append(buys, *p)
 		})
 	ob.sellQueue.Iterate(ob.sellQueue.capacity,
-		func(p *PriceLevel) {
+		func(p *PriceLevel, levelIndex int) {
 			sells = append(sells, *p)
 		})
 	return buys, sells

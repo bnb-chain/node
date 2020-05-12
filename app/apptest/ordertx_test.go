@@ -22,10 +22,10 @@ type level struct {
 	qty   utils.Fixed8
 }
 
-func getOrderBook(pair string) ([]level, []level) {
+func getOrderBook(pair string) ([]level, []level, bool) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 5)
+	orderbooks, pendingMatch := testApp.DexKeeper.GetOrderBookLevels(pair, 5)
 	for _, l := range orderbooks {
 		if l.BuyPrice != 0 {
 			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})
@@ -34,7 +34,7 @@ func getOrderBook(pair string) ([]level, []level) {
 			sells = append(sells, level{price: l.SellPrice, qty: l.SellQty})
 		}
 	}
-	return buys, sells
+	return buys, sells, pendingMatch
 }
 
 func genOrderID(add sdk.AccAddress, seq int64, ctx sdk.Context, am auth.AccountKeeper) string {
@@ -125,6 +125,10 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
 
+	tradingPair2 := types.NewTradingPair("ETH-001", "BNB", 1e8)
+	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair2)
+	testApp.DexKeeper.AddEngine(tradingPair2)
+
 	add := Account(0).GetAddress()
 	oid := fmt.Sprintf("%X-0", add)
 	msg := o.NewNewOrderMsg(add, oid, 1, "BTC-000_BNB", 355e8, 1e8)
@@ -133,11 +137,17 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	t.Logf("res is %v and error is %v", res, e)
 	assert.Equal(uint32(0), res.Code)
 	assert.Nil(e)
-	buys, sells := getOrderBook("BTC-000_BNB")
+	buys, sells, pendingMatch := getOrderBook("BTC-000_BNB")
 	assert.Equal(1, len(buys))
 	assert.Equal(0, len(sells))
+	assert.Equal(true, pendingMatch)
 	assert.Equal(utils.Fixed8(355e8), buys[0].price)
 	assert.Equal(utils.Fixed8(1e8), buys[0].qty)
+
+	buys, sells, pendingMatch = getOrderBook("ETH-001_BNB")
+	assert.Equal(0, len(buys))
+	assert.Equal(0, len(sells))
+	assert.Equal(false, pendingMatch)
 }
 
 func Test_Match(t *testing.T) {
@@ -196,13 +206,17 @@ func Test_Match(t *testing.T) {
 	t.Logf("res is %v and error is %v", res, e)
 	msg = o.NewNewOrderMsg(add, genOrderID(add, 3, ctx, am), 1, "BTC-000_BNB", 98e8, 300e8)
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
-	buys, sells := getOrderBook("BTC-000_BNB")
+	buys, sells, pendingMatch := getOrderBook("BTC-000_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
+
+	assert.Equal(true, pendingMatch)
 	testApp.DexKeeper.MatchAndAllocateSymbols(ctx, nil, false)
-	buys, sells = getOrderBook("BTC-000_BNB")
+	buys, sells, pendingMatch = getOrderBook("BTC-000_BNB")
+
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
+	assert.Equal(false, pendingMatch)
 
 	trades, lastPx := testApp.DexKeeper.GetLastTradesForPair("BTC-000_BNB")
 	assert.Equal(int64(96e8), lastPx)
@@ -247,20 +261,21 @@ func Test_Match(t *testing.T) {
 	res, e = testClient.DeliverTxSync(msg, testApp.Codec)
 	t.Logf("res is %v and error is %v", res, e)
 
-	buys, sells = getOrderBook("BTC-000_BNB")
+	buys, sells, _ = getOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
-	buys, sells = getOrderBook("ETH-000_BNB")
+	buys, sells, _ = getOrderBook("ETH-000_BNB")
 	assert.Equal(4, len(buys))
 	assert.Equal(3, len(sells))
 
 	testApp.DexKeeper.MatchAndAllocateSymbols(ctx, nil, false)
-	buys, sells = getOrderBook("ETH-000_BNB")
+	buys, sells, _ = getOrderBook("ETH-000_BNB")
+
 	t.Logf("buys: %v", buys)
 	t.Logf("sells: %v", sells)
 	assert.Equal(1, len(buys))
 	assert.Equal(2, len(sells))
-	buys, sells = getOrderBook("BTC-000_BNB")
+	buys, sells, _ = getOrderBook("BTC-000_BNB")
 	assert.Equal(0, len(buys))
 	assert.Equal(3, len(sells))
 	trades, lastPx = testApp.DexKeeper.GetLastTradesForPair("ETH-000_BNB")

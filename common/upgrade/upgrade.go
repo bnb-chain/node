@@ -17,13 +17,18 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
+
+
 	// TODO: add upgrade name
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
-	//FIXME upgrade version placeholder
-	BEP8 = "BEP8"
+
+	//Nightingale upgrade
+	BEP8 = "BEP8"   // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
+	BEP67 = "BEP67" // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
+	BEP70 = "BEP70" // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {
