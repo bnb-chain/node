@@ -103,7 +103,6 @@ func (s *server) handleMiniPairsReq(cdc *wire.Codec, ctx context.CLIContext) htt
 	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexMiniAbciQueryPrefix)
 }
 
-
 func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return dexapi.DepthReqHandler(cdc, ctx)
 }
@@ -132,7 +131,6 @@ func (s *server) handleMiniTokenReq(cdc *wire.Codec, ctx context.CLIContext) htt
 func (s *server) handleMiniTokensReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return tksapi.GetTokensReqHandler(cdc, ctx, true)
 }
-
 
 func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {
 	return tksapi.BalancesReqHandler(cdc, ctx, tokens)

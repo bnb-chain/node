@@ -18,7 +18,7 @@ func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string, isMini
 	var abciPrefix string
 	if isMini {
 		abciPrefix = "mini-tokens"
-	}else{
+	} else {
 		abciPrefix = "tokens"
 	}
 	bz, err := ctx.Query(fmt.Sprintf("%s/info/%s", abciPrefix, symbol), nil)
@@ -29,14 +29,14 @@ func getTokenInfo(ctx context.CLIContext, cdc *wire.Codec, symbol string, isMini
 	if isMini {
 		var token types.MiniToken
 		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &token)
-		if err!=nil{
+		if err != nil {
 			fmt.Println(err)
 		}
 		return token, nil
-	}else{
+	} else {
 		var token types.Token
 		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &token)
-		if err!=nil{
+		if err != nil {
 			fmt.Println(err)
 		}
 		return token, nil

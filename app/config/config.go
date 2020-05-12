@@ -374,7 +374,7 @@ type UpgradeConfig struct {
 	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
-	BEP3Height  int64 `mapstructure:"BEP3Height"`
+	BEP3Height int64 `mapstructure:"BEP3Height"`
 
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
@@ -383,7 +383,7 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 
 	// TODO: add upgrade name
-	BEP8Height int64 `mapstructure:"BEP8Height"`
+	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 }

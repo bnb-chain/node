@@ -18,7 +18,6 @@ const (
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
 
-
 	// TODO: add upgrade name
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
@@ -26,7 +25,7 @@ const (
 	FixZeroBalance       = "FixZeroBalance"
 
 	//Nightingale upgrade
-	BEP8 = "BEP8"   // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
+	BEP8  = "BEP8"  // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
 	BEP67 = "BEP67" // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
 	BEP70 = "BEP70" // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
 )

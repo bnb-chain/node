@@ -21,7 +21,7 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	var abciPrefix string
 	if isMini {
 		abciPrefix = "mini-tokens"
-	}else{
+	} else {
 		abciPrefix = "tokens"
 	}
 	bz, err := ctx.Query(fmt.Sprintf("%s/list/%d/%d/%s", abciPrefix, offset, limit, strconv.FormatBool(showZeroSupplyTokens)), nil)
@@ -31,14 +31,14 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	if isMini {
 		tokens := make([]types.MiniToken, 0)
 		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-		if err!=nil{
+		if err != nil {
 			fmt.Println(err)
 		}
 		return tokens, nil
-	}else{
+	} else {
 		tokens := make([]types.Token, 0)
 		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-		if err!=nil{
+		if err != nil {
 			fmt.Println(err)
 		}
 		return tokens, nil

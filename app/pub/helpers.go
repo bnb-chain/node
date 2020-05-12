@@ -17,12 +17,12 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/utils"
 	miniIssue "github.com/binance-chain/node/plugins/minitokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
 func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.DexKeeper, tradesToPublish []*Trade, pairType orderPkg.SymbolPairType) []string {
@@ -327,7 +327,7 @@ func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, trad
 			tradeIdx += 1
 			if utils.IsMiniTokenTradingPair(symbol) {
 				miniTradesToPublish = append(miniTradesToPublish, t)
-			}else {
+			} else {
 				tradesToPublish = append(tradesToPublish, t)
 			}
 		}
