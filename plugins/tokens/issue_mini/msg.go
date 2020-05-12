@@ -18,9 +18,9 @@ const (
 	maxTokenNameLength = 32
 )
 
-var _ sdk.Msg = IssueMsg{}
+var _ sdk.Msg = IssueMiniMsg{}
 
-type IssueMsg struct {
+type IssueMiniMsg struct {
 	From        sdk.AccAddress `json:"from"`
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
@@ -30,8 +30,8 @@ type IssueMsg struct {
 	TokenURI    string         `json:"token_uri"`
 }
 
-func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, supply int64, mintable bool, tokenURI string) IssueMsg {
-	return IssueMsg{
+func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, supply int64, mintable bool, tokenURI string) IssueMiniMsg {
+	return IssueMiniMsg{
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
@@ -44,7 +44,7 @@ func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, suppl
 
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
-func (msg IssueMsg) ValidateBasic() sdk.Error {
+func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
@@ -72,9 +72,9 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 	return nil
 }
 
-// Implements IssueMsg.
-func (msg IssueMsg) Route() string { return Route }
-func (msg IssueMsg) Type() string {
+// Implements IssueMiniMsg.
+func (msg IssueMiniMsg) Route() string { return Route }
+func (msg IssueMiniMsg) Type() string {
 	switch types.SupplyRangeType(msg.TokenType) {
 	case types.SupplyRange.TINY:
 		return IssueTinyMsgType
@@ -84,15 +84,15 @@ func (msg IssueMsg) Type() string {
 		return IssueMiniMsgType
 	}
 }
-func (msg IssueMsg) String() string               { return fmt.Sprintf("IssueMsg{%#v}", msg) }
-func (msg IssueMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
-func (msg IssueMsg) GetSignBytes() []byte {
+func (msg IssueMiniMsg) String() string               { return fmt.Sprintf("IssueMiniMsg{%#v}", msg) }
+func (msg IssueMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
+func (msg IssueMiniMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
-func (msg IssueMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg IssueMiniMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }

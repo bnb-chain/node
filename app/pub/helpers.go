@@ -132,7 +132,7 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 		case freeze.UnfreezeMsg:
 			txAsset = msg.Symbol
 			// will not cover timelock, timeUnlock, timeRelock, atomic Swap
-		case miniIssue.IssueMsg:
+		case miniIssue.IssueMiniMsg:
 			txAsset = msg.Symbol
 		}
 		transactionsToPublish = append(transactionsToPublish, Transaction{

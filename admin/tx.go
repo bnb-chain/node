@@ -26,7 +26,7 @@ var transferOnlyModeBlackList = []string{
 	timelock.TimeLockMsg{}.Type(),
 	timelock.TimeUnlockMsg{}.Type(),
 	timelock.TimeRelockMsg{}.Type(),
-	miniIssue.IssueMsg{}.Type(),
+	miniIssue.IssueMiniMsg{}.Type(),
 }
 
 var TxBlackList = map[runtime.Mode][]string{

@@ -69,7 +69,7 @@ sed -i -e "s/6060/7060/g" ${witnesshome}/config/config.toml
 ${executable} start --pruning breathe > ${deamonhome}/log.txt 2>&1 &
 validator_pid=$!
 echo ${validator_pid}
-sleep 60 # sleep in case cli status call failed to get node id
+sleep 20 # sleep in case cli status call failed to get node id
 validatorStatus=$(${cli} status)
 validator_id=$(echo ${validatorStatus} | grep -o "\"id\":\"[a-zA-Z0-9]*\"" | sed "s/\"//g" | sed "s/id://g")
 #echo ${validator_id}

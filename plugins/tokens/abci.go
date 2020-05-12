@@ -9,11 +9,21 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/types"
 )
 
-func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
-	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
+func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler {
+	abciQueryPrefix := prefix
+	var isMini bool
+	switch abciQueryPrefix {
+	case abciQueryPrefix:
+		isMini = false
+	case miniAbciQueryPrefix:
+		isMini = true
+	default:
+		isMini = false
+	}
+	return func(app types.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
 		if path[0] != abciQueryPrefix || len(path) < 2 {
 			return nil
@@ -36,24 +46,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Log:  "empty symbol not permitted",
 				}
 			}
-			token, err := mapper.GetToken(ctx, symbol)
-			if err != nil {
-				return &abci.ResponseQuery{
-					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
-				}
-			}
-			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(token)
-			if err != nil {
-				return &abci.ResponseQuery{
-					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
-				}
-			}
-			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
-			}
+			return queryAndMarshallToken(app, mapper, ctx, symbol, isMini)
 		case "list": // args: ["tokens", "list", <offset>, <limit>, <showZeroSupplyTokens>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
@@ -114,5 +107,49 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					abciQueryPrefix, path),
 			}
 		}
+	}
+}
+
+func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, symbol string, isMini bool) *abci.ResponseQuery {
+	var bz []byte
+	var err error
+	var token interface{}
+
+	token, err = getToken(mapper, ctx, symbol, isMini)
+	if err != nil {
+		return &abci.ResponseQuery{
+			Code: uint32(sdk.CodeInternal),
+			Log:  err.Error(),
+		}
+	}
+	switch token.(type) {
+	case types.MiniToken:
+		bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token.(types.MiniToken))
+	case types.Token:
+		bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token.(types.Token))
+	default:
+		return &abci.ResponseQuery{
+			Code: uint32(sdk.CodeInternal),
+			Log:  err.Error(),
+		}
+	}
+
+	if err != nil {
+		return &abci.ResponseQuery{
+			Code: uint32(sdk.CodeInternal),
+			Log:  err.Error(),
+		}
+	}
+	return &abci.ResponseQuery{
+		Code:  uint32(sdk.ABCICodeOK),
+		Value: bz,
+	}
+}
+
+func getToken(mapper Mapper, ctx sdk.Context, symbol string, isMini bool) (interface{}, error) {
+	if isMini {
+		return mapper.GetMiniToken(ctx, symbol)
+	} else {
+		return mapper.GetToken(ctx, symbol)
 	}
 }

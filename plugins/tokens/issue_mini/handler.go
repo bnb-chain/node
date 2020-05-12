@@ -20,7 +20,7 @@ import (
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case IssueMsg:
+		case IssueMiniMsg:
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
@@ -29,7 +29,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
+func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMiniMsg) sdk.Result {
 	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)

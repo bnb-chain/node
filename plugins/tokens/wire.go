@@ -25,6 +25,6 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(swap.DepositHTLTMsg{}, "tokens/DepositHTLTMsg", nil)
 	cdc.RegisterConcrete(swap.ClaimHTLTMsg{}, "tokens/ClaimHTLTMsg", nil)
 	cdc.RegisterConcrete(swap.RefundHTLTMsg{}, "tokens/RefundHTLTMsg", nil)
-	cdc.RegisterConcrete(issue_mini.IssueMsg{}, "minitokens/IssueMsg", nil)
-	cdc.RegisterConcrete(seturi_mini.SetURIMsg{}, "minitokens/SetURIMsg", nil)
+	cdc.RegisterConcrete(issue_mini.IssueMiniMsg{}, "tokens/IssueMiniMsg", nil)
+	cdc.RegisterConcrete(seturi_mini.SetURIMsg{}, "tokens/SetURIMsg", nil)
 }
