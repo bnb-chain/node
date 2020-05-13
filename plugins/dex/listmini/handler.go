@@ -36,7 +36,7 @@ func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
 
-	baseToken, err := tokenMapper.GetMiniToken(ctx, msg.BaseAssetSymbol)
+	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}

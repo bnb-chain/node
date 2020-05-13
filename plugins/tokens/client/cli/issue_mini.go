@@ -20,7 +20,7 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "issue",
 		Short: "issue a new mini-token",
-		RunE:  cmdr.issueToken,
+		RunE:  cmdr.issueMiniToken,
 	}
 
 	cmd.Flags().String(flagTokenName, "", "name of the new token")

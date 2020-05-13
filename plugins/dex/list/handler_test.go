@@ -207,7 +207,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "token(BTC-000) not found")
 
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -234,7 +234,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "quote token does not exist")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
@@ -258,7 +258,7 @@ func TestListHandler_LowerCase(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -267,7 +267,7 @@ func TestListHandler_LowerCase(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
@@ -325,7 +325,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -334,7 +334,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,

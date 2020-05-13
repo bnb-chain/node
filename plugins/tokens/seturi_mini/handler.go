@@ -29,7 +29,7 @@ func handleSetURI(ctx sdk.Context, tokenMapper store.Mapper, msg SetURIMsg) sdk.
 	logger := log.With("module", "mini-token", "symbol", symbol, "tokenURI", msg.TokenURI, "from", msg.From)
 
 	errLogMsg := "set token URI failed"
-	token, err := tokenMapper.GetMiniToken(ctx, symbol)
+	token, err := tokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()

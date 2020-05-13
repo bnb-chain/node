@@ -17,27 +17,25 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
-	miniTkstore "github.com/binance-chain/node/plugins/minitokens/store"
 	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
 
-func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper, miniTkstore.MiniTokenMapper) {
-	ms, capKey1, capKey2, capKey3 := testutils.SetupThreeMultiStoreForUnitTest()
+func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper) {
+	ms, capKey1, capKey2, _ := testutils.SetupThreeMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
-	miniTokenMapper := miniTkstore.NewMiniTokenMapper(cdc, capKey3)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	handler := NewHandler(tokenMapper, miniTokenMapper, bankKeeper)
-	miniTokenHandler := miniIssue.NewHandler(miniTokenMapper, bankKeeper)
+	handler := NewHandler(tokenMapper, bankKeeper)
+	miniTokenHandler := miniIssue.NewHandler(tokenMapper, bankKeeper)
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1},
 		sdk.RunTxModeDeliver, log.NewNopLogger()).
 		WithAccountCache(auth.NewAccountCache(accountStoreCache))
-	return ctx, handler, miniTokenHandler, accountKeeper, tokenMapper, miniTokenMapper
+	return ctx, handler, miniTokenHandler, accountKeeper, tokenMapper
 }
 
 func setChainVersion() {
@@ -49,7 +47,7 @@ func resetChainVersion() {
 }
 
 func TestHandleIssueToken(t *testing.T) {
-	ctx, handler, _, accountKeeper, tokenMapper, _ := setup()
+	ctx, handler, _, accountKeeper, tokenMapper:= setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
@@ -66,7 +64,7 @@ func TestHandleIssueToken(t *testing.T) {
 }
 
 func TestHandleMintToken(t *testing.T) {
-	ctx, handler, _, accountKeeper, tokenMapper, _ := setup()
+	ctx, handler, _, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	mintMsg := NewMintMsg(acc.GetAddress(), "NNB-000", 10000e8)
 	sdkResult := handler(ctx, mintMsg)
@@ -112,7 +110,7 @@ func TestHandleMintToken(t *testing.T) {
 func TestHandleMintMiniToken(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
-	ctx, handler, miniTokenHandler, accountKeeper, tokenMapper, miniTokenMapper := setup()
+	ctx, handler, miniTokenHandler, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	mintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 1001e8)
 	sdkResult := handler(ctx, mintMsg)
@@ -124,10 +122,10 @@ func TestHandleMintMiniToken(t *testing.T) {
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	sdkResult = handler(ctx, mintMsg)
-	token, err := miniTokenMapper.GetToken(ctx, "NNB-000M")
+	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
 	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	_, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NotNil(t, err)
@@ -140,9 +138,9 @@ func TestHandleMintMiniToken(t *testing.T) {
 	validMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 1000e8)
 	sdkResult = handler(ctx, validMintMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
-	token, err = miniTokenMapper.GetToken(ctx, "NNB-000M")
+	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	invalidMintMsg := NewMintMsg(acc2.GetAddress(), "NNB-000M", 100e8)

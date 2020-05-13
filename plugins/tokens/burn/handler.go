@@ -39,18 +39,18 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	if !token.IsOwner(msg.From) {
-		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.Owner)
+		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.GetOwner())
 		return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
 	}
 
-	coins := keeper.GetCoins(ctx, token.Owner)
+	coins := keeper.GetCoins(ctx, token.GetOwner())
 	if coins.AmountOf(symbol) < burnAmount ||
-		token.TotalSupply.ToInt64() < burnAmount {
+		token.GetTotalSupply().ToInt64() < burnAmount {
 		logger.Info("burn token failed", "reason", "no enough tokens to burn")
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, sdk.Coins{{
+	_, _, sdkError := keeper.SubtractCoins(ctx, token.GetOwner(), sdk.Coins{{
 		Denom:  symbol,
 		Amount: burnAmount,
 	}})
@@ -59,7 +59,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 		return sdkError.Result()
 	}
 
-	newTotalSupply := token.TotalSupply.ToInt64() - burnAmount
+	newTotalSupply := token.GetTotalSupply().ToInt64() - burnAmount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())
@@ -74,7 +74,7 @@ func handleBurnMiniToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.
 	logger := log.With("module", "mini-token", "symbol", msg.Symbol, "amount", msg.Amount)
 	burnAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
-	token, err := tokenMapper.GetMiniToken(ctx, symbol)
+	token, err := tokenMapper.GetToken(ctx, symbol)
 	errLogMsg := "burn token failed"
 	if err != nil {
 		logger.Info("burn token failed", "reason", "invalid token symbol")
@@ -82,11 +82,11 @@ func handleBurnMiniToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.
 	}
 
 	if !token.IsOwner(msg.From) {
-		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.Owner)
+		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.GetOwner())
 		return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
 	}
 
-	coins := keeper.GetCoins(ctx, token.Owner)
+	coins := keeper.GetCoins(ctx, token.GetOwner())
 
 	useAllBalance := coins.AmountOf(symbol) == burnAmount
 
@@ -97,12 +97,12 @@ func handleBurnMiniToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.
 	}
 
 	if coins.AmountOf(symbol) < burnAmount ||
-		token.TotalSupply.ToInt64() < burnAmount {
+		token.GetTotalSupply().ToInt64() < burnAmount {
 		logger.Info("burn token failed", "reason", "no enough tokens to burn")
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, sdk.Coins{{
+	_, _, sdkError := keeper.SubtractCoins(ctx, token.GetOwner(), sdk.Coins{{
 		Denom:  symbol,
 		Amount: burnAmount,
 	}})
@@ -111,7 +111,7 @@ func handleBurnMiniToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.
 		return sdkError.Result()
 	}
 
-	newTotalSupply := token.TotalSupply.ToInt64() - burnAmount
+	newTotalSupply := token.GetTotalSupply().ToInt64() - burnAmount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())

@@ -90,7 +90,7 @@ func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Map
 	}
 
 	if sdk.IsUpgrade(upgrade.ListingRuleUpgrade) {
-		quoteToken, err := tokenMapper.GetToken(ctx, msg.QuoteAssetSymbol)
+		quoteToken, err := tokenMapper.GetToken(ctx, msg.QuoteAssetSymbol) //todo
 		if err != nil {
 			return sdk.ErrInvalidCoins(err.Error()).Result()
 		}

@@ -1,7 +1,6 @@
 package types
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
@@ -63,6 +62,8 @@ type MiniToken struct {
 	TokenURI  string          `json:"token_uri"` //TODO set max length
 }
 
+var _ IToken = &MiniToken{}
+
 func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
 	// double check that the symbol is suffixed
 	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
@@ -92,7 +93,7 @@ func IsMiniTokenSymbol(symbol string) bool {
 	return true
 }
 
-func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
+//func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
 func (token MiniToken) String() string {
 	return fmt.Sprintf("{Name: %v, Symbol: %v, TokenType: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
 		token.Name, token.Symbol, token.TokenType, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
@@ -100,11 +101,11 @@ func (token MiniToken) String() string {
 
 // Token Validation
 
-func ValidateMiniToken(token MiniToken) error {
-	if err := ValidateMapperMiniTokenSymbol(token.Symbol); err != nil {
+func ValidateMiniToken(token IToken) error {
+	if err := ValidateMapperMiniTokenSymbol(token.GetSymbol()); err != nil {
 		return err
 	}
-	if err := ValidateIssueMsgMiniTokenSymbol(token.OrigSymbol); err != nil {
+	if err := ValidateIssueMsgMiniTokenSymbol(token.GetOrigSymbol()); err != nil {
 		return err
 	}
 	return nil

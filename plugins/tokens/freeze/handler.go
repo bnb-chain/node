@@ -90,7 +90,7 @@ func handleFreezeMiniToken(ctx sdk.Context, miniTokenMapper store.Mapper, accKee
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	errLogMsg := "freeze token failed"
-	_, err := miniTokenMapper.GetMiniToken(ctx, symbol)
+	_, err := miniTokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
@@ -129,7 +129,7 @@ func handleUnfreezeMiniToken(ctx sdk.Context, miniTokenMapper store.Mapper, accK
 	useAllFrozenBalance := frozenAmount == unfreezeAmount
 	errLogMsg := "unfreeze token failed"
 
-	_, err := miniTokenMapper.GetMiniToken(ctx, symbol)
+	_, err := miniTokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()

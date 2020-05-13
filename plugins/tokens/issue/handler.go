@@ -76,7 +76,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
 
-	if err := tokenMapper.NewToken(ctx, *token); err != nil {
+	if err := tokenMapper.NewToken(ctx, token); err != nil {
 		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
@@ -115,7 +115,7 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
 
-	if !token.Mintable {
+	if !token.IsMintable() {
 		logger.Info(errLogMsg, "reason", "token cannot be minted")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token(%s) cannot be minted", msg.Symbol)).Result()
 	}
@@ -126,21 +126,21 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 	}
 
 	// use minus to prevent overflow
-	if msg.Amount > common.TokenMaxTotalSupply-token.TotalSupply.ToInt64() {
+	if msg.Amount > common.TokenMaxTotalSupply-token.GetTotalSupply().ToInt64() {
 		logger.Info(errLogMsg, "reason", "exceed the max total supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %ds",
 			common.TokenMaxTotalSupply)).Result()
 	}
-	newTotalSupply := token.TotalSupply.ToInt64() + msg.Amount
+	newTotalSupply := token.GetTotalSupply().ToInt64() + msg.Amount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "update total supply failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("update total supply failed")).Result()
 	}
 
-	_, _, sdkError := bankKeeper.AddCoins(ctx, token.Owner,
+	_, _, sdkError := bankKeeper.AddCoins(ctx, token.GetOwner(),
 		sdk.Coins{{
-			Denom:  token.Symbol,
+			Denom:  token.GetSymbol(),
 			Amount: msg.Amount,
 		}})
 	if sdkError != nil {
@@ -161,13 +161,15 @@ func handleMintMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper b
 		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height")).Result()
 	}
 	errLogMsg := "mint token failed"
-	token, err := tokenMapper.GetMiniToken(ctx, symbol)
+
+	iToken, err := tokenMapper.GetToken(ctx, symbol)
+	token := iToken.(*types.MiniToken) //todo
 	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
 
-	if !token.Mintable {
+	if !token.IsMintable() {
 		logger.Info(errLogMsg, "reason", "token cannot be minted")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token(%s) cannot be minted", msg.Symbol)).Result()
 	}

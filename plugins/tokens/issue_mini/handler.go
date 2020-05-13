@@ -86,7 +86,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
 
-	if err := tokenMapper.NewMiniToken(ctx, *token); err != nil {
+	if err := tokenMapper.NewToken(ctx, token); err != nil {
 		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}

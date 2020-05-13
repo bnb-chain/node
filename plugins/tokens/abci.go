@@ -13,9 +13,9 @@ import (
 )
 
 func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler {
-	abciQueryPrefix := prefix
+	queryPrefix := prefix
 	var isMini bool
-	switch abciQueryPrefix {
+	switch queryPrefix {
 	case abciQueryPrefix:
 		isMini = false
 	case miniAbciQueryPrefix:
@@ -25,7 +25,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 	}
 	return func(app types.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
-		if path[0] != abciQueryPrefix || len(path) < 2 {
+		if path[0] != queryPrefix || len(path) < 2 {
 			return nil
 		}
 		switch path[1] {
@@ -35,7 +35,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires a symbol path arg",
-						abciQueryPrefix, path[1]),
+						queryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
@@ -53,7 +53,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires offset and limit path segments",
-						abciQueryPrefix, path[1]),
+						queryPrefix, path[1]),
 				}
 			}
 			showZeroSupplyTokens := false
@@ -61,7 +61,14 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 				showZeroSupplyTokens = true
 			}
 			ctx := app.GetContextForCheckState()
-			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens)
+			//var tokens interface{}
+			//if isMini{
+			//	tokens = mapper.GetMiniTokenList(ctx, showZeroSupplyTokens)
+			//}else {
+			//	tokens = mapper.GetTokenList(ctx, showZeroSupplyTokens)
+			//} TODO
+
+			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens, isMini)
 			offset, err := strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{
@@ -104,7 +111,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 				Code: uint32(sdk.ABCICodeOK),
 				Info: fmt.Sprintf(
 					"Unknown `%s` query path: %v",
-					abciQueryPrefix, path),
+					queryPrefix, path),
 			}
 		}
 	}
@@ -115,25 +122,14 @@ func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, s
 	var err error
 	var token interface{}
 
-	token, err = getToken(mapper, ctx, symbol, isMini)
+	token, err = mapper.GetToken(ctx, symbol)
 	if err != nil {
 		return &abci.ResponseQuery{
 			Code: uint32(sdk.CodeInternal),
 			Log:  err.Error(),
 		}
 	}
-	switch token.(type) {
-	case types.MiniToken:
-		bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token.(types.MiniToken))
-	case types.Token:
-		bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token.(types.Token))
-	default:
-		return &abci.ResponseQuery{
-			Code: uint32(sdk.CodeInternal),
-			Log:  err.Error(),
-		}
-	}
-
+	bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token)
 	if err != nil {
 		return &abci.ResponseQuery{
 			Code: uint32(sdk.CodeInternal),
@@ -143,13 +139,5 @@ func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, s
 	return &abci.ResponseQuery{
 		Code:  uint32(sdk.ABCICodeOK),
 		Value: bz,
-	}
-}
-
-func getToken(mapper Mapper, ctx sdk.Context, symbol string, isMini bool) (interface{}, error) {
-	if isMini {
-		return mapper.GetMiniToken(ctx, symbol)
-	} else {
-		return mapper.GetToken(ctx, symbol)
 	}
 }

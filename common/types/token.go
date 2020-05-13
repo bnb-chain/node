@@ -26,6 +26,20 @@ const (
 	NativeTokenTotalSupply        = 2e16
 )
 
+type IToken interface {
+	GetName() string
+	GetSymbol() string
+	GetOrigSymbol() string
+	GetTotalSupply() utils.Fixed8
+	SetTotalSupply(totalSupply utils.Fixed8)
+	GetOwner() sdk.AccAddress
+	IsMintable() bool
+	IsOwner(addr sdk.AccAddress) bool
+	String() string
+}
+
+var _ IToken = &Token{}
+
 type Token struct {
 	Name        string         `json:"name"`
 	Symbol      string         `json:"symbol"`
@@ -33,6 +47,34 @@ type Token struct {
 	TotalSupply utils.Fixed8   `json:"total_supply"`
 	Owner       sdk.AccAddress `json:"owner"`
 	Mintable    bool           `json:"mintable"`
+}
+
+func (token Token) GetName() string {
+	return token.Name
+}
+
+func (token Token) GetSymbol() string {
+	return token.Symbol
+}
+
+func (token Token) GetOrigSymbol() string {
+	return token.OrigSymbol
+}
+
+func (token Token) GetTotalSupply() utils.Fixed8 {
+	return token.TotalSupply
+}
+
+func (token *Token) SetTotalSupply(totalSupply utils.Fixed8)  {
+	token.TotalSupply = totalSupply
+}
+
+func (token Token) GetOwner() sdk.AccAddress {
+	return token.Owner
+}
+
+func (token Token) IsMintable() bool {
+	return token.Mintable
 }
 
 func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress, mintable bool) (*Token, error) {
@@ -62,11 +104,11 @@ func (token Token) String() string {
 
 // Token Validation
 
-func ValidateToken(token Token) error {
-	if err := ValidateMapperTokenSymbol(token.Symbol); err != nil {
+func ValidateToken(token IToken) error {
+	if err := ValidateMapperTokenSymbol(token.GetSymbol()); err != nil {
 		return err
 	}
-	if err := ValidateIssueMsgTokenSymbol(token.OrigSymbol); err != nil {
+	if err := ValidateIssueMsgTokenSymbol(token.GetOrigSymbol()); err != nil {
 		return err
 	}
 	return nil

@@ -28,21 +28,13 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	if err != nil {
 		return nil, err
 	}
-	if isMini {
-		tokens := make([]types.MiniToken, 0)
-		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return tokens, nil
-	} else {
-		tokens := make([]types.Token, 0)
-		err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return tokens, nil
+
+	tokens := make([]types.IToken, 0)
+	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
+	if err != nil {
+		fmt.Println(err)
 	}
+	return tokens, nil
 
 }
 
