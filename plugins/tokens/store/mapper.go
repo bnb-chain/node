@@ -155,8 +155,12 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
 	}
-
-	key := []byte(strings.ToUpper(symbol))
+	var key []byte
+	if types.IsMiniTokenSymbol(symbol) {
+		key = m.calcMiniTokenKey(strings.ToUpper(symbol))
+	}else {
+		key = []byte(strings.ToUpper(symbol))
+	}
 	store := ctx.KVStore(m.key)
 	bz := store.Get(key)
 	if bz == nil {

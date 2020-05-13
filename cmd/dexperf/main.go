@@ -37,7 +37,6 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/minitokens"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
 )
@@ -545,7 +544,6 @@ func MakeCodec() *wire.Codec {
 	tokens.RegisterWire(cdc)
 	types.RegisterWire(cdc)
 	tx.RegisterWire(cdc)
-	minitokens.RegisterWire(cdc)
 	return cdc
 }
 

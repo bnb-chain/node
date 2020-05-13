@@ -25,6 +25,9 @@ import (
 func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	ms, capKey1, capKey2, _ := testutils.SetupThreeMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
+	cdc.RegisterInterface((*types.IToken)(nil), nil)
+	cdc.RegisterConcrete(&types.Token{}, "bnbchain/Token", nil)
+	cdc.RegisterConcrete(&types.MiniToken{}, "bnbchain/MiniToken", nil)
 	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
@@ -57,7 +60,7 @@ func TestHandleIssueToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 100000e8, acc.GetAddress(), false)
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *token.(*types.Token))
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
@@ -81,7 +84,7 @@ func TestHandleMintToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 110000e8, acc.GetAddress(), true)
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *token.(*types.Token))
 
 	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000", types.TokenMaxTotalSupply)
 	sdkResult = handler(ctx, invalidMintMsg)
@@ -127,9 +130,9 @@ func TestHandleMintMiniToken(t *testing.T) {
 	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
-	_, err = tokenMapper.GetToken(ctx, "NNB-000M")
+	_, err = tokenMapper.GetToken(ctx, "NNB-000")
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "token(NNB-000M) not found")
+	require.Contains(t, err.Error(), "token(NNB-000) not found")
 
 	sdkResult = handler(ctx, mintMsg)
 	require.Equal(t, false, sdkResult.Code.IsOK())

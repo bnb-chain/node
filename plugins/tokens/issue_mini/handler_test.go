@@ -17,14 +17,17 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/minitokens/store"
+	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
 
-func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.MiniTokenMapper) {
+func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	ms, capKey1, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
-	tokenMapper := store.NewMiniTokenMapper(cdc, capKey1)
+	cdc.RegisterInterface((*types.IToken)(nil), nil)
+	cdc.RegisterConcrete(&types.Token{}, "bnbchain/Token", nil)
+	cdc.RegisterConcrete(&types.MiniToken{}, "bnbchain/MiniToken", nil)
+	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
 	handler := NewHandler(tokenMapper, bankKeeper)
@@ -65,7 +68,7 @@ func TestHandleIssueToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
 	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
@@ -84,5 +87,5 @@ func TestHandleIssueToken(t *testing.T) {
 	token, err = tokenMapper.GetToken(ctx, "NBB-002M")
 	require.NoError(t, err)
 	expectedToken, err = types.NewMiniToken("New BB", "NBB-002M", 2, 10000e8+100, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 }
