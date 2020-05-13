@@ -387,10 +387,11 @@ func (app *BinanceChain) initStaking() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime:     60 * 60 * 24 * time.Second, // 1 day
-			MaxValidators:     21,
-			BondDenom:         types.NativeTokenSymbol,
-			MinSelfDelegation: 20000e8,
+			UnbondingTime:       60 * 60 * 24 * time.Second, // 1 day
+			MaxValidators:       21,
+			BondDenom:           types.NativeTokenSymbol,
+			MinSelfDelegation:   20000e8,
+			MinDelegationChange: 1e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
 			// TODO: optimize these parameters
