@@ -3,8 +3,6 @@ package issue
 import (
 	"testing"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
