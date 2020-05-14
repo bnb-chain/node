@@ -18,7 +18,7 @@ import (
 func getTokenInfoCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info <symbol>",
-		Short: "Query token info",
+		Short: "Query token/mini-token info",
 		RunE:  cmdr.runGetToken,
 	}
 
@@ -34,7 +34,12 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 		return errors.New("you must provide the symbol")
 	}
 
-	key := []byte(strings.ToUpper(symbol))
+	var key []byte
+	if types.IsMiniTokenSymbol(symbol) {
+		key = calcMiniTokenKey(strings.ToUpper(symbol))
+	}else {
+		key = []byte(strings.ToUpper(symbol))
+	}
 
 	res, err := ctx.QueryStore(key, common.TokenStoreName)
 	if err != nil {
@@ -47,14 +52,14 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// decode the value
-	token := new(types.Token)
+	var token types.IToken
 	err = c.Cdc.UnmarshalBinaryBare(res, &token)
 	if err != nil {
 		return err
 	}
 
 	// print out the toke info
-	output, err := wire.MarshalJSONIndent(c.Cdc, token)
+	output, err := wire.MarshalJSONIndent(c.Cdc, &token)
 	if err != nil {
 		return err
 	}

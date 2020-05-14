@@ -10,13 +10,12 @@ import (
 
 func setTokenURICmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-uri --symbol {symbol} --uri {token uri} --from {token issuer address}",
+		Use:   "set-uri-mini --symbol {symbol} --uri {token uri} --from {token issuer address}",
 		Short: "set token URI of mini-token",
 		RunE:  cmdr.setTokenURI,
 	}
 
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the mini-token")
-	cmd.Flags().StringP(flagURI, "u", "", "a distinct uri for the mini-token")
 	cmd.Flags().String(flagTokenUri, "", "uri of the token information")
 
 	return cmd

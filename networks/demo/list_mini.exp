@@ -1,0 +1,19 @@
+#!/usr/bin/expect
+
+set symbol [lindex $argv 0]
+set quote_symbol [lindex $argv 1]
+set init_price [lindex $argv 2]
+set from [lindex $argv 3]
+set chain_id [lindex $argv 4]
+set home [lindex $argv 5]
+set proposal_id [lindex $argv 6]
+
+set timeout 30
+	if {"${home}" == ""} {
+		spawn ./bnbcli dex list-mini -s $symbol --quote-asset-symbol $quote_symbol --from $from --init-price $init_price --chain-id $chain_id --proposal-id $proposal_id
+	} else {
+		spawn ./bnbcli dex list-mini --home $home -s $symbol --quote-asset-symbol $quote_symbol --from $from --init-price $init_price --chain-id $chain_id --proposal-id $proposal_id
+	}
+	expect "Password*"
+	send "12345678\r"
+interact

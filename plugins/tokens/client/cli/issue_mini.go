@@ -18,7 +18,7 @@ const (
 
 func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "issue",
+		Use:   "issue-mini",
 		Short: "issue a new mini-token",
 		RunE:  cmdr.issueMiniToken,
 	}

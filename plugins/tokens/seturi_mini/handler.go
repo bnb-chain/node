@@ -41,7 +41,7 @@ func handleSetURI(ctx sdk.Context, tokenMapper store.Mapper, msg SetURIMsg) sdk.
 	}
 
 	if len(msg.TokenURI) < 1 {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not exceed %v characters", common.MaxTokenURILength)).Result()
+		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not be empty")).Result()
 	}
 
 	if len(msg.TokenURI) > common.MaxTokenURILength {
