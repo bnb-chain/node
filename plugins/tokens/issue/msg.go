@@ -3,6 +3,7 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -93,7 +94,7 @@ func NewMintMsg(from sdk.AccAddress, symbol string, amount int64) MintMsg {
 
 func (msg MintMsg) ValidateBasic() sdk.Error {
 
-	if types.IsMiniTokenSymbol(msg.Symbol) {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsMiniTokenSymbol(msg.Symbol) {
 		return msg.validateMiniTokenBasic()
 	}
 
@@ -121,10 +122,6 @@ func (msg MintMsg) validateMiniTokenBasic() sdk.Error {
 
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
-	}
-
-	if err := types.ValidateMapperMiniTokenSymbol(msg.Symbol); err != nil {
-		return sdk.ErrInvalidCoins(err.Error())
 	}
 
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply

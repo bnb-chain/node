@@ -3,6 +3,7 @@ package freeze
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -41,7 +42,7 @@ func (msg FreezeMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccA
 // doesn't require access to any other information.
 func (msg FreezeMsg) ValidateBasic() sdk.Error {
 
-	if types.IsMiniTokenSymbol(msg.Symbol) {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsMiniTokenSymbol(msg.Symbol) {
 		return msg.validateMiniTokenBasic()
 	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")

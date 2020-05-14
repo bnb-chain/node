@@ -3,6 +3,7 @@ package issue_mini
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -45,6 +46,10 @@ func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, suppl
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
+	if !sdk.IsUpgrade(upgrade.BEP8){
+		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height"))
+	}
+
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
