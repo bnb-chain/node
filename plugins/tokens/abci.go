@@ -61,12 +61,6 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 				showZeroSupplyTokens = true
 			}
 			ctx := app.GetContextForCheckState()
-			//var tokens interface{}
-			//if isMini{
-			//	tokens = mapper.GetMiniTokenList(ctx, showZeroSupplyTokens)
-			//}else {
-			//	tokens = mapper.GetTokenList(ctx, showZeroSupplyTokens)
-			//} TODO
 
 			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens, isMini)
 			offset, err := strconv.Atoi(path[2])
@@ -120,7 +114,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, symbol string, isMini bool) *abci.ResponseQuery {
 	var bz []byte
 	var err error
-	var token interface{}
+	var token types.IToken
 
 	token, err = mapper.GetToken(ctx, symbol)
 	if err != nil {

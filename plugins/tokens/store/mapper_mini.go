@@ -24,7 +24,7 @@ func (m mapper) UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) e
 		return errors.New("uri length cannot be larger than 2048")
 	}
 
-	key := []byte(strings.ToUpper(symbol))
+	key := m.calcMiniTokenKey(strings.ToUpper(symbol))
 	store := ctx.KVStore(m.key)
 	bz := store.Get(key)
 	if bz == nil {

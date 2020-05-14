@@ -50,7 +50,7 @@ func resetChainVersion() {
 }
 
 func TestHandleIssueToken(t *testing.T) {
-	ctx, handler, _, accountKeeper, tokenMapper:= setup()
+	ctx, handler, _, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")

@@ -164,7 +164,7 @@ func handleMintMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper b
 
 	iToken, err := tokenMapper.GetToken(ctx, symbol)
 	//token = iToken.(*types.MiniToken) //todo
-	if err != nil || iToken == nil{
+	if err != nil {
 		logger.Info(errLogMsg, "reason", "symbol not exist")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
