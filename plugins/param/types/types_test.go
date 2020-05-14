@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -102,7 +103,7 @@ func TestCSCParamChangeCheck(t *testing.T) {
 		testcases = append(testcases, TestCase{cp: generatCSCParamChange(), expectError: false})
 	}
 	testcases[91].cp.Key = common.RandStr(255)
-	testcases[92].cp.Value = common.RandBytes(255)
+	testcases[92].cp.Value = hex.EncodeToString(common.RandBytes(255))
 
 	// empty key
 	testcases[93].cp.Key = ""
@@ -111,19 +112,19 @@ func TestCSCParamChangeCheck(t *testing.T) {
 	testcases[94].cp.Key = common.RandStr(256)
 	testcases[94].expectError = true
 	// empty value
-	testcases[95].cp.Value = []byte{}
+	testcases[95].cp.Value = hex.EncodeToString([]byte{})
 	testcases[95].expectError = true
 	//value length exceed 255
-	testcases[96].cp.Value = common.RandBytes(256)
+	testcases[96].cp.Value = hex.EncodeToString(common.RandBytes(256))
 	testcases[96].expectError = true
 	// empty target
-	testcases[97].cp.Target = []byte{}
+	testcases[97].cp.Target = hex.EncodeToString([]byte{})
 	testcases[97].expectError = true
 	//target length not 20
-	testcases[98].cp.Target = common.RandBytes(19)
+	testcases[98].cp.Target = hex.EncodeToString(common.RandBytes(19))
 	testcases[98].expectError = true
 	//target length not 20
-	testcases[99].cp.Target = common.RandBytes(21)
+	testcases[99].cp.Target = hex.EncodeToString(common.RandBytes(21))
 	testcases[99].expectError = true
 
 	for _, c := range testcases {
@@ -138,8 +139,9 @@ func TestCSCParamChangeCheck(t *testing.T) {
 }
 
 func TestCSCParamChangeSerialize(t *testing.T) {
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		cscParam := generatCSCParamChange()
+		cscParam.Check()
 		bz := cscParam.Serialize()
 		assert.Equal(t, bz[0], byte(0x00))
 		keyLength := int(bz[1])
@@ -151,8 +153,8 @@ func TestCSCParamChangeSerialize(t *testing.T) {
 		target := bz[3+keyLength+valLength : 3+keyLength+valLength+20]
 		assert.Equal(t, len(bz), int(23+keyLength+valLength))
 		assert.True(t, bytes.Compare(key, []byte(cscParam.Key)) == 0)
-		assert.True(t, bytes.Compare(val, cscParam.Value) == 0)
-		assert.True(t, bytes.Compare(target, cscParam.Target) == 0)
+		assert.True(t, bytes.Compare(val, cscParam.ValueBytes) == 0)
+		assert.True(t, bytes.Compare(target, cscParam.TargetBytes) == 0)
 	}
 }
 
@@ -162,16 +164,16 @@ func TestSCParamCheck(t *testing.T) {
 		expectError bool
 	}
 	testcases := []TestCase{
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{ProphecyParams: types.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}}}}, expectError: false},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{ProphecyParams: types.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(7, 0)}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{ProphecyParams: types.ProphecyParams{ConsensusNeeded: sdk.ZeroDec()}}}}, expectError: true},
+		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}}}}, expectError: false},
+		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 0)}}}}, expectError: true},
+		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.ZeroDec()}}}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: false},
 		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB1", MinSelfDelegation: 100e8}}}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 1 * time.Minute, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 0, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 1e15}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{ProphecyParams: types.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}},
-			&OracleParams{ProphecyParams: types.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}}, expectError: true},
+		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}},
+			&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{nil}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{}}, expectError: true},
 	}
@@ -190,7 +192,7 @@ func TestSCParamCheck(t *testing.T) {
 func generatCSCParamChange() CSCParamChange {
 	return CSCParamChange{
 		Key:    common.RandStr(common.RandIntn(255) + 1),
-		Value:  common.RandBytes(common.RandIntn(255) + 1),
-		Target: common.RandBytes(20),
+		Value:  hex.EncodeToString(common.RandBytes(common.RandIntn(255) + 1)),
+		Target: hex.EncodeToString(common.RandBytes(20)),
 	}
 }

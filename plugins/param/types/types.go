@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	oTypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	sType "github.com/cosmos/cosmos-sdk/x/stake/types"
-	"math"
 
 	"github.com/binance-chain/node/common/types"
 )
@@ -287,7 +288,7 @@ type SCParam interface {
 }
 
 type OracleParams struct {
-	oTypes.ProphecyParams
+	oTypes.Params
 }
 
 func (p *OracleParams) IsNative() bool {
@@ -295,7 +296,7 @@ func (p *OracleParams) IsNative() bool {
 }
 
 func (p *OracleParams) Value() interface{} {
-	return p.ProphecyParams
+	return p.Params
 }
 
 func (p *OracleParams) GetParamAttribute() (string, bool, bool) {
@@ -303,7 +304,7 @@ func (p *OracleParams) GetParamAttribute() (string, bool, bool) {
 }
 
 func (p *OracleParams) Check() error {
-	return p.ProphecyParams.UpdateCheck()
+	return p.Params.UpdateCheck()
 }
 
 type StakeParams struct {
@@ -340,6 +341,19 @@ func (s *SlashParams) Value() interface{} {
 
 func (s *SlashParams) GetParamAttribute() (string, bool, bool) {
 	return "slash", false, true
+}
+
+func ToSCParam(p interface{}) SCParam {
+	switch iParams := p.(type) {
+	case *slashing.Params:
+		return &SlashParams{Params: *iParams}
+	case *sType.Params:
+		return &StakeParams{Params: *iParams}
+	case *oTypes.Params:
+		return &OracleParams{Params: *iParams}
+	default:
+		return nil
+	}
 }
 
 type SCChangeParams struct {

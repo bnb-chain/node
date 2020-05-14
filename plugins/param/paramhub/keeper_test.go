@@ -2,6 +2,7 @@ package paramhub_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -60,9 +61,10 @@ func TestCSCParamUpdatesSuccess(t *testing.T) {
 
 	cscParam := ptypes.CSCParamChange{
 		Key:    "testa",
-		Value:  []byte("testValue"),
-		Target: cmn.RandBytes(20),
+		Value:  hex.EncodeToString([]byte(hex.EncodeToString([]byte("testValue")))),
+		Target: hex.EncodeToString(cmn.RandBytes(20)),
 	}
+	cscParam.Check()
 	cscParamsBz, err := app.Codec.MarshalJSON(cscParam)
 	proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(cscParamsBz), gov.ProposalTypeCSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
 	_, err = testClient.DeliverTxSync(&proposeMsg, testApp.Codec)
@@ -92,19 +94,23 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 	cscParams := []ptypes.CSCParamChange{
 		{
 			Key:    "testA",
-			Value:  []byte("testValueA"),
-			Target: cmn.RandBytes(20),
+			Value:  hex.EncodeToString([]byte(hex.EncodeToString([]byte("testValueA")))),
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
 		{
 			Key:    "testB",
-			Value:  []byte("testValueB"),
-			Target: cmn.RandBytes(20),
+			Value:  hex.EncodeToString([]byte(hex.EncodeToString([]byte("testValueB")))),
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
 		{
 			Key:    "testC",
-			Value:  []byte("testValueC"),
-			Target: cmn.RandBytes(20),
+			Value:  hex.EncodeToString([]byte(hex.EncodeToString([]byte("testValueC")))),
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
+	}
+	for idx ,c:=range cscParams{
+		c.Check()
+		cscParams[idx] = c
 	}
 
 	ctx = UpdateContext(valAddr, ctx, 3, tNow.AddDate(0, 0, 1))
@@ -197,24 +203,29 @@ func TestSubmitCSCParamUpdatesFail(t *testing.T) {
 	cscParams := []ptypes.CSCParamChange{
 		{
 			Key:    "",
-			Value:  []byte("testValue"),
-			Target: cmn.RandBytes(20),
+			Value:  hex.EncodeToString([]byte("testValue")),
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
 		{
 			Key:    "testKey",
-			Value:  []byte(""),
-			Target: cmn.RandBytes(20),
+			Value:  "",
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
 		{
 			Key:    "testKey",
-			Value:  []byte("testValue"),
-			Target: cmn.RandBytes(10),
+			Value:  hex.EncodeToString([]byte("testValue")),
+			Target: hex.EncodeToString(cmn.RandBytes(10)),
 		},
 		{
 			Key:    cmn.RandStr(256),
-			Value:  []byte("testValue"),
-			Target: cmn.RandBytes(20),
+			Value:  hex.EncodeToString([]byte("testValue")),
+			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
+	}
+
+	for idx ,c:=range cscParams{
+		c.Check()
+		cscParams[idx] = c
 	}
 
 	for _, cscParam := range cscParams {
@@ -237,7 +248,7 @@ func TestSCParamUpdatesSuccess(t *testing.T) {
 
 	scParams := ptypes.SCChangeParams{
 		SCParams: []ptypes.SCParam{
-			&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}},
+			&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}},
 			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}},
 		}}
 	scParamsBz, err := app.Codec.MarshalJSON(scParams)
@@ -264,7 +275,6 @@ func TestSCParamUpdatesSuccess(t *testing.T) {
 
 	// TODO, open the check when add_oracle branch is merged.
 	//p := testApp.OracleKeeper.GetProphecyParams(ctx)
-	//fmt.Println(p.ConsensusNeeded.String())
 	//assert.True(t, p.ConsensusNeeded.Equal(sdk.NewDecWithPrec(9, 1)))
 	//storePrefix := testApp.ScKeeper.GetSideChainStorePrefix(ctx, app.ServerContext.BscChainId)
 	//sideChainCtx := ctx.WithSideChainKeyPrefix(storePrefix)
@@ -282,9 +292,9 @@ func TestSCParamMultiUpdatesSuccess(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
 
 	scParamses := []ptypes.SCChangeParams{
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}},
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(8, 1)}}}},
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}}}},
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}},
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(8, 1)}}}},
+		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}}}},
 	}
 	for idx, scParams := range scParamses {
 		scParamsBz, err := app.Codec.MarshalJSON(scParams)
@@ -329,7 +339,7 @@ func TestSCParamUpdatesFail(t *testing.T) {
 			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "", MinSelfDelegation: 100e8}},
 		}},
 		{SCParams: []ptypes.SCParam{
-			&ptypes.OracleParams{otypes.ProphecyParams{ConsensusNeeded: sdk.NewDecWithPrec(2, 0)}},
+			&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(2, 0)}},
 		}},
 		{SCParams: []ptypes.SCParam{
 			nil,

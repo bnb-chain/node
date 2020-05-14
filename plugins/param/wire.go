@@ -1,6 +1,11 @@
 package param
 
 import (
+	oTypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
+	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	stype "github.com/cosmos/cosmos-sdk/x/stake/types"
+
 	"github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
@@ -18,4 +23,8 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(&types.StakeParams{}, "params/StakeParams", nil)
 	cdc.RegisterConcrete(&types.SlashParams{}, "params/SlashParams", nil)
 
+	cdc.RegisterInterface((*params.ParamSet)(nil), nil)
+	cdc.RegisterConcrete(&stype.Params{}, "params/StakeParamSet", nil)
+	cdc.RegisterConcrete(&oTypes.Params{}, "params/OracleParamSet", nil)
+	cdc.RegisterConcrete(&slashing.Params{}, "params/SlashParamSet", nil)
 }

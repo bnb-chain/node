@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/binance-chain/node/plugins/param"
-	"github.com/binance-chain/node/wire"
 	"io/ioutil"
 	"time"
 
@@ -21,7 +19,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/app"
+	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/types"
+	"github.com/binance-chain/node/wire"
 )
 
 const (
@@ -124,7 +124,11 @@ func ShowSideChainParamsCmd(cdc *wire.Codec) *cobra.Command {
 				return fmt.Errorf("format %s is not supported, options [%s, %s] ", format, types.JSONFORMAT, types.AMINOFORMAT)
 			}
 
-			bz, err := cliCtx.Query(fmt.Sprintf("%s/fees", param.AbciQueryPrefix), nil)
+			data, err := cdc.MarshalJSON(sideChainId)
+			if err != nil {
+				return err
+			}
+			bz, err := cliCtx.Query(fmt.Sprintf("%s/sideParams", param.AbciQueryPrefix), data)
 			if err != nil {
 				return err
 			}

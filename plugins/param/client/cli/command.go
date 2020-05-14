@@ -33,5 +33,8 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	dexCmd.AddCommand(
 		client.GetCommands(
 			ShowFeeParamsCmd(cdc))...)
+	dexCmd.AddCommand(
+		client.GetCommands(
+			ShowSideChainParamsCmd(cdc))...)
 	cmd.AddCommand(dexCmd)
 }

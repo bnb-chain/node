@@ -2,13 +2,13 @@ package paramhub
 
 import (
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/x/params/subspace"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/cosmos/cosmos-sdk/x/params/subspace"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
@@ -52,11 +52,11 @@ type Keeper struct {
 	codespace        sdk.CodespaceType
 
 	// just for query
-	subscriberParamSpace []subspace.SubParamSpaceKey
+	subscriberParamSpace []*subspace.SubParamSpace
 
 	govKeeper *gov.Keeper
 	ibcKeeper *ibc.Keeper
-	scKeeper  *sidechain.Keeper
+	ScKeeper  *sidechain.Keeper
 
 	updateCallbacks  []func([]sdk.Context, []interface{})
 	genesisCallbacks []func(sdk.Context, interface{})
@@ -68,11 +68,12 @@ type Keeper struct {
 func NewKeeper(cdc *codec.Codec, key *sdk.KVStoreKey, tkey *sdk.TransientStoreKey) *Keeper {
 	logger := bnclog.With("module", "paramHub")
 	keeper := Keeper{
-		Keeper:           params.NewKeeper(cdc, key, tkey),
-		cdc:              cdc,
-		updateCallbacks:  make([]func([]sdk.Context, []interface{}), 0),
-		genesisCallbacks: make([]func(sdk.Context, interface{}), 0),
-		logger:           logger,
+		Keeper:               params.NewKeeper(cdc, key, tkey),
+		cdc:                  cdc,
+		updateCallbacks:      make([]func([]sdk.Context, []interface{}), 0),
+		genesisCallbacks:     make([]func(sdk.Context, interface{}), 0),
+		logger:               logger,
+		subscriberParamSpace: make([]*subspace.SubParamSpace, 0),
 	}
 	keeper.nativeParamSpace = keeper.Subspace(NativeParamSpace).WithTypeTable(NativeParamTypeTable())
 	keeper.sideParamSpace = keeper.Subspace(SideParamSpace).WithTypeTable(SideParamTypeTable())
@@ -82,12 +83,16 @@ func NewKeeper(cdc *codec.Codec, key *sdk.KVStoreKey, tkey *sdk.TransientStoreKe
 	return &keeper
 }
 
+func (keeper *Keeper) GetSubscriberParamSpace() []*subspace.SubParamSpace {
+	return keeper.subscriberParamSpace
+}
+
 func (keeper *Keeper) SetGovKeeper(govKeeper *gov.Keeper) {
 	keeper.govKeeper = govKeeper
 }
 
 func (keeper *Keeper) SetupForSideChain(scKeeper *sidechain.Keeper, ibcKeeper *ibc.Keeper) {
-	keeper.scKeeper = scKeeper
+	keeper.ScKeeper = scKeeper
 	keeper.ibcKeeper = ibcKeeper
 	keeper.initIbc()
 }
@@ -112,7 +117,7 @@ func (keeper *Keeper) EndBreatheBlock(ctx sdk.Context) {
 		contexts = append(contexts, ctx)
 	}
 	if sdk.IsUpgrade(sdk.LaunchBscUpgrade) {
-		_, storePrefixes := keeper.scKeeper.GetAllSideChainPrefixes(ctx)
+		_, storePrefixes := keeper.ScKeeper.GetAllSideChainPrefixes(ctx)
 		scChangeItems := make([]types.SCParam, 0)
 		scChangeContexts := make([]sdk.Context, 0)
 		for i := range storePrefixes {
@@ -149,8 +154,8 @@ func (keeper *Keeper) EndBlock(ctx sdk.Context) {
 	keeper.logger.Info("Sync params proposals.")
 	changes := make([]interface{}, 0)
 	contexts := make([]sdk.Context, 0)
-	if sdk.IsUpgrade(sdk.LaunchBscUpgrade) && keeper.scKeeper != nil {
-		sideChainIds, storePrefixes := keeper.scKeeper.GetAllSideChainPrefixes(ctx)
+	if sdk.IsUpgrade(sdk.LaunchBscUpgrade) && keeper.ScKeeper != nil {
+		sideChainIds, storePrefixes := keeper.ScKeeper.GetAllSideChainPrefixes(ctx)
 		for i := range storePrefixes {
 			sideChainCtx := ctx.WithSideChainKeyPrefix(storePrefixes[i])
 			cscChanges := keeper.getLastCSCParamChanges(sideChainCtx)
@@ -194,7 +199,7 @@ func (keeper *Keeper) Load(ctx sdk.Context) {
 	keeper.loadFeeParam(ctx)
 }
 
-func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.SubParamSpaceKey, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
+func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.SubParamSpace, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
 	if u != nil {
 		keeper.SubscribeUpdateEvent(u)
 	}
@@ -203,6 +208,9 @@ func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}),
 	}
 	if l != nil {
 		keeper.SubscribeLoadEvent(l)
+	}
+	if s != nil {
+		keeper.subscriberParamSpace = append(keeper.subscriberParamSpace, s)
 	}
 }
 
