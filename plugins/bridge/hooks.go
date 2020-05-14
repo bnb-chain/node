@@ -46,15 +46,18 @@ func (hooks *SkipSequenceClaimHooks) CheckClaim(ctx sdk.Context, claim string) s
 	return nil
 }
 
-func (hooks *SkipSequenceClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
+func (hooks *SkipSequenceClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	skipSequenceClaim, err := types.GetSkipSequenceClaimFromOracleClaim(claim)
 	if err != nil {
-		return sdk.Tags{}, types.ErrInvalidClaim(fmt.Sprintf("unmarshal claim error, claim=%s", claim))
+		return sdk.ClaimResult{}, types.ErrInvalidClaim(fmt.Sprintf("unmarshal claim error, claim=%s", claim))
 	}
 
 	hooks.bridgeKeeper.OracleKeeper.IncreaseSequence(ctx, skipSequenceClaim.ClaimType)
 
-	return nil, nil
+	return sdk.ClaimResult{
+		Code: 0,
+		Msg:  "",
+	}, nil
 }
 
 type UpdateBindClaimHooks struct {
@@ -99,21 +102,21 @@ func (hooks *UpdateBindClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk
 	return nil
 }
 
-func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
+func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	updateBindClaim, sdkErr := types.GetUpdateBindClaimFromOracleClaim(claim)
 	if sdkErr != nil {
-		return sdk.Tags{}, sdkErr
+		return sdk.ClaimResult{}, sdkErr
 	}
 
 	bindRequest, sdkErr := hooks.bridgeKeeper.GetBindRequest(ctx, updateBindClaim.Symbol)
 	if sdkErr != nil {
-		return sdk.Tags{}, sdkErr
+		return sdk.ClaimResult{}, sdkErr
 	}
 
 	isIdentical := bindRequest.Symbol == updateBindClaim.Symbol &&
 		bindRequest.ContractAddress.String() == updateBindClaim.ContractAddress.String()
 	if !isIdentical {
-		return sdk.Tags{}, types.ErrInvalidClaim("claim is not identical to bind request")
+		return sdk.ClaimResult{}, types.ErrInvalidClaim("claim is not identical to bind request")
 	}
 
 	if updateBindClaim.Status == types.BindStatusSuccess {
@@ -121,7 +124,7 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 			bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 
 		if sdkErr != nil {
-			return sdk.Tags{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
+			return sdk.ClaimResult{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
 		}
 	} else {
 		var calibratedAmount int64
@@ -136,7 +139,7 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
 			sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: calibratedAmount}})
 		if sdkErr != nil {
-			return sdk.Tags{}, sdkErr
+			return sdk.ClaimResult{}, sdkErr
 		}
 
 		if ctx.IsDeliverTx() {
@@ -145,7 +148,10 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	}
 
 	hooks.bridgeKeeper.DeleteBindRequest(ctx, updateBindClaim.Symbol)
-	return nil, nil
+	return sdk.ClaimResult{
+		Code: 0,
+		Msg:  "",
+	}, nil
 }
 
 type TransferOutRefundClaimHooks struct {
@@ -179,15 +185,15 @@ func (hooks *TransferOutRefundClaimHooks) CheckClaim(ctx sdk.Context, claim stri
 	return nil
 }
 
-func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
+func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	refundClaim, sdkErr := types.GetTransferOutRefundClaimFromOracleClaim(claim)
 	if sdkErr != nil {
-		return nil, sdkErr
+		return sdk.ClaimResult{}, sdkErr
 	}
 
 	_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, refundClaim.RefundAddress, sdk.Coins{refundClaim.Amount})
 	if sdkErr != nil {
-		return nil, sdkErr
+		return sdk.ClaimResult{}, sdkErr
 	}
 
 	if ctx.IsDeliverTx() {
@@ -197,7 +203,11 @@ func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim st
 	tags := sdk.NewTags(
 		types.TransferOutRefundReason, []byte(refundClaim.RefundReason.String()),
 	)
-	return tags, nil
+	return sdk.ClaimResult{
+		Code: 0,
+		Msg:  "",
+		Tags: tags,
+	}, nil
 }
 
 type TransferInClaimHooks struct {
@@ -270,23 +280,39 @@ func (hooks *TransferInClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk
 	return nil
 }
 
-func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.Tags, sdk.Error) {
+func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	transferInClaim, err := types.GetTransferInClaimFromOracleClaim(claim)
 	if err != nil {
-		return nil, err
+		return sdk.ClaimResult{}, err
 	}
 
 	tokenInfo, errMsg := hooks.bridgeKeeper.TokenMapper.GetToken(ctx, transferInClaim.Symbol)
 	if errMsg != nil {
-		return nil, sdk.ErrInternal(errMsg.Error())
+		return sdk.ClaimResult{}, sdk.ErrInternal(errMsg.Error())
 	}
 
 	if tokenInfo.ContractAddress != transferInClaim.ContractAddress.String() {
-		return hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
+		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
+		if err != nil {
+			return sdk.ClaimResult{}, err
+		}
+		return sdk.ClaimResult{
+			Code: 0,
+			Msg:  "",
+			Tags: tags,
+		}, nil
 	}
 
 	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-		return hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.Timeout)
+		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.Timeout)
+		if err != nil {
+			return sdk.ClaimResult{}, err
+		}
+		return sdk.ClaimResult{
+			Code: 0,
+			Msg:  "",
+			Tags: tags,
+		}, nil
 	}
 
 	balance := hooks.bridgeKeeper.BankKeeper.GetCoins(ctx, types.PegAccount)
@@ -296,14 +322,22 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		totalTransferInAmount = sdk.Coins{amount}.Plus(totalTransferInAmount)
 	}
 	if !balance.IsGTE(totalTransferInAmount) {
-		return hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.InsufficientBalance)
+		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.InsufficientBalance)
+		if err != nil {
+			return sdk.ClaimResult{}, err
+		}
+		return sdk.ClaimResult{
+			Code: 0,
+			Msg:  "",
+			Tags: tags,
+		}, nil
 	}
 
 	for idx, receiverAddr := range transferInClaim.ReceiverAddresses {
 		amount := sdk.NewCoin(transferInClaim.Symbol, transferInClaim.Amounts[idx])
 		_, err = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
 		if err != nil {
-			return nil, err
+			return sdk.ClaimResult{}, err
 		}
 	}
 
@@ -311,7 +345,7 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	relayFee := sdk.Coins{transferInClaim.RelayFee}
 	_, _, err = hooks.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, relayFee)
 	if err != nil {
-		return nil, err
+		return sdk.ClaimResult{}, err
 	}
 
 	if ctx.IsDeliverTx() {
@@ -331,5 +365,8 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		)
 	}
 
-	return nil, nil
+	return sdk.ClaimResult{
+		Code: 0,
+		Msg:  "",
+	}, nil
 }
