@@ -138,7 +138,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
-	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey)
+	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey, app.ParamHub.Subspace(sidechain.DefaultParamspace))
 
 	app.slashKeeper = slashing.NewKeeper(
 		cdc,
@@ -377,6 +377,9 @@ func (app *BinanceChain) initSideChain() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		bscStorePrefix := []byte{0x99}
 		app.scKeeper.SetSideChainIdAndStorePrefix(ctx, ServerContext.BscChainId, bscStorePrefix)
+		app.scKeeper.SetParams(ctx, sidechain.Params{
+			BscSideChainId: ServerContext.BscChainId,
+		})
 	})
 }
 
@@ -406,9 +409,6 @@ func (app *BinanceChain) initSlashing() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
-		app.slashKeeper.SetParams(ctx, slashing.Params{
-			BscSideChainId: ServerContext.BscChainId,
-		})
 		app.slashKeeper.SetParams(newCtx, slashing.Params{
 			MaxEvidenceAge:           60 * 60 * 24 * time.Second,     // 1 day
 			DoubleSignUnbondDuration: 60 * 60 * 24 * 7 * time.Second, // 7 days
@@ -418,7 +418,6 @@ func (app *BinanceChain) initSlashing() {
 			SubmitterReward:          100e8,
 			DowntimeSlashAmount:      1000e8,
 			DowntimeSlashFee:         100e8,
-			BscSideChainId:           ServerContext.BscChainId,
 		})
 	})
 	// todo register oracle claim
