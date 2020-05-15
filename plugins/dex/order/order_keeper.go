@@ -33,6 +33,7 @@ type IDexOrderKeeper interface {
 	clearOrderChanges()
 	getOrderChanges() OrderChanges
 	getOrderInfosForPub() OrderInfoForPublish
+	removeOrderInfosForPub(orderId string)
 	appendOrderChange(change OrderChange)
 	initOrders(symbol string)
 	support(pair string) bool
@@ -61,9 +62,9 @@ var _ IDexOrderKeeper = &BEP2OrderKeeper{}
 // in the future, this may be distributed via Sharding
 type BaseOrderKeeper struct {
 	allOrders        map[string]map[string]*OrderInfo // symbol -> order ID -> order
-	OrderChangesMtx  *sync.Mutex                      // guard OrderChanges and OrderInfosForPub during PreDevlierTx (which is async)
-	OrderChanges     OrderChanges                     // order changed in this block, will be cleaned before matching for new block
-	OrderInfosForPub OrderInfoForPublish              // for publication usage
+	orderChangesMtx  *sync.Mutex                      // guard orderChanges and orderInfosForPub during PreDevlierTx (which is async)
+	orderChanges     OrderChanges                     // order changed in this block, will be cleaned before matching for new block
+	orderInfosForPub OrderInfoForPublish              // for publication usage
 	roundOrders      map[string][]string              // limit to the total tx number in a block
 	roundIOCOrders   map[string][]string
 	poolSize         uint // number of concurrent channels, counted in the pow of 2
@@ -74,19 +75,23 @@ type BaseOrderKeeper struct {
 
 // NewBEP2OrderKeeper - Returns the BEP2OrderKeeper
 func NewBEP2OrderKeeper() IDexOrderKeeper {
-	logger := bnclog.With("module", "Bep2OrderKeeper")
 	return &BEP2OrderKeeper{
-		BaseOrderKeeper{
-			allOrders: make(map[string]map[string]*OrderInfo, 256),
-			// need to init the nested map when a new symbol added.
-			OrderChangesMtx:  &sync.Mutex{},
-			OrderChanges:     make(OrderChanges, 0),
-			OrderInfosForPub: make(OrderInfoForPublish),
-			roundOrders:      make(map[string][]string, 256),
-			roundIOCOrders:   make(map[string][]string, 256),
-			logger:           logger,
-			symbolSelector:   &BEP2SymbolSelector{},
-		},
+		NewBaseOrderKeeper("Bep2OrderKeeper", &BEP2SymbolSelector{}),
+	}
+}
+
+func NewBaseOrderKeeper(moduleName string, symbolSelector SymbolSelector) BaseOrderKeeper {
+	logger := bnclog.With("module", moduleName)
+	return BaseOrderKeeper{
+		allOrders: make(map[string]map[string]*OrderInfo, 256),
+		// need to init the nested map when a new symbol added.
+		orderChangesMtx:  &sync.Mutex{},
+		orderChanges:     make(OrderChanges, 0),
+		orderInfosForPub: make(OrderInfoForPublish),
+		roundOrders:      make(map[string][]string, 256),
+		roundIOCOrders:   make(map[string][]string, 256),
+		logger:           logger,
+		symbolSelector:   symbolSelector,
 	}
 }
 
@@ -96,10 +101,10 @@ func (kp *BaseOrderKeeper) addOrder(symbol string, info OrderInfo, collectOrderI
 		change := OrderChange{info.Id, Ack, "", nil}
 		// deliberately not add this message to orderChanges
 		if !isRecovery {
-			kp.OrderChanges = append(kp.OrderChanges, change)
+			kp.orderChanges = append(kp.orderChanges, change)
 		}
 		kp.logger.Debug("add order to order changes map", "orderId", info.Id, "isRecovery", isRecovery)
-		kp.OrderInfosForPub[info.Id] = &info
+		kp.orderInfosForPub[info.Id] = &info
 	}
 
 	kp.allOrders[symbol][info.Id] = &info
@@ -216,7 +221,7 @@ func (kp *BaseOrderKeeper) getOpenOrders(pair string, addr sdk.AccAddress) []sto
 }
 
 func (kp *BaseOrderKeeper) clearOrderChanges() {
-	kp.OrderChanges = kp.OrderChanges[:0]
+	kp.orderChanges = kp.orderChanges[:0]
 }
 
 func (kp *BaseOrderKeeper) getAllOrders() map[string]map[string]*OrderInfo {
@@ -224,15 +229,19 @@ func (kp *BaseOrderKeeper) getAllOrders() map[string]map[string]*OrderInfo {
 }
 
 func (kp *BaseOrderKeeper) getOrderChanges() OrderChanges {
-	return kp.OrderChanges
+	return kp.orderChanges
 }
 
 func (kp *BaseOrderKeeper) getOrderInfosForPub() OrderInfoForPublish {
-	return kp.OrderInfosForPub
+	return kp.orderInfosForPub
+}
+
+func (kp *BaseOrderKeeper) removeOrderInfosForPub(orderId string) {
+	delete(kp.orderInfosForPub, orderId)
 }
 
 func (kp *BaseOrderKeeper) appendOrderChange(change OrderChange) {
-	kp.OrderChanges = append(kp.OrderChanges, change)
+	kp.orderChanges = append(kp.orderChanges, change)
 }
 
 func (kp *BaseOrderKeeper) getRoundOrdersForPair(pair string) []string {
@@ -252,9 +261,9 @@ func (kp *BaseOrderKeeper) selectSymbolsToMatch(height, timestamp int64, matchAl
 }
 
 func (kp *BaseOrderKeeper) appendOrderChangeSync(change OrderChange) {
-	kp.OrderChangesMtx.Lock()
-	kp.OrderChanges = append(kp.OrderChanges, change)
-	kp.OrderChangesMtx.Unlock()
+	kp.orderChangesMtx.Lock()
+	kp.orderChanges = append(kp.orderChanges, change)
+	kp.orderChangesMtx.Unlock()
 }
 
 func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
@@ -305,9 +314,9 @@ func (kp *BEP2OrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, heig
 		}
 	}
 	if collectOrderInfoForPublish {
-		if _, exists := kp.OrderInfosForPub[orderInfo.Id]; !exists {
+		if _, exists := kp.orderInfosForPub[orderInfo.Id]; !exists {
 			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)
-			kp.OrderInfosForPub[orderInfo.Id] = orderInfo
+			kp.orderInfosForPub[orderInfo.Id] = orderInfo
 		}
 	}
 }

@@ -72,10 +72,9 @@ func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedS
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
 		var snapshot OrderBookSnapshot
+		snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
 		if sdk.IsUpgrade(upgrade.BEP8) {
-			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice, LastMatchHeight: eng.LastMatchHeight}
-		} else {
-			snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
+			snapshot.LastMatchHeight = eng.LastMatchHeight
 		}
 		key := genOrderBookSnapshotKey(height, pair)
 		effectedStoreKeys = append(effectedStoreKeys, key)

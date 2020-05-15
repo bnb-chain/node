@@ -1,15 +1,16 @@
-package listmini
+package list
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/plugins/dex/order"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
 )
 
-const Route = "dexListMini"
+const MiniRoute = "dexListMini"
 
 var _ sdk.Msg = ListMiniMsg{}
 
@@ -20,7 +21,7 @@ type ListMiniMsg struct {
 	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMiniMsg {
+func NewMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMiniMsg {
 	return ListMiniMsg{
 		From:             from,
 		BaseAssetSymbol:  baseAssetSymbol,
@@ -29,8 +30,8 @@ func NewMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string
 	}
 }
 
-func (msg ListMiniMsg) Route() string                { return Route }
-func (msg ListMiniMsg) Type() string                 { return Route }
+func (msg ListMiniMsg) Route() string                { return MiniRoute }
+func (msg ListMiniMsg) Type() string                 { return MiniRoute }
 func (msg ListMiniMsg) String() string               { return fmt.Sprintf("MsgListMini{%#v}", msg) }
 func (msg ListMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
@@ -40,7 +41,10 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
-	if types.NativeTokenSymbol != msg.QuoteAssetSymbol { //todo permit BUSD
+	if len(msg.QuoteAssetSymbol) == 0 {
+		return sdk.ErrInvalidCoins("quote token is empty: " + err.Error())
+	}
+	if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol!= msg.QuoteAssetSymbol{
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
 	}
 	if msg.InitPrice <= 0 {

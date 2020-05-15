@@ -148,7 +148,7 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 			case order.CancelOrderMsg:
 				app.Logger.Info("failed to process CancelOrderMsg", "oid", msg.RefId)
 				// The error on deliver should be rare and only impact witness publisher's performance
-				// OrderInfo must has been in keeper.OrderInfosForPub
+				// OrderInfo must has been in keeper.orderInfosForPub
 				app.DexKeeper.UpdateOrderChangeSync(order.OrderChange{msg.RefId, order.FailedBlocking, "", msg}, msg.Symbol)
 			default:
 				// deliberately do nothing for message other than NewOrderMsg

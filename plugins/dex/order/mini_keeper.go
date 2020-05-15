@@ -2,14 +2,12 @@ package order
 
 import (
 	"fmt"
-	"strings"
-	"sync"
-
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
 )
 
 const (
@@ -26,17 +24,9 @@ var _ IDexOrderKeeper = &MiniOrderKeeper{}
 
 // NewBEP2OrderKeeper - Returns the MiniToken orderKeeper
 func NewMiniOrderKeeper() IDexOrderKeeper {
-	logger := bnclog.With("module", "dexMiniKeeper")
 	return &MiniOrderKeeper{
-		BaseOrderKeeper{
-			allOrders:        make(map[string]map[string]*OrderInfo, 256), // need to init the nested map when a new symbol added.
-			OrderChangesMtx:  &sync.Mutex{},
-			OrderChanges:     make(OrderChanges, 0),
-			OrderInfosForPub: make(OrderInfoForPublish),
-			roundOrders:      make(map[string][]string, 256),
-			roundIOCOrders:   make(map[string][]string, 256),
-			logger:           logger,
-			symbolSelector:   &MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)}},
+		NewBaseOrderKeeper("dexMiniKeeper",
+			&MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)}),
 	}
 }
 
@@ -117,9 +107,9 @@ func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, heig
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
 	//TODO confirm no active orders for mini symbol
 	if collectOrderInfoForPublish {
-		if _, exists := kp.OrderInfosForPub[orderInfo.Id]; !exists {
+		if _, exists := kp.orderInfosForPub[orderInfo.Id]; !exists {
 			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)
-			kp.OrderInfosForPub[orderInfo.Id] = orderInfo
+			kp.orderInfosForPub[orderInfo.Id] = orderInfo
 		}
 	}
 }

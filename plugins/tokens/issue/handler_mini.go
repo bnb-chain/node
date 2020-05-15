@@ -1,4 +1,4 @@
-package issue_mini
+package issue
 
 import (
 	"encoding/json"
@@ -17,11 +17,11 @@ import (
 )
 
 // NewHandler creates a new token issue message handler
-func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
+func NewMiniHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case IssueMiniMsg:
-			return handleIssueToken(ctx, tokenMapper, keeper, msg)
+			return handleIssueMiniToken(ctx, tokenMapper, keeper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -29,7 +29,7 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMiniMsg) sdk.Result {
+func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMiniMsg) sdk.Result {
 	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)

@@ -12,7 +12,6 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex/list"
-	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
@@ -20,7 +19,6 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
-	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	miniURI "github.com/binance-chain/node/plugins/tokens/seturi_mini"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -65,10 +63,10 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
 		miniTokenFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: miniIssue.IssueTinyMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: miniIssue.IssueMiniMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: listmini.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: list.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForProposer},
 		}
 		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
 	})
@@ -83,7 +81,7 @@ func init() {
 	// CalculatorsGen is defined in a common package which can't import app package.
 	// Reasonable to init here, since fee param drive the calculator.
 	fees.CalculatorsGen = map[string]fees.FeeCalculatorGenerator{
-		gov.MsgSubmitProposal{}.Type():    fees.FixedFeeCalculatorGen,
+		gov.MsgSubmitProposal{}.Type(): fees.FixedFeeCalculatorGen,
 		gov.MsgDeposit{}.Type():           fees.FixedFeeCalculatorGen,
 		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
 		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
@@ -104,9 +102,9 @@ func init() {
 		swap.DepositHTLT:                fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                  fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                 fees.FixedFeeCalculatorGen,
-		miniIssue.IssueTinyMsgType:      fees.FixedFeeCalculatorGen,
-		miniIssue.IssueMiniMsgType:      fees.FixedFeeCalculatorGen,
+		issue.IssueTinyMsgType:          fees.FixedFeeCalculatorGen,
+		issue.IssueMiniMsgType:          fees.FixedFeeCalculatorGen,
 		miniURI.SetURIRoute:             fees.FixedFeeCalculatorGen,
-		listmini.Route:                  fees.FixedFeeCalculatorGen,
+		list.MiniRoute:                      fees.FixedFeeCalculatorGen,
 	}
 }

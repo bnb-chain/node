@@ -17,5 +17,6 @@ type SymbolPairType = order.SymbolPairType
 var NewTradingPairMapper = store.NewTradingPairMapper
 var NewDexKeeper = order.NewDexKeeper
 var PairType = order.PairType
+var InitOrders = order.Init
 
 const DefaultCodespace = types.DefaultCodespace

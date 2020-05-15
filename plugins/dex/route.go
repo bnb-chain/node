@@ -1,7 +1,6 @@
 package dex
 
 import (
-	"github.com/binance-chain/node/plugins/dex/listmini"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -20,6 +19,6 @@ func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
 	routes[order.RouteNewOrder] = orderHandler
 	routes[order.RouteCancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
-	routes[listmini.Route] = listmini.NewHandler(dexKeeper, tokenMapper)
+	routes[list.MiniRoute] = list.NewMiniHandler(dexKeeper, tokenMapper)
 	return routes
 }

@@ -1,7 +1,7 @@
 package seturi_mini
 
 import (
-	"github.com/binance-chain/node/plugins/tokens/issue_mini"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"testing"
 
@@ -32,7 +32,7 @@ func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.M
 	handler := NewHandler(tokenMapper)
 
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	miniTokenHandler := issue_mini.NewHandler(tokenMapper, bankKeeper)
+	miniTokenHandler := issue.NewMiniHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
@@ -57,7 +57,7 @@ func TestHandleSetURI(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg := issue_mini.NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
+	msg := issue.NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
 	sdkResult := miniIssueHandler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 

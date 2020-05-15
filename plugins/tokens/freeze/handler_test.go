@@ -17,7 +17,6 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/issue_mini"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
@@ -34,7 +33,7 @@ func setup() (sdk.Context, sdk.Handler, sdk.Handler, sdk.Handler, auth.AccountKe
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
 	handler := NewHandler(tokenMapper, accountKeeper, bankKeeper)
 	tokenHandler := issue.NewHandler(tokenMapper, bankKeeper)
-	miniTokenHandler := issue_mini.NewHandler(tokenMapper, bankKeeper)
+	miniTokenHandler := issue.NewMiniHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
@@ -59,7 +58,7 @@ func TestHandleFreezeMini(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg := issue_mini.NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
+	msg := issue.NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
 	sdkResult := miniIssueHandler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 

@@ -11,7 +11,6 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/list"
-	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -95,8 +94,7 @@ func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			quoteAsset := viper.GetString(flagQuoteAsset)
-			if quoteAsset != types.NativeTokenSymbol {
-				// TODO BUSD
+			if quoteAsset != types.NativeTokenSymbol && !strings.HasPrefix(quoteAsset, "BUSD") {
 				return errors.New("invalid quote asset")
 			}
 
@@ -109,7 +107,7 @@ func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := listmini.NewMsg(from, baseAsset, quoteAsset, initPrice)
+			msg := list.NewMiniMsg(from, baseAsset, quoteAsset, initPrice)
 			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err

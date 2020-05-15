@@ -1,4 +1,4 @@
-package listmini
+package list
 
 import (
 	"fmt"
@@ -14,11 +14,11 @@ import (
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper) sdk.Handler {
+func NewMiniHandler(dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMiniMsg:
-			return handleList(ctx, dexKeeper, tokenMapper, msg)
+			return handleListMini(ctx, dexKeeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -26,7 +26,7 @@ func NewHandler(dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper) sdk.Handl
 	}
 }
 
-func handleList(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
+func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg ListMiniMsg) sdk.Result {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("list mini-token is not supported at current height")).Result()

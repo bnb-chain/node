@@ -986,7 +986,7 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 	if baseAsset != types.NativeTokenSymbol &&
 		quoteAsset != types.NativeTokenSymbol {
 
-		// support busd pair listing
+		// support busd pair listing including mini-token as base
 		if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
 			if baseAsset == BUSDSymbol || quoteAsset == BUSDSymbol {
 				if kp.pairExistsBetween(ctx, types.NativeTokenSymbol, BUSDSymbol) {
@@ -1006,7 +1006,7 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 		}
 	}
 
-	if isMiniSymbolPair(baseAsset, quoteAsset) && types.NativeTokenSymbol != quoteAsset { //todo permit BUSD
+	if isMiniSymbolPair(baseAsset, quoteAsset) && types.NativeTokenSymbol != quoteAsset {
 		return errors.New("quote token is not valid for mini symbol pair: " + quoteAsset)
 	}
 
@@ -1091,6 +1091,16 @@ func (kp *DexKeeper) GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPu
 	kp.logger.Error("pairType is not supported %d", pairType)
 	return make(OrderInfoForPublish)
 
+}
+
+func (kp *DexKeeper) RemoveOrderInfosForPub(pairType SymbolPairType, orderId string) {
+	for _, orderKeeper := range kp.OrderKeepers {
+		if orderKeeper.supportPairType(pairType) {
+			orderKeeper.removeOrderInfosForPub(orderId)
+			return
+		}
+	}
+	kp.logger.Error("pairType is not supported %d", pairType)
 }
 
 func (kp *DexKeeper) GetPairMapper() store.TradingPairMapper {

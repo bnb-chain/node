@@ -21,7 +21,6 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
-	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -132,7 +131,7 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 		case freeze.UnfreezeMsg:
 			txAsset = msg.Symbol
 			// will not cover timelock, timeUnlock, timeRelock, atomic Swap
-		case miniIssue.IssueMiniMsg:
+		case issue.IssueMiniMsg:
 			txAsset = msg.Symbol
 		}
 		transactionsToPublish = append(transactionsToPublish, Transaction{
@@ -266,9 +265,9 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 }
 
 func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, matchAllMiniSymbols bool) ([]*Trade, []*Trade) {
-	// This channels is used for protect not update `dexKeeper.OrderChanges` concurrently
+	// This channels is used for protect not update `dexKeeper.orderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
-	// while dexKeeper.OrderChanges are not separated by concurrent factor (users here)
+	// while dexKeeper.orderChanges are not separated by concurrent factor (users here)
 	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize+MiniTransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)

@@ -1,4 +1,4 @@
-package issue_mini
+package issue
 
 import (
 	"encoding/json"
@@ -13,10 +13,9 @@ import (
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
 const (
-	Route              = "miniTokensIssue"
-	IssueTinyMsgType   = "tinyIssueMsg"
-	IssueMiniMsgType   = "miniIssueMsg" //For max total supply in range 2
-	maxTokenNameLength = 32
+	MiniRoute        = "miniTokensIssue"
+	IssueTinyMsgType = "tinyIssueMsg"
+	IssueMiniMsgType = "miniIssueMsg" //For max total supply in range 2
 )
 
 var _ sdk.Msg = IssueMiniMsg{}
@@ -31,7 +30,7 @@ type IssueMiniMsg struct {
 	TokenURI    string         `json:"token_uri"`
 }
 
-func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, supply int64, mintable bool, tokenURI string) IssueMiniMsg {
+func NewIssueMiniMsg(from sdk.AccAddress, name, symbol string, tokenType int8, supply int64, mintable bool, tokenURI string) IssueMiniMsg {
 	return IssueMiniMsg{
 		From:        from,
 		Name:        name,
@@ -46,7 +45,7 @@ func NewIssueMsg(from sdk.AccAddress, name, symbol string, tokenType int8, suppl
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
-	if !sdk.IsUpgrade(upgrade.BEP8){
+	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height"))
 	}
 
@@ -78,7 +77,7 @@ func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueMiniMsg.
-func (msg IssueMiniMsg) Route() string { return Route }
+func (msg IssueMiniMsg) Route() string { return MiniRoute }
 func (msg IssueMiniMsg) Type() string {
 	switch types.SupplyRangeType(msg.TokenType) {
 	case types.SupplyRange.TINY:

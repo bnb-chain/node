@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 	"io"
 	"os"
 	"runtime/debug"
@@ -38,13 +39,11 @@ import (
 	"github.com/binance-chain/node/plugins/account"
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
-	"github.com/binance-chain/node/plugins/dex/listmini"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
-	miniIssue "github.com/binance-chain/node/plugins/tokens/issue_mini"
 	"github.com/binance-chain/node/plugins/tokens/seturi_mini"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
@@ -80,15 +79,15 @@ type BinanceChain struct {
 	queryHandlers map[string]types.AbciQueryHandler
 
 	// keepers
-	CoinKeeper      bank.Keeper
-	DexKeeper       *dex.DexKeeper
-	AccountKeeper   auth.AccountKeeper
-	TokenMapper     tkstore.Mapper
-	ValAddrCache    *ValAddrCache
-	stakeKeeper     stake.Keeper
-	govKeeper       gov.Keeper
-	timeLockKeeper  timelock.Keeper
-	swapKeeper      swap.Keeper
+	CoinKeeper     bank.Keeper
+	DexKeeper      *dex.DexKeeper
+	AccountKeeper  auth.AccountKeeper
+	TokenMapper    tkstore.Mapper
+	ValAddrCache   *ValAddrCache
+	stakeKeeper    stake.Keeper
+	govKeeper      gov.Keeper
+	timeLockKeeper timelock.Keeper
+	swapKeeper     swap.Keeper
 	// keeper to process param store and update
 	ParamHub *param.ParamHub
 
@@ -295,9 +294,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
-		miniIssue.IssueMiniMsg{}.Type(),
+		issue.IssueMiniMsg{}.Type(),
 		seturi_mini.SetURIMsg{}.Type(),
-		listmini.ListMiniMsg{}.Type(),
+		list.ListMiniMsg{}.Type(),
 	)
 }
 
@@ -333,7 +332,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	stateDB := baseapp.LoadStateDB()
 	defer stateDB.Close()
 
-	order.Init(
+	dex.InitOrders(
 		app.DexKeeper,
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
@@ -853,11 +852,11 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
 	for id := range pub.ToRemoveOrderIdCh {
 		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.GetOrderInfosForPub(dex.PairType.BEP2), id) //TODO change to removeOrderInfosForPub method
+		app.DexKeeper.RemoveOrderInfosForPub(dex.PairType.BEP2, id)
 	}
 	for id := range pub.ToRemoveMiniOrderIdCh {
 		pub.Logger.Debug("delete mini order from order changes map", "orderId", id)
-		delete(app.DexKeeper.GetOrderInfosForPub(dex.PairType.MINI), id)
+		app.DexKeeper.RemoveOrderInfosForPub(dex.PairType.MINI, id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

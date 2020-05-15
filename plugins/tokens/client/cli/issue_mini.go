@@ -2,13 +2,13 @@ package commands
 
 import (
 	"fmt"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/issue_mini"
 )
 
 const (
@@ -73,7 +73,7 @@ func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := issue_mini.NewIssueMsg(from, name, symbol, int8(tokenType), supply, mintable, tokenURI)
+	msg := issue.NewIssueMiniMsg(from, name, symbol, int8(tokenType), supply, mintable, tokenURI)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }
 
