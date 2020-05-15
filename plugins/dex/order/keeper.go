@@ -46,51 +46,6 @@ var BUSDSymbol string
 type FeeHandler func(map[string]*types.Fee)
 type TransferHandler func(Transfer)
 
-type IDexKeeper interface {
-	InitRecentPrices(ctx sdk.Context)
-	AddEngine(pair dexTypes.TradingPair) *me.MatchEng
-	UpdateTickSizeAndLotSize(ctx sdk.Context)
-	DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, price int64) (lotSize int64)
-	UpdateLotSize(symbol string, lotSize int64)
-	AddOrder(info OrderInfo, isRecovery bool) (err error)
-	RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error)
-	GetOrder(id string, symbol string, side int8, price int64) (ord me.OrderPart, err error)
-	OrderExists(symbol, id string) (OrderInfo, bool)
-	GetOrderBookLevels(pair string, maxLevels int) (orderbook []store.OrderBookLevel, pendingMatch bool)
-	GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
-	GetOrderBooks(maxLevels int, pairType SymbolPairType) ChangedPriceLevelsMap
-	GetPriceLevel(pair string, side int8, price int64) *me.PriceLevel
-	GetLastTrades(height int64, pair string) ([]me.Trade, int64)
-	GetLastTradesForPair(pair string) ([]me.Trade, int64)
-	ClearOrderBook(pair string)
-	ClearOrderChanges()
-	StoreTradePrices(ctx sdk.Context)
-	ExpireOrders(ctx sdk.Context, blockTime time.Time, postAlloTransHandler TransferHandler)
-	MarkBreatheBlock(ctx sdk.Context, height int64, blockTime time.Time)
-	GetBreatheBlockHeight(ctx sdk.Context, timeNow time.Time, daysBack int) (int64, error)
-	GetLastBreatheBlockHeight(ctx sdk.Context, latestBlockHeight int64, timeNow time.Time, blockInterval, daysBack int) int64
-	DelistTradingPair(ctx sdk.Context, symbol string, postAllocTransHandler TransferHandler)
-	CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
-	CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset string) error
-	SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error)
-	LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight int64, timeOfLatestBlock time.Time, blockInterval, daysBack int) (int64, error)
-	GetPairMapper() store.TradingPairMapper
-	GetOrderChanges(pairType SymbolPairType) OrderChanges
-	GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPublish
-	GetAllOrders() map[string]map[string]*OrderInfo
-	GetAllOrdersForPair(symbol string) map[string]*OrderInfo
-	getAccountKeeper() *auth.AccountKeeper
-	getLogger() tmlog.Logger
-	getFeeManager() *FeeManager
-	GetEngines() map[string]*me.MatchEng
-	ShouldPublishOrder() bool
-	UpdateOrderChange(change OrderChange, symbol string)
-	UpdateOrderChangeSync(change OrderChange, symbol string)
-	ValidateOrder(context sdk.Context, account sdk.Account, msg NewOrderMsg) error
-	SelectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string
-	ReloadOrder(symbol string, orderInfo *OrderInfo, height int64)
-}
-
 type DexKeeper struct {
 	PairMapper                 store.TradingPairMapper
 	storeKey                   sdk.StoreKey // The key used to access the store from the Context.
@@ -106,8 +61,6 @@ type DexKeeper struct {
 	cdc                        *wire.Codec
 	OrderKeepers               []IDexOrderKeeper
 }
-
-var _ IDexKeeper = &DexKeeper{}
 
 func NewDexKeeper(key sdk.StoreKey, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, cdc *wire.Codec, am auth.AccountKeeper, collectOrderInfoForPublish bool, concurrency uint) *DexKeeper {
 	logger := bnclog.With("module", "dex_keeper")
@@ -130,6 +83,15 @@ func NewDexKeeper(key sdk.StoreKey, tradingPairMapper store.TradingPairMapper, c
 
 func (kp *DexKeeper) SetBUSDSymbol(symbol string) {
 	BUSDSymbol = symbol
+}
+
+func (kp *DexKeeper) GetSupportedOrderKeeper(pair string) (IDexOrderKeeper, error) {
+	for _, orderKeeper := range kp.OrderKeepers {
+		if orderKeeper.support(pair) {
+			return orderKeeper, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to find orderKeeper for symbol pair [%v]", pair)
 }
 
 func (kp *DexKeeper) InitRecentPrices(ctx sdk.Context) {
@@ -216,11 +178,10 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.initOrders(symbol)
-			break
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		dexOrderKeeper.initOrders(symbol)
+	} else {
+		kp.logger.Error(err.Error())
 	}
 	return eng
 }
@@ -239,11 +200,10 @@ func (kp *DexKeeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		return err
 	}
 
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.addOrder(symbol, info, kp.CollectOrderInfoForPublish, isRecovery)
-			break
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		dexOrderKeeper.addOrder(symbol, info, kp.CollectOrderInfoForPublish, isRecovery)
+	} else {
+		kp.logger.Error(err.Error())
 	}
 
 	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
@@ -256,10 +216,10 @@ func orderNotFound(symbol, id string) error {
 
 func (kp *DexKeeper) RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
 	symbol = strings.ToUpper(symbol)
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			return orderKeeper.removeOrder(kp, id, symbol, postCancelHandler)
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		return dexOrderKeeper.removeOrder(kp, id, symbol, postCancelHandler)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	return orderNotFound(symbol, id)
 }
@@ -278,10 +238,10 @@ func (kp *DexKeeper) GetOrder(id string, symbol string, side int8, price int64) 
 }
 
 func (kp *DexKeeper) OrderExists(symbol, id string) (OrderInfo, bool) {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			return orderKeeper.orderExists(symbol, id)
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		return dexOrderKeeper.orderExists(symbol, id)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	return OrderInfo{}, false
 }
@@ -355,11 +315,10 @@ func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook [
 				j++
 			})
 		var roundOrders []string
-		for _, orderKeeper := range kp.OrderKeepers {
-			if orderKeeper.support(pair) {
-				roundOrders = orderKeeper.getRoundOrdersForPair(pair)
-				break
-			}
+		if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err != nil {
+			roundOrders = dexOrderKeeper.getRoundOrdersForPair(pair)
+		} else {
+			kp.logger.Error(err.Error())
 		}
 
 		pendingMatch = len(roundOrders) > 0
@@ -368,10 +327,10 @@ func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook [
 }
 
 func (kp *DexKeeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(pair) {
-			return orderKeeper.getOpenOrders(pair, addr)
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err != nil {
+		return dexOrderKeeper.getOpenOrders(pair, addr)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	return make([]store.OpenOrder, 0)
 }
@@ -923,11 +882,11 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 
 func (kp *DexKeeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
 	ordersOfSymbol := make(map[string]*OrderInfo)
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			ordersOfSymbol = orderKeeper.getAllOrdersForPair(symbol)
-			break
-		}
+
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		ordersOfSymbol = dexOrderKeeper.getAllOrdersForPair(symbol)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 
 	orderNum := len(ordersOfSymbol)
@@ -1025,29 +984,27 @@ func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
 
 func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo {
 	ordersOfSymbol := make(map[string]*OrderInfo)
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			ordersOfSymbol = orderKeeper.getAllOrdersForPair(symbol)
-			break
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		ordersOfSymbol = dexOrderKeeper.getAllOrdersForPair(symbol)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	return ordersOfSymbol
 }
 
 func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.reloadOrder(symbol, orderInfo, height, kp.CollectOrderInfoForPublish)
-			return
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		dexOrderKeeper.reloadOrder(symbol, orderInfo, height, kp.CollectOrderInfoForPublish)
+	} else {
+		kp.logger.Error(err.Error())
 	}
 }
 
 func (kp *DexKeeper) ValidateOrder(context sdk.Context, account sdk.Account, msg NewOrderMsg) error {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(msg.Symbol) {
-			return orderKeeper.validateOrder(kp, context, account, msg)
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(msg.Symbol); err != nil {
+		return dexOrderKeeper.validateOrder(kp, context, account, msg)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	return fmt.Errorf("symbol:%s is not supported", msg.Symbol)
 }
@@ -1073,11 +1030,11 @@ func (kp *DexKeeper) UpdateOrderChange(change OrderChange, symbol string) {
 }
 
 func (kp *DexKeeper) UpdateOrderChangeSync(change OrderChange, symbol string) {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.appendOrderChangeSync(change)
-			return
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+		dexOrderKeeper.appendOrderChangeSync(change)
+		return
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 	kp.logger.Error("symbol is not supported %d", symbol)
 }
@@ -1090,7 +1047,6 @@ func (kp *DexKeeper) GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPu
 	}
 	kp.logger.Error("pairType is not supported %d", pairType)
 	return make(OrderInfoForPublish)
-
 }
 
 func (kp *DexKeeper) RemoveOrderInfosForPub(pairType SymbolPairType, orderId string) {

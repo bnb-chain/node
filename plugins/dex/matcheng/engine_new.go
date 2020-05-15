@@ -12,7 +12,7 @@ import (
 	"github.com/binance-chain/node/common/utils"
 )
 
-func (me *MatchEng) Match(height int64, isMini bool) bool {
+func (me *MatchEng) Match(height int64, lastMatchedHeight int64) bool {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return me.MatchBeforeGalileo(height)
 	}
@@ -20,30 +20,21 @@ func (me *MatchEng) Match(height int64, isMini bool) bool {
 	me.Trades = me.Trades[:0]
 	r := me.Book.GetOverlappedRange(&me.overLappedLevel, &me.buyBuf, &me.sellBuf)
 	if r <= 0 {
-		me.LastMatchHeight = height
 		return true
 	}
 	prepareMatch(&me.overLappedLevel)
 	tradePrice, index := getTradePrice(&me.overLappedLevel, &me.maxExec, &me.leastSurplus, me.LastTradePrice, me.PriceLimitPct)
 	if index < 0 {
-		me.LastMatchHeight = height
 		return false
 	}
 
 	if err := me.dropRedundantQty(index); err != nil {
 		me.logger.Error("dropRedundantQty failed", "error", err)
-		me.LastMatchHeight = height
 		return false
 	}
 	//If order height > the last Match height, then it's maker.
 	// Block Height cannot be used here since mini-token is not matched in every block
-	var lastMatchHeight int64
-	if isMini {
-		lastMatchHeight = me.LastMatchHeight
-	} else {
-		lastMatchHeight = height - 1 //Every block is deemed as performed matching for all BEP2 symbols
-	}
-	takerSide, err := me.determineTakerSide(lastMatchHeight, index)
+	takerSide, err := me.determineTakerSide(lastMatchedHeight, index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
@@ -52,7 +43,6 @@ func (me *MatchEng) Match(height int64, isMini bool) bool {
 	surplus := me.overLappedLevel[index].BuySellSurplus
 	me.fillOrdersNew(takerSide, takerSideOrders, index, tradePrice, surplus)
 	me.LastTradePrice = tradePrice
-	me.LastMatchHeight = height
 	return true
 }
 

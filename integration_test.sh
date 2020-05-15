@@ -331,7 +331,7 @@ check_operation "Issue Mini Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # send
-result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000:${mbc_symbol}" ${bob_addr} a)
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000:${mbc_symbol}" ${bob_addr} 1)
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
 sleep 1s

@@ -2,8 +2,6 @@ package fees
 
 import (
 	"fmt"
-	"sync"
-
 	"github.com/binance-chain/node/common/types"
 )
 
@@ -13,7 +11,6 @@ var Pool pool = newPool()
 type pool struct {
 	fees          map[string]types.Fee // TxHash -> fee
 	committedFees types.Fee
-	sync.Mutex
 }
 
 func newPool() pool {
@@ -28,8 +25,6 @@ func (p *pool) AddFee(txHash string, fee types.Fee) {
 }
 
 func (p *pool) AddAndCommitFee(txHash string, fee types.Fee) {
-	p.Lock()
-	defer p.Unlock()
 	p.fees[txHash] = fee
 	p.committedFees.AddFee(fee)
 }
