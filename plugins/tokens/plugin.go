@@ -9,7 +9,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
 	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
@@ -22,15 +24,26 @@ func InitPlugin(
 	appp app.ChainApp, mapper Mapper, accKeeper auth.AccountKeeper, coinKeeper bank.Keeper,
 	timeLockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
 	// add msg handlers
-	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper, swapKeeper) {
+	for route, handler := range Routes(mapper, accKeeper, coinKeeper, timeLockKeeper,
+		swapKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 
 	// add abci handlers
-	tokenHandler := createQueryHandler(mapper, abciQueryPrefix)
-	miniTokenHandler := createQueryHandler(mapper, miniAbciQueryPrefix)
-	appp.RegisterQueryHandler(abciQueryPrefix, tokenHandler)
-	appp.RegisterQueryHandler(miniAbciQueryPrefix, miniTokenHandler)
+	handler := createQueryHandler(mapper)
+	appp.RegisterQueryHandler(abciQueryPrefix, handler)
+
+	RegisterUpgradeBeginBlocker(mapper)
+}
+
+func RegisterUpgradeBeginBlocker(mapper Mapper) {
+	// bind bnb smart chain contract address to bnb token
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.LaunchBscUpgrade, func(ctx sdk.Context) {
+		err := mapper.UpdateBind(ctx, types.NativeTokenSymbol, "0x0000000000000000000000000000000000000000", 18)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler {

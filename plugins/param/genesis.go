@@ -63,11 +63,11 @@ const (
 	IOCExpireFee       = 25e3
 	IOCExpireFeeNative = 5e3
 
-	//MiniToken fee
-	TinyIssueFee   = 2e8
-	MiniIssueFee   = 3e8
-	MiniSetUriFee  = 37500
-	MiniListingFee = 8e8
+	// cross chain
+	CrossBindFee             = 1e6
+	CrossTransferOutFee      = 1e6
+	CrossTransferOutRelayFee = 1e6
+	CrossBindRelayFee        = 1e6
 )
 
 var DefaultGenesisState = param.GenesisState{
