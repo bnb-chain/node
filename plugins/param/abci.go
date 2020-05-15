@@ -5,8 +5,8 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/binance-chain/node/plugins/param/types"
 	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/param/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -58,10 +58,14 @@ func createAbciQueryHandler(paramHub *ParamHub) app.AbciQueryHandler {
 			params := make([]types.SCParam, 0)
 			for _, subSpace := range paramHub.GetSubscriberParamSpace() {
 				param := subSpace.Proto()
-				subSpace.ParamSpace.GetParamSet(newCtx, param)
+				if _, native := types.ToSCParam(param).GetParamAttribute(); native {
+					subSpace.ParamSpace.GetParamSet(ctx, param)
+				} else {
+					subSpace.ParamSpace.GetParamSet(newCtx, param)
+				}
 				params = append(params, types.ToSCParam(param))
 			}
-			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(params)
+			bz, err := app.GetCodec().MarshalJSON(params)
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),

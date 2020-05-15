@@ -133,7 +133,7 @@ func ShowSideChainParamsCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 			var params []types.SCParam
-			err = cdc.UnmarshalBinaryLengthPrefixed(bz, &params)
+			err = cdc.UnmarshalJSON(bz, &params)
 			if err != nil {
 				return err
 			}

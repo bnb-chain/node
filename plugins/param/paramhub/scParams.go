@@ -17,6 +17,10 @@ func (keeper *Keeper) getLastSCParamChanges(ctx sdk.Context) []types.SCChangePar
 				keeper.SetLastSCParamChangeProposalId(ctx, types.LastProposalID{ProposalID: proposal.GetProposalID()})
 				first = false
 			}
+
+			proposal.SetStatus(gov.StatusExecuted)
+			keeper.govKeeper.SetProposal(ctx, proposal)
+
 			var changeParam types.SCChangeParams
 			strProposal := proposal.GetDescription()
 			err := keeper.cdc.UnmarshalJSON([]byte(strProposal), &changeParam)

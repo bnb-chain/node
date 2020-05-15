@@ -8,12 +8,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/tendermint/tendermint/libs/common"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/oracle/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/tendermint/go-amino"
+	"github.com/tendermint/tendermint/libs/common"
+
+	"github.com/binance-chain/node/wire"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+var testScParams = `[ { "type": "params/StakeParams", "value": { "Params": { "unbonding_time": "604800000000000", "max_validators": 11, "bond_denom": "BNB", "min_self_delegation": "5000000000000", "min_delegation_change": "100000000" } } }, { "type": "params/SlashParams", "value": { "Params": { "max_evidence_age": "259200000000000", "signed_blocks_window": "0", "min_signed_per_window": "0", "double_sign_unbond_duration": "9223372036854775807", "downtime_unbond_duration": "172800000000000", "too_low_del_unbond_duration": "86400000000000", "slash_fraction_double_sign": "0", "slash_fraction_downtime": "0", "double_sign_slash_amount": "1000000000000", "downtime_slash_amount": "5000000000", "submitter_reward": "100000000000", "downtime_slash_fee": "1000000000" } } }, { "type": "params/OracleParams", "value": { "Params": { "ConsensusNeeded": "70000000" } } } ]`
 
 func TestFixedFeeParamTypeCheck(t *testing.T) {
 	testCases := []struct {
@@ -164,16 +168,14 @@ func TestSCParamCheck(t *testing.T) {
 		expectError bool
 	}
 	testcases := []TestCase{
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}}}}, expectError: false},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 0)}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.ZeroDec()}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: false},
-		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB1", MinSelfDelegation: 100e8}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 1 * time.Minute, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 0, BondDenom: "BNB", MinSelfDelegation: 100e8}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 1e15}}}}, expectError: true},
-		{cp: SCChangeParams{SCParams: []SCParam{&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}},
-			&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}}, expectError: true},
+		{cp: generatSCParamChange(&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 1)}}, 2), expectError: false},
+		{cp: generatSCParamChange(&OracleParams{Params: types.Params{ConsensusNeeded: sdk.NewDecWithPrec(7, 0)}}, 2), expectError: true},
+		{cp: generatSCParamChange(&OracleParams{Params: types.Params{ConsensusNeeded: sdk.ZeroDec()}}, 2), expectError: true},
+		{cp: generatSCParamChange(&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8, MinDelegationChange: 1e5}}, 0), expectError: false},
+		{cp: generatSCParamChange(&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB1", MinSelfDelegation: 100e8, MinDelegationChange: 1e5}}, 0), expectError: true},
+		{cp: generatSCParamChange(&StakeParams{Params: stake.Params{UnbondingTime: 1 * time.Second, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8, MinDelegationChange: 1e5}}, 0), expectError: true},
+		{cp: generatSCParamChange(&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 0, BondDenom: "BNB", MinSelfDelegation: 100e8, MinDelegationChange: 1e5}}, 0), expectError: true},
+		{cp: generatSCParamChange(&StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 1e7, MinDelegationChange: 1e5}}, 0), expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{nil}}, expectError: true},
 		{cp: SCChangeParams{SCParams: []SCParam{}}, expectError: true},
 	}
@@ -195,4 +197,21 @@ func generatCSCParamChange() CSCParamChange {
 		Value:  hex.EncodeToString(common.RandBytes(common.RandIntn(255) + 1)),
 		Target: hex.EncodeToString(common.RandBytes(20)),
 	}
+}
+
+func generatSCParamChange(s SCParam, idx int) SCChangeParams {
+	iScPrams := make([]SCParam, 0)
+	cdc := amino.NewCodec()
+	testRegisterWire(cdc)
+	cdc.UnmarshalJSON([]byte(testScParams), &iScPrams)
+	iScPrams[idx] = s
+	return SCChangeParams{SCParams: iScPrams, Description: "test"}
+}
+
+// Register concrete types on wire codec
+func testRegisterWire(cdc *wire.Codec) {
+	cdc.RegisterInterface((*SCParam)(nil), nil)
+	cdc.RegisterConcrete(&OracleParams{}, "params/OracleParams", nil)
+	cdc.RegisterConcrete(&StakeParams{}, "params/StakeParams", nil)
+	cdc.RegisterConcrete(&SlashParams{}, "params/SlashParams", nil)
 }

@@ -3,6 +3,7 @@ package paramhub_test
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/tendermint/go-amino"
 	"os"
 	"strings"
 	"testing"
@@ -47,7 +48,8 @@ var (
 	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500000e8), sdk.NewCoin("BTC-000", 200e8)})
-	testClient = NewTestClient(testApp)
+	testScParams = `[ { "type": "params/StakeParams", "value": { "Params": { "unbonding_time": "604800000000000", "max_validators": 11, "bond_denom": "BNB", "min_self_delegation": "5000000000000", "min_delegation_change": "100000000" } } }, { "type": "params/SlashParams", "value": { "Params": { "max_evidence_age": "259200000000000", "signed_blocks_window": "0", "min_signed_per_window": "0", "double_sign_unbond_duration": "9223372036854775807", "downtime_unbond_duration": "172800000000000", "too_low_del_unbond_duration": "86400000000000", "slash_fraction_double_sign": "0", "slash_fraction_downtime": "0", "double_sign_slash_amount": "1000000000000", "downtime_slash_amount": "5000000000", "submitter_reward": "100000000000", "downtime_slash_fee": "1000000000" } } }, { "type": "params/OracleParams", "value": { "Params": { "ConsensusNeeded": "70000000" } } } ]`
+	testClient   = NewTestClient(testApp)
 )
 
 func TestCSCParamUpdatesSuccess(t *testing.T) {
@@ -108,7 +110,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 			Target: hex.EncodeToString(cmn.RandBytes(20)),
 		},
 	}
-	for idx ,c:=range cscParams{
+	for idx, c := range cscParams {
 		c.Check()
 		cscParams[idx] = c
 	}
@@ -223,7 +225,7 @@ func TestSubmitCSCParamUpdatesFail(t *testing.T) {
 		},
 	}
 
-	for idx ,c:=range cscParams{
+	for idx, c := range cscParams {
 		c.Check()
 		cscParams[idx] = c
 	}
@@ -250,6 +252,7 @@ func TestSCParamUpdatesSuccess(t *testing.T) {
 		SCParams: []ptypes.SCParam{
 			&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}},
 			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "BNB", MinSelfDelegation: 100e8}},
+			generatSCParamChange(nil, 0).SCParams[1],
 		}}
 	scParamsBz, err := app.Codec.MarshalJSON(scParams)
 	proposeMsg := gov.NewMsgSideChainSubmitProposal("testSideProposal", string(scParamsBz), gov.ProposalTypeSCParamsChange, sideValAddr, sdk.Coins{sdk.Coin{"BNB", 2000e8}}, time.Second, "bsc")
@@ -292,9 +295,9 @@ func TestSCParamMultiUpdatesSuccess(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
 
 	scParamses := []ptypes.SCChangeParams{
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}}},
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(8, 1)}}}},
-		{SCParams: []ptypes.SCParam{&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}}}},
+		generatSCParamChange(&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(6, 1)}}, 2),
+		generatSCParamChange(&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(8, 1)}}, 2),
+		generatSCParamChange(&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(9, 1)}}, 2),
 	}
 	for idx, scParams := range scParamses {
 		scParamsBz, err := app.Codec.MarshalJSON(scParams)
@@ -335,12 +338,8 @@ func TestSCParamUpdatesFail(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
 
 	scParamses := []ptypes.SCChangeParams{
-		{SCParams: []ptypes.SCParam{
-			&ptypes.StakeParams{Params: stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "", MinSelfDelegation: 100e8}},
-		}},
-		{SCParams: []ptypes.SCParam{
-			&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(2, 0)}},
-		}},
+		generatSCParamChange(&ptypes.StakeParams{stake.Params{UnbondingTime: 24 * time.Hour, MaxValidators: 10, BondDenom: "", MinSelfDelegation: 100e8}}, 0),
+		generatSCParamChange(&ptypes.OracleParams{otypes.Params{ConsensusNeeded: sdk.NewDecWithPrec(2, 0)}}, 2),
 		{SCParams: []ptypes.SCParam{
 			nil,
 		}},
@@ -458,7 +457,7 @@ func setupTest() (crypto.Address, sdk.Context, []sdk.Account) {
 	ctx = UpdateContext(valAddr, ctx, 2, tNow)
 	testApp.SetCheckState(abci.Header{Time: tNow.AddDate(0, 0, -2)})
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
-	msg := stake.NewMsgCreateSideChainValidator(sdk.ValAddress(sideValAddr), sdk.NewCoin("BNB", 2000000000000),
+	msg := stake.NewMsgCreateSideChainValidator(sdk.ValAddress(sideValAddr), sdk.NewCoin("BNB", 5000000000000),
 		stake.NewDescription("m", "i", "w", "d"),
 		stake.NewCommissionMsg(sdk.NewDecWithPrec(1, 4), sdk.NewDecWithPrec(1, 4), sdk.NewDecWithPrec(1, 4)),
 		"bsc", sideValAddr, sideValAddr)
@@ -469,4 +468,23 @@ func setupTest() (crypto.Address, sdk.Context, []sdk.Account) {
 	}
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{})
 	return valAddr, ctx, accs
+}
+
+func generatSCParamChange(s ptypes.SCParam, idx int) ptypes.SCChangeParams {
+	iScPrams := make([]ptypes.SCParam, 0)
+	cdc := amino.NewCodec()
+	testRegisterWire(cdc)
+	cdc.UnmarshalJSON([]byte(testScParams), &iScPrams)
+	if s != nil {
+		iScPrams[idx] = s
+	}
+	return ptypes.SCChangeParams{SCParams: iScPrams, Description: "test"}
+}
+
+// Register concrete types on wire codec
+func testRegisterWire(cdc *wire.Codec) {
+	cdc.RegisterInterface((*ptypes.SCParam)(nil), nil)
+	cdc.RegisterConcrete(&ptypes.OracleParams{}, "params/OracleParams", nil)
+	cdc.RegisterConcrete(&ptypes.StakeParams{}, "params/StakeParams", nil)
+	cdc.RegisterConcrete(&ptypes.SlashParams{}, "params/SlashParams", nil)
 }

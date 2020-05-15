@@ -21,8 +21,7 @@ var (
 	ParamStoreKeyFees                    = []byte("fees")
 
 	// for side chain
-	ParamStoreKeyCSCLastParamsChangeProposalID = []byte("CSCLastParamsChangeProposalID")
-	ParamStoreKeySCLastParamsChangeProposalID  = []byte("SCLastParamsChangeProposalID")
+	ParamStoreKeySCLastParamsChangeProposalID = []byte("SCLastParamsChangeProposalID")
 )
 
 const (
@@ -39,7 +38,6 @@ func NativeParamTypeTable() params.TypeTable {
 
 func SideParamTypeTable() params.TypeTable {
 	return params.NewTypeTable(
-		ParamStoreKeyCSCLastParamsChangeProposalID, types.LastProposalID{},
 		ParamStoreKeySCLastParamsChangeProposalID, types.LastProposalID{},
 	)
 }
@@ -52,7 +50,7 @@ type Keeper struct {
 	codespace        sdk.CodespaceType
 
 	// just for query
-	subscriberParamSpace []*subspace.SubParamSpace
+	subscriberParamSpace []*subspace.ParamSpaceProto
 
 	govKeeper *gov.Keeper
 	ibcKeeper *ibc.Keeper
@@ -73,7 +71,7 @@ func NewKeeper(cdc *codec.Codec, key *sdk.KVStoreKey, tkey *sdk.TransientStoreKe
 		updateCallbacks:      make([]func([]sdk.Context, []interface{}), 0),
 		genesisCallbacks:     make([]func(sdk.Context, interface{}), 0),
 		logger:               logger,
-		subscriberParamSpace: make([]*subspace.SubParamSpace, 0),
+		subscriberParamSpace: make([]*subspace.ParamSpaceProto, 0),
 	}
 	keeper.nativeParamSpace = keeper.Subspace(NativeParamSpace).WithTypeTable(NativeParamTypeTable())
 	keeper.sideParamSpace = keeper.Subspace(SideParamSpace).WithTypeTable(SideParamTypeTable())
@@ -83,7 +81,7 @@ func NewKeeper(cdc *codec.Codec, key *sdk.KVStoreKey, tkey *sdk.TransientStoreKe
 	return &keeper
 }
 
-func (keeper *Keeper) GetSubscriberParamSpace() []*subspace.SubParamSpace {
+func (keeper *Keeper) GetSubscriberParamSpace() []*subspace.ParamSpaceProto {
 	return keeper.subscriberParamSpace
 }
 
@@ -130,7 +128,7 @@ func (keeper *Keeper) EndBreatheBlock(ctx sdk.Context) {
 				}
 				for _, c := range change.SCParams {
 					scChangeItems = append(scChangeItems, c)
-					if _, native, _ := c.GetParamAttribute(); native {
+					if _, native := c.GetParamAttribute(); native {
 						scChangeContexts = append(scChangeContexts, ctx)
 					} else {
 						scChangeContexts = append(scChangeContexts, sideChainCtx)
@@ -199,7 +197,7 @@ func (keeper *Keeper) Load(ctx sdk.Context) {
 	keeper.loadFeeParam(ctx)
 }
 
-func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.SubParamSpace, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
+func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.ParamSpaceProto, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
 	if u != nil {
 		keeper.SubscribeUpdateEvent(u)
 	}

@@ -175,9 +175,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		timelock.DefaultCodespace)
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
-	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
+	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.StakeKeeper)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, app.crossChainConfig.BscChainId)
+		app.IbcKeeper, app.Pool, app.crossChainConfig.BscChainId)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -406,6 +406,7 @@ func (app *BinanceChain) initSideChain() {
 }
 
 func (app *BinanceChain) initOracle() {
+	app.oracleKeeper.SubscribeParamChange(app.ParamHub)
 	oracle.RegisterUpgradeBeginBlocker(app.oracleKeeper)
 }
 
@@ -506,7 +507,6 @@ func (app *BinanceChain) initParams() {
 		storePrefix := app.ScKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.ParamHub.SetLastSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
-		app.ParamHub.SetLastCSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
 	})
 	if app.CheckState != nil && app.CheckState.Ctx.BlockHeight() != 0 {
 		app.ParamHub.Load(app.CheckState.Ctx)
@@ -721,7 +721,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	} else if ctx.RouterCallRecord()["stake"] {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.StakeKeeper)
 	}
-	ibc.EndBlocker(ctx, app.ibcKeeper)
+	ibc.EndBlocker(ctx, app.IbcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
 	}

@@ -1,11 +1,15 @@
 package paramhub
 
 import (
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/plugins/param/types"
 )
+
+const SafeToleratePeriod = 2 * 7 * 24 * 60 * 60 * time.Second // 2 weeks
 
 func (keeper *Keeper) registerCSCParamsCallBack() {
 	keeper.SubscribeParamChange(
@@ -18,7 +22,7 @@ func (keeper *Keeper) registerCSCParamsCallBack() {
 					keeper.logger.Debug("Receive param changes that not interested.")
 				}
 			}
-		}, nil,nil, nil,
+		}, nil, nil, nil,
 	)
 }
 
@@ -35,14 +39,20 @@ func (keeper *Keeper) updateCSCParams(ctx sdk.Context, updates types.CSCParamCha
 
 func (keeper *Keeper) getLastCSCParamChanges(ctx sdk.Context) []types.CSCParamChange {
 	changes := make([]types.CSCParamChange, 0)
-	lastProposalId := keeper.GetLastCSCParamChangeProposalId(ctx)
-	first := true
-	keeper.govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, lastProposalId.ProposalID, true, func(proposal gov.Proposal) bool {
+	// It can still find the valid proposal if the block chain stop for SafeToleratePeriod time
+	backPeriod := SafeToleratePeriod + gov.MaxVotingPeriod
+	keeper.govKeeper.Iterate(ctx, nil, nil, gov.StatusNil, 0, true, func(proposal gov.Proposal) bool {
 		if proposal.GetProposalType() == gov.ProposalTypeCSCParamsChange {
-			if first {
-				keeper.SetLastCSCParamChangeProposalId(ctx, types.LastProposalID{ProposalID: proposal.GetProposalID()})
-				first = false
+			if ctx.BlockHeader().Time.Sub(proposal.GetVotingStartTime()) > backPeriod {
+				return true
 			}
+			if proposal.GetStatus() != gov.StatusPassed {
+				return false
+			}
+
+			proposal.SetStatus(gov.StatusExecuted)
+			keeper.govKeeper.SetProposal(ctx, proposal)
+
 			var changeParam types.CSCParamChange
 			strProposal := proposal.GetDescription()
 			err := keeper.cdc.UnmarshalJSON([]byte(strProposal), &changeParam)
@@ -59,15 +69,4 @@ func (keeper *Keeper) getLastCSCParamChanges(ctx sdk.Context) []types.CSCParamCh
 		return false
 	})
 	return changes
-}
-
-func (keeper *Keeper) GetLastCSCParamChangeProposalId(ctx sdk.Context) types.LastProposalID {
-	var id types.LastProposalID
-	keeper.sideParamSpace.GetIfExists(ctx, ParamStoreKeyCSCLastParamsChangeProposalID, &id)
-	return id
-}
-
-func (keeper *Keeper) SetLastCSCParamChangeProposalId(ctx sdk.Context, id types.LastProposalID) {
-	keeper.sideParamSpace.Set(ctx, ParamStoreKeyCSCLastParamsChangeProposalID, &id)
-	return
 }

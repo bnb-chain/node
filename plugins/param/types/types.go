@@ -289,7 +289,7 @@ type SCParam interface {
 	Check() error
 	Value() interface{}
 	// native means weather the parameter stored in native store context or side chain store context
-	GetParamAttribute() (paramType string, native bool, exclusive bool)
+	GetParamAttribute() (paramType string, native bool)
 }
 
 type OracleParams struct {
@@ -304,8 +304,8 @@ func (p *OracleParams) Value() interface{} {
 	return p.Params
 }
 
-func (p *OracleParams) GetParamAttribute() (string, bool, bool) {
-	return "oracle", true, true
+func (p *OracleParams) GetParamAttribute() (string, bool) {
+	return "oracle", true
 }
 
 func (p *OracleParams) Check() error {
@@ -328,8 +328,8 @@ func (s *StakeParams) Value() interface{} {
 	return s.Params
 }
 
-func (s *StakeParams) GetParamAttribute() (string, bool, bool) {
-	return "stake", false, true
+func (s *StakeParams) GetParamAttribute() (string, bool) {
+	return "stake", false
 }
 
 type SlashParams struct {
@@ -344,8 +344,8 @@ func (s *SlashParams) Value() interface{} {
 	return s.Params
 }
 
-func (s *SlashParams) GetParamAttribute() (string, bool, bool) {
-	return "slash", false, true
+func (s *SlashParams) GetParamAttribute() (string, bool) {
+	return "slash", false
 }
 
 func ToSCParam(p interface{}) SCParam {
@@ -367,10 +367,18 @@ type SCChangeParams struct {
 }
 
 func (s *SCChangeParams) Check() error {
-	if len(s.SCParams) == 0 {
-		return fmt.Errorf("the sc_params is empty")
+	supportParams := []SCParam{&SlashParams{}, &OracleParams{}, &StakeParams{}}
+
+	if len(s.SCParams) != len(supportParams) {
+		return fmt.Errorf("the sc_params length mismatch, suppose %d", len(supportParams))
 	}
+
 	paramSet := make(map[string]bool)
+	for _, s := range supportParams {
+		stype, _ := s.GetParamAttribute()
+		paramSet[stype] = true
+	}
+
 	for _, sc := range s.SCParams {
 		if sc == nil {
 			return fmt.Errorf("sc_params contains empty element")
@@ -379,11 +387,12 @@ func (s *SCChangeParams) Check() error {
 		if err != nil {
 			return err
 		}
-		paramType, _, exclusive := sc.GetParamAttribute()
-		if exist := paramSet[paramType]; exist && exclusive {
-			return fmt.Errorf("contains duplicated parmaType %s", paramType)
+		paramType, _ := sc.GetParamAttribute()
+		if exist := paramSet[paramType]; exist {
+			delete(paramSet, paramType)
+		} else {
+			return fmt.Errorf("unsupported param type %s", paramType)
 		}
-		paramSet[paramType] = true
 	}
 	return nil
 }
