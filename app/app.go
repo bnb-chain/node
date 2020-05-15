@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -390,10 +391,10 @@ func (app *BinanceChain) initStaking() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime:       60 * 60 * 24 * time.Second, // 1 day
-			MaxValidators:       21,
+			UnbondingTime:       60 * 60 * 24 * 7 * time.Second, // 7 days
+			MaxValidators:       11,
 			BondDenom:           types.NativeTokenSymbol,
-			MinSelfDelegation:   20000e8,
+			MinSelfDelegation:   50000e8,
 			MinDelegationChange: 1e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
@@ -410,14 +411,14 @@ func (app *BinanceChain) initSlashing() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.slashKeeper.SetParams(newCtx, slashing.Params{
-			MaxEvidenceAge:           60 * 60 * 24 * time.Second,     // 1 day
-			DoubleSignUnbondDuration: 60 * 60 * 24 * 7 * time.Second, // 7 days
+			MaxEvidenceAge:           60 * 60 * 24 * 3 * time.Second, // 3 days
+			DoubleSignUnbondDuration: math.MaxInt64,                  // forever
 			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
 			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
-			DoubleSignSlashAmount:    1000e8,
-			SubmitterReward:          100e8,
-			DowntimeSlashAmount:      1000e8,
-			DowntimeSlashFee:         100e8,
+			DoubleSignSlashAmount:    10000e8,
+			SubmitterReward:          1000e8,
+			DowntimeSlashAmount:      50e8,
+			DowntimeSlashFee:         10e8,
 		})
 	})
 	// todo register oracle claim
