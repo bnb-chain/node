@@ -337,7 +337,7 @@ check_operation "Send Token" "${result}" "${chain_operation_words}"
 sleep 1s
 # multi send
 echo ${bob_addr}
-result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"10000000000:${mbc_symbol}\"},{\"to\":\"${alice_addr}\",\"amount\":\"1000000000:${mbc_symbol}\"}]")
+result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"10000000000:${mbc_symbol}\"},{\"to\":\"${alice_addr}\",\"amount\":\"1000000000:${mbc_symbol}\"}]" 1)
 check_operation "Multi Send Token" "${result}" "${chain_operation_words}"
 
 sleep 1s

@@ -178,7 +178,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		dexOrderKeeper.initOrders(symbol)
 	} else {
 		kp.logger.Error(err.Error())
@@ -200,7 +200,7 @@ func (kp *DexKeeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		return err
 	}
 
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		dexOrderKeeper.addOrder(symbol, info, kp.CollectOrderInfoForPublish, isRecovery)
 	} else {
 		kp.logger.Error(err.Error())
@@ -216,7 +216,7 @@ func orderNotFound(symbol, id string) error {
 
 func (kp *DexKeeper) RemoveOrder(id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
 	symbol = strings.ToUpper(symbol)
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		return dexOrderKeeper.removeOrder(kp, id, symbol, postCancelHandler)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -238,7 +238,7 @@ func (kp *DexKeeper) GetOrder(id string, symbol string, side int8, price int64) 
 }
 
 func (kp *DexKeeper) OrderExists(symbol, id string) (OrderInfo, bool) {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		return dexOrderKeeper.orderExists(symbol, id)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -315,7 +315,7 @@ func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook [
 				j++
 			})
 		var roundOrders []string
-		if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err != nil {
+		if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err == nil {
 			roundOrders = dexOrderKeeper.getRoundOrdersForPair(pair)
 		} else {
 			kp.logger.Error(err.Error())
@@ -327,7 +327,7 @@ func (kp *DexKeeper) GetOrderBookLevels(pair string, maxLevels int) (orderbook [
 }
 
 func (kp *DexKeeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(pair); err == nil {
 		return dexOrderKeeper.getOpenOrders(pair, addr)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -883,7 +883,7 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 func (kp *DexKeeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
 	ordersOfSymbol := make(map[string]*OrderInfo)
 
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		ordersOfSymbol = dexOrderKeeper.getAllOrdersForPair(symbol)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -984,7 +984,7 @@ func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
 
 func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo {
 	ordersOfSymbol := make(map[string]*OrderInfo)
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		ordersOfSymbol = dexOrderKeeper.getAllOrdersForPair(symbol)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -993,7 +993,7 @@ func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo {
 }
 
 func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		dexOrderKeeper.reloadOrder(symbol, orderInfo, height, kp.CollectOrderInfoForPublish)
 	} else {
 		kp.logger.Error(err.Error())
@@ -1001,7 +1001,7 @@ func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int
 }
 
 func (kp *DexKeeper) ValidateOrder(context sdk.Context, account sdk.Account, msg NewOrderMsg) error {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(msg.Symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(msg.Symbol); err == nil {
 		return dexOrderKeeper.validateOrder(kp, context, account, msg)
 	} else {
 		kp.logger.Debug(err.Error())
@@ -1030,7 +1030,7 @@ func (kp *DexKeeper) UpdateOrderChange(change OrderChange, symbol string) {
 }
 
 func (kp *DexKeeper) UpdateOrderChangeSync(change OrderChange, symbol string) {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err != nil {
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		dexOrderKeeper.appendOrderChangeSync(change)
 		return
 	} else {

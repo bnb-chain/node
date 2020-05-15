@@ -25,7 +25,7 @@ scripthome="${src}/networks/publisher"
 ############################ END ##########################
 
 #X1Mini_symbol="X1Mini-ED3"
-result=$(${cli} mini-token issue --from=zc --token-name="X1M Coin" --symbol=X1M --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
+result=$(${cli} token issue-mini --from=zc --token-name="X1M Coin" --symbol=X1M --total-supply=800000000000 --token-type=1 --chain-id ${chain_id})
 X1Mini_symbol=$(echo "${result}" | tail -n 1 | grep -o "X1M-[0-9A-Z]*")
 echo ${X1Mini_symbol}
 sleep 2
