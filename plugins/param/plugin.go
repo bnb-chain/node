@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/oracle"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
@@ -11,6 +12,7 @@ import (
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/param/paramhub"
@@ -74,6 +76,11 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: gov.MsgSideChainSubmitProposal{}.Type(), Fee: SideProposeFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: gov.MsgSideChainDeposit{}.Type(), Fee: SideDepositFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: gov.MsgSideChainVote{}.Type(), Fee: SideVoteFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.BindMsg{}.Type(), Fee: CrossBindFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.BindRelayFeeName, Fee: CrossBindRelayFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.TransferOutFeeName, Fee: CrossTransferOutRelayFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: oracle.ClaimMsg{}.Type(), Fee: sdk.ZeroFee, FeeFor: sdk.FeeFree},
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
@@ -124,5 +131,10 @@ func init() {
 		swap.DepositHTLT:                           fees.FixedFeeCalculatorGen,
 		swap.ClaimHTLT:                             fees.FixedFeeCalculatorGen,
 		swap.RefundHTLT:                            fees.FixedFeeCalculatorGen,
+		bridge.BindMsg{}.Type():                    fees.FixedFeeCalculatorGen,
+		bridge.TransferOutMsg{}.Type():             fees.FixedFeeCalculatorGen,
+		bridge.BindRelayFeeName:                    fees.FixedFeeCalculatorGen,
+		bridge.TransferOutFeeName:                  fees.FixedFeeCalculatorGen,
+		oracle.ClaimMsg{}.Type():                   fees.FixedFeeCalculatorGen,
 	}
 }

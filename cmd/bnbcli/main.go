@@ -22,6 +22,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 	accountcmd "github.com/binance-chain/node/plugins/account/client/cli"
 	apiserv "github.com/binance-chain/node/plugins/api"
+	bridgecmd "github.com/binance-chain/node/plugins/bridge/client/cli"
 	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
 	paramcmd "github.com/binance-chain/node/plugins/param/client/cli"
 	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
@@ -94,6 +95,7 @@ func main() {
 	slashingcmd.AddCommands(rootCmd, cdc)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
+	bridgecmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
