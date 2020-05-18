@@ -867,7 +867,7 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 	delete(kp.recentPrices, symbol)
 
 	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.supportUpgradeVersion() {
+		if orderKeeper.support(symbol) {
 			orderKeeper.deleteOrdersForPair(symbol)
 			break
 		}

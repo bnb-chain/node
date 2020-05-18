@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/plugins/tokens/issue"
 	"io"
 	"os"
 	"runtime/debug"
@@ -44,7 +43,8 @@ import (
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/plugins/tokens/seturi_mini"
+	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -295,7 +295,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		issue.IssueMiniMsg{}.Type(),
-		seturi_mini.SetURIMsg{}.Type(),
+		seturi.SetURIMsg{}.Type(),
 		list.ListMiniMsg{}.Type(),
 	)
 }

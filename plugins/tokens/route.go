@@ -1,7 +1,7 @@
 package tokens
 
 import (
-	"github.com/binance-chain/node/plugins/tokens/seturi_mini"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -23,6 +23,6 @@ func Routes(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.
 	routes[timelock.MsgRoute] = timelock.NewHandler(timeLockKeeper)
 	routes[swap.AtomicSwapRoute] = swap.NewHandler(swapKeeper)
 	routes[issue.MiniRoute] = issue.NewMiniHandler(tokenMapper, keeper)
-	routes[seturi_mini.SetURIRoute] = seturi_mini.NewHandler(tokenMapper)
+	routes[seturi.SetURIRoute] = seturi.NewHandler(tokenMapper)
 	return routes
 }

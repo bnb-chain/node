@@ -112,8 +112,8 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	keeper.FeeManager.FeeConfig.CancelFee = 12
 	keeper.FeeManager.FeeConfig.CancelFeeNative = 6
 
-	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0) // give user enough coins to pay the fee
-	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0)
+	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0, "XYZ-000") // give user enough coins to pay the fee
+	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 0, 0, "XYZ-000")
 	return assert.New(t), require.New(t), app, buyerAcc, sellerAcc
 }
 

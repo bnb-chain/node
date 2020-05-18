@@ -29,6 +29,7 @@ import (
 	"github.com/binance-chain/node/common"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/utils"
+	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -183,7 +184,7 @@ func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
 }
 
 func (app *BinanceChain) reInitChain() error {
-	order.Init(
+	dex.InitOrders(
 		app.DexKeeper,
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,

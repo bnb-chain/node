@@ -1,4 +1,4 @@
-package seturi_mini
+package seturi
 
 import (
 	"github.com/binance-chain/node/plugins/tokens/issue"

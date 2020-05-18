@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"fmt"
+	"github.com/binance-chain/node/common/upgrade"
 	"os"
 	"testing"
 
@@ -33,8 +34,8 @@ var (
 	cdc    *wire.Codec
 )
 
-func setup(t *testing.T) (ass *assert.Assertions, req *require.Assertions, pair string) {
-	baseAssetSymbol := "XYZ-000"
+func setup(t *testing.T, symbol string, upgrade bool) (ass *assert.Assertions, req *require.Assertions, pair string) {
+	baseAssetSymbol := symbol
 	logger := log.NewTMLogger(os.Stdout)
 
 	db := dbm.NewMemDB()
@@ -43,19 +44,32 @@ func setup(t *testing.T) (ass *assert.Assertions, req *require.Assertions, pair 
 	ctx = app.GetContextForCheckState()
 	cdc = app.GetCodec()
 
+	if upgrade {
+		setChainVersion()
+	}
+
 	keeper = app.(*appPkg.BinanceChain).DexKeeper
 	tradingPair := dextypes.NewTradingPair(baseAssetSymbol, types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
 	am = app.(*appPkg.BinanceChain).AccountKeeper
-	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000) // give user enough coins to pay the fee
+	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000, symbol) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 
-	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000)
+	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000, symbol)
 	seller = sellerAcc.GetAddress()
 
 	pair = fmt.Sprintf("%s_%s", baseAssetSymbol, types.NativeTokenSymbol)
 
 	return assert.New(t), require.New(t), pair
+}
+
+func setChainVersion() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+}
+
+func resetChainVersion() {
+	upgrade.Mgr.Config.HeightMap = nil
 }

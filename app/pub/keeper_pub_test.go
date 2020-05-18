@@ -72,10 +72,10 @@ func setupKeeperTest(t *testing.T) (*assert.Assertions, *require.Assertions) {
 	//keeper.FeeConfig.SetFeeRate(ctx, 1000)
 	//keeper.FeeConfig.SetFeeRateNative(ctx, 500)
 
-	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000) // give user enough coins to pay the fee
+	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000, "XYZ-000") // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 
-	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000)
+	_, sellerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000, "XYZ-000")
 	seller = sellerAcc.GetAddress()
 
 	return assert.New(t), require.New(t)

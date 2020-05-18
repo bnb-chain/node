@@ -79,19 +79,19 @@ func NewNamedAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto
 	return privKey, appAcc
 }
 
-func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, sdk.Account) {
+func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64, symbol string) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	coins := NewNativeTokens(free)
-	coins = append(coins, sdk.NewCoin("XYZ-000", free))
+	coins = append(coins, sdk.NewCoin(symbol, free))
 	acc.SetCoins(coins)
 
 	appAcc := acc.(*types.AppAccount)
 	lockedCoins := NewNativeTokens(locked)
-	lockedCoins = append(lockedCoins, sdk.NewCoin("XYZ-000", locked))
+	lockedCoins = append(lockedCoins, sdk.NewCoin(symbol, locked))
 	appAcc.SetLockedCoins(lockedCoins)
 	freezeCoins := NewNativeTokens(freeze)
-	freezeCoins = append(freezeCoins, sdk.NewCoin("XYZ-000", freeze))
+	freezeCoins = append(freezeCoins, sdk.NewCoin(symbol, freeze))
 	appAcc.SetFrozenCoins(freezeCoins)
 	am.SetAccount(ctx, acc)
 	return privKey, acc
