@@ -42,10 +42,10 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
 	if len(msg.QuoteAssetSymbol) == 0 {
-		return sdk.ErrInvalidCoins("quote token is empty: " + err.Error())
+		return sdk.ErrInvalidCoins("quote token is empty ")
 	}
 	if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol!= msg.QuoteAssetSymbol{
-		return sdk.ErrInvalidCoins("quote token: " + err.Error())
+		return sdk.ErrInvalidCoins("quote token is not valid ")
 	}
 	if msg.InitPrice <= 0 {
 		return sdk.ErrInvalidCoins("price should be positive")
