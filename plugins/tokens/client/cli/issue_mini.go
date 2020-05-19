@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	flagTokenType   = "token-type"
-	flagTokenUri    = "token-uri"
+	flagTokenType = "token-type"
+	flagTokenUri  = "token-uri"
 )
 
 func issueMiniTokenCmd(cmdr Commander) *cobra.Command {

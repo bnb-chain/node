@@ -30,7 +30,6 @@ type server struct {
 	tokens  tkstore.Mapper
 
 	accStoreName string
-
 }
 
 // NewServer provides a new server structure.

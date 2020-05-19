@@ -26,7 +26,7 @@ func NewTestFeeConfig() FeeConfig {
 	return feeConfig
 }
 
-func feeManagerCalcTradeFeeForSingleTransfer(t *testing.T, symbol string){
+func feeManagerCalcTradeFeeForSingleTransfer(t *testing.T, symbol string) {
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	keeper.AddEngine(dextype.NewTradingPair(symbol, "BNB", 1e7))
@@ -177,7 +177,6 @@ func TestFeeManager_CalcExpiresFee(t *testing.T) {
 	keeper.AddEngine(dextype.NewTradingPair("XYZ-111", "BNB", 2e7))
 	keeper.AddEngine(dextype.NewTradingPair("BNB", "BTC", 5e5))
 	keeper.AddEngine(dextype.NewTradingPair("ZYX-000M", "BNB", 1e8))
-
 
 	// in BNB
 	expireTransfers := ExpireTransfers{

@@ -24,7 +24,7 @@ func resetChainVersion() {
 	upgrade.Mgr.Config.HeightMap = nil
 }
 
-func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T ){
+func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T) {
 	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
@@ -62,10 +62,10 @@ func TestHandleListMiniIdenticalSymbols(t *testing.T) {
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
 	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
-		From: sdk.AccAddress("testacc"),
-		BaseAssetSymbol: "BTC-000M",
+		From:             sdk.AccAddress("testacc"),
+		BaseAssetSymbol:  "BTC-000M",
 		QuoteAssetSymbol: "BTC-000M",
-		InitPrice: 1000,
+		InitPrice:        1000,
 	})
 	require.Contains(t, result.Log, "base asset symbol should not be identical to quote asset symbol")
 }
@@ -78,10 +78,10 @@ func TestHandleListMiniWrongBaseSymbol(t *testing.T) {
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
 	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
-		From: sdk.AccAddress("testacc"),
-		BaseAssetSymbol: "BTC",
+		From:             sdk.AccAddress("testacc"),
+		BaseAssetSymbol:  "BTC",
 		QuoteAssetSymbol: "BNB",
-		InitPrice: 1000,
+		InitPrice:        1000,
 	})
 	//require.Equal(t, result.Code, sdk.ABCICodeOK)
 	require.Contains(t, result.Log, "token(BTC) not found")
@@ -95,10 +95,10 @@ func TestHandleListMiniRight(t *testing.T) {
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
 	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
-		From: sdk.AccAddress("testacc"),
-		BaseAssetSymbol: "BTC-000M",
+		From:             sdk.AccAddress("testacc"),
+		BaseAssetSymbol:  "BTC-000M",
 		QuoteAssetSymbol: "BNB",
-		InitPrice: 1000,
+		InitPrice:        1000,
 	})
 	require.Equal(t, result.Code, sdk.ABCICodeOK)
 }

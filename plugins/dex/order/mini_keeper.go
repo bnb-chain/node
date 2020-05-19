@@ -2,12 +2,13 @@ package order
 
 import (
 	"fmt"
+	"strings"
+
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"strings"
 )
 
 const (

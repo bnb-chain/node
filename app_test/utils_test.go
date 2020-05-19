@@ -2,9 +2,10 @@ package app_test
 
 import (
 	"fmt"
-	"github.com/binance-chain/node/common/upgrade"
 	"os"
 	"testing"
+
+	"github.com/binance-chain/node/common/upgrade"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

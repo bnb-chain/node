@@ -37,7 +37,7 @@ func (c Commander) runGetToken(cmd *cobra.Command, args []string) error {
 	var key []byte
 	if types.IsMiniTokenSymbol(symbol) {
 		key = calcMiniTokenKey(strings.ToUpper(symbol))
-	}else {
+	} else {
 		key = []byte(strings.ToUpper(symbol))
 	}
 

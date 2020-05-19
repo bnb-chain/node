@@ -3,6 +3,7 @@ package list
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/binance-chain/node/plugins/dex/order"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,7 +45,7 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 	if len(msg.QuoteAssetSymbol) == 0 {
 		return sdk.ErrInvalidCoins("quote token is empty ")
 	}
-	if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol!= msg.QuoteAssetSymbol{
+	if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
 		return sdk.ErrInvalidCoins("quote token is not valid ")
 	}
 	if msg.InitPrice <= 0 {

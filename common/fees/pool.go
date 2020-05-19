@@ -2,6 +2,7 @@ package fees
 
 import (
 	"fmt"
+
 	"github.com/binance-chain/node/common/types"
 )
 

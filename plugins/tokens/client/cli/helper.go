@@ -66,7 +66,6 @@ func parseAmount(amountStr string) (int64, error) {
 	return amount, nil
 }
 
-
 func validateTokenURI(uri string) error {
 	if len(uri) > 2048 {
 		return errors.New("uri cannot be longer than 2048 characters")

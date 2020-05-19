@@ -80,7 +80,6 @@ func TestHandleIssueMiniToken(t *testing.T) {
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 }
 
-
 func TestHandleMintMiniToken(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()

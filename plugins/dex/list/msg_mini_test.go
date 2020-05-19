@@ -1,8 +1,9 @@
 package list
 
 import (
-	"github.com/binance-chain/node/plugins/dex/order"
 	"testing"
+
+	"github.com/binance-chain/node/plugins/dex/order"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"

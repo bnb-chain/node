@@ -158,7 +158,7 @@ func (m mapper) UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) 
 	var key []byte
 	if types.IsMiniTokenSymbol(symbol) {
 		key = m.calcMiniTokenKey(strings.ToUpper(symbol))
-	}else {
+	} else {
 		key = []byte(strings.ToUpper(symbol))
 	}
 	store := ctx.KVStore(m.key)

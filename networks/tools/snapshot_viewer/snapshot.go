@@ -47,7 +47,7 @@ func prepareCms(root string, appDB *db.GoLevelDB) sdk.CommitMultiStore {
 	keys := []store.StoreKey{
 		common.MainStoreKey, common.TokenStoreKey, common.DexStoreKey,
 		common.PairStoreKey, common.GovStoreKey, common.StakeStoreKey,
-		common.ParamsStoreKey, common.ValAddrStoreKey, common.AccountStoreKey,}
+		common.ParamsStoreKey, common.ValAddrStoreKey, common.AccountStoreKey}
 
 	cms := store.NewCommitMultiStore(appDB)
 	for _, key := range keys {

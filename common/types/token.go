@@ -65,7 +65,7 @@ func (token Token) GetTotalSupply() utils.Fixed8 {
 	return token.TotalSupply
 }
 
-func (token *Token) SetTotalSupply(totalSupply utils.Fixed8)  {
+func (token *Token) SetTotalSupply(totalSupply utils.Fixed8) {
 	token.TotalSupply = totalSupply
 }
 

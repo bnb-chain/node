@@ -107,4 +107,3 @@ func TestHandleMintToken(t *testing.T) {
 	invalidMintMsg = NewMintMsg(acc.GetAddress(), "BNB", 10000e8)
 	require.Contains(t, invalidMintMsg.ValidateBasic().Error(), "cannot mint native token")
 }
-

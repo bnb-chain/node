@@ -10,7 +10,6 @@ import (
 	"github.com/binance-chain/node/common/types"
 )
 
-
 func (m mapper) UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol cannot be empty")
@@ -51,4 +50,3 @@ func (m mapper) calcMiniTokenKey(symbol string) []byte {
 	buf.WriteString(symbol)
 	return buf.Bytes()
 }
-

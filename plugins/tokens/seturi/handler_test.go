@@ -1,9 +1,10 @@
 package seturi
 
 import (
+	"testing"
+
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"testing"
 
 	"github.com/binance-chain/node/common/upgrade"
 

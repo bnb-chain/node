@@ -3,6 +3,7 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/binance-chain/node/common/upgrade"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

@@ -1,9 +1,10 @@
 package burn
 
 import (
+	"testing"
+
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"testing"
 
 	"github.com/binance-chain/node/common/upgrade"
 
@@ -79,7 +80,7 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 1e8 -1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 1e8-1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	account := accountKeeper.GetAccount(ctx, msg.From).(types.NamedAccount)
@@ -123,7 +124,6 @@ func TestHandleBurn(t *testing.T) {
 	msg := issue.NewIssueMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, false)
 	sdkResult := issueHandler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
-
 
 	_, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NotNil(t, err)
