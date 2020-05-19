@@ -200,10 +200,11 @@ func (kp *DexKeeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		return err
 	}
 
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
+	if dexOrderKeeper, keeperNotFoundErr := kp.GetSupportedOrderKeeper(symbol); keeperNotFoundErr == nil {
 		dexOrderKeeper.addOrder(symbol, info, kp.CollectOrderInfoForPublish, isRecovery)
 	} else {
-		kp.logger.Error(err.Error())
+		//Should not happen.
+		kp.logger.Error(keeperNotFoundErr.Error())
 	}
 
 	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
@@ -219,6 +220,7 @@ func (kp *DexKeeper) RemoveOrder(id string, symbol string, postCancelHandler fun
 	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
 		return dexOrderKeeper.removeOrder(kp, id, symbol, postCancelHandler)
 	} else {
+		//Leave it for debug. Return orderNotFound error for compatibility with the logic before BEP8 upgrade
 		kp.logger.Debug(err.Error())
 	}
 	return orderNotFound(symbol, id)
@@ -973,7 +975,7 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 }
 
 func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
-	allOrders := make(map[string]map[string]*OrderInfo) //TODO replace by iterator
+	allOrders := make(map[string]map[string]*OrderInfo)
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportUpgradeVersion() {
 			allOrders = appendAllOrdersMap(allOrders, orderKeeper.getAllOrders())

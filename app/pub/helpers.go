@@ -288,12 +288,12 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 	close(iocExpireFeeHolderCh)
 
 	tradeHeight := ctx.BlockHeight()
-	tradesToPublish, miniTradesToPublish := extractTradesToPublish(dexKeeper, ctx, tradeHeight)
+	tradesToPublish, miniTradesToPublish := extractTradesToPublish(dexKeeper, tradeHeight)
 	wg.Wait()
 	return tradesToPublish, miniTradesToPublish
 }
 
-func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, tradeHeight int64) (tradesToPublish []*Trade, miniTradesToPublish []*Trade) {
+func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, tradeHeight int64) (tradesToPublish []*Trade, miniTradesToPublish []*Trade) {
 	tradesToPublish = make([]*Trade, 0, 32)
 	miniTradesToPublish = make([]*Trade, 0, 32)
 	tradeIdx := 0
@@ -520,10 +520,7 @@ func collectOrdersToPublish(
 	timestamp int64, miniTrades []*Trade,
 	miniOrderChanges orderPkg.OrderChanges,
 	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order, feeToPublish map[string]string) {
-	opensToPublish = make([]*Order, 0)
-	closedToPublish = make([]*Order, 0)
-	miniOpensToPublish = make([]*Order, 0)
-	miniClosedToPublish = make([]*Order, 0)
+
 	// serve as a cache to avoid fee's serialization several times for one address
 	feeToPublish = make(map[string]string)
 
@@ -534,8 +531,8 @@ func collectOrdersToPublish(
 	chargedExpires := make(map[string]int)
 
 	// collect orders (new, cancel, ioc-no-fill, expire, failed-blocking and failed-matching) from orderChanges
-	opensToPublish, closedToPublish = collectOrders(orderChanges, orderInfos, timestamp, opensToPublish, closedToPublish, chargedCancels, chargedExpires)
-	miniOpensToPublish, miniClosedToPublish = collectOrders(miniOrderChanges, miniOrderInfos, timestamp, miniOpensToPublish, miniClosedToPublish, chargedCancels, chargedExpires)
+	opensToPublish, closedToPublish = collectOrders(orderChanges, orderInfos, timestamp, chargedCancels, chargedExpires)
+	miniOpensToPublish, miniClosedToPublish = collectOrders(miniOrderChanges, miniOrderInfos, timestamp, chargedCancels, chargedExpires)
 
 	// update C and E fields in serialized fee string
 	updateCancelExpireOrderNum(closedToPublish, orderInfos, feeToPublish, chargedCancels, chargedExpires, feeHolder)
@@ -595,7 +592,9 @@ func updateCancelExpireOrderNum(closedToPublish []*Order, orderInfos orderPkg.Or
 	}
 }
 
-func collectOrders(orderChanges orderPkg.OrderChanges, orderInfos orderPkg.OrderInfoForPublish, timestamp int64, opensToPublish []*Order, closedToPublish []*Order, chargedCancels map[string]int, chargedExpires map[string]int) ([]*Order, []*Order) {
+func collectOrders(orderChanges orderPkg.OrderChanges, orderInfos orderPkg.OrderInfoForPublish, timestamp int64, chargedCancels map[string]int, chargedExpires map[string]int) ([]*Order, []*Order) {
+	opensToPublish := make([]*Order, 0)
+	closedToPublish := make([]*Order, 0)
 	for _, o := range orderChanges {
 		if orderInfo := o.ResolveOrderInfo(orderInfos); orderInfo != nil {
 			orderToPublish := Order{

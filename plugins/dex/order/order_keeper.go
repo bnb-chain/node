@@ -267,7 +267,6 @@ func (kp *BaseOrderKeeper) appendOrderChangeSync(change OrderChange) {
 }
 
 func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
-	//TODO
 	for symbol, orders := range kp.allOrders {
 		for orderId := range orders {
 			iter(symbol, orderId)
@@ -278,6 +277,9 @@ func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
 //------  BEP2OrderKeeper methods -----
 
 func (kp *BEP2OrderKeeper) support(pair string) bool {
+	if !sdk.IsUpgrade(sdk.BEP8) {
+		return true
+	}
 	return !dexUtils.IsMiniTokenTradingPair(pair)
 }
 
