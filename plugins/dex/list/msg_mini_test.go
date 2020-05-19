@@ -3,10 +3,11 @@ package list
 import (
 	"testing"
 
-	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/require"
+
+	"github.com/binance-chain/node/plugins/dex/order"
 )
 
 func TestMiniIdenticalBaseAssetAndQuoteAsset(t *testing.T) {

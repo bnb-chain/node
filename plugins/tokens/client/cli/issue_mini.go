@@ -3,13 +3,13 @@ package commands
 import (
 	"fmt"
 
-	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/tokens/issue"
 )
 
 const (

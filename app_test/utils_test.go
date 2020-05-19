@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +17,7 @@ import (
 	appPkg "github.com/binance-chain/node/app"
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"

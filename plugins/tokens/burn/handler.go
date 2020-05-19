@@ -5,13 +5,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
