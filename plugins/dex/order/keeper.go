@@ -62,7 +62,7 @@ type DexKeeper struct {
 	OrderKeepers               []IDexOrderKeeper
 }
 
-func NewDexKeeper(key sdk.StoreKey, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, cdc *wire.Codec, am auth.AccountKeeper, collectOrderInfoForPublish bool, concurrency uint) *DexKeeper {
+func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *DexKeeper {
 	logger := bnclog.With("module", "dex_keeper")
 	return &DexKeeper{
 		PairMapper:                 tradingPairMapper,

@@ -317,7 +317,7 @@ func (app *BinanceChain) initRunningMode() {
 
 func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
-	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, pairMapper, app.RegisterCodespace(dex.DefaultCodespace), app.Codec, app.AccountKeeper, app.publicationConfig.ShouldPublishAny(), app.baseConfig.OrderKeeperConcurrency)
+	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper, app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec, app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
 

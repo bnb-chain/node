@@ -65,8 +65,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *ord
 	accKeeper := auth.NewAccountKeeper(cdc, accKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, pairKey)
-	dexKeeper = order.NewDexKeeper(common.DexStoreKey, pairMapper,
-		codespacer.RegisterNext(dexTypes.DefaultCodespace), cdc, accKeeper, false, 2)
+	dexKeeper = order.NewDexKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
 
 	tokenMapper = tokenStore.NewMapper(cdc, tokenKey)
 

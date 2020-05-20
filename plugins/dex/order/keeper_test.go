@@ -56,8 +56,7 @@ func MakeKeeper(cdc *wire.Codec) *DexKeeper {
 	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewDexKeeper(common.DexStoreKey, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace),
-		cdc, accKeeper, true, 2)
+	keeper := NewDexKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
 
 	return keeper
 }
@@ -551,7 +550,7 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *DexKeeper) {
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
 
-	keeper = NewDexKeeper(capKey2, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), cdc, mapper, false, 2)
+	keeper = NewDexKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
