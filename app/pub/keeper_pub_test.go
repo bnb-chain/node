@@ -120,12 +120,13 @@ func TestKeeper_IOCExpireWithFee(t *testing.T) {
 	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 1)
 	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 
-	trades, miniTrades := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
 
 	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 2)
 	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 1)
 	require.Len(trades, 0)
-	require.Len(miniTrades, 0)
+	require.Len(keeper.GetAllOrderChanges(), 2)
+	require.Len(keeper.GetAllOrderInfosForPub(), 1)
 
 	orderChange0 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[0]
 	orderChange1 := keeper.GetOrderChanges(orderPkg.PairType.BEP2)[1]
@@ -207,7 +208,7 @@ func Test_IOCPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
 
 	require.Len(keeper.GetOrderChanges(orderPkg.PairType.BEP2), 3)
 	require.Len(keeper.GetOrderInfosForPub(orderPkg.PairType.BEP2), 2)
@@ -247,7 +248,7 @@ func Test_GTEPartialExpire(t *testing.T) {
 	assert.Equal("s-1", orderChange1.Id)
 	assert.Equal(orderPkg.Ack, orderChange1.Tpe)
 
-	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
 	require.Len(trades, 1)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)
@@ -298,7 +299,7 @@ func Test_OneBuyVsTwoSell(t *testing.T) {
 	assert.Equal("s-2", orderChange2.Id)
 	assert.Equal(orderPkg.Ack, orderChange2.Tpe)
 
-	trades, _ := MatchAndAllocateAllForPublish(keeper, ctx, false)
+	trades := MatchAndAllocateAllForPublish(keeper, ctx, false)
 	require.Len(trades, 2)
 	trade0 := trades[0]
 	assert.Equal("0-0", trade0.Id)

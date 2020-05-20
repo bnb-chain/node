@@ -6,39 +6,31 @@ import (
 
 // intermediate data structures to deal with concurrent publication between main thread and publisher thread
 type BlockInfoToPublish struct {
-	height                int64
-	timestamp             int64
-	tradesToPublish       []*Trade
-	proposalsToPublish    *Proposals
-	stakeUpdates          *StakeUpdates
-	orderChanges          orderPkg.OrderChanges
-	orderInfos            orderPkg.OrderInfoForPublish
-	accounts              map[string]Account
-	latestPricesLevels    orderPkg.ChangedPriceLevelsMap
-	miniLatestPriceLevels orderPkg.ChangedPriceLevelsMap
-	blockFee              BlockFee
-	feeHolder             orderPkg.FeeHolder
-	transfers             *Transfers
-	block                 *Block
-	miniTradesToPublish   []*Trade
-	miniOrderChanges      orderPkg.OrderChanges
-	miniOrderInfos        orderPkg.OrderInfoForPublish
+	height             int64
+	timestamp          int64
+	tradesToPublish    []*Trade
+	proposalsToPublish *Proposals
+	stakeUpdates       *StakeUpdates
+	orderChanges       orderPkg.OrderChanges
+	orderInfos         orderPkg.OrderInfoForPublish
+	accounts           map[string]Account
+	latestPricesLevels orderPkg.ChangedPriceLevelsMap
+	blockFee           BlockFee
+	feeHolder          orderPkg.FeeHolder
+	transfers          *Transfers
+	block              *Block
 }
 
 func NewBlockInfoToPublish(
 	height int64,
 	timestamp int64,
 	tradesToPublish []*Trade,
-	miniTradesToPublish []*Trade,
 	proposalsToPublish *Proposals,
 	stakeUpdates *StakeUpdates,
 	orderChanges orderPkg.OrderChanges,
-	miniOrderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
-	miniOrderInfos orderPkg.OrderInfoForPublish,
 	accounts map[string]Account,
 	latestPriceLevels orderPkg.ChangedPriceLevelsMap,
-	miniLatestPriceLevels orderPkg.ChangedPriceLevelsMap,
 	blockFee BlockFee,
 	feeHolder orderPkg.FeeHolder, transfers *Transfers, block *Block) BlockInfoToPublish {
 	return BlockInfoToPublish{
@@ -51,13 +43,9 @@ func NewBlockInfoToPublish(
 		orderInfos,
 		accounts,
 		latestPriceLevels,
-		miniLatestPriceLevels,
 		blockFee,
 		feeHolder,
 		transfers,
 		block,
-		miniTradesToPublish,
-		miniOrderChanges,
-		miniOrderInfos,
 	}
 }

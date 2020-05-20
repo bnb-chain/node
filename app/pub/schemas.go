@@ -146,9 +146,7 @@ const (
                            }
                         }
                     ]
-                }], "default": null },
-               { "name": "miniTrades", "type": ["null", "org.binance.dex.model.avro.Trades"], "default": null },
-				{ "name": "miniOrders", "type": ["null", "org.binance.dex.model.avro.Orders"], "default": null }
+                }], "default": null }
             ]
         }
     `

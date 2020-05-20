@@ -337,7 +337,7 @@ func (kp *DexKeeper) GetOpenOrders(pair string, addr sdk.AccAddress) []store.Ope
 	return make([]store.OpenOrder, 0)
 }
 
-func (kp *DexKeeper) GetOrderBooks(maxLevels int, pairType SymbolPairType) ChangedPriceLevelsMap {
+func (kp *DexKeeper) GetOrderBooks(maxLevels int) ChangedPriceLevelsMap {
 	var res = make(ChangedPriceLevelsMap)
 	for pair, eng := range kp.engines {
 		buys := make(map[int64]int64)
@@ -1020,6 +1020,16 @@ func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
 	kp.logger.Error("pairType is not supported %d", pairType)
 	return make(OrderChanges, 0)
 }
+func (kp *DexKeeper) GetAllOrderChanges() OrderChanges {
+	var res OrderChanges
+	for _, orderKeeper := range kp.OrderKeepers {
+		if orderKeeper.supportUpgradeVersion() {
+			res = append(res, orderKeeper.getOrderChanges()...)
+		}
+	}
+	kp.logger.Debug("pairType is not supported %v", res)
+	return res
+}
 
 func (kp *DexKeeper) UpdateOrderChange(change OrderChange, symbol string) {
 	for _, orderKeeper := range kp.OrderKeepers {
@@ -1051,14 +1061,24 @@ func (kp *DexKeeper) GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPu
 	return make(OrderInfoForPublish)
 }
 
-func (kp *DexKeeper) RemoveOrderInfosForPub(pairType SymbolPairType, orderId string) {
+func (kp *DexKeeper) GetAllOrderInfosForPub() OrderInfoForPublish {
+	orderInfoForPub := make(OrderInfoForPublish)
 	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.supportPairType(pairType) {
+		if orderKeeper.supportUpgradeVersion() {
+			orderInfoForPub = appendOrderInfoForPub(orderInfoForPub, orderKeeper.getOrderInfosForPub())
+		}
+	}
+	return orderInfoForPub
+}
+
+func (kp *DexKeeper) RemoveOrderInfosForPub(pair string, orderId string) {
+	for _, orderKeeper := range kp.OrderKeepers {
+		if orderKeeper.support(pair) {
 			orderKeeper.removeOrderInfosForPub(orderId)
 			return
 		}
 	}
-	kp.logger.Error("pairType is not supported %d", pairType)
+	kp.logger.Error("pair is not supported %d", pair)
 }
 
 func (kp *DexKeeper) GetPairMapper() store.TradingPairMapper {
@@ -1086,6 +1106,16 @@ func (kp *DexKeeper) GetEngines() map[string]*me.MatchEng {
 }
 func appendAllOrdersMap(ms ...map[string]map[string]*OrderInfo) map[string]map[string]*OrderInfo {
 	res := make(map[string]map[string]*OrderInfo)
+	for _, m := range ms {
+		for k, v := range m {
+			res[k] = v
+		}
+	}
+	return res
+}
+
+func appendOrderInfoForPub(ms ...OrderInfoForPublish) OrderInfoForPublish {
+	res := make(OrderInfoForPublish)
 	for _, m := range ms {
 		for k, v := range m {
 			res[k] = v

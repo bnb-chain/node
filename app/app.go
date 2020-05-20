@@ -537,10 +537,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
 	var tradesToPublish []*pub.Trade
-	var miniTradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			tradesToPublish, miniTradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
 		} else {
 			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
 		}
@@ -587,7 +586,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var stakeUpdates pub.StakeUpdates
 		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, miniTradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 		}
 
 		// clean up intermediate cached data
@@ -773,21 +772,21 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
 	var transferToPublish *pub.Transfers
 	var blockToPublish *pub.Block
 	var latestPriceLevels order.ChangedPriceLevelsMap
-	var miniLatestPriceLevels order.ChangedPriceLevelsMap
+
+	orderChanges := app.DexKeeper.GetAllOrderChanges()
+	orderInfoForPublish := app.DexKeeper.GetAllOrderInfosForPub()
 
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
-			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish, dex.PairType.BEP2)
-			miniTradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, miniTradesToPublish, dex.PairType.MINI)
-			tradeRelatedAccounts = append(tradeRelatedAccounts, miniTradeRelatedAccounts...)
+			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish, orderChanges, orderInfoForPublish)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,
@@ -805,8 +804,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 			blockToPublish = pub.GetBlockPublished(app.Pool, header, blockHash)
 		}
 		if app.publicationConfig.PublishOrderBook {
-			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel, dex.PairType.BEP2)
-			miniLatestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel, dex.PairType.MINI)
+			latestPriceLevels = app.DexKeeper.GetOrderBooks(pub.MaxOrderBookLevel)
 		}
 	})
 
@@ -817,46 +815,34 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, miniTradesToPubli
 	pub.Logger.Info("start to publish", "height", height,
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
-		len(app.DexKeeper.GetOrderChanges(dex.PairType.BEP2)),
-		"numOfMiniTrades", len(miniTradesToPublish),
-		"numOfMiniOrders", // the order num we collected here doesn't include trade related orders
-		len(app.DexKeeper.GetOrderChanges(dex.PairType.MINI)),
+		len(orderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
 		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
 		len(accountsToPublish))
-	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
-	pub.ToRemoveMiniOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	pub.ToRemoveOrderIdCh = make(chan pub.OrderSymbolId, pub.ToRemoveOrderIdChannelSize)
 
 	pub.ToPublishCh <- pub.NewBlockInfoToPublish(
 		height,
 		blockTime,
 		tradesToPublish,
-		miniTradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
-		app.DexKeeper.GetOrderChanges(dex.PairType.BEP2), // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.GetOrderChanges(dex.PairType.MINI),
-		app.DexKeeper.GetOrderInfosForPub(dex.PairType.BEP2), // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.GetOrderInfosForPub(dex.PairType.MINI),
+		orderChanges,        // thread-safety is guarded by the signal from RemoveDoneCh
+		orderInfoForPublish, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
-		miniLatestPriceLevels,
 		blockFee,
 		app.DexKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
 		transferToPublish,
 		blockToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
-	for id := range pub.ToRemoveOrderIdCh {
-		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		app.DexKeeper.RemoveOrderInfosForPub(dex.PairType.BEP2, id)
-	}
-	for id := range pub.ToRemoveMiniOrderIdCh {
-		pub.Logger.Debug("delete mini order from order changes map", "orderId", id)
-		app.DexKeeper.RemoveOrderInfosForPub(dex.PairType.MINI, id)
+	for o := range pub.ToRemoveOrderIdCh {
+		pub.Logger.Debug("delete order from order changes map", "symbol", o.Symbol, "orderId", o.Id)
+		app.DexKeeper.RemoveOrderInfosForPub(o.Symbol, o.Id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

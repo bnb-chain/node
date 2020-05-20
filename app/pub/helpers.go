@@ -17,33 +17,31 @@ import (
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.DexKeeper, tradesToPublish []*Trade, pairType orderPkg.SymbolPairType) []string {
-	res := make([]string, 0, len(tradesToPublish)*2+len(kp.GetOrderChanges(pairType)))
-	OrderInfosForPub := kp.GetOrderInfosForPub(pairType)
+func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.DexKeeper, tradesToPublish []*Trade, orderChanges orderPkg.OrderChanges, orderInfosForPublish orderPkg.OrderInfoForPublish) []string {
+	res := make([]string, 0, len(tradesToPublish)*2+len(kp.GetAllOrderChanges()))
 
 	for _, t := range tradesToPublish {
 
-		if bo, ok := OrderInfosForPub[t.Bid]; ok {
+		if bo, ok := orderInfosForPublish[t.Bid]; ok {
 			res = append(res, string(bo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate buy order in OrderChangesMap for trade account resolving", "bid", t.Bid)
 		}
-		if so, ok := OrderInfosForPub[t.Sid]; ok {
+		if so, ok := orderInfosForPublish[t.Sid]; ok {
 			res = append(res, string(so.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate sell order in OrderChangesMap for trade account resolving", "sid", t.Sid)
 		}
 	}
 
-	for _, orderChange := range kp.GetOrderChanges(pairType) {
-		if orderInfo := OrderInfosForPub[orderChange.Id]; orderInfo != nil {
+	for _, orderChange := range orderChanges {
+		if orderInfo := orderInfosForPublish[orderChange.Id]; orderInfo != nil {
 			res = append(res, string(orderInfo.Sender.Bytes()))
 		} else {
 			Logger.Error("failed to locate order change in OrderChangesMap", "orderChange", orderChange.String())
@@ -264,7 +262,7 @@ func GetAccountBalances(mapper auth.AccountKeeper, ctx sdk.Context, accSlices ..
 	return
 }
 
-func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, matchAllMiniSymbols bool) ([]*Trade, []*Trade) {
+func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Context, matchAllMiniSymbols bool) []*Trade {
 	// This channels is used for protect not update `dexKeeper.orderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.orderChanges are not separated by concurrent factor (users here)
@@ -288,14 +286,13 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 	close(iocExpireFeeHolderCh)
 
 	tradeHeight := ctx.BlockHeight()
-	tradesToPublish, miniTradesToPublish := extractTradesToPublish(dexKeeper, tradeHeight)
+	tradesToPublish := extractTradesToPublish(dexKeeper, tradeHeight)
 	wg.Wait()
-	return tradesToPublish, miniTradesToPublish
+	return tradesToPublish
 }
 
-func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, tradeHeight int64) (tradesToPublish []*Trade, miniTradesToPublish []*Trade) {
+func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, tradeHeight int64) (tradesToPublish []*Trade) {
 	tradesToPublish = make([]*Trade, 0, 32)
-	miniTradesToPublish = make([]*Trade, 0, 32)
 	tradeIdx := 0
 
 	for symbol := range dexKeeper.GetEngines() {
@@ -324,14 +321,10 @@ func extractTradesToPublish(dexKeeper *orderPkg.DexKeeper, tradeHeight int64) (t
 				TickType:   int(trade.TickType),
 			}
 			tradeIdx += 1
-			if utils.IsMiniTokenTradingPair(symbol) {
-				miniTradesToPublish = append(miniTradesToPublish, t)
-			} else {
-				tradesToPublish = append(tradesToPublish, t)
-			}
+			tradesToPublish = append(tradesToPublish, t)
 		}
 	}
-	return tradesToPublish, miniTradesToPublish
+	return tradesToPublish
 }
 
 func ExpireOrdersForPublish(
@@ -517,9 +510,7 @@ func collectOrdersToPublish(
 	orderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
 	feeHolder orderPkg.FeeHolder,
-	timestamp int64, miniTrades []*Trade,
-	miniOrderChanges orderPkg.OrderChanges,
-	miniOrderInfos orderPkg.OrderInfoForPublish) (opensToPublish []*Order, closedToPublish []*Order, miniOpensToPublish []*Order, miniClosedToPublish []*Order, feeToPublish map[string]string) {
+	timestamp int64) (opensToPublish []*Order, closedToPublish []*Order, feeToPublish map[string]string) {
 
 	// serve as a cache to avoid fee's serialization several times for one address
 	feeToPublish = make(map[string]string)
@@ -532,16 +523,14 @@ func collectOrdersToPublish(
 
 	// collect orders (new, cancel, ioc-no-fill, expire, failed-blocking and failed-matching) from orderChanges
 	opensToPublish, closedToPublish = collectOrders(orderChanges, orderInfos, timestamp, chargedCancels, chargedExpires)
-	miniOpensToPublish, miniClosedToPublish = collectOrders(miniOrderChanges, miniOrderInfos, timestamp, chargedCancels, chargedExpires)
 
 	// update C and E fields in serialized fee string
 	updateCancelExpireOrderNum(closedToPublish, orderInfos, feeToPublish, chargedCancels, chargedExpires, feeHolder)
-	updateCancelExpireOrderNum(miniClosedToPublish, miniOrderInfos, feeToPublish, chargedCancels, chargedExpires, feeHolder)
+
 	// update fee and collect orders from trades
 	opensToPublish, closedToPublish = convertTradesToOrders(trades, orderInfos, timestamp, feeHolder, feeToPublish, opensToPublish, closedToPublish)
-	miniOpensToPublish, miniClosedToPublish = convertTradesToOrders(miniTrades, miniOrderInfos, timestamp, feeHolder, feeToPublish, miniOpensToPublish, miniClosedToPublish)
 
-	return opensToPublish, closedToPublish, miniOpensToPublish, miniClosedToPublish, feeToPublish
+	return opensToPublish, closedToPublish, feeToPublish
 }
 
 func convertTradesToOrders(trades []*Trade, orderInfos orderPkg.OrderInfoForPublish, timestamp int64, feeHolder orderPkg.FeeHolder, feeToPublish map[string]string, opensToPublish []*Order, closedToPublish []*Order) ([]*Order, []*Order) {
