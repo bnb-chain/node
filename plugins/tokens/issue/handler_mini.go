@@ -70,7 +70,7 @@ func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper 
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
 
-	if !common.IsMiniTokenSymbol(symbol) {
+	if !common.IsValidMiniTokenSymbol(symbol) {
 		logger.Info(errLogMsg, "reason", "symbol not valid")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) is not valid for mini-token", symbol)).Result()
 	}

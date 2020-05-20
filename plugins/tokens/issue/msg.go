@@ -94,7 +94,7 @@ func NewMintMsg(from sdk.AccAddress, symbol string, amount int64) MintMsg {
 
 func (msg MintMsg) ValidateBasic() sdk.Error {
 
-	if sdk.IsUpgrade(upgrade.BEP8) && types.IsMiniTokenSymbol(msg.Symbol) {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
 		return msg.validateMiniTokenBasic()
 	}
 

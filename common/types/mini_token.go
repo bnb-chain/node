@@ -86,7 +86,19 @@ func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, 
 	}, nil
 }
 
+//check if it's mini token by last letter without validation
 func IsMiniTokenSymbol(symbol string) bool {
+	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if err != nil {
+		return false
+	}
+	suffixPart := parts[1]
+
+	return len(suffixPart) == MiniTokenSymbolSuffixLen && strings.HasSuffix(suffixPart, MiniTokenSymbolMSuffix)
+}
+
+//Validate and check if it's mini token
+func IsValidMiniTokenSymbol(symbol string) bool {
 	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
 		return false
 	}

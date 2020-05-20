@@ -33,7 +33,7 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	if !types.IsMiniTokenSymbol(symbol) {
+	if !types.IsValidMiniTokenSymbol(symbol) {
 		err = types.ValidateMapperTokenSymbol(symbol)
 		if err != nil {
 			return err

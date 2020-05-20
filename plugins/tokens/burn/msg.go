@@ -42,7 +42,7 @@ func (msg BurnMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAdd
 // doesn't require access to any other information.
 func (msg BurnMsg) ValidateBasic() sdk.Error {
 
-	if sdk.IsUpgrade(upgrade.BEP8) && types.IsMiniTokenSymbol(msg.Symbol) {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
 		return msg.validateMiniTokenBasic()
 	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")

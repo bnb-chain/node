@@ -44,12 +44,12 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
 	quoteAsset := pair.QuoteAssetSymbol
-	if !cmn.IsMiniTokenSymbol(baseAsset) {
+	if !cmn.IsValidMiniTokenSymbol(baseAsset) {
 		if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
 			return err
 		}
 	}
-	if !cmn.IsMiniTokenSymbol(quoteAsset) {
+	if !cmn.IsValidMiniTokenSymbol(quoteAsset) {
 		if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
 			return err
 		}
