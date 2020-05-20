@@ -399,7 +399,8 @@ func updateExpireFeeForPublish(
 // collect all changed books according to published order status
 func filterChangedOrderBooksByOrders(
 	ordersToPublish []*Order,
-	latestPriceLevels orderPkg.ChangedPriceLevelsMap, res orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
+	latestPriceLevels orderPkg.ChangedPriceLevelsMap) orderPkg.ChangedPriceLevelsMap {
+	var res = make(orderPkg.ChangedPriceLevelsMap)
 	// map from symbol -> price -> qty diff in this block
 	var buyQtyDiff = make(map[string]map[int64]int64)
 	var sellQtyDiff = make(map[string]map[int64]int64)

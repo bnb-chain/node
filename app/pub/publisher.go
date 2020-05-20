@@ -108,7 +108,7 @@ func Publish(
 			if cfg.PublishOrderBook {
 				var changedPrices = make(orderPkg.ChangedPriceLevelsMap)
 				duration := Timer(Logger, "prepare order books to publish", func() {
-					filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels, changedPrices)
+					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 				})
 				if metrics != nil {
 					numOfChangedPrices := 0
