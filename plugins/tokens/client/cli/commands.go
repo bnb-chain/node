@@ -54,6 +54,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 	tokenCmd.AddCommand(
 		client.PostCommands(
 			issueMiniTokenCmd(cmdr),
+			issueTinyTokenCmd(cmdr),
 			setTokenURICmd(cmdr))...,
 	)
 

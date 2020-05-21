@@ -295,6 +295,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		issue.IssueMiniMsg{}.Type(),
+		issue.IssueTinyMsg{}.Type(),
 		seturi.SetURIMsg{}.Type(),
 		list.ListMiniMsg{}.Type(),
 	)

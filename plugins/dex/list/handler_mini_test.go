@@ -43,13 +43,12 @@ func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T) 
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, &types.Token{
-		Name:        "Bitcoin Mini",
-		Symbol:      "BTC-000M",
-		OrigSymbol:  "BTC",
-		TotalSupply: 10000,
-		Owner:       sdk.AccAddress("testacc"),
-	})
+	miniToken, _ := types.NewMiniToken("Bitcoin Mini", "BTC-000M", types.MiniRangeType, 100000e8, sdk.AccAddress("testacc"), false, "")
+	err = tokenMapper.NewToken(ctx, miniToken)
+	require.Nil(t, err, "new token error")
+
+	tinyToken, _ := types.NewMiniToken("Bitcoin Mini", "ETH-000M", types.TinyRangeType, 10000e8, sdk.AccAddress("testacc"), true, "abc")
+	err = tokenMapper.NewToken(ctx, tinyToken)
 	require.Nil(t, err, "new token error")
 
 }
@@ -97,6 +96,22 @@ func TestHandleListMiniRight(t *testing.T) {
 	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
 		From:             sdk.AccAddress("testacc"),
 		BaseAssetSymbol:  "BTC-000M",
+		QuoteAssetSymbol: "BNB",
+		InitPrice:        1000,
+	})
+	require.Equal(t, result.Code, sdk.ABCICodeOK)
+}
+
+func TestHandleListTinyRight(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	cdc := MakeCodec()
+	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
+	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
+	setupForMini(ctx, tokenMapper, t)
+	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
+		From:             sdk.AccAddress("testacc"),
+		BaseAssetSymbol:  "ETH-000M",
 		QuoteAssetSymbol: "BNB",
 		InitPrice:        1000,
 	})

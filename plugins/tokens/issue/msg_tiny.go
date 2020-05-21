@@ -13,35 +13,30 @@ import (
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
 const (
-	MiniRoute        = "miniTokensIssue"
-	IssueMiniMsgType = "miniIssueMsg" //For max total supply in range 2
+	IssueTinyMsgType = "tinyIssueMsg"
 )
 
-var _ sdk.Msg = IssueMiniMsg{}
+var _ sdk.Msg = IssueTinyMsg{}
 
-type IssueMiniMsg struct {
-	From        sdk.AccAddress `json:"from"`
-	Name        string         `json:"name"`
-	Symbol      string         `json:"symbol"`
-	TotalSupply int64          `json:"total_supply"`
-	Mintable    bool           `json:"mintable"`
-	TokenURI    string         `json:"token_uri"`
+type IssueTinyMsg struct {
+	IssueMiniMsg
 }
 
-func NewIssueMiniMsg(from sdk.AccAddress, name, symbol string, supply int64, mintable bool, tokenURI string) IssueMiniMsg {
-	return IssueMiniMsg{
+func NewIssueTinyMsg(from sdk.AccAddress, name, symbol string, supply int64, mintable bool, tokenURI string) IssueTinyMsg {
+	return IssueTinyMsg{IssueMiniMsg{
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
 		TotalSupply: supply,
 		Mintable:    mintable,
 		TokenURI:    tokenURI,
+	},
 	}
 }
 
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
-func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
+func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height"))
 	}
@@ -62,28 +57,28 @@ func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token seturi should not exceed %v characters", types.MaxTokenURILength))
 	}
 
-	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.MiniRangeType.UpperBound() {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinTotalSupply, types.MiniRangeType.UpperBound()))
+	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.TinyRangeType.UpperBound() {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinTotalSupply, types.TinyRangeType.UpperBound()))
 	}
 
 	return nil
 }
 
-// Implements IssueMiniMsg.
-func (msg IssueMiniMsg) Route() string { return MiniRoute }
-func (msg IssueMiniMsg) Type() string {
-	return IssueMiniMsgType
+// Implements IssueTinyMsg.
+func (msg IssueTinyMsg) Route() string { return MiniRoute }
+func (msg IssueTinyMsg) Type() string {
+	return IssueTinyMsgType
 }
 
-func (msg IssueMiniMsg) String() string               { return fmt.Sprintf("IssueMiniMsg{%#v}", msg) }
-func (msg IssueMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
-func (msg IssueMiniMsg) GetSignBytes() []byte {
+func (msg IssueTinyMsg) String() string               { return fmt.Sprintf("IssueTinyMsg{%#v}", msg) }
+func (msg IssueTinyMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
+func (msg IssueTinyMsg) GetSignBytes() []byte {
 	b, err := json.Marshal(msg) // XXX: ensure some canonical form
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
-func (msg IssueMiniMsg) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg IssueTinyMsg) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }

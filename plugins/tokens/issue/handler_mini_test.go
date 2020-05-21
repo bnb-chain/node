@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,13 +46,13 @@ func TestHandleIssueMiniToken(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg := NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8+100, false, "http://www.xyz.com/nnb.json")
+	msg := NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8+100, false, "http://www.xyz.com/nnb.json")
 	sdkResult := handler(ctx, msg)
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg = NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
+	msg = NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, false, "http://www.xyz.com/nnb.json")
 	sdkResult = handler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
@@ -64,14 +65,14 @@ func TestHandleIssueMiniToken(t *testing.T) {
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
-	msg = NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 2, 100000e8+100, false, "http://www.xyz.com/nnb.json")
-	sdkResult = handler(ctx, msg)
+	msgMini := NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 100000e8+100, false, "http://www.xyz.com/nnb.json")
+	sdkResult = handler(ctx, msgMini)
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
-	msg = NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 2, 10000e8+100, false, "http://www.xyz.com/nnb.json")
-	sdkResult = handler(ctx, msg)
+	msgMini = NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 10000e8+100, false, "http://www.xyz.com/nnb.json")
+	sdkResult = handler(ctx, msgMini)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	token, err = tokenMapper.GetToken(ctx, "NBB-002M")
@@ -89,12 +90,15 @@ func TestHandleMintMiniToken(t *testing.T) {
 	sdkResult := handler(ctx, mintMsg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB-000M) does not exist")
 
-	issueMsg := NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 9000e8, true, "http://www.xyz.com/nnb.json")
+	issueMsg := NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 9000e8, true, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	sdkResult = miniTokenHandler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	sdkResult = handler(ctx, mintMsg)
+	require.Equal(t, false, sdkResult.Code.IsOK())
+	require.Contains(t, sdkResult.Log, fmt.Sprintf("mint amount is too large, the max total supply is %d", types.TinyRangeType.UpperBound()))
+
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
 	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
@@ -121,7 +125,7 @@ func TestHandleMintMiniToken(t *testing.T) {
 	require.Contains(t, sdkResult.Log, "only the owner can mint token NNB")
 
 	// issue a non-mintable token
-	issueMsg = NewIssueMiniMsg(acc.GetAddress(), "New BNB2", "NNB2", 1, 9000e8, false, "http://www.xyz.com/nnb.json")
+	issueMsg = NewIssueTinyMsg(acc.GetAddress(), "New BNB2", "NNB2", 9000e8, false, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	sdkResult = miniTokenHandler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())

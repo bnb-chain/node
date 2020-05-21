@@ -57,7 +57,7 @@ func TestHandleBurnMini(t *testing.T) {
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	msg := issue.NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 1, 10000e8, false, "http://www.xyz.com/nnb.json")
+	msg := issue.NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, false, "http://www.xyz.com/nnb.json")
 	sdkResult := miniIssueHandler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 

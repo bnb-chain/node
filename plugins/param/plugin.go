@@ -63,8 +63,8 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 	})
 	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
 		miniTokenFeeParams := []param.FeeParam{
-			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: AdvMiniIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: TinyIssueFee, FeeFor: types.FeeForProposer},
+			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
 			&param.FixedFeeParams{MsgType: list.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForProposer},
 		}

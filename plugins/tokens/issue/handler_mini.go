@@ -21,7 +21,9 @@ func NewMiniHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case IssueMiniMsg:
-			return handleIssueMiniToken(ctx, tokenMapper, keeper, msg)
+			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.MiniRangeType)
+		case IssueTinyMsg:
+			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.TinyRangeType)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -29,7 +31,7 @@ func NewMiniHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	}
 }
 
-func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMiniMsg) sdk.Result {
+func (msg IssueMiniMsg) handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, tokenType common.SupplyRangeType) sdk.Result {
 	errLogMsg := "issue miniToken failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
@@ -62,10 +64,10 @@ func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper 
 			common.MiniTokenMinTotalSupply)).Result()
 	}
 
-	if msg.TotalSupply > common.SupplyRangeType(msg.TokenType).UpperBound() {
+	if msg.TotalSupply > tokenType.UpperBound() {
 		logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply is too large, the max total supply is %d",
-			common.SupplyRangeType(msg.TokenType).UpperBound())).Result()
+			tokenType.UpperBound())).Result()
 	}
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
@@ -80,7 +82,7 @@ func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper 
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) already exists", msg.Symbol)).Result()
 	}
 
-	token, err := common.NewMiniToken(msg.Name, symbol, msg.TokenType, msg.TotalSupply, msg.From, msg.Mintable, msg.TokenURI)
+	token, err := common.NewMiniToken(msg.Name, symbol, tokenType, msg.TotalSupply, msg.From, msg.Mintable, msg.TokenURI)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "create token failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()

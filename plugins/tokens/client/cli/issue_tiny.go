@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -12,15 +10,11 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/issue"
 )
 
-const (
-	flagTokenUri = "token-uri"
-)
-
-func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
+func issueTinyTokenCmd(cmdr Commander) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "issue-mini",
-		Short: "issue a new mini-token",
-		RunE:  cmdr.issueMiniToken,
+		Use:   "issue-tiny",
+		Short: "issue a new tiny-token",
+		RunE:  cmdr.issueTinyToken,
 	}
 
 	cmd.Flags().String(flagTokenName, "", "name of the new token")
@@ -32,7 +26,7 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	return cmd
 }
 
-func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
+func (c Commander) issueTinyToken(cmd *cobra.Command, args []string) error {
 	cliCtx, txBldr := client.PrepareCtx(c.Cdc)
 	from, err := cliCtx.GetFromAddress()
 	if err != nil {
@@ -51,7 +45,7 @@ func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 	}
 
 	supply := viper.GetInt64(flagTotalSupply)
-	err = checkMiniSupplyAmount(supply, int8(types.MiniRangeType))
+	err = checkMiniSupplyAmount(supply, int8(types.TinyRangeType))
 	if err != nil {
 		return err
 	}
@@ -65,16 +59,6 @@ func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 	}
 
 	// build message
-	msg := issue.NewIssueMiniMsg(from, name, symbol, supply, mintable, tokenURI)
+	msg := issue.NewIssueTinyMsg(from, name, symbol, supply, mintable, tokenURI)
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
-}
-
-func checkMiniSupplyAmount(amount int64, tokenType int8) error {
-	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenSupplyUpperBound {
-		return errors.New("invalid supply amount")
-	}
-	if amount > types.SupplyRangeType(tokenType).UpperBound() {
-		return errors.New(fmt.Sprintf("supply amount cannot exceed max supply amount of %s - %d", types.SupplyRangeType(tokenType).String(), types.SupplyRangeType(tokenType).UpperBound()))
-	}
-	return nil
 }

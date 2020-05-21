@@ -64,7 +64,7 @@ type MiniToken struct {
 
 var _ IToken = &MiniToken{}
 
-func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
+func NewMiniToken(name, symbol string, supplyRangeType SupplyRangeType, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
 	// double check that the symbol is suffixed
 	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func NewMiniToken(name, symbol string, supplyRangeType int8, totalSupply int64, 
 			Owner:       owner,
 			Mintable:    mintable,
 		},
-		SupplyRangeType(supplyRangeType),
+		supplyRangeType,
 		tokenURI,
 	}, nil
 }
