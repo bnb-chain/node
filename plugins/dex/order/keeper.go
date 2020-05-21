@@ -1011,7 +1011,7 @@ func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
 			return orderKeeper.getOrderChanges()
 		}
 	}
-	kp.logger.Error("pairType is not supported %d", pairType)
+	kp.logger.Error("pairType is not supported %d for OrderChanges", pairType)
 	return make(OrderChanges, 0)
 }
 func (kp *DexKeeper) GetAllOrderChanges() OrderChanges {
@@ -1021,7 +1021,6 @@ func (kp *DexKeeper) GetAllOrderChanges() OrderChanges {
 			res = append(res, orderKeeper.getOrderChanges()...)
 		}
 	}
-	kp.logger.Debug("pairType is not supported %v", res)
 	return res
 }
 
@@ -1041,7 +1040,7 @@ func (kp *DexKeeper) GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPu
 			return orderKeeper.getOrderInfosForPub()
 		}
 	}
-	kp.logger.Error("pairType is not supported %d", pairType)
+	kp.logger.Error("pairType is not supported %d for OrderInfosForPub", pairType)
 	return make(OrderInfoForPublish)
 }
 
