@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"strconv"
 	"sync"
 	"time"
@@ -130,6 +131,10 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 			txAsset = msg.Symbol
 			// will not cover timelock, timeUnlock, timeRelock, atomic Swap
 		case issue.IssueMiniMsg:
+			txAsset = msg.Symbol
+		case issue.IssueTinyMsg:
+			txAsset = msg.Symbol
+		case seturi.SetURIMsg:
 			txAsset = msg.Symbol
 		}
 		transactionsToPublish = append(transactionsToPublish, Transaction{
