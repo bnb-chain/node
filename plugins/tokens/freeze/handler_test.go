@@ -64,7 +64,7 @@ func TestHandleFreezeMini(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	account := accountKeeper.GetAccount(ctx, msg.From).(types.NamedAccount)
@@ -109,7 +109,7 @@ func TestHandleFreezeMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "003")

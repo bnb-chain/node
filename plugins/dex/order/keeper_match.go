@@ -64,9 +64,6 @@ func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, time
 
 	symbolCh := make(chan symbolKeeper, concurrency)
 	producer := func() {
-		//for _, symbol := range symbolsToMatch {
-		//	symbolCh <- symbol
-		//}
 		for i := range kp.OrderKeepers {
 			kp.OrderKeepers[i].iterateRoundPairs(func(symbol string) {
 				symbolCh <- symbolKeeper{symbol: symbol, orderKeeper: kp.OrderKeepers[i]}

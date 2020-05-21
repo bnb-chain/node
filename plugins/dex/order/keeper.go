@@ -11,14 +11,15 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
+	dbm "github.com/tendermint/tendermint/libs/db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
+	tmstore "github.com/tendermint/tendermint/store"
 
 	"github.com/binance-chain/node/common/fees"
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
@@ -79,6 +80,11 @@ func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper sto
 		logger:                     logger,
 		OrderKeepers:               []IDexOrderKeeper{NewBEP2OrderKeeper(), NewMiniOrderKeeper()},
 	}
+}
+
+func Init(dexKeeper *DexKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
+	dexKeeper.initOrderBook(ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
+	dexKeeper.InitRecentPrices(ctx)
 }
 
 func (kp *DexKeeper) SetBUSDSymbol(symbol string) {
@@ -449,7 +455,7 @@ func (kp *DexKeeper) StoreTradePrices(ctx sdk.Context) {
 func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
-		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler, kp.engines)
+		return kp.allocateBeforeGalileo(ctx, tranCh, postAllocateHandler)
 	}
 
 	// use string of the addr as the key since map makes a fast path for string key.
@@ -520,7 +526,7 @@ func (kp *DexKeeper) allocate(ctx sdk.Context, tranCh <-chan Transfer, postAlloc
 }
 
 // DEPRECATED
-func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer), engines map[string]*matcheng.MatchEng) (
+func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transfer, postAllocateHandler func(tran Transfer)) (
 	types.Fee, map[string]*types.Fee) {
 	// use string of the addr as the key since map makes a fast path for string key.
 	// Also, making the key have same length is also an optimization.
@@ -584,7 +590,7 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 		}
 	}
 	collectFee(tradeInAsset, func(acc sdk.Account, in sdk.Coin) types.Fee {
-		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, engines)
+		fee := kp.FeeManager.CalcTradeFee(acc.GetCoins(), in, kp.engines)
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		return fee
 	})
@@ -592,7 +598,7 @@ func (kp *DexKeeper) allocateBeforeGalileo(ctx sdk.Context, tranCh <-chan Transf
 		var i int64 = 0
 		var fees types.Fee
 		for ; i < in.Amount; i++ {
-			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, engines)
+			fee := kp.FeeManager.CalcFixedFee(acc.GetCoins(), expireEventType, in.Denom, kp.engines)
 			acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 			fees.AddFee(fee)
 		}
@@ -868,11 +874,10 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 	delete(kp.engines, symbol)
 	delete(kp.recentPrices, symbol)
 
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.deleteOrdersForPair(symbol)
-			break
-		}
+	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(symbol); err == nil {
+		dexOrderKeeper.deleteOrdersForPair(symbol)
+	} else {
+		kp.logger.Debug(err.Error())
 	}
 
 	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
@@ -967,7 +972,7 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 		}
 	}
 
-	if isMiniSymbolPair(baseAsset, quoteAsset) && types.NativeTokenSymbol != quoteAsset {
+	if types.NativeTokenSymbol != quoteAsset && isMiniSymbolPair(baseAsset, quoteAsset) {
 		return errors.New("quote token is not valid for mini symbol pair: " + quoteAsset)
 	}
 
@@ -977,9 +982,7 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 func (kp *DexKeeper) GetAllOrders() map[string]map[string]*OrderInfo {
 	allOrders := make(map[string]map[string]*OrderInfo)
 	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.supportUpgradeVersion() {
-			allOrders = appendAllOrdersMap(allOrders, orderKeeper.getAllOrders())
-		}
+		allOrders = appendAllOrdersMap(allOrders, orderKeeper.getAllOrders())
 	}
 	return allOrders
 }
@@ -1002,15 +1005,6 @@ func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int
 	}
 }
 
-func (kp *DexKeeper) ValidateOrder(context sdk.Context, account sdk.Account, msg NewOrderMsg) error {
-	if dexOrderKeeper, err := kp.GetSupportedOrderKeeper(msg.Symbol); err == nil {
-		return dexOrderKeeper.validateOrder(kp, context, account, msg)
-	} else {
-		kp.logger.Debug(err.Error())
-	}
-	return fmt.Errorf("symbol:%s is not supported", msg.Symbol)
-}
-
 func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportPairType(pairType) {
@@ -1029,16 +1023,6 @@ func (kp *DexKeeper) GetAllOrderChanges() OrderChanges {
 	}
 	kp.logger.Debug("pairType is not supported %v", res)
 	return res
-}
-
-func (kp *DexKeeper) UpdateOrderChange(change OrderChange, symbol string) {
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.support(symbol) {
-			orderKeeper.appendOrderChange(change)
-			return
-		}
-	}
-	kp.logger.Error("symbol is not supported %d", symbol)
 }
 
 func (kp *DexKeeper) UpdateOrderChangeSync(change OrderChange, symbol string) {
@@ -1085,10 +1069,6 @@ func (kp *DexKeeper) GetPairMapper() store.TradingPairMapper {
 	return kp.PairMapper
 }
 
-func (kp *DexKeeper) getAccountKeeper() *auth.AccountKeeper {
-	return &kp.am
-}
-
 func (kp *DexKeeper) getLogger() tmlog.Logger {
 	return kp.logger
 }
@@ -1129,10 +1109,7 @@ func CreateMatchEng(pairSymbol string, basePrice, lotSize int64) *me.MatchEng {
 }
 
 func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
-	if sdk.IsUpgrade(upgrade.BEP8) {
-		return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
-	}
-	return false
+	return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
 }
 
 // Check whether there is trading pair between two symbols

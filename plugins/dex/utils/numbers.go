@@ -53,15 +53,3 @@ func IsUnderMinNotional(price, qty int64) bool {
 		return p < 1e8
 	}
 }
-
-func MaxOf(vars ...uint) uint {
-	max := vars[0]
-
-	for _, i := range vars {
-		if max < i {
-			max = i
-		}
-	}
-
-	return max
-}

@@ -1,15 +1,12 @@
 package order
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -39,7 +36,6 @@ type IDexOrderKeeper interface {
 	support(pair string) bool
 	supportUpgradeVersion() bool
 	supportPairType(pairType SymbolPairType) bool
-	validateOrder(dexKeeper *DexKeeper, context sdk.Context, account sdk.Account, msg NewOrderMsg) error
 	iterateRoundPairs(func(string))
 	iterateAllOrders(func(symbol string, id string))
 	reloadOrder(symbol string, orderInfo *OrderInfo, height int64, collectOrderInfoForPublish bool)
@@ -156,44 +152,6 @@ func (kp *BaseOrderKeeper) removeOrder(dexKeeper *DexKeeper, id string, symbol s
 
 func (kp *BaseOrderKeeper) deleteOrdersForPair(pair string) {
 	delete(kp.allOrders, pair)
-}
-
-func (kp *BaseOrderKeeper) validateOrder(dexKeeper *DexKeeper, ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
-	baseAsset, quoteAsset, err := dexUtils.TradingPair2Assets(msg.Symbol)
-	if err != nil {
-		return err
-	}
-
-	seq := acc.GetSequence()
-	expectedID := GenerateOrderID(seq, msg.Sender)
-	if expectedID != msg.Id {
-		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
-	}
-
-	pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
-	if err != nil {
-		return err
-	}
-
-	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
-		return fmt.Errorf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64())
-	}
-
-	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
-		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
-	}
-
-	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
-		if dexUtils.IsUnderMinNotional(msg.Price, msg.Quantity) {
-			return errors.New("notional value of the order is too small")
-		}
-	}
-
-	if dexUtils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
-		return errors.New("notional value of the order is too large(cannot fit in int64)")
-	}
-
-	return nil
 }
 
 func (kp *BaseOrderKeeper) getOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder {

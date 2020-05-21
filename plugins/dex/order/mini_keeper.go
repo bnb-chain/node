@@ -1,13 +1,9 @@
 package order
 
 import (
-	"fmt"
-	"strings"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
@@ -53,28 +49,6 @@ func (kp *MiniOrderKeeper) supportPairType(pairType SymbolPairType) bool {
 func (kp *MiniOrderKeeper) initOrders(symbol string) {
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	kp.symbolSelector.AddSymbolHash(symbol)
-}
-
-// override
-func (kp *MiniOrderKeeper) validateOrder(dexKeeper *DexKeeper, ctx sdk.Context, acc sdk.Account, msg NewOrderMsg) error {
-
-	err := kp.BaseOrderKeeper.validateOrder(dexKeeper, ctx, acc, msg)
-	if err != nil {
-		return err
-	}
-	coins := acc.GetCoins()
-	symbol := strings.ToUpper(msg.Symbol)
-	var quantityBigEnough bool
-	if msg.Side == Side.BUY {
-		quantityBigEnough = msg.Quantity >= types.MiniTokenMinTotalSupply
-	} else if msg.Side == Side.SELL {
-		quantityBigEnough = (msg.Quantity >= types.MiniTokenMinTotalSupply) || coins.AmountOf(symbol) == msg.Quantity
-	}
-	if !quantityBigEnough {
-		return fmt.Errorf("quantity is too small, the min quantity is %d or total free balance of the mini token",
-			types.MiniTokenMinTotalSupply)
-	}
-	return nil
 }
 
 func (kp *MiniOrderKeeper) clearAfterMatch() {

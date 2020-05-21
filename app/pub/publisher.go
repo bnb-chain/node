@@ -13,10 +13,9 @@ import (
 const (
 	// TODO(#66): revisit the setting / whole thread model here,
 	// do we need better way to make main thread less possibility to block
-	TransferCollectionChannelSize     = 4000
-	MiniTransferCollectionChannelSize = 1000
-	ToRemoveOrderIdChannelSize        = 1000
-	MaxOrderBookLevel                 = 100
+	TransferCollectionChannelSize = 4000
+	ToRemoveOrderIdChannelSize    = 1000
+	MaxOrderBookLevel             = 100
 )
 
 type OrderSymbolId struct {

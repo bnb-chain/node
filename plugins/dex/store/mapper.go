@@ -38,7 +38,8 @@ type mapper struct {
 func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 	return mapper{
 		key: key,
-		cdc: cdc}
+		cdc: cdc,
+	}
 }
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {

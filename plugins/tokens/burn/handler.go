@@ -47,8 +47,6 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
-		coins := keeper.GetCoins(ctx, token.GetOwner())
-
 		useAllBalance := coins.AmountOf(symbol) == burnAmount
 
 		if burnAmount <= 0 || (!useAllBalance && (burnAmount < common.MiniTokenMinTotalSupply)) {

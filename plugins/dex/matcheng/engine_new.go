@@ -33,7 +33,6 @@ func (me *MatchEng) Match(height int64, lastMatchedHeight int64) bool {
 		return false
 	}
 	//If order height > the last Match height, then it's maker.
-	// Block Height cannot be used here since mini-token is not matched in every block
 	takerSide, err := me.determineTakerSide(lastMatchedHeight, index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)

@@ -63,7 +63,7 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
@@ -79,7 +79,7 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 1e8-1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 1e8-1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	account := accountKeeper.GetAccount(ctx, msg.From).(types.NamedAccount)
@@ -98,7 +98,7 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 0, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 0, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
 	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)

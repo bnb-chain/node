@@ -24,7 +24,6 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -59,11 +58,6 @@ func compressAndSave(snapshot interface{}, cdc *wire.Codec, key string, kv sdk.K
 	bnclog.Debug(fmt.Sprintf("compressAndSave key: %s, value: %v", key, bytes))
 	kv.Set([]byte(key), compressedBytes)
 	return nil
-}
-
-func Init(dexKeeper *DexKeeper, ctx sdk.Context, blockInterval, daysBack int, blockStore *tmstore.BlockStore, stateDB dbm.DB, lastHeight int64, txDecoder sdk.TxDecoder) {
-	dexKeeper.initOrderBook(ctx, blockInterval, daysBack, blockStore, stateDB, lastHeight, txDecoder)
-	dexKeeper.InitRecentPrices(ctx)
 }
 
 func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedStoreKeys []string, err error) {
@@ -250,17 +244,6 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
 	kp.MatchSymbols(height, t, false) //no need to check result
-}
-
-func selectPairType(symbol string) SymbolPairType {
-	var pairType SymbolPairType
-
-	if (!sdk.IsUpgrade(upgrade.BEP8)) || !dexUtils.IsMiniTokenTradingPair(symbol) {
-		pairType = PairType.BEP2
-	} else {
-		pairType = PairType.MINI
-	}
-	return pairType
 }
 
 func (kp *DexKeeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,

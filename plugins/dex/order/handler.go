@@ -45,6 +45,20 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 
 	// note: the check sequence is well designed.
 	freeBalance := acc.GetCoins()
+
+	if sdk.IsUpgrade(sdk.BEP8) && isMiniSymbolPair(baseAssetSymbol, quoteAssetSymbol) {
+		var quantityBigEnough bool
+		if msg.Side == Side.BUY {
+			quantityBigEnough = msg.Quantity >= common.MiniTokenMinTotalSupply
+		} else if msg.Side == Side.SELL {
+			quantityBigEnough = (msg.Quantity >= common.MiniTokenMinTotalSupply) || freeBalance.AmountOf(symbol) == msg.Quantity
+		}
+		if !quantityBigEnough {
+			return fmt.Errorf("quantity is too small, the min quantity is %d or total free balance of the mini token",
+				common.MiniTokenMinTotalSupply)
+		}
+	}
+
 	var toLockCoins sdk.Coins
 	if msg.Side == Side.BUY {
 		// for buy orders,
@@ -81,7 +95,7 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 
 	acc.SetCoins(freeBalance.Minus(toLockCoins))
 	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
-	keeper.getAccountKeeper().SetAccount(ctx, acc)
+	keeper.am.SetAccount(ctx, acc)
 	return nil
 }
 
@@ -95,7 +109,7 @@ func handleNewOrder(
 		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()
 	}
 
-	acc := dexKeeper.getAccountKeeper().GetAccount(ctx, msg.Sender).(common.NamedAccount)
+	acc := dexKeeper.am.GetAccount(ctx, msg.Sender).(common.NamedAccount)
 	if !ctx.IsReCheckTx() {
 		//for recheck:
 		// 1. sequence is verified in anteHandler
@@ -103,7 +117,7 @@ func handleNewOrder(
 		// 3. trading pair is verified
 		// 4. price/qty may have odd tick size/lot size, but it can be handled as
 		//    other existing orders.
-		err := dexKeeper.ValidateOrder(ctx, acc, msg)
+		err := validateOrder(ctx, dexKeeper, acc, msg)
 
 		if err != nil {
 			return sdk.NewError(types.DefaultCodespace, types.CodeInvalidOrderParam, err.Error()).Result()
@@ -190,10 +204,10 @@ func handleCancelOrder(
 	}
 	fee := common.Fee{}
 	if !transfer.FeeFree() {
-		acc := dexKeeper.getAccountKeeper().GetAccount(ctx, msg.Sender)
+		acc := dexKeeper.am.GetAccount(ctx, msg.Sender)
 		fee = dexKeeper.getFeeManager().CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, dexKeeper.GetEngines())
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
-		dexKeeper.getAccountKeeper().SetAccount(ctx, acc)
+		dexKeeper.am.SetAccount(ctx, acc)
 	}
 
 	// this is done in memory! we must not run this block in checktx or simulate!
@@ -218,4 +232,42 @@ func handleCancelOrder(
 	}
 
 	return sdk.Result{}
+}
+
+func validateOrder(ctx sdk.Context, dexKeeper *DexKeeper, acc sdk.Account, msg NewOrderMsg) error {
+	baseAsset, quoteAsset, err := utils.TradingPair2Assets(msg.Symbol)
+	if err != nil {
+		return err
+	}
+
+	seq := acc.GetSequence()
+	expectedID := GenerateOrderID(seq, msg.Sender)
+	if expectedID != msg.Id {
+		return fmt.Errorf("the order ID(%s) given did not match the expected one: `%s`", msg.Id, expectedID)
+	}
+
+	pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
+	if err != nil {
+		return err
+	}
+
+	if msg.Quantity <= 0 || msg.Quantity%pair.LotSize.ToInt64() != 0 {
+		return fmt.Errorf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64())
+	}
+
+	if msg.Price <= 0 || msg.Price%pair.TickSize.ToInt64() != 0 {
+		return fmt.Errorf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64())
+	}
+
+	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
+		if utils.IsUnderMinNotional(msg.Price, msg.Quantity) {
+			return errors.New("notional value of the order is too small")
+		}
+	}
+
+	if utils.IsExceedMaxNotional(msg.Price, msg.Quantity) {
+		return errors.New("notional value of the order is too large(cannot fit in int64)")
+	}
+
+	return nil
 }

@@ -266,7 +266,7 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 	// This channels is used for protect not update `dexKeeper.orderChanges` concurrently
 	// matcher would send item to postAlloTransHandler in several goroutine (well-designed)
 	// while dexKeeper.orderChanges are not separated by concurrent factor (users here)
-	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize+MiniTransferCollectionChannelSize)
+	iocExpireFeeHolderCh := make(chan orderPkg.ExpireHolder, TransferCollectionChannelSize)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 

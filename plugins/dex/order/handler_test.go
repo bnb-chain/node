@@ -79,7 +79,7 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.ValidateOrder(ctx, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("trading pair not found: %s", msg.Symbol), err.Error())
 }
@@ -106,7 +106,7 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	}
 
 	for _, msg := range msgs {
-		err := keeper.ValidateOrder(ctx, nil, msg)
+		err := validateOrder(ctx, keeper, nil, msg)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", msg.Symbol), err.Error())
 	}
@@ -128,7 +128,7 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.ValidateOrder(ctx, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()), err.Error())
 }
@@ -149,7 +149,7 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.ValidateOrder(ctx, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()), err.Error())
 }
@@ -169,7 +169,7 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.ValidateOrder(ctx, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.NoError(t, err)
 }
 
@@ -188,7 +188,7 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = keeper.ValidateOrder(ctx, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, "notional value of the order is too large(cannot fit in int64)", err.Error())
 }
