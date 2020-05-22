@@ -46,7 +46,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 					Log:  "empty symbol not permitted",
 				}
 			}
-			return queryAndMarshallToken(app, mapper, ctx, symbol, isMini)
+			return queryAndMarshallToken(app, mapper, ctx, symbol)
 		case "list": // args: ["tokens", "list", <offset>, <limit>, <showZeroSupplyTokens>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
@@ -111,7 +111,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 	}
 }
 
-func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, symbol string, isMini bool) *abci.ResponseQuery {
+func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, symbol string) *abci.ResponseQuery {
 	var bz []byte
 	var err error
 	var token types.IToken
