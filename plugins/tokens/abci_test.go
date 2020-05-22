@@ -107,15 +107,15 @@ func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
 	res := app.Query(query)
 
 	cdc := app.GetCodec()
-	actual := make([]common.IToken, 2)
+	actual := make([]common.Token, 2)
 	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
-	assert.Equal(t, []common.IToken{
-		token1, token2,
+	assert.Equal(t, []common.Token{
+		*token1, *token2,
 	}, actual)
 }
 

@@ -63,6 +63,7 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 			ctx := app.GetContextForCheckState()
 
 			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens, isMini)
+
 			offset, err := strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{
@@ -87,9 +88,24 @@ func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler
 					Log:  "malformed range",
 				}
 			}
-			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(
-				tokens[offset:end],
-			)
+			var bz []byte
+			if isMini {
+				miniTokens := make([]*types.MiniToken, end-offset)
+				for i, token := range tokens[offset:end] {
+					miniTokens[i] = token.(*types.MiniToken)
+				}
+				bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(
+					miniTokens,
+				)
+			} else {
+				bep2Tokens := make([]*types.Token, end-offset)
+				for i, token := range tokens[offset:end] {
+					bep2Tokens[i] = token.(*types.Token)
+				}
+				bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(
+					bep2Tokens,
+				)
+			}
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
