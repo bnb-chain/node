@@ -139,15 +139,15 @@ func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
 	res := app.Query(query)
 
 	cdc := app.GetCodec()
-	actual := make([]common.IToken, 1)
+	actual := make([]common.Token, 1)
 	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
-	assert.Equal(t, []common.IToken{
-		token2,
+	assert.Equal(t, []common.Token{
+		*token2,
 	}, actual)
 }
 
@@ -171,15 +171,15 @@ func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
 	res := app.Query(query)
 
 	cdc := app.GetCodec()
-	actual := make([]common.IToken, 1)
+	actual := make([]common.Token, 1)
 	err = cdc.UnmarshalBinaryLengthPrefixed(res.Value, &actual)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
-	assert.Equal(t, []common.IToken{
-		token1,
+	assert.Equal(t, []common.Token{
+		*token1,
 	}, actual)
 }
 
