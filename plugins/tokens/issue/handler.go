@@ -27,7 +27,10 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		case MintMsg:
 			return handleMintToken(ctx, tokenMapper, keeper, msg)
-
+		case IssueMiniMsg:
+			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.MiniRangeType)
+		case IssueTinyMsg:
+			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.TinyRangeType)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
 			return sdk.ErrUnknownRequest(errMsg).Result()

@@ -21,7 +21,7 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-func setup() (sdk.Context, sdk.Handler, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper) {
+func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	ms, capKey1, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	cdc.RegisterInterface((*types.IToken)(nil), nil)
@@ -33,14 +33,13 @@ func setup() (sdk.Context, sdk.Handler, sdk.Handler, sdk.Handler, auth.AccountKe
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
 	handler := NewHandler(tokenMapper, accountKeeper, bankKeeper)
 	tokenHandler := issue.NewHandler(tokenMapper, bankKeeper)
-	miniTokenHandler := issue.NewMiniHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1},
 		sdk.RunTxModeDeliver, log.NewNopLogger()).
 		WithAccountCache(auth.NewAccountCache(accountStoreCache))
-	return ctx, handler, tokenHandler, miniTokenHandler, accountKeeper, tokenMapper
+	return ctx, handler, tokenHandler, accountKeeper, tokenMapper
 }
 
 func setChainVersion() {
@@ -54,7 +53,7 @@ func resetChainVersion() {
 func TestHandleFreezeMini(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
-	ctx, handler, _, miniIssueHandler, accountKeeper, tokenMapper := setup()
+	ctx, handler, miniIssueHandler, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
@@ -150,7 +149,7 @@ func TestHandleFreezeMini(t *testing.T) {
 func TestHandleFreeze(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
-	ctx, handler, issueHandler, _, accountKeeper, tokenMapper := setup()
+	ctx, handler, issueHandler, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")

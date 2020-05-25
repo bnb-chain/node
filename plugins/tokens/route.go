@@ -22,7 +22,6 @@ func Routes(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.
 	routes[freeze.FreezeRoute] = freeze.NewHandler(tokenMapper, accKeeper, keeper)
 	routes[timelock.MsgRoute] = timelock.NewHandler(timeLockKeeper)
 	routes[swap.AtomicSwapRoute] = swap.NewHandler(swapKeeper)
-	routes[issue.MiniRoute] = issue.NewMiniHandler(tokenMapper, keeper)
 	routes[seturi.SetURIRoute] = seturi.NewHandler(tokenMapper)
 	return routes
 }

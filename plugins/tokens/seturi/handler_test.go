@@ -21,7 +21,7 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.Mapper) {
+func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	ms, capKey1, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	cdc.RegisterInterface((*types.IToken)(nil), nil)
@@ -32,14 +32,13 @@ func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.M
 	handler := NewHandler(tokenMapper)
 
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	miniTokenHandler := issue.NewMiniHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1},
 		sdk.RunTxModeDeliver, log.NewNopLogger()).
 		WithAccountCache(auth.NewAccountCache(accountStoreCache))
-	return ctx, handler, miniTokenHandler, accountKeeper, tokenMapper
+	return ctx, handler, accountKeeper, tokenMapper
 }
 
 func setChainVersion() {
@@ -53,12 +52,12 @@ func resetChainVersion() {
 func TestHandleSetURI(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
-	ctx, handler, miniIssueHandler, accountKeeper, tokenMapper := setup()
+	ctx, handler, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	msg := issue.NewIssueMiniMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, false, "http://www.xyz.com/nnb.json")
-	sdkResult := miniIssueHandler(ctx, msg)
+	sdkResult := handler(ctx, msg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")

@@ -3,7 +3,6 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -15,21 +14,6 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
-
-// NewHandler creates a new token issue message handler
-func NewMiniHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		switch msg := msg.(type) {
-		case IssueMiniMsg:
-			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.MiniRangeType)
-		case IssueTinyMsg:
-			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.TinyRangeType)
-		default:
-			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
-			return sdk.ErrUnknownRequest(errMsg).Result()
-		}
-	}
-}
 
 func (msg IssueMiniMsg) handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, tokenType common.SupplyRangeType) sdk.Result {
 	errLogMsg := "issue miniToken failed"

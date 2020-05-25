@@ -65,7 +65,7 @@ func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueTinyMsg.
-func (msg IssueTinyMsg) Route() string { return MiniRoute }
+func (msg IssueTinyMsg) Route() string { return Route }
 func (msg IssueTinyMsg) Type() string {
 	return IssueTinyMsgType
 }

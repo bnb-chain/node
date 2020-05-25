@@ -29,7 +29,7 @@ func setupMini() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	handler := NewMiniHandler(tokenMapper, bankKeeper)
+	handler := NewHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
