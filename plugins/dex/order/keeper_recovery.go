@@ -154,6 +154,8 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 		eng.LastTradePrice = ob.LastTradePrice
 		if sdk.IsUpgrade(upgrade.BEP8) {
 			eng.LastMatchHeight = ob.LastMatchHeight
+		}else{
+			eng.LastMatchHeight = height
 		}
 		ctx.Logger().Info("Successfully Loaded order snapshot", "pair", pair)
 	}

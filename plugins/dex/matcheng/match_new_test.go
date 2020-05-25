@@ -923,7 +923,8 @@ func TestMatchEng_Match(t *testing.T) {
 	me.Book.InsertOrder("16", BUYSIDE, 100, 100, 20)
 
 	upgrade.Mgr.SetHeight(100)
-	assert.True(me.Match(100, 99))
+	me.LastMatchHeight = 99
+	assert.True(me.Match(100))
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(100), me.LastTradePrice)
 	assert.Equal([]Trade{
@@ -978,8 +979,8 @@ func TestMatchEng_Match(t *testing.T) {
 	me.Book.InsertOrder("15", SELLSIDE, 100, 100, 30)
 	me.Book.InsertOrder("6", BUYSIDE, 100, 110, 40)
 	me.Book.InsertOrder("8", BUYSIDE, 100, 110, 100)
-
-	assert.True(me.Match(100, 99))
+	me.LastMatchHeight = 99
+	assert.True(me.Match(100))
 	assert.Equal(4, len(me.overLappedLevel))
 	assert.Equal(int64(104), me.LastTradePrice)
 	assert.Equal([]Trade{

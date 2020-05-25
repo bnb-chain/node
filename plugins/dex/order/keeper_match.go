@@ -1,12 +1,10 @@
 package order
 
 import (
-	"github.com/binance-chain/node/common/upgrade"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/utils"
-	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
 func (kp *DexKeeper) SelectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
@@ -103,18 +101,9 @@ func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, height, ti
 	concurrency := len(tradeOuts)
 	orderKeeper := kp.mustGetOrderKeeper(symbol)
 	orders := orderKeeper.getAllOrdersForPair(symbol)
-	var lastMatchHeight int64
-	if dexUtils.IsMiniTokenTradingPair(symbol) {
-		lastMatchHeight = engine.LastMatchHeight
-	} else {
-		lastMatchHeight = height - 1 //Every block is deemed as performed matching for all BEP2 symbols
-	}
 	// please note there is no logging in matching, expecting to see the order book details
 	// from the exchange's order book stream.
-	if engine.Match(height, lastMatchHeight) {
-		if sdk.IsUpgrade(upgrade.BEP19) {
-			engine.LastMatchHeight = height
-		}
+	if engine.Match(height) {
 		kp.logger.Debug("Match finish:", "symbol", symbol, "lastTradePrice", engine.LastTradePrice)
 		for i := range engine.Trades {
 			t := &engine.Trades[i]
@@ -141,9 +130,6 @@ func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, height, ti
 		// for index service.
 		kp.logger.Error("Fatal error occurred in matching, cancel all incoming new orders",
 			"symbol", symbol)
-		if sdk.IsUpgrade(upgrade.BEP19) {
-			engine.LastMatchHeight = height
-		}
 		thisRoundIds := orderKeeper.getRoundOrdersForPair(symbol)
 		for _, id := range thisRoundIds {
 			msg := orders[id]

@@ -12,7 +12,14 @@ import (
 	"github.com/binance-chain/node/common/utils"
 )
 
-func (me *MatchEng) Match(height int64, lastMatchedHeight int64) bool {
+func (me *MatchEng) Match(height int64) bool {
+	success := me.runMatch(height)
+	if sdk.IsUpgrade(upgrade.BEP19) {
+		me.LastMatchHeight = height
+	}
+	return success
+}
+func (me *MatchEng) runMatch(height int64) bool {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return me.MatchBeforeGalileo(height)
 	}
@@ -33,7 +40,7 @@ func (me *MatchEng) Match(height int64, lastMatchedHeight int64) bool {
 		return false
 	}
 	//If order height > the last Match height, then it's maker.
-	takerSide, err := me.determineTakerSide(lastMatchedHeight, index)
+	takerSide, err := me.determineTakerSide(me.LastMatchHeight, index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
