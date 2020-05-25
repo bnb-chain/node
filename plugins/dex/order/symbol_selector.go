@@ -5,7 +5,7 @@ import (
 )
 
 type SymbolSelector interface {
-	SelectSymbolsToMatch(roundOrders map[string][]string, height, timestamp int64, matchAllSymbols bool) []string
+	SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string
 	AddSymbolHash(symbol string)
 	GetRoundMatchSymbol() *[]string
 	SetRoundMatchSymbol([]string)
@@ -28,12 +28,12 @@ func (bss *BEP2SymbolSelector) GetRoundMatchSymbol() *[]string {
 	panic("unsupported method")
 }
 
-func (bss *BEP2SymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height, timestamp int64, matchAllSymbols bool) []string {
+func (bss *BEP2SymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
 	size := len(roundOrders)
 	if size == 0 {
 		return make([]string, 0)
 	}
-	symbolsToMatch := make([]string, 0, 256)
+	symbolsToMatch := make([]string, 0, len(roundOrders))
 	for symbol := range roundOrders {
 		symbolsToMatch = append(symbolsToMatch, symbol)
 	}
@@ -62,12 +62,12 @@ func (mss *MiniSymbolSelector) SetRoundMatchSymbol(symbols []string) {
 	mss.roundMiniSymbols = symbols
 }
 
-func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height, timestamp int64, matchAllSymbols bool) []string {
+func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
 	size := len(roundOrders)
 	if size == 0 {
 		return make([]string, 0)
 	}
-	symbolsToMatch := make([]string, 0, 256)
+	symbolsToMatch := make([]string, 0, len(roundOrders))
 	if matchAllSymbols {
 		for symbol := range roundOrders {
 			symbolsToMatch = append(symbolsToMatch, symbol)
@@ -85,29 +85,29 @@ func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 
 func selectMiniSymbolsToMatch(roundOrders map[string][]string, miniSymbolsHash map[string]uint32, height int64, postSelect func(map[string]struct{})) {
 	symbolsToMatch := make(map[string]struct{}, 256)
-	selectActiveMiniSymbols(&symbolsToMatch, &roundOrders, defaultActiveMiniSymbolCount)
-	selectMiniSymbolsRoundRobin(&symbolsToMatch, &miniSymbolsHash, height)
+	selectActiveMiniSymbols(symbolsToMatch, roundOrders, defaultActiveMiniSymbolCount)
+	selectMiniSymbolsRoundRobin(symbolsToMatch, miniSymbolsHash, height)
 	postSelect(symbolsToMatch)
 }
 
-func selectActiveMiniSymbols(symbolsToMatch *map[string]struct{}, roundOrdersMini *map[string][]string, k int) {
+func selectActiveMiniSymbols(symbolsToMatch map[string]struct{}, roundOrdersMini map[string][]string, k int) {
 	//use quick select to select top k symbols
-	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(*roundOrdersMini))
-	for symbol, orders := range *roundOrdersMini {
+	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(roundOrdersMini))
+	for symbol, orders := range roundOrdersMini {
 		symbolOrderNumsSlice = append(symbolOrderNumsSlice, &SymbolWithOrderNumber{symbol, len(orders)})
 	}
 	topKSymbolOrderNums := findTopKLargest(symbolOrderNumsSlice, k)
 
 	for _, selected := range topKSymbolOrderNums {
-		(*symbolsToMatch)[selected.symbol] = struct{}{}
+		symbolsToMatch[selected.symbol] = struct{}{}
 	}
 }
 
-func selectMiniSymbolsRoundRobin(symbolsToMatch *map[string]struct{}, miniSymbolsHash *map[string]uint32, height int64) {
+func selectMiniSymbolsRoundRobin(symbolsToMatch map[string]struct{}, miniSymbolsHash map[string]uint32, height int64) {
 	m := height % defaultMiniBlockMatchInterval
-	for symbol, symbolHash := range *miniSymbolsHash {
+	for symbol, symbolHash := range miniSymbolsHash {
 		if int64(symbolHash%defaultMiniBlockMatchInterval) == m {
-			(*symbolsToMatch)[symbol] = struct{}{}
+			symbolsToMatch[symbol] = struct{}{}
 		}
 	}
 }

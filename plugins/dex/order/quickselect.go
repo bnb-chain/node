@@ -1,5 +1,7 @@
 package order
 
+import "github.com/tendermint/tendermint/libs/common"
+
 //Find and return top K symbols with largest number of order.
 // The returned top K slice is not sorted. The input orderNums may be re-ordered in place.
 // If more than one symbols have same order numbers, these symbol will be selected by ascending alphabetical sequence.
@@ -10,8 +12,13 @@ func findTopKLargest(orderNums []*SymbolWithOrderNumber, k int) []*SymbolWithOrd
 	return quickselect(orderNums, 0, len(orderNums)-1, k)
 }
 
-func partition(orderNums []*SymbolWithOrderNumber, start, end, pivot int) int {
+func partition(orderNums []*SymbolWithOrderNumber, start, end int) int {
 	// move pivot to end
+	if end == start {
+		return start
+	}
+
+	pivot := common.RandIntn(end-start) + start
 	orderNums[end], orderNums[pivot] = orderNums[pivot], orderNums[end]
 	pivotValue := orderNums[end]
 	i := start
@@ -38,7 +45,7 @@ func compare(orderNumA *SymbolWithOrderNumber, orderNumB *SymbolWithOrderNumber)
 
 func quickselect(orderNums []*SymbolWithOrderNumber, start, end, n int) []*SymbolWithOrderNumber {
 	// use last element as pivot
-	pivotIndex := partition(orderNums, start, end, end)
+	pivotIndex := partition(orderNums, start, end)
 
 	if n-1 == pivotIndex {
 		return orderNums[:pivotIndex+1]
