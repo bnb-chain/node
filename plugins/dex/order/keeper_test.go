@@ -107,7 +107,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 99000, 15000000)
 	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
-	symbolsToMatch := keeper.SelectSymbolsToMatch(ctx.BlockHeader().Height, 0, false)
+	symbolsToMatch := keeper.SelectSymbolsToMatch(ctx.BlockHeader().Height, false)
 	logger.Info("symbols to match", "symbols", symbolsToMatch)
 	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0)
 	c := channelHash(accAdd, 4)
