@@ -55,7 +55,7 @@ type DexKeeper struct {
 	am                         auth.AccountKeeper
 	FeeManager                 *FeeManager
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
-	CollectOrderInfoForPublish bool      //TODO seperate for each order keeper
+	CollectOrderInfoForPublish bool      //TODO separate for each order keeper
 	engines                    map[string]*me.MatchEng
 	pairsType                  map[string]SymbolPairType
 	logger                     tmlog.Logger
@@ -66,6 +66,12 @@ type DexKeeper struct {
 
 func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *DexKeeper {
 	logger := bnclog.With("module", "dexkeeper")
+	bep2OrderKeeper, miniOrderKeeper := NewBEP2OrderKeeper(), NewMiniOrderKeeper()
+	if collectOrderInfoForPublish {
+		bep2OrderKeeper.enablePublish()
+		miniOrderKeeper.enablePublish()
+	}
+
 	return &DexKeeper{
 		PairMapper:                 tradingPairMapper,
 		storeKey:                   key,
@@ -80,7 +86,7 @@ func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper sto
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		logger:                     logger,
-		OrderKeepers:               []DexOrderKeeper{NewBEP2OrderKeeper(), NewMiniOrderKeeper()},
+		OrderKeepers:               []DexOrderKeeper{bep2OrderKeeper, miniOrderKeeper},
 	}
 }
 
@@ -95,6 +101,13 @@ func (kp *DexKeeper) InitRecentPrices(ctx sdk.Context) {
 
 func (kp *DexKeeper) SetBUSDSymbol(symbol string) {
 	BUSDSymbol = symbol
+}
+
+func (kp *DexKeeper) EnablePublish() {
+	kp.CollectOrderInfoForPublish = true
+	for i := range kp.OrderKeepers {
+		kp.OrderKeepers[i].enablePublish()
+	}
 }
 
 func (kp *DexKeeper) getOrderKeeper(symbol string) (DexOrderKeeper, error) {
@@ -233,7 +246,7 @@ func (kp *DexKeeper) AddOrder(info OrderInfo, isRecovery bool) (err error) {
 		return err
 	}
 
-	kp.mustGetOrderKeeper(symbol).addOrder(symbol, info, kp.CollectOrderInfoForPublish, isRecovery)
+	kp.mustGetOrderKeeper(symbol).addOrder(symbol, info, isRecovery)
 	kp.logger.Debug("Added orders", "symbol", symbol, "id", info.Id)
 	return nil
 }
@@ -998,7 +1011,7 @@ func (kp *DexKeeper) GetAllOrdersForPair(symbol string) map[string]*OrderInfo {
 }
 
 func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
-	kp.mustGetOrderKeeper(symbol).reloadOrder(symbol, orderInfo, height, kp.CollectOrderInfoForPublish)
+	kp.mustGetOrderKeeper(symbol).reloadOrder(symbol, orderInfo, height)
 }
 
 func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {

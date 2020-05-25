@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	defaultMiniBlockMatchInterval = 16
-	defaultActiveMiniSymbolCount  = 8
+	defaultMiniBlockMatchInterval int = 16
+	defaultActiveMiniSymbolCount  int = 8
 )
 
 //order keeper for mini-token
 type MiniOrderKeeper struct {
 	BaseOrderKeeper
+	symbolSelector MiniSymbolSelector
 }
 
 var _ DexOrderKeeper = &MiniOrderKeeper{}
@@ -23,8 +24,11 @@ var _ DexOrderKeeper = &MiniOrderKeeper{}
 // NewBEP2OrderKeeper - Returns the MiniToken orderKeeper
 func NewMiniOrderKeeper() DexOrderKeeper {
 	return &MiniOrderKeeper{
-		NewBaseOrderKeeper("dexMiniKeeper",
-			&MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)}),
+		BaseOrderKeeper: NewBaseOrderKeeper("dexMiniKeeper"),
+		symbolSelector: MiniSymbolSelector{
+			make(map[string]uint32, 256),
+			make([]string, 0, 256),
+		},
 	}
 }
 
@@ -48,44 +52,47 @@ func (kp *MiniOrderKeeper) supportPairType(pairType SymbolPairType) bool {
 // override
 func (kp *MiniOrderKeeper) initOrders(symbol string) {
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
-	kp.symbolSelector.AddSymbolHash(symbol)
+	kp.symbolSelector.addSymbolHash(symbol)
 }
 
 func (kp *MiniOrderKeeper) clearAfterMatch() {
 	kp.logger.Debug("clearAfterMatchMini...")
-	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
+	for _, symbol := range kp.symbolSelector.roundSelectedSymbols {
 		delete(kp.roundOrders, symbol)
 		delete(kp.roundIOCOrders, symbol)
 	}
-	clearedRoundMatchSymbols := make([]string, 0)
-	kp.symbolSelector.SetRoundMatchSymbol(clearedRoundMatchSymbols)
+	kp.symbolSelector.clearRoundMatchSymbol()
 }
 
-func (kp *MiniOrderKeeper) iterateRoundPairs(iter func(string)) {
-	for _, symbol := range *kp.symbolSelector.GetRoundMatchSymbol() {
+func (kp *MiniOrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
+	for _, symbol := range kp.symbolSelector.roundSelectedSymbols {
 		iter(symbol)
 	}
 }
 
 func (kp *MiniOrderKeeper) getRoundPairsNum() int {
-	return len(*kp.symbolSelector.GetRoundMatchSymbol())
+	return len(kp.symbolSelector.roundSelectedSymbols)
 }
 
 func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
 	n := 0
-	kp.iterateRoundPairs(func(symbol string) {
+	kp.iterateRoundSelectedPairs(func(symbol string) {
 		n += len(kp.roundOrders[symbol])
 	})
 	return n
 }
 
-func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64, collectOrderInfoForPublish bool) {
+func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
 	//TODO confirm no active orders for mini symbol
-	if collectOrderInfoForPublish {
+	if kp.collectOrderInfoForPublish {
 		if _, exists := kp.orderInfosForPub[orderInfo.Id]; !exists {
 			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)
 			kp.orderInfosForPub[orderInfo.Id] = orderInfo
 		}
 	}
+}
+
+func (kp *MiniOrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
+	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, matchAllSymbols)
 }
