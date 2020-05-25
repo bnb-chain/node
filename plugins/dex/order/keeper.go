@@ -98,7 +98,12 @@ func (kp *DexKeeper) SetBUSDSymbol(symbol string) {
 }
 
 func (kp *DexKeeper) getOrderKeeper(symbol string) (DexOrderKeeper, error) {
-	pairType := kp.pairsType[symbol]
+	pairType, ok := kp.pairsType[symbol]
+	if !ok {
+		err := fmt.Errorf("order doesn't exist [%v]", symbol)
+		kp.logger.Debug(err.Error())
+		return nil, err
+	}
 	for i := range kp.OrderKeepers {
 		if kp.OrderKeepers[i].supportPairType(pairType) {
 			return kp.OrderKeepers[i], nil
@@ -246,6 +251,7 @@ func (kp *DexKeeper) RemoveOrder(id string, symbol string, postCancelHandler fun
 		if postCancelHandler != nil {
 			postCancelHandler(ord)
 		}
+		return nil
 	}
 	return orderNotFound(symbol, id)
 }
