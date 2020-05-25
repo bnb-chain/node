@@ -9,11 +9,11 @@ import (
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
-func (kp *DexKeeper) SelectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string {
+func (kp *DexKeeper) SelectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
 	symbolsToMatch := make([]string, 0, 256)
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportUpgradeVersion() {
-			symbolsToMatch = append(symbolsToMatch, orderKeeper.selectSymbolsToMatch(height, timestamp, matchAllSymbols)...)
+			symbolsToMatch = append(symbolsToMatch, orderKeeper.selectSymbolsToMatch(height, matchAllSymbols)...)
 		}
 	}
 	return symbolsToMatch
@@ -21,15 +21,16 @@ func (kp *DexKeeper) SelectSymbolsToMatch(height, timestamp int64, matchAllSymbo
 
 func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandler TransferHandler, matchAllSymbols bool) {
 	kp.logger.Debug("Start Matching for all...", "height", ctx.BlockHeader().Height)
-	timestamp := ctx.BlockHeader().Time.UnixNano()
+	blockHeader := ctx.BlockHeader()
+	timestamp := blockHeader.Time.UnixNano()
 
-	symbolsToMatch := kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols)
+	symbolsToMatch := kp.SelectSymbolsToMatch(blockHeader.Height, matchAllSymbols)
 	kp.logger.Info("symbols to match", "symbols", symbolsToMatch)
 	var tradeOuts []chan Transfer
 	if len(symbolsToMatch) == 0 {
 		kp.logger.Info("No order comes in for the block")
 	} else {
-		tradeOuts = kp.matchAndDistributeTrades(true, ctx.BlockHeader().Height, timestamp)
+		tradeOuts = kp.matchAndDistributeTrades(true, blockHeader.Height, timestamp)
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
@@ -84,7 +85,7 @@ func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, time
 }
 
 func (kp *DexKeeper) MatchSymbols(height, timestamp int64, matchAllSymbols bool) {
-	symbolsToMatch := kp.SelectSymbolsToMatch(height, timestamp, matchAllSymbols)
+	symbolsToMatch := kp.SelectSymbolsToMatch(height, matchAllSymbols)
 	kp.logger.Debug("symbols to match", "symbols", symbolsToMatch)
 
 	if len(symbolsToMatch) == 0 {
