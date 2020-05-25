@@ -96,10 +96,10 @@ func Test_findKthLargest_SameNumber(t *testing.T) {
 func Benchmark_findTopKLargest(b *testing.B) {
 	const size = 10000
 	origin := make([]*SymbolWithOrderNumber, size)
-	for i:=0; i<b.N; i++ {
+	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		for i:=0; i< size; i++ {
-			origin[i] = &SymbolWithOrderNumber{symbol:string(common.RandBytes(10)), numberOfOrders: int(common.RandIntn(size/10))}
+		for i := 0; i < size; i++ {
+			origin[i] = &SymbolWithOrderNumber{symbol: string(common.RandBytes(10)), numberOfOrders: int(common.RandIntn(size / 10))}
 		}
 		b.StartTimer()
 		findTopKLargest(origin, size/2)

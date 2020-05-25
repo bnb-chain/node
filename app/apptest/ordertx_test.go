@@ -124,10 +124,12 @@ func Test_handleNewOrder_DeliverTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC-000", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
+	testApp.DexKeeper.GetEngines()["BTC-000_BNB"].LastMatchHeight = -1
 
 	tradingPair2 := types.NewTradingPair("ETH-001", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair2)
 	testApp.DexKeeper.AddEngine(tradingPair2)
+	testApp.DexKeeper.GetEngines()["ETH-001_BNB"].LastMatchHeight = -1
 
 	add := Account(0).GetAddress()
 	oid := fmt.Sprintf("%X-0", add)
@@ -159,9 +161,11 @@ func Test_Match(t *testing.T) {
 	ethPair := types.NewTradingPair("ETH-000", "BNB", 97e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, ethPair)
 	testApp.DexKeeper.AddEngine(ethPair)
+	testApp.DexKeeper.GetEngines()["ETH-000_BNB"].LastMatchHeight = -1
 	btcPair := types.NewTradingPair("BTC-000", "BNB", 96e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, btcPair)
 	testApp.DexKeeper.AddEngine(btcPair)
+	testApp.DexKeeper.GetEngines()["BTC-000_BNB"].LastMatchHeight = -1
 	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	// setup accounts
@@ -316,6 +320,7 @@ func Test_handleCancelOrder_CheckTx(t *testing.T) {
 	tradingPair := types.NewTradingPair("BTC-000", "BNB", 1e8)
 	testApp.DexKeeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	testApp.DexKeeper.AddEngine(tradingPair)
+	testApp.DexKeeper.GetEngines()["BTC-000_BNB"].LastMatchHeight = -1
 	testApp.DexKeeper.FeeManager.UpdateConfig(newTestFeeConfig())
 
 	// setup accounts
