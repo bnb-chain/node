@@ -45,7 +45,7 @@ type DexOrderKeeper interface {
 	getRoundOrdersForPair(pair string) []string
 	getRoundIOCOrdersForPair(pair string) []string
 	clearAfterMatch()
-	selectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string
+	selectSymbolsToMatch(height int64, matchAllSymbols bool) []string
 	appendOrderChangeSync(change OrderChange)
 }
 
@@ -205,8 +205,8 @@ func (kp *BaseOrderKeeper) getAllOrdersForPair(pair string) map[string]*OrderInf
 	return kp.allOrders[pair]
 }
 
-func (kp *BaseOrderKeeper) selectSymbolsToMatch(height, timestamp int64, matchAllSymbols bool) []string {
-	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, timestamp, matchAllSymbols)
+func (kp *BaseOrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
+	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, matchAllSymbols)
 }
 
 func (kp *BaseOrderKeeper) appendOrderChangeSync(change OrderChange) {

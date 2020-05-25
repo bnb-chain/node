@@ -213,6 +213,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	for i := range kp.OrderKeepers {
 		if kp.OrderKeepers[i].supportPairType(pairType) {
 			kp.OrderKeepers[i].initOrders(symbol)
+			break
 		}
 	}
 	return eng

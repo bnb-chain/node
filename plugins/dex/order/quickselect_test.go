@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 func Test_findKthLargest(t *testing.T) {
@@ -27,98 +29,33 @@ func Test_findKthLargest(t *testing.T) {
 	//F6 := &SymbolWithOrderNumber{"f", 6}
 	F1 := &SymbolWithOrderNumber{"FXM-987M_BNB", 1}
 
-	assert := assert.New(t)
-
 	expected := []*SymbolWithOrderNumber{A3, A4, A5}
 	result := findTopKLargest([]*SymbolWithOrderNumber{A1, A2, A3, A4, A5}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A3, A4, A5}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A5, A3, A3, A1, A4}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A3, A4, A5}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A5, B3, A3, A1, A4}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A6, A5}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A3, A2, A1, A5, A6, A4}, 2)
-	assert.Equal(2, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A6, C4, B5}
 	result = findTopKLargest([]*SymbolWithOrderNumber{D3, E2, F1, B5, A6, C4}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{D3, E2, F1, B5, A6, C4}
 	result = findTopKLargest([]*SymbolWithOrderNumber{D3, E2, F1, B5, A6, C4}, 6)
-	assert.Equal(6, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{D3, E2, F1, B5, A6, C4}
 	result = findTopKLargest([]*SymbolWithOrderNumber{D3, E2, F1, B5, A6, C4}, 7)
-	assert.Equal(6, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 }
 
 func Test_findKthLargest_SameNumber(t *testing.T) {
@@ -135,75 +72,48 @@ func Test_findKthLargest_SameNumber(t *testing.T) {
 
 	expected := []*SymbolWithOrderNumber{A2, B2, E2}
 	result := findTopKLargest([]*SymbolWithOrderNumber{F2, E2, A2, B2, C1}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{B2, A2, C2}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A0, A1, A2, B2, C1, C2}, 3)
-	assert.Equal(3, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A2}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A0, A1, A2, B2, C1, C2}, 1)
-	assert.Equal(1, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A1, A2, B2, C2}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A0, A1, A2, B2, C1, C2}, 4)
 	assert.Equal(4, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
-		}
-	}
+	assertResult(t, expected, result)
 
 	expected = []*SymbolWithOrderNumber{A1, A2, B2, C1, C2}
 	result = findTopKLargest([]*SymbolWithOrderNumber{A0, A1, A2, B2, C1, C2}, 5)
 	assert.Equal(5, len(result))
-	for _, x := range result {
-		fmt.Printf("%v,", *x)
-	}
-	fmt.Println("")
-	for _, ele := range expected {
-		if !contains(result, ele) {
-			t.Fatalf("Expected contains %v, but doesn't exist", ele)
+	assertResult(t, expected, result)
+}
+
+func Benchmark_findTopKLargest(b *testing.B) {
+	const size = 10000
+	origin := make([]*SymbolWithOrderNumber, size)
+	for i:=0; i<b.N; i++ {
+		b.StopTimer()
+		for i:=0; i< size; i++ {
+			origin[i] = &SymbolWithOrderNumber{symbol:string(common.RandBytes(10)), numberOfOrders: int(common.RandIntn(size/10))}
 		}
+		b.StartTimer()
+		findTopKLargest(origin, size/2)
 	}
 }
 
-func contains(s []*SymbolWithOrderNumber, e *SymbolWithOrderNumber) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
+func assertResult(t *testing.T, expected []*SymbolWithOrderNumber, actual []*SymbolWithOrderNumber) {
+	var s string
+	for _, x := range actual {
+		s += fmt.Sprintf("%v,", *x)
 	}
-	return false
+	t.Logf(s)
+	require.Equal(t, len(expected), len(actual))
+	for _, ele := range expected {
+		require.Contains(t, actual, ele, "Expected contains %v, but doesn't exist", ele)
+	}
 }
