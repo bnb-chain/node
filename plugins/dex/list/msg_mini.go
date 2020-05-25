@@ -10,7 +10,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/order"
 )
 
-const MiniRoute = "dexListMini"
+const MiniMsg = "dexListMini"
 
 var _ sdk.Msg = ListMiniMsg{}
 
@@ -30,8 +30,8 @@ func NewMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol st
 	}
 }
 
-func (msg ListMiniMsg) Route() string                { return MiniRoute }
-func (msg ListMiniMsg) Type() string                 { return MiniRoute }
+func (msg ListMiniMsg) Route() string                { return Route }
+func (msg ListMiniMsg) Type() string                 { return MiniMsg }
 func (msg ListMiniMsg) String() string               { return fmt.Sprintf("MsgListMini{%#v}", msg) }
 func (msg ListMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 

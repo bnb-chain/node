@@ -1,36 +1,15 @@
 package list
 
 import (
-	"fmt"
-	"reflect"
-
 	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/tokens"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// NewHandler initialises dex message handlers
-func NewMiniHandler(dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		switch msg := msg.(type) {
-		case ListMiniMsg:
-			return handleListMini(ctx, dexKeeper, tokenMapper, msg)
-		default:
-			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
-			return sdk.ErrUnknownRequest(errMsg).Result()
-		}
-	}
-}
-
 func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg ListMiniMsg) sdk.Result {
-	if !sdk.IsUpgrade(upgrade.BEP8) {
-		return sdk.ErrInternal(fmt.Sprint("list mini-token is not supported at current height")).Result()
-	}
 
 	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
@@ -50,16 +29,8 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 		return sdk.ErrUnauthorized("only the owner of the base asset or quote asset can list the trading pair").Result()
 	}
 
-	if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
-		return sdk.ErrInvalidCoins("quote token does not exist").Result()
-	}
+	lotSize := dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
 
-	var lotSize int64
-	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
-		lotSize = dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
-	} else {
-		lotSize = utils.CalcLotSize(msg.InitPrice)
-	}
 	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
 	err = dexKeeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {

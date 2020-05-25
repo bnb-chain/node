@@ -105,6 +105,6 @@ func init() {
 		issue.IssueTinyMsgType:            fees.FixedFeeCalculatorGen,
 		issue.IssueMiniMsgType:            fees.FixedFeeCalculatorGen,
 		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
-		list.MiniRoute:                    fees.FixedFeeCalculatorGen,
+		list.ListMiniMsg{}.Type():         fees.FixedFeeCalculatorGen,
 	}
 }

@@ -19,6 +19,5 @@ func Routes(cdc *wire.Codec, dexKeeper *DexKeeper, tokenMapper tokens.Mapper,
 	routes[order.RouteNewOrder] = orderHandler
 	routes[order.RouteCancelOrder] = orderHandler
 	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
-	routes[list.MiniRoute] = list.NewMiniHandler(dexKeeper, tokenMapper)
 	return routes
 }
