@@ -13,7 +13,6 @@ import (
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
 // const Route  = "tokens/issue"
 const (
-	MiniRoute        = "miniTokensIssue"
 	IssueMiniMsgType = "miniIssueMsg" //For max total supply in range 2
 )
 
@@ -70,7 +69,7 @@ func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueMiniMsg.
-func (msg IssueMiniMsg) Route() string { return MiniRoute }
+func (msg IssueMiniMsg) Route() string { return Route }
 func (msg IssueMiniMsg) Type() string {
 	return IssueMiniMsgType
 }

@@ -55,7 +55,7 @@ type DexKeeper struct {
 	am                         auth.AccountKeeper
 	FeeManager                 *FeeManager
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
-	CollectOrderInfoForPublish bool
+	CollectOrderInfoForPublish bool      //TODO seperate for each order keeper
 	engines                    map[string]*me.MatchEng
 	pairsType                  map[string]SymbolPairType
 	logger                     tmlog.Logger

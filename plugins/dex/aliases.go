@@ -14,5 +14,6 @@ type DexKeeper = order.DexKeeper
 
 var NewTradingPairMapper = store.NewTradingPairMapper
 var NewDexKeeper = order.NewDexKeeper
+var InitOrders = order.Init
 
 const DefaultCodespace = types.DefaultCodespace

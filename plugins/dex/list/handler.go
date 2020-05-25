@@ -23,6 +23,8 @@ func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper go
 		switch msg := msg.(type) {
 		case ListMsg:
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)
+		case ListMiniMsg:
+			return handleListMini(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -90,7 +92,7 @@ func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Map
 	}
 
 	if sdk.IsUpgrade(upgrade.ListingRuleUpgrade) {
-		quoteToken, err := tokenMapper.GetToken(ctx, msg.QuoteAssetSymbol) //todo
+		quoteToken, err := tokenMapper.GetToken(ctx, msg.QuoteAssetSymbol)
 		if err != nil {
 			return sdk.ErrInvalidCoins(err.Error()).Result()
 		}

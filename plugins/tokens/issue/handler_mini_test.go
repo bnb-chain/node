@@ -29,7 +29,7 @@ func setupMini() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {
 	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	handler := NewMiniHandler(tokenMapper, bankKeeper)
+	handler := NewHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
@@ -84,7 +84,7 @@ func TestHandleIssueMiniToken(t *testing.T) {
 func TestHandleMintMiniToken(t *testing.T) {
 	setChainVersion()
 	defer resetChainVersion()
-	ctx, handler, miniTokenHandler, accountKeeper, tokenMapper := setup()
+	ctx, handler, accountKeeper, tokenMapper := setup()
 	_, acc := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	mintMsg := NewMintMsg(acc.GetAddress(), "NNB-000M", 1001e8)
 	sdkResult := handler(ctx, mintMsg)
@@ -92,7 +92,7 @@ func TestHandleMintMiniToken(t *testing.T) {
 
 	issueMsg := NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 9000e8, true, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	sdkResult = miniTokenHandler(ctx, issueMsg)
+	sdkResult = handler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	sdkResult = handler(ctx, mintMsg)
@@ -127,7 +127,7 @@ func TestHandleMintMiniToken(t *testing.T) {
 	// issue a non-mintable token
 	issueMsg = NewIssueTinyMsg(acc.GetAddress(), "New BNB2", "NNB2", 9000e8, false, "http://www.xyz.com/nnb.json")
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
-	sdkResult = miniTokenHandler(ctx, issueMsg)
+	sdkResult = handler(ctx, issueMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	mintMsg = NewMintMsg(acc.GetAddress(), "NNB2-000M", 1000e8)

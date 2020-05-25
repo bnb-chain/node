@@ -32,7 +32,7 @@ func setup() (sdk.Context, sdk.Handler, sdk.Handler, auth.AccountKeeper, store.M
 	handler := NewHandler(tokenMapper)
 
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
-	miniTokenHandler := issue.NewMiniHandler(tokenMapper, bankKeeper)
+	miniTokenHandler := issue.NewHandler(tokenMapper, bankKeeper)
 
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
