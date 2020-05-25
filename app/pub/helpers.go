@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"strconv"
 	"sync"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
