@@ -18,10 +18,10 @@ type MiniOrderKeeper struct {
 	BaseOrderKeeper
 }
 
-var _ IDexOrderKeeper = &MiniOrderKeeper{}
+var _ DexOrderKeeper = &MiniOrderKeeper{}
 
 // NewBEP2OrderKeeper - Returns the MiniToken orderKeeper
-func NewMiniOrderKeeper() IDexOrderKeeper {
+func NewMiniOrderKeeper() DexOrderKeeper {
 	return &MiniOrderKeeper{
 		NewBaseOrderKeeper("dexMiniKeeper",
 			&MiniSymbolSelector{make(map[string]uint32, 256), make([]string, 0, 256)}),

@@ -333,8 +333,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 	stateDB := baseapp.LoadStateDB()
 	defer stateDB.Close()
 
-	dex.InitOrders(
-		app.DexKeeper,
+	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,
 		app.baseConfig.BreatheBlockDaysCountBack,

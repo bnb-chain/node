@@ -158,8 +158,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				}
 			}
 			ctx := app.GetContextForCheckState()
-			existingPair, err := keeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
-			if pair != existingPair.GetSymbol() || err != nil {
+			if !keeper.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "pair is not listed",
