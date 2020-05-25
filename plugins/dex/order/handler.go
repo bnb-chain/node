@@ -143,7 +143,7 @@ func handleNewOrder(
 				if txSrc, ok := ctx.Value(baseapp.TxSourceKey).(int64); ok {
 					txSource = txSrc
 				} else {
-					dexKeeper.getLogger().Error("cannot get txSource from ctx")
+					dexKeeper.logger.Error("cannot get txSource from ctx")
 				}
 			})
 			msg := OrderInfo{
@@ -205,7 +205,7 @@ func handleCancelOrder(
 	fee := common.Fee{}
 	if !transfer.FeeFree() {
 		acc := dexKeeper.am.GetAccount(ctx, msg.Sender)
-		fee = dexKeeper.getFeeManager().CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, dexKeeper.GetEngines())
+		fee = dexKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, dexKeeper.GetEngines())
 		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		dexKeeper.am.SetAccount(ctx, acc)
 	}

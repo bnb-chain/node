@@ -37,21 +37,14 @@ func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandl
 	kp.ClearAfterMatch()
 }
 
-type symbolKeeper struct {
-	symbol      string
-	orderKeeper IDexOrderKeeper
-}
-
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 // Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols) before matchAndDistributeTrades
 func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
-
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
 
 	if distributeTrade {
 		ordNum := 0
-
 		for i := range kp.OrderKeepers {
 			ordNum += kp.OrderKeepers[i].getRoundOrdersNum()
 		}
@@ -62,18 +55,18 @@ func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, time
 		}
 	}
 
-	symbolCh := make(chan symbolKeeper, concurrency)
+	symbolCh := make(chan string, concurrency)
 	producer := func() {
 		for i := range kp.OrderKeepers {
 			kp.OrderKeepers[i].iterateRoundPairs(func(symbol string) {
-				symbolCh <- symbolKeeper{symbol: symbol, orderKeeper: kp.OrderKeepers[i]}
+				symbolCh <- symbol
 			})
 		}
 		close(symbolCh)
 	}
 	matchWorker := func() {
-		for sk := range symbolCh {
-			kp.matchAndDistributeTradesForSymbol(sk.symbol, sk.orderKeeper, height, timestamp, distributeTrade, tradeOuts)
+		for symbol := range symbolCh {
+			kp.matchAndDistributeTradesForSymbol(symbol, height, timestamp, distributeTrade, tradeOuts)
 		}
 
 	}
@@ -103,10 +96,11 @@ func (kp *DexKeeper) MatchSymbols(height, timestamp int64, matchAllSymbols bool)
 	kp.ClearAfterMatch()
 }
 
-func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, orderKeeper IDexOrderKeeper, height, timestamp int64,
-	distributeTrade bool, tradeOuts []chan Transfer) {
+func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, height, timestamp int64, distributeTrade bool,
+	tradeOuts []chan Transfer) {
 	engine := kp.engines[symbol]
 	concurrency := len(tradeOuts)
+	orderKeeper := kp.mustGetOrderKeeper(symbol)
 	orders := orderKeeper.getAllOrdersForPair(symbol)
 	var lastMatchHeight int64
 	if dexUtils.IsMiniTokenTradingPair(symbol) {

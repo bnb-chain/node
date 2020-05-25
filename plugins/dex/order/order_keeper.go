@@ -20,9 +20,9 @@ const (
 	minimalNumPrices = 500
 )
 
-type IDexOrderKeeper interface {
+type DexOrderKeeper interface {
 	addOrder(symbol string, info OrderInfo, collectOrderInfoForPublish bool, isRecovery bool)
-	removeOrder(dexKeeper *DexKeeper, id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error)
+	removeOrder(dexKeeper *DexKeeper, id string, symbol string) (ord me.OrderPart, err error)
 	orderExists(symbol, id string) (OrderInfo, bool)
 	getOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
 	getAllOrders() map[string]map[string]*OrderInfo
@@ -53,7 +53,7 @@ type BEP2OrderKeeper struct {
 	BaseOrderKeeper
 }
 
-var _ IDexOrderKeeper = &BEP2OrderKeeper{}
+var _ DexOrderKeeper = &BEP2OrderKeeper{}
 
 // in the future, this may be distributed via Sharding
 type BaseOrderKeeper struct {
@@ -70,7 +70,7 @@ type BaseOrderKeeper struct {
 }
 
 // NewBEP2OrderKeeper - Returns the BEP2OrderKeeper
-func NewBEP2OrderKeeper() IDexOrderKeeper {
+func NewBEP2OrderKeeper() DexOrderKeeper {
 	return &BEP2OrderKeeper{
 		NewBaseOrderKeeper("Bep2OrderKeeper", &BEP2SymbolSelector{}),
 	}
@@ -128,26 +128,17 @@ func (kp *BaseOrderKeeper) orderExists(symbol, id string) (OrderInfo, bool) {
 	return OrderInfo{}, false
 }
 
-func (kp *BaseOrderKeeper) removeOrder(dexKeeper *DexKeeper, id string, symbol string, postCancelHandler func(ord me.OrderPart)) (err error) {
-
+func (kp *BaseOrderKeeper) removeOrder(dexKeeper *DexKeeper, id string, symbol string) (ord me.OrderPart, err error) {
 	ordMsg, ok := kp.orderExists(symbol, id)
 	if !ok {
-		return orderNotFound(symbol, id)
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	eng, ok := dexKeeper.engines[symbol]
 	if !ok {
-		return orderNotFound(symbol, id)
+		return me.OrderPart{}, orderNotFound(symbol, id)
 	}
 	delete(kp.allOrders[symbol], id)
-	ord, err := eng.Book.RemoveOrder(id, ordMsg.Side, ordMsg.Price)
-	if err != nil {
-		return err
-	}
-
-	if postCancelHandler != nil {
-		postCancelHandler(ord)
-	}
-	return nil
+	return eng.Book.RemoveOrder(id, ordMsg.Side, ordMsg.Price)
 }
 
 func (kp *BaseOrderKeeper) deleteOrdersForPair(pair string) {

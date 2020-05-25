@@ -187,7 +187,6 @@ func ValidateMapperMiniTokenSymbol(symbol string) error {
 }
 
 func splitSuffixedMiniTokenSymbol(suffixed string) ([]string, error) {
-
 	split := strings.SplitN(suffixed, "-", 2)
 
 	if len(split) != 2 {
