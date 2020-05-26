@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
@@ -37,7 +38,7 @@ func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandl
 }
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
-// Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, timestamp, matchAllSymbols) before matchAndDistributeTrades
+// Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, matchAllSymbols) before matchAndDistributeTrades
 func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
@@ -57,7 +58,7 @@ func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, time
 	symbolCh := make(chan string, concurrency)
 	producer := func() {
 		for i := range kp.OrderKeepers {
-			kp.OrderKeepers[i].iterateRoundPairs(func(symbol string) {
+			kp.OrderKeepers[i].iterateRoundSelectedPairs(func(symbol string) {
 				symbolCh <- symbol
 			})
 		}

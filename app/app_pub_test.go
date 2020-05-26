@@ -98,7 +98,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	pub.IsLive = true
 
 	keeper := app.DexKeeper
-	keeper.CollectOrderInfoForPublish = true
+	keeper.EnablePublish()
 	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 102000)
 	keeper.PairMapper.AddTradingPair(app.DeliverState.Ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
