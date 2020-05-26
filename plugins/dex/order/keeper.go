@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -185,17 +186,18 @@ func (kp *DexKeeper) DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, 
 	} else if quoteAssetSymbol == types.NativeTokenSymbol {
 		priceAgainstNative = price
 	} else {
-		if ps, ok := kp.recentPrices[dexUtils.Assets2TradingPair(baseAssetSymbol, types.NativeTokenSymbol)]; ok {
-			priceAgainstNative = dexUtils.CalcPriceWMA(ps)
-		} else if ps, ok = kp.recentPrices[dexUtils.Assets2TradingPair(types.NativeTokenSymbol, baseAssetSymbol)]; ok {
-			wma := dexUtils.CalcPriceWMA(ps)
-			priceAgainstNative = 1e16 / wma
-		} else {
-			// the recentPrices still have not collected any price yet, iff the native pair is listed for less than kp.pricesStoreEvery blocks
-			if engine, ok := kp.engines[dexUtils.Assets2TradingPair(baseAssetSymbol, types.NativeTokenSymbol)]; ok {
-				priceAgainstNative = engine.LastTradePrice
-			} else if engine, ok = kp.engines[dexUtils.Assets2TradingPair(types.NativeTokenSymbol, baseAssetSymbol)]; ok {
-				priceAgainstNative = 1e16 / engine.LastTradePrice
+		priceAgainstNative = kp.calcPriceAgainst(baseAssetSymbol, types.NativeTokenSymbol)
+		if priceAgainstNative == 0 {
+			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
+				var tmp = big.NewInt(0)
+				priceAgainstBUSD := kp.calcPriceAgainst(baseAssetSymbol, BUSDSymbol)
+				priceBUSDAgainstNative := kp.calcPriceAgainst(BUSDSymbol, types.NativeTokenSymbol)
+				tmp = tmp.Div(tmp.Mul(big.NewInt(priceAgainstBUSD), big.NewInt(priceBUSDAgainstNative)), big.NewInt(1e8))
+				if tmp.IsInt64() {
+					priceAgainstNative = tmp.Int64()
+				} else {
+					priceAgainstNative = math.MaxInt64
+				}
 			} else {
 				// should not happen
 				kp.logger.Error("DetermineLotSize failed because no native pair found", "base", baseAssetSymbol, "quote", quoteAssetSymbol)
@@ -204,6 +206,24 @@ func (kp *DexKeeper) DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, 
 	}
 	lotSize = dexUtils.CalcLotSize(priceAgainstNative)
 	return lotSize
+}
+
+func (kp *DexKeeper) calcPriceAgainst(symbol, targetSymbol string) int64 {
+	var priceAgainst int64 = 0
+	if ps, ok := kp.recentPrices[dexUtils.Assets2TradingPair(symbol, targetSymbol)]; ok {
+		priceAgainst = dexUtils.CalcPriceWMA(ps)
+	} else if ps, ok = kp.recentPrices[dexUtils.Assets2TradingPair(targetSymbol, symbol)]; ok {
+		wma := dexUtils.CalcPriceWMA(ps)
+		priceAgainst = 1e16 / wma
+	} else {
+		if engine, ok := kp.engines[dexUtils.Assets2TradingPair(symbol, targetSymbol)]; ok {
+			priceAgainst = engine.LastTradePrice
+		} else if engine, ok = kp.engines[dexUtils.Assets2TradingPair(targetSymbol, symbol)]; ok {
+			priceAgainst = 1e16 / engine.LastTradePrice
+		}
+	}
+
+	return priceAgainst
 }
 
 func (kp *DexKeeper) UpdateLotSize(symbol string, lotSize int64) {

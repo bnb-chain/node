@@ -681,6 +681,38 @@ func TestKeeper_DetermineLotSize(t *testing.T) {
 	assert.Equal(int64(1e5), lotsize) // wma price of BNB/BTC-000 is between 1e7 and 1e8
 }
 
+func TestKeeper_DetermineLotSize_SupportBUSD(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+	keeper.SetBUSDSymbol("BUSD-BD1")
+
+	// no recentPrices recorded, use engine.LastTradePrice
+	pair1 := dextypes.NewTradingPairWithLotSize("BNB", "BUSD-BD1", 1e6, 1e5)
+	keeper.AddEngine(pair1)
+	pair2 := dextypes.NewTradingPairWithLotSize("AAA-000", "BUSD-BD1", 1e6, 1e7)
+	keeper.AddEngine(pair2)
+	lotsize := keeper.DetermineLotSize("BNB", "BUSD-BD1", 1e6)
+	assert.Equal(int64(1e5), lotsize)
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "BNB", 1e10)
+	assert.Equal(int64(1e3), lotsize)
+	lotsize = keeper.DetermineLotSize("AAA-000", "BUSD-BD1", 1e6)
+	assert.Equal(int64(1e5), lotsize)
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "AAA-000", 1e10)
+	assert.Equal(int64(1e3), lotsize)
+
+	// store some recentPrices
+	keeper.StoreTradePrices(ctx.WithBlockHeight(1 * pricesStoreEvery))
+	keeper.engines[pair1.GetSymbol()].LastTradePrice = 1e8
+	keeper.engines[pair2.GetSymbol()].LastTradePrice = 1e8
+	keeper.StoreTradePrices(ctx.WithBlockHeight(2 * pricesStoreEvery))
+	lotsize = keeper.DetermineLotSize("AAA-000", "BUSD-BD1", 1e4)
+	assert.Equal(int64(1e6), lotsize) // wma price of AAA-000/BNB is between 1e7 and 1e8
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "AAA-000", 1e12)
+	assert.Equal(int64(1e5), lotsize) // wma price of BUSD-BD1/BNB is between 1e8 and 1e9
+}
+
 func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
 	assert := assert.New(t)
 	ctx, _, keeper := setup()
