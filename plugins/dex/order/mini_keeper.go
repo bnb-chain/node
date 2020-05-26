@@ -84,7 +84,7 @@ func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
 
 func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
-	//TODO confirm no active orders for mini symbol
+	//TODO confirm no round orders for mini symbol
 	if kp.collectOrderInfoForPublish {
 		if _, exists := kp.orderInfosForPub[orderInfo.Id]; !exists {
 			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)

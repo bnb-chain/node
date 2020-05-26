@@ -201,8 +201,6 @@ func (kp *BaseOrderKeeper) getAllOrdersForPair(pair string) map[string]*OrderInf
 	return kp.allOrders[pair]
 }
 
-
-
 func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
 	for symbol, orders := range kp.allOrders {
 		for orderId := range orders {
