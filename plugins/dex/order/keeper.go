@@ -191,7 +191,11 @@ func (kp *DexKeeper) DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, 
 		if !found {
 			if sdk.IsUpgrade(upgrade.BEP70) && len(BUSDSymbol) > 0 {
 				var tmp = big.NewInt(0)
-				priceAgainstBUSD, _ := kp.calcPriceAgainst(baseAssetSymbol, BUSDSymbol)
+				priceAgainstBUSD, ok := kp.calcPriceAgainst(baseAssetSymbol, BUSDSymbol)
+				if !ok {
+					// for newly added pair, there is no trading yet
+					priceAgainstBUSD = price
+				}
 				priceBUSDAgainstNative, _ := kp.calcPriceAgainst(BUSDSymbol, types.NativeTokenSymbol)
 				tmp = tmp.Div(tmp.Mul(big.NewInt(priceAgainstBUSD), big.NewInt(priceBUSDAgainstNative)), big.NewInt(1e8))
 				if tmp.IsInt64() {

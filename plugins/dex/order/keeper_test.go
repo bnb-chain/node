@@ -702,6 +702,10 @@ func TestKeeper_DetermineLotSize_SupportBUSD(t *testing.T) {
 	lotsize = keeper.DetermineLotSize("BUSD-BD1", "AAA-000", 1e10)
 	assert.Equal(int64(1e3), lotsize)
 
+	// no trading yet, use list price
+	lotsize = keeper.DetermineLotSize("BBB-000", "BUSD-BD1", 1e8)
+	assert.Equal(int64(1e3), lotsize)
+
 	// store some recentPrices
 	keeper.StoreTradePrices(ctx.WithBlockHeight(1 * pricesStoreEvery))
 	keeper.engines[pair1.GetSymbol()].LastTradePrice = 1e8
