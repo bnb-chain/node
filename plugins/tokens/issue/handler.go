@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/binance-chain/node/common/upgrade"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
@@ -42,28 +42,14 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 	errLogMsg := "issue token failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
-	var suffix string
-
-	// TxHashKey is set in BaseApp's runMsgs
-	txHash := ctx.Value(baseapp.TxHashKey)
-	if txHashStr, ok := txHash.(string); ok {
-		if len(txHashStr) >= types.TokenSymbolTxHashSuffixLen {
-			suffix = txHashStr[:types.TokenSymbolTxHashSuffixLen]
-		} else {
-			logger.Error(errLogMsg,
-				"reason", fmt.Sprintf("%s on Context had a length of %d, expected >= %d",
-					baseapp.TxHashKey, len(txHashStr), types.TokenSymbolTxHashSuffixLen))
-			return sdk.ErrInternal(fmt.Sprintf("unable to get the %s from Context", baseapp.TxHashKey)).Result()
-		}
-	} else {
-		logger.Error(errLogMsg,
-			"reason", fmt.Sprintf("%s on Context is not a string as expected", baseapp.TxHashKey))
+	suffix, err := getTokenSuffix(ctx)
+	if err != nil {
+		logger.Error(errLogMsg, "reason", err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("unable to get the %s from Context", baseapp.TxHashKey)).Result()
 	}
 
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
-
 	if exists := tokenMapper.Exists(ctx, symbol); exists {
 		logger.Info(errLogMsg, "reason", "already exists")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) already exists", msg.Symbol)).Result()
@@ -74,33 +60,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 		logger.Error(errLogMsg, "reason", "create token failed: "+err.Error())
 		return sdk.ErrInternal(fmt.Sprintf("unable to create token struct: %s", err.Error())).Result()
 	}
-
-	if err := tokenMapper.NewToken(ctx, token); err != nil {
-		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
-		return sdk.ErrInvalidCoins(err.Error()).Result()
-	}
-
-	if _, _, sdkError := bankKeeper.AddCoins(ctx, token.Owner,
-		sdk.Coins{{
-			Denom:  token.Symbol,
-			Amount: token.TotalSupply.ToInt64(),
-		}}); sdkError != nil {
-		logger.Error(errLogMsg, "reason", "update balance failed: "+sdkError.Error())
-		return sdkError.Result()
-	}
-
-	serialized, err := json.Marshal(token)
-	if err != nil {
-		logger.Error(errLogMsg, "reason", "fatal! unable to json serialize token: "+err.Error())
-		panic(err) // fatal, the sky is falling in goland
-	}
-
-	logger.Info("finished issuing token")
-
-	return sdk.Result{
-		Data: serialized,
-		Log:  fmt.Sprintf("Issued %s", token.Symbol),
-	}
+	return issue(ctx, logger, tokenMapper, bankKeeper, token)
 }
 
 //Mint MiniToken is also handled by this function
@@ -134,10 +94,10 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
 		miniToken := token.(*types.MiniToken)
-		if msg.Amount < common.MiniTokenMinTotalSupply {
+		if msg.Amount < common.MiniTokenMinExecutionAmount {
 			logger.Info(errLogMsg, "reason", "mint amount doesn't reach the min supply")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too small, the min amount is %d",
-				common.MiniTokenMinTotalSupply)).Result()
+				common.MiniTokenMinExecutionAmount)).Result()
 		}
 		// use minus to prevent overflow
 		if msg.Amount > miniToken.TokenType.UpperBound()-miniToken.TotalSupply.ToInt64() {
@@ -173,5 +133,52 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 	logger.Info("finished minting token")
 	return sdk.Result{
 		Data: []byte(strconv.FormatInt(newTotalSupply, 10)),
+	}
+}
+
+func issue(ctx sdk.Context, logger tmlog.Logger, tokenMapper store.Mapper, bankKeeper bank.Keeper, token common.IToken) sdk.Result {
+	errLogMsg := "issue token failed"
+	if err := tokenMapper.NewToken(ctx, token); err != nil {
+		logger.Error(errLogMsg, "reason", "add token failed: "+err.Error())
+		return sdk.ErrInvalidCoins(err.Error()).Result()
+	}
+
+	if _, _, sdkError := bankKeeper.AddCoins(ctx, token.GetOwner(),
+		sdk.Coins{{
+			Denom:  token.GetSymbol(),
+			Amount: token.GetTotalSupply().ToInt64(),
+		}}); sdkError != nil {
+		logger.Error(errLogMsg, "reason", "update balance failed: "+sdkError.Error())
+		return sdkError.Result()
+	}
+
+	serialized, err := json.Marshal(token)
+	if err != nil {
+		logger.Error(errLogMsg, "reason", "fatal! unable to json serialize token: "+err.Error())
+		panic(err) // fatal, the sky is falling in goland
+	}
+
+	logger.Info("finished issuing token")
+
+	return sdk.Result{
+		Data: serialized,
+		Log:  fmt.Sprintf("Issued %s", token.GetSymbol()),
+	}}
+
+func getTokenSuffix(ctx sdk.Context) (suffix string, err error) {
+	// TxHashKey is set in BaseApp's runMsgs
+	txHash := ctx.Value(baseapp.TxHashKey)
+	if txHashStr, ok := txHash.(string); ok {
+		if len(txHashStr) >= types.TokenSymbolTxHashSuffixLen {
+			suffix = txHashStr[:types.TokenSymbolTxHashSuffixLen]
+			return suffix, nil
+		} else {
+			err = fmt.Errorf("%s on Context had a length of %d, expected >= %d",
+				baseapp.TxHashKey, len(txHashStr), types.TokenSymbolTxHashSuffixLen)
+			return "", err
+		}
+	} else {
+		err = fmt.Errorf("%s on Context is not a string as expected", baseapp.TxHashKey)
+		return "", err
 	}
 }

@@ -7,7 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 const SetURIRoute = "miniTokensSetURI"
@@ -29,9 +28,6 @@ func NewSetUriMsg(from sdk.AccAddress, symbol string, tokenURI string) SetURIMsg
 }
 
 func (msg SetURIMsg) ValidateBasic() sdk.Error {
-	if !sdk.IsUpgrade(upgrade.BEP8) {
-		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height"))
-	}
 	if msg.From == nil || len(msg.From) == 0 {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}

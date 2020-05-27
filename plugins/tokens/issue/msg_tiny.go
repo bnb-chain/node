@@ -7,7 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
@@ -37,10 +36,6 @@ func NewIssueTinyMsg(from sdk.AccAddress, name, symbol string, supply int64, min
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
-	if !sdk.IsUpgrade(upgrade.BEP8) {
-		return sdk.ErrInternal(fmt.Sprint("issue miniToken is not supported at current height"))
-	}
-
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
@@ -57,8 +52,8 @@ func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("token seturi should not exceed %v characters", types.MaxTokenURILength))
 	}
 
-	if msg.TotalSupply < types.MiniTokenMinTotalSupply || msg.TotalSupply > types.TinyRangeType.UpperBound() {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinTotalSupply, types.TinyRangeType.UpperBound()))
+	if msg.TotalSupply < types.MiniTokenMinExecutionAmount || msg.TotalSupply > types.TinyRangeType.UpperBound() {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinExecutionAmount, types.TinyRangeType.UpperBound()))
 	}
 
 	return nil

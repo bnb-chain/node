@@ -44,7 +44,7 @@ func (s *server) bindRoutes() *server {
 		Queries("address", "{address}", "symbol", "{symbol}").
 		Methods("GET")
 
-	r.HandleFunc(prefix+"/mini-token/markets", s.handleMiniPairsReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/mini/markets", s.handleMiniPairsReq(s.cdc, s.ctx)).
 		Methods("GET")
 
 	// tokens routes
@@ -58,9 +58,9 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	// mini tokens routes
-	r.HandleFunc(prefix+"/mini-token/tokens", s.handleMiniTokensReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/mini/tokens", s.handleMiniTokensReq(s.cdc, s.ctx)).
 		Methods("GET")
-	r.HandleFunc(prefix+"/mini-token/tokens/{symbol}", s.handleMiniTokenReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/mini/tokens/{symbol}", s.handleMiniTokenReq(s.cdc, s.ctx)).
 		Methods("GET")
 
 	// fee params

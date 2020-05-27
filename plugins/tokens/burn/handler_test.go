@@ -62,8 +62,8 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken := types.NewMiniToken("New BNB", "NNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
 	burnMsg := NewMsg(acc.GetAddress(), "NNB-000M", 10001e8+1)
@@ -78,8 +78,8 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 1e8-1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken = types.NewMiniToken("New BNB", "NNB", "NNB-000M", 2, 1e8-1, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	account := accountKeeper.GetAccount(ctx, msg.From).(types.NamedAccount)
 	amount := account.GetCoins().AmountOf("NNB-000M")
@@ -97,8 +97,8 @@ func TestHandleBurnMini(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 0, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken = types.NewMiniToken("New BNB", "NNB", "NNB-000M", 2, 0, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
@@ -144,7 +144,7 @@ func TestHandleBurn(t *testing.T) {
 	token, err = tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 1e8-1, acc.GetAddress(), false)
-	require.Equal(t, *expectedToken, *(token.(*types.Token)))
+	require.Equal(t, expectedToken, token)
 
 	account := accountKeeper.GetAccount(ctx, msg.From).(types.NamedAccount)
 	amount := account.GetCoins().AmountOf("NNB-000")

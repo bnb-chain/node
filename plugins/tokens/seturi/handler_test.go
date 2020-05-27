@@ -63,8 +63,8 @@ func TestHandleSetURI(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken := types.NewMiniToken("New BNB", "NNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
 	setUriMsg := NewSetUriMsg(acc.GetAddress(), "NBB", "http://www.123.com/nnb_new.json")
@@ -79,8 +79,8 @@ func TestHandleSetURI(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.123.com/nnb_new.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken = types.NewMiniToken("New BNB", "NNB", "NNB-000M", 2, 10000e8, acc.GetAddress(), false, "http://www.123.com/nnb_new.json")
+	require.Equal(t, expectedToken, token)
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")

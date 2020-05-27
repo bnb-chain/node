@@ -114,7 +114,7 @@ func (kp *DexKeeper) EnablePublish() {
 func (kp *DexKeeper) getOrderKeeper(symbol string) (DexOrderKeeper, error) {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
-		err := fmt.Errorf("order doesn't exist [%v]", symbol)
+		err := fmt.Errorf("invalid symbol: %s", symbol)
 		kp.logger.Debug(err.Error())
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (kp *DexKeeper) getOrderKeeper(symbol string) (DexOrderKeeper, error) {
 			return kp.OrderKeepers[i], nil
 		}
 	}
-	err := fmt.Errorf("failed to find orderKeeper for symbol pair [%v]", symbol)
+	err := fmt.Errorf("failed to find orderKeeper for symbol pair [%s]", symbol)
 	kp.logger.Error(err.Error())
 	return nil, err
 }

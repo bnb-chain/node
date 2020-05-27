@@ -43,14 +43,13 @@ func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T) 
 	})
 	require.Nil(t, err, "new token error")
 
-	miniToken, _ := types.NewMiniToken("Bitcoin Mini", "BTC-000M", types.MiniRangeType, 100000e8, sdk.AccAddress("testacc"), false, "")
+	miniToken := types.NewMiniToken("Bitcoin Mini","BTC", "BTC-000M", types.MiniRangeType, 100000e8, sdk.AccAddress("testacc"), false, "")
 	err = tokenMapper.NewToken(ctx, miniToken)
 	require.Nil(t, err, "new token error")
 
-	tinyToken, _ := types.NewMiniToken("Bitcoin Mini", "ETH-000M", types.TinyRangeType, 10000e8, sdk.AccAddress("testacc"), true, "abc")
+	tinyToken := types.NewMiniToken("Bitcoin Mini", "ETH", "ETH-000M", types.TinyRangeType, 10000e8, sdk.AccAddress("testacc"), true, "abc")
 	err = tokenMapper.NewToken(ctx, tinyToken)
 	require.Nil(t, err, "new token error")
-
 }
 
 func TestHandleListMiniIdenticalSymbols(t *testing.T) {

@@ -47,9 +47,9 @@ func TestHandleIssueMiniToken(t *testing.T) {
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	msg := NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8+100, false, "http://www.xyz.com/nnb.json")
-	sdkResult := handler(ctx, msg)
+	sdkResult := msg.ValidateBasic().Result()
 	require.Equal(t, false, sdkResult.Code.IsOK())
-	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
+	require.Contains(t, sdkResult.Log, fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinExecutionAmount, types.TinyRangeType.UpperBound()))
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "000")
 	msg = NewIssueTinyMsg(acc.GetAddress(), "New BNB", "NNB", 10000e8, false, "http://www.xyz.com/nnb.json")
@@ -58,17 +58,17 @@ func TestHandleIssueMiniToken(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken := types.NewMiniToken("New BNB", "NNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
 	msgMini := NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 100000e8+100, false, "http://www.xyz.com/nnb.json")
-	sdkResult = handler(ctx, msgMini)
+	sdkResult = msgMini.ValidateBasic().Result()
 	require.Equal(t, false, sdkResult.Code.IsOK())
-	require.Contains(t, sdkResult.Log, "total supply is too large, the max total supply ")
+	require.Contains(t, sdkResult.Log, fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinExecutionAmount, types.MiniRangeType.UpperBound()))
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
 	msgMini = NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 10000e8+100, false, "http://www.xyz.com/nnb.json")
@@ -77,8 +77,8 @@ func TestHandleIssueMiniToken(t *testing.T) {
 
 	token, err = tokenMapper.GetToken(ctx, "NBB-002M")
 	require.NoError(t, err)
-	expectedToken, err = types.NewMiniToken("New BB", "NBB-002M", 2, 10000e8+100, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken = types.NewMiniToken("New BB", "NBB", "NBB-002M", 2, 10000e8+100, acc.GetAddress(), false, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 }
 
 func TestHandleMintMiniToken(t *testing.T) {
@@ -101,8 +101,8 @@ func TestHandleMintMiniToken(t *testing.T) {
 
 	token, err := tokenMapper.GetToken(ctx, "NNB-000M")
 	require.NoError(t, err)
-	expectedToken, err := types.NewMiniToken("New BNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken := types.NewMiniToken("New BNB", "NNB", "NNB-000M", 1, 9000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	_, err = tokenMapper.GetToken(ctx, "NNB-000")
 	require.NotNil(t, err)
@@ -116,8 +116,8 @@ func TestHandleMintMiniToken(t *testing.T) {
 	sdkResult = handler(ctx, validMintMsg)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 	token, err = tokenMapper.GetToken(ctx, "NNB-000M")
-	expectedToken, err = types.NewMiniToken("New BNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
-	require.Equal(t, *expectedToken, *(token.(*types.MiniToken)))
+	expectedToken = types.NewMiniToken("New BNB", "NNB", "NNB-000M", 1, 10000e8, acc.GetAddress(), true, "http://www.xyz.com/nnb.json")
+	require.Equal(t, expectedToken, token)
 
 	_, acc2 := testutils.NewAccount(ctx, accountKeeper, 100e8)
 	invalidMintMsg := NewMintMsg(acc2.GetAddress(), "NNB-000M", 100e8)

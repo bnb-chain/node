@@ -70,7 +70,7 @@ func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 }
 
 func checkMiniSupplyAmount(amount int64, tokenType int8) error {
-	if amount <= types.MiniTokenMinTotalSupply || amount > types.MiniTokenSupplyUpperBound {
+	if amount <= types.MiniTokenMinExecutionAmount || amount > types.MiniTokenSupplyUpperBound {
 		return errors.New("invalid supply amount")
 	}
 	if amount > types.SupplyRangeType(tokenType).UpperBound() {
