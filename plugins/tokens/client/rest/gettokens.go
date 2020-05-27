@@ -33,9 +33,9 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
 	if err != nil {
 		fmt.Println(err)
+		return nil, err
 	}
 	return tokens, nil
-
 }
 
 // GetTokensReqHandler creates an http request handler to get the list of tokens in the token mapper

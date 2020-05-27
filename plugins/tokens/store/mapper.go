@@ -71,18 +71,6 @@ func (m mapper) GetToken(ctx sdk.Context, symbol string) (types.IToken, error) {
 	return nil, fmt.Errorf("token(%v) not found", symbol)
 }
 
-func (m mapper) GetTokenCC(ctx context.CLIContext, symbol string) (types.IToken, error) {
-	key := []byte(strings.ToUpper(symbol))
-	bz, err := ctx.QueryStore(key, common.TokenStoreName)
-	if err != nil {
-		return nil, err
-	}
-	if bz != nil {
-		return m.decodeIToken(bz), nil
-	}
-	return nil, fmt.Errorf("token(%v) not found", symbol)
-}
-
 func (m mapper) GetTokenList(ctx sdk.Context, showZeroSupplyTokens bool, isMini bool) ITokens {
 	var res ITokens
 	store := ctx.KVStore(m.key)

@@ -57,7 +57,7 @@ func TestHandleIssueToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 100000e8, acc.GetAddress(), false)
-	require.Equal(t, *expectedToken, *token.(*types.Token))
+	require.Equal(t, expectedToken, token)
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
@@ -81,7 +81,7 @@ func TestHandleMintToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 110000e8, acc.GetAddress(), true)
-	require.Equal(t, *expectedToken, *token.(*types.Token))
+	require.Equal(t, expectedToken, token)
 
 	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000", types.TokenMaxTotalSupply)
 	sdkResult = handler(ctx, invalidMintMsg)

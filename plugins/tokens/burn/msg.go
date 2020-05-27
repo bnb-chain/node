@@ -41,7 +41,6 @@ func (msg BurnMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAdd
 // ValidateBasic does a simple validation check that
 // doesn't require access to any other information.
 func (msg BurnMsg) ValidateBasic() sdk.Error {
-
 	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
 		return msg.validateMiniTokenBasic()
 	}

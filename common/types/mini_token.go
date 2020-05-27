@@ -18,10 +18,10 @@ const (
 	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolMSuffix         = "M"
 
-	MiniTokenMinTotalSupply   int64 = 100000000      // 1 with 8 decimal digits
-	MiniTokenSupplyUpperBound int64 = 10000000000000 // 100k with 8 decimal digits
-	TinyTokenSupplyUpperBound int64 = 1000000000000
-	MaxTokenURILength               = 2048
+	MiniTokenMinExecutionAmount int64 = 100000000      // 1 with 8 decimal digits
+	MiniTokenSupplyUpperBound   int64 = 10000000000000 // 100k with 8 decimal digits
+	TinyTokenSupplyUpperBound   int64 = 1000000000000
+	MaxTokenURILength                 = 2048
 
 	TinyRangeType SupplyRangeType = 1
 	MiniRangeType SupplyRangeType = 2
@@ -64,26 +64,18 @@ type MiniToken struct {
 
 var _ IToken = &MiniToken{}
 
-func NewMiniToken(name, symbol string, supplyRangeType SupplyRangeType, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken, error) {
-	// double check that the symbol is suffixed
-	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
-		return nil, err
-	}
-	parts, err := splitSuffixedMiniTokenSymbol(symbol)
-	if err != nil {
-		return nil, err
-	}
+func NewMiniToken(name, origSymbol, symbol string, supplyRangeType SupplyRangeType, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken) {
 	return &MiniToken{
-		Token{Name: name,
+		Token: Token{Name: name,
 			Symbol:      symbol,
-			OrigSymbol:  parts[0],
+			OrigSymbol:  origSymbol,
 			TotalSupply: utils.Fixed8(totalSupply),
 			Owner:       owner,
 			Mintable:    mintable,
 		},
-		supplyRangeType,
-		tokenURI,
-	}, nil
+		TokenType: supplyRangeType,
+		TokenURI: tokenURI,
+	}
 }
 
 //check if it's mini token by last letter without validation

@@ -49,13 +49,13 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 	if sdk.IsUpgrade(sdk.BEP8) && isMiniSymbolPair(baseAssetSymbol, quoteAssetSymbol) {
 		var quantityBigEnough bool
 		if msg.Side == Side.BUY {
-			quantityBigEnough = msg.Quantity >= common.MiniTokenMinTotalSupply
+			quantityBigEnough = msg.Quantity >= common.MiniTokenMinExecutionAmount
 		} else if msg.Side == Side.SELL {
-			quantityBigEnough = (msg.Quantity >= common.MiniTokenMinTotalSupply) || freeBalance.AmountOf(symbol) == msg.Quantity
+			quantityBigEnough = (msg.Quantity >= common.MiniTokenMinExecutionAmount) || freeBalance.AmountOf(symbol) == msg.Quantity
 		}
 		if !quantityBigEnough {
 			return fmt.Errorf("quantity is too small, the min quantity is %d or total free balance of the mini token",
-				common.MiniTokenMinTotalSupply)
+				common.MiniTokenMinExecutionAmount)
 		}
 	}
 
@@ -102,8 +102,6 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 func handleNewOrder(
 	ctx sdk.Context, cdc *wire.Codec, dexKeeper *DexKeeper, msg NewOrderMsg,
 ) sdk.Result {
-	// TODO: the below is mostly copied from FreezeToken. It should be rewritten once "locked" becomes a field on account
-	// this check costs least.
 	if _, ok := dexKeeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
 		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()

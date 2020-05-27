@@ -43,10 +43,10 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
 		useAllBalance := coins.AmountOf(symbol) == freezeAmount
 
-		if msg.Amount <= 0 || (!useAllBalance && (msg.Amount < common.MiniTokenMinTotalSupply)) {
+		if msg.Amount <= 0 || (!useAllBalance && (msg.Amount < common.MiniTokenMinExecutionAmount)) {
 			logger.Info("freeze token failed", "reason", "freeze amount doesn't reach the min supply")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total account balance",
-				common.MiniTokenMinTotalSupply)).Result()
+				common.MiniTokenMinExecutionAmount)).Result()
 		}
 	}
 
@@ -79,10 +79,10 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
 		useAllFrozenBalance := frozenAmount == unfreezeAmount
-		if unfreezeAmount <= 0 || (!useAllFrozenBalance && (unfreezeAmount < common.MiniTokenMinTotalSupply)) {
+		if unfreezeAmount <= 0 || (!useAllFrozenBalance && (unfreezeAmount < common.MiniTokenMinExecutionAmount)) {
 			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min supply")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
-				common.MiniTokenMinTotalSupply)).Result()
+				common.MiniTokenMinExecutionAmount)).Result()
 		}
 	}
 
