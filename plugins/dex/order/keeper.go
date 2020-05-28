@@ -1017,10 +1017,6 @@ func (kp *DexKeeper) CanListTradingPair(ctx sdk.Context, baseAsset, quoteAsset s
 		}
 	}
 
-	if types.NativeTokenSymbol != quoteAsset && isMiniSymbolPair(baseAsset, quoteAsset) {
-		return errors.New("quote token is not valid for mini symbol pair: " + quoteAsset)
-	}
-
 	return nil
 }
 

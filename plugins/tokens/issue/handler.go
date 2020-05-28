@@ -28,9 +28,9 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 		case MintMsg:
 			return handleMintToken(ctx, tokenMapper, keeper, msg)
 		case IssueMiniMsg:
-			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.MiniRangeType)
+			return handleIssueMiniToken(ctx, tokenMapper, keeper, msg)
 		case IssueTinyMsg:
-			return msg.handleIssueMiniToken(ctx, tokenMapper, keeper, common.TinyRangeType)
+			return handleIssueTinyToken(ctx, tokenMapper, keeper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -50,7 +50,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 
 	// the symbol is suffixed with the first n bytes of the tx hash
 	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
-	if exists := tokenMapper.Exists(ctx, symbol); exists {
+	if exists := tokenMapper.ExistsBEP2(ctx, symbol); exists {
 		logger.Info(errLogMsg, "reason", "already exists")
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) already exists", msg.Symbol)).Result()
 	}
@@ -85,34 +85,27 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can mint token %s", msg.Symbol)).Result()
 	}
 
-	// use minus to prevent overflow
-	if msg.Amount > common.TokenMaxTotalSupply-token.GetTotalSupply().ToInt64() {
-		logger.Info(errLogMsg, "reason", "exceed the max total supply")
-		return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %ds",
-			common.TokenMaxTotalSupply)).Result()
-	}
-
-	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
+	if common.IsMiniTokenSymbol(symbol) {
 		miniToken := token.(*types.MiniToken)
-		if msg.Amount < common.MiniTokenMinExecutionAmount {
-			logger.Info(errLogMsg, "reason", "mint amount doesn't reach the min supply")
-			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too small, the min amount is %d",
-				common.MiniTokenMinExecutionAmount)).Result()
-		}
 		// use minus to prevent overflow
 		if msg.Amount > miniToken.TokenType.UpperBound()-miniToken.TotalSupply.ToInt64() {
 			logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %d",
 				miniToken.TokenType.UpperBound())).Result()
 		}
-
-		if msg.Amount > common.MiniTokenSupplyUpperBound-miniToken.TotalSupply.ToInt64() {
-			logger.Info(errLogMsg, "reason", "total supply exceeds the max total supply upper bound")
-			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply upper bound is %d",
-				common.MiniTokenSupplyUpperBound)).Result()
+	} else {
+		// use minus to prevent overflow
+		if msg.Amount > common.TokenMaxTotalSupply-token.GetTotalSupply().ToInt64() {
+			logger.Info(errLogMsg, "reason", "exceed the max total supply")
+			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount is too large, the max total supply is %ds",
+				common.TokenMaxTotalSupply)).Result()
 		}
 	}
 
+
+	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
+
+	}
 	newTotalSupply := token.GetTotalSupply().ToInt64() + msg.Amount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {

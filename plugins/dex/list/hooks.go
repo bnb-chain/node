@@ -58,11 +58,11 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("expire time should after now")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, listParams.BaseAssetSymbol) {
+	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
 		return errors.New("base token does not exist")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, listParams.QuoteAssetSymbol) {
+	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
 		return errors.New("quote token does not exist")
 	}
 

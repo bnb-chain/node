@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/binance-chain/node/common/upgrade"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
@@ -47,7 +47,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateIssueMsgTokenSymbol(msg.Symbol); err != nil {
+	if err := types.ValidateIssueSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
@@ -93,16 +93,18 @@ func NewMintMsg(from sdk.AccAddress, symbol string, amount int64) MintMsg {
 }
 
 func (msg MintMsg) ValidateBasic() sdk.Error {
-
-	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
-		return msg.validateMiniTokenBasic()
-	}
-
 	if msg.From == nil {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateMapperTokenSymbol(msg.Symbol); err != nil {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
+		if msg.Amount < types.MiniTokenMinExecutionAmount {
+			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount should be no less than %d", types.MiniTokenMinExecutionAmount))
+		}
+		return nil
+	}
+
+	if err := types.ValidateTokenSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
@@ -113,20 +115,6 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
 	if msg.Amount <= 0 || msg.Amount > types.TokenMaxTotalSupply {
 		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + string(types.TokenMaxTotalSupply))
-	}
-
-	return nil
-}
-
-func (msg MintMsg) validateMiniTokenBasic() sdk.Error {
-
-	if msg.From == nil {
-		return sdk.ErrInvalidAddress("sender address cannot be empty")
-	}
-
-	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
-	if msg.Amount < types.MiniTokenMinExecutionAmount || msg.Amount > types.MiniTokenSupplyUpperBound {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("Mint amount should be between %d and %d", types.MiniTokenMinExecutionAmount, types.MiniTokenSupplyUpperBound))
 	}
 
 	return nil

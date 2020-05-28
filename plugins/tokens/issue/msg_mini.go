@@ -44,7 +44,7 @@ func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateIssueMsgMiniTokenSymbol(msg.Symbol); err != nil {
+	if err := types.ValidateIssueMiniSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
@@ -64,11 +64,8 @@ func (msg IssueMiniMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueMiniMsg.
-func (msg IssueMiniMsg) Route() string { return Route }
-func (msg IssueMiniMsg) Type() string {
-	return IssueMiniMsgType
-}
-
+func (msg IssueMiniMsg) Route() string                { return Route }
+func (msg IssueMiniMsg) Type() string                 { return IssueMiniMsgType }
 func (msg IssueMiniMsg) String() string               { return fmt.Sprintf("IssueMiniMsg{%#v}", msg) }
 func (msg IssueMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 func (msg IssueMiniMsg) GetSignBytes() []byte {

@@ -35,16 +35,15 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	coins := keeper.GetCoins(ctx, msg.From)
-	if coins.AmountOf(symbol) < freezeAmount {
+	balance := coins.AmountOf(symbol)
+	if balance < freezeAmount {
 		logger.Info("freeze token failed", "reason", "no enough free tokens to freeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
-		useAllBalance := coins.AmountOf(symbol) == freezeAmount
-
-		if msg.Amount <= 0 || (!useAllBalance && (msg.Amount < common.MiniTokenMinExecutionAmount)) {
-			logger.Info("freeze token failed", "reason", "freeze amount doesn't reach the min supply")
+		if msg.Amount < common.MiniTokenMinExecutionAmount && balance != freezeAmount {
+			logger.Info("freeze token failed", "reason", "freeze amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total account balance",
 				common.MiniTokenMinExecutionAmount)).Result()
 		}
@@ -78,9 +77,8 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	}
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
-		useAllFrozenBalance := frozenAmount == unfreezeAmount
-		if unfreezeAmount <= 0 || (!useAllFrozenBalance && (unfreezeAmount < common.MiniTokenMinExecutionAmount)) {
-			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min supply")
+		if unfreezeAmount < common.MiniTokenMinExecutionAmount && frozenAmount != unfreezeAmount {
+			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
 				common.MiniTokenMinExecutionAmount)).Result()
 		}

@@ -79,7 +79,7 @@ func (token Token) IsMintable() bool {
 
 func NewToken(name, symbol string, totalSupply int64, owner sdk.AccAddress, mintable bool) (*Token, error) {
 	// double check that the symbol is suffixed
-	if err := ValidateMapperTokenSymbol(symbol); err != nil {
+	if err := ValidateTokenSymbol(symbol); err != nil {
 		return nil, err
 	}
 	parts, err := splitSuffixedTokenSymbol(symbol)
@@ -102,19 +102,7 @@ func (token Token) String() string {
 		token.Name, token.Symbol, token.TotalSupply, token.Owner, token.Mintable)
 }
 
-// Token Validation
-
-func ValidateToken(token IToken) error {
-	if err := ValidateMapperTokenSymbol(token.GetSymbol()); err != nil {
-		return err
-	}
-	if err := ValidateIssueMsgTokenSymbol(token.GetOrigSymbol()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func ValidateIssueMsgTokenSymbol(symbol string) error {
+func ValidateIssueSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("token symbol cannot be empty")
 	}
@@ -135,9 +123,9 @@ func ValidateIssueMsgTokenSymbol(symbol string) error {
 	return nil
 }
 
-func ValidateMapperTokenCoins(coins sdk.Coins) error {
+func ValidateTokenSymbols(coins sdk.Coins) error {
 	for _, coin := range coins {
-		err := ValidateMapperTokenSymbol(coin.Denom)
+		err := ValidateTokenSymbol(coin.Denom)
 		if err != nil {
 			return err
 		}
@@ -145,7 +133,7 @@ func ValidateMapperTokenCoins(coins sdk.Coins) error {
 	return nil
 }
 
-func ValidateMapperTokenSymbol(symbol string) error {
+func ValidateTokenSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("suffixed token symbol cannot be empty")
 	}

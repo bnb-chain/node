@@ -32,7 +32,7 @@ func (msg SetURIMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateMapperMiniTokenSymbol(msg.Symbol); err != nil {
+	if err := types.ValidateMiniTokenSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 

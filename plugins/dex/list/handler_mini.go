@@ -30,7 +30,6 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 	}
 
 	lotSize := dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
-
 	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
 	err = dexKeeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {

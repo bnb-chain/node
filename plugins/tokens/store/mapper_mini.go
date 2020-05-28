@@ -30,7 +30,7 @@ func (m mapper) UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) e
 		return errors.New("token does not exist")
 	}
 
-	decodedToken := m.decodeIToken(bz)
+	decodedToken := m.decodeToken(bz)
 
 	toBeUpdated, ok := decodedToken.(*types.MiniToken)
 	if !ok {
@@ -39,7 +39,7 @@ func (m mapper) UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) e
 
 	if toBeUpdated.TokenURI != uri {
 		toBeUpdated.TokenURI = uri
-		store.Set(key, m.encodeIToken(toBeUpdated))
+		store.Set(key, m.encodeToken(toBeUpdated))
 	}
 	return nil
 }

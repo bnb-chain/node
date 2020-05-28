@@ -45,7 +45,7 @@ func (msg BurnMsg) ValidateBasic() sdk.Error {
 		return msg.validateMiniTokenBasic()
 	}
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
-	err := types.ValidateMapperTokenSymbol(msg.Symbol)
+	err := types.ValidateTokenSymbol(msg.Symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}

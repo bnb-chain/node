@@ -40,15 +40,15 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	coins := keeper.GetCoins(ctx, token.GetOwner())
-	if coins.AmountOf(symbol) < burnAmount ||
+	balance := coins.AmountOf(symbol)
+	if balance < burnAmount ||
 		token.GetTotalSupply().ToInt64() < burnAmount {
 		logger.Info("burn token failed", "reason", "no enough tokens to burn")
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
 	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
-		useAllBalance := coins.AmountOf(symbol) == burnAmount
-		if burnAmount <= 0 || (!useAllBalance && (burnAmount < common.MiniTokenMinExecutionAmount)) {
+		if burnAmount < common.MiniTokenMinExecutionAmount && balance != burnAmount {
 			logger.Info("burn token failed", "reason", "burn amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("burn amount is too small, the min amount is %d or total free balance",
 				common.MiniTokenMinExecutionAmount)).Result()

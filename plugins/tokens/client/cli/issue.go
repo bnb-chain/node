@@ -59,7 +59,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateIssueMsgTokenSymbol(symbol)
+	err = types.ValidateIssueSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		err = types.ValidateMapperTokenSymbol(symbol)
+		err = types.ValidateTokenSymbol(symbol)
 		if err != nil {
 			return err
 		}

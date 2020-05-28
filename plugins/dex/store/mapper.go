@@ -46,12 +46,12 @@ func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
 	quoteAsset := pair.QuoteAssetSymbol
 	if !cmn.IsValidMiniTokenSymbol(baseAsset) {
-		if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
+		if err := cmn.ValidateTokenSymbol(baseAsset); err != nil {
 			return err
 		}
 	}
 	if !cmn.IsValidMiniTokenSymbol(quoteAsset) {
-		if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
+		if err := cmn.ValidateTokenSymbol(quoteAsset); err != nil {
 			return err
 		}
 	}

@@ -57,8 +57,11 @@ func TestMiniBUSDQuote(t *testing.T) {
 	require.NotNil(t, err, "msg should be error")
 	require.Contains(t, err.Error(), "quote token is not valid")
 
+	setChainVersion()
+	defer resetChainVersion()
 	order.BUSDSymbol = "BUSD-000"
 	msg = NewMiniMsg(sdk.AccAddress{}, "BTC-000M", "BUSD-000", 1000)
 	err = msg.ValidateBasic()
 	require.Nil(t, err, "msg should not be error")
+
 }
