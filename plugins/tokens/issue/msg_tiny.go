@@ -18,18 +18,22 @@ const (
 var _ sdk.Msg = IssueTinyMsg{}
 
 type IssueTinyMsg struct {
-	IssueMiniMsg
+	From        sdk.AccAddress `json:"from"`
+	Name        string         `json:"name"`
+	Symbol      string         `json:"symbol"`
+	TotalSupply int64          `json:"total_supply"`
+	Mintable    bool           `json:"mintable"`
+	TokenURI    string         `json:"token_uri"`
 }
 
 func NewIssueTinyMsg(from sdk.AccAddress, name, symbol string, supply int64, mintable bool, tokenURI string) IssueTinyMsg {
-	return IssueTinyMsg{IssueMiniMsg{
+	return IssueTinyMsg{
 		From:        from,
 		Name:        name,
 		Symbol:      symbol,
 		TotalSupply: supply,
 		Mintable:    mintable,
 		TokenURI:    tokenURI,
-	},
 	}
 }
 
@@ -40,7 +44,7 @@ func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateIssueMsgMiniTokenSymbol(msg.Symbol); err != nil {
+	if err := types.ValidateIssueMiniSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
@@ -60,11 +64,8 @@ func (msg IssueTinyMsg) ValidateBasic() sdk.Error {
 }
 
 // Implements IssueTinyMsg.
-func (msg IssueTinyMsg) Route() string { return Route }
-func (msg IssueTinyMsg) Type() string {
-	return IssueTinyMsgType
-}
-
+func (msg IssueTinyMsg) Route() string                { return Route }
+func (msg IssueTinyMsg) Type() string                 { return IssueTinyMsgType }
 func (msg IssueTinyMsg) String() string               { return fmt.Sprintf("IssueTinyMsg{%#v}", msg) }
 func (msg IssueTinyMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 func (msg IssueTinyMsg) GetSignBytes() []byte {

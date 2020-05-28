@@ -28,7 +28,7 @@ func (c Commander) setTokenURI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateMapperMiniTokenSymbol(symbol)
+	err = types.ValidateMiniTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}

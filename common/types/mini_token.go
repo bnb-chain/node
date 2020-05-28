@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
@@ -57,30 +58,75 @@ var SupplyRange = struct {
 }{TinyRangeType, MiniRangeType}
 
 type MiniToken struct {
-	Token
-	TokenType SupplyRangeType `json:"token_type"`
-	TokenURI  string          `json:"token_uri"` //TODO set max length
+	Name        string          `json:"name"`
+	Symbol      string          `json:"symbol"`
+	OrigSymbol  string          `json:"original_symbol"`
+	TotalSupply utils.Fixed8    `json:"total_supply"`
+	Owner       sdk.AccAddress  `json:"owner"`
+	Mintable    bool            `json:"mintable"`
+	TokenType   SupplyRangeType `json:"token_type"`
+	TokenURI    string          `json:"token_uri"` //TODO set max length
 }
 
 var _ IToken = &MiniToken{}
 
-func NewMiniToken(name, origSymbol, symbol string, supplyRangeType SupplyRangeType, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) (*MiniToken) {
+func NewMiniToken(name, origSymbol, symbol string, supplyRangeType SupplyRangeType, totalSupply int64, owner sdk.AccAddress, mintable bool, tokenURI string) *MiniToken {
 	return &MiniToken{
-		Token: Token{Name: name,
-			Symbol:      symbol,
-			OrigSymbol:  origSymbol,
-			TotalSupply: utils.Fixed8(totalSupply),
-			Owner:       owner,
-			Mintable:    mintable,
-		},
-		TokenType: supplyRangeType,
-		TokenURI: tokenURI,
+		Name:        name,
+		Symbol:      symbol,
+		OrigSymbol:  origSymbol,
+		TotalSupply: utils.Fixed8(totalSupply),
+		Owner:       owner,
+		Mintable:    mintable,
+		TokenType:   supplyRangeType,
+		TokenURI:    tokenURI,
 	}
+}
+
+func (token MiniToken) GetName() string {
+	return token.Name
+}
+
+func (token MiniToken) GetSymbol() string {
+	return token.Symbol
+}
+
+func (token MiniToken) GetOrigSymbol() string {
+	return token.OrigSymbol
+}
+
+func (token MiniToken) GetTotalSupply() utils.Fixed8 {
+	return token.TotalSupply
+}
+
+func (token *MiniToken) SetTotalSupply(totalSupply utils.Fixed8) {
+	token.TotalSupply = totalSupply
+}
+
+func (token MiniToken) GetOwner() sdk.AccAddress {
+	return token.Owner
+}
+
+func (token MiniToken) IsMintable() bool {
+	return token.Mintable
+}
+
+func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool {
+	return bytes.Equal(token.Owner, addr)
+}
+
+func (token MiniToken) String() string {
+	return fmt.Sprintf("{Name: %v, Symbol: %v, TokenType: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
+		token.Name, token.Symbol, token.TokenType, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
 }
 
 //check if it's mini token by last letter without validation
 func IsMiniTokenSymbol(symbol string) bool {
-	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if symbol == NativeTokenSymbol ||
+		symbol == NativeTokenSymbolDotBSuffixed {
+		return false
+	}
+	parts, err := splitSuffixedTokenSymbol(symbol)
 	if err != nil {
 		return false
 	}
@@ -91,33 +137,20 @@ func IsMiniTokenSymbol(symbol string) bool {
 
 //Validate and check if it's mini token
 func IsValidMiniTokenSymbol(symbol string) bool {
-	if err := ValidateMapperMiniTokenSymbol(symbol); err != nil {
+	if err := ValidateMiniTokenSymbol(symbol); err != nil {
 		return false
 	}
 	return true
 }
 
-//func (token *MiniToken) IsOwner(addr sdk.AccAddress) bool { return bytes.Equal(token.Owner, addr) }
-func (token MiniToken) String() string {
-	return fmt.Sprintf("{Name: %v, Symbol: %v, TokenType: %v, TotalSupply: %v, Owner: %X, Mintable: %v, TokenURI: %v}",
-		token.Name, token.Symbol, token.TokenType, token.TotalSupply, token.Owner, token.Mintable, token.TokenURI)
-}
-
-// Token Validation
-
-func ValidateMiniToken(token IToken) error {
-	if err := ValidateMapperMiniTokenSymbol(token.GetSymbol()); err != nil {
-		return err
-	}
-	if err := ValidateIssueMsgMiniTokenSymbol(token.GetOrigSymbol()); err != nil {
-		return err
-	}
-	return nil
-}
-
-func ValidateIssueMsgMiniTokenSymbol(symbol string) error {
+func ValidateIssueMiniSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("token symbol cannot be empty")
+	}
+
+	if symbol == NativeTokenSymbol ||
+		symbol == NativeTokenSymbolDotBSuffixed {
+		return errors.New("symbol cannot be the same as native token")
 	}
 
 	// check len without suffix
@@ -132,18 +165,22 @@ func ValidateIssueMsgMiniTokenSymbol(symbol string) error {
 	return nil
 }
 
-func ValidateMapperMiniTokenSymbol(symbol string) error {
+func ValidateMiniTokenSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("suffixed token symbol cannot be empty")
 	}
 
-	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if symbol == NativeTokenSymbol ||
+		symbol == NativeTokenSymbolDotBSuffixed {
+		return errors.New("symbol cannot be the same as native token")
+	}
+
+	parts, err := splitSuffixedTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}
 
 	symbolPart := parts[0]
-
 	// check len without suffix
 	if len(symbolPart) < MiniTokenSymbolMinLen {
 		return fmt.Errorf("mini-token symbol part is too short, got %d chars", len(symbolPart))
@@ -157,7 +194,6 @@ func ValidateMapperMiniTokenSymbol(symbol string) error {
 	}
 
 	suffixPart := parts[1]
-
 	if len(suffixPart) != MiniTokenSymbolSuffixLen {
 		return fmt.Errorf("mini-token symbol suffix must be %d chars in length, got %d", MiniTokenSymbolSuffixLen, len(suffixPart))
 	}
@@ -176,18 +212,4 @@ func ValidateMapperMiniTokenSymbol(symbol string) error {
 	}
 
 	return nil
-}
-
-func splitSuffixedMiniTokenSymbol(suffixed string) ([]string, error) {
-	split := strings.SplitN(suffixed, "-", 2)
-
-	if len(split) != 2 {
-		return nil, errors.New("suffixed mini-token symbol must contain a hyphen ('-')")
-	}
-
-	if strings.Contains(split[1], "-") {
-		return nil, errors.New("suffixed mini-token symbol must contain just one hyphen ('-')")
-	}
-
-	return split, nil
 }

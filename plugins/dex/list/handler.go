@@ -105,12 +105,12 @@ func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Map
 			return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
 		}
 
-		if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+		if !tokenMapper.ExistsBEP2(ctx, msg.QuoteAssetSymbol) {
 			return sdk.ErrInvalidCoins("quote token does not exist").Result()
 		}
 	}
 
-	if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+	if !tokenMapper.ExistsBEP2(ctx, msg.QuoteAssetSymbol) {
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 

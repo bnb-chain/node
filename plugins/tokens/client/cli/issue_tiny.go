@@ -39,7 +39,7 @@ func (c Commander) issueTinyToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateIssueMsgMiniTokenSymbol(symbol)
+	err = types.ValidateIssueMiniSymbol(symbol)
 	if err != nil {
 		return err
 	}
