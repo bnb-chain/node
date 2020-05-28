@@ -104,6 +104,7 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 		return nil
 	}
 
+	// if BEP8 not upgraded, we rely on `ValidateTokenSymbol` rejecting the MiniToken.
 	if err := types.ValidateTokenSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}

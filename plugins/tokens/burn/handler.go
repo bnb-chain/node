@@ -10,7 +10,6 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
@@ -47,7 +46,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
+	if common.IsMiniTokenSymbol(symbol) {
 		if burnAmount < common.MiniTokenMinExecutionAmount && balance != burnAmount {
 			logger.Info("burn token failed", "reason", "burn amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("burn amount is too small, the min amount is %d or total free balance",

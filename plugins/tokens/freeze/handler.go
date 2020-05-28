@@ -11,7 +11,6 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
@@ -41,7 +40,7 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
 	}
 
-	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
+	if common.IsMiniTokenSymbol(symbol) {
 		if msg.Amount < common.MiniTokenMinExecutionAmount && balance != freezeAmount {
 			logger.Info("freeze token failed", "reason", "freeze amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total account balance",
@@ -76,7 +75,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
 	}
 
-	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
+	if common.IsMiniTokenSymbol(symbol) {
 		if unfreezeAmount < common.MiniTokenMinExecutionAmount && frozenAmount != unfreezeAmount {
 			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min amount")
 			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",

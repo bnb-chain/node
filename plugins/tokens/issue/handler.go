@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -102,10 +101,6 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 		}
 	}
 
-
-	if sdk.IsUpgrade(upgrade.BEP8) && common.IsMiniTokenSymbol(symbol) {
-
-	}
 	newTotalSupply := token.GetTotalSupply().ToInt64() + msg.Amount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
