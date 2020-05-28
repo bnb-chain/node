@@ -126,7 +126,7 @@ func IsMiniTokenSymbol(symbol string) bool {
 		symbol == NativeTokenSymbolDotBSuffixed {
 		return false
 	}
-	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	parts, err := splitSuffixedTokenSymbol(symbol)
 	if err != nil {
 		return false
 	}
@@ -148,7 +148,6 @@ func ValidateIssueMiniSymbol(symbol string) error {
 		return errors.New("token symbol cannot be empty")
 	}
 
-	// since the native token was given a suffix exception above, do not allow it to have a suffix
 	if symbol == NativeTokenSymbol ||
 		symbol == NativeTokenSymbolDotBSuffixed {
 		return errors.New("symbol cannot be the same as native token")
@@ -171,7 +170,12 @@ func ValidateMiniTokenSymbol(symbol string) error {
 		return errors.New("suffixed token symbol cannot be empty")
 	}
 
-	parts, err := splitSuffixedMiniTokenSymbol(symbol)
+	if symbol == NativeTokenSymbol ||
+		symbol == NativeTokenSymbolDotBSuffixed {
+		return errors.New("symbol cannot be the same as native token")
+	}
+
+	parts, err := splitSuffixedTokenSymbol(symbol)
 	if err != nil {
 		return err
 	}
@@ -208,18 +212,4 @@ func ValidateMiniTokenSymbol(symbol string) error {
 	}
 
 	return nil
-}
-
-func splitSuffixedMiniTokenSymbol(suffixed string) ([]string, error) {
-	split := strings.SplitN(suffixed, "-", 2)
-
-	if len(split) != 2 {
-		return nil, errors.New("suffixed mini-token symbol must contain a hyphen ('-')")
-	}
-
-	if strings.Contains(split[1], "-") {
-		return nil, errors.New("suffixed mini-token symbol must contain just one hyphen ('-')")
-	}
-
-	return split, nil
 }

@@ -42,8 +42,12 @@ func (msg BurnMsg) GetSigners() []sdk.AccAddress           { return []sdk.AccAdd
 // doesn't require access to any other information.
 func (msg BurnMsg) ValidateBasic() sdk.Error {
 	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
-		return msg.validateMiniTokenBasic()
+		if msg.Amount <= 0 {
+			return sdk.ErrInsufficientFunds("amount should be more than 0")
+		}
+		return nil
 	}
+	// if BEP8 not upgraded, we rely on `ValidateTokenSymbol` rejecting the MiniToken.
 	// expect all msgs that reference a token after issue to use the suffixed form (e.g. "BNB-ABC")
 	err := types.ValidateTokenSymbol(msg.Symbol)
 	if err != nil {
@@ -62,11 +66,4 @@ func (msg BurnMsg) GetSignBytes() []byte {
 		panic(err)
 	}
 	return b
-}
-
-func (msg BurnMsg) validateMiniTokenBasic() sdk.Error {
-	if msg.Amount <= 0 {
-		return sdk.ErrInsufficientFunds("amount should be more than 0")
-	}
-	return nil
 }
