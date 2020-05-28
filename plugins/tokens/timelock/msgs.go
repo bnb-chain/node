@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/binance-chain/node/common/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
