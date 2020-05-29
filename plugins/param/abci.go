@@ -3,11 +3,11 @@ package param
 import (
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/param/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func createAbciQueryHandler(paramHub *ParamHub) app.AbciQueryHandler {

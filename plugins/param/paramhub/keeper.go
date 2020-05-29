@@ -123,7 +123,7 @@ func (keeper *Keeper) EndBreatheBlock(ctx sdk.Context) {
 			scParamChanges := keeper.getLastSCParamChanges(sideChainCtx)
 			for _, change := range scParamChanges {
 				if err := change.Check(); err != nil {
-					keeper.logger.Error("scParamChanges check failed will,skip", "scParamChanges", change, "err", err)
+					keeper.logger.Error("scParamChanges check failed, will skip", "scParamChanges", change, "err", err)
 					continue
 				}
 				for _, c := range change.SCParams {

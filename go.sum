@@ -35,6 +35,8 @@ github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200525065501-f82e6861678b h1
 github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200525065501-f82e6861678b/go.mod h1:1DPC1SoewiaJppFT3Ie5Mo5ruYkQc3niLarUk9ueMj8=
 github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200527064629-7d6990f069ab h1:Bjmj2iA7eO3T36rbfh57YANzMw+nwtnp65uX8hSEh14=
 github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200527064629-7d6990f069ab/go.mod h1:1DPC1SoewiaJppFT3Ie5Mo5ruYkQc3niLarUk9ueMj8=
+github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200529031735-802c570b4153 h1:26sUdM6YDMSXGhemc8NSqghfrUnbnwXGt4/DI4QF7hg=
+github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200529031735-802c570b4153/go.mod h1:1DPC1SoewiaJppFT3Ie5Mo5ruYkQc3niLarUk9ueMj8=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20200513123950-52d1eadcff75 h1:nioXz2YQ7easa403Ez4V9nY2CRVOaOV32Q8H118yNLk=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20200513123950-52d1eadcff75/go.mod h1:1DPC1SoewiaJppFT3Ie5Mo5ruYkQc3niLarUk9ueMj8=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=

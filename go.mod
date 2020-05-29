@@ -28,7 +28,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200527064629-7d6990f069ab
+	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20200529031735-802c570b4153
 	github.com/tendermint/go-amino => github.com/binance-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.3
 	github.com/tendermint/tendermint => github.com/binance-chain/bnc-tendermint v0.32.3-binance.1.0.20200430083314-39f228dd6425

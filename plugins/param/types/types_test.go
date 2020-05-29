@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/cosmos/cosmos-sdk/x/oracle/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/common"
 
