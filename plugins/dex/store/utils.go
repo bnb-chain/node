@@ -12,7 +12,7 @@ func ValidatePairSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("symbol pair must not be empty")
 	}
-	
+
 	tokenSymbols := strings.SplitN(strings.ToUpper(symbol), "_", 2)
 	if len(tokenSymbols) != 2 {
 		return errors.New("invalid symbol: trading pair must contain an underscore ('_')")

@@ -151,7 +151,8 @@ func issue(ctx sdk.Context, logger tmlog.Logger, tokenMapper store.Mapper, bankK
 	return sdk.Result{
 		Data: serialized,
 		Log:  fmt.Sprintf("Issued %s", token.GetSymbol()),
-	}}
+	}
+}
 
 func getTokenSuffix(ctx sdk.Context) (suffix string, err error) {
 	// TxHashKey is set in BaseApp's runMsgs

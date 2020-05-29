@@ -43,7 +43,7 @@ func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T) 
 	})
 	require.Nil(t, err, "new token error")
 
-	miniToken := types.NewMiniToken("Bitcoin Mini","BTC", "BTC-000M", types.MiniRangeType, 100000e8, sdk.AccAddress("testacc"), false, "")
+	miniToken := types.NewMiniToken("Bitcoin Mini", "BTC", "BTC-000M", types.MiniRangeType, 100000e8, sdk.AccAddress("testacc"), false, "")
 	err = tokenMapper.NewToken(ctx, miniToken)
 	require.Nil(t, err, "new token error")
 
