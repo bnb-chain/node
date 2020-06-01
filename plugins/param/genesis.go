@@ -54,10 +54,10 @@ const (
 	IOCExpireFeeNative = 5e3
 
 	//MiniToken fee
-	TinyIssueFee   = 10e8
-	MiniIssueFee   = 20e8
-	MiniSetUriFee  = 1e8
-	MiniListingFee = 100e8
+	TinyIssueFee   = 2e8
+	MiniIssueFee   = 4e8
+	MiniSetUriFee  = 37500
+	MiniListingFee = 10e8
 )
 
 var DefaultGenesisState = param.GenesisState{
