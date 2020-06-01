@@ -3,14 +3,12 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 
-	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
@@ -45,39 +43,32 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper
 	}
 }
 
-func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, transferInClaim types.TransferInClaim, refundReason types.RefundReason) (sdk.Tags, sdk.Error) {
-	tags := sdk.NewTags(sdk.TagAction, types.ActionTransferInFailed)
-
+func (k Keeper) RefundTransferIn(ctx sdk.Context, decimals int8, transferInClaim types.TransferInClaim, transferInSeq int64, refundReason types.RefundReason) (sdk.Tags, sdk.Error) {
 	for idx, refundAddr := range transferInClaim.RefundAddresses {
-		var calibratedAmount sdk.Int
-		if tokenInfo.ContractDecimals >= cmmtypes.TokenDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
-			calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Mul(decimals)
-		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
-			if !sdk.NewInt(transferInClaim.Amounts[idx]).Mod(decimals).IsZero() {
-				return nil, types.ErrInvalidAmount("can't calibrate timeout amount")
-			}
-			calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Div(decimals)
+		bscAmount, sdkErr := types.ConvertBCAmountToBSCAmount(decimals, transferInClaim.Amounts[idx])
+		if sdkErr != nil {
+			return nil, sdkErr
 		}
-		transferInFailurePackage, err := types.SerializeTransferInFailurePackage(calibratedAmount,
-			transferInClaim.ContractAddress[:], refundAddr[:], refundReason)
+
+		refundPackage := types.TransferInRefundPackage{
+			RefundAmount:       bscAmount,
+			ContractAddr:       transferInClaim.ContractAddress[:],
+			RefundAddr:         refundAddr[:],
+			TransferInSequence: transferInSeq,
+			RefundReason:       refundReason,
+		}
+		serializedPackage, err := types.SerializeTransferInRefundPackage(&refundPackage)
 
 		if err != nil {
 			return nil, types.ErrSerializePackageFailed(err.Error())
 		}
 
-		seq, sdkErr := k.IbcKeeper.CreateIBCPackage(ctx, k.DestChainId, types.RefundChannel, transferInFailurePackage)
+		_, sdkErr = k.IbcKeeper.CreateIBCPackage(ctx, k.DestChainId, types.RefundChannel, serializedPackage)
 		if sdkErr != nil {
 			return nil, sdkErr
 		}
-		tags = tags.AppendTags(sdk.NewTags(
-			types.TransferInRefundSequence, []byte(strconv.Itoa(int(seq))),
-			types.TransferOutRefundReason, []byte(refundReason.String()),
-		))
 	}
-
-	return tags, nil
+	return nil, nil
 }
 
 func (k Keeper) CreateBindRequest(ctx sdk.Context, req types.BindRequest) sdk.Error {
@@ -121,4 +112,29 @@ func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindReques
 	}
 
 	return bindRequest, nil
+}
+
+func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress, decimals int8) sdk.Error {
+	key := types.GetContractDecimalsKey(contractAddr[:])
+
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
+	if bz != nil {
+		return types.ErrContractDecimalsExists(fmt.Sprintf("contract decimal exists, contract_addr=%s", contractAddr.String()))
+	}
+
+	kvStore.Set(key, []byte{byte(decimals)})
+	return nil
+}
+
+func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress) int8 {
+	key := types.GetContractDecimalsKey(contractAddr[:])
+
+	kvStore := ctx.KVStore(k.storeKey)
+	bz := kvStore.Get(key)
+	if bz == nil {
+		return -1
+	}
+
+	return int8(bz[0])
 }

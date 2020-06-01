@@ -14,6 +14,7 @@ type (
 
 	TransferOutMsg = types.TransferOutMsg
 	BindMsg        = types.BindMsg
+	UnbindMsg      = types.UnbindMsg
 
 	SkipSequenceClaim      = types.SkipSequenceClaim
 	UpdateBindClaim        = types.UpdateBindClaim

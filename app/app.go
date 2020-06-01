@@ -311,6 +311,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		gov.MsgSideChainDeposit{}.Type(),
 		gov.MsgSideChainVote{}.Type(),
 		bridge.BindMsg{}.Type(),
+		bridge.UnbindMsg{}.Type(),
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)

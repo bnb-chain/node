@@ -43,6 +43,7 @@ var (
 		"timeUnlock":               {},
 		"timeRelock":               {},
 		"crossBind":                {},
+		"crossUnbind":              {},
 		"crossTransferOut":         {},
 		"crossBindRelayFee":        {},
 		"crossTransferOutRelayFee": {},

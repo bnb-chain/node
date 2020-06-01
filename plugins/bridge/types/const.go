@@ -7,6 +7,8 @@ import (
 )
 
 const (
+	BSCBNBDecimals int8 = 18
+
 	BindChannel        = "bind"
 	TransferOutChannel = "transferOut"
 	RefundChannel      = "refund"
