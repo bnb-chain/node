@@ -65,7 +65,7 @@ func TestHandleIssueMiniToken(t *testing.T) {
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
 
 	ctx = ctx.WithValue(baseapp.TxHashKey, "002")
-	msgMini := NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 100000e8+100, false, "http://www.xyz.com/nnb.json")
+	msgMini := NewIssueMiniMsg(acc.GetAddress(), "New BB", "NBB", 1000000e8+100, false, "http://www.xyz.com/nnb.json")
 	sdkResult = msgMini.ValidateBasic().Result()
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, fmt.Sprintf("total supply should be between %d and %d", types.MiniTokenMinExecutionAmount, types.MiniRangeType.UpperBound()))
