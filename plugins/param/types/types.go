@@ -46,6 +46,7 @@ var (
 		"crossUnbind":              {},
 		"crossTransferOut":         {},
 		"crossBindRelayFee":        {},
+		"crossUnbindRelayFee":      {},
 		"crossTransferOutRelayFee": {},
 		"oracleClaim":              {},
 

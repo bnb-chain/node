@@ -71,6 +71,7 @@ const (
 	CrossTransferOutFee      = 1e6
 	CrossTransferOutRelayFee = 1e6
 	CrossBindRelayFee        = 1e6
+	CrossUnbindRelayFee      = 1e6
 )
 
 var DefaultGenesisState = param.GenesisState{

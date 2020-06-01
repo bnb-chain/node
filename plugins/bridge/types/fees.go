@@ -8,6 +8,7 @@ import (
 
 const (
 	BindRelayFeeName   = "crossBindRelayFee"
+	UnbindRelayFeeName = "crossUnbindRelayFee"
 	TransferOutFeeName = "crossTransferOutRelayFee"
 )
 

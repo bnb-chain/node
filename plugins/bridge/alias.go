@@ -24,5 +24,6 @@ type (
 
 const (
 	BindRelayFeeName   = types.BindRelayFeeName
+	UnbindRelayFeeName   = types.UnbindRelayFeeName
 	TransferOutFeeName = types.TransferOutFeeName
 )

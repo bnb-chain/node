@@ -50,6 +50,9 @@ func SerializeBindPackage(bindPackage *BindPackage) ([]byte, error) {
 
 	copy(serializedBytes[1:33], bindPackage.Bep2TokenSymbol)
 
+	length := len(bindPackage.RelayReward.BigInt().Bytes())
+	copy(serializedBytes[158-length:158], bindPackage.RelayReward.BigInt().Bytes())
+
 	// return if bind type is unbind
 	if bindPackage.BindType == BindTypeUnbind {
 		return serializedBytes, nil
@@ -65,7 +68,7 @@ func SerializeBindPackage(bindPackage *BindPackage) ([]byte, error) {
 		return nil, fmt.Errorf("overflow, maximum bits is 255")
 	}
 
-	length := len(bindPackage.TotalSupply.BigInt().Bytes())
+	length = len(bindPackage.TotalSupply.BigInt().Bytes())
 	copy(serializedBytes[85-length:85], bindPackage.TotalSupply.BigInt().Bytes())
 
 	length = len(bindPackage.PeggyAmount.BigInt().Bytes())
@@ -74,9 +77,6 @@ func SerializeBindPackage(bindPackage *BindPackage) ([]byte, error) {
 	copy(serializedBytes[117:118], []byte{byte(bindPackage.Decimals)})
 
 	binary.BigEndian.PutUint64(serializedBytes[118:126], uint64(bindPackage.ExpireTime))
-
-	length = len(bindPackage.RelayReward.BigInt().Bytes())
-	copy(serializedBytes[158-length:158], bindPackage.RelayReward.BigInt().Bytes())
 
 	return serializedBytes, nil
 }

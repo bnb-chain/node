@@ -48,9 +48,25 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can unbind token %s", msg.Symbol)).Result()
 	}
 
+	relayFee, sdkErr := types.GetFee(types.UnbindRelayFeeName)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+	bscRelayFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
+	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, relayFee.Tokens)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+		return sdkErr.Result()
+	}
+
 	unbindPackage := types.BindPackage{
 		BindType:        types.BindTypeUnbind,
 		Bep2TokenSymbol: msg.Symbol,
+		RelayReward:     bscRelayFee,
 	}
 	serializedPackage, err := types.SerializeBindPackage(&unbindPackage)
 	if err != nil {
@@ -58,7 +74,7 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 		return types.ErrSerializePackageFailed(err.Error()).Result()
 	}
 
-	_, sdkErr := keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.BindChannel, serializedPackage)
+	_, sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.BindChannel, serializedPackage)
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("create unbind ibc package error", "err", sdkErr.Error())
 		return sdkErr.Result()
@@ -71,7 +87,9 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	}
 
 	log.With("module", "bridge").Info("unbind token success", "symbol", msg.Symbol, "contract_addr", token.ContractAddress)
-
+	if ctx.IsDeliverTx() {
+		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
+	}
 	return sdk.Result{}
 }
 

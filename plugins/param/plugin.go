@@ -80,6 +80,7 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: bridge.UnbindMsg{}.Type(), Fee: CrossUnbindFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: bridge.TransferOutMsg{}.Type(), Fee: CrossTransferOutFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: bridge.BindRelayFeeName, Fee: CrossBindRelayFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: bridge.UnbindRelayFeeName, Fee: CrossUnbindRelayFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: bridge.TransferOutFeeName, Fee: CrossTransferOutRelayFee, FeeFor: sdk.FeeForProposer},
 			&param.FixedFeeParams{MsgType: oracle.ClaimMsg{}.Type(), Fee: sdk.ZeroFee, FeeFor: sdk.FeeFree},
 		}
@@ -136,6 +137,7 @@ func init() {
 		bridge.UnbindMsg{}.Type():                  fees.FixedFeeCalculatorGen,
 		bridge.TransferOutMsg{}.Type():             fees.FixedFeeCalculatorGen,
 		bridge.BindRelayFeeName:                    fees.FixedFeeCalculatorGen,
+		bridge.UnbindRelayFeeName:                  fees.FixedFeeCalculatorGen,
 		bridge.TransferOutFeeName:                  fees.FixedFeeCalculatorGen,
 		oracle.ClaimMsg{}.Type():                   fees.FixedFeeCalculatorGen,
 	}
