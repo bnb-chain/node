@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"math"
 	"path/filepath"
 	"text/template"
 
@@ -407,7 +408,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       1,
 		ListingRuleUpgradeHeight:   1,
 		FixZeroBalanceHeight:       1,
-		LaunchBscUpgradeHeight:     1,
+		LaunchBscUpgradeHeight:     math.MaxInt64,
 	}
 }
 

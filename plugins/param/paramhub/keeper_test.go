@@ -45,12 +45,19 @@ import (
 var (
 	memDB                             = dbm.NewMemDB()
 	logger                            = log.NewTMLogger(os.Stdout)
-	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500000e8), sdk.NewCoin("BTC-000", 200e8)})
 	testScParams = `[ { "type": "params/StakeParams", "value": { "Params": { "unbonding_time": "604800000000000", "max_validators": 11, "bond_denom": "BNB", "min_self_delegation": "5000000000000", "min_delegation_change": "100000000" } } }, { "type": "params/SlashParams", "value": { "Params": { "max_evidence_age": "259200000000000", "signed_blocks_window": "0", "min_signed_per_window": "0", "double_sign_unbond_duration": "9223372036854775807", "downtime_unbond_duration": "172800000000000", "too_low_del_unbond_duration": "86400000000000", "slash_fraction_double_sign": "0", "slash_fraction_downtime": "0", "double_sign_slash_amount": "1000000000000", "downtime_slash_amount": "5000000000", "submitter_reward": "100000000000", "downtime_slash_fee": "1000000000" } } }, { "type": "params/OracleParams", "value": { "Params": { "ConsensusNeeded": "70000000" } } } ]`
-	testClient   = NewTestClient(testApp)
+
+	testClient *TestClient
+	testApp    *app.BinanceChain
 )
+
+func init() {
+	app.ServerContext.UpgradeConfig.LaunchBscUpgradeHeight = 1
+	testApp = app.NewBinanceChain(logger, memDB, os.Stdout)
+	testClient = NewTestClient(testApp)
+}
 
 func TestCSCParamUpdatesSuccess(t *testing.T) {
 	valAddr, ctx, accounts := setupTest()
