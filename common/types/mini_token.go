@@ -20,7 +20,7 @@ const (
 	MiniTokenSymbolMSuffix         = "M"
 
 	MiniTokenMinExecutionAmount int64 = 100000000      // 1 with 8 decimal digits
-	MiniTokenSupplyUpperBound   int64 = 10000000000000 // 100k with 8 decimal digits
+	MiniTokenSupplyUpperBound   int64 = 100000000000000 // 100k with 8 decimal digits
 	TinyTokenSupplyUpperBound   int64 = 1000000000000
 	MaxTokenURILength                 = 2048
 
