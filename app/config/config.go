@@ -398,9 +398,9 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
-		BEP8Height:                 1,
-		BEP67Height:                1,
-		BEP70Height:                1,
+		BEP8Height:                 math.MaxInt64,
+		BEP67Height:                math.MaxInt64,
+		BEP70Height:                math.MaxInt64,
 	}
 }
 
