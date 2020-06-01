@@ -19,9 +19,9 @@ const (
 	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolMSuffix         = "M"
 
-	MiniTokenMinExecutionAmount int64 = 100000000      // 1 with 8 decimal digits
-	MiniTokenSupplyUpperBound   int64 = 100000000000000 // 100k with 8 decimal digits
-	TinyTokenSupplyUpperBound   int64 = 1000000000000
+	MiniTokenMinExecutionAmount int64 = 100000000       // 1 with 8 decimal digits
+	MiniTokenSupplyUpperBound   int64 = 100000000000000 // 1m with 8 decimal digits
+	TinyTokenSupplyUpperBound   int64 = 1000000000000   // 10k with 8 decimal digits
 	MaxTokenURILength                 = 2048
 
 	TinyRangeType SupplyRangeType = 1
