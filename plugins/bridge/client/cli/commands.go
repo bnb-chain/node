@@ -20,6 +20,7 @@ func AddCommands(cmd *cobra.Command, cdc *codec.Codec) {
 			TransferOutCmd(cdc),
 			UpdateBindCmd(cdc),
 			SkipSequenceCmd(cdc),
+			UnbindCmd(cdc),
 		)...,
 	)
 

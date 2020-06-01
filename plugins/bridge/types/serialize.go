@@ -50,6 +50,11 @@ func SerializeBindPackage(bindPackage *BindPackage) ([]byte, error) {
 
 	copy(serializedBytes[1:33], bindPackage.Bep2TokenSymbol)
 
+	// return if bind type is unbind
+	if bindPackage.BindType == BindTypeUnbind {
+		return serializedBytes, nil
+	}
+
 	if len(bindPackage.ContractAddr) != 20 {
 		return nil, fmt.Errorf("contract address length must be 20")
 	}

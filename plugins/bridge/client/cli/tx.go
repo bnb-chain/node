@@ -272,6 +272,39 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
+func UnbindCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "unbind",
+		Short: "unbind smart chain token to bep2 token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			from, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			symbol := viper.GetString(flagSymbol)
+
+			// build message
+			msg := types.NewUnbindMsg(from, symbol)
+
+			sdkErr := msg.ValidateBasic()
+			if sdkErr != nil {
+				return fmt.Errorf("%v", sdkErr.Data())
+			}
+			return client.SendOrPrintTx(cliCtx, txBldr, msg)
+		},
+	}
+
+	cmd.Flags().String(flagSymbol, "", "symbol")
+	return cmd
+}
+
+
 func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "transfer-out",
