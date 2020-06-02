@@ -45,7 +45,6 @@ import (
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
-	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
@@ -82,7 +81,7 @@ type BinanceChain struct {
 	CoinKeeper     bank.Keeper
 	DexKeeper      *dex.DexKeeper
 	AccountKeeper  auth.AccountKeeper
-	TokenMapper    tkstore.Mapper
+	TokenMapper    tokens.Mapper
 	ValAddrCache   *ValAddrCache
 	stakeKeeper    stake.Keeper
 	govKeeper      gov.Keeper
@@ -132,7 +131,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
+	app.TokenMapper = tokens.NewMapper(cdc, common.TokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	tradingPairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)

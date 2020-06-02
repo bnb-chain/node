@@ -32,7 +32,6 @@ func listAllTokens(ctx context.CLIContext, cdc *wire.Codec, offset int, limit in
 	tokens := make([]types.IToken, 0)
 	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &tokens)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	return tokens, nil
