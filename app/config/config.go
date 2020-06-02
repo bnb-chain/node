@@ -67,6 +67,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
+# Block height of BEP8 upgrade
+BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
@@ -360,6 +362,7 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
+
 	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
@@ -368,7 +371,7 @@ type UpgradeConfig struct {
 	// Hubble Upgrade
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
-	BEP3Height  int64 `mapstructure:"BEP3Height"`
+	BEP3Height int64 `mapstructure:"BEP3Height"`
 
 	// TODO: add upgrade name
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
@@ -376,6 +379,8 @@ type UpgradeConfig struct {
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 
+	// TODO: add upgrade name
+	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 }
@@ -393,8 +398,9 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LotSizeUpgradeHeight:       math.MaxInt64,
 		ListingRuleUpgradeHeight:   math.MaxInt64,
 		FixZeroBalanceHeight:       math.MaxInt64,
-		BEP67Height:                1,
-		BEP70Height:                1,
+		BEP8Height:                 math.MaxInt64,
+		BEP67Height:                math.MaxInt64,
+		BEP70Height:                math.MaxInt64,
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -21,5 +22,6 @@ func Routes(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.
 	routes[freeze.FreezeRoute] = freeze.NewHandler(tokenMapper, accKeeper, keeper)
 	routes[timelock.MsgRoute] = timelock.NewHandler(timeLockKeeper)
 	routes[swap.AtomicSwapRoute] = swap.NewHandler(swapKeeper)
+	routes[seturi.SetURIRoute] = seturi.NewHandler(tokenMapper)
 	return routes
 }

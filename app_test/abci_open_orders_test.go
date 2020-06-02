@@ -18,8 +18,21 @@ import (
 )
 
 func Test_Success(t *testing.T) {
-	assert, require, pair := setup(t)
+	baseSymbol := "XYZ-000"
+	runTestSuccess(t, baseSymbol, true)
+}
 
+func Test_Success_Before_Upgrade(t *testing.T) {
+	baseSymbol := "XYZ-000"
+	runTestSuccess(t, baseSymbol, false)
+}
+
+func Test_Success_Mini(t *testing.T) {
+	baseSymbol := "XYZ-000M"
+	runTestSuccess(t, baseSymbol, true)
+}
+func runTestSuccess(t *testing.T, symbol string, upgrade bool) {
+	assert, require, pair := setup(t, symbol, true)
 	msg := orderPkg.NewNewOrderMsg(buyer, "b-1", orderPkg.Side.BUY, pair, 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, "", 0}, false)
 
@@ -38,7 +51,7 @@ func Test_Success(t *testing.T) {
 
 	ctx = ctx.WithBlockHeader(abci.Header{Height: 101, Time: time.Unix(1, 0)})
 	ctx = ctx.WithBlockHeight(101)
-	keeper.MatchAndAllocateAll(ctx, nil)
+	keeper.MatchAndAllocateSymbols(ctx, nil, false)
 
 	openOrders = issueMustSuccessQuery(pair, buyer, assert)
 	require.Len(openOrders, 1)
@@ -59,15 +72,52 @@ func Test_Success(t *testing.T) {
 }
 
 func Test_InvalidPair(t *testing.T) {
-	assert, _, _ := setup(t)
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000"
+	runInvalidPair(t, baseSymbol)
+}
 
+func Test_InvalidPair_Before_Upgrade(t *testing.T) {
+	baseSymbol := "XYZ-000"
+	runInvalidPair(t, baseSymbol)
+}
+
+func Test_InvalidPair_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000M"
+	runInvalidPair(t, baseSymbol)
+}
+
+func runInvalidPair(t *testing.T, symbol string) {
+	assert, _, _ := setup(t, symbol, true)
 	res := issueQuery("%afuiewf%@^&2blf", buyer.String())
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
 	assert.Equal("pair is not valid", res.Log)
 }
 
 func Test_NonListedPair(t *testing.T) {
-	assert, _, _ := setup(t)
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000"
+	runNonListedPair(t, baseSymbol)
+}
+
+func Test_NonListedPair_Before_Upgrade(t *testing.T) {
+	baseSymbol := "XYZ-000"
+	runNonListedPair(t, baseSymbol)
+}
+
+func Test_NonListedPair_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000M"
+	runNonListedPair(t, baseSymbol)
+}
+
+func runNonListedPair(t *testing.T, symbol string) {
+	assert, _, _ := setup(t, symbol, true)
 
 	res := issueQuery("NNB-000_BNB", buyer.String())
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
@@ -75,7 +125,26 @@ func Test_NonListedPair(t *testing.T) {
 }
 
 func Test_InvalidAddr(t *testing.T) {
-	assert, _, pair := setup(t)
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000"
+	runInvalidAddr(t, baseSymbol)
+}
+
+func Test_InvalidAddr_Before_Upgrade(t *testing.T) {
+	baseSymbol := "XYZ-000"
+	runInvalidAddr(t, baseSymbol)
+}
+
+func Test_InvalidAddr_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000M"
+	runInvalidAddr(t, baseSymbol)
+}
+
+func runInvalidAddr(t *testing.T, symbol string) {
+	assert, _, pair := setup(t, symbol, true)
 
 	res := issueQuery(pair, "%afuiewf%@^&2blf")
 	assert.Equal(uint32(sdk.CodeInternal), res.Code)
@@ -83,7 +152,26 @@ func Test_InvalidAddr(t *testing.T) {
 }
 
 func Test_NonExistAddr(t *testing.T) {
-	assert, _, pair := setup(t)
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000"
+	runNonExistAddr(t, baseSymbol)
+}
+
+func Test_NonExistAddr_Before_Upgrade(t *testing.T) {
+	baseSymbol := "XYZ-000"
+	runNonExistAddr(t, baseSymbol)
+}
+
+func Test_NonExistAddr_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	baseSymbol := "XYZ-000M"
+	runNonExistAddr(t, baseSymbol)
+}
+
+func runNonExistAddr(t *testing.T, symbol string) {
+	assert, _, pair := setup(t, symbol, true)
 
 	msg := orderPkg.NewNewOrderMsg(seller, "s-1", orderPkg.Side.SELL, pair, 102000, 3000000)
 	keeper.AddOrder(orderPkg.OrderInfo{msg, 100, 0, 100, 0, 0, "", 0}, false)
@@ -101,7 +189,7 @@ func issueMustSuccessQuery(pair string, address sdk.AccAddress, assert *assert.A
 }
 
 func issueQuery(pair string, address string) abci.ResponseQuery {
-	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.AbciQueryPrefix, pair, address)
+	path := fmt.Sprintf("/%s/openorders/%s/%s", dex.DexAbciQueryPrefix, pair, address)
 	query := abci.RequestQuery{
 		Path: path,
 		Data: []byte(""),

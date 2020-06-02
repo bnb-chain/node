@@ -44,12 +44,16 @@ func NewTradingPairMapper(cdc *wire.Codec, key sdk.StoreKey) TradingPairMapper {
 
 func (m mapper) AddTradingPair(ctx sdk.Context, pair types.TradingPair) error {
 	baseAsset := pair.BaseAssetSymbol
-	if err := cmn.ValidateMapperTokenSymbol(baseAsset); err != nil {
-		return err
-	}
 	quoteAsset := pair.QuoteAssetSymbol
-	if err := cmn.ValidateMapperTokenSymbol(quoteAsset); err != nil {
-		return err
+	if !cmn.IsValidMiniTokenSymbol(baseAsset) {
+		if err := cmn.ValidateTokenSymbol(baseAsset); err != nil {
+			return err
+		}
+	}
+	if !cmn.IsValidMiniTokenSymbol(quoteAsset) {
+		if err := cmn.ValidateTokenSymbol(quoteAsset); err != nil {
+			return err
+		}
 	}
 
 	tradeSymbol := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))

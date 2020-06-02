@@ -18,11 +18,16 @@ const (
 	MaxOrderBookLevel             = 100
 )
 
+type OrderSymbolId struct {
+	Symbol string
+	Id     string
+}
+
 var (
 	Logger            tmlog.Logger
 	Cfg               *config.PublicationConfig
 	ToPublishCh       chan BlockInfoToPublish
-	ToRemoveOrderIdCh chan string // order ids to remove from keeper.OrderInfoForPublish
+	ToRemoveOrderIdCh chan OrderSymbolId // order symbol and ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
 )
 
@@ -58,14 +63,7 @@ func Publish(
 					marketData.orderInfos,
 					marketData.feeHolder,
 					marketData.timestamp)
-				for _, o := range closedToPublish {
-					if ToRemoveOrderIdCh != nil {
-						Logger.Debug(
-							"going to delete order from order changes map",
-							"orderId", o.OrderId, "status", o.Status)
-						ToRemoveOrderIdCh <- o.OrderId
-					}
-				}
+				addClosedOrder(closedToPublish, ToRemoveOrderIdCh)
 			}
 
 			// ToRemoveOrderIdCh would be only used in production code
@@ -75,6 +73,7 @@ func Publish(
 			}
 
 			ordersToPublish := append(opensToPublish, closedToPublish...)
+
 			if cfg.PublishOrderUpdates {
 				duration := Timer(Logger, "publish all orders", func() {
 					publishExecutionResult(
@@ -106,7 +105,7 @@ func Publish(
 			}
 
 			if cfg.PublishOrderBook {
-				var changedPrices orderPkg.ChangedPriceLevelsMap
+				var changedPrices = make(orderPkg.ChangedPriceLevelsMap)
 				duration := Timer(Logger, "prepare order books to publish", func() {
 					changedPrices = filterChangedOrderBooksByOrders(ordersToPublish, marketData.latestPricesLevels)
 				})
@@ -168,6 +167,17 @@ func Publish(
 
 		if metrics != nil {
 			metrics.PublishTotalTimeMs.Set(float64(publishTotalTime))
+		}
+	}
+}
+
+func addClosedOrder(closedToPublish []*Order, toRemoveOrderIdCh chan OrderSymbolId) {
+	if toRemoveOrderIdCh != nil {
+		for _, o := range closedToPublish {
+			Logger.Debug(
+				"going to delete order from order changes map",
+				"orderId", o.OrderId, "status", o.Status)
+			toRemoveOrderIdCh <- OrderSymbolId{o.Symbol, o.OrderId}
 		}
 	}
 }

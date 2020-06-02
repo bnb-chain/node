@@ -49,7 +49,7 @@ type FeeManager struct {
 	FeeConfig FeeConfig
 }
 
-func NewFeeManager(cdc *wire.Codec, storeKey sdk.StoreKey, logger tmlog.Logger) *FeeManager {
+func NewFeeManager(cdc *wire.Codec, logger tmlog.Logger) *FeeManager {
 	return &FeeManager{
 		cdc:       cdc,
 		logger:    logger,

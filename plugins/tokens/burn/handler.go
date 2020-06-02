@@ -1,6 +1,7 @@
 package burn
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/binance-chain/node/common/log"
+	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
 
@@ -16,7 +18,6 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 		if msg, ok := msg.(BurnMsg); ok {
 			return handleBurnToken(ctx, tokenMapper, keeper, msg)
 		}
-
 		errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
 		return sdk.ErrUnknownRequest(errMsg).Result()
 	}
@@ -33,18 +34,27 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	if !token.IsOwner(msg.From) {
-		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.Owner)
+		logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.GetOwner())
 		return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
 	}
 
-	coins := keeper.GetCoins(ctx, token.Owner)
-	if coins.AmountOf(symbol) < burnAmount ||
-		token.TotalSupply.ToInt64() < burnAmount {
+	coins := keeper.GetCoins(ctx, token.GetOwner())
+	balance := coins.AmountOf(symbol)
+	if balance < burnAmount ||
+		token.GetTotalSupply().ToInt64() < burnAmount {
 		logger.Info("burn token failed", "reason", "no enough tokens to burn")
 		return sdk.ErrInsufficientCoins("do not have enough token to burn").Result()
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, token.Owner, sdk.Coins{{
+	if common.IsMiniTokenSymbol(symbol) {
+		if burnAmount < common.MiniTokenMinExecutionAmount && balance != burnAmount {
+			logger.Info("burn token failed", "reason", "burn amount doesn't reach the min amount")
+			return sdk.ErrInvalidCoins(fmt.Sprintf("burn amount is too small, the min amount is %d or total free balance",
+				common.MiniTokenMinExecutionAmount)).Result()
+		}
+	}
+
+	_, _, sdkError := keeper.SubtractCoins(ctx, token.GetOwner(), sdk.Coins{{
 		Denom:  symbol,
 		Amount: burnAmount,
 	}})
@@ -53,7 +63,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 		return sdkError.Result()
 	}
 
-	newTotalSupply := token.TotalSupply.ToInt64() - burnAmount
+	newTotalSupply := token.GetTotalSupply().ToInt64() - burnAmount
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error("burn token failed", "reason", "update total supply failed: "+err.Error())
