@@ -29,10 +29,7 @@ type MiniSymbolSelector struct {
 	roundSelectedSymbols []string          //mini token pairs to match in this round
 }
 
-var _ SymbolSelector = &MiniSymbolSelector{
-	make(map[string]uint32),
-	make([]string, 0),
-}
+var _ SymbolSelector = &MiniSymbolSelector{}
 
 func (mss *MiniSymbolSelector) addSymbolHash(symbol string) {
 	mss.symbolsHash[symbol] = crc32.ChecksumIEEE([]byte(symbol))

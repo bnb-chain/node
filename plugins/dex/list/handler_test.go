@@ -27,7 +27,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
-	tokenStore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
 func MakeCodec() *codec.Codec {
@@ -42,7 +41,7 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 
-func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *order.DexKeeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
+func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) {
 	accKey := sdk.NewKVStoreKey("acc")
 	pairKey := sdk.NewKVStoreKey("pair")
 	tokenKey := sdk.NewKVStoreKey("token")
@@ -67,7 +66,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *ord
 	pairMapper := store.NewTradingPairMapper(cdc, pairKey)
 	dexKeeper = order.NewDexKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
 
-	tokenMapper = tokenStore.NewMapper(cdc, tokenKey)
+	tokenMapper = tokens.NewMapper(cdc, tokenKey)
 
 	paramsKeeper := params.NewKeeper(cdc, paramKey, paramTKey)
 	bankKeeper := bank.NewBaseKeeper(accKeeper)

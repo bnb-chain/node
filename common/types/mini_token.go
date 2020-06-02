@@ -19,9 +19,9 @@ const (
 	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolMSuffix         = "M"
 
-	MiniTokenMinExecutionAmount int64 = 100000000       // 1 with 8 decimal digits
-	MiniTokenSupplyUpperBound   int64 = 100000000000000 // 1m with 8 decimal digits
-	TinyTokenSupplyUpperBound   int64 = 1000000000000   // 10k with 8 decimal digits
+	MiniTokenMinExecutionAmount int64 = 1e8       // 1 with 8 decimal digits
+	MiniTokenSupplyUpperBound   int64 = 1000000e8 // 1m with 8 decimal digits
+	TinyTokenSupplyUpperBound   int64 = 10000e8  // 10k with 8 decimal digits
 	MaxTokenURILength                 = 2048
 
 	TinyRangeType SupplyRangeType = 1
@@ -137,10 +137,7 @@ func IsMiniTokenSymbol(symbol string) bool {
 
 //Validate and check if it's mini token
 func IsValidMiniTokenSymbol(symbol string) bool {
-	if err := ValidateMiniTokenSymbol(symbol); err != nil {
-		return false
-	}
-	return true
+	return ValidateMiniTokenSymbol(symbol) == nil
 }
 
 func ValidateIssueMiniSymbol(symbol string) error {

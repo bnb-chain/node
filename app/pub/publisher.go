@@ -172,8 +172,8 @@ func Publish(
 }
 
 func addClosedOrder(closedToPublish []*Order, toRemoveOrderIdCh chan OrderSymbolId) {
-	for _, o := range closedToPublish {
-		if toRemoveOrderIdCh != nil {
+	if toRemoveOrderIdCh != nil {
+		for _, o := range closedToPublish {
 			Logger.Debug(
 				"going to delete order from order changes map",
 				"orderId", o.OrderId, "status", o.Status)

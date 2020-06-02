@@ -12,7 +12,7 @@ import (
 
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
-	tokenStore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens"
 )
 
 func setChainVersion() {
@@ -24,7 +24,7 @@ func resetChainVersion() {
 	upgrade.Mgr.Config.HeightMap = nil
 }
 
-func setupForMini(ctx sdk.Context, tokenMapper tokenStore.Mapper, t *testing.T) {
+func setupForMini(ctx sdk.Context, tokenMapper tokens.Mapper, t *testing.T) {
 	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",

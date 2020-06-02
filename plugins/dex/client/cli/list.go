@@ -107,7 +107,7 @@ func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := list.NewMiniMsg(from, baseAsset, quoteAsset, initPrice)
+			msg := list.NewListMiniMsg(from, baseAsset, quoteAsset, initPrice)
 			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err

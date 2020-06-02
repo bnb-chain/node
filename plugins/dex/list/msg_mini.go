@@ -22,7 +22,7 @@ type ListMiniMsg struct {
 	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMiniMsg {
+func NewListMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMiniMsg {
 	return ListMiniMsg{
 		From:             from,
 		BaseAssetSymbol:  baseAssetSymbol,

@@ -786,7 +786,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
-			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish, orderChanges, orderInfoForPublish)
+			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(tradesToPublish, orderChanges, orderInfoForPublish)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,

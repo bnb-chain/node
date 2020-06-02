@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	abci "github.com/tendermint/tendermint/abci/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -21,11 +23,10 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-func GetTradeAndOrdersRelatedAccounts(kp *orderPkg.DexKeeper, tradesToPublish []*Trade, orderChanges orderPkg.OrderChanges, orderInfosForPublish orderPkg.OrderInfoForPublish) []string {
-	res := make([]string, 0, len(tradesToPublish)*2+len(kp.GetAllOrderChanges()))
+func GetTradeAndOrdersRelatedAccounts(tradesToPublish []*Trade, orderChanges orderPkg.OrderChanges, orderInfosForPublish orderPkg.OrderInfoForPublish) []string {
+	res := make([]string, 0, len(tradesToPublish)*2+len(orderChanges))
 
 	for _, t := range tradesToPublish {
 
@@ -531,7 +532,7 @@ func collectOrdersToPublish(
 	opensToPublish, closedToPublish = collectOrders(orderChanges, orderInfos, timestamp, chargedCancels, chargedExpires)
 
 	// update C and E fields in serialized fee string
-	updateCancelExpireOrderNum(closedToPublish, orderInfos, feeToPublish, chargedCancels, chargedExpires, feeHolder)
+	updateCancelExpireOrderNumInFees(closedToPublish, orderInfos, feeToPublish, chargedCancels, chargedExpires, feeHolder)
 
 	// update fee and collect orders from trades
 	opensToPublish, closedToPublish = convertTradesToOrders(trades, orderInfos, timestamp, feeHolder, feeToPublish, opensToPublish, closedToPublish)
@@ -566,7 +567,7 @@ func convertTradesToOrders(trades []*Trade, orderInfos orderPkg.OrderInfoForPubl
 	return opensToPublish, closedToPublish
 }
 
-func updateCancelExpireOrderNum(closedToPublish []*Order, orderInfos orderPkg.OrderInfoForPublish, feeToPublish map[string]string, chargedCancels map[string]int, chargedExpires map[string]int, feeHolder orderPkg.FeeHolder) {
+func updateCancelExpireOrderNumInFees(closedToPublish []*Order, orderInfos orderPkg.OrderInfoForPublish, feeToPublish map[string]string, chargedCancels map[string]int, chargedExpires map[string]int, feeHolder orderPkg.FeeHolder) {
 	for _, order := range closedToPublish {
 		if orderInfo, ok := orderInfos[order.OrderId]; ok {
 			senderBytesStr := string(orderInfo.Sender)
