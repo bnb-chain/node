@@ -13,6 +13,13 @@ import (
 )
 
 func (me *MatchEng) Match(height int64) bool {
+	success := me.runMatch(height)
+	if sdk.IsUpgrade(upgrade.BEP19) {
+		me.LastMatchHeight = height
+	}
+	return success
+}
+func (me *MatchEng) runMatch(height int64) bool {
 	if !sdk.IsUpgrade(upgrade.BEP19) {
 		return me.MatchBeforeGalileo(height)
 	}
@@ -32,7 +39,8 @@ func (me *MatchEng) Match(height int64) bool {
 		me.logger.Error("dropRedundantQty failed", "error", err)
 		return false
 	}
-	takerSide, err := me.determineTakerSide(height, index)
+	//If order height > the last Match height, then it's maker.
+	takerSide, err := me.determineTakerSide(index)
 	if err != nil {
 		me.logger.Error("determineTakerSide failed", "error", err)
 		return false
@@ -41,7 +49,6 @@ func (me *MatchEng) Match(height int64) bool {
 	surplus := me.overLappedLevel[index].BuySellSurplus
 	me.fillOrdersNew(takerSide, takerSideOrders, index, tradePrice, surplus)
 	me.LastTradePrice = tradePrice
-	me.LastMatchHeight = height
 	return true
 }
 
@@ -115,23 +122,23 @@ func dropRedundantQty(orders []OrderPart, toDropQty, lotSize int64) error {
 	return nil
 }
 
-func findTakerStartIdx(height int64, orders []OrderPart) (idx int, makerTotal int64) {
+func findTakerStartIdx(lastMatchHeight int64, orders []OrderPart) (idx int, makerTotal int64) {
 	i, k := 0, len(orders)
 	for ; i < k; i++ {
-		if orders[i].Time >= height {
-			return i, makerTotal
-		} else {
+		if orders[i].Time <= lastMatchHeight {
 			makerTotal += orders[i].nxtTrade
+		} else {
+			return i, makerTotal
 		}
 	}
 	return i, makerTotal
 }
 
-func (me *MatchEng) determineTakerSide(height int64, tradePriceIdx int) (int8, error) {
+func (me *MatchEng) determineTakerSide(tradePriceIdx int) (int8, error) {
 	makerSide := UNKNOWN
 	for i := 0; i <= tradePriceIdx; i++ {
 		l := &me.overLappedLevel[i]
-		l.BuyTakerStartIdx, l.BuyMakerTotal = findTakerStartIdx(height, l.BuyOrders)
+		l.BuyTakerStartIdx, l.BuyMakerTotal = findTakerStartIdx(me.LastMatchHeight, l.BuyOrders)
 		if l.HasBuyMaker() {
 			makerSide = BUYSIDE
 		}
@@ -139,7 +146,7 @@ func (me *MatchEng) determineTakerSide(height int64, tradePriceIdx int) (int8, e
 
 	for i := len(me.overLappedLevel) - 1; i >= tradePriceIdx; i-- {
 		l := &me.overLappedLevel[i]
-		l.SellTakerStartIdx, l.SellMakerTotal = findTakerStartIdx(height, l.SellOrders)
+		l.SellTakerStartIdx, l.SellMakerTotal = findTakerStartIdx(me.LastMatchHeight, l.SellOrders)
 		if l.HasSellMaker() {
 			if makerSide == BUYSIDE {
 				return UNKNOWN, errors.New("both buy side and sell side have maker orders.")

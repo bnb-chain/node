@@ -20,7 +20,7 @@ var (
 	zc, _ = sdk.AccAddressFromBech32(ZcAddr)
 )
 
-func initKeeper() *Keeper {
+func initKeeper() *DexKeeper {
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
 	return keeper

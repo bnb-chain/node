@@ -52,12 +52,12 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func MakeKeeper(cdc *wire.Codec) *Keeper {
-	accountMapper := auth.NewAccountMapper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
+func MakeKeeper(cdc *wire.Codec) *DexKeeper {
+	accKeeper := auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
-	keeper := NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+	keeper := NewDexKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dextypes.DefaultCodespace), 2, cdc, true)
+
 	return keeper
 }
 
@@ -107,6 +107,8 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 99000, 15000000)
 	ord = OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
 	keeper.AddOrder(ord, false)
+	symbolsToMatch := keeper.SelectSymbolsToMatch(ctx.BlockHeader().Height, false)
+	logger.Info("symbols to match", "symbols", symbolsToMatch)
 	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0)
 	c := channelHash(accAdd, 4)
 	i := 0
@@ -182,7 +184,7 @@ func MakeAddress() (sdk.AccAddress, secp256k1.PrivKeySecp256k1) {
 	return addr, privKey
 }
 
-func effectedStoredKVPairs(keeper *Keeper, ctx sdk.Context, keys []string) map[string][]byte {
+func effectedStoredKVPairs(keeper *DexKeeper, ctx sdk.Context, keys []string) map[string][]byte {
 	res := make(map[string][]byte, len(keys))
 	store := ctx.KVStore(keeper.storeKey)
 	for _, key := range keys {
@@ -217,8 +219,8 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	assert.Equal(1, len(keeper.allOrders))
-	assert.Equal(7, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(7, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
 	assert.Equal(1, len(keeper.engines))
 
 	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
@@ -231,8 +233,8 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
-	assert.Equal(7, len(keeper2.allOrders["XYZ-000_BNB"]))
-	o123459 := keeper2.allOrders["XYZ-000_BNB"]["123459"]
+	assert.Equal(7, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
+	o123459 := keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123459"]
 	assert.Equal(int64(98000), o123459.Price)
 	assert.Equal(int64(1000000), o123459.Quantity)
 	assert.Equal(int64(0), o123459.CumQty)
@@ -271,25 +273,25 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	keeper.AddOrder(info123457, false)
 	msg := NewNewOrderMsg(accAdd, "123458", Side.SELL, "XYZ-000_BNB", 100000, 2000000)
 	keeper.AddOrder(OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}, false)
-	assert.Equal(1, len(keeper.allOrders))
-	assert.Equal(3, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(3, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
 	assert.Equal(1, len(keeper.engines))
 
-	keeper.MatchAll(42, 0)
+	keeper.MatchSymbols(42, 0, false)
 	_, err := keeper.SnapShotOrderBook(ctx, 43)
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
-	assert.Equal(2, len(keeper2.allOrders["XYZ-000_BNB"]))
-	assert.Equal(int64(102000), keeper2.allOrders["XYZ-000_BNB"]["123456"].Price)
-	assert.Equal(int64(2000000), keeper2.allOrders["XYZ-000_BNB"]["123456"].CumQty)
-	assert.Equal(int64(10000), keeper2.allOrders["XYZ-000_BNB"]["123457"].Price)
-	assert.Equal(int64(0), keeper2.allOrders["XYZ-000_BNB"]["123457"].CumQty)
+	assert.Equal(2, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
+	assert.Equal(int64(102000), keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123456"].Price)
+	assert.Equal(int64(2000000), keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123456"].CumQty)
+	assert.Equal(int64(10000), keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123457"].Price)
+	assert.Equal(int64(0), keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123457"].CumQty)
 	info123456_Changed := info123456
 	info123456_Changed.CumQty = 2000000
-	assert.Equal(info123456_Changed, *keeper2.OrderInfosForPub["123456"])
-	assert.Equal(info123457, *keeper2.OrderInfosForPub["123457"])
+	assert.Equal(info123456_Changed, *keeper2.GetOrderInfosForPub(PairType.BEP2)["123456"])
+	assert.Equal(info123457, *keeper2.GetOrderInfosForPub(PairType.BEP2)["123457"])
 	assert.Equal(1, len(keeper2.engines))
 	assert.Equal(int64(102000), keeper2.engines["XYZ-000_BNB"].LastTradePrice)
 	assert.Equal(int64(43), h)
@@ -325,7 +327,7 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(int64(43), h)
-	assert.Equal(0, len(keeper2.allOrders["XYZ-000_BNB"]))
+	assert.Equal(0, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
 	buys, sells = keeper2.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	assert.Equal(0, len(buys))
 	assert.Equal(0, len(sells))
@@ -538,7 +540,7 @@ func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore, accountKey *sdk.KVStor
 	return auth.NewAccountCache(accountStoreCache)
 }
 
-func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
+func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *DexKeeper) {
 	ms, capKey, capKey2 := testutils.SetupMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
 	types.RegisterWire(cdc)
@@ -547,7 +549,8 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *Keeper) {
 	accountCache := getAccountCache(cdc, ms, capKey)
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "mychainid"}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	keeper = NewKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+
+	keeper = NewDexKeeper(capKey2, mapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
 	return
 }
 
@@ -579,13 +582,13 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 	require.Len(t, sells, 1)
 	require.Len(t, sells[0].Orders, 1)
 	require.Equal(t, int64(2e8), sells[0].TotalLeavesQty())
-	require.Len(t, keeper.allOrders["ABC-000_BNB"], 1)
+	require.Len(t, keeper.GetAllOrdersForPair("ABC-000_BNB"), 1)
 	buys, sells = keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 1)
 	require.Len(t, sells, 0)
 	require.Len(t, buys[0].Orders, 1)
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
-	require.Len(t, keeper.allOrders["XYZ-000_BNB"], 1)
+	require.Len(t, keeper.GetAllOrdersForPair("XYZ-000_BNB"), 1)
 	expectFees := types.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 6e4),
 		sdk.NewCoin("ABC-000", 1e7),
@@ -638,13 +641,13 @@ func TestKeeper_ExpireOrdersBasedOnPrice(t *testing.T) {
 	require.Len(t, sells, 2)
 	require.Len(t, sells[0].Orders, 1)
 	require.Equal(t, int64(1e8), sells[0].TotalLeavesQty())
-	require.Len(t, keeper.allOrders["ABC-000_BNB"], 4)
+	require.Len(t, keeper.GetAllOrdersForPair("ABC-000_BNB"), 4)
 	buys, sells = keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 2)
 	require.Len(t, sells, 0)
 	require.Len(t, buys[0].Orders, 1)
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
-	require.Len(t, keeper.allOrders["XYZ-000_BNB"], 2)
+	require.Len(t, keeper.GetAllOrdersForPair("XYZ-000_BNB"), 2)
 	fees.Pool.Clear()
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, 0)
 }
@@ -676,6 +679,42 @@ func TestKeeper_DetermineLotSize(t *testing.T) {
 	assert.Equal(int64(1e6), lotsize) // wma price of AAA-000/BNB is between 1e7 and 1e8
 	lotsize = keeper.DetermineLotSize("BTC-000", "AAA-000", 1e12)
 	assert.Equal(int64(1e5), lotsize) // wma price of BNB/BTC-000 is between 1e7 and 1e8
+}
+
+func TestKeeper_DetermineLotSize_SupportBUSD(t *testing.T) {
+	assert := assert.New(t)
+	ctx, _, keeper := setup()
+
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+	keeper.SetBUSDSymbol("BUSD-BD1")
+
+	// no recentPrices recorded, use engine.LastTradePrice
+	pair1 := dextypes.NewTradingPairWithLotSize("BNB", "BUSD-BD1", 1e6, 1e5)
+	keeper.AddEngine(pair1)
+	pair2 := dextypes.NewTradingPairWithLotSize("AAA-000", "BUSD-BD1", 1e6, 1e7)
+	keeper.AddEngine(pair2)
+	lotsize := keeper.DetermineLotSize("BNB", "BUSD-BD1", 1e6)
+	assert.Equal(int64(1e5), lotsize)
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "BNB", 1e10)
+	assert.Equal(int64(1e3), lotsize)
+	lotsize = keeper.DetermineLotSize("AAA-000", "BUSD-BD1", 1e6)
+	assert.Equal(int64(1e5), lotsize)
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "AAA-000", 1e10)
+	assert.Equal(int64(1e3), lotsize)
+
+	// no trading yet, use list price
+	lotsize = keeper.DetermineLotSize("BBB-000", "BUSD-BD1", 1e8)
+	assert.Equal(int64(1e3), lotsize)
+
+	// store some recentPrices
+	keeper.StoreTradePrices(ctx.WithBlockHeight(1 * pricesStoreEvery))
+	keeper.engines[pair1.GetSymbol()].LastTradePrice = 1e8
+	keeper.engines[pair2.GetSymbol()].LastTradePrice = 1e8
+	keeper.StoreTradePrices(ctx.WithBlockHeight(2 * pricesStoreEvery))
+	lotsize = keeper.DetermineLotSize("AAA-000", "BUSD-BD1", 1e4)
+	assert.Equal(int64(1e6), lotsize) // wma price of AAA-000/BNB is between 1e7 and 1e8
+	lotsize = keeper.DetermineLotSize("BUSD-BD1", "AAA-000", 1e12)
+	assert.Equal(int64(1e5), lotsize) // wma price of BUSD-BD1/BNB is between 1e8 and 1e9
 }
 
 func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
@@ -762,8 +801,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(1, len(res))
 
 	// match existing two orders
-	matchRes, _ := keeper.MatchAll(43, 86)
-	assert.Equal(sdk.CodeOK, matchRes)
+	keeper.MatchSymbols(43, 86, false)
 
 	// after match, the original buy order's cumQty and latest updated fields should be updated
 	res = keeper.GetOpenOrders("NNB_BNB", zc)
@@ -797,8 +835,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(int64(88), res[0].LastUpdatedTimestamp)
 
 	// match existing two orders
-	matchRes, _ = keeper.MatchAll(44, 88)
-	assert.Equal(sdk.CodeOK, matchRes)
+	keeper.MatchSymbols(44, 88, false)
 
 	// after match, all orders should be closed
 	res = keeper.GetOpenOrders("NNB_BNB", zc)
@@ -848,17 +885,75 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
 	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	assert.Equal(1, len(keeper.allOrders))
-	assert.Equal(9, len(keeper.allOrders["XYZ-000_BNB"]))
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(9, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
 	assert.Equal(1, len(keeper.engines))
 
 	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
-	assert.Equal(0, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.GetAllOrders()))
 	assert.Equal(0, len(keeper.engines))
 
 	expectFees := types.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),
 		sdk.NewCoin("XYZ-000", 4e5),
+	}.Sort(), types.FeeForProposer)
+	require.Equal(t, expectFees, fees.Pool.BlockFees())
+}
+
+func TestKeeper_DelistMiniTradingPair(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	assert := assert.New(t)
+	ctx, am, keeper := setup()
+	fees.Pool.Clear()
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	addr := acc.GetAddress()
+
+	tradingPair := dextypes.NewTradingPair("XYZ-000M", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
+		sdk.NewCoin("BNB", 11e4),
+		sdk.NewCoin("XYZ-000M", 4e4),
+	}.Sort())
+
+	acc.(types.NamedAccount).SetCoins(sdk.Coins{
+		sdk.NewCoin("XYZ-000M", 4e5),
+	}.Sort())
+
+	am.SetAccount(ctx, acc)
+
+	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000M_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000M_BNB", 1e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000M_BNB", 2e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000M_BNB", 3e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000M_BNB", 5e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000M_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000M_BNB", 6e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000M_BNB", 7e6, 1e4)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000M_BNB", 4e6, 1e6)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(9, len(keeper.GetAllOrdersForPair("XYZ-000M_BNB")))
+	assert.Equal(1, len(keeper.engines))
+
+	keeper.DelistTradingPair(ctx, "XYZ-000M_BNB", nil)
+	assert.Equal(0, len(keeper.GetAllOrders()))
+	assert.Equal(0, len(keeper.engines))
+
+	expectFees := types.NewFee(sdk.Coins{
+		sdk.NewCoin("BNB", 10e4),
+		sdk.NewCoin("XYZ-000M", 4e5),
 	}.Sort(), types.FeeForProposer)
 	require.Equal(t, expectFees, fees.Pool.BlockFees())
 }
@@ -874,12 +969,12 @@ func TestKeeper_DelistTradingPair_Empty(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	assert.Equal(1, len(keeper.allOrders))
-	assert.Equal(0, len(keeper.allOrders["XYZ-001_BNB"]))
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(0, len(keeper.GetAllOrdersForPair("XYZ-001_BNB")))
 	assert.Equal(1, len(keeper.engines))
 
 	keeper.DelistTradingPair(ctx, "XYZ-001_BNB", nil)
-	assert.Equal(0, len(keeper.allOrders))
+	assert.Equal(0, len(keeper.GetAllOrders()))
 	assert.Equal(0, len(keeper.engines))
 
 	expectFees := types.NewFee(sdk.Coins(nil), types.ZeroFee)
@@ -952,6 +1047,7 @@ func TestKeeper_CanListTradingPair_SupportBUSD(t *testing.T) {
 
 	// upgraded, but BNB-BUSD pair does not exist
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+	keeper.SetBUSDSymbol("BUSD-BD1")
 	err = keeper.CanListTradingPair(ctx, "AAA-000", "BUSD-BD1")
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "token AAA-000 should be listed against BNB before against BUSD-BD1")
@@ -1011,4 +1107,40 @@ func TestKeeper_CanDelistTradingPair_SupportBUSD(t *testing.T) {
 	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000", "XYZ-000", 1e8))
 	err = keeper.CanDelistTradingPair(ctx, "AAA-000", "XYZ-000")
 	require.Nil(t, err)
+}
+
+func TestKeeper_CanDelistMiniTradingPair_SupportBUSD(t *testing.T) {
+	ctx, _, keeper := setup()
+	err := keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000M", "BUSD-BD1", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000M", "BUSD-BD1")
+	require.Nil(t, err)
+
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("BUSD-BD1", "AAA-000M", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "BUSD-BD1", "AAA-000M")
+	require.Nil(t, err)
+
+	// delisting AAA-XYZ will not depends on BUSD-AAA or BUSD-XYZ
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "AAA-000M", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair(types.NativeTokenSymbol, "XYZ-000M", 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000M", "XYZ-000M", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000M", "XYZ-000M")
+	require.Nil(t, err)
+}
+
+func TestKeeper_CanDelistMiniTradingPair(t *testing.T) {
+	ctx, _, keeper := setup()
+	err := keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000M", types.NativeTokenSymbol, 1e8))
+	err = keeper.PairMapper.AddTradingPair(ctx, dextypes.NewTradingPair("AAA-000M", "BUSD-BD1", 1e8))
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000M", types.NativeTokenSymbol)
+	err = keeper.CanDelistTradingPair(ctx, "AAA-000M", "BUSD-BD1")
+	require.Nil(t, err)
+}
+
+func setChainVersion() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+}
+
+func resetChainVersion() {
+	upgrade.Mgr.Config.HeightMap = nil
 }

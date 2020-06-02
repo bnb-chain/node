@@ -6,37 +6,39 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/app/pub"
 	bnclog "github.com/binance-chain/node/common/log"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens"
 )
 
-const AbciQueryPrefix = "dex"
+const DexAbciQueryPrefix = "dex"
+const DexMiniAbciQueryPrefix = "dex-mini"
 const DelayedDaysForDelist = 3
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, keeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
+	appp app.ChainApp, dexKeeper *DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
 ) {
-	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, keeper, tokenMapper, accMapper, govKeeper) {
+	for route, handler := range Routes(dexKeeper, tokenMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 
 	// add abci handlers
-	handler := createQueryHandler(keeper)
-	appp.RegisterQueryHandler(AbciQueryPrefix, handler)
+	dexHandler := createQueryHandler(dexKeeper, DexAbciQueryPrefix)
+	appp.RegisterQueryHandler(DexAbciQueryPrefix, dexHandler)
+	//dex mini handler
+	dexMiniHandler := createQueryHandler(dexKeeper, DexMiniAbciQueryPrefix)
+	appp.RegisterQueryHandler(DexMiniAbciQueryPrefix, dexMiniHandler)
 }
 
-func createQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
-	return createAbciQueryHandler(keeper)
+func createQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQueryHandler {
+	return createAbciQueryHandler(keeper, abciQueryPrefix)
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
@@ -50,7 +52,7 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	dexKeeper.UpdateTickSizeAndLotSize(ctx)
 
 	logger.Info("Expire stale orders")
-	if dexKeeper.CollectOrderInfoForPublish {
+	if dexKeeper.ShouldPublishOrder() {
 		pub.ExpireOrdersForPublish(dexKeeper, ctx, blockTime)
 	} else {
 		dexKeeper.ExpireOrders(ctx, blockTime, nil)
@@ -78,7 +80,7 @@ func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKee
 			continue
 		}
 
-		if dexKeeper.CollectOrderInfoForPublish {
+		if dexKeeper.ShouldPublishOrder() {
 			pub.DelistTradingPairForPublish(ctx, dexKeeper, symbol)
 		} else {
 			dexKeeper.DelistTradingPair(ctx, symbol, nil)
@@ -115,7 +117,6 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 			if timeToDelist.Before(blockTime) {
 				symbol := utils.Assets2TradingPair(strings.ToUpper(delistParam.BaseAssetSymbol), strings.ToUpper(delistParam.QuoteAssetSymbol))
 				symbols = append(symbols, symbol)
-
 				// update proposal delisted status
 				delistParam.IsExecuted = true
 				bz, err := json.Marshal(delistParam)

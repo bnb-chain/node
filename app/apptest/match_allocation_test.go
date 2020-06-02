@@ -127,6 +127,8 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account) {
 	// for new match engine
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
 	addr := secp256k1.GenPrivKey().PubKey().Address()
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}

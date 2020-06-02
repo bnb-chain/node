@@ -46,5 +46,6 @@ func NewBlockInfoToPublish(
 		blockFee,
 		feeHolder,
 		transfers,
-		block}
+		block,
+	}
 }

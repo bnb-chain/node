@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"strconv"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/wire"
 )
+
+const miniTokenKeyPrefix = "mini"
 
 type Commander struct {
 	Cdc *wire.Codec
@@ -30,9 +33,11 @@ func (c Commander) checkAndSendTx(cmd *cobra.Command, args []string, builder msg
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateMapperTokenSymbol(symbol)
-	if err != nil {
-		return err
+	if !types.IsValidMiniTokenSymbol(symbol) {
+		err = types.ValidateTokenSymbol(symbol)
+		if err != nil {
+			return err
+		}
 	}
 
 	symbol = strings.ToUpper(symbol)
@@ -59,4 +64,19 @@ func parseAmount(amountStr string) (int64, error) {
 	}
 
 	return amount, nil
+}
+
+func validateTokenURI(uri string) error {
+	if len(uri) > 2048 {
+		return errors.New("uri cannot be longer than 2048 characters")
+	}
+	return nil
+}
+
+func calcMiniTokenKey(symbol string) []byte {
+	var buf bytes.Buffer
+	buf.WriteString(miniTokenKeyPrefix)
+	buf.WriteString(":")
+	buf.WriteString(symbol)
+	return buf.Bytes()
 }

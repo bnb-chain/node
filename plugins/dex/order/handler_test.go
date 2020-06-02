@@ -16,22 +16,24 @@ import (
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
 )
 
-func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
+func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 	db := dbm.NewMemDB()
 	key := sdk.NewKVStoreKey("pair") // TODO: can this be "pairs" as in the constant?
 	key2 := sdk.NewKVStoreKey(common.AccountStoreName)
+	key3 := sdk.NewKVStoreKey(common.DexStoreName)
 	ms := cstore.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(key2, sdk.StoreTypeIAVL, db)
 	ms.LoadLatestVersion()
-	return ms, key, key2
+	return ms, key, key2, key3
 }
 
-func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context) {
-	ms, key, key2 := setupMultiStore()
+func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context, *DexKeeper) {
+	ms, key, key2, key3 := setupMultiStore()
 	var cdc = wire.NewCodec()
 	auth.RegisterBaseAccount(cdc)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
@@ -39,7 +41,8 @@ func setupMappers() (store.TradingPairMapper, auth.AccountKeeper, sdk.Context) {
 	accMapper := auth.NewAccountKeeper(cdc, key2, auth.ProtoBaseAccount)
 	accountCache := getAccountCache(cdc, ms, key2)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger()).WithAccountCache(accountCache)
-	return pairMapper, accMapper, ctx
+	keeper := NewDexKeeper(key3, accMapper, pairMapper, sdk.NewCodespacer().RegisterNext(dextypes.DefaultCodespace), 2, cdc, false)
+	return pairMapper, accMapper, ctx, keeper
 }
 
 func setupAccount(ctx sdk.Context, accMapper auth.AccountKeeper) (sdk.Account, sdk.AccAddress) {
@@ -61,7 +64,7 @@ func setupAccount(ctx sdk.Context, accMapper auth.AccountKeeper) (sdk.Account, s
 }
 
 func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
-	pairMapper, accMapper, ctx := setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
@@ -76,14 +79,13 @@ func TestHandler_ValidateOrder_OrderNotExist(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
-
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("trading pair not found: %s", msg.Symbol), err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
-	pairMapper, _, ctx := setupMappers()
+	_, _, ctx, keeper := setupMappers()
 
 	msgs := []NewOrderMsg{
 		{
@@ -104,14 +106,14 @@ func TestHandler_ValidateOrder_WrongSymbol(t *testing.T) {
 	}
 
 	for _, msg := range msgs {
-		err := validateOrder(ctx, pairMapper, nil, msg)
+		err := validateOrder(ctx, keeper, nil, msg)
 		require.Error(t, err)
 		require.Equal(t, fmt.Sprintf("Failed to parse trading pair symbol:%s into assets", msg.Symbol), err.Error())
 	}
 }
 
 func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
-	pairMapper, accMapper, ctx := setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
@@ -126,13 +128,13 @@ func TestHandler_ValidateOrder_WrongPrice(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("price(%v) is not rounded to tickSize(%v)", msg.Price, pair.TickSize.ToInt64()), err.Error())
 }
 
 func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
-	pairMapper, accMapper, ctx := setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	pair := types.NewTradingPair("AAA-000", "BNB", 1e8)
 	err := pairMapper.AddTradingPair(ctx, pair)
 	require.NoError(t, err)
@@ -147,13 +149,13 @@ func TestHandler_ValidateOrder_WrongQuantity(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, fmt.Sprintf("quantity(%v) is not rounded to lotSize(%v)", msg.Quantity, pair.LotSize.ToInt64()), err.Error())
 }
 
 func TestHandler_ValidateOrder_Normal(t *testing.T) {
-	pairMapper, accMapper, ctx := setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
 
@@ -167,12 +169,12 @@ func TestHandler_ValidateOrder_Normal(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.NoError(t, err)
 }
 
 func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
-	pairMapper, accMapper, ctx := setupMappers()
+	pairMapper, accMapper, ctx, keeper := setupMappers()
 	err := pairMapper.AddTradingPair(ctx, types.NewTradingPair("AAA-000", "BNB", 1e8))
 	require.NoError(t, err)
 
@@ -186,7 +188,7 @@ func TestHandler_ValidateOrder_MaxNotional(t *testing.T) {
 		Id:       fmt.Sprintf("%X-0", acc.GetAddress()),
 	}
 
-	err = validateOrder(ctx, pairMapper, acc, msg)
+	err = validateOrder(ctx, keeper, acc, msg)
 	require.Error(t, err)
 	require.Equal(t, "notional value of the order is too large(cannot fit in int64)", err.Error())
 }

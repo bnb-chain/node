@@ -10,7 +10,9 @@ import (
 // type TradingPair = types.TradingPair
 
 type TradingPairMapper = store.TradingPairMapper
-type DexKeeper = order.Keeper
+type DexKeeper = order.DexKeeper
 
 var NewTradingPairMapper = store.NewTradingPairMapper
-var NewOrderKeeper = order.NewKeeper
+var NewDexKeeper = order.NewDexKeeper
+
+const DefaultCodespace = types.DefaultCodespace

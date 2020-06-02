@@ -40,6 +40,11 @@ var (
 		"depositHTLT": {},
 		"claimHTLT":   {},
 		"refundHTLT":  {},
+
+		"tinyIssueMsg":     {},
+		"miniIssueMsg":     {},
+		"miniTokensSetURI": {},
+		"dexListMini":      {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

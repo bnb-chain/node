@@ -13,20 +13,27 @@ import (
 )
 
 func SetupMultiStoreForUnitTest() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
-	_, ms, capKey, capKey2 := SetupMultiStoreWithDBForUnitTest()
+	_, ms, capKey, capKey2, _ := SetupMultiStoreWithDBForUnitTest()
 	return ms, capKey, capKey2
 }
 
-func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey) {
+func SetupThreeMultiStoreForUnitTest() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
+	_, ms, capKey, capKey2, capKey3 := SetupMultiStoreWithDBForUnitTest()
+	return ms, capKey, capKey2, capKey3
+}
+
+func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
 	db := dbm.NewMemDB()
 	capKey := sdk.NewKVStoreKey("capkey")
 	capKey2 := sdk.NewKVStoreKey("capkey2")
+	capKey3 := sdk.NewKVStoreKey("capkey3")
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(capKey, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(capKey2, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(capKey3, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, db)
 	ms.LoadLatestVersion()
-	return db, ms, capKey, capKey2
+	return db, ms, capKey, capKey2, capKey3
 }
 
 // coins to more than cover the fee
@@ -72,19 +79,19 @@ func NewNamedAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto
 	return privKey, appAcc
 }
 
-func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64) (crypto.PrivKey, sdk.Account) {
+func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, freeze int64, symbol string) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
 	coins := NewNativeTokens(free)
-	coins = append(coins, sdk.NewCoin("XYZ-000", free))
+	coins = append(coins, sdk.NewCoin(symbol, free))
 	acc.SetCoins(coins)
 
 	appAcc := acc.(*types.AppAccount)
 	lockedCoins := NewNativeTokens(locked)
-	lockedCoins = append(lockedCoins, sdk.NewCoin("XYZ-000", locked))
+	lockedCoins = append(lockedCoins, sdk.NewCoin(symbol, locked))
 	appAcc.SetLockedCoins(lockedCoins)
 	freezeCoins := NewNativeTokens(freeze)
-	freezeCoins = append(freezeCoins, sdk.NewCoin("XYZ-000", freeze))
+	freezeCoins = append(freezeCoins, sdk.NewCoin(symbol, freeze))
 	appAcc.SetFrozenCoins(freezeCoins)
 	am.SetAccount(ctx, acc)
 	return privKey, acc

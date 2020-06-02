@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
@@ -18,24 +19,25 @@ import (
 const MaxDepthLevels = 1000    // matches UI requirement
 const DefaultDepthLevels = 100 // matches UI requirement
 
-func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
+func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQueryHandler {
+	queryPrefix := abciQueryPrefix
 	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
-		if path[0] != AbciQueryPrefix || len(path) < 2 {
+		if path[0] != queryPrefix || len(path) < 2 {
 			return nil
 		}
 		switch path[1] {
-		case "pairs": // args: ["dex", "pairs", <offset>, <limit>]
+		case "pairs": // args: ["dex" or "dex-mini", "pairs", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires offset and limit in the path",
-						AbciQueryPrefix, path[1]),
+						queryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
-			pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
+			pairs := listPairs(keeper, ctx, queryPrefix)
 			var offset, limit, end int
 			var err error
 			if pairs == nil || len(pairs) == 0 {
@@ -81,6 +83,14 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Value: bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
+			if queryPrefix == DexMiniAbciQueryPrefix {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.ABCICodeOK),
+					Info: fmt.Sprintf(
+						"Unknown `%s` query path: %v",
+						queryPrefix, path),
+				}
+			}
 			//TODO: sync lock, validate pair
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
@@ -124,6 +134,14 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Value: bz,
 			}
 		case "openorders": // args: ["dex", "openorders", <pair>, <bech32Str>]
+			if queryPrefix == DexMiniAbciQueryPrefix {
+				return &abci.ResponseQuery{
+					Code: uint32(sdk.ABCICodeOK),
+					Info: fmt.Sprintf(
+						"Unknown `%s` query path: %v",
+						queryPrefix, path),
+				}
+			}
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -141,8 +159,7 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				}
 			}
 			ctx := app.GetContextForCheckState()
-			existingPair, err := keeper.PairMapper.GetTradingPair(ctx, baseAsset, quoteAsset)
-			if pair != existingPair.GetSymbol() || err != nil {
+			if !keeper.PairMapper.Exists(ctx, baseAsset, quoteAsset) {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
 					Log:  "pair is not listed",
@@ -174,8 +191,25 @@ func createAbciQueryHandler(keeper *DexKeeper) app.AbciQueryHandler {
 				Code: uint32(sdk.ABCICodeOK),
 				Info: fmt.Sprintf(
 					"Unknown `%s` query path: %v",
-					AbciQueryPrefix, path),
+					queryPrefix, path),
 			}
 		}
 	}
+}
+
+func listPairs(keeper *DexKeeper, ctx sdk.Context, abciPrefix string) []types.TradingPair {
+	pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
+	rs := make([]types.TradingPair, 0, len(pairs))
+	for _, pair := range pairs {
+		if keeper.GetPairType(pair.GetSymbol()) == order.PairType.MINI {
+			if abciPrefix == DexMiniAbciQueryPrefix {
+				rs = append(rs, pair)
+			}
+		} else {
+			if abciPrefix == DexAbciQueryPrefix {
+				rs = append(rs, pair)
+			}
+		}
+	}
+	return rs
 }
