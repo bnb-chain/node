@@ -6,14 +6,13 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
 	"github.com/binance-chain/node/app/pub"
 	bnclog "github.com/binance-chain/node/common/log"
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens"
 )
 
 const DexAbciQueryPrefix = "dex"
@@ -22,12 +21,11 @@ const DelayedDaysForDelist = 3
 
 // InitPlugin initializes the dex plugin.
 func InitPlugin(
-	appp app.ChainApp, dexKeeper *DexKeeper, tokenMapper tkstore.Mapper, accMapper auth.AccountKeeper, govKeeper gov.Keeper,
+	appp app.ChainApp, dexKeeper *DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
 ) {
-	cdc := appp.GetCodec()
 
 	// add msg handlers
-	for route, handler := range Routes(cdc, dexKeeper, tokenMapper, accMapper, govKeeper) {
+	for route, handler := range Routes(dexKeeper, tokenMapper, govKeeper) {
 		appp.GetRouter().AddRoute(route, handler)
 	}
 

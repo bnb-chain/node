@@ -346,7 +346,7 @@ func (app *BinanceChain) initDex(pairMapper dex.TradingPairMapper) {
 
 func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 }

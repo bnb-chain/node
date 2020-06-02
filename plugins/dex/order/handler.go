@@ -16,7 +16,6 @@ import (
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/wire"
 )
 
 type NewOrderResponse struct {
@@ -24,11 +23,11 @@ type NewOrderResponse struct {
 }
 
 // NewHandler - returns a handler for dex type messages.
-func NewHandler(cdc *wire.Codec, dexKeeper *DexKeeper) sdk.Handler {
+func NewHandler(dexKeeper *DexKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
-			return handleNewOrder(ctx, cdc, dexKeeper, msg)
+			return handleNewOrder(ctx, dexKeeper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, dexKeeper, msg)
 		default:
@@ -100,7 +99,7 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 }
 
 func handleNewOrder(
-	ctx sdk.Context, cdc *wire.Codec, dexKeeper *DexKeeper, msg NewOrderMsg,
+	ctx sdk.Context, dexKeeper *DexKeeper, msg NewOrderMsg,
 ) sdk.Result {
 	if _, ok := dexKeeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)

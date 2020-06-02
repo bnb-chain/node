@@ -111,6 +111,18 @@ func (kp *DexKeeper) EnablePublish() {
 	}
 }
 
+func (kp *DexKeeper) GetPairType(symbol string) SymbolPairType {
+	pairType, ok := kp.pairsType[symbol]
+	if !ok {
+		if dexUtils.IsMiniTokenTradingPair(symbol) {
+			pairType = PairType.MINI
+		} else {
+			pairType = PairType.BEP2
+		}
+	}
+	return pairType
+}
+
 func (kp *DexKeeper) getOrderKeeper(symbol string) (DexOrderKeeper, error) {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
