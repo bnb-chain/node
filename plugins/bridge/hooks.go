@@ -135,6 +135,13 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 			log.With("module", "bridge").Error("update token info error", "err", sdkErr.Error(), "symbol", updateBindClaim.Symbol)
 			return sdk.ClaimResult{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
 		}
+
+		sdkErr = hooks.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("set contract decimals error", "err", sdkErr.Error(), "symbol", updateBindClaim.Symbol)
+			return sdk.ClaimResult{}, sdk.ErrInternal(fmt.Sprintf("set contract decimals error"))
+		}
+
 		log.With("module", "bridge").Info("bind token success", "symbol", updateBindClaim.Symbol, "contract_addr", updateBindClaim.ContractAddress.String())
 	} else {
 		_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
