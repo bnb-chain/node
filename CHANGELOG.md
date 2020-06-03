@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7
+## 0.7.0
 FEATURES
 * [\#725](https://github.com/binance-chain/node/pull/725) [Token] [Dex] BEP8 - Mini-BEP2 token features
 * [\#710](https://github.com/binance-chain/node/pull/710) [DEX] BEP70 - Support busd pair listing and trading
