@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
@@ -46,7 +47,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateIssueMsgTokenSymbol(msg.Symbol); err != nil {
+	if err := types.ValidateIssueSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 
@@ -96,7 +97,15 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("sender address cannot be empty")
 	}
 
-	if err := types.ValidateMapperTokenSymbol(msg.Symbol); err != nil {
+	if sdk.IsUpgrade(upgrade.BEP8) && types.IsValidMiniTokenSymbol(msg.Symbol) {
+		if msg.Amount < types.MiniTokenMinExecutionAmount {
+			return sdk.ErrInvalidCoins(fmt.Sprintf("mint amount should be no less than %d", types.MiniTokenMinExecutionAmount))
+		}
+		return nil
+	}
+
+	// if BEP8 not upgraded, we rely on `ValidateTokenSymbol` rejecting the MiniToken.
+	if err := types.ValidateTokenSymbol(msg.Symbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
 	}
 

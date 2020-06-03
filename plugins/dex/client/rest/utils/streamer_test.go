@@ -19,9 +19,10 @@ func TestStreamDepthResponse(t *testing.T) {
 		limit int
 	}
 	type response struct {
-		Height int64      `json:"height"`
-		Asks   [][]string `json:"asks"`
-		Bids   [][]string `json:"bids"`
+		Height       int64      `json:"height"`
+		Asks         [][]string `json:"asks"`
+		Bids         [][]string `json:"bids"`
+		PendingMatch bool       `json:"pendingMatch"`
 	}
 	tests := []struct {
 		name    string
@@ -41,9 +42,10 @@ func TestStreamDepthResponse(t *testing.T) {
 			},
 			wantW: (func() string {
 				want, _ := json.Marshal(response{
-					Height: 1,
-					Asks:   [][]string{},
-					Bids:   [][]string{},
+					Height:       1,
+					Asks:         [][]string{},
+					Bids:         [][]string{},
+					PendingMatch: false,
 				})
 				sorted := types.MustSortJSON(want)
 				return string(sorted)
@@ -82,6 +84,7 @@ func TestStreamDepthResponse(t *testing.T) {
 					Bids: [][]string{
 						{"100.00000000", "1.00000000"},
 					},
+					PendingMatch: false,
 				})
 				sorted := types.MustSortJSON(want)
 				return string(sorted)
@@ -126,6 +129,7 @@ func TestStreamDepthResponse(t *testing.T) {
 						{"150.00000000", "1.00000000"},
 						{"100.00000000", "1.00000000"},
 					},
+					PendingMatch: false,
 				})
 				sorted := types.MustSortJSON(want)
 				return string(sorted)
@@ -165,6 +169,7 @@ func TestStreamDepthResponse(t *testing.T) {
 						// highest buy first
 						{"100.00000000", "1.00000000"},
 					},
+					PendingMatch: false,
 				})
 				sorted := types.MustSortJSON(want)
 				return string(sorted)

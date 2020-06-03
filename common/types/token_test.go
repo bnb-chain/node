@@ -79,30 +79,30 @@ func TestNewToken(t *testing.T) {
 	}
 }
 
-func TestValidateIssueMsgTokenSymbol(t *testing.T) {
+func TestValidateIssueSymbol(t *testing.T) {
 	for _, tt := range issueMsgSymbolTestCases {
 		t.Run(tt.symbol, func(t *testing.T) {
-			if err := types.ValidateIssueMsgTokenSymbol(tt.symbol); (err == nil) != tt.correct {
-				t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, correct %v", err, tt.correct)
+			if err := types.ValidateIssueSymbol(tt.symbol); (err == nil) != tt.correct {
+				t.Errorf("ValidateIssueSymbol() error = %v, correct %v", err, tt.correct)
 			}
 		})
 	}
-	// extra test. an issued symbol that is valid in NewToken and ValidateMapperTokenSymbol but not here
-	if err := types.ValidateIssueMsgTokenSymbol("XYZ-000"); err == nil {
-		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ-000 to be invalid", err)
+	// extra test. an issued symbol that is valid in NewToken and ValidateTokenSymbol but not here
+	if err := types.ValidateIssueSymbol("XYZ-000"); err == nil {
+		t.Errorf("ValidateIssueSymbol() error = %v, expected XYZ-000 to be invalid", err)
 	}
 }
 
-func TestValidateMapperTokenSymbol(t *testing.T) {
+func TestValidateTokenSymbol(t *testing.T) {
 	for _, tt := range tokenMapperSymbolTestCases {
 		t.Run(tt.symbol, func(t *testing.T) {
-			if err := types.ValidateMapperTokenSymbol(tt.symbol); (err == nil) != tt.correct {
-				t.Errorf("ValidateMapperTokenSymbol() error = %v, correct %v", err, tt.correct)
+			if err := types.ValidateTokenSymbol(tt.symbol); (err == nil) != tt.correct {
+				t.Errorf("ValidateTokenSymbol() error = %v, correct %v", err, tt.correct)
 			}
 		})
 	}
-	// extra test. an issued symbol that is valid in ValidateIssueMsgTokenSymbol but not here
-	if err := types.ValidateMapperTokenSymbol("XYZ"); err == nil {
-		t.Errorf("ValidateIssueMsgTokenSymbol() error = %v, expected XYZ to be invalid", err)
+	// extra test. an issued symbol that is valid in ValidateIssueSymbol but not here
+	if err := types.ValidateTokenSymbol("XYZ"); err == nil {
+		t.Errorf("ValidateIssueSymbol() error = %v, expected XYZ to be invalid", err)
 	}
 }

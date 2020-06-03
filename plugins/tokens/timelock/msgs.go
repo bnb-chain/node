@@ -6,6 +6,8 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/types"
 )
 
 const (
@@ -65,6 +67,13 @@ func (msg TimeLockMsg) ValidateBasic() sdk.Error {
 
 	if !msg.Amount.IsPositive() {
 		return sdk.ErrInvalidCoins(msg.Amount.String())
+	}
+
+	if sdk.IsUpgrade(sdk.BEP8) {
+		symbolError := types.ValidateTokenSymbols(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error())
+		}
 	}
 
 	return nil
@@ -141,6 +150,12 @@ func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidRelock(DefaultCodespace, fmt.Sprintf("nothing to update for time lock"))
 	}
 
+	if sdk.IsUpgrade(sdk.BEP8) {
+		symbolError := types.ValidateTokenSymbols(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error())
+		}
+	}
 	return nil
 }
 

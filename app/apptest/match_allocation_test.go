@@ -127,6 +127,8 @@ func SetupTest(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account)
 func SetupTest_new(initPrices ...int64) (crypto.Address, sdk.Context, []sdk.Account) {
 	// for new match engine
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP19, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
 	addr := secp256k1.GenPrivKey().PubKey().Address()
 	accAddr := sdk.AccAddress(addr)
 	baseAcc := auth.BaseAccount{Address: accAddr}
@@ -230,7 +232,7 @@ func GetOrderId(add sdk.AccAddress, seq int64, ctx sdk.Context) string {
 func GetOrderBook(pair string) ([]level, []level) {
 	buys := make([]level, 0)
 	sells := make([]level, 0)
-	orderbooks := testApp.DexKeeper.GetOrderBookLevels(pair, 25)
+	orderbooks, _ := testApp.DexKeeper.GetOrderBookLevels(pair, 25)
 	for _, l := range orderbooks {
 		if l.BuyPrice != 0 {
 			buys = append(buys, level{price: l.BuyPrice, qty: l.BuyQty})

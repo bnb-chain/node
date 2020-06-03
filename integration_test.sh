@@ -75,7 +75,6 @@ bob_addr=$(./bnbcli keys list --home ${cli_home} | grep bob | grep -o "bnb1[0-9a
 # wait for the chain
 sleep 10s
 
-
 ## ROUND 1 ##
 
 # send
@@ -319,5 +318,64 @@ sleep 1s
 # Deposit to a single chain atomic swap
 result=$(expect ./deposit.exp ${swapID} "10000:${eth_symbol}" bob ${chain_id}  ${cli_home})
 check_operation "Deposit to a deposited single chain atomic swap" "${result}" "ERROR"
+
+
+## ROUND 5 ##
+
+sleep 1s
+# issue token
+result=$(expect ./issue_mini.exp MBC MiniBitcoin 900000000000 true alice ${chain_id} ${cli_home} 1 sample)
+mbc_symbol=$(echo "${result}" | tail -n 1 | grep -o "MBC-[0-9A-Z]*M")
+check_operation "Issue Mini Token" "${result}" "${chain_operation_words}"
+
+
+sleep 1s
+# send
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000:${mbc_symbol}" ${bob_addr} 1)
+check_operation "Send Token" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# multi send
+echo ${bob_addr}
+result=$(expect ./multi_send.exp ${cli_home} alice ${chain_id} "[{\"to\":\"${bob_addr}\",\"amount\":\"10000000000:${mbc_symbol}\"},{\"to\":\"${alice_addr}\",\"amount\":\"1000000000:${mbc_symbol}\"}]" 1)
+check_operation "Multi Send Token" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# mint token
+result=$(expect ./mint.exp ${mbc_symbol} 10000000000 alice ${chain_id} ${cli_home})
+check_operation "Mint Token" "${result}" "${chain_operation_words}"
+
+sleep 3s
+# list trading pair
+result=$(expect ./list_mini.exp ${mbc_symbol} BNB 100000000 alice ${chain_id} ${cli_home})
+check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# place buy order
+result=$(expect ./order.exp ${mbc_symbol}_BNB 1 100000000 1000000000 bob ${chain_id} gte ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
+printf "Order ID: $order_id\n"
+
+sleep 2s
+# cancel order
+result=$(expect ./cancel.exp "${mbc_symbol}_BNB" "${order_id}" bob ${chain_id} ${cli_home})
+check_operation "Cancel Order" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# place buy order
+result=$(expect ./order.exp ${mbc_symbol}_BNB 1 100000000 1000000000 bob ${chain_id} gte ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+
+echo ""
+./bnbcli dex show -l ${mbc_symbol}_BNB  --trust-node true
+
+sleep 1s
+# place Sell order
+result=$(expect ./order.exp ${mbc_symbol}_BNB 2 100000000 2000000000 alice ${chain_id} gte ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+
+result=$(./bnbcli dex show -l ${mbc_symbol}_BNB  --trust-node true)
+check_operation "Order Book" "${result}" "${order_book_words}"
 
 exit_test 0

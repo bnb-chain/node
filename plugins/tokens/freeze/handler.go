@@ -1,6 +1,7 @@
 package freeze
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -33,9 +34,18 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)
 	coins := keeper.GetCoins(ctx, msg.From)
-	if coins.AmountOf(symbol) < freezeAmount {
+	balance := coins.AmountOf(symbol)
+	if balance < freezeAmount {
 		logger.Info("freeze token failed", "reason", "no enough free tokens to freeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to freeze").Result()
+	}
+
+	if common.IsMiniTokenSymbol(symbol) {
+		if msg.Amount < common.MiniTokenMinExecutionAmount && balance != freezeAmount {
+			logger.Info("freeze token failed", "reason", "freeze amount doesn't reach the min amount")
+			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total account balance",
+				common.MiniTokenMinExecutionAmount)).Result()
+		}
 	}
 
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
@@ -52,11 +62,20 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	unfreezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", unfreezeAmount, "addr", msg.From)
+
 	account := accKeeper.GetAccount(ctx, msg.From).(common.NamedAccount)
 	frozenAmount := account.GetFrozenCoins().AmountOf(symbol)
 	if frozenAmount < unfreezeAmount {
 		logger.Info("unfreeze token failed", "reason", "no enough frozen tokens to unfreeze")
 		return sdk.ErrInsufficientCoins("do not have enough token to unfreeze").Result()
+	}
+
+	if common.IsMiniTokenSymbol(symbol) {
+		if unfreezeAmount < common.MiniTokenMinExecutionAmount && frozenAmount != unfreezeAmount {
+			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min amount")
+			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
+				common.MiniTokenMinExecutionAmount)).Result()
+		}
 	}
 
 	newFrozenTokens := account.GetFrozenCoins().Minus(sdk.Coins{{Denom: symbol, Amount: unfreezeAmount}})

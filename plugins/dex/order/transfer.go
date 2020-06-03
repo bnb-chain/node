@@ -167,6 +167,7 @@ func transferFromOrderRemoved(ord me.OrderPart, ordMsg OrderInfo, tranEventType 
 		outAsset:   unlockAsset,
 		out:        unlock,
 		unlock:     unlock,
+		Symbol:     ordMsg.Symbol,
 	}
 }
 
