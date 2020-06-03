@@ -31,6 +31,9 @@ type KafkaMarketDataPublisher struct {
 	blockFeeCodec         *goavro.Codec
 	transfersCodec        *goavro.Codec
 	blockCodec            *goavro.Codec
+	stakingCodec          *goavro.Codec
+	distributionCodec     *goavro.Codec
+	slashingCodec         *goavro.Codec
 
 	failFast         bool
 	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
@@ -138,6 +141,36 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishStaking {
+		if _, ok := publisher.producers[Cfg.StakingTopic]; !ok {
+			publisher.producers[Cfg.StakingTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create staking producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishDistributeReward {
+		if _, ok := publisher.producers[Cfg.DistributeRewardTopic]; !ok {
+			publisher.producers[Cfg.DistributeRewardTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create distribution producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishSlashing {
+		if _, ok := publisher.producers[Cfg.SlashingTopic]; !ok {
+			publisher.producers[Cfg.SlashingTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create slashing producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -221,6 +254,12 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.TransferTopic
 	case blockTpe:
 		topic = Cfg.BlockTopic
+	case stakingTpe:
+		topic = Cfg.StakingTopic
+	case distributionTpe:
+		topic = Cfg.DistributeRewardTopic
+	case slashingTpe:
+		topic = Cfg.SlashingTopic
 	}
 	return
 }
@@ -299,6 +338,12 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.transfersCodec
 	case blockTpe:
 		codec = publisher.blockCodec
+	case stakingTpe:
+		codec = publisher.stakingCodec
+	case distributionTpe:
+		codec = publisher.distributionCodec
+	case slashingTpe:
+		codec = publisher.slashingCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -321,6 +366,12 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.transfersCodec, err = goavro.NewCodec(transfersSchema); err != nil {
 		return err
 	} else if publisher.blockCodec, err = goavro.NewCodec(blockDatasSchema); err != nil {
+		return err
+	} else if publisher.stakingCodec, err = goavro.NewCodec(stakingSchema); err != nil {
+		return err
+	} else if publisher.distributionCodec, err = goavro.NewCodec(distributionSchema); err != nil {
+		return err
+	} else if publisher.slashingCodec, err = goavro.NewCodec(slashingSchema); err != nil {
 		return err
 	}
 	return nil

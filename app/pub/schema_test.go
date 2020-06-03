@@ -2,6 +2,8 @@ package pub
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/linkedin/goavro"
 	"os"
 	"testing"
 
@@ -125,4 +127,40 @@ func TestBlockMarsha(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestStakingMarshaling(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	valAddr, _ := sdk.ValAddressFromBech32("bva1e2y8w2rz957lahwy0y5h3w53sm8d78qexkn3rh")
+	delAddr, _ := sdk.AccAddressFromBech32("bnb1e2y8w2rz957lahwy0y5h3w53sm8d78qex2jpan")
+
+	dels := make(map[string][]*Delegation)
+	dels["chain-id-1"] = []*Delegation{{
+		DelegatorAddr: delAddr,
+		ValidatorAddr: valAddr,
+		Shares:        sdk.NewDecWithoutFra(1),
+	}}
+
+	removedVals := make(map[string][]sdk.ValAddress)
+	removedVals["chain-id-1"] = []sdk.ValAddress{sdk.ValAddress(valAddr)}
+
+	msg := StakingMsg{
+		NumOfMsgs: 42, Height: 20, Timestamp: 1000,
+		Validators: []*Validator{{
+			FeeAddr:         delAddr,
+			OperatorAddr:    valAddr,
+			Status:          1,
+			DelegatorShares: sdk.NewDecWithoutFra(10000),
+		}},
+		RemovedValidators: removedVals,
+		Delegations:       dels,
+	}
+	bz, err := publisher.marshal(&msg, stakingTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	codec, err := goavro.NewCodec(stakingSchema)
+	native, _, err := codec.NativeFromBinary(bz)
+	fmt.Printf("%v", native)
 }
