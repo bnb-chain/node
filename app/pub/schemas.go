@@ -414,4 +414,244 @@ const (
 			]
 		}
     `
+
+	stakingSchema = `
+		{
+			"type": "record",
+			"name": "Staking",
+			"namespace": "org.binance.dex.model.avro",
+			"fields": [
+				{"name": "height", "type": "long"},
+				{"name": "timestamp", "type": "long" },
+				{"name": "numOfMsgs", "type": "int" },
+				{"name": "validators", "type": ["null", {
+					"type": "array",
+					"items": {
+						"type": "record",
+						"name": "Validator",
+						"namespace": "org.binance.dex.model.avro",
+						"fields": [
+							{"name": "feeAddr", "type": "string"},
+							{"name": "operatorAddr", "type": "string"},
+							{"name": "consAddr", "type": ["null","string"], "default": "null"},
+							{"name": "jailed", "type": "boolean"},
+							{"name": "status", "type": "string"},
+							{"name": "tokens", "type": "long"},
+							{"name": "delegatorShares", "type": "long"},
+							{"name": "description", "type": {
+								"type": "record",
+								"name": "Description",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{"name": "moniker", "type": "string"},
+									{"name": "identity", "type": "string"},
+									{"name": "website", "type": "string"},
+									{"name": "details", "type": "string"}
+								]
+							}},
+							{"name": "bondHeight", "type": "long"},
+							{"name": "bondIntraTxCounter", "type": "int"},
+							{"name": "commission", "type": {
+								"type": "record",
+								"name": "Commission",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{"name": "rate", "type": "long"},
+									{"name": "maxRate", "type": "long"},
+									{"name": "maxChangeRate", "type": "long"},
+									{"name": "updateTime", "type": "long"}
+								]
+							}},
+							{"name": "distributionAddr", "type": "string"},
+							{"name": "sideChainId", "type": "string"},
+							{"name": "sideConsAddr", "type": "string"},
+							{"name": "sideFeeAddr", "type": "string"}
+						]
+					}
+				}], "default": "null"},
+				{"name": "removedValidators", "type": ["null", {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {"type": "string"}
+					}
+				}], "default": null},
+				{"name": "delegations", "type": ["null",{
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "Delegation",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "validator", "type": "string"},
+								{"name": "shares", "type": "long"}
+							]
+						}
+					}
+				}], "default": null},
+				{"name": "unBondingDelegations", "type": ["null",{
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "UnBondingDelgation",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "validator", "type": "string"},
+								{"name": "creationHeight", "type": "long"},
+								{"name": "minTime", "type": "long"},
+								{"name": "initialBalance", "type": {
+									"type": "record",
+									"name": "Coin",
+									"namespace": "org.binance.dex.model.avro",
+									"fields": [
+										{ "name": "denom", "type": "string" },
+										{ "name": "amount", "type": "long" }
+									]
+								}},
+								{"name": "balance", "type": "org.binance.dex.model.avro.Coin"}
+							]
+						}
+					}
+				}], "default": null},
+				{"name": "reDelegations", "type": ["null",{
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "ReDelegation",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "srcValidator", "type": "string"},
+								{"name": "dstValidator", "type": "string"},
+								{"name": "creationHeight", "type": "long"},
+								{"name": "sharesSrc", "type": "long"},
+								{"name": "sharesDst", "type": "long"},
+								{"name": "initialBalance", "type": "org.binance.dex.model.avro.Coin" },
+								{"name": "balance", "type": "org.binance.dex.model.avro.Coin" },
+								{"name": "minTime", "type": "long"}
+							]
+						}
+					}
+				}], "default": null},
+				{"name": "completedUBDs", "type": ["null",{
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "CompletedUnbondingDelegation",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{ "name": "validator", "type": "string" },
+								{ "name": "delegator", "type": "string" },
+								{ "name": "amount", "type": "org.binance.dex.model.avro.Coin"}
+							]
+						}
+					}
+				}],  "default": null},
+				{"name": "completedREDs", "type": ["null",{
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "CompletedReDelegation",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{ "name": "delegator", "type": "string" },
+								{ "name": "srcValidator", "type": "string" },
+								{ "name": "dstValidator", "type": "string" }
+							]
+						}
+					}
+				}],  "default": null}
+			]
+		}
+	`
+
+	distributionSchema = `
+		{
+			"type": "record",
+			"name": "Distribution",
+			"namespace": "org.binance.dex.model.avro",
+			"fields": [
+				{ "name": "height", "type": "long" },
+				{ "name": "timestamp", "type": "long" },
+				{ "name": "numOfMsgs", "type": "int" },
+				{ "name": "distributions", "type": {
+						"type": "map",
+						"values": {
+							"type": "array",
+							"items": {
+								"type": "record",
+								"name": "DistributionData",
+								"namespace": "org.binance.dex.model.avro",
+								"fields": [
+									{"name": "validator", "type": "string"},
+									{"name": "selfDelegator","type": "string"},
+									{"name": "valTokens", "type": "long"},
+									{"name": "totalReward", "type": "long"},
+									{"name": "commission", "type": "long"},
+									{"name": "rewards", "type":{
+										"type": "array",
+										"items": {
+											"type": "record",
+											"name": "Reward",
+											"namespace": "org.binance.dex.model.avro",
+											"fields":[
+												{"name": "delegator", "type": "string"},
+												{"name": "delegationTokens", "type": "long"},
+												{"name": "reward", "type": "long"}
+											]
+										}
+									}}
+								]
+							}
+						}
+					}
+				}
+			]
+		}
+	`
+
+	slashingSchema = `
+		{
+			"type": "record",
+			"name": "Slashing",
+			"namespace": "org.binance.dex.model.avro",
+			"fields": [
+				{ "name": "height", "type": "long" },
+				{ "name": "timestamp", "type": "long" },
+				{ "name": "numOfMsgs", "type": "int" },
+				{ "name": "slashData", "type": {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "SlashData",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "validator", "type": "string"},
+								{"name": "infractionType", "type": "int"},
+								{"name": "infractionHeight", "type": "long"},
+								{"name": "jailUtil", "type": "long"},
+								{"name": "slashAmount", "type": "long"},
+								{"name": "submitter", "type": "string"},
+								{"name": "submitterReward", "type": "long"}
+							]
+						}
+					}
+				}}
+			]
+		}
+	`
 )

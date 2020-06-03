@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/app/config"
+	"github.com/binance-chain/node/app/pub/sub"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 )
 
@@ -29,11 +32,238 @@ var (
 	ToPublishCh       chan BlockInfoToPublish
 	ToRemoveOrderIdCh chan OrderSymbolId // order symbol and ids to remove from keeper.OrderInfoForPublish
 	IsLive            bool
+
+	ToPublishEventCh chan *sub.ToPublishEvent
 )
 
 type MarketDataPublisher interface {
 	publish(msg AvroOrJsonMsg, tpe msgType, height int64, timestamp int64)
 	Stop()
+}
+
+func PublishEvent(
+	publisher MarketDataPublisher,
+	Logger tmlog.Logger,
+	cfg *config.PublicationConfig,
+	ToPublishEventCh <-chan *sub.ToPublishEvent) {
+	for toPublish := range ToPublishEventCh {
+		eventData := toPublish.EventData
+		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
+		if cfg.PublishStaking {
+			var msgNum int
+			var validators []*Validator
+			var removedValidators map[string][]sdk.ValAddress
+			var delegationsMap map[string][]*Delegation
+			var ubdsMap map[string][]*UnbondingDelegation
+			var redsMap map[string][]*ReDelegation
+			var completedUBDsMap map[string][]*CompletedUnbondingDelegation
+			var completedREDsMap map[string][]*CompletedReDelegation
+			if eventData.StakeData != nil {
+				if len(eventData.StakeData.Validators) > 0 {
+					validators = make([]*Validator, len(eventData.StakeData.Validators), len(eventData.StakeData.Validators))
+					msgNum += len(eventData.StakeData.Validators)
+					var i int
+					for _, val := range eventData.StakeData.Validators {
+						v := Validator(val)
+						validators[i] = &v
+						i++
+					}
+				}
+				if len(eventData.StakeData.RemovedValidators) > 0 {
+					removedValidators = make(map[string][]sdk.ValAddress)
+					for chainId, removedVals := range eventData.StakeData.RemovedValidators {
+						vals := make([]sdk.ValAddress, len(removedVals), len(removedVals))
+						msgNum += len(removedVals)
+						var i int
+						for _, val := range removedVals {
+							vals[i] = val
+							i++
+						}
+						removedValidators[chainId] = vals
+					}
+				}
+				if len(eventData.StakeData.Delegations) > 0 || len(eventData.StakeData.RemovedDelegations) > 0 {
+					delegationsMap = make(map[string][]*Delegation)
+					for chainId, dels := range eventData.StakeData.Delegations {
+						delegations := make([]*Delegation, len(dels), len(dels))
+						msgNum += len(dels)
+						var i int
+						for _, del := range dels {
+							d := Delegation(del)
+							delegations[i] = &d
+							i++
+						}
+						delegationsMap[chainId] = delegations
+					}
+
+					for chainId, removedDels := range eventData.StakeData.RemovedDelegations {
+						if delegationsMap[chainId] == nil {
+							delegationsMap[chainId] = make([]*Delegation, 0)
+						}
+						msgNum += len(removedDels)
+						for _, dvPair := range removedDels {
+							d := Delegation{
+								DelegatorAddr: dvPair.DelegatorAddr,
+								ValidatorAddr: dvPair.ValidatorAddr,
+								Shares:        sdk.ZeroDec(),
+							}
+							delegationsMap[chainId] = append(delegationsMap[chainId], &d)
+						}
+
+					}
+				}
+				if len(eventData.StakeData.UnbondingDelegations) > 0 {
+					ubdsMap = make(map[string][]*UnbondingDelegation)
+					for chainId, ubds := range eventData.StakeData.UnbondingDelegations {
+						unbondingDelegations := make([]*UnbondingDelegation, len(ubds), len(ubds))
+						msgNum += len(ubds)
+						var i int
+						for _, ubd := range ubds {
+							u := UnbondingDelegation(ubd)
+							unbondingDelegations[i] = &u
+							i++
+						}
+						ubdsMap[chainId] = unbondingDelegations
+					}
+				}
+				if len(eventData.StakeData.ReDelegations) > 0 {
+					redsMap = make(map[string][]*ReDelegation)
+					for chainId, reds := range eventData.StakeData.ReDelegations {
+						redelgations := make([]*ReDelegation, len(reds), len(reds))
+						msgNum += len(reds)
+						var i int
+						for _, red := range reds {
+							r := ReDelegation(red)
+							redelgations[i] = &r
+							i++
+						}
+						redsMap[chainId] = redelgations
+					}
+				}
+				if len(eventData.StakeData.CompletedUBDs) > 0 {
+					completedUBDsMap = make(map[string][]*CompletedUnbondingDelegation)
+					for chainId, ubds := range eventData.StakeData.CompletedUBDs {
+						comUBDs := make([]*CompletedUnbondingDelegation, len(ubds), len(ubds))
+						msgNum += len(ubds)
+						for i, ubd := range ubds {
+							comUBDs[i] = &CompletedUnbondingDelegation{
+								Validator: ubd.Validator,
+								Delegator: ubd.Delegator,
+								Amount:    Coin{Denom: ubd.Amount.Denom, Amount: ubd.Amount.Amount},
+							}
+						}
+						completedUBDsMap[chainId] = comUBDs
+					}
+				}
+				if len(eventData.StakeData.CompletedREDs) > 0 {
+					completedREDsMap = make(map[string][]*CompletedReDelegation)
+					for chainId, reds := range eventData.StakeData.CompletedREDs {
+						comREDs := make([]*CompletedReDelegation, len(reds), len(reds))
+						msgNum += len(reds)
+						for i, red := range reds {
+							comREDs[i] = &CompletedReDelegation{
+								Delegator:    red.DelegatorAddr,
+								ValidatorSrc: red.ValidatorSrcAddr,
+								ValidatorDst: red.ValidatorDstAddr,
+							}
+						}
+						completedREDsMap[chainId] = comREDs
+					}
+				}
+				if msgNum > 0 {
+					msg := StakingMsg{
+						NumOfMsgs: msgNum,
+						Height:    toPublish.Height,
+						Timestamp: toPublish.Timestamp.Unix(),
+
+						Validators:           validators,
+						RemovedValidators:    removedValidators,
+						Delegations:          delegationsMap,
+						UnbondingDelegations: ubdsMap,
+						ReDelegations:        redsMap,
+						CompletedUBDs:        completedUBDsMap,
+						CompletedREDs:        completedREDsMap,
+					}
+					publisher.publish(&msg, stakingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+				}
+			}
+
+		}
+
+		if cfg.PublishDistributeReward {
+			var msgNum int
+			distributions := make(map[string][]*Distribution)
+			for chainId, disData := range eventData.StakeData.Distribution {
+				dis := make([]*Distribution, len(disData), len(disData))
+				for i, disData := range disData {
+					rewards := make([]*Reward, len(disData.Rewards), len(disData.Rewards))
+					for i, reward := range disData.Rewards {
+						delegatorTokens, err := sdk.MulQuoDec(disData.ValTokens, reward.Shares, disData.ValShares)
+						if err != nil {
+							Logger.Error("error convert shares to tokens, delegator: %s", reward.AccAddr)
+							continue
+						}
+						rewardMsg := &Reward{
+							Delegator: reward.AccAddr,
+							Amount:    reward.Amount,
+							Tokens:    delegatorTokens.RawInt(),
+						}
+						rewards[i] = rewardMsg
+					}
+					dis[i] = &Distribution{
+						Validator:     disData.Validator,
+						SelfDelegator: disData.SelfDelegator,
+						ValTokens:     disData.ValTokens.RawInt(),
+						TotalReward:   disData.TotalReward.RawInt(),
+						Commission:    disData.Commission.RawInt(),
+						Rewards:       rewards,
+					}
+					msgNum += len(disData.Rewards)
+				}
+				distributions[chainId] = dis
+			}
+
+			if len(distributions) > 0 {
+				distributionMsg := DistributionMsg{
+					NumOfMsgs:     msgNum,
+					Height:        toPublish.Height,
+					Timestamp:     toPublish.Timestamp.UnixNano(),
+					Distributions: distributions,
+				}
+				publisher.publish(&distributionMsg, distributionTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+			}
+		}
+
+		if cfg.PublishSlashing {
+			var msgNum int
+			slashData := make(map[string][]*Slash)
+			for chainId, slashes := range eventData.SlashData {
+				slashDataPerChain := make([]*Slash, len(slashes), len(slashes))
+				for i, slash := range slashes {
+					slashDataPerChain[i] = &Slash{
+						Validator:        slash.Validator,
+						InfractionType:   slash.InfractionType,
+						InfractionHeight: slash.InfractionHeight,
+						JailUtil:         slash.JailUtil.Unix(),
+						SlashAmount:      slash.SlashAmount,
+						Submitter:        slash.Submitter,
+						SubmitterReward:  slash.SubmitterReward,
+					}
+					msgNum++
+				}
+				slashData[chainId] = slashDataPerChain
+			}
+			if msgNum > 0 {
+				slashMsg := SlashMsg{
+					NumOfMsgs: msgNum,
+					Height:    toPublish.Height,
+					Timestamp: toPublish.Timestamp.Unix(),
+					SlashData: slashData,
+				}
+				publisher.publish(&slashMsg, slashingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+			}
+		}
+	}
 }
 
 func Publish(

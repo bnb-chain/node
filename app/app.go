@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
@@ -38,6 +39,7 @@ import (
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
+	appsub "github.com/binance-chain/node/app/pub/sub"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
@@ -109,6 +111,8 @@ type BinanceChain struct {
 	abciQueryBlackList map[string]bool
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
+	psServer           *pubsub.Server
+	subscriber         *pubsub.Subscriber
 
 	dexConfig *config.DexConfig
 
@@ -194,6 +198,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		pub.Logger = logger.With("module", "pub")
 		pub.Cfg = app.publicationConfig
 		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
+		pub.ToPublishEventCh = make(chan *appsub.ToPublishEvent, app.publicationConfig.PublicationChannelSize)
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
@@ -213,8 +218,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 			}
 
 			go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
+			go pub.PublishEvent(app.publisher, logger, app.publicationConfig, pub.ToPublishEventCh)
 			pub.IsLive = true
 		}
+
+		app.startPubSub(logger)
+		app.subscribeEvent(logger)
 	}
 
 	// finish app initialization
@@ -270,6 +279,26 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	return app
+}
+
+func (app *BinanceChain) startPubSub(logger log.Logger) {
+	pubLogger := logger.With("module", "bnc_pubsub")
+	app.psServer = pubsub.NewServer(pubLogger)
+	if err := app.psServer.Start(); err != nil {
+		panic(err)
+	}
+}
+
+func (app *BinanceChain) subscribeEvent(logger log.Logger) {
+	subLogger := logger.With("module", "bnc_sub")
+	sub, err := app.psServer.NewSubscriber(pubsub.ClientID("bnc_app"), subLogger)
+	if err != nil {
+		panic(err)
+	}
+	if err = appsub.SubscribeAllEvent(sub); err != nil {
+		panic(err)
+	}
+	app.subscriber = sub
 }
 
 // setUpgradeConfig will overwrite default upgrade config
@@ -460,13 +489,14 @@ func (app *BinanceChain) initParamHub() {
 
 func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
+	app.stakeKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), keeper.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime:       60 * 60 * 24 * 7 * time.Second, // 7 days
+			UnbondingTime:       10 * time.Second, // 7 days
 			MaxValidators:       11,
 			BondDenom:           types.NativeTokenSymbol,
 			MinSelfDelegation:   50000e8,
@@ -505,12 +535,13 @@ func (app *BinanceChain) initGov() {
 func (app *BinanceChain) initSlashing() {
 	app.slashKeeper.SetSideChain(&app.scKeeper)
 	app.slashKeeper.SubscribeParamChange(app.ParamHub)
+	app.slashKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), slashing.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.slashKeeper.SetParams(newCtx, slashing.Params{
-			MaxEvidenceAge:           60 * 60 * 24 * 3 * time.Second, // 3 days
+			MaxEvidenceAge:           10 * time.Second,               // 3 days
 			DoubleSignUnbondDuration: math.MaxInt64,                  // forever
 			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
 			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
@@ -682,10 +713,12 @@ func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.Response
 	if res.IsOK() {
 		// commit or panic
 		fees.Pool.CommitFee(txHash)
+		app.psServer.Publish(appsub.TxDeliverSuccEvent{})
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
 			app.processErrAbciResponseForPub(req.Tx)
 		}
+		app.psServer.Publish(appsub.TxDeliverFailEvent{})
 	}
 	if app.publicationConfig.PublishBlock {
 		pub.Pool.AddTxRes(txHash, res)
@@ -784,12 +817,17 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
 			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+
+			appsub.SetMeta(height, blockTime)
+			app.subscriber.Wait()
+			app.publishEvent()
 		}
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
+	appsub.Clear()
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
 	pub.Pool.Clean()
@@ -971,6 +1009,13 @@ func MakeCodec() *wire.Codec {
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
 	return cdc
+}
+
+func (app *BinanceChain) publishEvent() {
+	if appsub.ToPublish() != nil && appsub.ToPublish().EventData != nil {
+		pub.ToPublishEventCh <- appsub.ToPublish()
+	}
+
 }
 
 func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
