@@ -9,6 +9,11 @@ IMPROVEMENTS
 * [\#704](https://github.com/binance-chain/node/pull/704) [DEX] BEP67 Price-based Order Expiration
 * [\#714](https://github.com/binance-chain/node/pull/714) [DEX] Add pendingMatch flag to orderbook query response
 
+## 0.6.3-hf.1
+
+BUG FIXES
+* [\#693](https://github.com/binance-chain/node/pull/693) [Deps] hot fix for hard fork in stdTx getSigner
+
 ## 0.6.3
 
 BUG FIXES
