@@ -218,12 +218,11 @@ func (hooks *TransferOutRefundClaimHooks) CheckClaim(ctx sdk.Context, claim stri
 			sdk.AccAddress(transferOutPackage.RefundAddress).String(), refundClaim.RefundAddress.String()))
 	}
 
-	token, err := hooks.bridgeKeeper.TokenMapper.GetToken(ctx, refundClaim.Amount.Denom)
-	if err != nil {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", refundClaim.Amount.Denom))
-	}
+	contractAddr := types.SmartChainAddress{}
+	contractAddr.SetBytes(transferOutPackage.ContractAddress)
+	contractDecimals := hooks.bridgeKeeper.GetContractDecimals(ctx, contractAddr)
 
-	bcAmount, sdkErr := types.ConvertBSCAmountToBCAmount(token.ContractDecimals, transferOutPackage.Amount)
+	bcAmount, sdkErr := types.ConvertBSCAmountToBCAmount(contractDecimals, transferOutPackage.Amount)
 	if sdkErr != nil {
 		return sdkErr
 	}
