@@ -197,18 +197,18 @@ func (keeper *Keeper) Load(ctx sdk.Context) {
 	keeper.loadFeeParam(ctx)
 }
 
-func (keeper *Keeper) SubscribeParamChange(u func([]sdk.Context, []interface{}), s *subspace.ParamSpaceProto, g func(sdk.Context, interface{}), l func(sdk.Context, interface{})) {
-	if u != nil {
-		keeper.SubscribeUpdateEvent(u)
+func (keeper *Keeper) SubscribeParamChange(updateCb func([]sdk.Context, []interface{}), spaceProto *subspace.ParamSpaceProto, genesisCb func(sdk.Context, interface{}), loadCb func(sdk.Context, interface{})) {
+	if updateCb != nil {
+		keeper.SubscribeUpdateEvent(updateCb)
 	}
-	if g != nil {
-		keeper.SubscribeGenesisEvent(g)
+	if genesisCb != nil {
+		keeper.SubscribeGenesisEvent(genesisCb)
 	}
-	if l != nil {
-		keeper.SubscribeLoadEvent(l)
+	if loadCb != nil {
+		keeper.SubscribeLoadEvent(loadCb)
 	}
-	if s != nil {
-		keeper.subscriberParamSpace = append(keeper.subscriberParamSpace, s)
+	if spaceProto != nil {
+		keeper.subscriberParamSpace = append(keeper.subscriberParamSpace, spaceProto)
 	}
 }
 
