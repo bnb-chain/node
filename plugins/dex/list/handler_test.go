@@ -27,7 +27,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
-	tokenStore "github.com/binance-chain/node/plugins/tokens/store"
 )
 
 func MakeCodec() *codec.Codec {
@@ -42,7 +41,7 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 
-func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *order.Keeper, tokenMapper tokenStore.Mapper, govKeeper gov.Keeper) {
+func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) {
 	accKey := sdk.NewKVStoreKey("acc")
 	pairKey := sdk.NewKVStoreKey("pair")
 	tokenKey := sdk.NewKVStoreKey("token")
@@ -65,10 +64,9 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 	accKeeper := auth.NewAccountKeeper(cdc, accKey, types.ProtoAppAccount)
 	codespacer := sdk.NewCodespacer()
 	pairMapper := store.NewTradingPairMapper(cdc, pairKey)
-	orderKeeper = order.NewKeeper(common.DexStoreKey, accKeeper, pairMapper,
-		codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
+	dexKeeper = order.NewDexKeeper(common.DexStoreKey, accKeeper, pairMapper, codespacer.RegisterNext(dexTypes.DefaultCodespace), 2, cdc, false)
 
-	tokenMapper = tokenStore.NewMapper(cdc, tokenKey)
+	tokenMapper = tokens.NewMapper(cdc, tokenKey)
 
 	paramsKeeper := params.NewKeeper(cdc, paramKey, paramTKey)
 	bankKeeper := bank.NewBaseKeeper(accKeeper)
@@ -85,7 +83,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, orderKeeper *o
 		gov.DefaultCodespace,
 		new(sdk.Pool))
 
-	return ms, orderKeeper, tokenMapper, govKeeper
+	return ms, dexKeeper, tokenMapper, govKeeper
 }
 
 func getProposal(lowerCase bool, baseAssetSymbol string, quoteAssetSymbol string) gov.Proposal {
@@ -207,7 +205,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "token(BTC-000) not found")
 
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -234,7 +232,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "quote token does not exist")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
@@ -258,7 +256,7 @@ func TestListHandler_LowerCase(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -267,7 +265,7 @@ func TestListHandler_LowerCase(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,
@@ -325,7 +323,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	cdc := MakeCodec()
 	ms, orderKeeper, tokenMapper, govKeeper := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	err := tokenMapper.NewToken(ctx, types.Token{
+	err := tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Bitcoin",
 		Symbol:      "BTC-000",
 		OrigSymbol:  "BTC",
@@ -334,7 +332,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      types.NativeTokenSymbol,
 		OrigSymbol:  types.NativeTokenSymbol,

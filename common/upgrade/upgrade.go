@@ -22,8 +22,14 @@ const (
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
+
 	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
+
+	//Nightingale upgrade
+	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
+	BEP67 = "BEP67"  // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
+	BEP70 = "BEP70"  // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {

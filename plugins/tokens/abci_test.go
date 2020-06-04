@@ -26,8 +26,8 @@ var (
 	addr         = sdk.AccAddress(pk.Address())
 	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr, false)
 	token2Ptr, _ = common.NewToken("XXY", "XXY-000", 10000000000, addr, false)
-	token1       = *token1Ptr
-	token2       = *token2Ptr
+	token1       = token1Ptr
+	token2       = token2Ptr
 )
 
 func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
@@ -53,7 +53,7 @@ func Test_Tokens_ABCI_GetInfo_Success(t *testing.T) {
 	}
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
-	assert.Equal(t, token1, actual)
+	assert.Equal(t, *token1, actual)
 }
 
 func Test_Tokens_ABCI_GetInfo_Error_NotFound(t *testing.T) {
@@ -115,7 +115,7 @@ func Test_Tokens_ABCI_GetTokens_Success(t *testing.T) {
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
 	assert.Equal(t, []common.Token{
-		token1, token2,
+		*token1, *token2,
 	}, actual)
 }
 
@@ -147,7 +147,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithOffset(t *testing.T) {
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
 	assert.Equal(t, []common.Token{
-		token2,
+		*token2,
 	}, actual)
 }
 
@@ -179,7 +179,7 @@ func Test_Tokens_ABCI_GetTokens_Success_WithLimit(t *testing.T) {
 
 	assert.True(t, sdk.ABCICodeType(res.Code).IsOK())
 	assert.Equal(t, []common.Token{
-		token1,
+		*token1,
 	}, actual)
 }
 

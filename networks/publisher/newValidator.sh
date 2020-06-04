@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-src='/Users/zhaocong/go/src/github.com/binance-chain/node'
-executable='/Users/zhaocong/go/src/github.com/binance-chain/node/build/bnbchaind'
-cli='/Users/zhaocong/go/src/github.com/binance-chain/node/build/bnbcli'
-home='/Users/zhaocong'
+home=$HOME
+src="${home}/go/src/github.com/binance-chain/node"
+executable="${home}/go/src/github.com/binance-chain/node/build/bnbchaind"
+cli="${home}/go/src/github.com/binance-chain/node/build/bnbcli"
 
 ## clean history data
 #rm -r ${home}/.bnbchaind_val2

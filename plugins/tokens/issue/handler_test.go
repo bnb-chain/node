@@ -15,24 +15,35 @@ import (
 
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"
 )
 
 func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {
-	ms, capKey1, capKey2 := testutils.SetupMultiStoreForUnitTest()
+	ms, capKey1, capKey2, _ := testutils.SetupThreeMultiStoreForUnitTest()
 	cdc := wire.NewCodec()
+	cdc.RegisterInterface((*types.IToken)(nil), nil)
+	cdc.RegisterConcrete(&types.Token{}, "bnbchain/Token", nil)
+	cdc.RegisterConcrete(&types.MiniToken{}, "bnbchain/MiniToken", nil)
 	tokenMapper := store.NewMapper(cdc, capKey1)
 	accountKeeper := auth.NewAccountKeeper(cdc, capKey2, auth.ProtoBaseAccount)
 	bankKeeper := bank.NewBaseKeeper(accountKeeper)
 	handler := NewHandler(tokenMapper, bankKeeper)
-
 	accountStore := ms.GetKVStore(capKey2)
 	accountStoreCache := auth.NewAccountStoreCache(cdc, accountStore, 10)
 	ctx := sdk.NewContext(ms, abci.Header{ChainID: "mychainid", Height: 1},
 		sdk.RunTxModeDeliver, log.NewNopLogger()).
 		WithAccountCache(auth.NewAccountCache(accountStoreCache))
 	return ctx, handler, accountKeeper, tokenMapper
+}
+
+func setChainVersion() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+}
+
+func resetChainVersion() {
+	upgrade.Mgr.Config.HeightMap = nil
 }
 
 func TestHandleIssueToken(t *testing.T) {
@@ -46,7 +57,7 @@ func TestHandleIssueToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 100000e8, acc.GetAddress(), false)
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, expectedToken, token)
 
 	sdkResult = handler(ctx, msg)
 	require.Contains(t, sdkResult.Log, "symbol(NNB) already exists")
@@ -70,7 +81,7 @@ func TestHandleMintToken(t *testing.T) {
 	token, err := tokenMapper.GetToken(ctx, "NNB-000")
 	require.NoError(t, err)
 	expectedToken, err := types.NewToken("New BNB", "NNB-000", 110000e8, acc.GetAddress(), true)
-	require.Equal(t, *expectedToken, token)
+	require.Equal(t, expectedToken, token)
 
 	invalidMintMsg := NewMintMsg(acc.GetAddress(), "NNB-000", types.TokenMaxTotalSupply)
 	sdkResult = handler(ctx, invalidMintMsg)

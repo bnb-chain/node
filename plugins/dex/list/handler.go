@@ -18,11 +18,13 @@ import (
 )
 
 // NewHandler initialises dex message handlers
-func NewHandler(keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
+func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case ListMsg:
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)
+		case ListMiniMsg:
+			return handleListMini(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -74,7 +76,7 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error
 	return nil
 }
 
-func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
+func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
 	msg ListMsg) sdk.Result {
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()
@@ -103,12 +105,12 @@ func handleList(ctx sdk.Context, keeper *order.Keeper, tokenMapper tokens.Mapper
 			return sdk.ErrUnauthorized("only the owner of the token can list the token").Result()
 		}
 
-		if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+		if !tokenMapper.ExistsBEP2(ctx, msg.QuoteAssetSymbol) {
 			return sdk.ErrInvalidCoins("quote token does not exist").Result()
 		}
 	}
 
-	if !tokenMapper.Exists(ctx, msg.QuoteAssetSymbol) {
+	if !tokenMapper.ExistsBEP2(ctx, msg.QuoteAssetSymbol) {
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 
