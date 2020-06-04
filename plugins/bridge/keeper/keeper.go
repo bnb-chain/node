@@ -114,17 +114,16 @@ func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindReques
 	return bindRequest, nil
 }
 
-func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress, decimals int8) sdk.Error {
+func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress, decimals int8) {
 	key := types.GetContractDecimalsKey(contractAddr[:])
 
 	kvStore := ctx.KVStore(k.storeKey)
 	bz := kvStore.Get(key)
 	if bz != nil {
-		return types.ErrContractDecimalsExists(fmt.Sprintf("contract decimal exists, contract_addr=%s", contractAddr.String()))
+		return
 	}
 
 	kvStore.Set(key, []byte{byte(decimals)})
-	return nil
 }
 
 func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress) int8 {
