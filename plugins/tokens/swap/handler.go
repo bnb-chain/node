@@ -27,7 +27,8 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
-	blockTime := ctx.BlockHeader().Time.Unix()
+	header := ctx.BlockHeader()
+	blockTime := header.Time.Unix()
 	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
 		return ErrInvalidTimestamp(fmt.Sprintf("Timestamp (%d) can neither be 15 minutes ahead of the current time (%d), nor 30 minutes later", msg.Timestamp, ctx.BlockHeader().Time.Unix())).Result()
 	}
@@ -50,6 +51,10 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 		ClosedTime:          0,
 		Status:              Open,
 		Index:               kp.getIndex(ctx),
+	}
+	// hotfix for chain "Binance-Chain-Tigris"
+	if header.Height == 90913098 && header.ChainID == "Binance-Chain-Tigris" {
+		swap.Index = 0
 	}
 	swapID := CalculateSwapID(swap.RandomNumberHash, swap.From, msg.SenderOtherChain)
 	err = kp.CreateSwap(ctx, swapID, swap)

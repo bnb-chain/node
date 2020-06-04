@@ -44,7 +44,7 @@ func InitGenesis(ctx sdk.Context, tokenMapper store.Mapper, coinKeeper bank.Keep
 		if err != nil {
 			panic(err)
 		}
-		err = tokenMapper.NewToken(ctx, *token)
+		err = tokenMapper.NewToken(ctx, token)
 		if err != nil {
 			panic(err)
 		}

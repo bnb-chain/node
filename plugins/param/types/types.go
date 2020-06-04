@@ -54,6 +54,10 @@ var (
 
 		"bsc_submit_evidence": {},
 		"side_chain_unjail":   {},
+		"tinyIssueMsg":        {},
+		"miniIssueMsg":        {},
+		"miniTokensSetURI":    {},
+		"dexListMini":         {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

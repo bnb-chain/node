@@ -6,12 +6,16 @@
 # TODO: support two validator without docker in same machine
 
 ########################### SETUP #########################
-src='/Users/zhaocong/go/src/github.com/binance-chain/node'
-home='/Users/zhaocong'
-deamonhome='/Users/zhaocong/.bnbchaind'
-witnesshome='/Users/zhaocong/.bnbchaind_witness'
-clihome='/Users/zhaocong/.bnbcli'
+home=$HOME
+src="${home}/go/src/github.com/binance-chain/node"
+deamonhome="${home}/.bnbchaind"
+witnesshome="${home}/.bnbchaind_witness"
+clihome="${home}/.bnbcli"
 chain_id='test-chain-n4b735'
+echo $src
+echo $deamonhome
+echo $witnesshome
+echo $clihome
 
 key_seed_path="${home}"
 executable="${src}/build/bnbchaind"
@@ -40,6 +44,8 @@ mkdir -p ${home}/.bnbchaind_witness/config
 sed -i -e "s/log_level = \"main:info,state:info,\*:error\"/log_level = \"debug\"/g" ${deamonhome}/config/config.toml
 sed -i -e "s/allow_duplicate_ip = false/allow_duplicate_ip = true/g" ${deamonhome}/config/config.toml
 sed -i -e "s/addr_book_strict = true/addr_book_strict = false/g" ${deamonhome}/config/config.toml
+# for http-ap testing
+sed -i -e "s/index_tags = \"\"/index_tags = \"tx.height\"/g" ${deamonhome}/config/config.toml
 
 sed -i -e 's/logToConsole = true/logToConsole = false/g' ${deamonhome}/config/app.toml
 sed -i -e 's/breatheBlockInterval = 0/breatheBlockInterval = 100/g' ${deamonhome}/config/app.toml

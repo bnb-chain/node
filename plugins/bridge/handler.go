@@ -43,7 +43,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
 	}
 
-	if token.ContractAddress != "" {
+	if token.GetContractAddress() != "" {
 		return types.ErrTokenBound(fmt.Sprintf("token %s is already bound", symbol)).Result()
 	}
 
@@ -67,14 +67,14 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	var calibratedAmount sdk.Int
 	if msg.ContractDecimals >= cmmtypes.TokenDecimals {
 		decimals := sdk.NewIntWithDecimal(1, int(msg.ContractDecimals-cmmtypes.TokenDecimals))
-		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Mul(decimals)
+		calibratedTotalSupply = sdk.NewInt(token.GetTotalSupply().ToInt64()).Mul(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Mul(decimals)
 	} else {
 		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
-		if !sdk.NewInt(token.TotalSupply.ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
+		if !sdk.NewInt(token.GetTotalSupply().ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
 			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
 		}
-		calibratedTotalSupply = sdk.NewInt(token.TotalSupply.ToInt64()).Div(decimals)
+		calibratedTotalSupply = sdk.NewInt(token.GetTotalSupply().ToInt64()).Div(decimals)
 		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol)).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
@@ -121,7 +121,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", symbol)).Result()
 	}
 
-	if token.ContractAddress == "" {
+	if token.GetContractAddress() == "" {
 		return types.ErrTokenNotBound(fmt.Sprintf("token %s is not bound", symbol)).Result()
 	}
 
@@ -137,18 +137,18 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 
 	var calibratedAmount sdk.Int
-	if token.ContractDecimals >= cmmtypes.TokenDecimals {
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.ContractDecimals-cmmtypes.TokenDecimals)))
+	if token.GetContractDecimals() >= cmmtypes.TokenDecimals {
+		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.GetContractDecimals()-cmmtypes.TokenDecimals)))
 	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.ContractDecimals))
+		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.GetContractDecimals()))
 		if !sdk.NewInt(msg.Amount.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount %d to ERC20(decimals: %d) amount", msg.Amount.Amount, token.ContractDecimals)).Result()
+			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount %d to ERC20(decimals: %d) amount", msg.Amount.Amount, token.GetContractDecimals())).Result()
 		}
 		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(decimals)
 	}
 	calibratedRelayFee := sdk.NewInt(fee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol)).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
-	contractAddr := types.NewSmartChainAddress(token.ContractAddress)
+	contractAddr := types.NewSmartChainAddress(token.GetContractAddress())
 	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
 		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
 	if err != nil {

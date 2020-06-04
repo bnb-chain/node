@@ -291,7 +291,7 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		return sdk.ClaimResult{}, sdk.ErrInternal(errMsg.Error())
 	}
 
-	if tokenInfo.ContractAddress != transferInClaim.ContractAddress.String() {
+	if tokenInfo.GetContractAddress() != transferInClaim.ContractAddress.String() {
 		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
 		if err != nil {
 			return sdk.ClaimResult{}, err

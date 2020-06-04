@@ -177,7 +177,7 @@ func TestTradingPairExists(t *testing.T) {
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
 		OrigSymbol:  listParams.BaseAssetSymbol,
@@ -186,7 +186,7 @@ func TestTradingPairExists(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.QuoteAssetSymbol,
 		OrigSymbol:  "BTC",
@@ -226,7 +226,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
 		OrigSymbol:  "BTC",
@@ -235,7 +235,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.QuoteAssetSymbol,
 		OrigSymbol:  "ETH",
@@ -260,7 +260,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 	err = orderKeeper.PairMapper.AddTradingPair(ctx, pair)
 	require.Nil(t, err, "add trading pair error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
 		OrigSymbol:  "BTC",
@@ -269,7 +269,7 @@ func TestPrerequisiteTradingPair(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.QuoteAssetSymbol,
 		OrigSymbol:  "ETH",
@@ -330,7 +330,7 @@ func TestQuoteTokenDoesNotExist(t *testing.T) {
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
 		OrigSymbol:  "BNB",
@@ -366,7 +366,7 @@ func TestRightProposal(t *testing.T) {
 
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.BaseAssetSymbol,
 		OrigSymbol:  listParams.BaseAssetSymbol,
@@ -375,7 +375,7 @@ func TestRightProposal(t *testing.T) {
 	})
 	require.Nil(t, err, "new token error")
 
-	err = tokenMapper.NewToken(ctx, types.Token{
+	err = tokenMapper.NewToken(ctx, &types.Token{
 		Name:        "Native Token",
 		Symbol:      listParams.QuoteAssetSymbol,
 		OrigSymbol:  "BTC",

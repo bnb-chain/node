@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 
 	hnd "github.com/binance-chain/node/plugins/api/handlers"
+	"github.com/binance-chain/node/plugins/dex"
 	dexapi "github.com/binance-chain/node/plugins/dex/client/rest"
 	paramapi "github.com/binance-chain/node/plugins/param/client/rest"
 	tksapi "github.com/binance-chain/node/plugins/tokens/client/rest"
@@ -94,8 +95,12 @@ func (s *server) handleSimulateReq(cdc *wire.Codec, ctx context.CLIContext) http
 	return s.withTextPlainForm(s.limitReqSize(h))
 }
 
-func (s *server) handlePairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return dexapi.GetPairsReqHandler(cdc, ctx)
+func (s *server) handleBEP2PairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexAbciQueryPrefix)
+}
+
+func (s *server) handleMiniPairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexMiniAbciQueryPrefix)
 }
 
 func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
@@ -112,11 +117,19 @@ func (s *server) handleDexOpenOrdersReq(cdc *wire.Codec, ctx context.CLIContext)
 }
 
 func (s *server) handleTokenReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return tksapi.GetTokenReqHandler(cdc, ctx)
+	return tksapi.GetTokenReqHandler(cdc, ctx, false)
 }
 
 func (s *server) handleTokensReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
-	return tksapi.GetTokensReqHandler(cdc, ctx)
+	return tksapi.GetTokensReqHandler(cdc, ctx, false)
+}
+
+func (s *server) handleMiniTokenReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.GetTokenReqHandler(cdc, ctx, true)
+}
+
+func (s *server) handleMiniTokensReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return tksapi.GetTokensReqHandler(cdc, ctx, true)
 }
 
 func (s *server) handleBalancesReq(cdc *wire.Codec, ctx context.CLIContext, tokens tkstore.Mapper) http.HandlerFunc {

@@ -45,16 +45,16 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, tokenMapper store.Mapper
 	}
 }
 
-func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.Token, transferInClaim types.TransferInClaim, refundReason types.RefundReason) (sdk.Tags, sdk.Error) {
+func (k Keeper) RefundTransferIn(ctx sdk.Context, tokenInfo cmmtypes.IToken, transferInClaim types.TransferInClaim, refundReason types.RefundReason) (sdk.Tags, sdk.Error) {
 	tags := sdk.NewTags(sdk.TagAction, types.ActionTransferInFailed)
 
 	for idx, refundAddr := range transferInClaim.RefundAddresses {
 		var calibratedAmount sdk.Int
-		if tokenInfo.ContractDecimals >= cmmtypes.TokenDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.ContractDecimals-cmmtypes.TokenDecimals))
+		if tokenInfo.GetContractDecimals() >= cmmtypes.TokenDecimals {
+			decimals := sdk.NewIntWithDecimal(1, int(tokenInfo.GetContractDecimals()-cmmtypes.TokenDecimals))
 			calibratedAmount = sdk.NewInt(transferInClaim.Amounts[idx]).Mul(decimals)
 		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.ContractDecimals))
+			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-tokenInfo.GetContractDecimals()))
 			if !sdk.NewInt(transferInClaim.Amounts[idx]).Mod(decimals).IsZero() {
 				return nil, types.ErrInvalidAmount("can't calibrate timeout amount")
 			}

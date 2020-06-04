@@ -40,11 +40,11 @@ func (msg ListMsg) ValidateBasic() sdk.Error {
 	if msg.ProposalId <= 0 {
 		return sdk.ErrInvalidCoins("proposal id should be positive")
 	}
-	err := types.ValidateMapperTokenSymbol(msg.BaseAssetSymbol)
+	err := types.ValidateTokenSymbol(msg.BaseAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("base token: " + err.Error())
 	}
-	err = types.ValidateMapperTokenSymbol(msg.QuoteAssetSymbol)
+	err = types.ValidateTokenSymbol(msg.QuoteAssetSymbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins("quote token: " + err.Error())
 	}
