@@ -1,14 +1,18 @@
 package bridge
 
 import (
+	"bytes"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 
+	"github.com/binance-chain/node/common/log"
 	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
+
+var _ sdk.ClaimHooks = &SkipSequenceClaimHooks{}
 
 type SkipSequenceClaimHooks struct {
 	bridgeKeeper Keeper
@@ -49,6 +53,7 @@ func (hooks *SkipSequenceClaimHooks) CheckClaim(ctx sdk.Context, claim string) s
 func (hooks *SkipSequenceClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	skipSequenceClaim, err := types.GetSkipSequenceClaimFromOracleClaim(claim)
 	if err != nil {
+		log.With("module", "bridge").Error("unmarshal skip sequence claim error", "err", err.Error(), "claim", claim)
 		return sdk.ClaimResult{}, types.ErrInvalidClaim(fmt.Sprintf("unmarshal claim error, claim=%s", claim))
 	}
 
@@ -59,6 +64,8 @@ func (hooks *SkipSequenceClaimHooks) ExecuteClaim(ctx sdk.Context, claim string)
 		Msg:  "",
 	}, nil
 }
+
+var _ sdk.ClaimHooks = &UpdateBindClaimHooks{}
 
 type UpdateBindClaimHooks struct {
 	bridgeKeeper Keeper
@@ -119,26 +126,24 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		return sdk.ClaimResult{}, types.ErrInvalidClaim("claim is not identical to bind request")
 	}
 
+	log.With("module", "bridge").Info("update bind status", "status", updateBindClaim.Status.String(), "symbol", updateBindClaim.Symbol)
 	if updateBindClaim.Status == types.BindStatusSuccess {
 		sdkErr := hooks.bridgeKeeper.TokenMapper.UpdateBind(ctx, bindRequest.Symbol,
 			bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 
 		if sdkErr != nil {
+			log.With("module", "bridge").Error("update token info error", "err", sdkErr.Error(), "symbol", updateBindClaim.Symbol)
 			return sdk.ClaimResult{}, sdk.ErrInternal(fmt.Sprintf("update token bind info error"))
 		}
-	} else {
-		var calibratedAmount int64
-		if cmmtypes.TokenDecimals > bindRequest.ContractDecimals {
-			decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-bindRequest.ContractDecimals))
-			calibratedAmount = bindRequest.Amount.Mul(decimals).Int64()
-		} else {
-			decimals := sdk.NewIntWithDecimal(1, int(bindRequest.ContractDecimals-cmmtypes.TokenDecimals))
-			calibratedAmount = bindRequest.Amount.Div(decimals).Int64()
-		}
 
+		hooks.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
+
+		log.With("module", "bridge").Info("bind token success", "symbol", updateBindClaim.Symbol, "contract_addr", updateBindClaim.ContractAddress.String())
+	} else {
 		_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
-			sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: calibratedAmount}})
+			sdk.Coins{sdk.Coin{Denom: bindRequest.Symbol, Amount: bindRequest.DeductedAmount}})
 		if sdkErr != nil {
+			log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
 			return sdk.ClaimResult{}, sdkErr
 		}
 
@@ -154,6 +159,8 @@ func (hooks *UpdateBindClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	}, nil
 }
 
+var _ sdk.ClaimHooks = &TransferOutRefundClaimHooks{}
+
 type TransferOutRefundClaimHooks struct {
 	bridgeKeeper Keeper
 }
@@ -165,9 +172,13 @@ func NewTransferOutRefundClaimHooks(bridgeKeeper Keeper) *TransferOutRefundClaim
 }
 
 func (hooks *TransferOutRefundClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk.Error {
-	refundClaim, err := types.GetTransferOutRefundClaimFromOracleClaim(claim)
-	if err != nil {
+	refundClaim, sdkErr := types.GetTransferOutRefundClaimFromOracleClaim(claim)
+	if sdkErr != nil {
 		return types.ErrInvalidClaim(fmt.Sprintf("unmarshal transfer out refund claim error, claim=%s", claim))
+	}
+
+	if refundClaim.TransferOutSequence < 0 {
+		return types.ErrInvalidSequence("transfer out sequence should not be less than 0")
 	}
 
 	if len(refundClaim.RefundAddress) != sdk.AddrLen {
@@ -182,17 +193,53 @@ func (hooks *TransferOutRefundClaimHooks) CheckClaim(ctx sdk.Context, claim stri
 		return types.ErrInvalidStatus(fmt.Sprintf("refund reason(%d) does not exist", refundClaim.RefundReason))
 	}
 
+	ibcPackage, err := hooks.bridgeKeeper.IbcKeeper.GetIBCPackage(ctx, hooks.bridgeKeeper.DestChainId, types.TransferOutChannel, uint64(refundClaim.TransferOutSequence))
+	if err != nil {
+		return types.ErrInvalidClaim(fmt.Sprintf("transfer out ibc package does not exist, sequence=%d", refundClaim.TransferOutSequence))
+	}
+
+	transferOutPackage, err := types.DeserializeTransferOutPackage(ibcPackage)
+	if err != nil {
+		return types.ErrDeserializePackageFailed(fmt.Sprintf("deserialize transfer out package error"))
+	}
+
+	if bytes.Compare(transferOutPackage.RefundAddress, refundClaim.RefundAddress) != 0 ||
+		transferOutPackage.Bep2TokenSymbol != refundClaim.Amount.Denom {
+		return types.ErrInvalidClaim(fmt.Sprintf("transfer out symbol(%s) is not identical to refund symbol(%s)",
+			transferOutPackage.Bep2TokenSymbol, refundClaim.Amount.Denom))
+	}
+
+	if bytes.Compare(transferOutPackage.RefundAddress, refundClaim.RefundAddress) != 0 {
+		return types.ErrInvalidClaim(fmt.Sprintf("transfer out address(%s) is not identical to refund address(%s)",
+			sdk.AccAddress(transferOutPackage.RefundAddress).String(), refundClaim.RefundAddress.String()))
+	}
+
+	contractAddr := types.SmartChainAddress{}
+	contractAddr.SetBytes(transferOutPackage.ContractAddress)
+	contractDecimals := hooks.bridgeKeeper.GetContractDecimals(ctx, contractAddr)
+
+	bcAmount, sdkErr := types.ConvertBSCAmountToBCAmount(contractDecimals, transferOutPackage.Amount)
+	if sdkErr != nil {
+		return sdkErr
+	}
+	if bcAmount != refundClaim.Amount.Amount {
+		return types.ErrInvalidClaim(fmt.Sprintf("transfer out amount(%d) is not equal to refund amount(%d)",
+			bcAmount, refundClaim.Amount.Amount))
+	}
+
 	return nil
 }
 
 func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
 	refundClaim, sdkErr := types.GetTransferOutRefundClaimFromOracleClaim(claim)
 	if sdkErr != nil {
+		log.With("module", "bridge").Error("unmarshal transfer out refund claim error", "err", sdkErr.Error(), "claim", claim)
 		return sdk.ClaimResult{}, sdkErr
 	}
 
 	_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, refundClaim.RefundAddress, sdk.Coins{refundClaim.Amount})
 	if sdkErr != nil {
+		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
 		return sdk.ClaimResult{}, sdkErr
 	}
 
@@ -200,15 +247,14 @@ func (hooks *TransferOutRefundClaimHooks) ExecuteClaim(ctx sdk.Context, claim st
 		hooks.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundClaim.RefundAddress})
 	}
 
-	tags := sdk.NewTags(
-		types.TransferOutRefundReason, []byte(refundClaim.RefundReason.String()),
-	)
 	return sdk.ClaimResult{
 		Code: 0,
 		Msg:  "",
-		Tags: tags,
+		Tags: nil,
 	}, nil
 }
+
+var _ sdk.ClaimHooks = &TransferInClaimHooks{}
 
 type TransferInClaimHooks struct {
 	bridgeKeeper Keeper
@@ -281,20 +327,35 @@ func (hooks *TransferInClaimHooks) CheckClaim(ctx sdk.Context, claim string) sdk
 }
 
 func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (sdk.ClaimResult, sdk.Error) {
-	transferInClaim, err := types.GetTransferInClaimFromOracleClaim(claim)
-	if err != nil {
-		return sdk.ClaimResult{}, err
+	transferInClaim, sdkErr := types.GetTransferInClaimFromOracleClaim(claim)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("unmarshal transfer in claim error", "err", sdkErr.Error(), "claim", claim)
+		return sdk.ClaimResult{}, sdkErr
 	}
 
-	tokenInfo, errMsg := hooks.bridgeKeeper.TokenMapper.GetToken(ctx, transferInClaim.Symbol)
-	if errMsg != nil {
-		return sdk.ClaimResult{}, sdk.ErrInternal(errMsg.Error())
+	transferInSeq := hooks.bridgeKeeper.OracleKeeper.GetCurrentSequence(ctx, types.ClaimTypeTransferIn)
+
+	tokenInfo, err := hooks.bridgeKeeper.TokenMapper.GetToken(ctx, transferInClaim.Symbol)
+	if err != nil {
+		log.With("module", "bridge").Error("transfer in get token error", "err", err.Error(), "symbol", transferInClaim.Symbol)
+		return sdk.ClaimResult{}, sdk.ErrInternal(err.Error())
 	}
 
 	if tokenInfo.GetContractAddress() != transferInClaim.ContractAddress.String() {
-		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.UnboundToken)
-		if err != nil {
-			return sdk.ClaimResult{}, err
+		// check decimals of contract
+		contractDecimals := hooks.bridgeKeeper.GetContractDecimals(ctx, transferInClaim.ContractAddress)
+		if contractDecimals < 0 {
+			log.With("module", "bridge").Error("decimals of contract does not exist", "contract_addr", transferInClaim.ContractAddress.String())
+			return sdk.ClaimResult{}, types.ErrContractDecimalsNotExists(
+				fmt.Sprintf("decimals of contract does not exist, contract_addr=%s",
+					transferInClaim.ContractAddress.String()),
+			)
+		}
+
+		tags, sdkErr := hooks.bridgeKeeper.RefundTransferIn(ctx, contractDecimals, transferInClaim, transferInSeq, types.UnboundToken)
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
+			return sdk.ClaimResult{}, sdkErr
 		}
 		return sdk.ClaimResult{
 			Code: 0,
@@ -304,9 +365,10 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 	}
 
 	if transferInClaim.ExpireTime < ctx.BlockHeader().Time.Unix() {
-		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.Timeout)
-		if err != nil {
-			return sdk.ClaimResult{}, err
+		tags, sdkErr := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo.GetContractDecimals(), transferInClaim, transferInSeq, types.Timeout)
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
+			return sdk.ClaimResult{}, sdkErr
 		}
 		return sdk.ClaimResult{
 			Code: 0,
@@ -322,9 +384,10 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 		totalTransferInAmount = sdk.Coins{amount}.Plus(totalTransferInAmount)
 	}
 	if !balance.IsGTE(totalTransferInAmount) {
-		tags, err := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo, transferInClaim, types.InsufficientBalance)
-		if err != nil {
-			return sdk.ClaimResult{}, err
+		tags, sdkErr := hooks.bridgeKeeper.RefundTransferIn(ctx, tokenInfo.GetContractDecimals(), transferInClaim, transferInSeq, types.InsufficientBalance)
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
+			return sdk.ClaimResult{}, sdkErr
 		}
 		return sdk.ClaimResult{
 			Code: 0,
@@ -335,17 +398,19 @@ func (hooks *TransferInClaimHooks) ExecuteClaim(ctx sdk.Context, claim string) (
 
 	for idx, receiverAddr := range transferInClaim.ReceiverAddresses {
 		amount := sdk.NewCoin(transferInClaim.Symbol, transferInClaim.Amounts[idx])
-		_, err = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
-		if err != nil {
-			return sdk.ClaimResult{}, err
+		_, sdkErr = hooks.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+			return sdk.ClaimResult{}, sdkErr
 		}
 	}
 
 	// distribute fee
 	relayFee := sdk.Coins{transferInClaim.RelayFee}
-	_, _, err = hooks.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, relayFee)
-	if err != nil {
-		return sdk.ClaimResult{}, err
+	_, _, sdkErr = hooks.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, relayFee)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("subtract coins error", "err", sdkErr.Error())
+		return sdk.ClaimResult{}, sdkErr
 	}
 
 	if ctx.IsDeliverTx() {

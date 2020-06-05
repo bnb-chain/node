@@ -67,9 +67,11 @@ const (
 
 	// cross chain
 	CrossBindFee             = 1e6
+	CrossUnbindFee           = 1e6
 	CrossTransferOutFee      = 1e6
 	CrossTransferOutRelayFee = 1e6
 	CrossBindRelayFee        = 1e6
+	CrossUnbindRelayFee      = 1e6
 
 	//MiniToken fee
 	TinyIssueFee   = 2e8

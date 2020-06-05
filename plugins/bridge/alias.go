@@ -14,6 +14,7 @@ type (
 
 	TransferOutMsg = types.TransferOutMsg
 	BindMsg        = types.BindMsg
+	UnbindMsg      = types.UnbindMsg
 
 	SkipSequenceClaim      = types.SkipSequenceClaim
 	UpdateBindClaim        = types.UpdateBindClaim
@@ -23,5 +24,6 @@ type (
 
 const (
 	BindRelayFeeName   = types.BindRelayFeeName
+	UnbindRelayFeeName   = types.UnbindRelayFeeName
 	TransferOutFeeName = types.TransferOutFeeName
 )

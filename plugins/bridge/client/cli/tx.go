@@ -24,20 +24,21 @@ import (
 )
 
 const (
-	flagSequence         = "channel-sequence"
-	flagSequenceToSkip   = "sequence-to-skip"
-	flagClaimTypeToSkip  = "claim-type-to-skip"
-	flagContractAddress  = "contract-address"
-	flagRefundAddress    = "refund-address"
-	flagRecipientAddress = "recipient-address"
-	flagAmount           = "amount"
-	flagSymbol           = "symbol"
-	flagRelayFee         = "relay-fee"
-	flagContractDecimals = "contract-decimals"
-	flagToAddress        = "to"
-	flagBindStatus       = "bind-status"
-	flagExpireTime       = "expire-time"
-	flagRefundReason     = "refund-reason"
+	flagSequence            = "channel-sequence"
+	flagTransferOutSequence = "transfer-out-sequence"
+	flagSequenceToSkip      = "sequence-to-skip"
+	flagClaimTypeToSkip     = "claim-type-to-skip"
+	flagContractAddress     = "contract-address"
+	flagRefundAddress       = "refund-address"
+	flagRecipientAddress    = "recipient-address"
+	flagAmount              = "amount"
+	flagSymbol              = "symbol"
+	flagRelayFee            = "relay-fee"
+	flagContractDecimals    = "contract-decimals"
+	flagToAddress           = "to"
+	flagBindStatus          = "bind-status"
+	flagExpireTime          = "expire-time"
+	flagRefundReason        = "refund-reason"
 
 	flagChannelId = "channel-id"
 )
@@ -195,9 +196,10 @@ func TransferOutRefundCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			claim := types.TransferOutRefundClaim{
-				RefundAddress: refundAddr,
-				Amount:        amountToTransfer,
-				RefundReason:  refundReason,
+				TransferOutSequence: viper.GetInt64(flagTransferOutSequence),
+				RefundAddress:       refundAddr,
+				Amount:              amountToTransfer,
+				RefundReason:        refundReason,
 			}
 			claimBz, err := json.Marshal(claim)
 			if err != nil {
@@ -221,6 +223,7 @@ func TransferOutRefundCmd(cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Int64(flagSequence, 0, "sequence of timeout channel")
+	cmd.Flags().Int64(flagTransferOutSequence, 0, "sequence of transfer out transaction")
 	cmd.Flags().String(flagRefundAddress, "", "sender address")
 	cmd.Flags().String(flagAmount, "", "amount of transfer token")
 	cmd.Flags().String(flagRefundReason, "", "refund reason: unboundToken, timeout, insufficientBalance")
@@ -268,6 +271,39 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 
 	return cmd
 }
+
+func UnbindCmd(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "unbind",
+		Short: "unbind smart chain token to bep2 token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+
+			from, err := cliCtx.GetFromAddress()
+			if err != nil {
+				return err
+			}
+
+			symbol := viper.GetString(flagSymbol)
+
+			// build message
+			msg := types.NewUnbindMsg(from, symbol)
+
+			sdkErr := msg.ValidateBasic()
+			if sdkErr != nil {
+				return fmt.Errorf("%v", sdkErr.Data())
+			}
+			return client.SendOrPrintTx(cliCtx, txBldr, msg)
+		},
+	}
+
+	cmd.Flags().String(flagSymbol, "", "symbol")
+	return cmd
+}
+
 
 func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{

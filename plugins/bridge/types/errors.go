@@ -9,25 +9,28 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 12
 
-	CodeInvalidTransferMsg      sdk.CodeType = 1
-	CodeInvalidSequence         sdk.CodeType = 2
-	CodeInvalidAmount           sdk.CodeType = 3
-	CodeInvalidEthereumAddress  sdk.CodeType = 4
-	CodeInvalidDecimal          sdk.CodeType = 5
-	CodeInvalidContractAddress  sdk.CodeType = 6
-	CodeTokenNotBound           sdk.CodeType = 7
-	CodeInvalidSymbol           sdk.CodeType = 8
-	CodeInvalidExpireTime       sdk.CodeType = 9
-	CodeSerializePackageFailed  sdk.CodeType = 10
-	CodeGetChannelIdFailed      sdk.CodeType = 11
-	CodeBindRequestExists       sdk.CodeType = 12
-	CodeBindRequestNotExists    sdk.CodeType = 13
-	CodeBindRequestNotIdentical sdk.CodeType = 14
-	CodeInvalidStatus           sdk.CodeType = 15
-	CodeTokenBound              sdk.CodeType = 16
-	CodeInvalidLength           sdk.CodeType = 17
-	CodeFeeNotFound             sdk.CodeType = 18
-	CodeInvalidClaim            sdk.CodeType = 19
+	CodeInvalidTransferMsg        sdk.CodeType = 1
+	CodeInvalidSequence           sdk.CodeType = 2
+	CodeInvalidAmount             sdk.CodeType = 3
+	CodeInvalidEthereumAddress    sdk.CodeType = 4
+	CodeInvalidDecimals           sdk.CodeType = 5
+	CodeInvalidContractAddress    sdk.CodeType = 6
+	CodeTokenNotBound             sdk.CodeType = 7
+	CodeInvalidSymbol             sdk.CodeType = 8
+	CodeInvalidExpireTime         sdk.CodeType = 9
+	CodeSerializePackageFailed    sdk.CodeType = 10
+	CodeGetChannelIdFailed        sdk.CodeType = 11
+	CodeBindRequestExists         sdk.CodeType = 12
+	CodeBindRequestNotExists      sdk.CodeType = 13
+	CodeBindRequestNotIdentical   sdk.CodeType = 14
+	CodeInvalidStatus             sdk.CodeType = 15
+	CodeTokenBound                sdk.CodeType = 16
+	CodeInvalidLength             sdk.CodeType = 17
+	CodeFeeNotFound               sdk.CodeType = 18
+	CodeInvalidClaim              sdk.CodeType = 19
+	CodeDeserializePackageFailed  sdk.CodeType = 20
+	CodeContractDecimalsExists    sdk.CodeType = 21
+	CodeContractDecimalsNotExists sdk.CodeType = 22
 )
 
 //----------------------------------------
@@ -49,8 +52,8 @@ func ErrInvalidEthereumAddress(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidEthereumAddress, msg)
 }
 
-func ErrInvalidDecimal(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidDecimal, msg)
+func ErrInvalidDecimals(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidDecimals, msg)
 }
 
 func ErrInvalidContractAddress(msg string) sdk.Error {
@@ -71,6 +74,10 @@ func ErrInvalidExpireTime(msg string) sdk.Error {
 
 func ErrSerializePackageFailed(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeSerializePackageFailed, msg)
+}
+
+func ErrDeserializePackageFailed(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeDeserializePackageFailed, msg)
 }
 
 func ErrGetChannelIdFailed(msg string) sdk.Error {
@@ -107,4 +114,12 @@ func ErrFeeNotFound(msg string) sdk.Error {
 
 func ErrInvalidClaim(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidClaim, msg)
+}
+
+func ErrContractDecimalsExists(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeContractDecimalsExists, msg)
+}
+
+func ErrContractDecimalsNotExists(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeContractDecimalsNotExists, msg)
 }

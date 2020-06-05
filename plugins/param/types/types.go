@@ -43,8 +43,10 @@ var (
 		"timeUnlock":               {},
 		"timeRelock":               {},
 		"crossBind":                {},
+		"crossUnbind":              {},
 		"crossTransferOut":         {},
 		"crossBindRelayFee":        {},
+		"crossUnbindRelayFee":      {},
 		"crossTransferOutRelayFee": {},
 		"oracleClaim":              {},
 
