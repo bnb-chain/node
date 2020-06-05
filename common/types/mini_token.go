@@ -21,7 +21,7 @@ const (
 
 	MiniTokenMinExecutionAmount int64 = 1e8       // 1 with 8 decimal digits
 	MiniTokenSupplyUpperBound   int64 = 1000000e8 // 1m with 8 decimal digits
-	TinyTokenSupplyUpperBound   int64 = 10000e8  // 10k with 8 decimal digits
+	TinyTokenSupplyUpperBound   int64 = 10000e8   // 10k with 8 decimal digits
 	MaxTokenURILength                 = 2048
 
 	TinyRangeType SupplyRangeType = 1
@@ -58,14 +58,16 @@ var SupplyRange = struct {
 }{TinyRangeType, MiniRangeType}
 
 type MiniToken struct {
-	Name        string          `json:"name"`
-	Symbol      string          `json:"symbol"`
-	OrigSymbol  string          `json:"original_symbol"`
-	TotalSupply utils.Fixed8    `json:"total_supply"`
-	Owner       sdk.AccAddress  `json:"owner"`
-	Mintable    bool            `json:"mintable"`
-	TokenType   SupplyRangeType `json:"token_type"`
-	TokenURI    string          `json:"token_uri"` //TODO set max length
+	Name             string          `json:"name"`
+	Symbol           string          `json:"symbol"`
+	OrigSymbol       string          `json:"original_symbol"`
+	TotalSupply      utils.Fixed8    `json:"total_supply"`
+	Owner            sdk.AccAddress  `json:"owner"`
+	Mintable         bool            `json:"mintable"`
+	TokenType        SupplyRangeType `json:"token_type"`
+	TokenURI         string          `json:"token_uri"` //TODO set max length
+	ContractAddress  string          `json:"contract_address"`
+	ContractDecimals int8            `json:"contract_decimals"`
 }
 
 var _ IToken = &MiniToken{}
@@ -101,6 +103,22 @@ func (token MiniToken) GetTotalSupply() utils.Fixed8 {
 
 func (token *MiniToken) SetTotalSupply(totalSupply utils.Fixed8) {
 	token.TotalSupply = totalSupply
+}
+
+func (token *MiniToken) SetContractDecimals(decimal int8) {
+	token.ContractDecimals = decimal
+}
+
+func (token MiniToken) GetContractDecimals() int8 {
+	return token.ContractDecimals
+}
+
+func (token *MiniToken) SetContractAddress(addr string) {
+	token.ContractAddress = addr
+}
+
+func (token *MiniToken) GetContractAddress() string {
+	return token.ContractAddress
 }
 
 func (token MiniToken) GetOwner() sdk.AccAddress {

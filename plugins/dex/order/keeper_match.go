@@ -2,8 +2,8 @@ package order
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/utils"
 )
 

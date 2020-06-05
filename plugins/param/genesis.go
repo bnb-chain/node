@@ -1,11 +1,11 @@
 package param
 
 import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	sdk "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	param "github.com/binance-chain/node/plugins/param/types"
@@ -35,8 +35,17 @@ const (
 	RefundHTLTFee  = 37500
 
 	// stake fee
-	CreateValidatorFee = 10e8
-	RemoveValidatorFee = 1e8
+	CreateValidatorFee          = 10e8
+	RemoveValidatorFee          = 1e8
+	CreateSideChainValidatorFee = 10e8
+	EditSideChainValidatorFee   = 1e8
+	SideChainDelegateFee        = 1e5
+	SideChainRedelegateFee      = 3e5
+	SideChainUndelegateFee      = 2e5
+
+	// slashing fee
+	BscSubmitEvidenceFee = 10e8
+	SideChainUnjail      = 1e8
 
 	// Transfer fee
 	TransferFee       = 62500
@@ -52,6 +61,12 @@ const (
 	FeeRateNative      = 400
 	IOCExpireFee       = 25e3
 	IOCExpireFeeNative = 5e3
+
+	// cross chain
+	CrossBindFee             = 1e6
+	CrossTransferOutFee      = 1e6
+	CrossTransferOutRelayFee = 1e6
+	CrossBindRelayFee        = 1e6
 
 	//MiniToken fee
 	TinyIssueFee   = 2e8

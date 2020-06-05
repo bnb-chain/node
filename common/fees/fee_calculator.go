@@ -7,7 +7,7 @@ import (
 	param "github.com/binance-chain/node/plugins/param/types"
 )
 
-type FeeCalculator func(msg sdk.Msg) types.Fee
+type FeeCalculator func(msg sdk.Msg) sdk.Fee
 type FeeCalculatorGenerator func(params param.FeeParam) FeeCalculator
 
 var calculators = make(map[string]FeeCalculator)
@@ -31,24 +31,24 @@ func UnsetAllCalculators() {
 	}
 }
 
-func FixedFeeCalculator(amount int64, feeType types.FeeDistributeType) FeeCalculator {
-	if feeType == types.FeeFree {
+func FixedFeeCalculator(amount int64, feeType sdk.FeeDistributeType) FeeCalculator {
+	if feeType == sdk.FeeFree {
 		return FreeFeeCalculator()
 	}
-	return func(msg sdk.Msg) types.Fee {
-		return types.NewFee(append(sdk.Coins{}, sdk.NewCoin(types.NativeTokenSymbol, amount)), feeType)
+	return func(msg sdk.Msg) sdk.Fee {
+		return sdk.NewFee(append(sdk.Coins{}, sdk.NewCoin(types.NativeTokenSymbol, amount)), feeType)
 	}
 }
 
 func FreeFeeCalculator() FeeCalculator {
-	return func(msg sdk.Msg) types.Fee {
-		return types.NewFee(append(sdk.Coins{}), types.FeeFree)
+	return func(msg sdk.Msg) sdk.Fee {
+		return sdk.NewFee(append(sdk.Coins{}), sdk.FeeFree)
 	}
 }
 
 var FixedFeeCalculatorGen = func(params param.FeeParam) FeeCalculator {
 	if defaultParam, ok := params.(*param.FixedFeeParams); ok {
-		if defaultParam.Fee <= 0 || defaultParam.FeeFor == types.FeeFree {
+		if defaultParam.Fee <= 0 || defaultParam.FeeFor == sdk.FeeFree {
 			return FreeFeeCalculator()
 		} else {
 			return FixedFeeCalculator(defaultParam.Fee, defaultParam.FeeFor)

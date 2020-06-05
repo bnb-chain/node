@@ -6,12 +6,10 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/spf13/viper"
-
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
-
-	"github.com/cosmos/cosmos-sdk/server"
 )
 
 var configTemplate *template.Template
@@ -67,6 +65,8 @@ LotSizeUpgradeHeight = {{ .UpgradeConfig.LotSizeUpgradeHeight }}
 ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 # Block height of FixZeroBalanceHeight upgrade
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
+# Block height of smart chain upgrade
+LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
@@ -159,6 +159,14 @@ logFilePath = "{{ .LogConfig.LogFilePath }}"
 # Number of logs keep in memory before writing to file
 logBuffSize = {{ .LogConfig.LogBuffSize }}
 
+[cross_chain]
+# IBC chain-id for current chain
+ibcChainId = {{ .CrossChainConfig.IbcChainId }}
+# chain-id for bsc chain
+bscChainId = "{{ .CrossChainConfig.BscChainId }}"
+# IBC chain-id for bsc chain
+bscIbcChainId = {{ .CrossChainConfig.BscIbcChainId }}
+
 [dex]
 # The suffixed symbol of BUSD
 BUSDSymbol = "{{ .DexConfig.BUSDSymbol }}"
@@ -188,6 +196,7 @@ type BinanceChainConfig struct {
 	*BaseConfig        `mapstructure:"base"`
 	*UpgradeConfig     `mapstructure:"upgrade"`
 	*QueryConfig       `mapstructure:"query"`
+	*CrossChainConfig  `mapstructure:"cross_chain"`
 	*DexConfig         `mapstructure:"dex"`
 }
 
@@ -199,6 +208,7 @@ func DefaultBinanceChainConfig() *BinanceChainConfig {
 		BaseConfig:        defaultBaseConfig(),
 		UpgradeConfig:     defaultUpgradeConfig(),
 		QueryConfig:       defaultQueryConfig(),
+		CrossChainConfig:  defaultCrossChainConfig(),
 		DexConfig:         defaultGovConfig(),
 	}
 }
@@ -325,6 +335,22 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishBlock
 }
 
+type CrossChainConfig struct {
+	IbcChainId uint16 `mapstructure:"ibcChainId"`
+
+	BscChainId    string `mapstructure:"bscChainId"`
+	BscIbcChainId uint16 `mapstructure:"bscIBCChainId"`
+}
+
+func defaultCrossChainConfig() *CrossChainConfig {
+	return &CrossChainConfig{
+		IbcChainId: 0,
+
+		BscChainId:    "bsc",
+		BscIbcChainId: 0,
+	}
+}
+
 type LogConfig struct {
 	LogToConsole bool   `mapstructure:"logToConsole"`
 	LogFileRoot  string `mapstructure:"logFileRoot"`
@@ -372,12 +398,13 @@ type UpgradeConfig struct {
 	BEP12Height int64 `mapstructure:"BEP12Height"`
 	// Archimedes Upgrade
 	BEP3Height int64 `mapstructure:"BEP3Height"`
-
-	// TODO: add upgrade name
+	// Heisenberg Upgrade
 	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
+	// TODO: add upgrade name
+	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
@@ -394,13 +421,14 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP19Height:                1,
 		BEP12Height:                1,
 		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: math.MaxInt64,
-		LotSizeUpgradeHeight:       math.MaxInt64,
-		ListingRuleUpgradeHeight:   math.MaxInt64,
-		FixZeroBalanceHeight:       math.MaxInt64,
-		BEP8Height:                 math.MaxInt64,
-		BEP67Height:                math.MaxInt64,
-		BEP70Height:                math.MaxInt64,
+		FixSignBytesOverflowHeight: 1,
+		LotSizeUpgradeHeight:       1,
+		ListingRuleUpgradeHeight:   1,
+		FixZeroBalanceHeight:       1,
+		BEP8Height:                 1,
+		BEP67Height:                1,
+		BEP70Height:                1,
+		LaunchBscUpgradeHeight:     math.MaxInt64,
 	}
 }
 

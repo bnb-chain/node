@@ -17,12 +17,14 @@ const (
 	BEP12 = "BEP12" // https://github.com/binance-chain/BEPs/pull/17
 	// Archimedes Upgrade
 	BEP3 = "BEP3" // https://github.com/binance-chain/BEPs/pull/30
-
-	// TODO: add upgrade name
+	// Heisenberg Upgrade
 	FixSignBytesOverflow = sdk.FixSignBytesOverflow
 	LotSizeOptimization  = "LotSizeOptimization"
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
+
+	// TODO: add upgrade name
+	LaunchBscUpgrade = sdk.LaunchBscUpgrade
 
 	//Nightingale upgrade
 	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade

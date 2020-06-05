@@ -3,17 +3,19 @@ package app
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/wire"
@@ -83,7 +85,7 @@ func TestNoFeeDistribution(t *testing.T) {
 func TestFeeDistribution2Proposer(t *testing.T) {
 	// setup
 	am, valAddrCache, ctx, proposerAcc, _, _, _ := setup()
-	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForProposer))
+	fees.Pool.AddAndCommitFee("DIST", sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, sdk.FeeForProposer))
 	blockFee := distributeFee(ctx, am, valAddrCache, true)
 	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "BNB:10", []string{string(proposerAcc.GetAddress())}}, blockFee)
@@ -94,7 +96,7 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	// setup
 	am, valAddrCache, ctx, proposerAcc, valAcc1, valAcc2, valAcc3 := setup()
 	// fee amount can be divided evenly
-	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 40)}, types.FeeForAll))
+	fees.Pool.AddAndCommitFee("DIST", sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 40)}, sdk.FeeForAll))
 	blockFee := distributeFee(ctx, am, valAddrCache, true)
 	// Notice: clean the pool after distributeFee
 	fees.Pool.Clear()
@@ -102,7 +104,7 @@ func TestFeeDistribution2AllValidators(t *testing.T) {
 	checkBalance(t, ctx, am, valAddrCache, []int64{110, 110, 110, 110})
 
 	// cannot be divided evenly
-	fees.Pool.AddAndCommitFee("DIST", types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 50)}, types.FeeForAll))
+	fees.Pool.AddAndCommitFee("DIST", sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 50)}, sdk.FeeForAll))
 	blockFee = distributeFee(ctx, am, valAddrCache, true)
 	fees.Pool.Clear()
 	require.Equal(t, pub.BlockFee{0, "BNB:50", []string{string(proposerAcc.GetAddress()), string(valAcc1.GetAddress()), string(valAcc2.GetAddress()), string(valAcc3.GetAddress())}}, blockFee)

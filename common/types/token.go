@@ -32,6 +32,11 @@ type IToken interface {
 	GetOrigSymbol() string
 	GetTotalSupply() utils.Fixed8
 	SetTotalSupply(totalSupply utils.Fixed8)
+	SetContractAddress(addr string)
+	GetContractAddress() string
+	SetContractDecimals(decimal int8)
+	GetContractDecimals() int8
+
 	GetOwner() sdk.AccAddress
 	IsMintable() bool
 	IsOwner(addr sdk.AccAddress) bool
@@ -41,16 +46,34 @@ type IToken interface {
 var _ IToken = &Token{}
 
 type Token struct {
-	Name        string         `json:"name"`
-	Symbol      string         `json:"symbol"`
-	OrigSymbol  string         `json:"original_symbol"`
-	TotalSupply utils.Fixed8   `json:"total_supply"`
-	Owner       sdk.AccAddress `json:"owner"`
-	Mintable    bool           `json:"mintable"`
+	Name             string         `json:"name"`
+	Symbol           string         `json:"symbol"`
+	OrigSymbol       string         `json:"original_symbol"`
+	TotalSupply      utils.Fixed8   `json:"total_supply"`
+	Owner            sdk.AccAddress `json:"owner"`
+	Mintable         bool           `json:"mintable"`
+	ContractAddress  string         `json:"contract_address"`
+	ContractDecimals int8           `json:"contract_decimals"`
 }
 
 func (token Token) GetName() string {
 	return token.Name
+}
+
+func (token *Token) SetContractDecimals(decimal int8) {
+	token.ContractDecimals = decimal
+}
+
+func (token Token) GetContractDecimals() int8 {
+	return token.ContractDecimals
+}
+
+func (token *Token) SetContractAddress(addr string) {
+	token.ContractAddress = addr
+}
+
+func (token *Token) GetContractAddress() string {
+	return token.ContractAddress
 }
 
 func (token Token) GetSymbol() string {
