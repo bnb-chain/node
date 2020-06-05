@@ -17,6 +17,7 @@ import (
 )
 
 const abciQueryPrefix = "tokens"
+const miniAbciQueryPrefix = "mini-tokens"
 
 // InitPlugin initializes the plugin.
 func InitPlugin(
@@ -29,9 +30,10 @@ func InitPlugin(
 	}
 
 	// add abci handlers
-	handler := createQueryHandler(mapper)
-	appp.RegisterQueryHandler(abciQueryPrefix, handler)
-
+	tokenHandler := createQueryHandler(mapper, abciQueryPrefix)
+	miniTokenHandler := createQueryHandler(mapper, miniAbciQueryPrefix)
+	appp.RegisterQueryHandler(abciQueryPrefix, tokenHandler)
+	appp.RegisterQueryHandler(miniAbciQueryPrefix, miniTokenHandler)
 	RegisterUpgradeBeginBlocker(mapper)
 }
 
@@ -45,8 +47,8 @@ func RegisterUpgradeBeginBlocker(mapper Mapper) {
 	})
 }
 
-func createQueryHandler(mapper Mapper) app.AbciQueryHandler {
-	return createAbciQueryHandler(mapper)
+func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler {
+	return createAbciQueryHandler(mapper, queryPrefix)
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.

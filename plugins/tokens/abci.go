@@ -9,13 +9,23 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/types"
 )
 
-func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
-	return func(app app.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
+func createAbciQueryHandler(mapper Mapper, prefix string) types.AbciQueryHandler {
+	queryPrefix := prefix
+	var isMini bool
+	switch queryPrefix {
+	case abciQueryPrefix:
+		isMini = false
+	case miniAbciQueryPrefix:
+		isMini = true
+	default:
+		isMini = false
+	}
+	return func(app types.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		// expects at least two query path segments.
-		if path[0] != abciQueryPrefix || len(path) < 2 {
+		if path[0] != queryPrefix || len(path) < 2 {
 			return nil
 		}
 		switch path[1] {
@@ -25,7 +35,7 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires a symbol path arg",
-						abciQueryPrefix, path[1]),
+						queryPrefix, path[1]),
 				}
 			}
 			ctx := app.GetContextForCheckState()
@@ -36,31 +46,14 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Log:  "empty symbol not permitted",
 				}
 			}
-			token, err := mapper.GetToken(ctx, symbol)
-			if err != nil {
-				return &abci.ResponseQuery{
-					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
-				}
-			}
-			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(token)
-			if err != nil {
-				return &abci.ResponseQuery{
-					Code: uint32(sdk.CodeInternal),
-					Log:  err.Error(),
-				}
-			}
-			return &abci.ResponseQuery{
-				Code:  uint32(sdk.ABCICodeOK),
-				Value: bz,
-			}
+			return queryAndMarshallToken(app, mapper, ctx, symbol)
 		case "list": // args: ["tokens", "list", <offset>, <limit>, <showZeroSupplyTokens>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
 					Log: fmt.Sprintf(
 						"%s %s query requires offset and limit path segments",
-						abciQueryPrefix, path[1]),
+						queryPrefix, path[1]),
 				}
 			}
 			showZeroSupplyTokens := false
@@ -68,7 +61,9 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				showZeroSupplyTokens = true
 			}
 			ctx := app.GetContextForCheckState()
-			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens)
+
+			tokens := mapper.GetTokenList(ctx, showZeroSupplyTokens, isMini)
+
 			offset, err := strconv.Atoi(path[2])
 			if err != nil || offset < 0 || offset >= len(tokens) {
 				return &abci.ResponseQuery{
@@ -93,9 +88,24 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 					Log:  "malformed range",
 				}
 			}
-			bz, err := app.GetCodec().MarshalBinaryLengthPrefixed(
-				tokens[offset:end],
-			)
+			var bz []byte
+			if isMini {
+				miniTokens := make([]*types.MiniToken, end-offset)
+				for i, token := range tokens[offset:end] {
+					miniTokens[i] = token.(*types.MiniToken)
+				}
+				bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(
+					miniTokens,
+				)
+			} else {
+				bep2Tokens := make([]*types.Token, end-offset)
+				for i, token := range tokens[offset:end] {
+					bep2Tokens[i] = token.(*types.Token)
+				}
+				bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(
+					bep2Tokens,
+				)
+			}
 			if err != nil {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeInternal),
@@ -111,8 +121,33 @@ func createAbciQueryHandler(mapper Mapper) app.AbciQueryHandler {
 				Code: uint32(sdk.ABCICodeOK),
 				Info: fmt.Sprintf(
 					"Unknown `%s` query path: %v",
-					abciQueryPrefix, path),
+					queryPrefix, path),
 			}
 		}
+	}
+}
+
+func queryAndMarshallToken(app types.ChainApp, mapper Mapper, ctx sdk.Context, symbol string) *abci.ResponseQuery {
+	var bz []byte
+	var err error
+	var token types.IToken
+
+	token, err = mapper.GetToken(ctx, symbol)
+	if err != nil {
+		return &abci.ResponseQuery{
+			Code: uint32(sdk.CodeInternal),
+			Log:  err.Error(),
+		}
+	}
+	bz, err = app.GetCodec().MarshalBinaryLengthPrefixed(token)
+	if err != nil {
+		return &abci.ResponseQuery{
+			Code: uint32(sdk.CodeInternal),
+			Log:  err.Error(),
+		}
+	}
+	return &abci.ResponseQuery{
+		Code:  uint32(sdk.ABCICodeOK),
+		Value: bz,
 	}
 }

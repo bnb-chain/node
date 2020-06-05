@@ -4,9 +4,10 @@ set home [lindex $argv 0]
 set from [lindex $argv 1]
 set chain_id [lindex $argv 2]
 set tx [lindex $argv 3]
+set memo [lindex $argv 4]
 
 set timeout 30
-	spawn ./bnbcli token multi-send --home $home --from $from --chain-id=$chain_id --transfers $tx
+	spawn ./bnbcli token multi-send --home $home --from $from --chain-id=$chain_id --transfers $tx --memo $memo
 	expect "Password*"
 	send "12345678\r"
 interact

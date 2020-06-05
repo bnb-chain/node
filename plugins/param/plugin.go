@@ -21,6 +21,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	miniURI "github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
@@ -84,6 +85,15 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 		}
 		paramHub.UpdateFeeParams(ctx, stakingFeeParams)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(upgrade.BEP8, func(ctx sdk.Context) {
+		miniTokenFeeParams := []param.FeeParam{
+			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: TinyIssueFee, FeeFor: sdk.FeeForAll},
+			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: MiniIssueFee, FeeFor: sdk.FeeForAll},
+			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: sdk.FeeForProposer},
+			&param.FixedFeeParams{MsgType: list.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: sdk.FeeForAll},
+		}
+		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
+	})
 }
 
 func EndBreatheBlock(ctx sdk.Context, paramHub *ParamHub) {
@@ -136,5 +146,9 @@ func init() {
 		bridge.BindRelayFeeName:                    fees.FixedFeeCalculatorGen,
 		bridge.TransferOutFeeName:                  fees.FixedFeeCalculatorGen,
 		oracle.ClaimMsg{}.Type():                   fees.FixedFeeCalculatorGen,
+		miniURI.SetURIRoute:                        fees.FixedFeeCalculatorGen,
+		list.ListMiniMsg{}.Type():                  fees.FixedFeeCalculatorGen,
+		issue.IssueTinyMsgType:                     fees.FixedFeeCalculatorGen,
+		issue.IssueMiniMsgType:                     fees.FixedFeeCalculatorGen,
 	}
 }

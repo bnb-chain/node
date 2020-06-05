@@ -145,7 +145,7 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	_, acc2 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 
 	acc2Coins := acc2.GetCoins()
-	acc2Coins = acc2Coins.Plus(sdk.Coins{sdk.Coin{"ABC", 1000000000000}})
+	acc2Coins = acc2Coins.Plus(sdk.Coins{sdk.Coin{"ABC-123", 1000000000000}})
 	_ = acc2.SetCoins(acc2Coins)
 	accKeeper.SetAccount(ctx, acc2)
 
@@ -169,7 +169,7 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
 	swapID, _ := hex.DecodeString(swapIDStr)
 
-	amountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
+	amountABC := sdk.Coins{sdk.Coin{"ABC-123", 100000000}}
 	expectedIncome = "10000:BNB"
 	msg = NewDepositHTLTMsg(acc2.GetAddress(), amountABC, swapID)
 
@@ -205,12 +205,12 @@ func TestHandleCreateAndClaimSwapForSingleChain(t *testing.T) {
 	require.Equal(t, Completed, swap.Status)
 
 	acc1Acc := accKeeper.GetAccount(ctx, acc1.GetAddress())
-	require.Equal(t, amountABC[0].Amount, acc1Acc.GetCoins().AmountOf("ABC"))
+	require.Equal(t, amountABC[0].Amount, acc1Acc.GetCoins().AmountOf("ABC-123"))
 	require.Equal(t, amountBNB[0].Amount, acc1OrignalCoins.AmountOf("BNB")-acc1Acc.GetCoins().AmountOf("BNB"))
 
 	acc2Acc := accKeeper.GetAccount(ctx, acc2.GetAddress())
 	require.Equal(t, amountBNB[0].Amount, acc2Acc.GetCoins().AmountOf("BNB")-acc2OrignalCoins.AmountOf("BNB"))
-	require.Equal(t, amountABC[0].Amount, acc2OrignalCoins.AmountOf("ABC")-acc2Acc.GetCoins().AmountOf("ABC"))
+	require.Equal(t, amountABC[0].Amount, acc2OrignalCoins.AmountOf("ABC-123")-acc2Acc.GetCoins().AmountOf("ABC-123"))
 }
 
 func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
@@ -222,7 +222,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	_, acc2 := testutils.NewAccount(ctx, accKeeper, 10000e8)
 
 	acc2Coins := acc2.GetCoins()
-	acc2Coins = acc2Coins.Plus(sdk.Coins{sdk.Coin{"ABC", 1000000000000}})
+	acc2Coins = acc2Coins.Plus(sdk.Coins{sdk.Coin{"ABC-123", 1000000000000}})
 	_ = acc2.SetCoins(acc2Coins)
 	accKeeper.SetAccount(ctx, acc2)
 
@@ -246,7 +246,7 @@ func TestHandleCreateAndRefundSwapForSingleChain(t *testing.T) {
 	swapIDStr := strings.Replace(result.Log, "swapID: ", "", -1)
 	swapID, _ := hex.DecodeString(swapIDStr)
 
-	amountABC := sdk.Coins{sdk.Coin{"ABC", 100000000}}
+	amountABC := sdk.Coins{sdk.Coin{"ABC-123", 100000000}}
 	expectedIncome = "10000:BNB"
 	msg = NewDepositHTLTMsg(acc2.GetAddress(), amountABC, swapID)
 

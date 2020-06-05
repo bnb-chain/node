@@ -49,7 +49,8 @@ import (
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
-	tkstore "github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 	"github.com/binance-chain/node/wire"
@@ -86,7 +87,7 @@ type BinanceChain struct {
 	CoinKeeper     bank.Keeper
 	DexKeeper      *dex.DexKeeper
 	AccountKeeper  auth.AccountKeeper
-	TokenMapper    tkstore.Mapper
+	TokenMapper    tokens.Mapper
 	ValAddrCache   *ValAddrCache
 	stakeKeeper    stake.Keeper
 	slashKeeper    slashing.Keeper
@@ -107,9 +108,11 @@ type BinanceChain struct {
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
 
+	dexConfig *config.DexConfig
+
 	// Unlike tendermint, we don't need implement a no-op metrics, usage of this field should
 	// check nil-ness to know whether metrics collection is turn on
-	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, stakeKeeper)
+	// TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	metrics *pub.Metrics
 
 	takeSnapshotHeight int64 // whether to take snapshot of current height, set at endblock(), reset at commit()
@@ -132,6 +135,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		crossChainConfig:   ServerContext.CrossChainConfig,
 		abciQueryBlackList: getABCIQueryBlackList(ServerContext.QueryConfig),
 		publicationConfig:  ServerContext.PublicationConfig,
+		dexConfig:          ServerContext.DexConfig,
 	}
 	// set upgrade config
 	SetUpgradeConfig(app.upgradeConfig)
@@ -140,7 +144,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// mappers
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
-	app.TokenMapper = tkstore.NewMapper(cdc, common.TokenStoreKey)
+	app.TokenMapper = tokens.NewMapper(cdc, common.TokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
 	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
@@ -180,7 +184,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.ibcKeeper, app.Pool, app.crossChainConfig.BscChainId)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
-		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, stakeKeeper)
+		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
 	}
 
 	if app.publicationConfig.ShouldPublishAny() {
@@ -280,6 +284,10 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
 
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
+
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
@@ -314,6 +322,13 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
+		issue.IssueMiniMsg{}.Type(),
+		issue.IssueTinyMsg{}.Type(),
+		seturi.SetURIMsg{}.Type(),
+		list.ListMiniMsg{}.Type(),
+	)
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
@@ -333,10 +348,11 @@ func (app *BinanceChain) initRunningMode() {
 
 func (app *BinanceChain) initDex() {
 	pairMapper := dex.NewTradingPairMapper(app.Codec, common.PairStoreKey)
-	app.DexKeeper = dex.NewOrderKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
+	app.DexKeeper = dex.NewDexKeeper(common.DexStoreKey, app.AccountKeeper, pairMapper,
 		app.RegisterCodespace(dex.DefaultCodespace), app.baseConfig.OrderKeeperConcurrency, app.Codec,
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
+	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
@@ -357,6 +373,7 @@ func (app *BinanceChain) initDex() {
 		stateDB,
 		app.LastBlockHeight(),
 		app.TxDecoder)
+
 }
 
 func (app *BinanceChain) initPlugins() {
@@ -369,7 +386,7 @@ func (app *BinanceChain) initPlugins() {
 	app.initSlashing()
 	app.initOracle()
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
-	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.AccountKeeper, app.govKeeper)
+	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.govKeeper)
 	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 	bridge.InitPlugin(app, app.bridgeKeeper)
@@ -682,13 +699,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	height := ctx.BlockHeader().Height
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	isBreatheBlock := app.isBreatheBlock(height, lastBlockTime, blockTime)
-
 	var tradesToPublish []*pub.Trade
 	if sdk.IsUpgrade(upgrade.BEP19) || !isBreatheBlock {
 		if app.publicationConfig.ShouldPublishAny() && pub.IsLive {
-			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx)
+			tradesToPublish = pub.MatchAndAllocateAllForPublish(app.DexKeeper, ctx, isBreatheBlock)
 		} else {
-			app.DexKeeper.MatchAndAllocateAll(ctx, nil)
+			app.DexKeeper.MatchAndAllocateSymbols(ctx, nil, isBreatheBlock)
 		}
 	}
 
@@ -706,6 +722,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
+
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
@@ -928,10 +945,13 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	var blockToPublish *pub.Block
 	var latestPriceLevels order.ChangedPriceLevelsMap
 
+	orderChanges := app.DexKeeper.GetAllOrderChanges()
+	orderInfoForPublish := app.DexKeeper.GetAllOrderInfosForPub()
+
 	duration := pub.Timer(app.Logger, fmt.Sprintf("collect publish information, height=%d", height), func() {
 		if app.publicationConfig.PublishAccountBalance {
 			txRelatedAccounts := app.Pool.TxRelatedAddrs()
-			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(app.DexKeeper, tradesToPublish)
+			tradeRelatedAccounts := pub.GetTradeAndOrdersRelatedAccounts(tradesToPublish, orderChanges, orderInfoForPublish)
 			accountsToPublish = pub.GetAccountBalances(
 				app.AccountKeeper,
 				ctx,
@@ -960,33 +980,34 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 	pub.Logger.Info("start to publish", "height", height,
 		"blockTime", blockTime, "numOfTrades", len(tradesToPublish),
 		"numOfOrders", // the order num we collected here doesn't include trade related orders
-		len(app.DexKeeper.OrderChanges),
+		len(orderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
 		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
 		len(accountsToPublish))
-	pub.ToRemoveOrderIdCh = make(chan string, pub.ToRemoveOrderIdChannelSize)
+	pub.ToRemoveOrderIdCh = make(chan pub.OrderSymbolId, pub.ToRemoveOrderIdChannelSize)
+
 	pub.ToPublishCh <- pub.NewBlockInfoToPublish(
 		height,
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
 		stakeUpdates,
-		app.DexKeeper.OrderChanges,     // thread-safety is guarded by the signal from RemoveDoneCh
-		app.DexKeeper.OrderInfosForPub, // thread-safety is guarded by the signal from RemoveDoneCh
+		orderChanges,        // thread-safety is guarded by the signal from RemoveDoneCh
+		orderInfoForPublish, // thread-safety is guarded by the signal from RemoveDoneCh
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
-		app.DexKeeper.RoundOrderFees,
+		app.DexKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
 		transferToPublish,
 		blockToPublish)
 
 	// remove item from OrderInfoForPublish when we published removed order (cancel, iocnofill, fullyfilled, expired)
-	for id := range pub.ToRemoveOrderIdCh {
-		pub.Logger.Debug("delete order from order changes map", "orderId", id)
-		delete(app.DexKeeper.OrderInfosForPub, id)
+	for o := range pub.ToRemoveOrderIdCh {
+		pub.Logger.Debug("delete order from order changes map", "symbol", o.Symbol, "orderId", o.Id)
+		app.DexKeeper.RemoveOrderInfosForPub(o.Symbol, o.Id)
 	}
 
 	pub.Logger.Debug("finish publish", "height", height)

@@ -14,11 +14,11 @@ import (
 )
 
 type ListHooks struct {
-	orderKeeper *order.Keeper
+	orderKeeper *order.DexKeeper
 	tokenMapper tokens.Mapper
 }
 
-func NewListHooks(orderKeeper *order.Keeper, tokenMapper tokens.Mapper) ListHooks {
+func NewListHooks(orderKeeper *order.DexKeeper, tokenMapper tokens.Mapper) ListHooks {
 	return ListHooks{
 		orderKeeper: orderKeeper,
 		tokenMapper: tokenMapper,
@@ -58,11 +58,11 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("expire time should after now")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, listParams.BaseAssetSymbol) {
+	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
 		return errors.New("base token does not exist")
 	}
 
-	if !hooks.tokenMapper.Exists(ctx, listParams.QuoteAssetSymbol) {
+	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
 		return errors.New("quote token does not exist")
 	}
 
@@ -74,10 +74,10 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 }
 
 type DelistHooks struct {
-	orderKeeper *order.Keeper
+	orderKeeper *order.DexKeeper
 }
 
-func NewDelistHooks(orderKeeper *order.Keeper) DelistHooks {
+func NewDelistHooks(orderKeeper *order.DexKeeper) DelistHooks {
 	return DelistHooks{
 		orderKeeper: orderKeeper,
 	}

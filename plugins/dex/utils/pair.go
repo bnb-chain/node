@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
 )
 
@@ -82,4 +83,12 @@ func TradingPair2AssetsSafe(symbol string) (baseAsset, quoteAsset string) {
 
 func Assets2TradingPair(baseAsset, quoteAsset string) (symbol string) {
 	return fmt.Sprintf("%s_%s", baseAsset, quoteAsset)
+}
+
+func IsMiniTokenTradingPair(symbol string) bool {
+	baseAsset, quoteAsset, err := TradingPair2Assets(symbol)
+	if err != nil {
+		return false
+	}
+	return types.IsMiniTokenSymbol(baseAsset) || types.IsMiniTokenSymbol(quoteAsset)
 }

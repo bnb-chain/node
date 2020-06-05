@@ -70,6 +70,12 @@ const (
 	CrossTransferOutFee      = 1e6
 	CrossTransferOutRelayFee = 1e6
 	CrossBindRelayFee        = 1e6
+
+	//MiniToken fee
+	TinyIssueFee   = 2e8
+	MiniIssueFee   = 4e8
+	MiniSetUriFee  = 37500
+	MiniListingFee = 10e8
 )
 
 var DefaultGenesisState = param.GenesisState{

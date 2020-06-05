@@ -65,6 +65,10 @@ var (
 		"side_submit_proposal": {},
 		"side_deposit":         {},
 		"side_vote":            {},
+		"tinyIssueMsg":        {},
+		"miniIssueMsg":        {},
+		"miniTokensSetURI":    {},
+		"dexListMini":         {},
 	}
 
 	ValidTransferFeeMsgTypes = map[string]struct{}{

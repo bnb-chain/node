@@ -18,6 +18,8 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(list.ListMsg{}, "dex/ListMsg", nil)
 	cdc.RegisterConcrete(types.TradingPair{}, "dex/TradingPair", nil)
 
+	cdc.RegisterConcrete(list.ListMiniMsg{}, "dex/ListMiniMsg", nil)
+
 	cdc.RegisterConcrete(order.FeeConfig{}, "dex/FeeConfig", nil)
 	cdc.RegisterConcrete(order.OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(order.ActiveOrders{}, "dex/ActiveOrders", nil)

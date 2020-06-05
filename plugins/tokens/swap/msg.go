@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 )
 
 const (
@@ -99,6 +102,13 @@ func (msg HTLTMsg) ValidateBasic() sdk.Error {
 	if msg.HeightSpan < MinimumHeightSpan || msg.HeightSpan > MaximumHeightSpan {
 		return ErrInvalidHeightSpan("The height span should be no less than 360 and no greater than 518400")
 	}
+
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		symbolError := types.ValidateTokenSymbols(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error())
+		}
+	}
 	return nil
 }
 
@@ -147,6 +157,12 @@ func (msg DepositHTLTMsg) ValidateBasic() sdk.Error {
 	}
 	if !msg.Amount.IsPositive() {
 		return sdk.ErrInvalidCoins("The swapped out coins must be positive")
+	}
+	if sdk.IsUpgrade(upgrade.BEP8) {
+		symbolError := types.ValidateTokenSymbols(msg.Amount)
+		if symbolError != nil {
+			return sdk.ErrInvalidCoins(symbolError.Error())
+		}
 	}
 	return nil
 }
