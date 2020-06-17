@@ -26,6 +26,7 @@ type TradingPairMapper interface {
 	ListAllTradingPairs(ctx sdk.Context) []types.TradingPair
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
+	DeleteRecentPrices(ctx sdk.Context, baseAsset, quoteAsset string)
 }
 
 var _ TradingPairMapper = mapper{}
@@ -157,7 +158,7 @@ func (m mapper) GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStor
 		} else {
 			recordStarted = true
 		}
-		prices := m.decodeRecentPrices(bz, numPricesStored)
+		prices := m.decodeRecentPrices(bz)
 		numSymbol := len(prices.Pair)
 		for i := 0; i < numSymbol; i++ {
 			symbol := prices.Pair[i]
@@ -170,6 +171,36 @@ func (m mapper) GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStor
 
 	ctx.Logger().Debug("Got recentPrices", "lastSeq", lastSeq, "recentPrices", recentPrices)
 	return recentPrices
+}
+
+func (m mapper) DeleteRecentPrices(ctx sdk.Context, baseAsset, quoteAsset string) {
+	symbolToDelete := dexUtils.Assets2TradingPair(strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
+	store := ctx.KVStore(m.key)
+	iter := sdk.KVStorePrefixIterator(store, []byte(recentPricesKeyPrefix))
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		bz := iter.Value()
+		prices := m.decodeRecentPrices(bz)
+		numSymbol := len(prices.Pair)
+		for i := 0; i < numSymbol; i++ {
+			symbol := prices.Pair[i]
+			if symbol == symbolToDelete {
+				prices.Pair = removePair(prices.Pair, i)
+				prices.Price = removePrice(prices.Price, i)
+				bz := m.cdc.MustMarshalBinaryBare(prices)
+				store.Set(iter.Key(), bz)
+				break
+			}
+		}
+	}
+}
+
+func removePair(pair []string, i int) []string {
+	return append(pair[:i], pair[i+1:]...)
+}
+func removePrice(price []int64, i int) []int64 {
+	return append(price[:i], price[i+1:]...)
 }
 
 func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
@@ -195,7 +226,7 @@ func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
 	return bz
 }
 
-func (m mapper) decodeRecentPrices(bz []byte, numPricesStored int64) *RecentPrice {
+func (m mapper) decodeRecentPrices(bz []byte) *RecentPrice {
 	value := RecentPrice{}
 	m.cdc.MustUnmarshalBinaryBare(bz, &value)
 	return &value

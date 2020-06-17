@@ -949,6 +949,7 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 	if err != nil {
 		kp.logger.Error("delete trading pair error", "err", err.Error())
 	}
+	kp.PairMapper.DeleteRecentPrices(ctx, baseAsset, quoteAsset)
 }
 
 func (kp *DexKeeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {
