@@ -129,17 +129,20 @@ func TestMapper_UpdateRecentPrices(t *testing.T) {
 }
 
 func TestMapper_DeleteRecentPrices(t *testing.T) {
+	const numPricesStored = 5
+	const pairNum = 3
+	const priceStoreEvery = 2
 	pairMapper, ctx := setup()
-	for i := 0; i < 3000; i++ {
-		lastPrices := make(map[string]int64, 2)
+	for i := 0; i < 30; i++ {
+		lastPrices := make(map[string]int64, pairNum)
 		lastPrices["ABC_BNB"] = 10
 		lastPrices["ABC_EFG"] = 3
 		lastPrices["EFG_BNB"] = 3
-		ctx = ctx.WithBlockHeight(int64(2 * (i + 1)))
-		pairMapper.UpdateRecentPrices(ctx, 2, 5, lastPrices)
+		ctx = ctx.WithBlockHeight(int64(priceStoreEvery * (i + 1)))
+		pairMapper.UpdateRecentPrices(ctx, priceStoreEvery, numPricesStored, lastPrices)
 	}
 
-	allRecentPrices := pairMapper.GetRecentPrices(ctx, 2, 5)
+	allRecentPrices := pairMapper.GetRecentPrices(ctx, priceStoreEvery, numPricesStored)
 	require.Equal(t, 3, len(allRecentPrices))
 	require.Equal(t, int64(5), allRecentPrices["ABC_BNB"].Count())
 	require.Equal(t, []interface{}{int64(10), int64(10), int64(10), int64(10), int64(10)}, allRecentPrices["ABC_BNB"].Elements())
@@ -148,8 +151,8 @@ func TestMapper_DeleteRecentPrices(t *testing.T) {
 	require.Equal(t, int64(5), allRecentPrices["ABC_EFG"].Count())
 	require.Equal(t, []interface{}{int64(3), int64(3), int64(3), int64(3), int64(3)}, allRecentPrices["EFG_BNB"].Elements())
 
-	pairMapper.DeleteRecentPrices(ctx, "ABC", "EFG")
-	allRecentPrices = pairMapper.GetRecentPrices(ctx, 2, 5)
+	pairMapper.DeleteRecentPrices(ctx, "ABC_EFG")
+	allRecentPrices = pairMapper.GetRecentPrices(ctx, priceStoreEvery, numPricesStored)
 	require.Equal(t, 2, len(allRecentPrices))
 	require.Equal(t, int64(5), allRecentPrices["ABC_BNB"].Count())
 	require.Equal(t, []interface{}{int64(10), int64(10), int64(10), int64(10), int64(10)}, allRecentPrices["ABC_BNB"].Elements())
@@ -158,28 +161,30 @@ func TestMapper_DeleteRecentPrices(t *testing.T) {
 }
 
 func TestMapper_DeleteOneRecentPrices(t *testing.T) {
+	const numPricesStored = 10
+	const pairNum = 1
+	const priceStoreEvery = 2
 	pairMapper, ctx := setup()
-	for i := 0; i < 10; i++ {
-		lastPrices := make(map[string]int64, 1)
+	for i := 0; i < numPricesStored; i++ {
+		lastPrices := make(map[string]int64, pairNum)
 		if i < 5 {
 			lastPrices["ABC_BNB"] = 10
 		}
 		ctx = ctx.WithBlockHeight(int64(2 * (i + 1)))
-		pairMapper.UpdateRecentPrices(ctx, 2, 10, lastPrices)
+		pairMapper.UpdateRecentPrices(ctx, priceStoreEvery, numPricesStored, lastPrices)
 	}
-
-	allRecentPrices := pairMapper.GetRecentPrices(ctx, 2, 10)
+	allRecentPrices := pairMapper.GetRecentPrices(ctx, priceStoreEvery, numPricesStored)
 	require.Equal(t, 1, len(allRecentPrices))
 	require.Equal(t, int64(5), allRecentPrices["ABC_BNB"].Count())
 	require.Equal(t, []interface{}{int64(10), int64(10), int64(10), int64(10), int64(10)}, allRecentPrices["ABC_BNB"].Elements())
 
-	pairMapper.DeleteRecentPrices(ctx, "ABC", "BNB")
-	allRecentPrices = pairMapper.GetRecentPrices(ctx, 2, 5)
+	pairMapper.DeleteRecentPrices(ctx, "ABC_BNB")
+	allRecentPrices = pairMapper.GetRecentPrices(ctx, priceStoreEvery, numPricesStored)
 	require.Equal(t, 0, len(allRecentPrices))
 
 	//allowed to delete again
-	pairMapper.DeleteRecentPrices(ctx, "ABC", "BNB")
-	allRecentPrices = pairMapper.GetRecentPrices(ctx, 2, 5)
+	pairMapper.DeleteRecentPrices(ctx, "ABC_BNB")
+	allRecentPrices = pairMapper.GetRecentPrices(ctx, priceStoreEvery, numPricesStored)
 	require.Equal(t, 0, len(allRecentPrices))
 }
 
@@ -188,29 +193,32 @@ func BenchmarkMapper_DeleteRecentPrices(b *testing.B) {
 	defer db.Close()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pairMapper.DeleteRecentPrices(ctx, string(i), string(i))
+		pairMapper.DeleteRecentPrices(ctx, string(i)+"_"+string(i))
 	}
 }
 
 func setupForBenchTest() (dbm.DB, TradingPairMapper, sdk.Context) {
+	const numPricesStored = 2000
+	const pairNum = 500
+	const priceStoreEvery = 1000
 	db, ms, key := setupLevelDbMultiStore()
 	ctx := sdk.NewContext(ms, abci.Header{Height: 1}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	var cdc = wire.NewCodec()
 	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
 	cdc.RegisterConcrete(RecentPrice{}, "dex/RecentPrice", nil)
 	pairMapper := NewTradingPairMapper(cdc, key)
-	for i := 0; i < 500; i++ {
+	for i := 0; i < pairNum; i++ {
 		tradingPair := dextypes.NewTradingPair(string(i), string(i), 102000)
 		pairMapper.AddTradingPair(ctx, tradingPair)
 	}
 
-	for i := 0; i < 2000; i++ {
-		lastPrices := make(map[string]int64, 500)
-		for j := 0; j < 500; j++ {
+	for i := 0; i < numPricesStored; i++ {
+		lastPrices := make(map[string]int64, pairNum)
+		for j := 0; j < pairNum; j++ {
 			lastPrices[string(j)+"_"+string(j)] = 8
 		}
-		ctx = ctx.WithBlockHeight(int64(1000 * (i + 1)))
-		pairMapper.UpdateRecentPrices(ctx, 1000, 2000, lastPrices)
+		ctx = ctx.WithBlockHeight(int64(priceStoreEvery * (i + 1)))
+		pairMapper.UpdateRecentPrices(ctx, priceStoreEvery, numPricesStored, lastPrices)
 	}
 
 	return db, pairMapper, ctx
