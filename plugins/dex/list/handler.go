@@ -114,6 +114,7 @@ func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Map
 		return sdk.ErrInvalidCoins("quote token does not exist").Result()
 	}
 
+	keeper.CleanRecentPrice(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)
 	var lotSize int64
 	if sdk.IsUpgrade(upgrade.LotSizeOptimization) {
 		lotSize = keeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)

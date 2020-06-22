@@ -190,6 +190,24 @@ func (kp *DexKeeper) determineTickAndLotSize(pair dexTypes.TradingPair, priceWMA
 	return
 }
 
+func (kp *DexKeeper) CleanRecentPrice(baseAssetSymbol, quoteAssetSymbol string) {
+	clean := func(base, quote string) {
+		symbol := dexUtils.Assets2TradingPair(baseAssetSymbol, quoteAssetSymbol)
+		if _, engineExists := kp.engines[symbol]; !engineExists {
+			if _, priceExists := kp.recentPrices[symbol]; priceExists {
+				delete(kp.recentPrices, symbol)
+			}
+		}
+	}
+
+	clean(baseAssetSymbol, quoteAssetSymbol)
+	clean(quoteAssetSymbol, baseAssetSymbol)
+	clean(baseAssetSymbol, types.NativeTokenSymbol)
+	clean(types.NativeTokenSymbol,baseAssetSymbol)
+	clean(quoteAssetSymbol, types.NativeTokenSymbol)
+	clean(types.NativeTokenSymbol, quoteAssetSymbol)
+}
+
 func (kp *DexKeeper) DetermineLotSize(baseAssetSymbol, quoteAssetSymbol string, price int64) (lotSize int64) {
 	var priceAgainstNative int64
 	if baseAssetSymbol == types.NativeTokenSymbol {
@@ -953,6 +971,10 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 
 func (kp *DexKeeper) deleteRecentPrices(ctx sdk.Context, symbol string) {
 	delete(kp.recentPrices, symbol)
+	// we do not delete from db on testnet before height 87864285(delisting happened on that height)
+	if ctx.ChainID() == "Binance-Chain-Nile" && ctx.BlockHeader().Height <= 87864285 {
+		return
+	}
 	kp.PairMapper.DeleteRecentPrices(ctx, symbol)
 }
 
