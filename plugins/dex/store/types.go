@@ -36,7 +36,7 @@ type RecentPrice struct {
 	Price []int64
 }
 
-func (prices *RecentPrice) removeRecentPrice(symbolToDelete string) {
+func (prices *RecentPrice) removePair(symbolToDelete string) {
 	numSymbol := len(prices.Pair)
 	for i := 0; i < numSymbol; i++ {
 		symbol := prices.Pair[i]

@@ -181,7 +181,7 @@ func (m mapper) DeleteRecentPrices(ctx sdk.Context, symbol string) {
 	for ; iter.Valid(); iter.Next() {
 		bz := iter.Value()
 		prices := m.decodeRecentPrices(bz)
-		prices.removeRecentPrice(symbol)
+		prices.removePair(symbol)
 		bz = m.cdc.MustMarshalBinaryBare(prices)
 		store.Set(iter.Key(), bz)
 	}
