@@ -426,6 +426,9 @@ func (app *BinanceChain) initSideChain() {
 }
 
 func (app *BinanceChain) initOracle() {
+	if ServerContext.Config.Instrumentation.Prometheus {
+		app.oracleKeeper.EnablePrometheusMetrics()
+	}
 	app.oracleKeeper.SubscribeParamChange(app.ParamHub)
 	oracle.RegisterUpgradeBeginBlocker(app.oracleKeeper)
 }
