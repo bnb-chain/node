@@ -19,6 +19,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/oracle"
+	"github.com/cosmos/cosmos-sdk/x/paramHub"
+	param "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
+	paramTypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
@@ -44,8 +47,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/param"
-	"github.com/binance-chain/node/plugins/param/paramhub"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/issue"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
@@ -97,7 +98,7 @@ type BinanceChain struct {
 	ibcKeeper      ibc.Keeper
 	scKeeper       sidechain.Keeper
 	// keeper to process param store and update
-	ParamHub *param.ParamHub
+	ParamHub *param.Keeper
 
 	baseConfig         *config.BaseConfig
 	upgradeConfig      *config.UpgradeConfig
@@ -144,9 +145,9 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.AccountKeeper = auth.NewAccountKeeper(cdc, common.AccountStoreKey, types.ProtoAppAccount)
 	app.TokenMapper = tokens.NewMapper(cdc, common.TokenStoreKey)
 	app.CoinKeeper = bank.NewBaseKeeper(app.AccountKeeper)
-	app.ParamHub = paramhub.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
-	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.RegisterCodespace(ibc.DefaultCodespace))
+	app.ParamHub = param.NewKeeper(cdc, common.ParamsStoreKey, common.TParamsStoreKey)
 	app.scKeeper = sidechain.NewKeeper(common.SideChainStoreKey, app.ParamHub.Subspace(sidechain.DefaultParamspace))
+	app.ibcKeeper = ibc.NewKeeper(common.IbcStoreKey, app.ParamHub.Subspace(ibc.DefaultParamspace), app.RegisterCodespace(ibc.DefaultCodespace), app.scKeeper)
 
 	app.slashKeeper = slashing.NewKeeper(
 		cdc,
@@ -172,15 +173,15 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		app.RegisterCodespace(gov.DefaultCodespace),
 		app.Pool,
 	)
-	app.ParamHub.SetGovKeeper(app.govKeeper)
 
 	app.timeLockKeeper = timelock.NewKeeper(cdc, common.TimeLockStoreKey, app.CoinKeeper, app.AccountKeeper,
 		timelock.DefaultCodespace)
 
 	app.swapKeeper = swap.NewKeeper(cdc, common.AtomicSwapStoreKey, app.CoinKeeper, app.Pool, swap.DefaultCodespace)
-	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace), app.stakeKeeper)
-	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.TokenMapper, app.oracleKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, app.crossChainConfig.BscChainId)
+	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace),
+		app.stakeKeeper, app.scKeeper, app.ibcKeeper, app.CoinKeeper, app.Pool)
+	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.AccountKeeper, app.TokenMapper, app.scKeeper, app.CoinKeeper,
+		app.ibcKeeper, app.Pool, sdk.IbcChainID(app.crossChainConfig.BscIbcChainId))
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -314,7 +315,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgSideChainUndelegate{}.Type(),
 		slashing.MsgBscSubmitEvidence{}.Type(),
 		slashing.MsgSideChainUnjail{}.Type(),
+		gov.MsgSideChainSubmitProposal{}.Type(),
+		gov.MsgSideChainDeposit{}.Type(),
+		gov.MsgSideChainVote{}.Type(),
 		bridge.BindMsg{}.Type(),
+		bridge.UnbindMsg{}.Type(),
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
@@ -369,13 +374,14 @@ func (app *BinanceChain) initPlugins() {
 	app.initSideChain()
 	app.initIbc()
 	app.initDex()
+	app.initGov()
 	app.initGovHooks()
 	app.initStaking()
 	app.initSlashing()
 	app.initOracle()
+	app.initParamHub()
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.govKeeper)
-	param.InitPlugin(app, app.ParamHub)
 	account.InitPlugin(app, app.AccountKeeper)
 	bridge.InitPlugin(app, app.bridgeKeeper)
 	app.initParams()
@@ -394,6 +400,7 @@ func (app *BinanceChain) initPlugins() {
 	app.QueryRouter().AddRoute("slashing", slashing.NewQuerier(app.slashKeeper, app.Codec))
 	app.QueryRouter().AddRoute("timelock", timelock.NewQuerier(app.timeLockKeeper))
 	app.QueryRouter().AddRoute(swap.AtomicSwapRoute, swap.NewQuerier(app.swapKeeper))
+	app.QueryRouter().AddRoute("param", paramHub.NewQuerier(app.ParamHub, app.Codec))
 
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
@@ -411,7 +418,20 @@ func (app *BinanceChain) initSideChain() {
 }
 
 func (app *BinanceChain) initOracle() {
+	if ServerContext.Config.Instrumentation.Prometheus {
+		app.oracleKeeper.EnablePrometheusMetrics()
+	}
+	app.oracleKeeper.SubscribeParamChange(app.ParamHub)
 	oracle.RegisterUpgradeBeginBlocker(app.oracleKeeper)
+}
+
+func (app *BinanceChain) initParamHub() {
+	paramHub.RegisterUpgradeBeginBlocker(app.ParamHub)
+	handler := paramHub.CreateAbciQueryHandler(app.ParamHub)
+	// paramHub used to be a plugin of node, we still keep the old api here.
+	app.RegisterQueryHandler(paramHub.AbciQueryPrefix, func(app types.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
+		return handler(app.GetContextForCheckState(), req, path)
+	})
 }
 
 func (app *BinanceChain) initStaking() {
@@ -432,11 +452,34 @@ func (app *BinanceChain) initStaking() {
 			LooseTokens: sdk.NewDec(5e15),
 		})
 	})
+	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+}
+
+func (app *BinanceChain) initGov() {
+	app.govKeeper.SetupForSideChain(&app.scKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		err := app.govKeeper.SetInitialProposalID(newCtx, 1)
+		if err != nil {
+			panic(err)
+		}
+		app.govKeeper.SetDepositParams(newCtx, gov.DepositParams{
+			MinDeposit:       sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 2000e8)},
+			MaxDepositPeriod: time.Duration(2*24) * time.Hour, // 2 days
+		})
+		app.govKeeper.SetTallyParams(newCtx, gov.TallyParams{
+			Quorum:    sdk.NewDecWithPrec(5, 1),
+			Threshold: sdk.NewDecWithPrec(5, 1),
+			Veto:      sdk.NewDecWithPrec(334, 3),
+		})
+	})
 }
 
 func (app *BinanceChain) initSlashing() {
 	app.slashKeeper.SetSideChain(&app.scKeeper)
+	app.slashKeeper.SubscribeParamChange(app.ParamHub)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
@@ -451,37 +494,50 @@ func (app *BinanceChain) initSlashing() {
 			DowntimeSlashFee:         10e8,
 		})
 	})
-
-	err := app.slashKeeper.ClaimRegister(app.oracleKeeper)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (app *BinanceChain) initIbc() {
 	// set up IBC chainID for BBC
-	app.ibcKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
+	app.scKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
 	// set up IBC chainID for BSC
-	err := app.ibcKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
+	err := app.scKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
 	if err != nil {
 		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", ServerContext.BscChainId, err.Error()))
 	}
+	app.ibcKeeper.SubscribeParamChange(app.ParamHub)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.ibcKeeper.SetParams(newCtx, ibc.Params{
+			RelayerFee: ibc.DefaultRelayerFeeParam,
+		})
+	})
 }
 
 func (app *BinanceChain) initGovHooks() {
 	listHooks := list.NewListHooks(app.DexKeeper, app.TokenMapper)
-	feeChangeHooks := param.NewFeeChangeHooks(app.Codec)
+	feeChangeHooks := paramHub.NewFeeChangeHooks(app.Codec)
+	cscParamChangeHooks := paramHub.NewCSCParamsChangeHook(app.Codec)
+	scParamChangeHooks := paramHub.NewSCParamsChangeHook(app.Codec)
 	delistHooks := list.NewDelistHooks(app.DexKeeper)
 	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeCSCParamsChange, cscParamChangeHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeSCParamsChange, scParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 }
 
 func (app *BinanceChain) initParams() {
-	if app.CheckState == nil || app.CheckState.Ctx.BlockHeight() == 0 {
-		return
+	app.ParamHub.SetGovKeeper(&app.govKeeper)
+	app.ParamHub.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.ParamHub.SetLastSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
+	})
+	if app.CheckState != nil && app.CheckState.Ctx.BlockHeight() != 0 {
+		app.ParamHub.Load(app.CheckState.Ctx)
 	}
-	app.ParamHub.Load(app.CheckState.Ctx)
 }
 
 // initChainerFn performs custom logic for chain initialization.
@@ -594,7 +650,7 @@ func (app *BinanceChain) CheckTx(req abci.RequestCheckTx) (res abci.ResponseChec
 		Code:   uint32(result.Code),
 		Data:   result.Data,
 		Log:    result.Log,
-		Events: result.Tags.ToEvents(),
+		Events: result.GetEvents(),
 	}
 }
 
@@ -670,7 +726,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.takeSnapshotHeight = height
 		fmt.Println(ctx.BlockHeight())
 		dex.EndBreatheBlock(ctx, app.DexKeeper, app.govKeeper, height, blockTime)
-		param.EndBreatheBlock(ctx, app.ParamHub)
+		paramHub.EndBreatheBlock(ctx, app.ParamHub)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 	} else {
 		app.Logger.Debug("normal block", "height", height)
@@ -680,12 +736,14 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 
-	tags, passed, failed := gov.EndBlocker(ctx, app.govKeeper)
+	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
 	if app.publicationConfig.PublishOrderUpdates {
+		//TODO, "passed" and "failed" contains proposalId and ChainId, please publish chain id as well during
+		// the refactor of publisher.
 		proposals = pub.CollectProposalsForPublish(passed, failed)
 	}
-
+	paramHub.EndBlock(ctx, app.ParamHub)
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
 	if isBreatheBlock {
@@ -718,7 +776,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
-		Events:           append(tags.ToEvents(), ctx.EventManager().ABCIEvents()...),
+		Events:           ctx.EventManager().ABCIEvents(),
 	}
 }
 
@@ -878,6 +936,7 @@ func MakeCodec() *wire.Codec {
 	wire.RegisterCrypto(cdc) // Register crypto.
 	bank.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc) // Register Msgs
+	paramHub.RegisterWire(cdc)
 	dex.RegisterWire(cdc)
 	tokens.RegisterWire(cdc)
 	account.RegisterWire(cdc)
@@ -886,9 +945,9 @@ func MakeCodec() *wire.Codec {
 	stake.RegisterCodec(cdc)
 	slashing.RegisterCodec(cdc)
 	gov.RegisterCodec(cdc)
-	param.RegisterWire(cdc)
 	bridge.RegisterWire(cdc)
 	oracle.RegisterWire(cdc)
+	ibc.RegisterWire(cdc)
 	return cdc
 }
 

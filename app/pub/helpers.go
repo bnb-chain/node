@@ -367,14 +367,14 @@ func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper,
 	return
 }
 
-func CollectProposalsForPublish(passed, failed []int64) Proposals {
+func CollectProposalsForPublish(passed, failed []gov.SimpleProposal) Proposals {
 	totalProposals := len(passed) + len(failed)
 	ps := make([]*Proposal, 0, totalProposals)
 	for _, p := range passed {
-		ps = append(ps, &Proposal{p, Succeed})
+		ps = append(ps, &Proposal{p.Id, Succeed})
 	}
 	for _, p := range failed {
-		ps = append(ps, &Proposal{p, Failed})
+		ps = append(ps, &Proposal{p.Id, Failed})
 	}
 	return Proposals{totalProposals, ps}
 }

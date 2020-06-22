@@ -10,13 +10,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/paramHub"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/param"
-	paramtypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
 )
@@ -137,7 +137,7 @@ func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState 
 		Tokens:       []tokens.GenesisToken{nativeToken},
 		Accounts:     genAccounts,
 		DexGenesis:   dex.DefaultGenesis,
-		ParamGenesis: param.DefaultGenesisState,
+		ParamGenesis: paramHub.DefaultGenesisState,
 		StakeData:    stakeData,
 		GenTxs:       appGenTxs,
 		GovData:      govData,

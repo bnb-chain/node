@@ -2,13 +2,13 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/binance-chain/node/common/fees"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 )
 
 const (
-	BindRelayFeeName   = "crossBindRelayFee"
-	TransferOutFeeName = "crossTransferOutRelayFee"
+	BindRelayFeeName        = "crossBindRelayFee"
+	UnbindRelayFeeName      = "crossUnbindRelayFee"
+	TransferOutRelayFeeName = "crossTransferOutRelayFee"
 )
 
 func GetFee(feeName string) (sdk.Fee, sdk.Error) {

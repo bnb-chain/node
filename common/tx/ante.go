@@ -17,7 +17,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
 )
 
@@ -351,7 +350,7 @@ func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account,
 }
 
 func calculateFees(msg sdk.Msg) (sdk.Fee, error) {
-	calculator := fees.GetCalculator(msg.Type())
+	calculator := sdkfees.GetCalculator(msg.Type())
 	if calculator == nil {
 		return sdk.Fee{}, errors.New("missing calculator for msgType:" + msg.Type())
 	}

@@ -9,17 +9,16 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	param "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	cmnUtils "github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
 

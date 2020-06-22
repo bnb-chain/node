@@ -10,6 +10,7 @@ import (
 	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
+	"github.com/cosmos/cosmos-sdk/x/paramHub"
 
 	abcicli "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
@@ -24,10 +25,8 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
 )
@@ -40,7 +39,7 @@ type TestClient struct {
 func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
 	return func(ctx sdk.Context, tx sdk.Tx, runTxMode sdk.RunTxMode) (newCtx sdk.Context, result sdk.Result, abort bool) {
 		msg := tx.GetMsgs()[0]
-		fee := fees.GetCalculator(msg.Type())(msg)
+		fee := sdkfees.GetCalculator(msg.Type())(msg)
 
 		if ctx.IsDeliverTx() {
 			// add fee to pool, even it's free
@@ -149,7 +148,7 @@ func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*c
 		Tokens:       tokens,
 		Accounts:     genaccs,
 		DexGenesis:   dex.DefaultGenesis,
-		ParamGenesis: param.DefaultGenesisState,
+		ParamGenesis: paramHub.DefaultGenesisState,
 	}
 
 	stateBytes, err := wire.MarshalJSONIndent(bapp.Codec, genesisState)
