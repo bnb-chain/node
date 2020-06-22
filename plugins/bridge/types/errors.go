@@ -1,45 +1,32 @@
 package types
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
 	DefaultCodespace sdk.CodespaceType = 12
 
-	CodeInvalidTransferMsg      sdk.CodeType = 1
-	CodeInvalidSequence         sdk.CodeType = 2
-	CodeInvalidAmount           sdk.CodeType = 3
-	CodeInvalidEthereumAddress  sdk.CodeType = 4
-	CodeInvalidDecimal          sdk.CodeType = 5
-	CodeInvalidContractAddress  sdk.CodeType = 6
-	CodeTokenNotBound           sdk.CodeType = 7
-	CodeInvalidSymbol           sdk.CodeType = 8
-	CodeInvalidExpireTime       sdk.CodeType = 9
-	CodeSerializePackageFailed  sdk.CodeType = 10
-	CodeGetChannelIdFailed      sdk.CodeType = 11
-	CodeBindRequestExists       sdk.CodeType = 12
-	CodeBindRequestNotExists    sdk.CodeType = 13
-	CodeBindRequestNotIdentical sdk.CodeType = 14
-	CodeInvalidStatus           sdk.CodeType = 15
-	CodeTokenBound              sdk.CodeType = 16
-	CodeInvalidLength           sdk.CodeType = 17
-	CodeFeeNotFound             sdk.CodeType = 18
-	CodeInvalidClaim            sdk.CodeType = 19
+	CodeInvalidAmount             sdk.CodeType = 1
+	CodeInvalidEthereumAddress    sdk.CodeType = 2
+	CodeInvalidDecimals           sdk.CodeType = 3
+	CodeInvalidContractAddress    sdk.CodeType = 4
+	CodeTokenNotBound             sdk.CodeType = 5
+	CodeInvalidSymbol             sdk.CodeType = 6
+	CodeInvalidExpireTime         sdk.CodeType = 7
+	CodeBindRequestExists         sdk.CodeType = 8
+	CodeBindRequestNotExists      sdk.CodeType = 9
+	CodeTokenBound                sdk.CodeType = 10
+	CodeInvalidLength             sdk.CodeType = 11
+	CodeFeeNotFound               sdk.CodeType = 12
+	CodeInvalidClaim              sdk.CodeType = 13
+	CodeDeserializePackageFailed  sdk.CodeType = 14
+	CodeTokenBindRelationChanged  sdk.CodeType = 15
+	CodeTransferInExpire          sdk.CodeType = 16
 )
 
 //----------------------------------------
 // Error constructors
-
-func ErrInvalidTransferMsg(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidTransferMsg, fmt.Sprintf("invalid transfer msg: %s", msg))
-}
-
-func ErrInvalidSequence(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidSequence, msg)
-}
 
 func ErrInvalidAmount(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidAmount, msg)
@@ -49,8 +36,8 @@ func ErrInvalidEthereumAddress(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidEthereumAddress, msg)
 }
 
-func ErrInvalidDecimal(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidDecimal, msg)
+func ErrInvalidDecimals(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidDecimals, msg)
 }
 
 func ErrInvalidContractAddress(msg string) sdk.Error {
@@ -69,12 +56,8 @@ func ErrInvalidExpireTime(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidExpireTime, msg)
 }
 
-func ErrSerializePackageFailed(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeSerializePackageFailed, msg)
-}
-
-func ErrGetChannelIdFailed(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeGetChannelIdFailed, msg)
+func ErrDeserializePackageFailed(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeDeserializePackageFailed, msg)
 }
 
 func ErrBindRequestExists(msg string) sdk.Error {
@@ -83,14 +66,6 @@ func ErrBindRequestExists(msg string) sdk.Error {
 
 func ErrBindRequestNotExists(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeBindRequestNotExists, msg)
-}
-
-func ErrBindRequestNotIdentical(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeBindRequestNotIdentical, msg)
-}
-
-func ErrInvalidStatus(msg string) sdk.Error {
-	return sdk.NewError(DefaultCodespace, CodeInvalidStatus, msg)
 }
 
 func ErrTokenBound(msg string) sdk.Error {
@@ -107,4 +82,12 @@ func ErrFeeNotFound(msg string) sdk.Error {
 
 func ErrInvalidClaim(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeInvalidClaim, msg)
+}
+
+func ErrTokenBindRelationChanged(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeTokenBindRelationChanged, msg)
+}
+
+func ErrTransferInExpire(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeTransferInExpire, msg)
 }

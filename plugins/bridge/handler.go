@@ -5,8 +5,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 
+	"github.com/binance-chain/node/common/log"
 	cmmtypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
@@ -18,11 +21,79 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleTransferOutMsg(ctx, keeper, msg)
 		case BindMsg:
 			return handleBindMsg(ctx, keeper, msg)
+		case UnbindMsg:
+			return handleUnbindMsg(ctx, keeper, msg)
 		default:
 			errMsg := "Unrecognized bridge msg type"
 			return sdk.ErrUnknownRequest(errMsg).Result()
 		}
 	}
+}
+
+func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
+	// check is native symbol
+	if msg.Symbol == cmmtypes.NativeTokenSymbol {
+		return types.ErrInvalidSymbol("can not unbind native symbol").Result()
+	}
+
+	token, err := keeper.TokenMapper.GetToken(ctx, msg.Symbol)
+	if err != nil {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("symbol(%s) does not exist", msg.Symbol)).Result()
+	}
+
+	if token.GetContractAddress() == "" {
+		return types.ErrTokenBound(fmt.Sprintf("token %s is not bound", msg.Symbol)).Result()
+	}
+
+	if !token.IsOwner(msg.From) {
+		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can unbind token %s", msg.Symbol)).Result()
+	}
+
+	relayFee, sdkErr := types.GetFee(types.UnbindRelayFeeName)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
+	bscRelayFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+
+	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, relayFee.Tokens)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+		return sdkErr.Result()
+	}
+
+	unbindPackage := types.BindSynPackage{
+		PackageType:     types.BindTypeUnbind,
+		Bep2TokenSymbol: types.SymbolToBytes(msg.Symbol),
+	}
+
+	encodedPackage, err := rlp.EncodeToBytes(unbindPackage)
+	if err != nil {
+		log.With("module", "bridge").Error("encode unbind package error", "err", err.Error())
+		return sdk.ErrInternal("encode unbind package error").Result()
+	}
+
+	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType,
+		encodedPackage, *bscRelayFee.BigInt())
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("create unbind ibc package error", "err", sdkErr.Error())
+		return sdkErr.Result()
+	}
+
+	err = keeper.TokenMapper.UpdateBind(ctx, msg.Symbol, "", 0)
+	if err != nil {
+		log.With("module", "bridge").Error("update token info error", "err", err.Error())
+		return sdk.ErrInternal(fmt.Sprintf("update token error, err=%s", err.Error())).Result()
+	}
+
+	log.With("module", "bridge").Info("unbind token success", "symbol", msg.Symbol, "contract_addr", token.GetContractDecimals())
+	if ctx.IsDeliverTx() {
+		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
+	}
+	return sdk.Result{}
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
@@ -51,55 +122,81 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrUnauthorized(fmt.Sprintf("only the owner can bind token %s", msg.Symbol)).Result()
 	}
 
-	peggyAmount := sdk.Coins{sdk.Coin{Denom: symbol, Amount: msg.Amount}}
+	// if token owner has bound token before, decimals should be the same as the original when contract address is the same.
+	existsContractDecimals := keeper.GetContractDecimals(ctx, msg.ContractAddress)
+	if existsContractDecimals >= 0 && existsContractDecimals != msg.ContractDecimals {
+		return types.ErrInvalidDecimals(fmt.Sprintf("decimals should be %d", existsContractDecimals)).Result()
+	}
+
+	tokenAmount := keeper.BankKeeper.GetCoins(ctx, types.PegAccount).AmountOf(symbol)
+	if msg.Amount < tokenAmount {
+		return sdk.ErrInvalidCoins(fmt.Sprintf("bind amount should be no less than %d", tokenAmount)).Result()
+	}
+
+	peggyAmount := sdk.Coins{
+		sdk.Coin{Denom: symbol, Amount: msg.Amount - tokenAmount},
+	}
+
 	relayFee, sdkErr := types.GetFee(types.BindRelayFeeName)
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
 	transferAmount := peggyAmount.Plus(relayFee.Tokens)
 
-	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
+	bscTotalSupply, sdkErr := types.ConvertBCAmountToBSCAmount(msg.ContractDecimals, token.GetTotalSupply().ToInt64())
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+	bscAmount, sdkErr := types.ConvertBCAmountToBSCAmount(msg.ContractDecimals, msg.Amount)
+	if sdkErr != nil {
+		return sdkErr.Result()
+	}
+	bscRelayFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
 
-	var calibratedTotalSupply sdk.Int
-	var calibratedAmount sdk.Int
-	if msg.ContractDecimals >= cmmtypes.TokenDecimals {
-		decimals := sdk.NewIntWithDecimal(1, int(msg.ContractDecimals-cmmtypes.TokenDecimals))
-		calibratedTotalSupply = sdk.NewInt(token.GetTotalSupply().ToInt64()).Mul(decimals)
-		calibratedAmount = sdk.NewInt(msg.Amount).Mul(decimals)
-	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-msg.ContractDecimals))
-		if !sdk.NewInt(token.GetTotalSupply().ToInt64()).Mod(decimals).IsZero() || !sdk.NewInt(msg.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount to ERC20(decimals: %d) amount", msg.ContractDecimals)).Result()
-		}
-		calibratedTotalSupply = sdk.NewInt(token.GetTotalSupply().ToInt64()).Div(decimals)
-		calibratedAmount = sdk.NewInt(msg.Amount).Div(decimals)
+	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+		return sdkErr.Result()
 	}
-	calibratedRelayFee := sdk.NewInt(relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol)).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
 
 	bindRequest := types.BindRequest{
 		From:             msg.From,
 		Symbol:           symbol,
-		Amount:           calibratedAmount,
+		Amount:           msg.Amount,
+		DeductedAmount:   msg.Amount - tokenAmount,
 		ContractAddress:  msg.ContractAddress,
 		ContractDecimals: msg.ContractDecimals,
 		ExpireTime:       msg.ExpireTime,
 	}
 	sdkErr = keeper.CreateBindRequest(ctx, bindRequest)
 	if sdkErr != nil {
+		log.With("module", "bridge").Error("create bind request error", "err", sdkErr.Error())
 		return sdkErr.Result()
 	}
 
-	bindPackage, err := types.SerializeBindPackage(symbol, msg.ContractAddress[:],
-		calibratedTotalSupply, calibratedAmount, msg.ContractDecimals, msg.ExpireTime, calibratedRelayFee)
-	if err != nil {
-		return types.ErrSerializePackageFailed(err.Error()).Result()
+	bindPackage := types.BindSynPackage{
+		PackageType:     types.BindTypeBind,
+		Bep2TokenSymbol: types.SymbolToBytes(msg.Symbol),
+		ContractAddr:    msg.ContractAddress,
+		TotalSupply:     bscTotalSupply.BigInt(),
+		PeggyAmount:     bscAmount.BigInt(),
+		Decimals:        uint8(msg.ContractDecimals),
+		ExpireTime:      uint64(msg.ExpireTime),
 	}
 
-	_, sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.BindChannel, bindPackage)
+	encodedPackage, err := rlp.EncodeToBytes(bindPackage)
+	if err != nil {
+		log.With("module", "bridge").Error("encode unbind package error", "err", err.Error())
+		return sdk.ErrInternal("encode unbind package error").Result()
+	}
+
+	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType, encodedPackage,
+		*bscRelayFee.BigInt())
 	if sdkErr != nil {
+		log.With("module", "bridge").Error("create bind ibc package error", "err", sdkErr.Error())
 		return sdkErr.Result()
 	}
 
@@ -125,38 +222,55 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return types.ErrTokenNotBound(fmt.Sprintf("token %s is not bound", symbol)).Result()
 	}
 
-	fee, sdkErr := types.GetFee(types.TransferOutFeeName)
+	// check mini token
+	sdkErr := bank.CheckAndValidateMiniTokenCoins(ctx, keeper.AccountKeeper, msg.From, sdk.Coins{msg.Amount})
 	if sdkErr != nil {
 		return sdkErr.Result()
 	}
 
-	transferAmount := sdk.Coins{msg.Amount}.Plus(fee.Tokens)
-	_, cErr := keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
-	if cErr != nil {
-		return cErr.Result()
+	relayFee, sdkErr := types.GetFee(types.TransferOutRelayFeeName)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("get transfer out syn fee error", "err", sdkErr.Error())
+		return sdkErr.Result()
+	}
+	transferAmount := sdk.Coins{msg.Amount}.Plus(relayFee.Tokens)
+
+	bscTransferAmount, sdkErr := types.ConvertBCAmountToBSCAmount(token.GetContractDecimals(), msg.Amount.Amount)
+	if sdkErr != nil {
+		return sdkErr.Result()
 	}
 
-	var calibratedAmount sdk.Int
-	if token.GetContractDecimals() >= cmmtypes.TokenDecimals {
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Mul(sdk.NewIntWithDecimal(1, int(token.GetContractDecimals()-cmmtypes.TokenDecimals)))
-	} else {
-		decimals := sdk.NewIntWithDecimal(1, int(cmmtypes.TokenDecimals-token.GetContractDecimals()))
-		if !sdk.NewInt(msg.Amount.Amount).Mod(decimals).IsZero() {
-			return types.ErrInvalidAmount(fmt.Sprintf("can't convert bep2(decimals: 8) amount %d to ERC20(decimals: %d) amount", msg.Amount.Amount, token.GetContractDecimals())).Result()
-		}
-		calibratedAmount = sdk.NewInt(msg.Amount.Amount).Div(decimals)
+	bscRelayFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
+	if sdkErr != nil {
+		return sdkErr.Result()
 	}
-	calibratedRelayFee := sdk.NewInt(fee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol)).Mul(sdk.NewIntWithDecimal(1, int(18-cmmtypes.TokenDecimals)))
+
+	_, sdkErr = keeper.BankKeeper.SendCoins(ctx, msg.From, types.PegAccount, transferAmount)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+		return sdkErr.Result()
+	}
 
 	contractAddr := types.NewSmartChainAddress(token.GetContractAddress())
-	transferPackage, err := types.SerializeTransferOutPackage(symbol, contractAddr[:], msg.From.Bytes(), msg.To[:],
-		calibratedAmount, msg.ExpireTime, calibratedRelayFee)
-	if err != nil {
-		return types.ErrSerializePackageFailed(err.Error()).Result()
+	transferPackage := types.TransferOutSynPackage{
+		Bep2TokenSymbol: types.SymbolToBytes(symbol),
+		ContractAddress: contractAddr,
+		RefundAddress:   msg.From.Bytes(),
+		Recipient:       msg.To,
+		Amount:          bscTransferAmount.BigInt(),
+		ExpireTime:      uint64(msg.ExpireTime),
 	}
 
-	_, sdkErr = keeper.IbcKeeper.CreateIBCPackage(ctx, keeper.DestChainId, types.TransferOutChannel, transferPackage)
+	encodedPackage, err := rlp.EncodeToBytes(transferPackage)
+	if err != nil {
+		log.With("module", "bridge").Error("encode transfer out package error", "err", err.Error())
+		return sdk.ErrInternal("encode unbind package error").Result()
+	}
+
+	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.TransferOutChannelID, sdk.SynCrossChainPackageType,
+		encodedPackage, *bscRelayFee.BigInt())
 	if sdkErr != nil {
+		log.With("module", "bridge").Error("create transfer out ibc package error", "err", sdkErr.Error())
 		return sdkErr.Result()
 	}
 
