@@ -9,11 +9,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
 	"github.com/binance-chain/node/common/testutils"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/param/types"
-	"github.com/binance-chain/node/plugins/tokens"
 )
 
 func newAddr() sdk.AccAddress {
@@ -38,7 +37,7 @@ func TestTransferFeeGen(t *testing.T) {
 		LowerLimitAsMulti: 2,
 	}
 
-	calculator := tokens.TransferFeeCalculatorGen(&params)
+	calculator := bank.TransferFeeCalculatorGen(&params)
 
 	// (1 addr, 1 coin) : (1 addr, 1 coin)
 	msg := bank.MsgSend{
