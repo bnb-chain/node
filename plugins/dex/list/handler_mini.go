@@ -28,7 +28,7 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 	if !baseToken.IsOwner(msg.From) && !quoteToken.IsOwner(msg.From) {
 		return sdk.ErrUnauthorized("only the owner of the base asset or quote asset can list the trading pair").Result()
 	}
-
+	dexKeeper.CleanRecentPrice(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)
 	lotSize := dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
 	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
 	err = dexKeeper.PairMapper.AddTradingPair(ctx, pair)
