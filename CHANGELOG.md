@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.2
+BUG FIXES
+* [\#753](https://github.com/binance-chain/node/pull/753) [Dex] Delete recent price from db when delisting
 ## 0.7.0
 FEATURES
 * [\#725](https://github.com/binance-chain/node/pull/725) [Token] [Dex] BEP8 - Mini-BEP2 token features
