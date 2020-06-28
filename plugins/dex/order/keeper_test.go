@@ -110,7 +110,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	keeper.AddOrder(ord, false)
 	symbolsToMatch := keeper.SelectSymbolsToMatch(ctx.BlockHeader().Height, false)
 	logger.Info("symbols to match", "symbols", symbolsToMatch)
-	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0)
+	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0, symbolsToMatch)
 	c := channelHash(accAdd, 4)
 	i := 0
 	for tr := range tradeOuts[c] {
