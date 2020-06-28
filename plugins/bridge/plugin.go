@@ -1,13 +1,11 @@
 package bridge
 
 import (
-	"github.com/cosmos/cosmos-sdk/x/sidechain"
-
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
-func InitPlugin(chainApp app.ChainApp, keeper Keeper, scKeeper sidechain.Keeper) {
+func InitPlugin(chainApp app.ChainApp, keeper Keeper) {
 	for route, handler := range Routes(keeper) {
 		chainApp.GetRouter().AddRoute(route, handler)
 	}

@@ -391,7 +391,7 @@ func (app *BinanceChain) initPlugins() {
 	tokens.InitPlugin(app, app.TokenMapper, app.AccountKeeper, app.CoinKeeper, app.timeLockKeeper, app.swapKeeper)
 	dex.InitPlugin(app, app.DexKeeper, app.TokenMapper, app.govKeeper)
 	account.InitPlugin(app, app.AccountKeeper)
-	bridge.InitPlugin(app, app.bridgeKeeper, app.scKeeper)
+	bridge.InitPlugin(app, app.bridgeKeeper)
 	app.initParams()
 
 	// add handlers from bnc-cosmos-sdk (others moved to plugin init funcs)
