@@ -277,5 +277,14 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 	}
-	return sdk.Result{}
+
+	pegTags := sdk.Tags{}
+	for _, coin := range transferAmount {
+		if coin.Amount > 0 {
+			pegTags = append(pegTags, sdk.GetPegInTag(coin.Denom, coin.Amount))
+		}
+	}
+	return sdk.Result{
+		Tags: pegTags,
+	}
 }

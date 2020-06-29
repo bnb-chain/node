@@ -129,7 +129,7 @@ func NewTransferOutApp(bridgeKeeper Keeper) *TransferOutApp {
 	}
 }
 
-func (app *TransferOutApp) checkPackage(ctx sdk.Context, refundPackage *types.TransferOutRefundPackage) sdk.Error {
+func (app *TransferOutApp) checkPackage(refundPackage *types.TransferOutRefundPackage) sdk.Error {
 	if len(refundPackage.RefundAddr) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(refundPackage.RefundAddr.String())
 	}
@@ -156,7 +156,7 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 		}
 	}
 
-	sdkErr = app.checkPackage(ctx, refundPackage)
+	sdkErr = app.checkPackage(refundPackage)
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("check transfer out refund package error", "err", sdkErr.Error(), "claim", string(payload))
 		return sdk.ExecuteResult{
@@ -164,10 +164,11 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 		}
 	}
 
+	symbol := types.BytesToSymbol(refundPackage.Bep2TokenSymbol)
 	_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, refundPackage.RefundAddr,
 		sdk.Coins{
 			sdk.Coin{
-				Denom:  types.BytesToSymbol(refundPackage.Bep2TokenSymbol),
+				Denom:  symbol,
 				Amount: refundPackage.RefundAmount.Int64(),
 			},
 		},
@@ -183,7 +184,9 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundPackage.RefundAddr})
 	}
 
-	return sdk.ExecuteResult{}
+	return sdk.ExecuteResult{
+		Tags: sdk.Tags{sdk.GetPegOutTag(symbol, refundPackage.RefundAmount.Int64())},
+	}
 }
 
 func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
@@ -204,14 +207,16 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 		}
 	}
 
+	symbol := types.BytesToSymbol(transferOutPackage.Bep2TokenSymbol)
 	_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, transferOutPackage.RefundAddress,
 		sdk.Coins{
 			sdk.Coin{
-				Denom:  types.BytesToSymbol(transferOutPackage.Bep2TokenSymbol),
+				Denom:  symbol,
 				Amount: bcAmount,
 			},
 		},
 	)
+
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
 		return sdk.ExecuteResult{
@@ -223,7 +228,9 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, transferOutPackage.RefundAddress})
 	}
 
-	return sdk.ExecuteResult{}
+	return sdk.ExecuteResult{
+		Tags: sdk.Tags{sdk.GetPegOutTag(symbol, bcAmount)},
+	}
 }
 
 func (app *TransferOutApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
@@ -367,5 +374,15 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 	}
 
-	return sdk.ExecuteResult{}
+	// emit peg related event
+	var totalAmount int64 = 0
+	var tags sdk.Tags
+	if totalTransferInAmount != nil {
+		totalAmount = totalTransferInAmount.AmountOf(symbol)
+		tags = sdk.Tags{sdk.GetPegOutTag(symbol, totalAmount)}
+	}
+
+	return sdk.ExecuteResult{
+		Tags: tags,
+	}
 }
