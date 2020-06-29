@@ -157,7 +157,7 @@ func QueryProphecy(cdc *codec.Codec) *cobra.Command {
 			chainId := viper.GetUint(flagSideChainId)
 			channelId := viper.GetUint(flagChannelId)
 
-			key := oracle.GetClaimId(sdk.IbcChainID(chainId), sdk.IbcChannelID(channelId), uint64(sequence))
+			key := oracle.GetClaimId(sdk.ChainID(chainId), sdk.ChannelID(channelId), uint64(sequence))
 			res, err := cliCtx.QueryStore([]byte(key), common.OracleStoreName)
 			if err != nil {
 				return err

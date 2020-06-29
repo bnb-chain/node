@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"os"
 	"strings"
 	"testing"
@@ -33,7 +34,7 @@ import (
 	pHub "github.com/cosmos/cosmos-sdk/x/paramHub"
 	paramHub "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
 	ptypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
-	"github.com/cosmos/cosmos-sdk/x/sidechain"
+	sTypes "github.com/cosmos/cosmos-sdk/x/sidechain/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
@@ -91,11 +92,11 @@ func TestCSCParamUpdatesSuccess(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
 
-	packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(0))
+	packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(0))
 	assert.NoError(t, err)
-	expectedBz := cscParam.Serialize()
+	expectedBz, _ := rlp.EncodeToBytes(cscParam)
 	assert.NoError(t, err)
-	assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+	assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 }
 
 func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
@@ -146,10 +147,10 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
 
 	for idx, cscParam := range cscParams {
-		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(idx))
-		expectedBz := cscParam.Serialize()
+		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(idx))
+		expectedBz,_:= rlp.EncodeToBytes(cscParam)
 		assert.NoError(t, err)
-		assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
 
 	// expire proposal
@@ -169,7 +170,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 	testClient.cl.BeginBlockSync(abci.RequestBeginBlock{Header: ctx.BlockHeader()})
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
 
-	packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(3))
+	packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(3))
 	assert.NoError(t, err)
 	assert.True(t, len(packageBz) == 0, "write package unexpected")
 
@@ -196,10 +197,10 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 	testClient.cl.EndBlockSync(abci.RequestEndBlock{Height: ctx.BlockHeader().Height})
 
 	for idx, cscParam := range cscParams {
-		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(idx+3))
-		expectedBz := cscParam.Serialize()
+		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(idx+3))
+		expectedBz,_:= rlp.EncodeToBytes(cscParam)
 		assert.NoError(t, err)
-		assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
 }
 
