@@ -33,7 +33,7 @@ import (
 	pHub "github.com/cosmos/cosmos-sdk/x/paramHub"
 	paramHub "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
 	ptypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
-	"github.com/cosmos/cosmos-sdk/x/sidechain"
+	sTypes "github.com/cosmos/cosmos-sdk/x/sidechain/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
@@ -95,7 +95,7 @@ func TestCSCParamUpdatesSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	expectedBz := cscParam.Serialize()
 	assert.NoError(t, err)
-	assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+	assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 }
 
 func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
@@ -149,7 +149,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(idx))
 		expectedBz := cscParam.Serialize()
 		assert.NoError(t, err)
-		assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
 
 	// expire proposal
@@ -199,7 +199,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.IbcChannelName, uint64(idx+3))
 		expectedBz := cscParam.Serialize()
 		assert.NoError(t, err)
-		assert.True(t, bytes.Compare(expectedBz, packageBz[sidechain.PackageHeaderLength:]) == 0, "package bytes not equal")
+		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
 }
 

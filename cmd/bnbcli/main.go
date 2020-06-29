@@ -11,6 +11,8 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+	sidecmd "github.com/cosmos/cosmos-sdk/x/sidechain/client/cli"
+
 	paramcmd "github.com/cosmos/cosmos-sdk/x/paramHub/client/cli"
 	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
@@ -96,6 +98,7 @@ func main() {
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 	bridgecmd.AddCommands(rootCmd, cdc)
+	sidecmd.AddCommands(rootCmd,cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
