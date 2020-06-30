@@ -1,12 +1,11 @@
-package list
+package types
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/binance-chain/node/common/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/binance-chain/node/common/types"
 )
 
 const Route = "dexList"

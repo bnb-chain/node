@@ -12,6 +12,7 @@ import (
 
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
@@ -59,7 +60,7 @@ func TestHandleListMiniIdenticalSymbols(t *testing.T) {
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
-	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
+	result := handleListMini(ctx, orderKeeper, tokenMapper, dextypes.ListMiniMsg{
 		From:             sdk.AccAddress("testacc"),
 		BaseAssetSymbol:  "BTC-000M",
 		QuoteAssetSymbol: "BTC-000M",
@@ -75,7 +76,7 @@ func TestHandleListMiniWrongBaseSymbol(t *testing.T) {
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
-	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
+	result := handleListMini(ctx, orderKeeper, tokenMapper, dextypes.ListMiniMsg{
 		From:             sdk.AccAddress("testacc"),
 		BaseAssetSymbol:  "BTC",
 		QuoteAssetSymbol: "BNB",
@@ -92,7 +93,7 @@ func TestHandleListMiniRight(t *testing.T) {
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
-	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
+	result := handleListMini(ctx, orderKeeper, tokenMapper, dextypes.ListMiniMsg{
 		From:             sdk.AccAddress("testacc"),
 		BaseAssetSymbol:  "BTC-000M",
 		QuoteAssetSymbol: "BNB",
@@ -108,7 +109,7 @@ func TestHandleListTinyRight(t *testing.T) {
 	ms, orderKeeper, tokenMapper, _ := MakeKeepers(cdc)
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 	setupForMini(ctx, tokenMapper, t)
-	result := handleListMini(ctx, orderKeeper, tokenMapper, ListMiniMsg{
+	result := handleListMini(ctx, orderKeeper, tokenMapper, dextypes.ListMiniMsg{
 		From:             sdk.AccAddress("testacc"),
 		BaseAssetSymbol:  "ETH-000M",
 		QuoteAssetSymbol: "BNB",

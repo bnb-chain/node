@@ -1,14 +1,11 @@
-package list
+package types
 
 import (
 	"encoding/json"
 	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/order"
 )
 
 const MiniMsg = "dexListMini"
@@ -43,17 +40,6 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 	}
 	if len(msg.QuoteAssetSymbol) == 0 {
 		return sdk.ErrInvalidCoins("quote token is empty ")
-	}
-
-	// before BEP70 upgraded, we only support listing mini token against NativeToken
-	if sdk.IsUpgrade(upgrade.BEP70) {
-		if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ")
-		}
-	} else {
-		if types.NativeTokenSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ")
-		}
 	}
 
 	if msg.InitPrice <= 0 {

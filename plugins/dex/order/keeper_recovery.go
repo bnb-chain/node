@@ -23,9 +23,9 @@ import (
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/list"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	dexutils "github.com/binance-chain/node/plugins/dex/utils"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -243,9 +243,9 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 					logger.Error("Failed to replay cancel msg", "err", err)
 				}
 				logger.Info("Canceled Order", "order", msg)
-			case list.ListMiniMsg:
+			case dextypes.ListMiniMsg:
 				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol,msg.QuoteAssetSymbol)].LastMatchHeight = 0
-			case list.ListMsg:
+			case dextypes.ListMsg:
 				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol,msg.QuoteAssetSymbol)].LastMatchHeight = 0
 			}
 		}

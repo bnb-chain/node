@@ -1,6 +1,7 @@
 package dex
 
 import (
+	"github.com/binance-chain/node/plugins/dex/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
@@ -15,6 +16,6 @@ func Routes(dexKeeper *DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keepe
 	orderHandler := order.NewHandler(dexKeeper)
 	routes[order.RouteNewOrder] = orderHandler
 	routes[order.RouteCancelOrder] = orderHandler
-	routes[list.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
+	routes[types.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
 	return routes
 }

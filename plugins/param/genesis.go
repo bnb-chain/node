@@ -1,12 +1,12 @@
 package param
 
 import (
+	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	sdk "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens/burn"
@@ -74,7 +74,7 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{gov.MsgVote{}.Type(), sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{stake.MsgCreateValidator{}.Type(), CreateValidatorFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{stake.MsgRemoveValidator{}.Type(), RemoveValidatorFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{list.Route, ListingFee, sdk.FeeForAll},
+	&param.FixedFeeParams{types.Route, ListingFee, sdk.FeeForAll},
 	&param.FixedFeeParams{order.RouteNewOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{order.RouteCancelOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{issue.IssueMsgType, IssueFee, sdk.FeeForAll},
