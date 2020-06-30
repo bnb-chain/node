@@ -16,6 +16,6 @@ func Routes(dexKeeper *DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keepe
 	orderHandler := order.NewHandler(dexKeeper)
 	routes[order.RouteNewOrder] = orderHandler
 	routes[order.RouteCancelOrder] = orderHandler
-	routes[types.Route] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
+	routes[types.ListRoute] = list.NewHandler(dexKeeper, tokenMapper, govKeeper)
 	return routes
 }

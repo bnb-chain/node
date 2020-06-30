@@ -28,7 +28,7 @@ func NewListMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbo
 	}
 }
 
-func (msg ListMiniMsg) Route() string                { return Route }
+func (msg ListMiniMsg) Route() string                { return ListRoute }
 func (msg ListMiniMsg) Type() string                 { return MiniMsg }
 func (msg ListMiniMsg) String() string               { return fmt.Sprintf("MsgListMini{%#v}", msg) }
 func (msg ListMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }

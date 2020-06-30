@@ -86,7 +86,7 @@ func init() {
 		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
 		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
 		stake.MsgRemoveValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		dextypes.Route:                    fees.FixedFeeCalculatorGen,
+		dextypes.ListMsg{}.Type():         fees.FixedFeeCalculatorGen,
 		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
 		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,

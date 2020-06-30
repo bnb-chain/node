@@ -9,7 +9,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 )
 
-const Route = "dexList"
+const ListRoute = "dexList"
 
 var _ sdk.Msg = ListMsg{}
 
@@ -31,8 +31,8 @@ func NewMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quote
 	}
 }
 
-func (msg ListMsg) Route() string                { return Route }
-func (msg ListMsg) Type() string                 { return Route }
+func (msg ListMsg) Route() string                { return ListRoute }
+func (msg ListMsg) Type() string                 { return ListRoute }
 func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%#v}", msg) }
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 
