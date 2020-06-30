@@ -13,6 +13,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/linkedin/goavro v0.0.0-20180427201934-fa8f6a30176c
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
@@ -28,7 +30,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20200629041312-0118fe029a0b
+	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.25.0-bsc.prealpha.1.0.20200630112021-52227df108ce
 	github.com/tendermint/go-amino => github.com/binance-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.4
 	github.com/tendermint/tendermint => github.com/binance-chain/bnc-tendermint v0.32.3-binance.1.0.20200430083314-39f228dd6425
