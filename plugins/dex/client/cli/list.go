@@ -58,7 +58,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return errors.New("proposal id should larger than zero")
 			}
 
-			msg := dextypes.NewMsg(from, proposalId, baseAsset, quoteAsset, initPrice)
+			msg := dextypes.NewListMsg(from, proposalId, baseAsset, quoteAsset, initPrice)
 			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err

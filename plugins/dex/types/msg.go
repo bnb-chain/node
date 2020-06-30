@@ -21,7 +21,7 @@ type ListMsg struct {
 	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
+func NewListMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
 	return ListMsg{
 		From:             from,
 		ProposalId:       proposalId,
