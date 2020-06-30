@@ -11,8 +11,8 @@ import (
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/account"
-	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/param/paramhub"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -66,7 +66,7 @@ func RegisterUpgradeBeginBlocker(paramHub *ParamHub) {
 			&param.FixedFeeParams{MsgType: issue.IssueTinyMsgType, Fee: TinyIssueFee, FeeFor: types.FeeForAll},
 			&param.FixedFeeParams{MsgType: issue.IssueMiniMsgType, Fee: MiniIssueFee, FeeFor: types.FeeForAll},
 			&param.FixedFeeParams{MsgType: miniURI.SetURIMsg{}.Type(), Fee: MiniSetUriFee, FeeFor: types.FeeForProposer},
-			&param.FixedFeeParams{MsgType: list.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForAll},
+			&param.FixedFeeParams{MsgType: dextypes.ListMiniMsg{}.Type(), Fee: MiniListingFee, FeeFor: types.FeeForAll},
 		}
 		paramHub.UpdateFeeParams(ctx, miniTokenFeeParams)
 	})
@@ -86,7 +86,7 @@ func init() {
 		gov.MsgVote{}.Type():              fees.FixedFeeCalculatorGen,
 		stake.MsgCreateValidator{}.Type(): fees.FixedFeeCalculatorGen,
 		stake.MsgRemoveValidator{}.Type(): fees.FixedFeeCalculatorGen,
-		list.Route:                        fees.FixedFeeCalculatorGen,
+		dextypes.ListMsg{}.Type():         fees.FixedFeeCalculatorGen,
 		order.RouteNewOrder:               fees.FixedFeeCalculatorGen,
 		order.RouteCancelOrder:            fees.FixedFeeCalculatorGen,
 		issue.IssueMsgType:                fees.FixedFeeCalculatorGen,
@@ -105,6 +105,6 @@ func init() {
 		issue.IssueTinyMsgType:            fees.FixedFeeCalculatorGen,
 		issue.IssueMiniMsgType:            fees.FixedFeeCalculatorGen,
 		miniURI.SetURIRoute:               fees.FixedFeeCalculatorGen,
-		list.ListMiniMsg{}.Type():         fees.FixedFeeCalculatorGen,
+		dextypes.ListMiniMsg{}.Type():     fees.FixedFeeCalculatorGen,
 	}
 }
