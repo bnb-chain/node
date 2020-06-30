@@ -414,7 +414,6 @@ func (app *BinanceChain) initPlugins() {
 	app.QueryRouter().AddRoute("param", paramHub.NewQuerier(app.ParamHub, app.Codec))
 	app.QueryRouter().AddRoute("sideChain", sidechain.NewQuerier(app.scKeeper))
 
-
 	app.RegisterQueryHandler("account", app.AccountHandler)
 	app.RegisterQueryHandler("admin", admin.GetHandler(ServerContext.Config))
 
