@@ -1,4 +1,4 @@
-package list
+package types
 
 import (
 	"testing"
@@ -6,20 +6,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
 )
 
 
 func TestMiniWrongBaseAssetSymbol(t *testing.T) {
-	msg := dextypes.NewListMiniMsg(sdk.AccAddress{}, "BTC", "BTC-000", 1000)
+	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC", "BTC-000", 1000)
 	err := msg.ValidateBasic()
 	require.NotNil(t, err, "msg should be error")
 	require.Contains(t, err.Error(), "base token: suffixed token symbol must contain a hyphen ('-')")
 }
 
 func TestMiniWrongBaseAssetSymbolNotMiniToken(t *testing.T) {
-	msg := dextypes.NewListMiniMsg(sdk.AccAddress{}, "BTC-000", "BTC-000", 1000)
+	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC-000", "BTC-000", 1000)
 	err := msg.ValidateBasic()
 	require.NotNil(t, err, "msg should be error")
 	require.Contains(t, err.Error(), "base token: mini-token symbol suffix must be 4 chars in length, got 3")
@@ -27,14 +25,14 @@ func TestMiniWrongBaseAssetSymbolNotMiniToken(t *testing.T) {
 
 
 func TestMiniWrongInitPrice(t *testing.T) {
-	msg := dextypes.NewListMiniMsg(sdk.AccAddress{}, "BTC-000M", "BNB", -1000)
+	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC-000M", "BNB", -1000)
 	err := msg.ValidateBasic()
 	require.NotNil(t, err, "msg should be error")
 	require.Contains(t, err.Error(), "price should be positive")
 }
 
 func TestMiniRightMsg(t *testing.T) {
-	msg := dextypes.NewListMiniMsg(sdk.AccAddress{}, "BTC-000M", "BNB", 1000)
+	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC-000M", "BNB", 1000)
 	err := msg.ValidateBasic()
 	require.Nil(t, err, "msg should not be error")
 }
