@@ -24,7 +24,7 @@ type Keeper struct {
 
 	storeKey    sdk.StoreKey
 	Pool        *sdk.Pool
-	DestChainId sdk.IbcChainID
+	DestChainId sdk.ChainID
 
 	ScKeeper      sidechain.Keeper
 	BankKeeper    bank.Keeper
@@ -35,7 +35,7 @@ type Keeper struct {
 
 // NewKeeper creates new instances of the bridge Keeper
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, tokenMapper store.Mapper, scKeeper sidechain.Keeper,
-	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId sdk.IbcChainID) Keeper {
+	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId sdk.ChainID) Keeper {
 	return Keeper{
 		cdc:           cdc,
 		storeKey:      storeKey,

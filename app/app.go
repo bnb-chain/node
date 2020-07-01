@@ -184,7 +184,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace),
 		app.stakeKeeper, app.scKeeper, app.ibcKeeper, app.CoinKeeper, app.Pool)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.AccountKeeper, app.TokenMapper, app.scKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, sdk.IbcChainID(app.crossChainConfig.BscIbcChainId))
+		app.ibcKeeper, app.Pool, sdk.ChainID(app.crossChainConfig.BscIbcChainId))
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -441,9 +441,9 @@ func (app *BinanceChain) initOracle() {
 
 func (app *BinanceChain) initBridge() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), bTypes.BindChannelID, sdk.ChannelAllow)
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), bTypes.TransferOutChannelID, sdk.ChannelAllow)
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), bTypes.TransferInChannelID, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.BindChannelID, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferOutChannelID, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferInChannelID, sdk.ChannelAllow)
 	})
 }
 
@@ -453,7 +453,7 @@ func (app *BinanceChain) initParamHub() {
 
 	paramHub.RegisterUpgradeBeginBlocker(app.ParamHub)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), param.IbcChannelId, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), param.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.ParamHub.SetLastSCParamChangeProposalId(newCtx, paramTypes.LastProposalID{ProposalID: 0})
@@ -469,7 +469,7 @@ func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), keeper.IbcChannelId, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), keeper.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
@@ -513,7 +513,7 @@ func (app *BinanceChain) initSlashing() {
 	app.slashKeeper.SetSideChain(&app.scKeeper)
 	app.slashKeeper.SubscribeParamChange(app.ParamHub)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.IbcChainID(ServerContext.BscIbcChainId), slashing.IbcChannelId, sdk.ChannelAllow)
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), slashing.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.slashKeeper.SetParams(newCtx, slashing.Params{
@@ -531,9 +531,9 @@ func (app *BinanceChain) initSlashing() {
 
 func (app *BinanceChain) initIbc() {
 	// set up IBC chainID for BBC
-	app.scKeeper.SetSrcIbcChainID(sdk.IbcChainID(ServerContext.IbcChainId))
+	app.scKeeper.SetSrcChainID(sdk.ChainID(ServerContext.IbcChainId))
 	// set up IBC chainID for BSC
-	err := app.scKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.IbcChainID(ServerContext.BscIbcChainId))
+	err := app.scKeeper.RegisterDestChain(ServerContext.BscChainId, sdk.ChainID(ServerContext.BscIbcChainId))
 	if err != nil {
 		panic(fmt.Sprintf("register IBC chainID error: chainID=%s, err=%s", ServerContext.BscChainId, err.Error()))
 	}
