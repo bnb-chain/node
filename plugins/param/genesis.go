@@ -55,9 +55,9 @@ const (
 
 	//MiniToken fee
 	TinyIssueFee   = 2e8
-	MiniIssueFee   = 4e8
+	MiniIssueFee   = 3e8
 	MiniSetUriFee  = 37500
-	MiniListingFee = 10e8
+	MiniListingFee = 8e8
 )
 
 var DefaultGenesisState = param.GenesisState{
