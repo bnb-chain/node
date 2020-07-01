@@ -4,14 +4,23 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/fees"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
 func (kp *DexKeeper) SelectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
-	symbolsToMatch := make([]string, 0, 256)
-	for _, orderKeeper := range kp.OrderKeepers {
-		if orderKeeper.supportUpgradeVersion() {
-			symbolsToMatch = append(symbolsToMatch, orderKeeper.selectSymbolsToMatch(height, matchAllSymbols)...)
+	var symbolsToMatch []string
+	if sdk.IsUpgradeHeight(upgrade.BEP8) {
+		symbolsToMatch = make([]string, 0, len(kp.engines))
+		for symbol := range kp.engines {
+			symbolsToMatch = append(symbolsToMatch, symbol)
+		}
+	} else {
+		symbolsToMatch = make([]string, 0, 256)
+		for _, orderKeeper := range kp.OrderKeepers {
+			if orderKeeper.supportUpgradeVersion() {
+				symbolsToMatch = append(symbolsToMatch, orderKeeper.selectSymbolsToMatch(height, matchAllSymbols)...)
+			}
 		}
 	}
 	return symbolsToMatch
@@ -23,12 +32,13 @@ func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandl
 	timestamp := blockHeader.Time.UnixNano()
 
 	symbolsToMatch := kp.SelectSymbolsToMatch(blockHeader.Height, matchAllSymbols)
+
 	kp.logger.Info("symbols to match", "symbols", symbolsToMatch)
 	var tradeOuts []chan Transfer
 	if len(symbolsToMatch) == 0 {
 		kp.logger.Info("No order comes in for the block")
 	} else {
-		tradeOuts = kp.matchAndDistributeTrades(true, blockHeader.Height, timestamp)
+		tradeOuts = kp.matchAndDistributeTrades(true, blockHeader.Height, timestamp, symbolsToMatch)
 	}
 
 	totalFee := kp.allocateAndCalcFee(ctx, tradeOuts, postAlloTransHandler)
@@ -38,7 +48,7 @@ func (kp *DexKeeper) MatchAndAllocateSymbols(ctx sdk.Context, postAlloTransHandl
 
 // please note if distributeTrade this method will work in async mode, otherwise in sync mode.
 // Always run kp.SelectSymbolsToMatch(ctx.BlockHeader().Height, matchAllSymbols) before matchAndDistributeTrades
-func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64) []chan Transfer {
+func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, timestamp int64, symbolsToMatch []string) []chan Transfer {
 	concurrency := 1 << kp.poolSize
 	tradeOuts := make([]chan Transfer, concurrency)
 
@@ -56,10 +66,8 @@ func (kp *DexKeeper) matchAndDistributeTrades(distributeTrade bool, height, time
 
 	symbolCh := make(chan string, concurrency)
 	producer := func() {
-		for i := range kp.OrderKeepers {
-			kp.OrderKeepers[i].iterateRoundSelectedPairs(func(symbol string) {
-				symbolCh <- symbol
-			})
+		for _, symbol := range symbolsToMatch {
+			symbolCh <- symbol
 		}
 		close(symbolCh)
 	}
@@ -89,7 +97,7 @@ func (kp *DexKeeper) MatchSymbols(height, timestamp int64, matchAllSymbols bool)
 	if len(symbolsToMatch) == 0 {
 		kp.logger.Info("No order comes in for the block")
 	} else {
-		kp.matchAndDistributeTrades(false, height, timestamp)
+		kp.matchAndDistributeTrades(false, height, timestamp, symbolsToMatch)
 	}
 
 	kp.ClearAfterMatch()

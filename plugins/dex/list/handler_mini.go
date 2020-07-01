@@ -2,6 +2,8 @@ package list
 
 import (
 	"github.com/binance-chain/node/common/log"
+	ctypes "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -9,7 +11,18 @@ import (
 )
 
 func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
-	msg ListMiniMsg) sdk.Result {
+	msg types.ListMiniMsg) sdk.Result {
+
+	// before BEP70 upgraded, we only support listing mini token against NativeToken
+	if sdk.IsUpgrade(upgrade.BEP70) {
+		if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
+			return sdk.ErrInvalidCoins("quote token is not valid ").Result()
+		}
+	} else {
+		if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol {
+			return sdk.ErrInvalidCoins("quote token is not valid ").Result()
+		}
+	}
 
 	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.2
+BUG FIXES
+* [\#753](https://github.com/binance-chain/node/pull/753) [\#760](https://github.com/binance-chain/node/pull/760) [Dex] Delete recent price from db when delisting
+* [\#758](https://github.com/binance-chain/node/pull/758) [Dex] Force match all BEP2 symbols on BEP8 upgrade height to update last match height
+* [\#762](https://github.com/binance-chain/node/pull/762) [Dex] Fix mini msg
 ## 0.7.0
 FEATURES
 * [\#725](https://github.com/binance-chain/node/pull/725) [Token] [Dex] BEP8 - Mini-BEP2 token features

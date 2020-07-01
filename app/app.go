@@ -38,6 +38,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex"
 	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/ico"
 	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/param/paramhub"
@@ -295,7 +296,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		issue.IssueMiniMsg{}.Type(),
 		issue.IssueTinyMsg{}.Type(),
 		seturi.SetURIMsg{}.Type(),
-		list.ListMiniMsg{}.Type(),
+		dextypes.ListMiniMsg{}.Type(),
 	)
 }
 
