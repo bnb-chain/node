@@ -21,7 +21,7 @@ const (
 
 	MiniTokenMinExecutionAmount int64 = 1e8       // 1 with 8 decimal digits
 	MiniTokenSupplyUpperBound   int64 = 1000000e8 // 1m with 8 decimal digits
-	TinyTokenSupplyUpperBound   int64 = 10000e8  // 10k with 8 decimal digits
+	TinyTokenSupplyUpperBound   int64 = 10000e8   // 10k with 8 decimal digits
 	MaxTokenURILength                 = 2048
 
 	TinyRangeType SupplyRangeType = 1

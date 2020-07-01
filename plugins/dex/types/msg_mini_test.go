@@ -8,7 +8,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-
 func TestMiniWrongBaseAssetSymbol(t *testing.T) {
 	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC", "BTC-000", 1000)
 	err := msg.ValidateBasic()
@@ -23,7 +22,6 @@ func TestMiniWrongBaseAssetSymbolNotMiniToken(t *testing.T) {
 	require.Contains(t, err.Error(), "base token: mini-token symbol suffix must be 4 chars in length, got 3")
 }
 
-
 func TestMiniWrongInitPrice(t *testing.T) {
 	msg := NewListMiniMsg(sdk.AccAddress{}, "BTC-000M", "BNB", -1000)
 	err := msg.ValidateBasic()
@@ -36,4 +34,3 @@ func TestMiniRightMsg(t *testing.T) {
 	err := msg.ValidateBasic()
 	require.Nil(t, err, "msg should not be error")
 }
-

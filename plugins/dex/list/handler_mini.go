@@ -1,8 +1,8 @@
 package list
 
 import (
-	ctypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/log"
+	ctypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"

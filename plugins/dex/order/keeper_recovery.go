@@ -24,8 +24,8 @@ import (
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	dexutils "github.com/binance-chain/node/plugins/dex/utils"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
+	dexutils "github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -244,9 +244,9 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 				}
 				logger.Info("Canceled Order", "order", msg)
 			case dextypes.ListMiniMsg:
-				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol,msg.QuoteAssetSymbol)].LastMatchHeight = 0
+				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)].LastMatchHeight = 0
 			case dextypes.ListMsg:
-				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol,msg.QuoteAssetSymbol)].LastMatchHeight = 0
+				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)].LastMatchHeight = 0
 			}
 		}
 	}
