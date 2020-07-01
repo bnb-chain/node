@@ -6,8 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	sdk "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/list"
 	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/binance-chain/node/plugins/dex/types"
 	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
@@ -55,9 +55,9 @@ const (
 
 	//MiniToken fee
 	TinyIssueFee   = 2e8
-	MiniIssueFee   = 4e8
+	MiniIssueFee   = 3e8
 	MiniSetUriFee  = 37500
-	MiniListingFee = 10e8
+	MiniListingFee = 8e8
 )
 
 var DefaultGenesisState = param.GenesisState{
@@ -74,7 +74,7 @@ var FeeGenesisState = []param.FeeParam{
 	&param.FixedFeeParams{gov.MsgVote{}.Type(), sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{stake.MsgCreateValidator{}.Type(), CreateValidatorFee, sdk.FeeForProposer},
 	&param.FixedFeeParams{stake.MsgRemoveValidator{}.Type(), RemoveValidatorFee, sdk.FeeForProposer},
-	&param.FixedFeeParams{list.Route, ListingFee, sdk.FeeForAll},
+	&param.FixedFeeParams{types.ListRoute, ListingFee, sdk.FeeForAll},
 	&param.FixedFeeParams{order.RouteNewOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{order.RouteCancelOrder, sdk.ZeroFee, sdk.FeeFree},
 	&param.FixedFeeParams{issue.IssueMsgType, IssueFee, sdk.FeeForAll},

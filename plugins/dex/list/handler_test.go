@@ -120,7 +120,7 @@ func TestListHandler(t *testing.T) {
 	ctx := sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
 
 	// proposal does not exist
-	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result := handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId: 1,
 	})
 	require.Contains(t, result.Log, "proposal 1 does not exist")
@@ -129,7 +129,7 @@ func TestListHandler(t *testing.T) {
 
 	// wrong status
 	govKeeper.SetProposal(ctx, proposal)
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId: 1,
 	})
 	require.Contains(t, result.Log, "proposal status(DepositPeriod) should be Passed before you can list your token")
@@ -139,7 +139,7 @@ func TestListHandler(t *testing.T) {
 	proposal.SetProposalType(gov.ProposalTypeParameterChange)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId: 1,
 	})
 	require.Contains(t, result.Log, "proposal type(ParameterChange) should be ListTradingPair")
@@ -149,7 +149,7 @@ func TestListHandler(t *testing.T) {
 	proposal.SetStatus(gov.StatusPassed)
 	proposal.SetDescription("wrong params")
 	govKeeper.SetProposal(ctx, proposal)
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId: 1,
 	})
 	require.Contains(t, result.Log, "illegal list params in proposal")
@@ -158,20 +158,20 @@ func TestListHandler(t *testing.T) {
 	proposal = getProposal(false, "BTC-000", "BNB")
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		BaseAssetSymbol: "BTC-001",
 		ProposalId:      1,
 	})
 	require.Contains(t, result.Log, "base asset symbol(BTC-001) is not identical to symbol in proposal(BTC-000)")
 
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: "BNC",
 		ProposalId:       1,
 	})
 	require.Contains(t, result.Log, "quote asset symbol(BNC) is not identical to symbol in proposal(BNB)")
 
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: "BNB",
 		InitPrice:        100,
@@ -187,7 +187,7 @@ func TestListHandler(t *testing.T) {
 	ctx = ctx.WithBlockHeader(abci.Header{
 		Time: expiredTime,
 	})
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -197,7 +197,7 @@ func TestListHandler(t *testing.T) {
 
 	// token not found
 	ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -215,7 +215,7 @@ func TestListHandler(t *testing.T) {
 	require.Nil(t, err, "new token error")
 
 	// no quote asset
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -223,7 +223,7 @@ func TestListHandler(t *testing.T) {
 	})
 	require.Contains(t, result.Log, "only the owner of the token can list the token")
 
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -242,7 +242,7 @@ func TestListHandler(t *testing.T) {
 	require.Nil(t, err, "new token error")
 
 	// right case
-	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, ListMsg{
+	result = handleList(ctx, orderKeeper, tokenMapper, govKeeper, dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -278,7 +278,7 @@ func TestListHandler_LowerCase(t *testing.T) {
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
 	//ctx = sdk.NewContext(ms, abci.Header{}, sdk.RunTxModeDeliver, log.NewNopLogger())
-	listMsg := ListMsg{
+	listMsg := dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -300,7 +300,7 @@ func TestListHandler_WrongTradingPair(t *testing.T) {
 	proposal := getProposal(true, baseAsset, quoteAsset)
 	proposal.SetStatus(gov.StatusPassed)
 	govKeeper.SetProposal(ctx, proposal)
-	listMsg := ListMsg{
+	listMsg := dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  baseAsset,
 		QuoteAssetSymbol: quoteAsset,
@@ -349,7 +349,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	sdk.UpgradeMgr.SetHeight(upgradeHeight + 1)
 
 	// wrong owner
-	listMsg := ListMsg{
+	listMsg := dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,
@@ -360,7 +360,7 @@ func TestListHandler_AfterUpgrade(t *testing.T) {
 	require.Contains(t, result.Log, "only the owner of the base asset or quote asset can list the trading pair")
 
 	// right owner
-	listMsg = ListMsg{
+	listMsg = dexTypes.ListMsg{
 		ProposalId:       1,
 		BaseAssetSymbol:  "BTC-000",
 		QuoteAssetSymbol: types.NativeTokenSymbol,

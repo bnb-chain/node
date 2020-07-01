@@ -1,4 +1,4 @@
-package list
+package types
 
 import (
 	"encoding/json"
@@ -7,8 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/order"
 )
 
 const MiniMsg = "dexListMini"
@@ -31,7 +29,7 @@ func NewListMiniMsg(from sdk.AccAddress, baseAssetSymbol string, quoteAssetSymbo
 	}
 }
 
-func (msg ListMiniMsg) Route() string                { return Route }
+func (msg ListMiniMsg) Route() string                { return ListRoute }
 func (msg ListMiniMsg) Type() string                 { return MiniMsg }
 func (msg ListMiniMsg) String() string               { return fmt.Sprintf("MsgListMini{%#v}", msg) }
 func (msg ListMiniMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
@@ -43,17 +41,6 @@ func (msg ListMiniMsg) ValidateBasic() sdk.Error {
 	}
 	if len(msg.QuoteAssetSymbol) == 0 {
 		return sdk.ErrInvalidCoins("quote token is empty ")
-	}
-
-	// before BEP70 upgraded, we only support listing mini token against NativeToken
-	if sdk.IsUpgrade(upgrade.BEP70) {
-		if types.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ")
-		}
-	} else {
-		if types.NativeTokenSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ")
-		}
 	}
 
 	if msg.InitPrice <= 0 {

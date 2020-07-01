@@ -48,6 +48,7 @@ func MakeCodec() *wire.Codec {
 
 	cdc.RegisterConcrete(OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(ActiveOrders{}, "dex/ActiveOrders", nil)
+	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
 
 	return cdc
 }
@@ -109,7 +110,7 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	keeper.AddOrder(ord, false)
 	symbolsToMatch := keeper.SelectSymbolsToMatch(ctx.BlockHeader().Height, false)
 	logger.Info("symbols to match", "symbols", symbolsToMatch)
-	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0)
+	tradeOuts := keeper.matchAndDistributeTrades(true, 42, 0, symbolsToMatch)
 	c := channelHash(accAdd, 4)
 	i := 0
 	for tr := range tradeOuts[c] {
@@ -545,6 +546,8 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *DexKeeper) {
 	cdc := wire.NewCodec()
 	types.RegisterWire(cdc)
 	wire.RegisterCrypto(cdc)
+	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
+	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
 	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
@@ -607,27 +610,29 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 }
 
 func TestKeeper_ExpireOrdersBasedOnPrice(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, -1)
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC-000", "BNB", 1e6))
-	keeper.AddEngine(dextypes.NewTradingPair("XYZ-000", "BNB", 1e6))
+	keeper.AddEngine(dextypes.NewTradingPair("XYZ-000M", "BNB", 1e6))
 
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC-000_BNB", 3e6, 3e6), 4999, 0, 5001, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC-000_BNB", 1e6, 1e6), 10000, 0, 10000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "3", Side.BUY, "ABC-000_BNB", 2e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.BUY, "XYZ-000_BNB", 1e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "4", Side.BUY, "XYZ-000M_BNB", 1e6, 2e6), 10000, 0, 10000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "5", Side.SELL, "ABC-000_BNB", 1e6, 1e8), 10000, 0, 10000, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "6", Side.SELL, "ABC-000_BNB", 2e6, 2e8), 15000, 0, 15000, 0, 0, "", 0}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "7", Side.BUY, "XYZ-000_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, "", 0}, false)
-	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "8", Side.SELL, "XYZ-000_BNB", 2e6, 2e6), 3000, 0, 3000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "7", Side.BUY, "XYZ-000M_BNB", 2e6, 2e6), 20000, 0, 20000, 0, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "8", Side.SELL, "XYZ-000M_BNB", 2e6, 2e6), 3000, 0, 3000, 0, 0, "", 0}, false)
 
 	acc.(types.NamedAccount).SetLockedCoins(sdk.Coins{
 		sdk.NewCoin("ABC-000", 3e8),
 		sdk.NewCoin("BNB", 11e4),
-		sdk.NewCoin("XYZ-000", 2e6),
+		sdk.NewCoin("XYZ-000M", 2e6),
 	}.Sort())
 	am.SetAccount(ctx, acc)
 
@@ -642,12 +647,12 @@ func TestKeeper_ExpireOrdersBasedOnPrice(t *testing.T) {
 	require.Len(t, sells[0].Orders, 1)
 	require.Equal(t, int64(1e8), sells[0].TotalLeavesQty())
 	require.Len(t, keeper.GetAllOrdersForPair("ABC-000_BNB"), 4)
-	buys, sells = keeper.engines["XYZ-000_BNB"].Book.GetAllLevels()
+	buys, sells = keeper.engines["XYZ-000M_BNB"].Book.GetAllLevels()
 	require.Len(t, buys, 2)
 	require.Len(t, sells, 0)
 	require.Len(t, buys[0].Orders, 1)
 	require.Equal(t, int64(2e6), buys[0].TotalLeavesQty())
-	require.Len(t, keeper.GetAllOrdersForPair("XYZ-000_BNB"), 2)
+	require.Len(t, keeper.GetAllOrdersForPair("XYZ-000M_BNB"), 2)
 	fees.Pool.Clear()
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, 0)
 }
@@ -757,33 +762,53 @@ func TestKeeper_UpdateTickSizeAndLotSize(t *testing.T) {
 }
 
 func TestKeeper_UpdateLotSize(t *testing.T) {
+	symbol := "XYZ-000"
+	updateLotSize(t, symbol)
+}
+
+func TestKeeper_UpdateLotSize_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	symbol := "XYZ-000M"
+	updateLotSize(t, symbol)
+}
+
+func updateLotSize(t *testing.T, symbol string) {
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
 	logger := log.NewTMLogger(os.Stdout)
 	cms := MakeCMS(nil)
 	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
-	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
+	tradingPair := dextypes.NewTradingPair(symbol, "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
-
 	keeper.UpdateLotSize(tradingPair.GetSymbol(), 1e3)
-
 	assert.Equal(int64(1e3), keeper.engines[tradingPair.GetSymbol()].LotSize)
 }
 
 func TestOpenOrders_AfterMatch(t *testing.T) {
+	addOrderAfterMatch(t, "NNB-123")
+}
+
+func TestOpenOrders_AfterMatch_Mini(t *testing.T) {
+	setChainVersion()
+	defer resetChainVersion()
+	addOrderAfterMatch(t, "NNB-123M")
+}
+
+func addOrderAfterMatch(t *testing.T, symbol string) {
 	assert := assert.New(t)
 	keeper := initKeeper()
-	keeper.AddEngine(dextypes.NewTradingPair("NNB", "BNB", 100000000))
-
+	keeper.AddEngine(dextypes.NewTradingPair(symbol, "BNB", 100000000))
 	// add an original buy order, waiting to be filled
-	msg := NewNewOrderMsg(zc, ZcAddr+"-0", Side.BUY, "NNB_BNB", 1000000000, 1000000000)
+	pair := symbol + "_BNB"
+	msg := NewNewOrderMsg(zc, ZcAddr+"-0", Side.BUY, pair, 1000000000, 1000000000)
 	orderInfo := OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
-	res := keeper.GetOpenOrders("NNB_BNB", zc)
+	res := keeper.GetOpenOrders(pair, zc)
 	assert.Equal(1, len(res))
-	assert.Equal("NNB_BNB", res[0].Symbol)
+	assert.Equal(pair, res[0].Symbol)
 	assert.Equal(ZcAddr+"-0", res[0].Id)
 	assert.Equal(utils.Fixed8(0), res[0].CumQty)
 	assert.Equal(utils.Fixed8(1000000000), res[0].Price)
@@ -792,39 +817,36 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(int64(84), res[0].CreatedTimestamp)
 	assert.Equal(int64(42), res[0].LastUpdatedHeight)
 	assert.Equal(int64(84), res[0].LastUpdatedTimestamp)
-
 	// add a sell order, partialled fill the buy order
-	msg = NewNewOrderMsg(zz, ZzAddr+"-0", Side.SELL, "NNB_BNB", 900000000, 300000000)
+	msg = NewNewOrderMsg(zz, ZzAddr+"-0", Side.SELL, pair, 900000000, 300000000)
 	orderInfo = OrderInfo{msg, 43, 86, 43, 86, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
-	res = keeper.GetOpenOrders("NNB_BNB", zz)
+	res = keeper.GetOpenOrders(pair, zz)
 	assert.Equal(1, len(res))
-
 	// match existing two orders
 	keeper.MatchSymbols(43, 86, false)
-
 	// after match, the original buy order's cumQty and latest updated fields should be updated
-	res = keeper.GetOpenOrders("NNB_BNB", zc)
+	res = keeper.GetOpenOrders(pair, zc)
 	assert.Equal(1, len(res))
 	assert.Equal(utils.Fixed8(300000000), res[0].CumQty)
-	assert.Equal(utils.Fixed8(1000000000), res[0].Price)    // price shouldn't change
-	assert.Equal(utils.Fixed8(1000000000), res[0].Quantity) // quantity shouldn't change
+	assert.Equal(utils.Fixed8(1000000000), res[0].Price)
+	// price shouldn't change
+	assert.Equal(utils.Fixed8(1000000000), res[0].Quantity)
+	// quantity shouldn't change
 	assert.Equal(int64(42), res[0].CreatedHeight)
 	assert.Equal(int64(84), res[0].CreatedTimestamp)
 	assert.Equal(int64(43), res[0].LastUpdatedHeight)
 	assert.Equal(int64(86), res[0].LastUpdatedTimestamp)
-
 	// after match, the sell order should be closed
-	res = keeper.GetOpenOrders("NNB_BNB", zz)
+	res = keeper.GetOpenOrders(pair, zz)
 	assert.Equal(0, len(res))
-
 	// add another sell order to fully fill original buy order
-	msg = NewNewOrderMsg(zz, ZzAddr+"-1", Side.SELL, "NNB_BNB", 1000000000, 700000000)
+	msg = NewNewOrderMsg(zz, ZzAddr+"-1", Side.SELL, pair, 1000000000, 700000000)
 	orderInfo = OrderInfo{msg, 44, 88, 44, 88, 0, "", 0}
 	keeper.AddOrder(orderInfo, false)
-	res = keeper.GetOpenOrders("NNB_BNB", zz)
+	res = keeper.GetOpenOrders(pair, zz)
 	assert.Equal(1, len(res))
-	assert.Equal("NNB_BNB", res[0].Symbol)
+	assert.Equal(pair, res[0].Symbol)
 	assert.Equal(ZzAddr+"-1", res[0].Id)
 	assert.Equal(utils.Fixed8(0), res[0].CumQty)
 	assert.Equal(utils.Fixed8(1000000000), res[0].Price)
@@ -833,14 +855,12 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 	assert.Equal(int64(88), res[0].CreatedTimestamp)
 	assert.Equal(int64(44), res[0].LastUpdatedHeight)
 	assert.Equal(int64(88), res[0].LastUpdatedTimestamp)
-
 	// match existing two orders
 	keeper.MatchSymbols(44, 88, false)
-
 	// after match, all orders should be closed
-	res = keeper.GetOpenOrders("NNB_BNB", zc)
+	res = keeper.GetOpenOrders(pair, zc)
 	assert.Equal(0, len(res))
-	res = keeper.GetOpenOrders("NNB_BNB", zz)
+	res = keeper.GetOpenOrders(pair, zz)
 	assert.Equal(0, len(res))
 }
 
@@ -851,6 +871,7 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
+	ctx = ctx.WithBlockHeight(2000)
 
 	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
@@ -868,30 +889,36 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	am.SetAccount(ctx, acc)
 
 	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000_BNB", 3e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000_BNB", 5e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 7e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
+
+	lastTradePrices := make(map[string]int64, 1)
+	lastTradePrices["XYZ-000_BNB"] = 3e6
+	keeper.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
 	assert.Equal(1, len(keeper.GetAllOrders()))
 	assert.Equal(9, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
 	assert.Equal(1, len(keeper.engines))
+	assert.Equal(1, len(keeper.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)))
 
 	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
 	assert.Equal(0, len(keeper.GetAllOrders()))
 	assert.Equal(0, len(keeper.engines))
+	assert.Equal(0, len(keeper.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)))
 
 	expectFees := types.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),

@@ -34,6 +34,10 @@ function prepare_node() {
 	#$(cd "./${home}/config" && sed -i -e "s/db_backend = \"goleveldb\"/db_backend = \"boltdb\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e "s/log_level = \"main\:info,state\:info,\*\:error\"/log_level = \"*\:debug\"/g" config.toml)
 	$(cd "./${home}/config" && sed -i -e 's/"voting_period": "1209600000000000"/"voting_period": "5000000000"/g' genesis.json)
+	$(cd "./${home}/config" && sed -i -e "s/BEP3Height = 9223372036854775807/BEP3Height = 1/g" app.toml)
+	$(cd "./${home}/config" && sed -i -e "s/BEP8Height = 9223372036854775807/BEP8Height = 1/g" app.toml)
+	$(cd "./${home}/config" && sed -i -e "s/BEP67Height = 9223372036854775807/BEP67Height = 1/g" app.toml)
+	$(cd "./${home}/config" && sed -i -e "s/BEP70Height = 9223372036854775807/BEP70Height = 1/g" app.toml)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
@@ -328,6 +332,10 @@ result=$(expect ./issue_mini.exp MBC MiniBitcoin 900000000000 true alice ${chain
 mbc_symbol=$(echo "${result}" | tail -n 1 | grep -o "MBC-[0-9A-Z]*M")
 check_operation "Issue Mini Token" "${result}" "${chain_operation_words}"
 
+sleep 1s
+# mint token
+result=$(expect ./seturi.exp ${mbc_symbol} 10000000000 alice ${chain_id} ${cli_home})
+check_operation "Mint Token" "${result}" "${chain_operation_words}"
 
 sleep 1s
 # send
