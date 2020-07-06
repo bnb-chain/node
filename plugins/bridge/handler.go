@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -76,7 +77,7 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 		return sdk.ErrInternal("encode unbind package error").Result()
 	}
 
-	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType,
+	sendSeq, sdkErr := keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType,
 		encodedPackage, *bscRelayFee.BigInt())
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("create unbind ibc package error", "err", sdkErr.Error())
@@ -93,7 +94,14 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 	}
-	return sdk.Result{}
+
+	tags := sdk.NewTags(
+		types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10)),
+		types.TagChannel, []byte{uint8(types.BindChannelID)},
+	)
+	return sdk.Result{
+		Tags: tags,
+	}
 }
 
 func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
@@ -193,7 +201,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 		return sdk.ErrInternal("encode unbind package error").Result()
 	}
 
-	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType, encodedPackage,
+	sendSeq, sdkErr := keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.BindChannelID, sdk.SynCrossChainPackageType, encodedPackage,
 		*bscRelayFee.BigInt())
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("create bind ibc package error", "err", sdkErr.Error())
@@ -203,7 +211,13 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 	}
-	return sdk.Result{}
+	tags := sdk.NewTags(
+		types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10)),
+		types.TagChannel, []byte{uint8(types.BindChannelID)},
+	)
+	return sdk.Result{
+		Tags: tags,
+	}
 }
 
 func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sdk.Result {
@@ -267,7 +281,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return sdk.ErrInternal("encode unbind package error").Result()
 	}
 
-	_, sdkErr = keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.TransferOutChannelID, sdk.SynCrossChainPackageType,
+	sendSeq, sdkErr := keeper.IbcKeeper.CreateRawIBCPackageByIdWithFee(ctx, keeper.DestChainId, types.TransferOutChannelID, sdk.SynCrossChainPackageType,
 		encodedPackage, *bscRelayFee.BigInt())
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("create transfer out ibc package error", "err", sdkErr.Error())
@@ -284,6 +298,9 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 			pegTags = append(pegTags, sdk.GetPegInTag(coin.Denom, coin.Amount))
 		}
 	}
+	pegTags = append(pegTags, sdk.MakeTag(types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10))))
+	pegTags = append(pegTags, sdk.MakeTag(types.TagChannel, []byte{uint8(types.TransferOutChannelID)}))
+
 	return sdk.Result{
 		Tags: pegTags,
 	}
