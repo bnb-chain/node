@@ -1,4 +1,4 @@
-package list
+package types
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"github.com/binance-chain/node/common/types"
 )
 
-const Route = "dexList"
+const ListRoute = "dexList"
 
 var _ sdk.Msg = ListMsg{}
 
@@ -21,7 +21,7 @@ type ListMsg struct {
 	InitPrice        int64          `json:"init_price"`
 }
 
-func NewMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
+func NewListMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quoteAssetSymbol string, initPrice int64) ListMsg {
 	return ListMsg{
 		From:             from,
 		ProposalId:       proposalId,
@@ -31,8 +31,8 @@ func NewMsg(from sdk.AccAddress, proposalId int64, baseAssetSymbol string, quote
 	}
 }
 
-func (msg ListMsg) Route() string                { return Route }
-func (msg ListMsg) Type() string                 { return Route }
+func (msg ListMsg) Route() string                { return ListRoute }
+func (msg ListMsg) Type() string                 { return ListRoute }
 func (msg ListMsg) String() string               { return fmt.Sprintf("MsgList{%#v}", msg) }
 func (msg ListMsg) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.From} }
 

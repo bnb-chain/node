@@ -73,7 +73,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	if common.IsMiniTokenSymbol(symbol) {
 		if unfreezeAmount < common.MiniTokenMinExecutionAmount && frozenAmount != unfreezeAmount {
 			logger.Info("unfreeze token failed", "reason", "unfreeze amount doesn't reach the min amount")
-			return sdk.ErrInvalidCoins(fmt.Sprintf("freeze amount is too small, the min amount is %d or total frozen balance",
+			return sdk.ErrInvalidCoins(fmt.Sprintf("unfreeze amount is too small, the min amount is %d or total frozen balance",
 				common.MiniTokenMinExecutionAmount)).Result()
 		}
 	}

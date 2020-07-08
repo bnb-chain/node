@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -10,7 +11,7 @@ import (
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/list"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -57,7 +58,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return errors.New("proposal id should larger than zero")
 			}
 
-			msg := list.NewMsg(from, proposalId, baseAsset, quoteAsset, initPrice)
+			msg := dextypes.NewListMsg(from, proposalId, baseAsset, quoteAsset, initPrice)
 			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err
@@ -107,7 +108,7 @@ func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := list.NewListMiniMsg(from, baseAsset, quoteAsset, initPrice)
+			msg := dextypes.NewListMiniMsg(from, baseAsset, quoteAsset, initPrice)
 			err = client.SendOrPrintTx(cliCtx, txbldr, msg)
 			if err != nil {
 				return err

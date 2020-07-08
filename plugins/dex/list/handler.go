@@ -21,9 +21,9 @@ import (
 func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case ListMsg:
+		case types.ListMsg:
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)
-		case ListMiniMsg:
+		case types.ListMiniMsg:
 			return handleListMini(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
@@ -32,7 +32,7 @@ func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper go
 	}
 }
 
-func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error {
+func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg types.ListMsg) error {
 	proposal := govKeeper.GetProposal(ctx, msg.ProposalId)
 	if proposal == nil {
 		return fmt.Errorf("proposal %d does not exist", msg.ProposalId)
@@ -77,7 +77,7 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg ListMsg) error
 }
 
 func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper,
-	msg ListMsg) sdk.Result {
+	msg types.ListMsg) sdk.Result {
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
 		return types.ErrInvalidProposal(err.Error()).Result()
 	}
