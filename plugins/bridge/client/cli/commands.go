@@ -14,12 +14,9 @@ func AddCommands(cmd *cobra.Command, cdc *codec.Codec) {
 
 	bridgeCmd.AddCommand(
 		client.PostCommands(
-			TransferInCmd(cdc),
-			TransferOutRefundCmd(cdc),
 			BindCmd(cdc),
 			TransferOutCmd(cdc),
-			UpdateBindCmd(cdc),
-			SkipSequenceCmd(cdc),
+			UnbindCmd(cdc),
 		)...,
 	)
 

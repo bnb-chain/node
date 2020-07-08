@@ -1,58 +1,33 @@
 package bridge
 
 import (
-	"fmt"
-
 	app "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
-func InitPlugin(appp app.ChainApp, keeper Keeper) {
-	RegisterChannels(keeper)
-
+func InitPlugin(chainApp app.ChainApp, keeper Keeper) {
 	for route, handler := range Routes(keeper) {
-		appp.GetRouter().AddRoute(route, handler)
+		chainApp.GetRouter().AddRoute(route, handler)
 	}
 
-	InitOracle(keeper)
+	RegisterCrossApps(keeper)
 }
 
-func RegisterChannels(keeper Keeper) {
-	err := keeper.IbcKeeper.RegisterChannel(types.BindChannel, types.BindChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.BindChannel, err.Error()))
-	}
-	err = keeper.IbcKeeper.RegisterChannel(types.TransferOutChannel, types.TransferOutChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.TransferOutChannel, err.Error()))
-	}
-	err = keeper.IbcKeeper.RegisterChannel(types.RefundChannel, types.RefundChannelID)
-	if err != nil {
-		panic(fmt.Sprintf("register channel error, channel=%s, err=%s", types.RefundChannel, err.Error()))
-	}
-}
-
-func InitOracle(keeper Keeper) {
-	skipSequenceHooks := NewSkipSequenceClaimHooks(keeper)
-	err := keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeSkipSequence, types.ClaimTypeSkipSequenceName, skipSequenceHooks)
+func RegisterCrossApps(keeper Keeper) {
+	updateBindApp := NewBindApp(keeper)
+	err := keeper.ScKeeper.RegisterChannel(types.BindChannel, types.BindChannelID, updateBindApp)
 	if err != nil {
 		panic(err)
 	}
 
-	updateBindClaimHooks := NewUpdateBindClaimHooks(keeper)
-	err = keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeUpdateBind, types.ClaimTypeUpdateBindName, updateBindClaimHooks)
+	transferOutRefundApp := NewTransferOutApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.TransferOutChannel, types.TransferOutChannelID, transferOutRefundApp)
 	if err != nil {
 		panic(err)
 	}
 
-	transferOutRefundClaimHooks := NewTransferOutRefundClaimHooks(keeper)
-	err = keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeTransferOutRefund, types.ClaimTypeTransferOutRefundName, transferOutRefundClaimHooks)
-	if err != nil {
-		panic(err)
-	}
-
-	transferInClaimHooks := NewTransferInClaimHooks(keeper)
-	err = keeper.OracleKeeper.RegisterClaimType(types.ClaimTypeTransferIn, types.ClaimTypeTransferInName, transferInClaimHooks)
+	transferInApp := NewTransferInApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.TransferInChannel, types.TransferInChannelID, transferInApp)
 	if err != nil {
 		panic(err)
 	}

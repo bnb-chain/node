@@ -11,6 +11,9 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+	sidecmd "github.com/cosmos/cosmos-sdk/x/sidechain/client/cli"
+
+	paramcmd "github.com/cosmos/cosmos-sdk/x/paramHub/client/cli"
 	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
 
@@ -24,7 +27,6 @@ import (
 	apiserv "github.com/binance-chain/node/plugins/api"
 	bridgecmd "github.com/binance-chain/node/plugins/bridge/client/cli"
 	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
-	paramcmd "github.com/binance-chain/node/plugins/param/client/cli"
 	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
 	"github.com/binance-chain/node/version"
 )
@@ -96,6 +98,7 @@ func main() {
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 	bridgecmd.AddCommands(rootCmd, cdc)
+	sidecmd.AddCommands(rootCmd,cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)

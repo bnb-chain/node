@@ -344,10 +344,10 @@ type CrossChainConfig struct {
 
 func defaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{
-		IbcChainId: 0,
+		IbcChainId: 1,
 
 		BscChainId:    "bsc",
-		BscIbcChainId: 0,
+		BscIbcChainId: 2,
 	}
 }
 

@@ -49,6 +49,7 @@ func MakeCodec() *wire.Codec {
 
 	cdc.RegisterConcrete(OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(ActiveOrders{}, "dex/ActiveOrders", nil)
+	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
 
 	return cdc
 }
@@ -546,6 +547,8 @@ func setup() (ctx sdk.Context, mapper auth.AccountKeeper, keeper *DexKeeper) {
 	cdc := wire.NewCodec()
 	types.RegisterWire(cdc)
 	wire.RegisterCrypto(cdc)
+	cdc.RegisterConcrete(dextypes.TradingPair{}, "dex/TradingPair", nil)
+	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
 	mapper = auth.NewAccountKeeper(cdc, capKey, types.ProtoAppAccount)
 	accountCache := getAccountCache(cdc, ms, capKey)
 	pairMapper := store.NewTradingPairMapper(cdc, common.PairStoreKey)
@@ -852,6 +855,7 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
 	_, acc := testutils.NewAccount(ctx, am, 0)
 	addr := acc.GetAddress()
+	ctx = ctx.WithBlockHeight(2000)
 
 	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
@@ -869,30 +873,36 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 	am.SetAccount(ctx, acc)
 
 	msg := NewNewOrderMsg(addr, "123456", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234562", Side.BUY, "XYZ-000_BNB", 1e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123457", Side.BUY, "XYZ-000_BNB", 2e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123458", Side.BUY, "XYZ-000_BNB", 3e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123459", Side.SELL, "XYZ-000_BNB", 5e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123460", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "1234602", Side.SELL, "XYZ-000_BNB", 6e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123461", Side.SELL, "XYZ-000_BNB", 7e6, 1e4)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
 	msg = NewNewOrderMsg(addr, "123462", Side.BUY, "XYZ-000_BNB", 4e6, 1e6)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	keeper.AddOrder(OrderInfo{msg, 2000, 84, 42, 84, 0, "", 0}, false)
+
+	lastTradePrices := make(map[string]int64, 1)
+	lastTradePrices["XYZ-000_BNB"] = 3e6
+	keeper.PairMapper.UpdateRecentPrices(ctx, pricesStoreEvery, numPricesStored, lastTradePrices)
 	assert.Equal(1, len(keeper.GetAllOrders()))
 	assert.Equal(9, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
 	assert.Equal(1, len(keeper.engines))
+	assert.Equal(1, len(keeper.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)))
 
 	keeper.DelistTradingPair(ctx, "XYZ-000_BNB", nil)
 	assert.Equal(0, len(keeper.GetAllOrders()))
 	assert.Equal(0, len(keeper.engines))
+	assert.Equal(0, len(keeper.PairMapper.GetRecentPrices(ctx, pricesStoreEvery, numPricesStored)))
 
 	expectFees := sdk.NewFee(sdk.Coins{
 		sdk.NewCoin("BNB", 10e4),

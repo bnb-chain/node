@@ -7,13 +7,15 @@ import (
 )
 
 const (
+	BSCBNBDecimals int8 = 18
+
 	BindChannel        = "bind"
 	TransferOutChannel = "transferOut"
-	RefundChannel      = "refund"
+	TransferInChannel  = "transferIn"
 
-	BindChannelID        sdk.IbcChannelID = 1
-	TransferOutChannelID sdk.IbcChannelID = 2
-	RefundChannelID      sdk.IbcChannelID = 3
+	BindChannelID        sdk.ChannelID = 1
+	TransferOutChannelID sdk.ChannelID = 2
+	TransferInChannelID  sdk.ChannelID = 3
 
 	MinTransferOutExpireTimeGap = 60 * time.Second
 	MinBindExpireTimeGap        = 600 * time.Second

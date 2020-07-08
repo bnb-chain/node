@@ -16,6 +16,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	paramhub "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
+	paramTypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/types"
@@ -25,8 +27,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/store"
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/plugins/param/paramhub"
-	paramTypes "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -348,25 +348,29 @@ func channelHash(accAddress sdk.AccAddress, bucketNumber int) int {
 
 func (kp *DexKeeper) SubscribeParamChange(hub *paramhub.Keeper) {
 	hub.SubscribeParamChange(
-		func(ctx sdk.Context, changes []interface{}) {
-			for _, c := range changes {
-				switch change := c.(type) {
-				case []paramTypes.FeeParam:
-					feeConfig := ParamToFeeConfig(change)
-					if feeConfig != nil {
-						kp.FeeManager.UpdateConfig(*feeConfig)
-					}
-				default:
-					kp.logger.Debug("Receive param changes that not interested.")
+		func(_ sdk.Context, iChange interface{}) {
+			switch change := iChange.(type) {
+			case []paramTypes.FeeParam:
+				feeConfig := ParamToFeeConfig(change)
+				if feeConfig != nil {
+					kp.FeeManager.UpdateConfig(*feeConfig)
 				}
+			default:
+				kp.logger.Debug("Receive param changes that not interested.")
 			}
 		},
-		func(context sdk.Context, state paramTypes.GenesisState) {
-			feeConfig := ParamToFeeConfig(state.FeeGenesis)
-			if feeConfig != nil {
-				kp.FeeManager.UpdateConfig(*feeConfig)
-			} else {
-				panic("Genesis with no dex fee config ")
+		nil,
+		func(context sdk.Context, iState interface{}) {
+			switch state := iState.(type) {
+			case paramTypes.GenesisState:
+				feeConfig := ParamToFeeConfig(state.FeeGenesis)
+				if feeConfig != nil {
+					kp.FeeManager.UpdateConfig(*feeConfig)
+				} else {
+					panic("Genesis with no dex fee config ")
+				}
+			default:
+				kp.logger.Debug("Receive param genesis state that not interested.")
 			}
 		},
 		func(context sdk.Context, iLoad interface{}) {
@@ -941,7 +945,7 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 	}
 
 	delete(kp.engines, symbol)
-	delete(kp.recentPrices, symbol)
+	kp.deleteRecentPrices(ctx, symbol)
 	kp.mustGetOrderKeeper(symbol).deleteOrdersForPair(symbol)
 
 	baseAsset, quoteAsset := dexUtils.TradingPair2AssetsSafe(symbol)
@@ -949,6 +953,11 @@ func (kp *DexKeeper) DelistTradingPair(ctx sdk.Context, symbol string, postAlloc
 	if err != nil {
 		kp.logger.Error("delete trading pair error", "err", err.Error())
 	}
+}
+
+func (kp *DexKeeper) deleteRecentPrices(ctx sdk.Context, symbol string) {
+	delete(kp.recentPrices, symbol)
+	kp.PairMapper.DeleteRecentPrices(ctx, symbol)
 }
 
 func (kp *DexKeeper) expireAllOrders(ctx sdk.Context, symbol string) []chan Transfer {

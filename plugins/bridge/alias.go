@@ -14,14 +14,5 @@ type (
 
 	TransferOutMsg = types.TransferOutMsg
 	BindMsg        = types.BindMsg
-
-	SkipSequenceClaim      = types.SkipSequenceClaim
-	UpdateBindClaim        = types.UpdateBindClaim
-	TransferOutRefundClaim = types.TransferOutRefundClaim
-	TransferInClaim        = types.TransferInClaim
-)
-
-const (
-	BindRelayFeeName   = types.BindRelayFeeName
-	TransferOutFeeName = types.TransferOutFeeName
+	UnbindMsg      = types.UnbindMsg
 )
