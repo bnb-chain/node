@@ -35,7 +35,7 @@ func (app *BindApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.E
 		}
 	}
 
-	symbol := types.BytesToSymbol(bindPackage.Bep2TokenSymbol)
+	symbol := types.BytesToSymbol(bindPackage.TokenSymbol)
 	bindRequest, sdkErr := app.bridgeKeeper.GetBindRequest(ctx, symbol)
 	if sdkErr != nil {
 		return sdk.ExecuteResult{
@@ -68,7 +68,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.Execu
 		}
 	}
 
-	symbol := types.BytesToSymbol(approvePackage.Bep2TokenSymbol)
+	symbol := types.BytesToSymbol(approvePackage.TokenSymbol)
 
 	bindRequest, sdkErr := app.bridgeKeeper.GetBindRequest(ctx, symbol)
 	if sdkErr != nil {
@@ -164,7 +164,7 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 		}
 	}
 
-	symbol := types.BytesToSymbol(refundPackage.Bep2TokenSymbol)
+	symbol := types.BytesToSymbol(refundPackage.TokenSymbol)
 	_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, refundPackage.RefundAddr,
 		sdk.Coins{
 			sdk.Coin{
@@ -207,7 +207,7 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 		}
 	}
 
-	symbol := types.BytesToSymbol(transferOutPackage.Bep2TokenSymbol)
+	symbol := types.BytesToSymbol(transferOutPackage.TokenSymbol)
 	_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, transferOutPackage.RefundAddress,
 		sdk.Coins{
 			sdk.Coin{
@@ -304,7 +304,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk
 		panic(sdkErr)
 	}
 
-	symbol := types.BytesToSymbol(transferInPackage.Bep2TokenSymbol)
+	symbol := types.BytesToSymbol(transferInPackage.TokenSymbol)
 	tokenInfo, err := app.bridgeKeeper.TokenMapper.GetToken(ctx, symbol)
 	if err != nil {
 		panic(err)

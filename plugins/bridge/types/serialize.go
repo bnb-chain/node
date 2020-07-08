@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"math/big"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type BindPackageType uint8
@@ -16,13 +16,13 @@ const (
 )
 
 type BindSynPackage struct {
-	PackageType     BindPackageType
-	Bep2TokenSymbol [32]byte
-	ContractAddr    SmartChainAddress
-	TotalSupply     *big.Int
-	PeggyAmount     *big.Int
-	Decimals        uint8
-	ExpireTime      uint64
+	PackageType  BindPackageType
+	TokenSymbol  [32]byte
+	ContractAddr SmartChainAddress
+	TotalSupply  *big.Int
+	PeggyAmount  *big.Int
+	Decimals     uint8
+	ExpireTime   uint64
 }
 
 func DeserializeBindSynPackage(serializedPackage []byte) (*BindSynPackage, sdk.Error) {
@@ -35,7 +35,7 @@ func DeserializeBindSynPackage(serializedPackage []byte) (*BindSynPackage, sdk.E
 }
 
 type BindAckPackage struct {
-	Bep2TokenSymbol [32]byte
+	TokenSymbol [32]byte
 }
 
 type BindStatus uint32
@@ -48,8 +48,8 @@ const (
 )
 
 type ApproveBindSynPackage struct {
-	Status          BindStatus
-	Bep2TokenSymbol [32]byte
+	Status      BindStatus
+	TokenSymbol [32]byte
 }
 
 func DeserializeApproveBindSynPackage(serializedPackage []byte) (*ApproveBindSynPackage, sdk.Error) {
@@ -62,11 +62,11 @@ func DeserializeApproveBindSynPackage(serializedPackage []byte) (*ApproveBindSyn
 }
 
 type ApproveBindAckPackage struct {
-	Bep2TokenSymbol [32]byte
+	TokenSymbol [32]byte
 }
 
 type TransferInSynPackage struct {
-	Bep2TokenSymbol   [32]byte
+	TokenSymbol       [32]byte
 	ContractAddress   SmartChainAddress
 	Amounts           []*big.Int
 	ReceiverAddresses []sdk.AccAddress
@@ -91,7 +91,7 @@ type TransferInRefundPackage struct {
 }
 
 type TransferOutSynPackage struct {
-	Bep2TokenSymbol [32]byte
+	TokenSymbol     [32]byte
 	ContractAddress SmartChainAddress
 	Amount          *big.Int
 	Recipient       SmartChainAddress
@@ -118,10 +118,10 @@ const (
 )
 
 type TransferOutRefundPackage struct {
-	Bep2TokenSymbol [32]byte
-	RefundAmount    *big.Int
-	RefundAddr      sdk.AccAddress
-	RefundReason    RefundReason
+	TokenSymbol  [32]byte
+	RefundAmount *big.Int
+	RefundAddr   sdk.AccAddress
+	RefundReason RefundReason
 }
 
 func DeserializeTransferOutRefundPackage(serializedPackage []byte) (*TransferOutRefundPackage, sdk.Error) {
@@ -141,7 +141,7 @@ func SymbolToBytes(symbol string) [32]byte {
 }
 
 func BytesToSymbol(symbolBytes [32]byte) string {
-	bep2TokenSymbolBytes := make([]byte, 32, 32)
-	copy(bep2TokenSymbolBytes[:], symbolBytes[:])
-	return string(bytes.Trim(bep2TokenSymbolBytes, "\x00"))
+	tokenSymbolBytes := make([]byte, 32, 32)
+	copy(tokenSymbolBytes[:], symbolBytes[:])
+	return string(bytes.Trim(tokenSymbolBytes, "\x00"))
 }

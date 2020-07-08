@@ -67,8 +67,8 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	}
 
 	unbindPackage := types.BindSynPackage{
-		PackageType:     types.BindTypeUnbind,
-		Bep2TokenSymbol: types.SymbolToBytes(msg.Symbol),
+		PackageType: types.BindTypeUnbind,
+		TokenSymbol: types.SymbolToBytes(msg.Symbol),
 	}
 
 	encodedPackage, err := rlp.EncodeToBytes(unbindPackage)
@@ -186,13 +186,13 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 	}
 
 	bindPackage := types.BindSynPackage{
-		PackageType:     types.BindTypeBind,
-		Bep2TokenSymbol: types.SymbolToBytes(msg.Symbol),
-		ContractAddr:    msg.ContractAddress,
-		TotalSupply:     bscTotalSupply.BigInt(),
-		PeggyAmount:     bscAmount.BigInt(),
-		Decimals:        uint8(msg.ContractDecimals),
-		ExpireTime:      uint64(msg.ExpireTime),
+		PackageType:  types.BindTypeBind,
+		TokenSymbol:  types.SymbolToBytes(msg.Symbol),
+		ContractAddr: msg.ContractAddress,
+		TotalSupply:  bscTotalSupply.BigInt(),
+		PeggyAmount:  bscAmount.BigInt(),
+		Decimals:     uint8(msg.ContractDecimals),
+		ExpireTime:   uint64(msg.ExpireTime),
 	}
 
 	encodedPackage, err := rlp.EncodeToBytes(bindPackage)
@@ -267,7 +267,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	contractAddr := types.NewSmartChainAddress(token.GetContractAddress())
 	transferPackage := types.TransferOutSynPackage{
-		Bep2TokenSymbol: types.SymbolToBytes(symbol),
+		TokenSymbol:     types.SymbolToBytes(symbol),
 		ContractAddress: contractAddr,
 		RefundAddress:   msg.From.Bytes(),
 		Recipient:       msg.To,
