@@ -38,6 +38,9 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			toPublish.EventData.StakeData.appendCompletedRED(e.SideChainId, e.CompREDs)
 		case stake.ValidatorUpdateEvent:
 			sub.Logger.Debug(fmt.Sprintf("validator update event: %v \n", e))
+			if len(e.Validator.SideChainId) == 0 { // ignore bbc validator update events
+				return
+			}
 			if e.IsFromTx {
 				stagingArea.StakeData.appendValidator(e.Validator)
 			} else {
@@ -47,7 +50,7 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			sub.Logger.Debug(fmt.Sprintf("validator removed event: %v \n", e))
 			chainId := e.SideChainId
 			if len(chainId) == 0 {
-				chainId = "BC" // todo a specified chain ID for BC
+				return // ignore bbc validator
 			}
 			if e.IsFromTx {
 				stagingArea.StakeData.appendRemovedValidator(chainId, e.Operator)
@@ -85,6 +88,15 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			} else {
 				toPublish.EventData.StakeData.appendRED(e.SideChainId, key, e.RED)
 			}
+		case stake.SideDelegateEvent:
+			sub.Logger.Debug(fmt.Sprintf("delegate event: %v \n", e))
+			stagingArea.StakeData.appendDelegateEvent(e.SideChainId, e.DelegateEvent)
+		case stake.SideUndelegateEvent:
+			sub.Logger.Debug(fmt.Sprintf("undelegate event: %v \n", e))
+			stagingArea.StakeData.appendUnDelegateEvent(e.SideChainId, e.UndelegateEvent)
+		case stake.SideRedelegateEvent:
+			sub.Logger.Debug(fmt.Sprintf("redelegate event: %v \n", e))
+			stagingArea.StakeData.appendReDelegateEvent(e.SideChainId, e.RedelegateEvent)
 		default:
 			sub.Logger.Info("unknown event type")
 		}
@@ -103,6 +115,69 @@ type StakeData struct {
 	RemovedDelegations   map[string][]types.DVPair                       // ChainId -> []DVPair
 	UnbondingDelegations map[string]map[string]stake.UnbondingDelegation // ChainId -> delegator+validator -> UBD
 	ReDelegations        map[string]map[string]stake.Redelegation        // ChainId -> delegator+srcValidator+dstValidator -> RED
+	DelegateEvents       map[string][]stake.DelegateEvent                // ChainId -> delegate event
+	UndelegateEvents     map[string][]stake.UndelegateEvent              // ChainId -> undelegate event
+	RedelegateEvents     map[string][]stake.RedelegateEvent              // ChainId -> redelegate event
+}
+
+func (e *StakeData) appendDelegateEvent(chainId string, event stake.DelegateEvent) {
+	if e.DelegateEvents == nil {
+		e.DelegateEvents = make(map[string][]stake.DelegateEvent)
+	}
+	if _, ok := e.DelegateEvents[chainId]; !ok {
+		e.DelegateEvents[chainId] = make([]stake.DelegateEvent, 0)
+	}
+	e.DelegateEvents[chainId] = append(e.DelegateEvents[chainId], event)
+}
+
+func (e *StakeData) appendDelegateEvents(chainId string, events []stake.DelegateEvent) {
+	if e.DelegateEvents == nil {
+		e.DelegateEvents = make(map[string][]stake.DelegateEvent)
+	}
+	if _, ok := e.DelegateEvents[chainId]; !ok {
+		e.DelegateEvents[chainId] = make([]stake.DelegateEvent, 0)
+	}
+	e.DelegateEvents[chainId] = append(e.DelegateEvents[chainId], events...)
+}
+
+func (e *StakeData) appendUnDelegateEvent(chainId string, event stake.UndelegateEvent) {
+	if e.UndelegateEvents == nil {
+		e.UndelegateEvents = make(map[string][]stake.UndelegateEvent)
+	}
+	if _, ok := e.UndelegateEvents[chainId]; !ok {
+		e.UndelegateEvents[chainId] = make([]stake.UndelegateEvent, 0)
+	}
+	e.UndelegateEvents[chainId] = append(e.UndelegateEvents[chainId], event)
+}
+
+func (e *StakeData) appendUnDelegateEvents(chainId string, events []stake.UndelegateEvent) {
+	if e.UndelegateEvents == nil {
+		e.UndelegateEvents = make(map[string][]stake.UndelegateEvent)
+	}
+	if _, ok := e.UndelegateEvents[chainId]; !ok {
+		e.UndelegateEvents[chainId] = make([]stake.UndelegateEvent, 0)
+	}
+	e.UndelegateEvents[chainId] = append(e.UndelegateEvents[chainId], events...)
+}
+
+func (e *StakeData) appendReDelegateEvent(chainId string, event stake.RedelegateEvent) {
+	if e.RedelegateEvents == nil {
+		e.RedelegateEvents = make(map[string][]stake.RedelegateEvent)
+	}
+	if _, ok := e.RedelegateEvents[chainId]; !ok {
+		e.RedelegateEvents[chainId] = make([]stake.RedelegateEvent, 0)
+	}
+	e.RedelegateEvents[chainId] = append(e.RedelegateEvents[chainId], event)
+}
+
+func (e *StakeData) appendReDelegateEvents(chainId string, events []stake.RedelegateEvent) {
+	if e.RedelegateEvents == nil {
+		e.RedelegateEvents = make(map[string][]stake.RedelegateEvent)
+	}
+	if _, ok := e.RedelegateEvents[chainId]; !ok {
+		e.RedelegateEvents[chainId] = make([]stake.RedelegateEvent, 0)
+	}
+	e.RedelegateEvents[chainId] = append(e.RedelegateEvents[chainId], events...)
 }
 
 func (e *StakeData) appendDistribution(chainId string, data []stake.DistributionData) {
@@ -234,16 +309,31 @@ func commitStake() {
 			toPublish.EventData.StakeData.appendDistribution(chainId, v)
 		}
 	}
+	if len(stagingArea.StakeData.DelegateEvents) > 0 {
+		for chainId, v := range stagingArea.StakeData.DelegateEvents {
+			toPublish.EventData.StakeData.appendDelegateEvents(chainId, v)
+		}
+	}
+	if len(stagingArea.StakeData.UndelegateEvents) > 0 {
+		for chainId, v := range stagingArea.StakeData.UndelegateEvents {
+			toPublish.EventData.StakeData.appendUnDelegateEvents(chainId, v)
+		}
+	}
+	if len(stagingArea.StakeData.RedelegateEvents) > 0 {
+		for chainId, v := range stagingArea.StakeData.RedelegateEvents {
+			toPublish.EventData.StakeData.appendReDelegateEvents(chainId, v)
+		}
+	}
 	//if len(stagingArea.StakeData.CompletedUBDs) > 0 {
 	//	for chainId, v := range stagingArea.StakeData.CompletedUBDs {
 	//		toPublish.EventData.StakeData.appendCompletedUBD(chainId, v)
 	//	}
 	//}
-	if len(stagingArea.StakeData.CompletedREDs) > 0 {
-		for chainId, v := range stagingArea.StakeData.CompletedREDs {
-			toPublish.EventData.StakeData.appendCompletedRED(chainId, v)
-		}
-	}
+	//if len(stagingArea.StakeData.CompletedREDs) > 0 {
+	//	for chainId, v := range stagingArea.StakeData.CompletedREDs {
+	//		toPublish.EventData.StakeData.appendCompletedRED(chainId, v)
+	//	}
+	//}
 	if len(stagingArea.StakeData.Validators) > 0 {
 		toPublish.EventData.StakeData.appendValidators(stagingArea.StakeData.Validators)
 	}

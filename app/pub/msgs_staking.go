@@ -21,6 +21,9 @@ type StakingMsg struct {
 	ReDelegations        map[string][]*ReDelegation
 	CompletedUBDs        map[string][]*CompletedUnbondingDelegation
 	CompletedREDs        map[string][]*CompletedReDelegation
+	DelegateEvents       map[string][]*DelegateEvent
+	UndelegateEvents     map[string][]*UndelegateEvent
+	RedelegateEvents     map[string][]*RedelegateEvent
 }
 
 func (msg *StakingMsg) String() string {
@@ -104,6 +107,37 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 	}
 	//native["completedREDs"] = completedREDs
 	native["completedREDs"] = map[string]interface{}{"map": completedREDs}
+
+	delegateEvents := make(map[string]interface{})
+	for chainId, v := range msg.DelegateEvents {
+		deles := make([]map[string]interface{}, len(v), len(v))
+		for id, vv := range v {
+			deles[id] = vv.toNativeMap()
+		}
+		delegateEvents[chainId] = deles
+	}
+	native["delegateEvents"] = map[string]interface{}{"map": delegateEvents}
+
+	unDelegateEvents := make(map[string]interface{})
+	for chainId, v := range msg.UndelegateEvents {
+		undeles := make([]map[string]interface{}, len(v), len(v))
+		for id, vv := range v {
+			undeles[id] = vv.toNativeMap()
+		}
+		unDelegateEvents[chainId] = undeles
+	}
+	native["unDelegateEvents"] = map[string]interface{}{"map": unDelegateEvents}
+
+	reDelegateEvents := make(map[string]interface{})
+	for chainId, v := range msg.RedelegateEvents {
+		redeles := make([]map[string]interface{}, len(v), len(v))
+		for id, vv := range v {
+			redeles[id] = vv.toNativeMap()
+		}
+		reDelegateEvents[chainId] = redeles
+	}
+	native["reDelegateEvents"] = map[string]interface{}{"map": reDelegateEvents}
+
 	return native
 }
 
@@ -146,6 +180,24 @@ func (msg *StakingMsg) EssentialMsg() string {
 			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(ubds))
 		}
 	}
+	if len(msg.DelegateEvents) > 0 {
+		fmt.Fprintf(&builder, "delegateEvents:\n")
+		for chainId, dels := range msg.DelegateEvents {
+			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(dels))
+		}
+	}
+	if len(msg.UndelegateEvents) > 0 {
+		fmt.Fprintf(&builder, "undelegateEvents:\n")
+		for chainId, udes := range msg.UndelegateEvents {
+			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(udes))
+		}
+	}
+	if len(msg.RedelegateEvents) > 0 {
+		fmt.Fprintf(&builder, "redelegateEvents:\n")
+		for chainId, rdes := range msg.RedelegateEvents {
+			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(rdes))
+		}
+	}
 	return builder.String()
 }
 
@@ -161,6 +213,9 @@ func (msg *StakingMsg) EmptyCopy() AvroOrJsonMsg {
 		make(map[string][]*ReDelegation),
 		make(map[string][]*CompletedUnbondingDelegation),
 		make(map[string][]*CompletedReDelegation),
+		make(map[string][]*DelegateEvent),
+		make(map[string][]*UndelegateEvent),
+		make(map[string][]*RedelegateEvent),
 	}
 }
 
@@ -308,5 +363,67 @@ func (msg *CompletedReDelegation) toNativeMap() map[string]interface{} {
 	native["delegator"] = msg.Delegator.String()
 	native["srcValidator"] = msg.ValidatorSrc.String()
 	native["dstValidator"] = msg.ValidatorDst.String()
+	return native
+}
+
+type DelegateEvent struct {
+	Delegator sdk.AccAddress
+	Validator sdk.ValAddress
+	Amount    Coin
+	TxHash    string
+}
+
+func (msg *DelegateEvent) String() string {
+	return fmt.Sprintf("DelegateEvent: %v", msg.toNativeMap())
+}
+
+func (msg *DelegateEvent) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["delegator"] = msg.Delegator.String()
+	native["validator"] = msg.Validator.String()
+	native["amount"] = msg.Amount.ToNativeMap()
+	native["txHash"] = msg.TxHash
+	return native
+}
+
+type UndelegateEvent struct {
+	Delegator sdk.AccAddress
+	Validator sdk.ValAddress
+	Amount    Coin
+	TxHash    string
+}
+
+func (msg *UndelegateEvent) String() string {
+	return fmt.Sprintf("UndelegateEvent: %v", msg.toNativeMap())
+}
+
+func (msg *UndelegateEvent) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["delegator"] = msg.Delegator.String()
+	native["validator"] = msg.Validator.String()
+	native["amount"] = msg.Amount.ToNativeMap()
+	native["txHash"] = msg.TxHash
+	return native
+}
+
+type RedelegateEvent struct {
+	Delegator    sdk.AccAddress
+	ValidatorSrc sdk.ValAddress
+	ValidatorDst sdk.ValAddress
+	Amount       Coin
+	TxHash       string
+}
+
+func (msg *RedelegateEvent) String() string {
+	return fmt.Sprintf("RedelegateEvent: %v", msg.toNativeMap())
+}
+
+func (msg *RedelegateEvent) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["delegator"] = msg.Delegator.String()
+	native["srcValidator"] = msg.ValidatorSrc.String()
+	native["dstValidator"] = msg.ValidatorDst.String()
+	native["amount"] = msg.Amount.ToNativeMap()
+	native["txHash"] = msg.TxHash
 	return native
 }

@@ -24,6 +24,7 @@ const (
 	slashingTpe
 	crossTransferTpe
 	sideProposalType
+	breatheBlockTpe
 )
 
 var (
@@ -57,6 +58,8 @@ func (this msgType) String() string {
 		return "CrossTransfer"
 	case sideProposalType:
 		return "SideProposal"
+	case breatheBlockTpe:
+		return "BreatheBlock"
 	default:
 		return "Unknown"
 	}
@@ -78,6 +81,7 @@ var latestSchemaVersions = map[msgType]int{
 	slashingTpe:        0,
 	crossTransferTpe:   0,
 	sideProposalType:   0,
+	breatheBlockTpe:    0,
 }
 
 type AvroOrJsonMsg interface {
@@ -935,57 +939,6 @@ func (msg NativeTransaction) ToNativeMap() map[string]interface{} {
 	return native
 }
 
-//// completed unbonding delegation message
-//type CompletedUBDMsg struct {
-//	NumOfMsgs     int
-//	Height        int64
-//	Timestamp     int64
-//	CompletedUBDs map[string][]*CompletedUnbondingDelegation
-//}
-//
-//func (msg *CompletedUBDMsg) String() string {
-//	return fmt.Sprintf("CompletedUBDMsg numOfMsgs: %d", msg.NumOfMsgs)
-//}
-//
-//func (msg *CompletedUBDMsg) ToNativeMap() map[string]interface{} {
-//	var native = make(map[string]interface{})
-//	native["numOfMsgs"] = msg.NumOfMsgs
-//	native["height"] = msg.Height
-//	native["timestamp"] = msg.Timestamp
-//
-//	cps := make(map[string]interface{})
-//	for chainId, v := range msg.CompletedUBDs {
-//		ps := make([]map[string]interface{}, len(v), len(v))
-//		for idx, p := range v {
-//			ps[idx] = p.toNativeMap()
-//		}
-//		cps[chainId] = ps
-//	}
-//	native["completedUBDs"] = cps
-//	return native
-//}
-//
-//func (msg *CompletedUBDMsg) EssentialMsg() string {
-//	builder := strings.Builder{}
-//	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
-//	for chainId, ubds := range msg.CompletedUBDs {
-//		fmt.Fprintf(&builder, "chainId:%s\n", chainId)
-//		for _, ubd := range ubds {
-//			fmt.Fprintf(&builder, "validator:%s,delegator:%s\n", ubd.Validator.String(), ubd.Delegator.String())
-//		}
-//	}
-//	return builder.String()
-//}
-//
-//func (msg *CompletedUBDMsg) EmptyCopy() AvroOrJsonMsg {
-//	return &CompletedUBDMsg{
-//		msg.NumOfMsgs,
-//		msg.Height,
-//		msg.Timestamp,
-//		make(map[string][]*CompletedUnbondingDelegation),
-//	}
-//}
-
 // distribution message
 type DistributionMsg struct {
 	NumOfMsgs     int
@@ -1137,6 +1090,7 @@ type Slash struct {
 	InfractionHeight int64
 	JailUtil         int64
 	SlashAmount      int64
+	ToFeePool        int64
 	Submitter        sdk.AccAddress
 	SubmitterReward  int64
 }
@@ -1152,6 +1106,7 @@ func (msg *Slash) toNativeMap() map[string]interface{} {
 	native["infractionHeight"] = msg.InfractionHeight
 	native["jailUtil"] = msg.JailUtil
 	native["slashAmount"] = msg.SlashAmount
+	native["toFeePool"] = msg.ToFeePool
 	if msg.Submitter != nil {
 		native["submitter"] = msg.Submitter.String()
 	} else {
@@ -1159,4 +1114,33 @@ func (msg *Slash) toNativeMap() map[string]interface{} {
 	}
 	native["submitterReward"] = msg.SubmitterReward
 	return native
+}
+
+type BreatheBlockMsg struct {
+	Height    int64
+	Timestamp int64
+}
+
+func (msg *BreatheBlockMsg) String() string {
+	return fmt.Sprintf("BreatheBlockMsg: %v", msg.ToNativeMap())
+}
+
+func (msg *BreatheBlockMsg) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+	return native
+}
+
+func (msg *BreatheBlockMsg) EssentialMsg() string {
+	builder := strings.Builder{}
+	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
+	return builder.String()
+}
+
+func (msg *BreatheBlockMsg) EmptyCopy() AvroOrJsonMsg {
+	return &BreatheBlockMsg{
+		msg.Height,
+		msg.Timestamp,
+	}
 }

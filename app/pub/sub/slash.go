@@ -14,6 +14,7 @@ type SlashData struct {
 	InfractionHeight int64
 	JailUtil         time.Time
 	SlashAmount      int64
+	ToFeePool        int64
 	Submitter        sdk.AccAddress
 	SubmitterReward  int64
 }
@@ -34,6 +35,7 @@ func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
 				InfractionType:   sideSlashEvent.InfractionType,
 				InfractionHeight: sideSlashEvent.InfractionHeight,
 				JailUtil:         sideSlashEvent.JailUtil,
+				ToFeePool:        sideSlashEvent.ToFeePool,
 				SlashAmount:      sideSlashEvent.SubmitterReward,
 				Submitter:        sideSlashEvent.Submitter,
 				SubmitterReward:  sideSlashEvent.SubmitterReward,
