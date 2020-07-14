@@ -56,15 +56,14 @@ func Publish(
 			var opensToPublish []*Order
 			var closedToPublish []*Order
 			var feeToPublish map[string]string
-			if cfg.PublishOrderUpdates || cfg.PublishOrderBook {
-				opensToPublish, closedToPublish, feeToPublish = collectOrdersToPublish(
-					marketData.tradesToPublish,
-					marketData.orderChanges,
-					marketData.orderInfos,
-					marketData.feeHolder,
-					marketData.timestamp)
-				addClosedOrder(closedToPublish, ToRemoveOrderIdCh)
-			}
+
+			opensToPublish, closedToPublish, feeToPublish = collectOrdersToPublish(
+				marketData.tradesToPublish,
+				marketData.orderChanges,
+				marketData.orderInfos,
+				marketData.feeHolder,
+				marketData.timestamp)
+			addClosedOrder(closedToPublish, ToRemoveOrderIdCh)
 
 			// ToRemoveOrderIdCh would be only used in production code
 			// will be nil in mock (pressure testing, local publisher) and test code

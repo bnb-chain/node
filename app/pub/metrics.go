@@ -50,6 +50,8 @@ type Metrics struct {
 	NumAccounts metricsPkg.Gauge
 	// num of transfer
 	NumTransfers metricsPkg.Gauge
+
+	NumOrderInfoForPublish metricsPkg.Gauge
 }
 
 // PrometheusMetrics returns Metrics build using Prometheus client library.
@@ -140,6 +142,11 @@ func PrometheusMetrics() *Metrics {
 			Subsystem: "publication",
 			Name:      "num_transfer",
 			Help:      "Number of transfer we published",
+		}, []string{}),
+		NumOrderInfoForPublish: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+			Subsystem: "publication",
+			Name:      "num_orderinfo_pub",
+			Help:      "Number of OrderInfoForPublish in orderKeeper",
 		}, []string{}),
 	}
 }
