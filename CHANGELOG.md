@@ -1,4 +1,7 @@
 # Changelog
+## 0.7.2-hf.1
+BUG FIXES
+* [\#766](https://github.com/binance-chain/node/pull/766)[Dex] remove orderInfo from orderInfoForPub when publish anything
 
 ## 0.7.2
 BUG FIXES
