@@ -265,7 +265,10 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 		return sdkErr.Result()
 	}
 
-	contractAddr := types.NewSmartChainAddress(token.GetContractAddress())
+	contractAddr, err := types.NewSmartChainAddress(token.GetContractAddress())
+	if err != nil {
+		return types.ErrInvalidContractAddress(fmt.Sprintf("contract address is invalid, addr=%s", contractAddr)).Result()
+	}
 	transferPackage := types.TransferOutSynPackage{
 		TokenSymbol:     types.SymbolToBytes(symbol),
 		ContractAddress: contractAddr,

@@ -46,14 +46,18 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			contractAddress := viper.GetString(flagContractAddress)
+			contractAddressStr := viper.GetString(flagContractAddress)
 			contractDecimals := viper.GetInt(flagContractDecimals)
 			amount := viper.GetInt64(flagAmount)
 			symbol := viper.GetString(flagSymbol)
 			expireTime := viper.GetInt64(flagExpireTime)
 
 			// build message
-			msg := types.NewBindMsg(from, symbol, amount, types.NewSmartChainAddress(contractAddress), int8(contractDecimals), expireTime)
+			contractAddress, err := types.NewSmartChainAddress(contractAddressStr)
+			if err != nil {
+				return err
+			}
+			msg := types.NewBindMsg(from, symbol, amount, contractAddress, int8(contractDecimals), expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -119,7 +123,7 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			to := viper.GetString(flagToAddress)
+			toAddressStr := viper.GetString(flagToAddress)
 			amount := viper.GetString(flagAmount)
 			expireTime := viper.GetInt64(flagExpireTime)
 
@@ -129,7 +133,11 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// build message
-			msg := types.NewTransferOutMsg(from, types.NewSmartChainAddress(to), amountToTransfer, expireTime)
+			toAddress, err := types.NewSmartChainAddress(toAddressStr)
+			if err != nil {
+				return err
+			}
+			msg := types.NewTransferOutMsg(from, toAddress, amountToTransfer, expireTime)
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
