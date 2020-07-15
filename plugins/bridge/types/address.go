@@ -1,22 +1,38 @@
 package types
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	SmartChainAddressLength = 20
+)
+
 // SmartChainAddress defines a standard smart chain address
-type SmartChainAddress [20]byte
+type SmartChainAddress [SmartChainAddressLength]byte
 
 // NewSmartChainAddress is a constructor function for SmartChainAddress
-func NewSmartChainAddress(addr string) SmartChainAddress {
-	// we don't want to return error here, ethereum also do the same thing here
-	hexBytes, _ := sdk.HexDecode(addr)
+func NewSmartChainAddress(addr string) (SmartChainAddress, error) {
+	addr = strings.ToLower(addr)
+	if len(addr) >= 2 && addr[:2] == "0x" {
+		addr = addr[2:]
+	}
+	if length := len(addr); length != 2*SmartChainAddressLength {
+		return SmartChainAddress{}, fmt.Errorf("invalid address hex length: %v != %v", length, 2*SmartChainAddressLength)
+	}
+
+	bin, err := hex.DecodeString(addr)
+	if err != nil {
+		return SmartChainAddress{}, err
+	}
 	var address SmartChainAddress
-	address.SetBytes(hexBytes)
-	return address
+	address.SetBytes(bin)
+	return address, nil
 }
 
 func (addr *SmartChainAddress) SetBytes(b []byte) {
