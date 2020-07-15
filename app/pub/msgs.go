@@ -22,6 +22,8 @@ const (
 	stakingTpe
 	distributionTpe
 	slashingTpe
+	crossTransferTpe
+	sideProposalType
 )
 
 var (
@@ -51,6 +53,10 @@ func (this msgType) String() string {
 		return "Distribution"
 	case slashingTpe:
 		return "Slashing"
+	case crossTransferTpe:
+		return "CrossTransfer"
+	case sideProposalType:
+		return "SideProposal"
 	default:
 		return "Unknown"
 	}
@@ -70,6 +76,8 @@ var latestSchemaVersions = map[msgType]int{
 	stakingTpe:         0,
 	distributionTpe:    0,
 	slashingTpe:        0,
+	crossTransferTpe:   0,
+	sideProposalType:   0,
 }
 
 type AvroOrJsonMsg interface {
@@ -364,6 +372,30 @@ func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+type SideProposals struct {
+	Height    int64
+	Timestamp int64
+	NumOfMsgs int
+	Proposals []*SideProposal
+}
+
+func (msg *SideProposals) String() string {
+	return fmt.Sprintf("SideProposals in block: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
+}
+
+func (msg *SideProposals) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+	ps := make([]map[string]interface{}, len(msg.Proposals), len(msg.Proposals))
+	for idx, p := range msg.Proposals {
+		ps[idx] = p.toNativeMap()
+	}
+	native["proposals"] = ps
+	return native
+}
+
 type ProposalStatus uint8
 
 const (
@@ -394,6 +426,24 @@ func (msg *Proposal) String() string {
 func (msg *Proposal) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["id"] = msg.Id
+	native["status"] = msg.Status.String()
+	return native
+}
+
+type SideProposal struct {
+	Id      int64
+	ChainId string
+	Status  ProposalStatus
+}
+
+func (msg *SideProposal) String() string {
+	return fmt.Sprintf("SideProposal: %v", msg.toNativeMap())
+}
+
+func (msg *SideProposal) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["id"] = msg.Id
+	native["chainid"] = msg.ChainId
 	native["status"] = msg.Status.String()
 	return native
 }

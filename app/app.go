@@ -189,7 +189,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace),
 		app.stakeKeeper, app.scKeeper, app.ibcKeeper, app.CoinKeeper, app.Pool)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.AccountKeeper, app.TokenMapper, app.scKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, sdk.ChainID(app.crossChainConfig.BscIbcChainId))
+		app.ibcKeeper, app.Pool, sdk.ChainID(app.crossChainConfig.BscIbcChainId), app.crossChainConfig.BscChainId)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -470,6 +470,7 @@ func (app *BinanceChain) initOracle() {
 }
 
 func (app *BinanceChain) initBridge() {
+	app.bridgeKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.BindChannelID, sdk.ChannelAllow)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferOutChannelID, sdk.ChannelAllow)
@@ -504,7 +505,7 @@ func (app *BinanceChain) initStaking() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.SetParams(newCtx, stake.Params{
-			UnbondingTime:       10 * time.Second, // 7 days
+			UnbondingTime:       60 * 60 * 24 * 7 * time.Second, // 7 days
 			MaxValidators:       11,
 			BondDenom:           types.NativeTokenSymbol,
 			MinSelfDelegation:   50000e8,
@@ -549,7 +550,7 @@ func (app *BinanceChain) initSlashing() {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.slashKeeper.SetParams(newCtx, slashing.Params{
-			MaxEvidenceAge:           10 * time.Second,               // 3 days
+			MaxEvidenceAge:           60 * 60 * 24 * 3 * time.Second, // 3 days
 			DoubleSignUnbondDuration: math.MaxInt64,                  // forever
 			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
 			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
@@ -721,12 +722,16 @@ func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.Response
 	if res.IsOK() {
 		// commit or panic
 		fees.Pool.CommitFee(txHash)
-		app.psServer.Publish(appsub.TxDeliverSuccEvent{})
+		if app.psServer != nil {
+			app.psServer.Publish(appsub.TxDeliverSuccEvent{})
+		}
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
 			app.processErrAbciResponseForPub(req.Tx)
 		}
-		app.psServer.Publish(appsub.TxDeliverFailEvent{})
+		if app.psServer != nil {
+			app.psServer.Publish(appsub.TxDeliverFailEvent{})
+		}
 	}
 	if app.publicationConfig.PublishBlock {
 		pub.Pool.AddTxRes(txHash, res)
@@ -799,10 +804,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
-	if app.publicationConfig.PublishOrderUpdates {
-		//TODO, "passed" and "failed" contains proposalId and ChainId, please publish chain id as well during
-		// the refactor of publisher.
-		proposals = pub.CollectProposalsForPublish(passed, failed)
+	var sideProposals pub.SideProposals
+	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal{
+		proposals, sideProposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 	paramHub.EndBlock(ctx, app.ParamHub)
 	sidechain.EndBlock(ctx, app.scKeeper)
@@ -823,7 +827,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var stakeUpdates pub.StakeUpdates
 		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &sideProposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 
 			appsub.SetMeta(height, blockTime)
 			app.subscriber.Wait()
@@ -1025,7 +1029,7 @@ func (app *BinanceChain) publishEvent() {
 
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, sideProposalsToPublish *pub.SideProposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -1071,6 +1075,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		len(orderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
+		"numOfSideProposals",
+		sideProposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
 		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
@@ -1082,6 +1088,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
+		sideProposalsToPublish,
 		stakeUpdates,
 		orderChanges,        // thread-safety is guarded by the signal from RemoveDoneCh
 		orderInfoForPublish, // thread-safety is guarded by the signal from RemoveDoneCh

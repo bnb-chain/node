@@ -368,16 +368,24 @@ func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper,
 	return
 }
 
-func CollectProposalsForPublish(passed, failed []gov.SimpleProposal) Proposals {
-	totalProposals := len(passed) + len(failed)
-	ps := make([]*Proposal, 0, totalProposals)
+func CollectProposalsForPublish(passed, failed []gov.SimpleProposal) (Proposals, SideProposals) {
+	ps := make([]*Proposal, 0)
+	sidePs := make([]*SideProposal, 0)
 	for _, p := range passed {
-		ps = append(ps, &Proposal{p.Id, Succeed})
+		if p.ChainID == "" {
+			ps = append(ps, &Proposal{p.Id, Succeed})
+		} else {
+			sidePs = append(sidePs, &SideProposal{p.Id, p.ChainID, Succeed})
+		}
 	}
 	for _, p := range failed {
-		ps = append(ps, &Proposal{p.Id, Failed})
+		if p.ChainID == "" {
+			ps = append(ps, &Proposal{p.Id, Failed})
+		} else {
+			sidePs = append(sidePs, &SideProposal{p.Id, p.ChainID, Failed})
+		}
 	}
-	return Proposals{totalProposals, ps}
+	return Proposals{len(ps), ps}, SideProposals{NumOfMsgs: len(sidePs), Proposals: sidePs}
 }
 
 func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdates {

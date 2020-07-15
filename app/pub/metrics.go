@@ -39,6 +39,8 @@ type Metrics struct {
 	PublishTransfersTimeMs metricsPkg.Gauge
 	// Time	used to publish block
 	PublishBlockTimeMs metricsPkg.Gauge
+	// Time	used to publish sideProposal
+	PublishSideProposalTimeMs metricsPkg.Gauge
 
 	// num of trade
 	NumTrade metricsPkg.Gauge
@@ -110,10 +112,10 @@ func PrometheusMetrics() *Metrics {
 			Name:      "transfers_pub_time",
 			Help:      "Time to publish transfers (ms)",
 		}, []string{}),
-		PublishBlockTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		PublishSideProposalTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Subsystem: "publication",
-			Name:      "block_pub_time",
-			Help:      "Time to publish block info (ms)",
+			Name:      "side_proposal_pub_time",
+			Help:      "Time to publish sideProposal (ms)",
 		}, []string{}),
 
 		NumTrade: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{

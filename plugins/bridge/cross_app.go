@@ -56,11 +56,13 @@ func (app *BindApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.E
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+			{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, 0)
 	}
 	return sdk.ExecuteResult{}
 }
 
-func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFee int64) sdk.ExecuteResult {
 	approvePackage, sdkErr := types.DeserializeApproveBindSynPackage(payload)
 	if sdkErr != nil {
 		return sdk.ExecuteResult{
@@ -96,7 +98,9 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.Execu
 		}
 
 		app.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
-
+		if ctx.IsDeliverTx() {
+			publishCrossChainEvent(ctx, app.bridgeKeeper, bindRequest.From.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee)
+		}
 		log.With("module", "bridge").Info("bind token success", "symbol", symbol, "contract_addr", bindRequest.ContractAddress.String())
 	} else {
 		_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, bindRequest.From,
@@ -110,6 +114,8 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.Execu
 
 		if ctx.IsDeliverTx() {
 			app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
+			publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+				{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, relayerFee)
 		}
 	}
 
@@ -182,8 +188,9 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundPackage.RefundAddr})
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+			{refundPackage.RefundAddr.String(), refundPackage.RefundAmount.Int64()}}, symbol, TransferAckRefundType, 0)
 	}
-
 	return sdk.ExecuteResult{
 		Tags: sdk.Tags{sdk.GetPegOutTag(symbol, refundPackage.RefundAmount.Int64())},
 	}
@@ -226,6 +233,8 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, transferOutPackage.RefundAddress})
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+			{transferOutPackage.RefundAddress.String(), bcAmount}}, symbol, TransferFailAckRefundType, 0)
 	}
 
 	return sdk.ExecuteResult{
@@ -233,7 +242,7 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 	}
 }
 
-func (app *TransferOutApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+func (app *TransferOutApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, _ int64) sdk.ExecuteResult {
 	log.With("module", "bridge").Error("received transfer out syn package ")
 	return sdk.ExecuteResult{}
 }
@@ -291,7 +300,7 @@ func (app *TransferInApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte)
 	return sdk.ExecuteResult{}
 }
 
-func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFee int64) sdk.ExecuteResult {
 	transferInPackage, sdkErr := types.DeserializeTransferInSynPackage(payload)
 	if sdkErr != nil {
 		log.With("module", "bridge").Error("unmarshal transfer in claim error", "err", sdkErr.Error(), "claim", string(payload))
@@ -372,6 +381,14 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte) sdk
 	if ctx.IsDeliverTx() {
 		addressesChanged := append(transferInPackage.ReceiverAddresses, types.PegAccount)
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
+		to := make([]CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
+		for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
+			to = append(to, CrossReceiver{
+				Addr:   receiverAddr.String(),
+				Amount: transferInPackage.Amounts[idx].Int64(),
+			})
+		}
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), to, symbol, TransferInType, relayerFee)
 	}
 
 	// emit peg related event
