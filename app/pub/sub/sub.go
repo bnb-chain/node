@@ -3,6 +3,7 @@ package sub
 import (
 	"time"
 
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 )
 
@@ -11,6 +12,9 @@ func SubscribeAllEvent(sub *pubsub.Subscriber) error {
 		return err
 	}
 	if err := SubscribeSlashEvent(sub); err != nil {
+		return err
+	}
+	if err := SubscribeCrossTransferEvent(sub); err != nil {
 		return err
 	}
 
@@ -51,6 +55,8 @@ type EventStore struct {
 	StakeData *StakeData
 	// store for slash topic
 	SlashData map[string][]SlashData
+	// store for cross chain transfer topic
+	CrossTransferData []bridge.CrossTransferEvent
 }
 
 func newEventStore() *EventStore {
@@ -75,6 +81,7 @@ func SetMeta(height int64, timestamp time.Time) {
 
 func commit() {
 	commitStake()
+	commitCrossTransfer()
 	// clear stagingArea data
 	stagingArea = newEventStore()
 }

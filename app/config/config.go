@@ -134,6 +134,16 @@ publishSlashing = {{ .PublicationConfig.PublishSlashing }}
 slashingTopic = "{{ .PublicationConfig.SlashingTopic }}"
 slashingKafka = "{{ .PublicationConfig.SlashingKafka }}"
 
+# Whether we want publish cross transfer
+publishCrossTransfer = {{ .PublicationConfig.PublishCrossTransfer }}
+crossTransferTopic = "{{ .PublicationConfig.CrossTransferTopic }}"
+crossTransferKafka = "{{ .PublicationConfig.CrossTransferKafka }}"
+
+# Whether we want publish side proposals
+publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
+sideProposalTopic = "{{ .PublicationConfig.SideProposalTopic }}"
+sideProposalKafka = "{{ .PublicationConfig.SideProposalKafka }}"
+
 # Global setting
 publicationChannelSize = {{ .PublicationConfig.PublicationChannelSize }}
 publishKafka = {{ .PublicationConfig.PublishKafka }}
@@ -274,6 +284,14 @@ type PublicationConfig struct {
 	SlashingTopic   string `mapstructure:"slashingTopic"`
 	SlashingKafka   string `mapstructure:"slashingKafka"`
 
+	PublishCrossTransfer bool   `mapstructure:"publishCrossTransfer"`
+	CrossTransferTopic   string `mapstructure:"crossTransferTopic"`
+	CrossTransferKafka   string `mapstructure:"crossTransferKafka"`
+
+	PublishSideProposal bool   `mapstructure:"publishSideProposal"`
+	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
+	SideProposalKafka   string `mapstructure:"sideProposalKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -337,6 +355,14 @@ func defaultPublicationConfig() *PublicationConfig {
 		SlashingTopic:   "slashing",
 		SlashingKafka:   "127.0.0.1:9092",
 
+		PublishCrossTransfer: false,
+		CrossTransferTopic:   "crossTransfer",
+		CrossTransferKafka:   "127.0.0.1:9092",
+
+		PublishSideProposal: false,
+		SideProposalTopic:   "sideProposal",
+		SideProposalKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
@@ -363,7 +389,9 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishBlock ||
 		pubCfg.PublishDistributeReward ||
 		pubCfg.PublishStaking ||
-		pubCfg.PublishSlashing
+		pubCfg.PublishSlashing ||
+		pubCfg.PublishCrossTransfer ||
+		pubCfg.PublishSideProposal
 }
 
 type CrossChainConfig struct {

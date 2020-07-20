@@ -7,22 +7,22 @@ import (
 const (
 	DefaultCodespace sdk.CodespaceType = 12
 
-	CodeInvalidAmount             sdk.CodeType = 1
-	CodeInvalidEthereumAddress    sdk.CodeType = 2
-	CodeInvalidDecimals           sdk.CodeType = 3
-	CodeInvalidContractAddress    sdk.CodeType = 4
-	CodeTokenNotBound             sdk.CodeType = 5
-	CodeInvalidSymbol             sdk.CodeType = 6
-	CodeInvalidExpireTime         sdk.CodeType = 7
-	CodeBindRequestExists         sdk.CodeType = 8
-	CodeBindRequestNotExists      sdk.CodeType = 9
-	CodeTokenBound                sdk.CodeType = 10
-	CodeInvalidLength             sdk.CodeType = 11
-	CodeFeeNotFound               sdk.CodeType = 12
-	CodeInvalidClaim              sdk.CodeType = 13
-	CodeDeserializePackageFailed  sdk.CodeType = 14
-	CodeTokenBindRelationChanged  sdk.CodeType = 15
-	CodeTransferInExpire          sdk.CodeType = 16
+	CodeInvalidAmount            sdk.CodeType = 1
+	CodeInvalidEthereumAddress   sdk.CodeType = 2
+	CodeInvalidDecimals          sdk.CodeType = 3
+	CodeInvalidContractAddress   sdk.CodeType = 4
+	CodeTokenNotBound            sdk.CodeType = 5
+	CodeInvalidSymbol            sdk.CodeType = 6
+	CodeInvalidExpireTime        sdk.CodeType = 7
+	CodeBindRequestExists        sdk.CodeType = 8
+	CodeBindRequestNotExists     sdk.CodeType = 9
+	CodeTokenBound               sdk.CodeType = 10
+	CodeInvalidLength            sdk.CodeType = 11
+	CodeFeeNotFound              sdk.CodeType = 12
+	CodeInvalidClaim             sdk.CodeType = 13
+	CodeDeserializePackageFailed sdk.CodeType = 14
+	CodeTokenBindRelationChanged sdk.CodeType = 15
+	CodeTransferInExpire         sdk.CodeType = 16
 )
 
 //----------------------------------------

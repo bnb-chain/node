@@ -263,6 +263,37 @@ func PublishEvent(
 				publisher.publish(&slashMsg, slashingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 			}
 		}
+
+		if cfg.PublishCrossTransfer {
+			var msgNum int
+			crossTransfers := make([]CrossTransfer, 0)
+
+			for _, crossTransfer := range eventData.CrossTransferData {
+				msgNum++
+				ct := CrossTransfer{
+					TxHash:     crossTransfer.TxHash,
+					ChainId:    crossTransfer.ChainId,
+					RelayerFee: crossTransfer.RelayerFee,
+					Type:       crossTransfer.Type,
+					From:       crossTransfer.From,
+					Denom:      crossTransfer.Denom,
+				}
+				for _, receive := range crossTransfer.To {
+					ct.To = append(ct.To, CrossReceiver{
+						Addr:   receive.Addr,
+						Amount: receive.Amount,
+					})
+				}
+				crossTransfers = append(crossTransfers, ct)
+			}
+			crossTransferMsg := CrossTransfers{
+				Num:       msgNum,
+				Height:    toPublish.Height,
+				Timestamp: toPublish.Timestamp.Unix(),
+				Transfers: crossTransfers,
+			}
+			publisher.publish(&crossTransferMsg, crossTransferTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+		}
 	}
 }
 
@@ -386,6 +417,15 @@ func Publish(
 				}
 			}
 
+			if cfg.PublishSideProposal {
+				duration := Timer(Logger, "publish side chain proposal", func() {
+					publishSideProposals(publisher, marketData.height, marketData.timestamp, marketData.sideProposals)
+				})
+				if metrics != nil {
+					metrics.PublishSideProposalTimeMs.Set(float64(duration))
+				}
+			}
+
 			if metrics != nil {
 				metrics.PublicationHeight.Set(float64(marketData.height))
 				blockInterval := time.Since(lastPublishedTime)
@@ -496,6 +536,14 @@ func publishBlockFee(publisher MarketDataPublisher, height, timestamp int64, blo
 func publishTransfers(publisher MarketDataPublisher, height, timestamp int64, transfers *Transfers) {
 	if transfers != nil {
 		publisher.publish(transfers, transferTpe, height, timestamp)
+	}
+}
+
+func publishSideProposals(publisher MarketDataPublisher, height, timestamp int64, sideProposals *SideProposals) {
+	if sideProposals != nil {
+		sideProposals.Height = height
+		sideProposals.Timestamp = timestamp
+		publisher.publish(sideProposals, sideProposalType, height, timestamp)
 	}
 }
 

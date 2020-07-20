@@ -7,6 +7,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/pubsub"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -22,20 +23,23 @@ import (
 type Keeper struct {
 	cdc *codec.Codec // The wire codec for binary encoding/decoding.
 
-	storeKey    sdk.StoreKey
-	Pool        *sdk.Pool
-	DestChainId sdk.ChainID
+	storeKey      sdk.StoreKey
+	Pool          *sdk.Pool
+	DestChainId   sdk.ChainID
+	DestChainName string
 
 	ScKeeper      sidechain.Keeper
 	BankKeeper    bank.Keeper
 	TokenMapper   store.Mapper
 	AccountKeeper auth.AccountKeeper
 	IbcKeeper     ibc.Keeper
+
+	PbsbServer *pubsub.Server
 }
 
 // NewKeeper creates new instances of the bridge Keeper
 func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.AccountKeeper, tokenMapper store.Mapper, scKeeper sidechain.Keeper,
-	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId sdk.ChainID) Keeper {
+	bankKeeper bank.Keeper, ibcKeeper ibc.Keeper, pool *sdk.Pool, destChainId sdk.ChainID, destChainName string) Keeper {
 	return Keeper{
 		cdc:           cdc,
 		storeKey:      storeKey,
@@ -45,13 +49,14 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		AccountKeeper: accountKeeper,
 		IbcKeeper:     ibcKeeper,
 		DestChainId:   destChainId,
+		DestChainName:  destChainName,
 		ScKeeper:      scKeeper,
 	}
 }
 
 func (k Keeper) RefundTransferIn(decimals int8, transferInClaim *types.TransferInSynPackage, refundReason types.RefundReason) ([]byte, sdk.Error) {
 	refundBscAmounts := make([]*big.Int, 0, len(transferInClaim.RefundAddresses))
-	for idx, _ := range transferInClaim.RefundAddresses {
+	for idx := range transferInClaim.RefundAddresses {
 		bscAmount, sdkErr := types.ConvertBCAmountToBSCAmount(decimals, transferInClaim.Amounts[idx].Int64())
 		if sdkErr != nil {
 			return nil, sdkErr
@@ -139,4 +144,8 @@ func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr types.SmartCha
 	}
 
 	return int8(bz[0])
+}
+
+func (k *Keeper) SetPbsbServer(server *pubsub.Server) {
+	k.PbsbServer = server
 }
