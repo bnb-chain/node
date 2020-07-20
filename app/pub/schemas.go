@@ -572,7 +572,59 @@ const (
 							]
 						}
 					}
-				}],  "default": null}
+				}],  "default": null},
+				{"name": "delegateEvents", "type": ["null", {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "DelegateEvent",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "validator", "type": "string"},
+								{"name": "amount", "type": "org.binance.dex.model.avro.Coin"},
+								{"name": "txHash", "type": "string"}
+							]
+						}
+					}
+				}], "default": null},
+				{"name": "unDelegateEvents", "type": ["null", {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "UndelegateEvent",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "validator", "type": "string"},
+								{"name": "amount", "type": "org.binance.dex.model.avro.Coin"},
+								{"name": "txHash", "type": "string"}
+							]
+						}
+					}
+				}], "default": null},
+				{"name": "reDelegateEvents", "type": ["null", {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "record",
+							"name": "RedelegateEvent",
+							"namespace": "org.binance.dex.model.avro",
+							"fields": [
+								{"name": "delegator", "type": "string"},
+								{"name": "srcValidator", "type": "string"},
+								{"name": "dstValidator", "type": "string"},
+								{"name": "amount", "type": "org.binance.dex.model.avro.Coin"},
+								{"name": "txHash", "type": "string"}
+							]
+						}
+					}
+				}], "default": null}
 			]
 		}
 	`
@@ -645,6 +697,7 @@ const (
 								{"name": "infractionHeight", "type": "long"},
 								{"name": "jailUtil", "type": "long"},
 								{"name": "slashAmount", "type": "long"},
+								{"name": "toFeePool", "type": "long"},
 								{"name": "submitter", "type": "string"},
 								{"name": "submitterReward", "type": "long"}
 							]
@@ -724,5 +777,17 @@ const (
 				}
 			]
         }
+	`
+
+	breatheBlockSchema = `
+		{
+			"type": "record",
+			"name": "BreatheBlock",
+			"namespace": "org.binance.dex.model.avro",
+			"fields": [
+				{"name": "height", "type": "long"},
+				{"name": "timestamp", "type": "long"}
+			]
+		}
 	`
 )

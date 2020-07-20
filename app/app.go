@@ -822,7 +822,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		if height >= app.publicationConfig.FromHeightInclusive {
 			app.publish(tradesToPublish, &proposals, &sideProposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 
-			appsub.SetMeta(height, blockTime)
+			appsub.SetMeta(height, blockTime, isBreatheBlock)
 			app.subscriber.Wait()
 			app.publishEvent()
 		}
