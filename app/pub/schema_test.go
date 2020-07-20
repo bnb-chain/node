@@ -6,6 +6,7 @@ import (
 	"github.com/linkedin/goavro"
 	"os"
 	"testing"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,40 @@ func TestBlockMarsha(t *testing.T) {
 	err := json.Unmarshal([]byte(testBlock), &msg)
 	assert.NoError(t, err)
 	_, err = publisher.marshal(&msg, blockTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCrossTransferMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := CrossTransfers{
+		Height:    10,
+		Num:       2,
+		Timestamp: time.Now().Unix(),
+		Transfers: []CrossTransfer{
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", From: "xxxx", RelayerFee: 1, Denom: "BNB", To: []CrossReceiver{{Addr: "xxxx", Amount: 100}}},
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", From: "xxxx", RelayerFee: 0, Denom: "BNB", To: []CrossReceiver{{Addr: "xxxx", Amount: 100}}},
+		},
+	}
+	_, err := publisher.marshal(&msg, crossTransferTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSideProposalMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := SideProposals{
+		Height:    10,
+		NumOfMsgs: 2,
+		Timestamp: time.Now().Unix(),
+		Proposals: []*SideProposal{
+			{Id: 100, ChainId: "rialto", Status: Succeed},
+			{Id: 101, ChainId: "rialto", Status: Failed},
+		},
+	}
+	_, err := publisher.marshal(&msg, sideProposalType)
 	if err != nil {
 		t.Fatal(err)
 	}

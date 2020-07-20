@@ -34,6 +34,8 @@ type KafkaMarketDataPublisher struct {
 	stakingCodec          *goavro.Codec
 	distributionCodec     *goavro.Codec
 	slashingCodec         *goavro.Codec
+	crossTransferCodec    *goavro.Codec
+	sideProposalCodec     *goavro.Codec
 
 	failFast         bool
 	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
@@ -144,7 +146,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if Cfg.PublishStaking {
 		if _, ok := publisher.producers[Cfg.StakingTopic]; !ok {
 			publisher.producers[Cfg.StakingTopic], err =
-				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+				publisher.connectWithRetry(strings.Split(Cfg.StakingKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create staking producer", "err", err)
@@ -154,7 +156,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if Cfg.PublishDistributeReward {
 		if _, ok := publisher.producers[Cfg.DistributeRewardTopic]; !ok {
 			publisher.producers[Cfg.DistributeRewardTopic], err =
-				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+				publisher.connectWithRetry(strings.Split(Cfg.DistributeRewardKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create distribution producer", "err", err)
@@ -164,10 +166,30 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	if Cfg.PublishSlashing {
 		if _, ok := publisher.producers[Cfg.SlashingTopic]; !ok {
 			publisher.producers[Cfg.SlashingTopic], err =
-				publisher.connectWithRetry(strings.Split(Cfg.BlockKafka, KafkaBrokerSep), config)
+				publisher.connectWithRetry(strings.Split(Cfg.SlashingKafka, KafkaBrokerSep), config)
 		}
 		if err != nil {
 			Logger.Error("failed to create slashing producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishCrossTransfer {
+		if _, ok := publisher.producers[Cfg.CrossTransferTopic]; !ok {
+			publisher.producers[Cfg.CrossTransferTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.CrossTransferKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create crossTransfer producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishSideProposal {
+		if _, ok := publisher.producers[Cfg.SideProposalTopic]; !ok {
+			publisher.producers[Cfg.SideProposalTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.SideProposalKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create crossTransfer producer", "err", err)
 			return
 		}
 	}
@@ -260,6 +282,10 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.DistributeRewardTopic
 	case slashingTpe:
 		topic = Cfg.SlashingTopic
+	case crossTransferTpe:
+		topic = Cfg.CrossTransferTopic
+	case sideProposalType:
+		topic = Cfg.SideProposalTopic
 	}
 	return
 }
@@ -344,6 +370,10 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.distributionCodec
 	case slashingTpe:
 		codec = publisher.slashingCodec
+	case crossTransferTpe:
+		codec = publisher.crossTransferCodec
+	case sideProposalType:
+		codec = publisher.sideProposalCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -372,6 +402,10 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.distributionCodec, err = goavro.NewCodec(distributionSchema); err != nil {
 		return err
 	} else if publisher.slashingCodec, err = goavro.NewCodec(slashingSchema); err != nil {
+		return err
+	} else if publisher.crossTransferCodec, err = goavro.NewCodec(crossTransferSchema); err != nil {
+		return err
+	} else if publisher.sideProposalCodec, err = goavro.NewCodec(sideProposalsSchema); err != nil {
 		return err
 	}
 	return nil

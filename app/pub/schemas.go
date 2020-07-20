@@ -768,4 +768,75 @@ const (
 			]
 		}
 	`
+
+	crossTransferSchema = `
+        {
+            "type": "record",
+            "name": "CrossTransfers",
+            "namespace": "com.company",
+            "fields": [
+                { "name": "height", "type": "long"},
+                { "name": "num", "type": "int" },
+                { "name": "timestamp", "type": "long" },
+                { "name": "transfers",
+                  "type": {    
+                    "type": "array",
+                    "items": {
+                        "type": "record",
+                        "name": "Transfer",
+                        "namespace": "com.company",
+                        "fields": [
+                            { "name": "txhash", "type": "string" },
+                			{ "name": "type", "type": "string" },
+							{ "name": "relayerFee", "type": "long" },
+                			{ "name": "chainid", "type": "string" },
+                            { "name": "from", "type": "string" },
+                            { "name": "denom", "type": "string" },
+                            { "name": "to", 
+                                  "type": {
+                                     "type": "array",
+                                    "items": {
+                                        "type": "record",
+                                        "name": "Receiver",
+                                        "namespace": "com.company",
+                                        "fields": [
+                                            { "name": "addr", "type": "string" },
+											{ "name": "amount", "type": "long" }
+                                        ]
+                                    }
+                                  }
+                            }
+                        ]
+                    }
+                  }    
+                }
+            ]
+        }
+	`
+
+	sideProposalsSchema = `
+        {
+            "type": "record",
+            "name": "sideProposals",
+            "namespace": "com.company",
+            "fields": [
+				{ "name": "numOfMsgs", "type": "int" },
+				{ "name": "proposals", "type": {
+					"type": "array",
+					"items":
+					{
+						"type": "record",
+						"name": "Proposal",
+						"namespace": "org.binance.dex.model.avro",
+						"fields": [
+							{ "name": "id", "type": "long" },
+							{ "name": "chainid", "type": "string" },
+							{ "name": "status", "type": "string" }
+						]
+					}
+				   }
+				}
+			]
+        }
+	`
 )
