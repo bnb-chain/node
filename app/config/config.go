@@ -150,6 +150,11 @@ publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
 sideProposalTopic = "{{ .PublicationConfig.SideProposalTopic }}"
 sideProposalKafka = "{{ .PublicationConfig.SideProposalKafka }}"
 
+# Whether we want publish breatheBlock
+publishBreatheBlock = {{ .PublicationConfig.PublishBreatheBlock }}
+breatheBlockTopic = "{{ .PublicationConfig.BreatheBlockTopic }}"
+breatheBlockKafka = "{{ .PublicationConfig.BreatheBlockKafka }}"
+
 # Global setting
 publicationChannelSize = {{ .PublicationConfig.PublicationChannelSize }}
 publishKafka = {{ .PublicationConfig.PublishKafka }}
@@ -303,6 +308,10 @@ type PublicationConfig struct {
 	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
 	SideProposalKafka   string `mapstructure:"sideProposalKafka"`
 
+	PublishBreatheBlock bool   `mapstructure:"publichBreatheBlock"`
+	BreatheBlockTopic   string `mapstructure:"breatheBlockTopic"`
+	BreatheBlockKafka   string `mapstructure:"breatheBlockKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -374,6 +383,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		SideProposalTopic:   "sideProposal",
 		SideProposalKafka:   "127.0.0.1:9092",
 
+		PublishBreatheBlock: false,
+		BreatheBlockTopic:   "breatheBlock",
+		BreatheBlockKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
@@ -402,7 +415,8 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishStaking ||
 		pubCfg.PublishSlashing ||
 		pubCfg.PublishCrossTransfer ||
-		pubCfg.PublishSideProposal
+		pubCfg.PublishSideProposal ||
+		pubCfg.PublishBreatheBlock
 }
 
 type CrossChainConfig struct {
@@ -458,7 +472,6 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-
 	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`

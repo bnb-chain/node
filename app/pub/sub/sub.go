@@ -37,17 +37,17 @@ func SubscribeAllEvent(sub *pubsub.Subscriber) error {
 //-----------------------------------------------------
 var (
 	// events to be published, should be cleaned up each block
-	toPublish = &ToPublishEvent{}
+	toPublish = &ToPublishEvent{EventData: newEventStore()}
 	// staging area for accepting events to store
 	// should be moved to 'toPublish' when related tx successfully delivered
 	stagingArea = &EventStore{}
 )
 
 type ToPublishEvent struct {
-	Height    int64
-	Timestamp time.Time
-	EventData *EventStore
-	//isSuccessDeliver bool
+	Height         int64
+	Timestamp      time.Time
+	IsBreatheBlock bool
+	EventData      *EventStore
 }
 
 type EventStore struct {
@@ -74,9 +74,10 @@ func ToPublish() *ToPublishEvent {
 	return toPublish
 }
 
-func SetMeta(height int64, timestamp time.Time) {
+func SetMeta(height int64, timestamp time.Time, isBreatheBlock bool) {
 	toPublish.Height = height
 	toPublish.Timestamp = timestamp
+	toPublish.IsBreatheBlock = isBreatheBlock
 }
 
 func commit() {

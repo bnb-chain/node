@@ -36,6 +36,7 @@ type KafkaMarketDataPublisher struct {
 	slashingCodec         *goavro.Codec
 	crossTransferCodec    *goavro.Codec
 	sideProposalCodec     *goavro.Codec
+	breatheBlockCodec     *goavro.Codec
 
 	failFast         bool
 	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
@@ -193,6 +194,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishBreatheBlock {
+		if _, ok := publisher.producers[Cfg.BreatheBlockTopic]; !ok {
+			publisher.producers[Cfg.BreatheBlockTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BreatheBlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create breathe block producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -286,6 +297,8 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.CrossTransferTopic
 	case sideProposalType:
 		topic = Cfg.SideProposalTopic
+	case breatheBlockTpe:
+		topic = Cfg.BreatheBlockTopic
 	}
 	return
 }
@@ -374,6 +387,8 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.crossTransferCodec
 	case sideProposalType:
 		codec = publisher.sideProposalCodec
+	case breatheBlockTpe:
+		codec = publisher.breatheBlockCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -406,6 +421,8 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.crossTransferCodec, err = goavro.NewCodec(crossTransferSchema); err != nil {
 		return err
 	} else if publisher.sideProposalCodec, err = goavro.NewCodec(sideProposalsSchema); err != nil {
+		return err
+	} else if publisher.breatheBlockCodec, err = goavro.NewCodec(breatheBlockSchema); err != nil {
 		return err
 	}
 	return nil
