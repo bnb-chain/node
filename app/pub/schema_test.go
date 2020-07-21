@@ -2,8 +2,11 @@ package pub
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/linkedin/goavro"
 	"os"
 	"testing"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
@@ -125,4 +128,108 @@ func TestBlockMarsha(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestCrossTransferMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := CrossTransfers{
+		Height:    10,
+		Num:       2,
+		Timestamp: time.Now().Unix(),
+		Transfers: []CrossTransfer{
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", From: "xxxx", RelayerFee: 1, Denom: "BNB", To: []CrossReceiver{{Addr: "xxxx", Amount: 100}}},
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", From: "xxxx", RelayerFee: 0, Denom: "BNB", To: []CrossReceiver{{Addr: "xxxx", Amount: 100}}},
+		},
+	}
+	_, err := publisher.marshal(&msg, crossTransferTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSideProposalMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := SideProposals{
+		Height:    10,
+		NumOfMsgs: 2,
+		Timestamp: time.Now().Unix(),
+		Proposals: []*SideProposal{
+			{Id: 100, ChainId: "rialto", Status: Succeed},
+			{Id: 101, ChainId: "rialto", Status: Failed},
+		},
+	}
+	_, err := publisher.marshal(&msg, sideProposalType)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStakingMarshaling(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	valAddr, _ := sdk.ValAddressFromBech32("bva1e2y8w2rz957lahwy0y5h3w53sm8d78qexkn3rh")
+	delAddr, _ := sdk.AccAddressFromBech32("bnb1e2y8w2rz957lahwy0y5h3w53sm8d78qex2jpan")
+
+	dels := make(map[string][]*Delegation)
+	dels["chain-id-1"] = []*Delegation{{
+		DelegatorAddr: delAddr,
+		ValidatorAddr: valAddr,
+		Shares:        sdk.NewDecWithoutFra(1),
+	}}
+
+	removedVals := make(map[string][]sdk.ValAddress)
+	removedVals["chain-id-1"] = []sdk.ValAddress{sdk.ValAddress(valAddr)}
+
+	msg := StakingMsg{
+		NumOfMsgs: 42, Height: 20, Timestamp: 1000,
+		Validators: []*Validator{{
+			FeeAddr:         delAddr,
+			OperatorAddr:    valAddr,
+			Status:          1,
+			DelegatorShares: sdk.NewDecWithoutFra(10000),
+		}},
+		RemovedValidators: removedVals,
+		Delegations:       dels,
+		DelegateEvents:    map[string][]*DelegateEvent{"chain-id-1": {&DelegateEvent{delAddr, valAddr, Coin{Denom: "BNB", Amount: 99999999}, "0xadkjgege"}}},
+	}
+	bz, err := publisher.marshal(&msg, stakingTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	codec, err := goavro.NewCodec(stakingSchema)
+	native, _, err := codec.NativeFromBinary(bz)
+	fmt.Printf("%v", native)
+}
+
+func TestSlashMarshaling(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	valAddr, _ := sdk.ValAddressFromBech32("bva1e2y8w2rz957lahwy0y5h3w53sm8d78qexkn3rh")
+	submitterAddr, _ := sdk.AccAddressFromBech32("bnb1e2y8w2rz957lahwy0y5h3w53sm8d78qex2jpan")
+	slash := make(map[string][]*Slash)
+	slashItem := &Slash{
+		Validator:        valAddr,
+		InfractionType:   1,
+		InfractionHeight: 100,
+		JailUtil:         100000,
+		SlashAmount:      100,
+		ToFeePool:        10,
+		Submitter:        submitterAddr,
+		SubmitterReward:  90,
+	}
+	slash["chain-id-1"] = []*Slash{slashItem}
+
+	msg := SlashMsg{
+		NumOfMsgs: 1,
+		Height:    100,
+		Timestamp: 100000,
+		SlashData: slash,
+	}
+	bz, err := publisher.marshal(&msg, slashingTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	codec, err := goavro.NewCodec(slashingSchema)
+	native, _, err := codec.NativeFromBinary(bz)
+	fmt.Printf("%v", native)
 }

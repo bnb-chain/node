@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
@@ -38,6 +39,7 @@ import (
 	"github.com/binance-chain/node/admin"
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
+	appsub "github.com/binance-chain/node/app/pub/sub"
 	"github.com/binance-chain/node/common"
 	"github.com/binance-chain/node/common/runtime"
 	"github.com/binance-chain/node/common/tx"
@@ -110,6 +112,8 @@ type BinanceChain struct {
 	abciQueryBlackList map[string]bool
 	publicationConfig  *config.PublicationConfig
 	publisher          pub.MarketDataPublisher
+	psServer           *pubsub.Server
+	subscriber         *pubsub.Subscriber
 
 	dexConfig *config.DexConfig
 
@@ -185,7 +189,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	app.oracleKeeper = oracle.NewKeeper(cdc, common.OracleStoreKey, app.ParamHub.Subspace(oracle.DefaultParamSpace),
 		app.stakeKeeper, app.scKeeper, app.ibcKeeper, app.CoinKeeper, app.Pool)
 	app.bridgeKeeper = bridge.NewKeeper(cdc, common.BridgeStoreKey, app.AccountKeeper, app.TokenMapper, app.scKeeper, app.CoinKeeper,
-		app.ibcKeeper, app.Pool, sdk.ChainID(app.crossChainConfig.BscIbcChainId))
+		app.ibcKeeper, app.Pool, sdk.ChainID(app.crossChainConfig.BscIbcChainId), app.crossChainConfig.BscChainId)
 
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.metrics = pub.PrometheusMetrics() // TODO(#246): make it an aggregated wrapper of all component metrics (i.e. DexKeeper, StakeKeeper)
@@ -195,6 +199,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		pub.Logger = logger.With("module", "pub")
 		pub.Cfg = app.publicationConfig
 		pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
+		pub.ToPublishEventCh = make(chan *appsub.ToPublishEvent, app.publicationConfig.PublicationChannelSize)
 
 		publishers := make([]pub.MarketDataPublisher, 0, 1)
 		if app.publicationConfig.PublishKafka {
@@ -214,8 +219,12 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 			}
 
 			go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
+			go pub.PublishEvent(app.publisher, logger, app.publicationConfig, pub.ToPublishEventCh)
 			pub.IsLive = true
 		}
+
+		app.startPubSub(logger)
+		app.subscribeEvent(logger)
 	}
 
 	// finish app initialization
@@ -271,6 +280,26 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 	}
 
 	return app
+}
+
+func (app *BinanceChain) startPubSub(logger log.Logger) {
+	pubLogger := logger.With("module", "bnc_pubsub")
+	app.psServer = pubsub.NewServer(pubLogger)
+	if err := app.psServer.Start(); err != nil {
+		panic(err)
+	}
+}
+
+func (app *BinanceChain) subscribeEvent(logger log.Logger) {
+	subLogger := logger.With("module", "bnc_sub")
+	sub, err := app.psServer.NewSubscriber(pubsub.ClientID("bnc_app"), subLogger)
+	if err != nil {
+		panic(err)
+	}
+	if err = appsub.SubscribeAllEvent(sub); err != nil {
+		panic(err)
+	}
+	app.subscriber = sub
 }
 
 // setUpgradeConfig will overwrite default upgrade config
@@ -441,6 +470,7 @@ func (app *BinanceChain) initOracle() {
 }
 
 func (app *BinanceChain) initBridge() {
+	app.bridgeKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.BindChannelID, sdk.ChannelAllow)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferOutChannelID, sdk.ChannelAllow)
@@ -468,6 +498,7 @@ func (app *BinanceChain) initParamHub() {
 
 func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SetupForSideChain(&app.scKeeper, &app.ibcKeeper)
+	app.stakeKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		stake.MigratePowerRankKey(ctx, app.stakeKeeper)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), keeper.ChannelId, sdk.ChannelAllow)
@@ -513,6 +544,7 @@ func (app *BinanceChain) initGov() {
 func (app *BinanceChain) initSlashing() {
 	app.slashKeeper.SetSideChain(&app.scKeeper)
 	app.slashKeeper.SubscribeParamChange(app.ParamHub)
+	app.slashKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), slashing.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
@@ -690,9 +722,15 @@ func (app *BinanceChain) DeliverTx(req abci.RequestDeliverTx) (res abci.Response
 	if res.IsOK() {
 		// commit or panic
 		fees.Pool.CommitFee(txHash)
+		if app.psServer != nil {
+			app.psServer.Publish(appsub.TxDeliverSuccEvent{})
+		}
 	} else {
 		if app.publicationConfig.PublishOrderUpdates {
 			app.processErrAbciResponseForPub(req.Tx)
+		}
+		if app.psServer != nil {
+			app.psServer.Publish(appsub.TxDeliverFailEvent{})
 		}
 	}
 	if app.publicationConfig.PublishBlock {
@@ -766,10 +804,9 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
-	if app.publicationConfig.PublishOrderUpdates {
-		//TODO, "passed" and "failed" contains proposalId and ChainId, please publish chain id as well during
-		// the refactor of publisher.
-		proposals = pub.CollectProposalsForPublish(passed, failed)
+	var sideProposals pub.SideProposals
+	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal{
+		proposals, sideProposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 	paramHub.EndBlock(ctx, app.ParamHub)
 	sidechain.EndBlock(ctx, app.scKeeper)
@@ -790,13 +827,18 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		var stakeUpdates pub.StakeUpdates
 		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
-			app.publish(tradesToPublish, &proposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+			app.publish(tradesToPublish, &proposals, &sideProposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
+
+			appsub.SetMeta(height, blockTime, isBreatheBlock)
+			app.subscriber.Wait()
+			app.publishEvent()
 		}
 
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
 	}
+	appsub.Clear()
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
 	pub.Pool.Clean()
@@ -980,7 +1022,14 @@ func MakeCodec() *wire.Codec {
 	return cdc
 }
 
-func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
+func (app *BinanceChain) publishEvent() {
+	if appsub.ToPublish() != nil && appsub.ToPublish().EventData != nil {
+		pub.ToPublishEventCh <- appsub.ToPublish()
+	}
+
+}
+
+func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublish *pub.Proposals, sideProposalsToPublish *pub.SideProposals, stakeUpdates *pub.StakeUpdates, blockFee pub.BlockFee, ctx sdk.Context, height, blockTime int64) {
 	pub.Logger.Info("start to collect publish information", "height", height)
 
 	var accountsToPublish map[string]pub.Account
@@ -1026,6 +1075,8 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		len(orderChanges),
 		"numOfProposals",
 		proposalsToPublish.NumOfMsgs,
+		"numOfSideProposals",
+		sideProposalsToPublish.NumOfMsgs,
 		"numOfStakeUpdates",
 		stakeUpdates.NumOfMsgs,
 		"numOfAccounts",
@@ -1037,6 +1088,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		blockTime,
 		tradesToPublish,
 		proposalsToPublish,
+		sideProposalsToPublish,
 		stakeUpdates,
 		orderChanges,        // thread-safety is guarded by the signal from RemoveDoneCh
 		orderInfoForPublish, // thread-safety is guarded by the signal from RemoveDoneCh

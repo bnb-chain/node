@@ -93,11 +93,13 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	log.With("module", "bridge").Info("unbind token success", "symbol", msg.Symbol, "contract_addr", token.GetContractDecimals())
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
+		publishCrossChainEvent(ctx, keeper, msg.From.String(), []CrossReceiver{}, msg.Symbol, TransferUnBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	}
 
 	tags := sdk.NewTags(
 		types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10)),
 		types.TagChannel, []byte{uint8(types.BindChannelID)},
+		types.TagRelayerFee, []byte(strconv.FormatInt(relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol), 10)),
 	)
 	return sdk.Result{
 		Tags: tags,
@@ -210,13 +212,20 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
+		publishCrossChainEvent(ctx, keeper, msg.From.String(), []CrossReceiver{
+			{types.PegAccount.String(), bindRequest.DeductedAmount}}, symbol, TransferBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	}
-	tags := sdk.NewTags(
-		types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10)),
-		types.TagChannel, []byte{uint8(types.BindChannelID)},
-	)
+	pegTags := sdk.Tags{}
+	for _, coin := range transferAmount {
+		if coin.Amount > 0 {
+			pegTags = append(pegTags, sdk.GetPegInTag(coin.Denom, coin.Amount))
+		}
+	}
+	pegTags = append(pegTags, sdk.MakeTag(types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10))))
+	pegTags = append(pegTags, sdk.MakeTag(types.TagChannel, []byte{uint8(types.BindChannelID)}))
+	pegTags = append(pegTags, sdk.MakeTag(types.TagRelayerFee, []byte(strconv.FormatInt(relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol), 10))))
 	return sdk.Result{
-		Tags: tags,
+		Tags: pegTags,
 	}
 }
 
@@ -293,6 +302,8 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
+		publishCrossChainEvent(ctx, keeper, msg.From.String(), []CrossReceiver{
+			{types.PegAccount.String(), msg.Amount.Amount}}, symbol, TransferOutType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	}
 
 	pegTags := sdk.Tags{}
@@ -303,7 +314,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 	}
 	pegTags = append(pegTags, sdk.MakeTag(types.TagSendSequence, []byte(strconv.FormatUint(sendSeq, 10))))
 	pegTags = append(pegTags, sdk.MakeTag(types.TagChannel, []byte{uint8(types.TransferOutChannelID)}))
-
+	pegTags = append(pegTags, sdk.MakeTag(types.TagRelayerFee, []byte(strconv.FormatInt(relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol), 10))))
 	return sdk.Result{
 		Tags: pegTags,
 	}

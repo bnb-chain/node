@@ -10,6 +10,7 @@ type BlockInfoToPublish struct {
 	timestamp          int64
 	tradesToPublish    []*Trade
 	proposalsToPublish *Proposals
+	sideProposals      *SideProposals
 	stakeUpdates       *StakeUpdates
 	orderChanges       orderPkg.OrderChanges
 	orderInfos         orderPkg.OrderInfoForPublish
@@ -26,6 +27,7 @@ func NewBlockInfoToPublish(
 	timestamp int64,
 	tradesToPublish []*Trade,
 	proposalsToPublish *Proposals,
+	sideProposalsToPublish *SideProposals,
 	stakeUpdates *StakeUpdates,
 	orderChanges orderPkg.OrderChanges,
 	orderInfos orderPkg.OrderInfoForPublish,
@@ -38,6 +40,7 @@ func NewBlockInfoToPublish(
 		timestamp,
 		tradesToPublish,
 		proposalsToPublish,
+		sideProposalsToPublish,
 		stakeUpdates,
 		orderChanges,
 		orderInfos,

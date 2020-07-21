@@ -125,6 +125,36 @@ publishBlock = {{ .PublicationConfig.PublishBlock }}
 blockTopic = "{{ .PublicationConfig.BlockTopic }}"
 blockKafka = "{{ .PublicationConfig.BlockKafka }}"
 
+# Whether we want publish distribution
+publishDistributeReward = {{ .PublicationConfig.PublishDistributeReward }}
+distributeRewardTopic = "{{ .PublicationConfig.DistributeRewardTopic }}"
+distributeRewardKafka = "{{ .PublicationConfig.DistributeRewardKafka }}"
+
+# Whether we want publish staking
+publishStaking = {{ .PublicationConfig.PublishStaking }}
+stakingTopic = "{{ .PublicationConfig.StakingTopic }}"
+stakingKafka = "{{ .PublicationConfig.StakingKafka }}"
+
+# Whether we want publish slashing
+publishSlashing = {{ .PublicationConfig.PublishSlashing }}
+slashingTopic = "{{ .PublicationConfig.SlashingTopic }}"
+slashingKafka = "{{ .PublicationConfig.SlashingKafka }}"
+
+# Whether we want publish cross transfer
+publishCrossTransfer = {{ .PublicationConfig.PublishCrossTransfer }}
+crossTransferTopic = "{{ .PublicationConfig.CrossTransferTopic }}"
+crossTransferKafka = "{{ .PublicationConfig.CrossTransferKafka }}"
+
+# Whether we want publish side proposals
+publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
+sideProposalTopic = "{{ .PublicationConfig.SideProposalTopic }}"
+sideProposalKafka = "{{ .PublicationConfig.SideProposalKafka }}"
+
+# Whether we want publish breatheBlock
+publishBreatheBlock = {{ .PublicationConfig.PublishBreatheBlock }}
+breatheBlockTopic = "{{ .PublicationConfig.BreatheBlockTopic }}"
+breatheBlockKafka = "{{ .PublicationConfig.BreatheBlockKafka }}"
+
 # Global setting
 publicationChannelSize = {{ .PublicationConfig.PublicationChannelSize }}
 publishKafka = {{ .PublicationConfig.PublishKafka }}
@@ -258,6 +288,30 @@ type PublicationConfig struct {
 	BlockTopic   string `mapstructure:"blockTopic"`
 	BlockKafka   string `mapstructure:"blockKafka"`
 
+	PublishDistributeReward bool   `mapstructure:"publishDistributeReward"`
+	DistributeRewardTopic   string `mapstructure:"distributeRewardTopic"`
+	DistributeRewardKafka   string `mapstructure:"distributeRewardKafka"`
+
+	PublishStaking bool   `mapstructure:"publishStaking"`
+	StakingTopic   string `mapstructure:"stakingTopic"`
+	StakingKafka   string `mapstructure:"stakingKafka"`
+
+	PublishSlashing bool   `mapstructure:"publishSlashing"`
+	SlashingTopic   string `mapstructure:"slashingTopic"`
+	SlashingKafka   string `mapstructure:"slashingKafka"`
+
+	PublishCrossTransfer bool   `mapstructure:"publishCrossTransfer"`
+	CrossTransferTopic   string `mapstructure:"crossTransferTopic"`
+	CrossTransferKafka   string `mapstructure:"crossTransferKafka"`
+
+	PublishSideProposal bool   `mapstructure:"publishSideProposal"`
+	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
+	SideProposalKafka   string `mapstructure:"sideProposalKafka"`
+
+	PublishBreatheBlock bool   `mapstructure:"publichBreatheBlock"`
+	BreatheBlockTopic   string `mapstructure:"breatheBlockTopic"`
+	BreatheBlockKafka   string `mapstructure:"breatheBlockKafka"`
+
 	PublicationChannelSize int `mapstructure:"publicationChannelSize"`
 
 	// DO NOT put this option in config file
@@ -309,6 +363,30 @@ func defaultPublicationConfig() *PublicationConfig {
 		BlockTopic:   "block",
 		BlockKafka:   "127.0.0.1:9092",
 
+		PublishDistributeReward: false,
+		DistributeRewardTopic:   "distribution",
+		DistributeRewardKafka:   "127.0.0.1:9092",
+
+		PublishStaking: false,
+		StakingTopic:   "staking",
+		StakingKafka:   "127.0.0.1:9092",
+
+		PublishSlashing: false,
+		SlashingTopic:   "slashing",
+		SlashingKafka:   "127.0.0.1:9092",
+
+		PublishCrossTransfer: false,
+		CrossTransferTopic:   "crossTransfer",
+		CrossTransferKafka:   "127.0.0.1:9092",
+
+		PublishSideProposal: false,
+		SideProposalTopic:   "sideProposal",
+		SideProposalKafka:   "127.0.0.1:9092",
+
+		PublishBreatheBlock: false,
+		BreatheBlockTopic:   "breatheBlock",
+		BreatheBlockKafka:   "127.0.0.1:9092",
+
 		PublicationChannelSize: 10000,
 		FromHeightInclusive:    1,
 		PublishKafka:           false,
@@ -332,7 +410,13 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishOrderBook ||
 		pubCfg.PublishBlockFee ||
 		pubCfg.PublishTransfer ||
-		pubCfg.PublishBlock
+		pubCfg.PublishBlock ||
+		pubCfg.PublishDistributeReward ||
+		pubCfg.PublishStaking ||
+		pubCfg.PublishSlashing ||
+		pubCfg.PublishCrossTransfer ||
+		pubCfg.PublishSideProposal ||
+		pubCfg.PublishBreatheBlock
 }
 
 type CrossChainConfig struct {
@@ -388,7 +472,6 @@ func defaultBaseConfig() *BaseConfig {
 }
 
 type UpgradeConfig struct {
-
 	// Galileo Upgrade
 	BEP6Height  int64 `mapstructure:"BEP6Height"`
 	BEP9Height  int64 `mapstructure:"BEP9Height"`
