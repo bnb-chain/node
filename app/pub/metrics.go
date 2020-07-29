@@ -112,6 +112,11 @@ func PrometheusMetrics() *Metrics {
 			Name:      "transfers_pub_time",
 			Help:      "Time to publish transfers (ms)",
 		}, []string{}),
+		PublishBlockTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+			Subsystem: "publication",
+			Name:      "block_pub_time",
+			Help:      "Time to publish block info (ms)",
+		}, []string{}),
 		PublishSideProposalTimeMs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Subsystem: "publication",
 			Name:      "side_proposal_pub_time",
