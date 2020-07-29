@@ -870,9 +870,11 @@ const (
 	sideProposalsSchema = `
         {
             "type": "record",
-            "name": "sideProposals",
+            "name": "SideProposals",
             "namespace": "com.company",
             "fields": [
+				{ "name": "height", "type": "long" },
+				{ "name": "timestamp", "type": "long" },
 				{ "name": "numOfMsgs", "type": "int" },
 				{ "name": "proposals", "type": {
 					"type": "array",
