@@ -966,7 +966,7 @@ func (msg *DistributionMsg) ToNativeMap() map[string]interface{} {
 }
 
 func (msg *DistributionMsg) String() string {
-	return fmt.Sprintf("DistributionMsg numOfMsgs: %d", msg.NumOfMsgs)
+	return fmt.Sprintf("DistributionMsg at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
 }
 
 func (msg *DistributionMsg) EssentialMsg() string {
@@ -1045,7 +1045,7 @@ type SlashMsg struct {
 }
 
 func (msg *SlashMsg) String() string {
-	return fmt.Sprintf("SlashMsg: %v", msg.ToNativeMap())
+	return fmt.Sprintf("SlashMsg at height: %d, numOfMsgs: %d, slashData: %v", msg.Height, msg.NumOfMsgs, msg.SlashData)
 }
 
 func (msg *SlashMsg) ToNativeMap() map[string]interface{} {
@@ -1122,7 +1122,7 @@ type BreatheBlockMsg struct {
 }
 
 func (msg *BreatheBlockMsg) String() string {
-	return fmt.Sprintf("BreatheBlockMsg: %v", msg.ToNativeMap())
+	return fmt.Sprintf("BreatheBlockMsg at height: %d", msg.Height)
 }
 
 func (msg *BreatheBlockMsg) ToNativeMap() map[string]interface{} {
