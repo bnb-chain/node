@@ -27,7 +27,7 @@ type StakingMsg struct {
 }
 
 func (msg *StakingMsg) String() string {
-	return fmt.Sprintf("StakingMsg numOfMsgs: %d", msg.NumOfMsgs)
+	return fmt.Sprintf("StakingMsg at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
 }
 
 func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
