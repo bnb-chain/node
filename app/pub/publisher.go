@@ -61,6 +61,7 @@ func PublishEvent(
 			var delegateEventsMap map[string][]*DelegateEvent
 			var undelegateEventsMap map[string][]*UndelegateEvent
 			var redelegateEventsMap map[string][]*RedelegateEvent
+			var electedValidatorsMap map[string][]*Validator
 
 			if len(eventData.StakeData.Validators) > 0 {
 				validators = make([]*Validator, len(eventData.StakeData.Validators), len(eventData.StakeData.Validators))
@@ -231,6 +232,18 @@ func PublishEvent(
 					redelegateEventsMap[chainId] = vv
 				}
 			}
+			if len(eventData.StakeData.ElectedValidators) > 0 {
+				electedValidatorsMap = make(map[string][]*Validator)
+				for chainId, vals := range eventData.StakeData.ElectedValidators {
+					msgNum += len(vals)
+					electedVals := make([]*Validator, len(vals), len(vals))
+					for i := range vals {
+						val := Validator(vals[i])
+						electedVals[i] = &val
+					}
+					electedValidatorsMap[chainId] = electedVals
+				}
+			}
 
 			msg := StakingMsg{
 				NumOfMsgs: msgNum,
@@ -247,6 +260,7 @@ func PublishEvent(
 				DelegateEvents:       delegateEventsMap,
 				UndelegateEvents:     undelegateEventsMap,
 				RedelegateEvents:     redelegateEventsMap,
+				ElectedValidators:    electedValidatorsMap,
 			}
 			publisher.publish(&msg, stakingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 		}

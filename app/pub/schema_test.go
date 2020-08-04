@@ -190,6 +190,12 @@ func TestStakingMarshaling(t *testing.T) {
 		RemovedValidators: removedVals,
 		Delegations:       dels,
 		DelegateEvents:    map[string][]*DelegateEvent{"chain-id-1": {&DelegateEvent{delAddr, valAddr, Coin{Denom: "BNB", Amount: 99999999}, "0xadkjgege"}}},
+		ElectedValidators: map[string][]*Validator{"chain-id-1": {&Validator{
+			FeeAddr:         delAddr,
+			OperatorAddr:    valAddr,
+			Status:          1,
+			DelegatorShares: sdk.NewDecWithoutFra(10000),
+		}}},
 	}
 	bz, err := publisher.marshal(&msg, stakingTpe)
 	if err != nil {

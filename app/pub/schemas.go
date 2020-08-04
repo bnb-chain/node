@@ -738,6 +738,13 @@ const (
 							]
 						}
 					}
+				}], "default": null},
+				{"name": "electedValidators", "type": ["null", {
+					"type": "map",
+					"values": {
+						"type": "array",
+						"items": "org.binance.dex.model.avro.Validator"
+					}
 				}], "default": null}
 			]
 		}
