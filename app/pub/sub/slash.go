@@ -36,7 +36,7 @@ func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
 				InfractionHeight: sideSlashEvent.InfractionHeight,
 				JailUtil:         sideSlashEvent.JailUtil,
 				ToFeePool:        sideSlashEvent.ToFeePool,
-				SlashAmount:      sideSlashEvent.SubmitterReward,
+				SlashAmount:      sideSlashEvent.SlashAmt,
 				Submitter:        sideSlashEvent.Submitter,
 				SubmitterReward:  sideSlashEvent.SubmitterReward,
 			})
