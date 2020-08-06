@@ -313,15 +313,24 @@ func PublishEvent(
 			for chainId, slashes := range eventData.SlashData {
 				slashDataPerChain := make([]*Slash, len(slashes), len(slashes))
 				for i, slash := range slashes {
+
+					allocatedAmts := make([]*AllocatedAmt, len(slash.ValidatorsAllocatedAmt))
+					var idx int
+					for address, amount := range slash.ValidatorsAllocatedAmt {
+						allocatedAmts[idx] = &AllocatedAmt{Address: address, Amount: amount}
+						idx++
+					}
+
 					slashDataPerChain[i] = &Slash{
-						Validator:        slash.Validator,
-						InfractionType:   slash.InfractionType,
-						InfractionHeight: slash.InfractionHeight,
-						JailUtil:         slash.JailUtil.Unix(),
-						SlashAmount:      slash.SlashAmount,
-						ToFeePool:        slash.ToFeePool,
-						Submitter:        slash.Submitter,
-						SubmitterReward:  slash.SubmitterReward,
+						Validator:              slash.Validator,
+						InfractionType:         slash.InfractionType,
+						InfractionHeight:       slash.InfractionHeight,
+						JailUtil:               slash.JailUtil.Unix(),
+						SlashAmount:            slash.SlashAmount,
+						ToFeePool:              slash.ToFeePool,
+						Submitter:              slash.Submitter,
+						SubmitterReward:        slash.SubmitterReward,
+						ValidatorsAllocatedAmt: allocatedAmts,
 					}
 					msgNum++
 				}

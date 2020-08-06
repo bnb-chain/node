@@ -9,14 +9,15 @@ import (
 )
 
 type SlashData struct {
-	Validator        sdk.ValAddress
-	InfractionType   byte
-	InfractionHeight int64
-	JailUtil         time.Time
-	SlashAmount      int64
-	ToFeePool        int64
-	Submitter        sdk.AccAddress
-	SubmitterReward  int64
+	Validator              sdk.ValAddress
+	InfractionType         byte
+	InfractionHeight       int64
+	JailUtil               time.Time
+	SlashAmount            int64
+	ToFeePool              int64
+	Submitter              sdk.AccAddress
+	SubmitterReward        int64
+	ValidatorsAllocatedAmt map[string]int64
 }
 
 func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
@@ -31,14 +32,15 @@ func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
 				toPublish.EventData.SlashData[sideSlashEvent.SideChainId] = make([]SlashData, 0)
 			}
 			toPublish.EventData.SlashData[sideSlashEvent.SideChainId] = append(toPublish.EventData.SlashData[sideSlashEvent.SideChainId], SlashData{
-				Validator:        sideSlashEvent.Validator,
-				InfractionType:   sideSlashEvent.InfractionType,
-				InfractionHeight: sideSlashEvent.InfractionHeight,
-				JailUtil:         sideSlashEvent.JailUtil,
-				ToFeePool:        sideSlashEvent.ToFeePool,
-				SlashAmount:      sideSlashEvent.SlashAmt,
-				Submitter:        sideSlashEvent.Submitter,
-				SubmitterReward:  sideSlashEvent.SubmitterReward,
+				Validator:              sideSlashEvent.Validator,
+				InfractionType:         sideSlashEvent.InfractionType,
+				InfractionHeight:       sideSlashEvent.InfractionHeight,
+				JailUtil:               sideSlashEvent.JailUtil,
+				ToFeePool:              sideSlashEvent.ToFeePool,
+				SlashAmount:            sideSlashEvent.SlashAmt,
+				Submitter:              sideSlashEvent.Submitter,
+				SubmitterReward:        sideSlashEvent.SubmitterReward,
+				ValidatorsAllocatedAmt: sideSlashEvent.ValidatorsAllocatedAmt,
 			})
 		default:
 			sub.Logger.Info("unknown event type")

@@ -1085,14 +1085,15 @@ func (msg *SlashMsg) EmptyCopy() AvroOrJsonMsg {
 }
 
 type Slash struct {
-	Validator        sdk.ValAddress
-	InfractionType   byte
-	InfractionHeight int64
-	JailUtil         int64
-	SlashAmount      int64
-	ToFeePool        int64
-	Submitter        sdk.AccAddress
-	SubmitterReward  int64
+	Validator              sdk.ValAddress
+	InfractionType         byte
+	InfractionHeight       int64
+	JailUtil               int64
+	SlashAmount            int64
+	ToFeePool              int64
+	Submitter              sdk.AccAddress
+	SubmitterReward        int64
+	ValidatorsAllocatedAmt []*AllocatedAmt
 }
 
 func (msg *Slash) String() string {
@@ -1113,6 +1114,28 @@ func (msg *Slash) toNativeMap() map[string]interface{} {
 		native["submitter"] = ""
 	}
 	native["submitterReward"] = msg.SubmitterReward
+
+	vaa := make([]map[string]interface{}, len(msg.ValidatorsAllocatedAmt), len(msg.ValidatorsAllocatedAmt))
+	for idx, allocatedAmt := range msg.ValidatorsAllocatedAmt {
+		vaa[idx] = allocatedAmt.toNativeMap()
+	}
+	native["validatorsAllocatedAmt"] = vaa
+	return native
+}
+
+type AllocatedAmt struct {
+	Address string
+	Amount  int64
+}
+
+func (msg *AllocatedAmt) String() string {
+	return fmt.Sprintf("AllocatedAmt: %v", msg.toNativeMap())
+}
+
+func (msg *AllocatedAmt) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["address"] = msg.Address
+	native["amount"] = msg.Amount
 	return native
 }
 
