@@ -317,7 +317,7 @@ func PublishEvent(
 					allocatedAmts := make([]*AllocatedAmt, len(slash.ValidatorsAllocatedAmt))
 					var idx int
 					for address, amount := range slash.ValidatorsAllocatedAmt {
-						allocatedAmts[idx] = &AllocatedAmt{Address: address, Amount: amount}
+						allocatedAmts[idx] = &AllocatedAmt{Address: sdk.AccAddress([]byte(address)).String(), Amount: amount}
 						idx++
 					}
 
