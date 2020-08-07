@@ -17,7 +17,7 @@ type SlashData struct {
 	ToFeePool              int64
 	Submitter              sdk.AccAddress
 	SubmitterReward        int64
-	ValidatorsAllocatedAmt map[string]int64
+	ValidatorsCompensation map[string]int64
 }
 
 func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
@@ -40,7 +40,7 @@ func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
 				SlashAmount:            sideSlashEvent.SlashAmt,
 				Submitter:              sideSlashEvent.Submitter,
 				SubmitterReward:        sideSlashEvent.SubmitterReward,
-				ValidatorsAllocatedAmt: sideSlashEvent.ValidatorsAllocatedAmt,
+				ValidatorsCompensation: sideSlashEvent.ValidatorsCompensation,
 			})
 		default:
 			sub.Logger.Info("unknown event type")

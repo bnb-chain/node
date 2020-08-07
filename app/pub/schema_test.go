@@ -221,7 +221,7 @@ func TestSlashMarshaling(t *testing.T) {
 		ToFeePool:        10,
 		Submitter:        submitterAddr,
 		SubmitterReward:  80,
-		ValidatorsAllocatedAmt: []*AllocatedAmt{{
+		ValidatorsCompensation: []*AllocatedAmt{{
 			Address: submitterAddr.String(),
 			Amount:  10,
 		}},

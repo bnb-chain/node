@@ -1093,7 +1093,7 @@ type Slash struct {
 	ToFeePool              int64
 	Submitter              sdk.AccAddress
 	SubmitterReward        int64
-	ValidatorsAllocatedAmt []*AllocatedAmt
+	ValidatorsCompensation []*AllocatedAmt
 }
 
 func (msg *Slash) String() string {
@@ -1115,11 +1115,11 @@ func (msg *Slash) toNativeMap() map[string]interface{} {
 	}
 	native["submitterReward"] = msg.SubmitterReward
 
-	vaa := make([]map[string]interface{}, len(msg.ValidatorsAllocatedAmt), len(msg.ValidatorsAllocatedAmt))
-	for idx, allocatedAmt := range msg.ValidatorsAllocatedAmt {
-		vaa[idx] = allocatedAmt.toNativeMap()
+	vsc := make([]map[string]interface{}, len(msg.ValidatorsCompensation), len(msg.ValidatorsCompensation))
+	for idx, compensation := range msg.ValidatorsCompensation {
+		vsc[idx] = compensation.toNativeMap()
 	}
-	native["validatorsAllocatedAmt"] = vaa
+	native["validatorsCompensation"] = vsc
 	return native
 }
 

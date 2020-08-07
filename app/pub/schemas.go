@@ -821,7 +821,7 @@ const (
 								{"name": "toFeePool", "type": "long"},
 								{"name": "submitter", "type": "string"},
 								{"name": "submitterReward", "type": "long"},
-								{"name": "validatorsAllocatedAmt", "type":{
+								{"name": "validatorsCompensation", "type":{
 									"type": "array",
 									"items": {
 										"type": "record",

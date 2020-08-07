@@ -314,10 +314,10 @@ func PublishEvent(
 				slashDataPerChain := make([]*Slash, len(slashes), len(slashes))
 				for i, slash := range slashes {
 
-					allocatedAmts := make([]*AllocatedAmt, len(slash.ValidatorsAllocatedAmt))
+					vc := make([]*AllocatedAmt, len(slash.ValidatorsCompensation))
 					var idx int
-					for address, amount := range slash.ValidatorsAllocatedAmt {
-						allocatedAmts[idx] = &AllocatedAmt{Address: sdk.AccAddress([]byte(address)).String(), Amount: amount}
+					for address, amount := range slash.ValidatorsCompensation {
+						vc[idx] = &AllocatedAmt{Address: sdk.AccAddress([]byte(address)).String(), Amount: amount}
 						idx++
 					}
 
@@ -330,7 +330,7 @@ func PublishEvent(
 						ToFeePool:              slash.ToFeePool,
 						Submitter:              slash.Submitter,
 						SubmitterReward:        slash.SubmitterReward,
-						ValidatorsAllocatedAmt: allocatedAmts,
+						ValidatorsCompensation: vc,
 					}
 					msgNum++
 				}
