@@ -220,7 +220,11 @@ func TestSlashMarshaling(t *testing.T) {
 		SlashAmount:      100,
 		ToFeePool:        10,
 		Submitter:        submitterAddr,
-		SubmitterReward:  90,
+		SubmitterReward:  80,
+		ValidatorsCompensation: []*AllocatedAmt{{
+			Address: submitterAddr.String(),
+			Amount:  10,
+		}},
 	}
 	slash["chain-id-1"] = []*Slash{slashItem}
 

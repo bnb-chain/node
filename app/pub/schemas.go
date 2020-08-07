@@ -820,7 +820,19 @@ const (
 								{"name": "slashAmount", "type": "long"},
 								{"name": "toFeePool", "type": "long"},
 								{"name": "submitter", "type": "string"},
-								{"name": "submitterReward", "type": "long"}
+								{"name": "submitterReward", "type": "long"},
+								{"name": "validatorsCompensation", "type":{
+									"type": "array",
+									"items": {
+										"type": "record",
+										"name": "AllocatedAmt",
+										"namespace": "org.binance.dex.model.avro",
+										"fields":[
+											{"name": "address", "type": "string"},
+											{"name": "amount", "type": "long"}
+										]
+									}
+								}}
 							]
 						}
 					}
