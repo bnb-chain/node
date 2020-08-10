@@ -757,9 +757,6 @@ func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.Respo
 func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, blockTime time.Time) bool {
 	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
 	// state sync from breathe block, the height is breathe block + 1)
-	if height > 1455000 && height < 2463645{
-		app.baseConfig.BreatheBlockInterval = 3112
-	}
 	if app.baseConfig.BreatheBlockInterval > 0 {
 		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
 	} else {
@@ -808,7 +805,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
 	var sideProposals pub.SideProposals
-	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal{
+	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal {
 		proposals, sideProposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 	paramHub.EndBlock(ctx, app.ParamHub)
