@@ -11,26 +11,27 @@ import (
 const (
 	Topic = pubsub.Topic("cross-transfer")
 
-	TransferOutType string = "TO"
-	TransferInType  string = "TI"
-	TransferAckRefundType string = "TAR"
+	TransferOutType           string = "TO"
+	TransferInType            string = "TI"
+	TransferAckRefundType     string = "TAR"
 	TransferFailAckRefundType string = "TFAR"
 
-	TransferBindType string = "TB"
-	TransferUnBindType string = "TUB"
-	TransferFailBindType string = "TFB"
+	TransferBindType        string = "TB"
+	TransferUnBindType      string = "TUB"
+	TransferFailBindType    string = "TFB"
 	TransferApproveBindType string = "TPB"
-
 )
 
 type CrossTransferEvent struct {
-	TxHash  string
-	ChainId string
-	Type    string
+	TxHash     string
+	ChainId    string
+	Type       string
 	RelayerFee int64
-	From    string
-	Denom   string
-	To      []CrossReceiver
+	From       string
+	Denom      string
+	Contract   string
+	Decimals   int8
+	To         []CrossReceiver
 }
 
 type CrossReceiver struct {
@@ -47,13 +48,35 @@ func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
 			event := CrossTransferEvent{
-				TxHash:  txHashStr,
-				ChainId: keeper.DestChainName,
+				TxHash:     txHashStr,
+				ChainId:    keeper.DestChainName,
 				RelayerFee: relayerFee,
-				Type:    eventType,
-				From:    from,
-				Denom:   symbol,
-				To:      to,
+				Type:       eventType,
+				From:       from,
+				Denom:      symbol,
+				To:         to,
+			}
+			keeper.PbsbServer.Publish(event)
+		} else {
+			ctx.Logger().With("module", "bridge").Error("failed to get txhash, will not publish cross transfer event ")
+		}
+	}
+}
+
+func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from string, to []CrossReceiver, symbol string, eventType string, relayerFee int64, contract string, decimals int8) {
+	if keeper.PbsbServer != nil {
+		txHash := ctx.Value(baseapp.TxHashKey)
+		if txHashStr, ok := txHash.(string); ok {
+			event := CrossTransferEvent{
+				TxHash:     txHashStr,
+				ChainId:    keeper.DestChainName,
+				RelayerFee: relayerFee,
+				Type:       eventType,
+				From:       from,
+				Denom:      symbol,
+				Contract:   contract,
+				Decimals:   decimals,
+				To:         to,
 			}
 			keeper.PbsbServer.Publish(event)
 		} else {

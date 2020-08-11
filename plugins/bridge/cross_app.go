@@ -99,7 +99,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		app.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
 		if ctx.IsDeliverTx() {
-			publishCrossChainEvent(ctx, app.bridgeKeeper, bindRequest.From.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee)
+			publishBindSuccessEvent(ctx, app.bridgeKeeper, bindRequest.From.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 		}
 		log.With("module", "bridge").Info("bind token success", "symbol", symbol, "contract_addr", bindRequest.ContractAddress.String())
 	} else {
@@ -114,8 +114,8 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		if ctx.IsDeliverTx() {
 			app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-			publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
-				{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, relayerFee)
+			publishBindSuccessEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+				{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 		}
 	}
 
