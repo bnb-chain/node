@@ -542,9 +542,9 @@ func (app *BinanceChain) initGov() {
 }
 
 func (app *BinanceChain) initSlashing() {
+	app.slashKeeper.SetPbsbServer(app.psServer)
 	app.slashKeeper.SetSideChain(&app.scKeeper)
 	app.slashKeeper.SubscribeParamChange(app.ParamHub)
-	app.slashKeeper.SetPbsbServer(app.psServer)
 	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBscUpgrade, func(ctx sdk.Context) {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), slashing.ChannelId, sdk.ChannelAllow)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
