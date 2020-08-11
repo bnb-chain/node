@@ -24,6 +24,7 @@ type StakingMsg struct {
 	DelegateEvents       map[string][]*DelegateEvent
 	UndelegateEvents     map[string][]*UndelegateEvent
 	RedelegateEvents     map[string][]*RedelegateEvent
+	ElectedValidators    map[string][]*Validator
 }
 
 func (msg *StakingMsg) String() string {
@@ -138,6 +139,16 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 	}
 	native["reDelegateEvents"] = map[string]interface{}{"map": reDelegateEvents}
 
+	electedValidators := make(map[string]interface{})
+	for id, v := range msg.ElectedValidators {
+		evs := make([]map[string]interface{}, len(v), len(v))
+		for id, ev := range v {
+			evs[id] = ev.toNativeMap()
+		}
+		electedValidators[id] = evs
+	}
+	native["electedValidators"] = map[string]interface{}{"map": electedValidators}
+
 	return native
 }
 
@@ -198,6 +209,12 @@ func (msg *StakingMsg) EssentialMsg() string {
 			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(rdes))
 		}
 	}
+	if len(msg.ElectedValidators) > 0 {
+		fmt.Fprintf(&builder, "electedValidators:\n")
+		for chainId, evs := range msg.ElectedValidators {
+			fmt.Fprintf(&builder, "chainId:%s, numOfMsg: %d\n", chainId, len(evs))
+		}
+	}
 	return builder.String()
 }
 
@@ -216,6 +233,7 @@ func (msg *StakingMsg) EmptyCopy() AvroOrJsonMsg {
 		make(map[string][]*DelegateEvent),
 		make(map[string][]*UndelegateEvent),
 		make(map[string][]*RedelegateEvent),
+		make(map[string][]*Validator),
 	}
 }
 

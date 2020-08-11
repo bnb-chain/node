@@ -61,6 +61,7 @@ func PublishEvent(
 			var delegateEventsMap map[string][]*DelegateEvent
 			var undelegateEventsMap map[string][]*UndelegateEvent
 			var redelegateEventsMap map[string][]*RedelegateEvent
+			var electedValidatorsMap map[string][]*Validator
 
 			if len(eventData.StakeData.Validators) > 0 {
 				validators = make([]*Validator, len(eventData.StakeData.Validators), len(eventData.StakeData.Validators))
@@ -231,6 +232,18 @@ func PublishEvent(
 					redelegateEventsMap[chainId] = vv
 				}
 			}
+			if len(eventData.StakeData.ElectedValidators) > 0 {
+				electedValidatorsMap = make(map[string][]*Validator)
+				for chainId, vals := range eventData.StakeData.ElectedValidators {
+					msgNum += len(vals)
+					electedVals := make([]*Validator, len(vals), len(vals))
+					for i := range vals {
+						val := Validator(vals[i])
+						electedVals[i] = &val
+					}
+					electedValidatorsMap[chainId] = electedVals
+				}
+			}
 
 			msg := StakingMsg{
 				NumOfMsgs: msgNum,
@@ -247,6 +260,7 @@ func PublishEvent(
 				DelegateEvents:       delegateEventsMap,
 				UndelegateEvents:     undelegateEventsMap,
 				RedelegateEvents:     redelegateEventsMap,
+				ElectedValidators:    electedValidatorsMap,
 			}
 			publisher.publish(&msg, stakingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 		}
@@ -299,15 +313,24 @@ func PublishEvent(
 			for chainId, slashes := range eventData.SlashData {
 				slashDataPerChain := make([]*Slash, len(slashes), len(slashes))
 				for i, slash := range slashes {
+
+					vc := make([]*AllocatedAmt, len(slash.ValidatorsCompensation))
+					var idx int
+					for address, amount := range slash.ValidatorsCompensation {
+						vc[idx] = &AllocatedAmt{Address: sdk.AccAddress([]byte(address)).String(), Amount: amount}
+						idx++
+					}
+
 					slashDataPerChain[i] = &Slash{
-						Validator:        slash.Validator,
-						InfractionType:   slash.InfractionType,
-						InfractionHeight: slash.InfractionHeight,
-						JailUtil:         slash.JailUtil.Unix(),
-						SlashAmount:      slash.SlashAmount,
-						ToFeePool:        slash.ToFeePool,
-						Submitter:        slash.Submitter,
-						SubmitterReward:  slash.SubmitterReward,
+						Validator:              slash.Validator,
+						InfractionType:         slash.InfractionType,
+						InfractionHeight:       slash.InfractionHeight,
+						JailUtil:               slash.JailUtil.Unix(),
+						SlashAmount:            slash.SlashAmount,
+						ToFeePool:              slash.ToFeePool,
+						Submitter:              slash.Submitter,
+						SubmitterReward:        slash.SubmitterReward,
+						ValidatorsCompensation: vc,
 					}
 					msgNum++
 				}
