@@ -366,6 +366,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 		return sdk.ExecuteResult{
 			Payload: refundPackage,
+			Err:     sdk.ErrInsufficientFunds("balance of peg account is insufficient"),
 		}
 	}
 
