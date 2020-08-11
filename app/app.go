@@ -805,7 +805,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
 	var sideProposals pub.SideProposals
-	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal{
+	if app.publicationConfig.PublishOrderUpdates || app.publicationConfig.PublishSideProposal {
 		proposals, sideProposals = pub.CollectProposalsForPublish(passed, failed)
 	}
 	paramHub.EndBlock(ctx, app.ParamHub)

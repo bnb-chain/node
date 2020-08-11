@@ -97,6 +97,11 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 		case stake.SideRedelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("redelegate event: %v \n", e))
 			stagingArea.StakeData.appendReDelegateEvent(e.SideChainId, e.RedelegateEvent)
+		case stake.SideElectedValidatorsEvent:
+			sub.Logger.Debug(fmt.Sprintf("elected validators event: %v \n", e))
+			validators := make(map[string][]stake.Validator)
+			validators[e.SideChainId] = e.Validators
+			toPublish.EventData.StakeData.ElectedValidators = validators
 		default:
 			sub.Logger.Info("unknown event type")
 		}
@@ -118,6 +123,7 @@ type StakeData struct {
 	DelegateEvents       map[string][]stake.DelegateEvent                // ChainId -> delegate event
 	UndelegateEvents     map[string][]stake.UndelegateEvent              // ChainId -> undelegate event
 	RedelegateEvents     map[string][]stake.RedelegateEvent              // ChainId -> redelegate event
+	ElectedValidators    map[string][]stake.Validator                    // ChainId -> elected validators
 }
 
 func (e *StakeData) appendDelegateEvent(chainId string, event stake.DelegateEvent) {
