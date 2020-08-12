@@ -30,6 +30,7 @@ func SubscribeOracleEvent(sub *pubsub.Subscriber) error {
 		switch event.(type) {
 		case oTypes.CrossAppFailEvent:
 			crossFailEvent := event.(oTypes.CrossAppFailEvent)
+			sub.Logger.Info("do have crossFailEvent")
 
 			// no need to publish into CrossTransferData if no balance change.
 			if crossFailEvent.RelayerFee > 0 {

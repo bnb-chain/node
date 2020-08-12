@@ -865,7 +865,7 @@ const (
                             { "name": "from", "type": "string" },
                             { "name": "denom", "type": "string" },
                             { "name": "contract", "type": "string" },
-                            { "name": "decimals", "type": "long" },
+                            { "name": "decimals", "type": "int" },
                             { "name": "to", 
                                   "type": {
                                      "type": "array",
