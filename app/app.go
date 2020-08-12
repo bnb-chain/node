@@ -462,6 +462,7 @@ func (app *BinanceChain) initSideChain() {
 }
 
 func (app *BinanceChain) initOracle() {
+	app.oracleKeeper.SetPbsbServer(app.psServer)
 	if ServerContext.Config.Instrumentation.Prometheus {
 		app.oracleKeeper.EnablePrometheusMetrics()
 	}

@@ -99,7 +99,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		app.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
 		if ctx.IsDeliverTx() {
-			publishBindSuccessEvent(ctx, app.bridgeKeeper, bindRequest.From.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
+			publishBindSuccessEvent(ctx, app.bridgeKeeper, sdk.PegAccount.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 		}
 		log.With("module", "bridge").Info("bind token success", "symbol", symbol, "contract_addr", bindRequest.ContractAddress.String())
 	} else {
