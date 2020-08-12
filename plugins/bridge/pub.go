@@ -32,7 +32,7 @@ type CrossTransferEvent struct {
 	From       string
 	Denom      string
 	Contract   string
-	Decimals   int8
+	Decimals   int
 	To         []CrossReceiver
 }
 
@@ -77,7 +77,7 @@ func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from strin
 				From:       from,
 				Denom:      symbol,
 				Contract:   contract,
-				Decimals:   decimals,
+				Decimals:   int(decimals),
 				To:         to,
 			}
 			keeper.PbsbServer.Publish(event)
