@@ -94,7 +94,7 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
 		publishBindSuccessEvent(ctx, keeper, msg.From.String(), []CrossReceiver{}, msg.Symbol, TransferUnBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol),
-		token.GetContractAddress(), token.GetContractDecimals())
+			token.GetContractAddress(), token.GetContractDecimals())
 	}
 
 	tags := sdk.NewTags(

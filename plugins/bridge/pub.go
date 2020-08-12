@@ -20,6 +20,8 @@ const (
 	TransferUnBindType      string = "TUB"
 	TransferFailBindType    string = "TFB"
 	TransferApproveBindType string = "TPB"
+
+	CrossAppFailedType string = "CF"
 )
 
 type CrossTransferEvent struct {

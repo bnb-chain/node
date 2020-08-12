@@ -49,7 +49,7 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 		AccountKeeper: accountKeeper,
 		IbcKeeper:     ibcKeeper,
 		DestChainId:   destChainId,
-		DestChainName:  destChainName,
+		DestChainName: destChainName,
 		ScKeeper:      scKeeper,
 	}
 }
