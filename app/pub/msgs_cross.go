@@ -25,6 +25,8 @@ type CrossTransfer struct {
 	Type    string
 	From    string
 	Denom   string
+	Contract string
+	Decimals  int
 	To      []CrossReceiver
 }
 
@@ -39,6 +41,8 @@ func (msg CrossTransfer) ToNativeMap() map[string]interface{} {
 	native["chainid"] = msg.ChainId
 	native["from"] = msg.From
 	native["denom"] = msg.Denom
+	native["contract"] = msg.Contract
+	native["decimals"] = msg.Decimals
 	native["relayerFee"] =  msg.RelayerFee
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {

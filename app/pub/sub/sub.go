@@ -17,6 +17,9 @@ func SubscribeAllEvent(sub *pubsub.Subscriber) error {
 	if err := SubscribeCrossTransferEvent(sub); err != nil {
 		return err
 	}
+	if err := SubscribeOracleEvent(sub); err != nil {
+		return err
+	}
 
 	// commit events data from staging area to 'toPublish' when receiving `TxDeliverEvent`, represents the tx is successfully delivered.
 	if err := sub.Subscribe(TxDeliverTopic, func(event pubsub.Event) {

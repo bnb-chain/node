@@ -360,6 +360,8 @@ func PublishEvent(
 					Type:       crossTransfer.Type,
 					From:       crossTransfer.From,
 					Denom:      crossTransfer.Denom,
+					Contract:   crossTransfer.Contract,
+					Decimals:   crossTransfer.Decimals,
 				}
 				for _, receive := range crossTransfer.To {
 					ct.To = append(ct.To, CrossReceiver{
