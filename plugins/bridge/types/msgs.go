@@ -63,10 +63,6 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 		return ErrInvalidSymbol(fmt.Sprintf("symbol length should not be larger than %d", MaxSymbolLength))
 	}
 
-	if len(msg.Symbol) == 0 {
-		return ErrInvalidSymbol("symbol should not be empty")
-	}
-
 	if msg.Amount < 0 {
 		return ErrInvalidAmount("amount should be no less than 0")
 	}
