@@ -770,6 +770,7 @@ const (
 								"fields": [
 									{"name": "validator", "type": "string"},
 									{"name": "selfDelegator","type": "string"},
+									{"name": "distributeAddr","type": "string"},
 									{"name": "valTokens", "type": "long"},
 									{"name": "totalReward", "type": "long"},
 									{"name": "commission", "type": "long"},
