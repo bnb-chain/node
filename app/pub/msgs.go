@@ -991,12 +991,13 @@ func (msg *DistributionMsg) EmptyCopy() AvroOrJsonMsg {
 }
 
 type Distribution struct {
-	Validator     sdk.ValAddress
-	SelfDelegator sdk.AccAddress
-	ValTokens     int64
-	TotalReward   int64
-	Commission    int64
-	Rewards       []*Reward
+	Validator      sdk.ValAddress
+	SelfDelegator  sdk.AccAddress
+	DistributeAddr sdk.AccAddress
+	ValTokens      int64
+	TotalReward    int64
+	Commission     int64
+	Rewards        []*Reward
 }
 
 func (msg *Distribution) String() string {
@@ -1007,6 +1008,7 @@ func (msg *Distribution) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["validator"] = msg.Validator.String()
 	native["selfDelegator"] = msg.SelfDelegator.String()
+	native["distributeAddr"] = msg.DistributeAddr.String()
 	native["valTokens"] = msg.ValTokens
 	native["totalReward"] = msg.TotalReward
 	native["commission"] = msg.Commission

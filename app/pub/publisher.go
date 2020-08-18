@@ -286,12 +286,13 @@ func PublishEvent(
 						rewards[i] = rewardMsg
 					}
 					dis[i] = &Distribution{
-						Validator:     disData.Validator,
-						SelfDelegator: disData.SelfDelegator,
-						ValTokens:     disData.ValTokens.RawInt(),
-						TotalReward:   disData.TotalReward.RawInt(),
-						Commission:    disData.Commission.RawInt(),
-						Rewards:       rewards,
+						Validator:      disData.Validator,
+						SelfDelegator:  disData.SelfDelegator,
+						DistributeAddr: disData.DistributeAddr,
+						ValTokens:      disData.ValTokens.RawInt(),
+						TotalReward:    disData.TotalReward.RawInt(),
+						Commission:     disData.Commission.RawInt(),
+						Rewards:        rewards,
 					}
 					msgNum += len(disData.Rewards)
 				}
