@@ -482,10 +482,11 @@ type UpgradeConfig struct {
 	// Archimedes Upgrade
 	BEP3Height int64 `mapstructure:"BEP3Height"`
 	// Heisenberg Upgrade
-	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
-	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
-	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
-	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
+	FixSignBytesOverflowHeight     int64 `mapstructure:"FixSignBytesOverflowHeight"`
+	LotSizeUpgradeHeight           int64 `mapstructure:"LotSizeUpgradeHeight"`
+	ListingRuleUpgradeHeight       int64 `mapstructure:"ListingRuleUpgradeHeight"`
+	FixZeroBalanceHeight           int64 `mapstructure:"FixZeroBalanceHeight"`
+	FixSideChainRewardDistribution int64 `mapstructure:"FixSideChainRewardDistribution"`
 	// TODO: add upgrade name
 	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
 

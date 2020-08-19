@@ -316,6 +316,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixSideChainRewardDistribution, upgradeConfig.FixSideChainRewardDistribution)
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
@@ -519,6 +520,10 @@ func (app *BinanceChain) initStaking() {
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+
+	upgrade.Mgr.RegisterBeginBlocker(sdk.FixSideChainRewardDistribution, func(ctx sdk.Context) {
+		app.stakeKeeper.SyncAllDelegationsToValDel(ctx, ServerContext.BscChainId)
+	})
 }
 
 func (app *BinanceChain) initGov() {
