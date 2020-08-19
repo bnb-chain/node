@@ -482,13 +482,13 @@ type UpgradeConfig struct {
 	// Archimedes Upgrade
 	BEP3Height int64 `mapstructure:"BEP3Height"`
 	// Heisenberg Upgrade
-	FixSignBytesOverflowHeight     int64 `mapstructure:"FixSignBytesOverflowHeight"`
-	LotSizeUpgradeHeight           int64 `mapstructure:"LotSizeUpgradeHeight"`
-	ListingRuleUpgradeHeight       int64 `mapstructure:"ListingRuleUpgradeHeight"`
-	FixZeroBalanceHeight           int64 `mapstructure:"FixZeroBalanceHeight"`
-	FixSideChainRewardDistribution int64 `mapstructure:"FixSideChainRewardDistribution"`
+	FixSignBytesOverflowHeight int64 `mapstructure:"FixSignBytesOverflowHeight"`
+	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
+	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
+	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
-	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	LaunchBscUpgradeHeight         int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	FixSideChainRewardDistribution int64 `mapstructure:"FixSideChainRewardDistribution"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
@@ -499,20 +499,21 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 1,
-		BEP9Height:                 1,
-		BEP10Height:                1,
-		BEP19Height:                1,
-		BEP12Height:                1,
-		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: 1,
-		LotSizeUpgradeHeight:       1,
-		ListingRuleUpgradeHeight:   1,
-		FixZeroBalanceHeight:       1,
-		BEP8Height:                 1,
-		BEP67Height:                1,
-		BEP70Height:                1,
-		LaunchBscUpgradeHeight:     math.MaxInt64,
+		BEP6Height:                     1,
+		BEP9Height:                     1,
+		BEP10Height:                    1,
+		BEP19Height:                    1,
+		BEP12Height:                    1,
+		BEP3Height:                     1,
+		FixSignBytesOverflowHeight:     1,
+		LotSizeUpgradeHeight:           1,
+		ListingRuleUpgradeHeight:       1,
+		FixZeroBalanceHeight:           1,
+		BEP8Height:                     1,
+		BEP67Height:                    1,
+		BEP70Height:                    1,
+		LaunchBscUpgradeHeight:         math.MaxInt64,
+		FixSideChainRewardDistribution: math.MaxInt64,
 	}
 }
 

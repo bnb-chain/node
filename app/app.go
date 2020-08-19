@@ -522,7 +522,7 @@ func (app *BinanceChain) initStaking() {
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
 
 	upgrade.Mgr.RegisterBeginBlocker(sdk.FixSideChainRewardDistribution, func(ctx sdk.Context) {
-		app.stakeKeeper.SyncAllDelegationsToValDel(ctx, ServerContext.BscChainId)
+		app.stakeKeeper.SyncAllSelfDelegationsToValDel(ctx, ServerContext.BscChainId)
 	})
 }
 
