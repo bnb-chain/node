@@ -18,14 +18,14 @@ const (
 	// Archimedes Upgrade
 	BEP3 = sdk.BEP3 // https://github.com/binance-chain/BEPs/pull/30
 	// Heisenberg Upgrade
-	FixSignBytesOverflow           = sdk.FixSignBytesOverflow
-	FixSideChainRewardDistribution = sdk.FixSideChainRewardDistribution
-	LotSizeOptimization            = "LotSizeOptimization"
-	ListingRuleUpgrade             = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
-	FixZeroBalance                 = "FixZeroBalance"
+	FixSignBytesOverflow = sdk.FixSignBytesOverflow
+	LotSizeOptimization  = "LotSizeOptimization"
+	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
+	FixZeroBalance       = "FixZeroBalance"
 
 	// TODO: add upgrade name
-	LaunchBscUpgrade = sdk.LaunchBscUpgrade
+	LaunchBscUpgrade               = sdk.LaunchBscUpgrade
+	FixSideChainRewardDistribution = sdk.FixSideChainRewardDistribution
 
 	//Nightingale upgrade
 	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
