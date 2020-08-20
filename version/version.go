@@ -12,7 +12,8 @@ var (
 	Version string
 )
 
-const NodeVersion = "0.7.2-bsc.beta.3"
+
+const NodeVersion = "develop"
 
 func init() {
 	Version = fmt.Sprintf("Binance Chain Release: %s;", NodeVersion)

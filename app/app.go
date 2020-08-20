@@ -1068,6 +1068,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 
 	if app.metrics != nil {
 		app.metrics.CollectBlockTimeMs.Set(float64(duration))
+		app.metrics.NumOrderInfoForPublish.Set(float64(len(orderInfoForPublish)))
 	}
 
 	pub.Logger.Info("start to publish", "height", height,
