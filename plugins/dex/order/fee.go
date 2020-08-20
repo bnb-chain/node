@@ -154,7 +154,7 @@ func (m *FeeManager) calcNativeFee(tran *Transfer, engines map[string]*matcheng.
 				}
 
 				notional, pairExist = m.calcNotional(BUSDSymbol, qty, types.NativeTokenSymbol, engines)
-				if pairExist {
+				if !pairExist {
 					// must not happen
 					m.logger.Error(BUSDSymbol + " must be listed against " + types.NativeTokenSymbol)
 				}
