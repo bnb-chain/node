@@ -67,6 +67,8 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
 LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
+# Block height of FixSideChainRewardDistribution upgrade
+FixSideChainRewardDistribution = {{ .UpgradeConfig.FixSideChainRewardDistribution }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
