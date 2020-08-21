@@ -49,7 +49,7 @@ func PublishEvent(
 	for toPublish := range ToPublishEventCh {
 		eventData := toPublish.EventData
 		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
-		if cfg.PublishStaking {
+		if cfg.PublishStaking && eventData.StakeData != nil {
 			var msgNum int
 			var validators []*Validator
 			var removedValidators map[string][]sdk.ValAddress
@@ -265,7 +265,7 @@ func PublishEvent(
 			publisher.publish(&msg, stakingTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 		}
 
-		if cfg.PublishDistributeReward {
+		if cfg.PublishDistributeReward && eventData.StakeData != nil {
 			var msgNum int
 			distributions := make(map[string][]*Distribution)
 			for chainId, disData := range eventData.StakeData.Distribution {

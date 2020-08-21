@@ -3,29 +3,39 @@ package sub
 import (
 	"time"
 
+	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/plugins/bridge"
+
 	"github.com/cosmos/cosmos-sdk/pubsub"
 )
 
-func SubscribeAllEvent(sub *pubsub.Subscriber) error {
-	if err := SubscribeStakeEvent(sub); err != nil {
-		return err
+func SubscribeEvent(sub *pubsub.Subscriber, cfg *config.PublicationConfig) error {
+	if cfg.PublishStaking {
+		if err := SubscribeStakeEvent(sub); err != nil {
+			return err
+		}
 	}
-	if err := SubscribeSlashEvent(sub); err != nil {
-		return err
+
+	if cfg.PublishSlashing {
+		if err := SubscribeSlashEvent(sub); err != nil {
+			return err
+		}
 	}
-	if err := SubscribeCrossTransferEvent(sub); err != nil {
-		return err
-	}
-	if err := SubscribeOracleEvent(sub); err != nil {
-		return err
+
+	if cfg.PublishCrossTransfer {
+		if err := SubscribeCrossTransferEvent(sub); err != nil {
+			return err
+		}
+		if err := SubscribeOracleEvent(sub); err != nil {
+			return err
+		}
 	}
 
 	// commit events data from staging area to 'toPublish' when receiving `TxDeliverEvent`, represents the tx is successfully delivered.
 	if err := sub.Subscribe(TxDeliverTopic, func(event pubsub.Event) {
 		switch event.(type) {
 		case TxDeliverSuccEvent:
-			commit()
+			commit(cfg)
 		case TxDeliverFailEvent:
 			discard()
 		default:
@@ -34,6 +44,7 @@ func SubscribeAllEvent(sub *pubsub.Subscriber) error {
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -63,9 +74,7 @@ type EventStore struct {
 }
 
 func newEventStore() *EventStore {
-	return &EventStore{
-		StakeData: &StakeData{},
-	}
+	return &EventStore{}
 }
 
 func Clear() {
@@ -83,9 +92,13 @@ func SetMeta(height int64, timestamp time.Time, isBreatheBlock bool) {
 	toPublish.IsBreatheBlock = isBreatheBlock
 }
 
-func commit() {
-	commitStake()
-	commitCrossTransfer()
+func commit(cfg *config.PublicationConfig) {
+	if cfg.PublishStaking {
+		commitStake()
+	}
+	if cfg.PublishCrossTransfer {
+		commitCrossTransfer()
+	}
 	// clear stagingArea data
 	stagingArea = newEventStore()
 }

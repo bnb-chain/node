@@ -17,6 +17,12 @@ type CompletedUBD struct {
 
 func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 	err := sub.Subscribe(stake.Topic, func(event pubsub.Event) {
+		if toPublish.EventData.StakeData == nil {
+			toPublish.EventData.StakeData = &StakeData{}
+		}
+		if stagingArea.StakeData == nil {
+			stagingArea.StakeData = &StakeData{}
+		}
 		switch e := event.(type) {
 		case stake.SideDistributionEvent:
 			sub.Logger.Debug(fmt.Sprintf("distribution event: %v \n", e))
