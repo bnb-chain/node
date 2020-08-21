@@ -316,6 +316,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FixSideChainRewardDistribution, upgradeConfig.FixSideChainRewardDistribution)
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
@@ -519,6 +520,10 @@ func (app *BinanceChain) initStaking() {
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+
+	upgrade.Mgr.RegisterBeginBlocker(sdk.FixSideChainRewardDistribution, func(ctx sdk.Context) {
+		app.stakeKeeper.SyncAllSelfDelegationsToValDel(ctx, ServerContext.BscChainId)
+	})
 }
 
 func (app *BinanceChain) initGov() {
@@ -758,6 +763,9 @@ func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.Respo
 func (app *BinanceChain) isBreatheBlock(height int64, lastBlockTime time.Time, blockTime time.Time) bool {
 	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
 	// state sync from breathe block, the height is breathe block + 1)
+	if height > 1455000 && height < 2463645{
+		app.baseConfig.BreatheBlockInterval = 3112
+	}
 	if app.baseConfig.BreatheBlockInterval > 0 {
 		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
 	} else {
