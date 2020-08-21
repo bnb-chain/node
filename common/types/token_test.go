@@ -1,7 +1,12 @@
 package types_test
 
 import (
+	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/binance-chain/node/common/utils"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -105,4 +110,41 @@ func TestValidateTokenSymbol(t *testing.T) {
 	if err := types.ValidateTokenSymbol("XYZ"); err == nil {
 		t.Errorf("ValidateIssueSymbol() error = %v, expected XYZ to be invalid", err)
 	}
+}
+
+func TestMarshalToken(t *testing.T) {
+	type beforeToken struct {
+		Name        string         `json:"name"`
+		Symbol      string         `json:"symbol"`
+		OrigSymbol  string         `json:"original_symbol"`
+		TotalSupply utils.Fixed8   `json:"total_supply"`
+		Owner       sdk.AccAddress `json:"owner"`
+		Mintable    bool           `json:"mintable"`
+	}
+
+	type beforeMiniToken struct {
+		Name        string                `json:"name"`
+		Symbol      string                `json:"symbol"`
+		OrigSymbol  string                `json:"original_symbol"`
+		TotalSupply utils.Fixed8          `json:"total_supply"`
+		Owner       sdk.AccAddress        `json:"owner"`
+		Mintable    bool                  `json:"mintable"`
+		TokenType   types.SupplyRangeType `json:"token_type"`
+		TokenURI    string                `json:"token_uri"` //TODO set max length
+	}
+
+	emptyBeforeToken, err := json.Marshal(beforeToken{})
+	require.Nil(t, err, "error should be nil")
+
+	emptyBeforeMiniToken, err := json.Marshal(beforeMiniToken{})
+	require.Nil(t, err, "error should be nil")
+
+	emptyToken, err := json.Marshal(types.Token{})
+	require.Nil(t, err, "error should be nil")
+
+	emptyMiniToken, err := json.Marshal(types.MiniToken{})
+	require.Nil(t, err, "error should be nil")
+
+	require.Equal(t, string(emptyBeforeToken), string(emptyToken))
+	require.Equal(t, string(emptyBeforeMiniToken), string(emptyMiniToken))
 }

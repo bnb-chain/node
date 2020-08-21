@@ -52,8 +52,8 @@ type Token struct {
 	TotalSupply      utils.Fixed8   `json:"total_supply"`
 	Owner            sdk.AccAddress `json:"owner"`
 	Mintable         bool           `json:"mintable"`
-	ContractAddress  string         `json:"contract_address"`
-	ContractDecimals int8           `json:"contract_decimals"`
+	ContractAddress  string         `json:"contract_address,omitempty"`
+	ContractDecimals int8           `json:"contract_decimals,omitempty"`
 }
 
 func (token Token) GetName() string {

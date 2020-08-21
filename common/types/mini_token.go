@@ -66,8 +66,8 @@ type MiniToken struct {
 	Mintable         bool            `json:"mintable"`
 	TokenType        SupplyRangeType `json:"token_type"`
 	TokenURI         string          `json:"token_uri"` //TODO set max length
-	ContractAddress  string          `json:"contract_address"`
-	ContractDecimals int8            `json:"contract_decimals"`
+	ContractAddress  string          `json:"contract_address,omitempty"`
+	ContractDecimals int8            `json:"contract_decimals,omitempty"`
 }
 
 var _ IToken = &MiniToken{}
