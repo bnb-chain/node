@@ -383,14 +383,14 @@ func PublishEvent(
 				Transfers: crossTransfers,
 			}
 			publisher.publish(&crossTransferMsg, crossTransferTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+		}
 
-			if cfg.PublishBreatheBlock && toPublish.IsBreatheBlock {
-				breatheBlockMsg := BreatheBlockMsg{
-					Height:    toPublish.Height,
-					Timestamp: toPublish.Timestamp.UnixNano(),
-				}
-				publisher.publish(&breatheBlockMsg, breatheBlockTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+		if cfg.PublishBreatheBlock && toPublish.IsBreatheBlock {
+			breatheBlockMsg := BreatheBlockMsg{
+				Height:    toPublish.Height,
+				Timestamp: toPublish.Timestamp.UnixNano(),
 			}
+			publisher.publish(&breatheBlockMsg, breatheBlockTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 		}
 	}
 }
