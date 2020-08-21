@@ -17,6 +17,12 @@ type CompletedUBD struct {
 
 func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 	err := sub.Subscribe(stake.Topic, func(event pubsub.Event) {
+		if toPublish.EventData.StakeData == nil {
+			toPublish.EventData.StakeData = &StakeData{}
+		}
+		if stagingArea.StakeData == nil {
+			stagingArea.StakeData = &StakeData{}
+		}
 		switch e := event.(type) {
 		case stake.SideDistributionEvent:
 			sub.Logger.Debug(fmt.Sprintf("distribution event: %v \n", e))
@@ -310,6 +316,9 @@ func (e *StakeData) appendRED(chainId string, key string, red stake.Redelegation
 }
 
 func commitStake() {
+	if stagingArea.StakeData == nil {
+		return
+	}
 	if len(stagingArea.StakeData.Distribution) > 0 {
 		for chainId, v := range stagingArea.StakeData.Distribution {
 			toPublish.EventData.StakeData.appendDistribution(chainId, v)
@@ -330,16 +339,6 @@ func commitStake() {
 			toPublish.EventData.StakeData.appendReDelegateEvents(chainId, v)
 		}
 	}
-	//if len(stagingArea.StakeData.CompletedUBDs) > 0 {
-	//	for chainId, v := range stagingArea.StakeData.CompletedUBDs {
-	//		toPublish.EventData.StakeData.appendCompletedUBD(chainId, v)
-	//	}
-	//}
-	//if len(stagingArea.StakeData.CompletedREDs) > 0 {
-	//	for chainId, v := range stagingArea.StakeData.CompletedREDs {
-	//		toPublish.EventData.StakeData.appendCompletedRED(chainId, v)
-	//	}
-	//}
 	if len(stagingArea.StakeData.Validators) > 0 {
 		toPublish.EventData.StakeData.appendValidators(stagingArea.StakeData.Validators)
 	}
