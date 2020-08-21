@@ -296,7 +296,7 @@ func (app *BinanceChain) subscribeEvent(logger log.Logger) {
 	if err != nil {
 		panic(err)
 	}
-	if err = appsub.SubscribeAllEvent(sub); err != nil {
+	if err = appsub.SubscribeEvent(sub, app.publicationConfig); err != nil {
 		panic(err)
 	}
 	app.subscriber = sub
@@ -838,8 +838,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		// clean up intermediate cached data
 		app.DexKeeper.ClearOrderChanges()
 		app.DexKeeper.ClearRoundFee()
+
+		// clean up intermediate cached data used to be published
+		appsub.Clear()
 	}
-	appsub.Clear()
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
 	pub.Pool.Clean()
