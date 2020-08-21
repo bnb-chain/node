@@ -316,6 +316,9 @@ func (e *StakeData) appendRED(chainId string, key string, red stake.Redelegation
 }
 
 func commitStake() {
+	if stagingArea.StakeData == nil {
+		return
+	}
 	if len(stagingArea.StakeData.Distribution) > 0 {
 		for chainId, v := range stagingArea.StakeData.Distribution {
 			toPublish.EventData.StakeData.appendDistribution(chainId, v)
