@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/binance-chain/node/common/utils"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/utils"
 )
 
 var issueMsgSymbolTestCases = []struct {
