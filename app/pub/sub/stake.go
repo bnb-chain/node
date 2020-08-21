@@ -330,16 +330,6 @@ func commitStake() {
 			toPublish.EventData.StakeData.appendReDelegateEvents(chainId, v)
 		}
 	}
-	//if len(stagingArea.StakeData.CompletedUBDs) > 0 {
-	//	for chainId, v := range stagingArea.StakeData.CompletedUBDs {
-	//		toPublish.EventData.StakeData.appendCompletedUBD(chainId, v)
-	//	}
-	//}
-	//if len(stagingArea.StakeData.CompletedREDs) > 0 {
-	//	for chainId, v := range stagingArea.StakeData.CompletedREDs {
-	//		toPublish.EventData.StakeData.appendCompletedRED(chainId, v)
-	//	}
-	//}
 	if len(stagingArea.StakeData.Validators) > 0 {
 		toPublish.EventData.StakeData.appendValidators(stagingArea.StakeData.Validators)
 	}

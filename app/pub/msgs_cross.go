@@ -19,15 +19,15 @@ func (msg CrossReceiver) ToNativeMap() map[string]interface{} {
 }
 
 type CrossTransfer struct {
-	TxHash  string
-	ChainId string
+	TxHash     string
+	ChainId    string
 	RelayerFee int64
-	Type    string
-	From    string
-	Denom   string
-	Contract string
-	Decimals  int
-	To      []CrossReceiver
+	Type       string
+	From       string
+	Denom      string
+	Contract   string
+	Decimals   int
+	To         []CrossReceiver
 }
 
 func (msg CrossTransfer) String() string {
@@ -43,7 +43,7 @@ func (msg CrossTransfer) ToNativeMap() map[string]interface{} {
 	native["denom"] = msg.Denom
 	native["contract"] = msg.Contract
 	native["decimals"] = msg.Decimals
-	native["relayerFee"] =  msg.RelayerFee
+	native["relayerFee"] = msg.RelayerFee
 	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
 	for idx, t := range msg.To {
 		to[idx] = t.ToNativeMap()

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"os"
 	"strings"
 	"testing"
@@ -24,6 +23,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkFees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -148,7 +148,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 
 	for idx, cscParam := range cscParams {
 		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(idx))
-		expectedBz,_:= rlp.EncodeToBytes(cscParam)
+		expectedBz, _ := rlp.EncodeToBytes(cscParam)
 		assert.NoError(t, err)
 		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
@@ -198,7 +198,7 @@ func TestCSCParamUpdatesSequenceCorrect(t *testing.T) {
 
 	for idx, cscParam := range cscParams {
 		packageBz, err := testApp.ibcKeeper.GetIBCPackage(ctx, "bsc", paramHub.ChannelName, uint64(idx+3))
-		expectedBz,_:= rlp.EncodeToBytes(cscParam)
+		expectedBz, _ := rlp.EncodeToBytes(cscParam)
 		assert.NoError(t, err)
 		assert.True(t, bytes.Compare(expectedBz, packageBz[sTypes.PackageHeaderLength:]) == 0, "package bytes not equal")
 	}
