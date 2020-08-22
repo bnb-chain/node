@@ -2,7 +2,6 @@ package pub
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -204,8 +203,10 @@ func TestStakingMarshaling(t *testing.T) {
 	}
 
 	codec, err := goavro.NewCodec(stakingSchema)
-	native, _, err := codec.NativeFromBinary(bz)
-	fmt.Printf("%v", native)
+	_, _, err = codec.NativeFromBinary(bz)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestSlashMarshaling(t *testing.T) {
@@ -241,6 +242,8 @@ func TestSlashMarshaling(t *testing.T) {
 	}
 
 	codec, err := goavro.NewCodec(slashingSchema)
-	native, _, err := codec.NativeFromBinary(bz)
-	fmt.Printf("%v", native)
+	_, _, err = codec.NativeFromBinary(bz)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
