@@ -25,6 +25,7 @@ import (
 
 	"github.com/binance-chain/node/app/config"
 	"github.com/binance-chain/node/app/pub"
+	appsub "github.com/binance-chain/node/app/pub/sub"
 	"github.com/binance-chain/node/common/testutils"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
@@ -95,9 +96,13 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	pub.Logger = logger.With("module", "pub")
 	pub.Cfg = app.publicationConfig
 	pub.ToPublishCh = make(chan pub.BlockInfoToPublish, app.publicationConfig.PublicationChannelSize)
+	pub.ToPublishEventCh = make(chan *appsub.ToPublishEvent, app.publicationConfig.PublicationChannelSize)
 	app.publisher = pub.NewMockMarketDataPublisher()
 	go pub.Publish(app.publisher, app.metrics, logger, app.publicationConfig, pub.ToPublishCh)
 	pub.IsLive = true
+	go pub.PublishEvent(app.publisher, logger, app.publicationConfig, pub.ToPublishEventCh)
+	app.startPubSub(logger)
+	app.subscribeEvent(logger)
 
 	keeper := app.DexKeeper
 	keeper.EnablePublish()

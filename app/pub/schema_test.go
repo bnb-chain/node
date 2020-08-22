@@ -3,10 +3,11 @@ package pub
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/linkedin/goavro"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/linkedin/goavro"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"

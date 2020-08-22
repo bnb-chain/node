@@ -98,7 +98,7 @@ func main() {
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
 	bridgecmd.AddCommands(rootCmd, cdc)
-	sidecmd.AddCommands(rootCmd,cdc)
+	sidecmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)

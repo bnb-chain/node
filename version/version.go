@@ -12,7 +12,6 @@ var (
 	Version string
 )
 
-
 const NodeVersion = "develop"
 
 func init() {
