@@ -67,6 +67,7 @@ var tokenMapperSymbolTestCases = []struct {
 }
 
 func TestNewToken(t *testing.T) {
+	sdk.UpgradeMgr.SetHeight(1)
 	for _, tt := range tokenMapperSymbolTestCases {
 		t.Run(tt.symbol, func(t *testing.T) {
 			_, err := types.NewToken(tt.symbol, tt.symbol, 100000, sdk.AccAddress{}, false)

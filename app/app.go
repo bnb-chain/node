@@ -54,6 +54,7 @@ import (
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/ownership"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -320,6 +321,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
 
+	upgrade.Mgr.AddUpgradeHeight(upgrade.AdjustTokenSymbolLength, upgradeConfig.AdjustTokenSymbolLengthHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP82, upgradeConfig.BEP82Height)
+
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
@@ -355,6 +359,15 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
+	// register msg types of upgrade
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
+		issue.IssueMiniMsg{}.Type(),
+		issue.IssueTinyMsg{}.Type(),
+		seturi.SetURIMsg{}.Type(),
+		dextypes.ListMiniMsg{}.Type(),
+	)
+
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownership.TransferOwnershipMsg{}.Type())
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
