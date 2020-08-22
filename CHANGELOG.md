@@ -3,10 +3,7 @@
 FEATURES
 [Stake] import stake module for side chain
 [Slashing] import slashing module for side chain
-[Ibc] import ibc module
-[Oracle] import oracle module
-[Gov] add proposals for side chain
-[Bridge] add bridge plugin
+[Token] support cross chain transfer
 
 IMPROVEMENTS
 [Pub] import pubsub server for publishing message
