@@ -4,15 +4,19 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/cosmos/cosmos-sdk/x/paramHub"
+
 	abcicli "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	. "github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -21,10 +25,8 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/fees"
 	common "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/param"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/wire"
 )
@@ -37,13 +39,13 @@ type TestClient struct {
 func NewMockAnteHandler(cdc *wire.Codec) sdk.AnteHandler {
 	return func(ctx sdk.Context, tx sdk.Tx, runTxMode sdk.RunTxMode) (newCtx sdk.Context, result sdk.Result, abort bool) {
 		msg := tx.GetMsgs()[0]
-		fee := fees.GetCalculator(msg.Type())(msg)
+		fee := sdkfees.GetCalculator(msg.Type())(msg)
 
 		if ctx.IsDeliverTx() {
 			// add fee to pool, even it's free
 			stdTx := tx.(auth.StdTx)
 			txHash := cmn.HexBytes(tmhash.Sum(cdc.MustMarshalBinaryLengthPrefixed(stdTx))).String()
-			fees.Pool.AddFee(txHash, fee)
+			sdkfees.Pool.AddFee(txHash, fee)
 		}
 
 		return newCtx, sdk.Result{}, false
@@ -137,7 +139,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
 	genaccs := make([]app.GenesisAccount, len(accs))
 	for i, acc := range accs {
-		pk := ed25519.GenPrivKey().PubKey()
+		pk := GenPrivKey().PubKey()
 		valAddr := pk.Address()
 		genaccs[i] = app.NewGenesisAccount(acc, valAddr)
 	}
@@ -146,7 +148,7 @@ func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*c
 		Tokens:       tokens,
 		Accounts:     genaccs,
 		DexGenesis:   dex.DefaultGenesis,
-		ParamGenesis: param.DefaultGenesisState,
+		ParamGenesis: paramHub.DefaultGenesisState,
 	}
 
 	stateBytes, err := wire.MarshalJSONIndent(bapp.Codec, genesisState)

@@ -31,6 +31,12 @@ type KafkaMarketDataPublisher struct {
 	blockFeeCodec         *goavro.Codec
 	transfersCodec        *goavro.Codec
 	blockCodec            *goavro.Codec
+	stakingCodec          *goavro.Codec
+	distributionCodec     *goavro.Codec
+	slashingCodec         *goavro.Codec
+	crossTransferCodec    *goavro.Codec
+	sideProposalCodec     *goavro.Codec
+	breatheBlockCodec     *goavro.Codec
 
 	failFast         bool
 	essentialLogPath string                         // the path (default to db dir) we write essential file to make up data on kafka error
@@ -138,6 +144,66 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishStaking {
+		if _, ok := publisher.producers[Cfg.StakingTopic]; !ok {
+			publisher.producers[Cfg.StakingTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.StakingKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create staking producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishDistributeReward {
+		if _, ok := publisher.producers[Cfg.DistributeRewardTopic]; !ok {
+			publisher.producers[Cfg.DistributeRewardTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.DistributeRewardKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create distribution producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishSlashing {
+		if _, ok := publisher.producers[Cfg.SlashingTopic]; !ok {
+			publisher.producers[Cfg.SlashingTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.SlashingKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create slashing producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishCrossTransfer {
+		if _, ok := publisher.producers[Cfg.CrossTransferTopic]; !ok {
+			publisher.producers[Cfg.CrossTransferTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.CrossTransferKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create crossTransfer producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishSideProposal {
+		if _, ok := publisher.producers[Cfg.SideProposalTopic]; !ok {
+			publisher.producers[Cfg.SideProposalTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.SideProposalKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create crossTransfer producer", "err", err)
+			return
+		}
+	}
+	if Cfg.PublishBreatheBlock {
+		if _, ok := publisher.producers[Cfg.BreatheBlockTopic]; !ok {
+			publisher.producers[Cfg.BreatheBlockTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.BreatheBlockKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create breathe block producer", "err", err)
+			return
+		}
+	}
 	return
 }
 
@@ -221,6 +287,18 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.TransferTopic
 	case blockTpe:
 		topic = Cfg.BlockTopic
+	case stakingTpe:
+		topic = Cfg.StakingTopic
+	case distributionTpe:
+		topic = Cfg.DistributeRewardTopic
+	case slashingTpe:
+		topic = Cfg.SlashingTopic
+	case crossTransferTpe:
+		topic = Cfg.CrossTransferTopic
+	case sideProposalType:
+		topic = Cfg.SideProposalTopic
+	case breatheBlockTpe:
+		topic = Cfg.BreatheBlockTopic
 	}
 	return
 }
@@ -299,6 +377,18 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.transfersCodec
 	case blockTpe:
 		codec = publisher.blockCodec
+	case stakingTpe:
+		codec = publisher.stakingCodec
+	case distributionTpe:
+		codec = publisher.distributionCodec
+	case slashingTpe:
+		codec = publisher.slashingCodec
+	case crossTransferTpe:
+		codec = publisher.crossTransferCodec
+	case sideProposalType:
+		codec = publisher.sideProposalCodec
+	case breatheBlockTpe:
+		codec = publisher.breatheBlockCodec
 	default:
 		return nil, fmt.Errorf("doesn't support marshal kafka msg tpe: %s", tpe.String())
 	}
@@ -321,6 +411,18 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.transfersCodec, err = goavro.NewCodec(transfersSchema); err != nil {
 		return err
 	} else if publisher.blockCodec, err = goavro.NewCodec(blockDatasSchema); err != nil {
+		return err
+	} else if publisher.stakingCodec, err = goavro.NewCodec(stakingSchema); err != nil {
+		return err
+	} else if publisher.distributionCodec, err = goavro.NewCodec(distributionSchema); err != nil {
+		return err
+	} else if publisher.slashingCodec, err = goavro.NewCodec(slashingSchema); err != nil {
+		return err
+	} else if publisher.crossTransferCodec, err = goavro.NewCodec(crossTransferSchema); err != nil {
+		return err
+	} else if publisher.sideProposalCodec, err = goavro.NewCodec(sideProposalsSchema); err != nil {
+		return err
+	} else if publisher.breatheBlockCodec, err = goavro.NewCodec(breatheBlockSchema); err != nil {
 		return err
 	}
 	return nil

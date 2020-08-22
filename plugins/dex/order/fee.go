@@ -6,17 +6,16 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/binance-chain/node/common/upgrade"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	param "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	cmnUtils "github.com/binance-chain/node/common/utils"
 	"github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/utils"
-	param "github.com/binance-chain/node/plugins/param/types"
 	"github.com/binance-chain/node/wire"
 )
 
@@ -70,8 +69,8 @@ func (m *FeeManager) GetConfig() FeeConfig {
 	return m.FeeConfig
 }
 
-func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) types.Fee {
-	var fees types.Fee
+func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTransfers, engines map[string]*matcheng.MatchEng) sdk.Fee {
+	var fees sdk.Fee
 	if tradeTransfers == nil {
 		return fees
 	}
@@ -90,8 +89,8 @@ func (m *FeeManager) CalcTradesFee(balances sdk.Coins, tradeTransfers TradeTrans
 	return fees
 }
 
-func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng, expireTransferHandler func(tran Transfer)) types.Fee {
-	var fees types.Fee
+func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEventType, expireTransfers ExpireTransfers, engines map[string]*matcheng.MatchEng, expireTransferHandler func(tran Transfer)) sdk.Fee {
+	var fees sdk.Fee
 	if expireTransfers == nil {
 		return fees
 	}
@@ -108,7 +107,7 @@ func (m *FeeManager) CalcExpiresFee(balances sdk.Coins, expireType transferEvent
 	return fees
 }
 
-func (m *FeeManager) calcTradeFeeFromTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) calcTradeFeeFromTransfer(balances sdk.Coins, tran *Transfer, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeToken sdk.Coin
 
 	nativeFee, isOverflow := m.calcNativeFee(tran, engines)
@@ -191,7 +190,7 @@ func (m *FeeManager) calcNotional(asset string, qty int64, quoteAsset string, en
 // Note2: even though the function is called in multiple threads,
 // `engines` map would stay the same as no other function may change it in fee calculation stage,
 // so no race condition concern
-func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeToken sdk.Coin
 	inSymbol := tradeIn.Denom
 	inAmt := tradeIn.Amount
@@ -235,7 +234,7 @@ func (m *FeeManager) CalcTradeFee(balances sdk.Coins, tradeIn sdk.Coin, engines 
 // 1. transfer the "inAsset" to the balance, i.e. call doTransfer()
 // 2. call this method
 // 3. deduct the fee right away
-func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) types.Fee {
+func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventType, inAsset string, engines map[string]*matcheng.MatchEng) sdk.Fee {
 	var feeAmountNative int64
 	var feeAmount int64
 	if eventType == eventFullyExpire {
@@ -247,7 +246,7 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 	} else {
 		// should not be here
 		m.logger.Error("Invalid expire eventType", "eventType", eventType)
-		return types.Fee{}
+		return sdk.Fee{}
 	}
 
 	nativeTokenBalance := balances.AmountOf(types.NativeTokenSymbol)
@@ -293,8 +292,8 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 }
 
 // for each trade, the fee only contains one kind of token. And distribution type is always FeeForProposer
-func dexFeeWrap(fee sdk.Coin) types.Fee {
-	return types.NewFee(sdk.Coins{fee}, types.FeeForProposer)
+func dexFeeWrap(fee sdk.Coin) sdk.Fee {
+	return sdk.NewFee(sdk.Coins{fee}, sdk.FeeForProposer)
 }
 
 func isNativeToken(symbol string) bool {

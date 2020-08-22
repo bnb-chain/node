@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkfees "github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -16,7 +19,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/testutils"
 	"github.com/binance-chain/node/common/tx"
 	"github.com/binance-chain/node/common/types"
@@ -24,16 +26,16 @@ import (
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {
-	fees.UnsetAllCalculators()
+	sdkfees.UnsetAllCalculators()
 	testMsg := sdk.NewTestMsg(addrs...)
-	fees.RegisterCalculator(testMsg.Type(), fees.FreeFeeCalculator())
+	sdkfees.RegisterCalculator(testMsg.Type(), sdkfees.FreeFeeCalculator())
 	return testMsg
 }
 
-func newTestMsgWithFeeCalculator(calculator fees.FeeCalculator, addrs ...sdk.AccAddress) *sdk.TestMsg {
-	fees.UnsetAllCalculators()
+func newTestMsgWithFeeCalculator(calculator sdkfees.FeeCalculator, addrs ...sdk.AccAddress) *sdk.TestMsg {
+	sdkfees.UnsetAllCalculators()
 	testMsg := sdk.NewTestMsg(addrs...)
-	fees.RegisterCalculator(testMsg.Type(), calculator)
+	sdkfees.RegisterCalculator(testMsg.Type(), calculator)
 	return testMsg
 }
 
@@ -483,7 +485,7 @@ func setup() (mapper auth.AccountKeeper, ctx sdk.Context, anteHandler sdk.AnteHa
 	return
 }
 
-func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, feeCalculators ...fees.FeeCalculator) sdk.Context {
+func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler, priv crypto.PrivKey, addr sdk.AccAddress, feeCalculators ...sdkfees.FeeCalculator) sdk.Context {
 	for i := 0; i < len(feeCalculators); i++ {
 		msg := newTestMsgWithFeeCalculator(feeCalculators[i], addr)
 		txn := newTestTx(ctx, []sdk.Msg{msg}, []crypto.PrivKey{priv}, []int64{0}, []int64{int64(i)})
@@ -491,7 +493,7 @@ func runAnteHandlerWithMultiTxFees(ctx sdk.Context, anteHandler sdk.AnteHandler,
 		txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
 		ctx, _, _ = anteHandler(ctx.WithValue(baseapp.TxHashKey, txHash), txn, sdk.RunTxModeCheck)
 		if ctx.IsDeliverTx() {
-			fees.Pool.CommitFee(txHash)
+			sdkfees.Pool.CommitFee(txHash)
 		}
 	}
 
@@ -503,10 +505,10 @@ func checkBalance(t *testing.T, am auth.AccountKeeper, ctx sdk.Context, addr sdk
 	require.Equal(t, accNewBalance, newBalance)
 }
 
-func checkFee(t *testing.T, expectFee types.Fee) {
-	fee := fees.Pool.BlockFees()
+func checkFee(t *testing.T, expectFee sdk.Fee) {
+	fee := sdkfees.Pool.BlockFees()
 	require.Equal(t, expectFee, fee)
-	fees.Pool.Clear()
+	sdkfees.Pool.Clear()
 }
 
 // Test logic around fee deduction.
@@ -516,32 +518,32 @@ func TestAnteHandlerFeesInCheckTx(t *testing.T) {
 	priv1, acc1 := testutils.NewAccount(ctx, am, 100)
 
 	ctx = ctx.WithRunTxMode(sdk.RunTxModeCheck)
-	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), fees.FixedFeeCalculator(10, types.FeeForProposer))
+	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 90)})
-	checkFee(t, types.Fee{})
+	checkFee(t, sdk.Fee{})
 }
 
 func TestAnteHandlerOneTxFee(t *testing.T) {
 	// one tx, FeeFree
 	am, ctx, anteHandler := setup()
 	priv1, acc1 := testutils.NewAccount(ctx, am, 100)
-	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), fees.FreeFeeCalculator())
+	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), sdkfees.FreeFeeCalculator())
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 100)})
-	checkFee(t, types.Fee{})
+	checkFee(t, sdk.Fee{})
 
 	// one tx, FeeForProposer
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
-	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), fees.FixedFeeCalculator(10, types.FeeForProposer))
+	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 90)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForProposer))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, sdk.FeeForProposer))
 
 	// one tx, FeeForAll
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
-	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), fees.FixedFeeCalculator(10, types.FeeForAll))
+	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(), sdkfees.FixedFeeCalculator(10, sdk.FeeForAll))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 90)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForAll))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, sdk.FeeForAll))
 }
 
 func TestAnteHandlerMultiTxFees(t *testing.T) {
@@ -549,47 +551,47 @@ func TestAnteHandlerMultiTxFees(t *testing.T) {
 	am, ctx, anteHandler := setup()
 	priv1, acc1 := testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
-		fees.FreeFeeCalculator(),
-		fees.FixedFeeCalculator(10, types.FeeForProposer))
+		sdkfees.FreeFeeCalculator(),
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 90)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForProposer))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, sdk.FeeForProposer))
 
 	// two txs, 1. FeeProposer 2. FeeFree
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
-		fees.FixedFeeCalculator(10, types.FeeForProposer),
-		fees.FreeFeeCalculator())
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer),
+		sdkfees.FreeFeeCalculator())
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 90)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, types.FeeForProposer))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 10)}, sdk.FeeForProposer))
 
 	// two txs, 1. FeeProposer 2. FeeForAll
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
-		fees.FixedFeeCalculator(10, types.FeeForProposer),
-		fees.FixedFeeCalculator(10, types.FeeForAll))
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer),
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForAll))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 80)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, types.FeeForAll))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, sdk.FeeForAll))
 
 	// two txs, 1. FeeForAll 2. FeeProposer
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
-		fees.FixedFeeCalculator(10, types.FeeForAll),
-		fees.FixedFeeCalculator(10, types.FeeForProposer))
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForAll),
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer))
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 80)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, types.FeeForAll))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, sdk.FeeForAll))
 
 	// three txs, 1. FeeForAll 2. FeeProposer 3. FeeFree
 	am, ctx, anteHandler = setup()
 	priv1, acc1 = testutils.NewAccount(ctx, am, 100)
 	ctx = runAnteHandlerWithMultiTxFees(ctx, anteHandler, priv1, acc1.GetAddress(),
-		fees.FixedFeeCalculator(10, types.FeeForAll),
-		fees.FixedFeeCalculator(10, types.FeeForProposer),
-		fees.FreeFeeCalculator())
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForAll),
+		sdkfees.FixedFeeCalculator(10, sdk.FeeForProposer),
+		sdkfees.FreeFeeCalculator())
 	checkBalance(t, am, ctx, acc1.GetAddress(), sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 80)})
-	checkFee(t, types.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, types.FeeForAll))
+	checkFee(t, sdk.NewFee(sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, 20)}, sdk.FeeForAll))
 }
 
 func TestNewTxPreCheckerEmptySigner(t *testing.T) {

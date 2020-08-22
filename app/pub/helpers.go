@@ -11,12 +11,12 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/tokens/burn"
@@ -368,16 +368,24 @@ func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper,
 	return
 }
 
-func CollectProposalsForPublish(passed, failed []int64) Proposals {
-	totalProposals := len(passed) + len(failed)
-	ps := make([]*Proposal, 0, totalProposals)
+func CollectProposalsForPublish(passed, failed []gov.SimpleProposal) (Proposals, SideProposals) {
+	ps := make([]*Proposal, 0)
+	sidePs := make([]*SideProposal, 0)
 	for _, p := range passed {
-		ps = append(ps, &Proposal{p, Succeed})
+		if p.ChainID == "" {
+			ps = append(ps, &Proposal{p.Id, Succeed})
+		} else {
+			sidePs = append(sidePs, &SideProposal{p.Id, p.ChainID, Succeed})
+		}
 	}
 	for _, p := range failed {
-		ps = append(ps, &Proposal{p, Failed})
+		if p.ChainID == "" {
+			ps = append(ps, &Proposal{p.Id, Failed})
+		} else {
+			sidePs = append(sidePs, &SideProposal{p.Id, p.ChainID, Failed})
+		}
 	}
-	return Proposals{totalProposals, ps}
+	return Proposals{len(ps), ps}, SideProposals{NumOfMsgs: len(sidePs), Proposals: sidePs}
 }
 
 func CollectStakeUpdatesForPublish(unbondingDelegations []stake.UnbondingDelegation) StakeUpdates {
