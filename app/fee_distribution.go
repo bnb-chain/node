@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/common/fees"
 	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
@@ -67,12 +66,12 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 		validators = append(validators, string(proposerAccAddr)) // the first validator to publish should be proposer
 	}
 
-	if fee.Type == types.FeeForProposer {
+	if fee.Type == sdk.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
 		proposerAcc := am.GetAccount(ctx, proposerAccAddr)
 		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 		am.SetAccount(ctx, proposerAcc)
-	} else if fee.Type == types.FeeForAll {
+	} else if fee.Type == sdk.FeeForAll {
 		log.Info("Distributing the fees to all the validators",
 			"totalFees", fee.Tokens, "validatorSize", valSize)
 		avgTokens := sdk.Coins{}

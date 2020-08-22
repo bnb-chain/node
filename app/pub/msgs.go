@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type msgType int8
@@ -20,6 +19,12 @@ const (
 	blockFeeTpe
 	transferTpe
 	blockTpe
+	stakingTpe
+	distributionTpe
+	slashingTpe
+	crossTransferTpe
+	sideProposalType
+	breatheBlockTpe
 )
 
 var (
@@ -43,6 +48,18 @@ func (this msgType) String() string {
 		return "Transfers"
 	case blockTpe:
 		return "Block"
+	case stakingTpe:
+		return "Staking"
+	case distributionTpe:
+		return "Distribution"
+	case slashingTpe:
+		return "Slashing"
+	case crossTransferTpe:
+		return "CrossTransfer"
+	case sideProposalType:
+		return "SideProposal"
+	case breatheBlockTpe:
+		return "BreatheBlock"
 	default:
 		return "Unknown"
 	}
@@ -59,6 +76,12 @@ var latestSchemaVersions = map[msgType]int{
 	blockFeeTpe:        0,
 	transferTpe:        1,
 	blockTpe:           0,
+	stakingTpe:         0,
+	distributionTpe:    0,
+	slashingTpe:        0,
+	crossTransferTpe:   0,
+	sideProposalType:   0,
+	breatheBlockTpe:    0,
 }
 
 type AvroOrJsonMsg interface {
@@ -353,6 +376,30 @@ func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	return native
 }
 
+type SideProposals struct {
+	Height    int64
+	Timestamp int64
+	NumOfMsgs int
+	Proposals []*SideProposal
+}
+
+func (msg *SideProposals) String() string {
+	return fmt.Sprintf("SideProposals in block: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
+}
+
+func (msg *SideProposals) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+	ps := make([]map[string]interface{}, len(msg.Proposals), len(msg.Proposals))
+	for idx, p := range msg.Proposals {
+		ps[idx] = p.toNativeMap()
+	}
+	native["proposals"] = ps
+	return native
+}
+
 type ProposalStatus uint8
 
 const (
@@ -387,6 +434,24 @@ func (msg *Proposal) toNativeMap() map[string]interface{} {
 	return native
 }
 
+type SideProposal struct {
+	Id      int64
+	ChainId string
+	Status  ProposalStatus
+}
+
+func (msg *SideProposal) String() string {
+	return fmt.Sprintf("SideProposal: %v", msg.toNativeMap())
+}
+
+func (msg *SideProposal) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["id"] = msg.Id
+	native["chainid"] = msg.ChainId
+	native["status"] = msg.Status.String()
+	return native
+}
+
 type StakeUpdates struct {
 	NumOfMsgs                     int
 	CompletedUnbondingDelegations []*CompletedUnbondingDelegation
@@ -404,24 +469,6 @@ func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
 		ps[idx] = p.toNativeMap()
 	}
 	native["completedUnbondingDelegations"] = ps
-	return native
-}
-
-type CompletedUnbondingDelegation struct {
-	Validator sdk.ValAddress
-	Delegator sdk.AccAddress
-	Amount    Coin
-}
-
-func (msg *CompletedUnbondingDelegation) String() string {
-	return fmt.Sprintf("CompletedUnbondingDelegation: %v", msg.toNativeMap())
-}
-
-func (msg *CompletedUnbondingDelegation) toNativeMap() map[string]interface{} {
-	var native = make(map[string]interface{})
-	native["validator"] = msg.Validator.String()
-	native["delegator"] = msg.Delegator.String()
-	native["amount"] = msg.Amount.ToNativeMap()
 	return native
 }
 
@@ -890,4 +937,235 @@ func (msg NativeTransaction) ToNativeMap() map[string]interface{} {
 	native["data"] = msg.Data
 	native["proposalId"] = msg.ProposalId
 	return native
+}
+
+// distribution message
+type DistributionMsg struct {
+	NumOfMsgs     int
+	Height        int64
+	Timestamp     int64
+	Distributions map[string][]*Distribution
+}
+
+func (msg *DistributionMsg) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+
+	distributions := make(map[string]interface{})
+	for chainId, v := range msg.Distributions {
+		items := make([]map[string]interface{}, len(v), len(v))
+		for idx, item := range v {
+			items[idx] = item.toNativeMap()
+		}
+		distributions[chainId] = items
+	}
+	native["distributions"] = distributions
+	return native
+}
+
+func (msg *DistributionMsg) String() string {
+	return fmt.Sprintf("DistributionMsg at height: %d, numOfMsgs: %d", msg.Height, msg.NumOfMsgs)
+}
+
+func (msg *DistributionMsg) EssentialMsg() string {
+	builder := strings.Builder{}
+	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
+	for chainId, diss := range msg.Distributions {
+		fmt.Fprintf(&builder, "chainId:%s\n", chainId)
+		for _, dis := range diss {
+			fmt.Fprintf(&builder, "validator:%s,rewards count:%d\n", dis.Validator.String(), len(dis.Rewards))
+		}
+	}
+	return builder.String()
+}
+
+func (msg *DistributionMsg) EmptyCopy() AvroOrJsonMsg {
+	return &DistributionMsg{
+		msg.NumOfMsgs,
+		msg.Height,
+		msg.Timestamp,
+		make(map[string][]*Distribution),
+	}
+}
+
+type Distribution struct {
+	Validator      sdk.ValAddress
+	SelfDelegator  sdk.AccAddress
+	DistributeAddr sdk.AccAddress
+	ValTokens      int64
+	TotalReward    int64
+	Commission     int64
+	Rewards        []*Reward
+}
+
+func (msg *Distribution) String() string {
+	return fmt.Sprintf("Distribution: %v", msg.toNativeMap())
+}
+
+func (msg *Distribution) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["validator"] = msg.Validator.String()
+	native["selfDelegator"] = msg.SelfDelegator.String()
+	native["distributeAddr"] = msg.DistributeAddr.String()
+	native["valTokens"] = msg.ValTokens
+	native["totalReward"] = msg.TotalReward
+	native["commission"] = msg.Commission
+	as := make([]map[string]interface{}, len(msg.Rewards), len(msg.Rewards))
+	for idx, reward := range msg.Rewards {
+		as[idx] = reward.toNativeMap()
+	}
+	native["rewards"] = as
+	return native
+}
+
+type Reward struct {
+	Delegator sdk.AccAddress
+	Tokens    int64
+	Amount    int64
+}
+
+func (msg *Reward) String() string {
+	return fmt.Sprintf("Reward: %v", msg.toNativeMap())
+}
+
+func (msg *Reward) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["delegator"] = msg.Delegator.String()
+	native["delegationTokens"] = msg.Tokens
+	native["reward"] = msg.Amount
+	return native
+}
+
+// slash message
+type SlashMsg struct {
+	NumOfMsgs int
+	Height    int64
+	Timestamp int64
+	SlashData map[string][]*Slash
+}
+
+func (msg *SlashMsg) String() string {
+	return fmt.Sprintf("SlashMsg at height: %d, numOfMsgs: %d, slashData: %v", msg.Height, msg.NumOfMsgs, msg.SlashData)
+}
+
+func (msg *SlashMsg) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["numOfMsgs"] = msg.NumOfMsgs
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+
+	slashData := make(map[string]interface{})
+	for chainId, v := range msg.SlashData {
+		items := make([]map[string]interface{}, len(v), len(v))
+		for idx, item := range v {
+			items[idx] = item.toNativeMap()
+		}
+		slashData[chainId] = items
+	}
+	native["slashData"] = slashData
+	return native
+}
+
+func (msg *SlashMsg) EssentialMsg() string {
+	builder := strings.Builder{}
+	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
+	for chainId, slash := range msg.SlashData {
+		fmt.Fprintf(&builder, "chainId:%s\n, slash count: %d\n", chainId, len(slash))
+	}
+	return builder.String()
+}
+
+func (msg *SlashMsg) EmptyCopy() AvroOrJsonMsg {
+	return &SlashMsg{
+		msg.NumOfMsgs,
+		msg.Height,
+		msg.Timestamp,
+		make(map[string][]*Slash),
+	}
+}
+
+type Slash struct {
+	Validator              sdk.ValAddress
+	InfractionType         byte
+	InfractionHeight       int64
+	JailUtil               int64
+	SlashAmount            int64
+	ToFeePool              int64
+	Submitter              sdk.AccAddress
+	SubmitterReward        int64
+	ValidatorsCompensation []*AllocatedAmt
+}
+
+func (msg *Slash) String() string {
+	return fmt.Sprintf("Slash: %v", msg.toNativeMap())
+}
+
+func (msg *Slash) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["validator"] = msg.Validator.String()
+	native["infractionType"] = int(msg.InfractionType)
+	native["infractionHeight"] = msg.InfractionHeight
+	native["jailUtil"] = msg.JailUtil
+	native["slashAmount"] = msg.SlashAmount
+	native["toFeePool"] = msg.ToFeePool
+	if msg.Submitter != nil {
+		native["submitter"] = msg.Submitter.String()
+	} else {
+		native["submitter"] = ""
+	}
+	native["submitterReward"] = msg.SubmitterReward
+
+	vsc := make([]map[string]interface{}, len(msg.ValidatorsCompensation), len(msg.ValidatorsCompensation))
+	for idx, compensation := range msg.ValidatorsCompensation {
+		vsc[idx] = compensation.toNativeMap()
+	}
+	native["validatorsCompensation"] = vsc
+	return native
+}
+
+type AllocatedAmt struct {
+	Address string
+	Amount  int64
+}
+
+func (msg *AllocatedAmt) String() string {
+	return fmt.Sprintf("AllocatedAmt: %v", msg.toNativeMap())
+}
+
+func (msg *AllocatedAmt) toNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["address"] = msg.Address
+	native["amount"] = msg.Amount
+	return native
+}
+
+type BreatheBlockMsg struct {
+	Height    int64
+	Timestamp int64
+}
+
+func (msg *BreatheBlockMsg) String() string {
+	return fmt.Sprintf("BreatheBlockMsg at height: %d", msg.Height)
+}
+
+func (msg *BreatheBlockMsg) ToNativeMap() map[string]interface{} {
+	var native = make(map[string]interface{})
+	native["height"] = msg.Height
+	native["timestamp"] = msg.Timestamp
+	return native
+}
+
+func (msg *BreatheBlockMsg) EssentialMsg() string {
+	builder := strings.Builder{}
+	fmt.Fprintf(&builder, "height:%d\n", msg.Height)
+	return builder.String()
+}
+
+func (msg *BreatheBlockMsg) EmptyCopy() AvroOrJsonMsg {
+	return &BreatheBlockMsg{
+		msg.Height,
+		msg.Timestamp,
+	}
 }

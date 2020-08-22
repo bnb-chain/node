@@ -10,10 +10,15 @@ const (
 	DexStoreName        = "dex"
 	PairStoreName       = "pairs"
 	StakeStoreName      = "stake"
+	SlashingStoreName   = "slashing"
 	ParamsStoreName     = "params"
 	GovStoreName        = "gov"
 	TimeLockStoreName   = "time_lock"
 	AtomicSwapStoreName = "atomic_swap"
+	BridgeStoreName     = "bridge"
+	OracleStoreName     = "oracle"
+	IbcStoreName        = "ibc"
+	SideChainStoreName  = "sc"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -28,10 +33,15 @@ var (
 	DexStoreKey        = sdk.NewKVStoreKey(DexStoreName)
 	PairStoreKey       = sdk.NewKVStoreKey(PairStoreName)
 	StakeStoreKey      = sdk.NewKVStoreKey(StakeStoreName)
+	SlashingStoreKey   = sdk.NewKVStoreKey(SlashingStoreName)
 	ParamsStoreKey     = sdk.NewKVStoreKey(ParamsStoreName)
 	GovStoreKey        = sdk.NewKVStoreKey(GovStoreName)
 	TimeLockStoreKey   = sdk.NewKVStoreKey(TimeLockStoreName)
 	AtomicSwapStoreKey = sdk.NewKVStoreKey(AtomicSwapStoreName)
+	BridgeStoreKey     = sdk.NewKVStoreKey(BridgeStoreName)
+	OracleStoreKey     = sdk.NewKVStoreKey(OracleStoreName)
+	IbcStoreKey        = sdk.NewKVStoreKey(IbcStoreName)
+	SideChainStoreKey  = sdk.NewKVStoreKey(SideChainStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
@@ -44,10 +54,15 @@ var (
 		DexStoreName:             DexStoreKey,
 		PairStoreName:            PairStoreKey,
 		StakeStoreName:           StakeStoreKey,
+		SlashingStoreName:        SlashingStoreKey,
 		ParamsStoreName:          ParamsStoreKey,
 		GovStoreName:             GovStoreKey,
 		TimeLockStoreName:        TimeLockStoreKey,
 		AtomicSwapStoreName:      AtomicSwapStoreKey,
+		IbcStoreName:             IbcStoreKey,
+		SideChainStoreName:       SideChainStoreKey,
+		BridgeStoreName:          BridgeStoreKey,
+		OracleStoreName:          OracleStoreKey,
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 	}
@@ -60,10 +75,15 @@ var (
 		DexStoreName,
 		PairStoreName,
 		StakeStoreName,
+		SlashingStoreName,
 		ParamsStoreName,
 		GovStoreName,
 		TimeLockStoreName,
 		AtomicSwapStoreName,
+		IbcStoreName,
+		SideChainStoreName,
+		BridgeStoreName,
+		OracleStoreName,
 	}
 )
 

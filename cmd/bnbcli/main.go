@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -9,8 +11,11 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+	sidecmd "github.com/cosmos/cosmos-sdk/x/sidechain/client/cli"
+
+	paramcmd "github.com/cosmos/cosmos-sdk/x/paramHub/client/cli"
+	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
-	"github.com/spf13/cobra"
 
 	"github.com/tendermint/tendermint/libs/cli"
 
@@ -20,8 +25,8 @@ import (
 	"github.com/binance-chain/node/common/types"
 	accountcmd "github.com/binance-chain/node/plugins/account/client/cli"
 	apiserv "github.com/binance-chain/node/plugins/api"
+	bridgecmd "github.com/binance-chain/node/plugins/bridge/client/cli"
 	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
-	paramcmd "github.com/binance-chain/node/plugins/param/client/cli"
 	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
 	"github.com/binance-chain/node/version"
 )
@@ -88,17 +93,12 @@ func main() {
 	dexcmd.AddCommands(rootCmd, cdc)
 	paramcmd.AddCommands(rootCmd, cdc)
 
-	// stake cmds
-	rootCmd.AddCommand(
-
-		client.PostCommands(
-			stakecmd.GetCmdCreateValidator(cdc),
-			stakecmd.GetCmdRemoveValidator(cdc),
-			stakecmd.GetCmdQueryValidators("stake", cdc),
-			stakecmd.GetCmdQueryUnbondingDelegations("stake", cdc),
-		)...)
+	stakecmd.AddCommands(rootCmd, cdc)
+	slashingcmd.AddCommands(rootCmd, cdc)
 	govcmd.AddCommands(rootCmd, cdc)
 	admin.AddCommands(rootCmd, cdc)
+	bridgecmd.AddCommands(rootCmd, cdc)
+	sidecmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)

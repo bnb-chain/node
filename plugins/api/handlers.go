@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
+	paramapi "github.com/cosmos/cosmos-sdk/x/paramHub/client/rest"
 
 	hnd "github.com/binance-chain/node/plugins/api/handlers"
 	"github.com/binance-chain/node/plugins/dex"
 	dexapi "github.com/binance-chain/node/plugins/dex/client/rest"
-	paramapi "github.com/binance-chain/node/plugins/param/client/rest"
 	tksapi "github.com/binance-chain/node/plugins/tokens/client/rest"
 	tkstore "github.com/binance-chain/node/plugins/tokens/store"
 	"github.com/binance-chain/node/wire"

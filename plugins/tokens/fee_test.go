@@ -9,11 +9,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
 	"github.com/binance-chain/node/common/testutils"
 	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/param/types"
-	"github.com/binance-chain/node/plugins/tokens"
 )
 
 func newAddr() sdk.AccAddress {
@@ -21,9 +20,9 @@ func newAddr() sdk.AccAddress {
 	return addr
 }
 
-func checkFee(t *testing.T, fee common.Fee, expected int64) {
+func checkFee(t *testing.T, fee sdk.Fee, expected int64) {
 	require.Equal(t,
-		common.NewFee(sdk.Coins{sdk.NewCoin(common.NativeTokenSymbol, expected)}, common.FeeForProposer),
+		sdk.NewFee(sdk.Coins{sdk.NewCoin(common.NativeTokenSymbol, expected)}, sdk.FeeForProposer),
 		fee)
 }
 
@@ -32,13 +31,13 @@ func TestTransferFeeGen(t *testing.T) {
 		FixedFeeParams: types.FixedFeeParams{
 			MsgType: bank.MsgSend{}.Type(),
 			Fee:     1e6,
-			FeeFor:  common.FeeForProposer,
+			FeeFor:  sdk.FeeForProposer,
 		},
 		MultiTransferFee:  8e5,
 		LowerLimitAsMulti: 2,
 	}
 
-	calculator := tokens.TransferFeeCalculatorGen(&params)
+	calculator := bank.TransferFeeCalculatorGen(&params)
 
 	// (1 addr, 1 coin) : (1 addr, 1 coin)
 	msg := bank.MsgSend{
@@ -100,7 +99,7 @@ func TestTransferFeeParams_JsonFormat(t *testing.T) {
 		FixedFeeParams: types.FixedFeeParams{
 			MsgType: bank.MsgSend{}.Type(),
 			Fee:     250000,
-			FeeFor:  common.FeeForProposer,
+			FeeFor:  sdk.FeeForProposer,
 		},
 		MultiTransferFee:  200000,
 		LowerLimitAsMulti: 2,
