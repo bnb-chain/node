@@ -1,4 +1,17 @@
 # Changelog
+## 0.8.0
+FEATURES
+[Stake] import stake module for side chain
+[Slashing] import slashing module for side chain
+[Ibc] import ibc module
+[Oracle] import oracle module
+[Gov] add proposals for side chain
+[Bridge] add bridge plugin
+
+IMPROVEMENTS
+[Pub] import pubsub server for publishing message
+
+
 ## 0.7.2-hf.1
 BUG FIXES
 * [\#766](https://github.com/binance-chain/node/pull/766)[Dex] remove orderInfo from orderInfoForPub when publish anything
