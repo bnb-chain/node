@@ -1,4 +1,9 @@
 # Changelog
+
+## 0.8.0-hf.1
+BUG FIXES
+[CLI] bnbcli API Server get token issue
+
 ## 0.8.0
 FEATURES
 [Stake] import stake module for side chain
@@ -7,7 +12,6 @@ FEATURES
 
 IMPROVEMENTS
 [Pub] import pubsub server for publishing message
-
 
 ## 0.7.2-hf.1
 BUG FIXES
