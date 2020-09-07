@@ -407,12 +407,11 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 		if !scriptExecutionFailed { // no script execution failure
 			refundExcludeList = append(refundExcludeList, receiverAddr)
-		}
-
-		_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
-		if sdkErr != nil {
-			log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
-			panic(sdkErr)
+			_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
+			if sdkErr != nil {
+				log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
+				panic(sdkErr)
+			}
 		}
 	}
 	if len(refundExcludeList) != len(transferInPackage.ReceiverAddresses) {
