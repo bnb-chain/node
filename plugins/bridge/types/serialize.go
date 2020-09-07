@@ -111,11 +111,11 @@ func DeserializeTransferOutSynPackage(serializedPackage []byte) (*TransferOutSyn
 type RefundReason uint32
 
 const (
-	UnboundToken        RefundReason = 1
-	Timeout             RefundReason = 2
-	InsufficientBalance RefundReason = 3
-	Unknown             RefundReason = 4
-	TransferToBPE12Addr RefundReason = 5
+	UnboundToken              RefundReason = 1
+	Timeout                   RefundReason = 2
+	InsufficientBalance       RefundReason = 3
+	Unknown                   RefundReason = 4
+	ForbidTransferToBPE12Addr RefundReason = 5
 )
 
 type TransferOutRefundPackage struct {

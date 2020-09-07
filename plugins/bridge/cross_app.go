@@ -414,8 +414,9 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			}
 		}
 	}
+	var refundPackage []byte
 	if len(refundExcludeList) != len(transferInPackage.ReceiverAddresses) {
-		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.TransferToBPE12Addr, refundExcludeList)
+		refundPackage, sdkErr = app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.ForbidTransferToBPE12Addr, refundExcludeList)
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
 			panic(sdkErr)
@@ -450,7 +451,8 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	return sdk.ExecuteResult{
-		Tags: tags,
+		Tags:    tags,
+		Payload: refundPackage,
 	}
 }
 
