@@ -83,8 +83,8 @@ BEP82Height = {{ .UpgradeConfig.BEP82Height }}
 BEP84Height = {{ .UpgradeConfig.BEP84Height }}
 # Block height of FixFailAckPackage upgrade
 FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
-# Block height of EnableAccountScriptsForCrossChainTransfer upgrade
-EnableAccountScriptsForCrossChainTransfer = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransfer }}
+# Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
+EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -499,8 +499,8 @@ type UpgradeConfig struct {
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
-	LaunchBscUpgradeHeight                    int64 `mapstructure:"LaunchBscUpgradeHeight"`
-	EnableAccountScriptsForCrossChainTransfer int64 `mapstructure:"EnableAccountScriptsForCrossChainTransfer"`
+	LaunchBscUpgradeHeight                          int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
@@ -534,7 +534,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP82Height:                   math.MaxInt64,
 		BEP84Height:                   math.MaxInt64,
 		FixFailAckPackageHeight:       math.MaxInt64,
-		EnableAccountScriptsForCrossChainTransfer: math.MaxInt64,
+		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
 
