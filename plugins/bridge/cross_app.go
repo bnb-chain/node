@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
@@ -343,7 +344,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 				transferInPackage.ContractAddress.String()))
 		}
 
-		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(contractDecimals, transferInPackage, types.UnboundToken)
+		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(contractDecimals, transferInPackage, types.UnboundToken, nil)
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
 			panic(sdkErr)
@@ -355,7 +356,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	if int64(transferInPackage.ExpireTime) < ctx.BlockHeader().Time.Unix() {
-		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.Timeout)
+		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.Timeout, nil)
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
 			panic(sdkErr)
@@ -374,7 +375,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	if !balance.IsGTE(totalTransferInAmount) {
-		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.InsufficientBalance)
+		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.InsufficientBalance, nil)
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
 			panic(sdkErr)
@@ -385,17 +386,51 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 	}
 
+	refundExcludeList := make([]sdk.AccAddress, 0, len(transferInPackage.ReceiverAddresses))
 	for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
 		amount := sdk.NewCoin(symbol, transferInPackage.Amounts[idx].Int64())
+		scriptExecutionFailed := false
+		if sdk.IsUpgrade(upgrade.EnableAccountScriptsForCrossChainTransfer) {
+			sendMsg := bank.NewMsgSend(
+				[]bank.Input{bank.NewInput(types.PegAccount, sdk.Coins{amount})},
+				[]bank.Output{bank.NewOutput(receiverAddr, sdk.Coins{amount})})
+
+			for _, script := range sdk.GetRegisteredScripts(sendMsg.Type()) {
+				if script == nil {
+					continue
+				}
+				if script(ctx, sendMsg) != nil {
+					scriptExecutionFailed = true
+					break
+				}
+			}
+		}
+		if !scriptExecutionFailed { // no script execution failure
+			refundExcludeList = append(refundExcludeList, receiverAddr)
+		}
+
 		_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
 			panic(sdkErr)
 		}
 	}
+	if len(refundExcludeList) != len(transferInPackage.ReceiverAddresses) {
+		refundPackage, sdkErr := app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.TransferToBPE12Addr, refundExcludeList)
+		if sdkErr != nil {
+			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
+			panic(sdkErr)
+		}
+		if len(refundExcludeList) == 0 {
+			return sdk.ExecuteResult{
+				Payload: refundPackage,
+				Err:     types.ErrScriptsExecutionError("account scripts execution error"),
+			}
+		}
+	}
 
 	if ctx.IsDeliverTx() {
-		addressesChanged := append(transferInPackage.ReceiverAddresses, types.PegAccount)
+		addressesChanged := append(refundExcludeList, types.PegAccount)
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 		to := make([]CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
 		for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
