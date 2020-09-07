@@ -115,6 +115,7 @@ const (
 	Timeout             RefundReason = 2
 	InsufficientBalance RefundReason = 3
 	Unknown             RefundReason = 4
+	TransferToBPE12Addr RefundReason = 5
 )
 
 type TransferOutRefundPackage struct {

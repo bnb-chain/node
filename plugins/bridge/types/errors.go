@@ -23,6 +23,7 @@ const (
 	CodeDeserializePackageFailed sdk.CodeType = 14
 	CodeTokenBindRelationChanged sdk.CodeType = 15
 	CodeTransferInExpire         sdk.CodeType = 16
+	CodeScriptsExecutionError    sdk.CodeType = 17
 )
 
 //----------------------------------------
@@ -90,4 +91,8 @@ func ErrTokenBindRelationChanged(msg string) sdk.Error {
 
 func ErrTransferInExpire(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeTransferInExpire, msg)
+}
+
+func ErrScriptsExecutionError(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeScriptsExecutionError, msg)
 }
