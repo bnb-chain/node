@@ -25,6 +25,7 @@ const (
 
 	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
+	ToBeNamedUpgrade = sdk.ToBeNamedUpgrade
 
 	//Nightingale upgrade
 	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
