@@ -4,6 +4,7 @@ import (
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -27,4 +28,5 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(issue.IssueMiniMsg{}, "tokens/IssueMiniMsg", nil)
 	cdc.RegisterConcrete(issue.IssueTinyMsg{}, "tokens/IssueTinyMsg", nil)
 	cdc.RegisterConcrete(seturi.SetURIMsg{}, "tokens/SetURIMsg", nil)
+	cdc.RegisterConcrete(ownertransfer.TransferOwnershipMsg{}, "tokens/TransferOwnershipMsg", nil)
 }

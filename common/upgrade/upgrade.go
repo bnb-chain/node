@@ -32,6 +32,7 @@ const (
 	BEP70 = "BEP70"  // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
 
 	AdjustTokenSymbolLength = "AdjustTokenSymbolLength"
+	BEP82                   = sdk.BEP82
 )
 
 func UpgradeBEP10(before func(), after func()) {

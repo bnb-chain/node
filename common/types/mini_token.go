@@ -123,6 +123,10 @@ func (token *MiniToken) GetContractAddress() string {
 	return token.ContractAddress
 }
 
+func (token *MiniToken) SetOwner(addr sdk.AccAddress) {
+	token.Owner = addr
+}
+
 func (token MiniToken) GetOwner() sdk.AccAddress {
 	return token.Owner
 }
