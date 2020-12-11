@@ -25,12 +25,12 @@ const (
 
 	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
-	ToBeNamedUpgrade = sdk.ToBeNamedUpgrade
 
 	//Nightingale upgrade
 	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
 	BEP67 = "BEP67"  // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
 	BEP70 = "BEP70"  // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
+	BEP82 = sdk.BEP82
 )
 
 func UpgradeBEP10(before func(), after func()) {

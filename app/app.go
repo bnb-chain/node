@@ -10,6 +10,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -316,11 +317,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.ToBeNamedUpgrade, upgradeConfig.ToBeNamedUpgradeHeight)
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP82, upgradeConfig.BEP82Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -364,6 +365,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		seturi.SetURIMsg{}.Type(),
 		dextypes.ListMiniMsg{}.Type(),
 	)
+
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownertransfer.TransferOwnershipMsg{}.Type())
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {

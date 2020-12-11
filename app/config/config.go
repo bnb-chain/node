@@ -67,14 +67,14 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
 LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
-# New Upgrade
-ToBeNamedUpgradeHeight = {{ .UpgradeConfig.ToBeNamedUpgradeHeight }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+# Block height of BEP82 upgrade
+BEP82Height = {{ .UpgradeConfig.BEP82Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -490,12 +490,12 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
 	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
-	ToBeNamedUpgradeHeight int64 `mapstructure:"ToBeNamedUpgradeHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
+	BEP82Height int64 `mapstructure:"BEP82Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -515,7 +515,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                1,
 		BEP70Height:                1,
 		LaunchBscUpgradeHeight:     1,
-		ToBeNamedUpgradeHeight:     math.MaxInt64,
+		BEP82Height:                math.MaxInt64,
 	}
 }
 
