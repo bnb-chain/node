@@ -389,7 +389,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 	}
 
-	refundExcludeList := make([]sdk.AccAddress, 0, len(transferInPackage.ReceiverAddresses))
+	refundExcludeIdxList := make([]int, 0, len(transferInPackage.ReceiverAddresses))
 	for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
 		amount := sdk.NewCoin(symbol, transferInPackage.Amounts[idx].Int64())
 		scriptExecutionFailed := false
@@ -409,7 +409,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			}
 		}
 		if !scriptExecutionFailed { // no script execution error
-			refundExcludeList = append(refundExcludeList, receiverAddr)
+			refundExcludeIdxList = append(refundExcludeIdxList, idx)
 			_, sdkErr = app.bridgeKeeper.BankKeeper.SendCoins(ctx, types.PegAccount, receiverAddr, sdk.Coins{amount})
 			if sdkErr != nil {
 				log.With("module", "bridge").Error("send coins error", "err", sdkErr.Error())
@@ -422,13 +422,13 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 	}
 	var refundPackage []byte
-	if len(refundExcludeList) != len(transferInPackage.ReceiverAddresses) {
-		refundPackage, sdkErr = app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.ForbidTransferToBPE12Addr, refundExcludeList)
+	if len(refundExcludeIdxList) != len(transferInPackage.ReceiverAddresses) {
+		refundPackage, sdkErr = app.bridgeKeeper.RefundTransferIn(tokenInfo.GetContractDecimals(), transferInPackage, types.ForbidTransferToBPE12Addr, refundExcludeIdxList)
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("refund transfer in error", "err", sdkErr.Error())
 			panic(sdkErr)
 		}
-		if len(refundExcludeList) == 0 {
+		if len(refundExcludeIdxList) == 0 {
 			return sdk.ExecuteResult{
 				Payload: refundPackage,
 				Tags:    types.GenerateTransferInTags(transferInPackage.ReceiverAddresses, symbol, transferInPackage.Amounts, nil),
@@ -438,7 +438,11 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	if ctx.IsDeliverTx() {
-		addressesChanged := append(refundExcludeList, types.PegAccount)
+		var addressesChanged []sdk.AccAddress
+		for _, idx := range refundExcludeIdxList {
+			addressesChanged = append(addressesChanged, transferInPackage.ReceiverAddresses[idx])
+		}
+		addressesChanged = append(addressesChanged, types.PegAccount)
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 		to := make([]CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
 		for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
@@ -452,7 +456,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 
 	// emit peg related event
 	var totalAmount int64 = 0
-	tags := types.GenerateTransferInTags(transferInPackage.ReceiverAddresses, symbol, transferInPackage.Amounts, refundExcludeList)
+	tags := types.GenerateTransferInTags(transferInPackage.ReceiverAddresses, symbol, transferInPackage.Amounts, refundExcludeIdxList)
 	if totalTransferInAmount != nil {
 		totalAmount = totalTransferInAmount.AmountOf(symbol)
 		tags = tags.AppendTags(sdk.Tags{sdk.GetPegOutTag(symbol, totalAmount)})
