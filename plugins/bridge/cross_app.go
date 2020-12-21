@@ -2,10 +2,16 @@ package bridge
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/binance-chain/node/common/log"
+	ctypes "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
@@ -282,8 +288,15 @@ func (app *TransferInApp) checkTransferInSynPackage(transferInPackage *types.Tra
 	}
 
 	for _, amount := range transferInPackage.Amounts {
-		if amount.Int64() <= 0 {
-			return types.ErrInvalidAmount("amount to send should be positive")
+		// allow transfer 0 amount tokens
+		if sdk.IsUpgrade(upgrade.BEP100) {
+			if amount.Int64() < 0 {
+				return types.ErrInvalidAmount("amount to send should not be negative")
+			}
+		} else {
+			if amount.Int64() <= 0 {
+				return types.ErrInvalidAmount("amount to send should be positive")
+			}
 		}
 	}
 
@@ -403,4 +416,289 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	return sdk.ExecuteResult{
 		Tags: tags,
 	}
+}
+
+var _ sdk.CrossChainApplication = &MirrorApp{}
+
+type MirrorApp struct {
+	bridgeKeeper Keeper
+}
+
+func NewMirrorApp(bridgeKeeper Keeper) *MirrorApp {
+	return &MirrorApp{
+		bridgeKeeper: bridgeKeeper,
+	}
+}
+
+func (app *MirrorApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+	log.With("module", "bridge").Error("received mirror ack package ")
+	return sdk.ExecuteResult{}
+}
+
+func (app *MirrorApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+	log.With("module", "bridge").Error("received mirror fail ack package ")
+	return sdk.ExecuteResult{}
+}
+
+func (app *MirrorApp) checkMirrorSynPackage(ctx sdk.Context, mirrorPackage *types.MirrorSynPackage) uint8 {
+	// check expire time
+	if ctx.BlockHeader().Time.Unix() > int64(mirrorPackage.ExpireTime) {
+		return types.MirrorErrCodeExpired
+	}
+
+	// check symbol
+	symbol := types.BytesToSymbol(mirrorPackage.BEP20Symbol)
+	err := ctypes.ValidateIssueSymbol(symbol)
+	if err != nil {
+		return types.MirrorErrCodeUnknown
+	}
+
+	// check supply
+	supplyBigInt, cerr := types.ConvertBSCAmountToBCAmountBigInt(int8(mirrorPackage.BEP20Decimals), sdk.NewIntFromBigInt(mirrorPackage.BEP20TotalSupply))
+	if cerr != nil {
+		return types.MirrorErrCodeUnknown
+	}
+	maxSupply := sdk.NewInt(sdk.TokenMaxTotalSupply)
+	if supplyBigInt.GT(maxSupply) {
+		return types.MirrorErrCodeUnknown
+	}
+
+	return 0
+}
+
+func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFee int64) sdk.ExecuteResult {
+	mirrorPackage, sdkErr := types.DeserializeMirrorSynPackage(payload)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("unmarshal mirror claim error", "err", sdkErr.Error(), "claim", string(payload))
+		panic("unmarshal mirror claim error")
+	}
+
+	errCode := app.checkMirrorSynPackage(ctx, mirrorPackage)
+	if errCode != 0 {
+		ackPackage, sdkErr := app.generateAckPackage(errCode, "", mirrorPackage)
+		if sdkErr != nil {
+			panic("generate ack package error")
+		}
+
+		return sdk.ExecuteResult{
+			Payload: ackPackage,
+		}
+	}
+
+	// check symbol existence
+	symbol := app.getSymbol(payload, mirrorPackage)
+	if exists := app.bridgeKeeper.TokenMapper.ExistsBEP2(ctx, symbol); exists {
+		log.With("module", "bridge").Error("symbol already exists", "symbol", symbol)
+
+		ackPackage, sdkErr := app.generateAckPackage(types.MirrorErrCodeBEP2SymbolExists, symbol, mirrorPackage)
+		if sdkErr != nil {
+			panic("generate ack package error")
+		}
+
+		return sdk.ExecuteResult{
+			Payload: ackPackage,
+		}
+	}
+
+	name := types.BytesToSymbol(mirrorPackage.BEP20Name)
+	supply, sdkErr := types.ConvertBSCAmountToBCAmount(int8(mirrorPackage.BEP20Decimals), sdk.NewIntFromBigInt(mirrorPackage.BEP20TotalSupply))
+	if sdkErr != nil {
+		panic("convert bsc total supply error")
+	}
+
+	token, err := ctypes.NewToken(name, symbol, supply, types.PegAccount, true)
+	if err != nil {
+		panic(err.Error())
+	}
+	// set bep20 related fields
+	token.SetContractAddress(mirrorPackage.ContractAddr.String())
+	token.SetContractDecimals(int8(mirrorPackage.BEP20Decimals))
+
+	// issue token and mint
+	if err := app.bridgeKeeper.TokenMapper.NewToken(ctx, token); err != nil {
+		panic(err.Error())
+	}
+	if _, _, sdkError := app.bridgeKeeper.BankKeeper.AddCoins(ctx, token.GetOwner(),
+		sdk.Coins{{
+			Denom:  token.GetSymbol(),
+			Amount: token.GetTotalSupply().ToInt64(),
+		}}); sdkError != nil {
+		panic(sdkError.Error())
+	}
+
+	// return success payload
+	ackPackage, sdkErr := app.generateAckPackage(0, symbol, mirrorPackage)
+	if sdkErr != nil {
+		panic("generate ack package error")
+	}
+
+	// add balance change accounts
+	if ctx.IsDeliverTx() {
+		addressesChanged := []sdk.AccAddress{types.PegAccount}
+		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
+	}
+
+	// TODO: distribute fee
+
+	return sdk.ExecuteResult{
+		Payload: ackPackage,
+	}
+}
+
+func (app *MirrorApp) generateAckPackage(code uint8, symbol string, synPackage *types.MirrorSynPackage) ([]byte, sdk.Error) {
+	ackPackage := &types.MirrorAckPackage{
+		MirrorSender: synPackage.MirrorSender,
+		ContractAddr: synPackage.ContractAddr,
+		Decimals:     synPackage.BEP20Decimals,
+		BEP2Symbol:   types.SymbolToBytes(symbol),
+		MirrorFee:    synPackage.MirrorFee,
+		ErrorCode:    code,
+	}
+
+	encodedBytes, err := rlp.EncodeToBytes(ackPackage)
+	if err != nil {
+		return nil, sdk.ErrInternal("encode refund package error")
+	}
+	return encodedBytes, nil
+}
+
+func (app *MirrorApp) getSymbol(payload []byte, mirrorPackage *types.MirrorSynPackage) string {
+	symbol := types.BytesToSymbol(mirrorPackage.BEP20Symbol)
+	symbol = strings.ToUpper(symbol)
+
+	suffix := app.getBep2TokenSuffix(payload)
+
+	symbol = fmt.Sprintf("%s-%s", symbol, suffix)
+	return symbol
+}
+
+func (app *MirrorApp) getBep2TokenSuffix(payload []byte) string {
+	payloadHash := cmn.HexBytes(tmhash.Sum(payload)).String()
+
+	suffix := payloadHash[:ctypes.TokenSymbolTxHashSuffixLen]
+	return suffix
+}
+
+var _ sdk.CrossChainApplication = &MirrorSyncApp{}
+
+type MirrorSyncApp struct {
+	bridgeKeeper Keeper
+}
+
+func NewMirrorSyncApp(bridgeKeeper Keeper) *MirrorSyncApp {
+	return &MirrorSyncApp{
+		bridgeKeeper: bridgeKeeper,
+	}
+}
+
+func (app *MirrorSyncApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+	log.With("module", "bridge").Error("received mirror sync ack package ")
+	return sdk.ExecuteResult{}
+}
+
+func (app *MirrorSyncApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.ExecuteResult {
+	log.With("module", "bridge").Error("received mirror sync fail ack package ")
+	return sdk.ExecuteResult{}
+}
+func (app *MirrorSyncApp) checkMirrorSyncPackage(ctx sdk.Context, mirrorSyncPackage *types.MirrorSyncSynPackage) uint8 {
+	// check expire time
+	if ctx.BlockHeader().Time.Unix() > int64(mirrorSyncPackage.ExpireTime) {
+		return types.MirrorSyncErrCodeExpired
+	}
+
+	return 0
+}
+
+func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFee int64) sdk.ExecuteResult {
+	mirrorSyncPackage, sdkErr := types.DeserializeMirrorSyncSynPackage(payload)
+	if sdkErr != nil {
+		log.With("module", "bridge").Error("unmarshal mirror sync claim error", "err", sdkErr.Error(), "claim", string(payload))
+		panic("unmarshal mirror claim error")
+	}
+
+	errCode := app.checkMirrorSyncPackage(ctx, mirrorSyncPackage)
+	if errCode != 0 {
+		ackPackage, sdkErr := app.generateAckPackage(errCode, mirrorSyncPackage)
+		if sdkErr != nil {
+			panic("generate ack package error")
+		}
+
+		return sdk.ExecuteResult{
+			Payload: ackPackage,
+		}
+	}
+
+	symbol := types.BytesToSymbol(mirrorSyncPackage.BEP2Symbol)
+	token, err := app.bridgeKeeper.TokenMapper.GetToken(ctx, symbol)
+	if err != nil {
+		panic("get bep 2 token error")
+	}
+
+	// check token
+	if token.GetContractAddress() == "" || token.GetOwner().String() != types.PegAccount.String() {
+		ackPackage, sdkErr := app.generateAckPackage(types.MirrorSyncErrNotBoundByMirror, mirrorSyncPackage)
+		if sdkErr != nil {
+			panic("generate ack package error")
+		}
+
+		return sdk.ExecuteResult{
+			Payload: ackPackage,
+		}
+	}
+
+	// mint or burn
+	newSupply := mirrorSyncPackage.BEP20TotalSupply.Int64()
+	if newSupply > ctypes.TokenMaxTotalSupply {
+		ackPackage, sdkErr := app.generateAckPackage(types.MirrorSyncErrCodeUnknown, mirrorSyncPackage)
+		if sdkErr != nil {
+			panic("generate ack package error")
+		}
+
+		return sdk.ExecuteResult{
+			Payload: ackPackage,
+		}
+	}
+
+	if newSupply > token.GetTotalSupply().ToInt64() {
+		if _, _, sdkError := app.bridgeKeeper.BankKeeper.AddCoins(ctx, token.GetOwner(),
+			sdk.Coins{{
+				Denom:  token.GetSymbol(),
+				Amount: newSupply - token.GetTotalSupply().ToInt64(),
+			}}); sdkError != nil {
+			panic(sdkError.Error())
+		}
+	} else if newSupply < token.GetTotalSupply().ToInt64() {
+		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, token.GetOwner(),
+			sdk.Coins{{
+				Denom:  token.GetSymbol(),
+				Amount: token.GetTotalSupply().ToInt64() - newSupply,
+			}}); sdkError != nil {
+			panic(sdkError.Error())
+		}
+	}
+
+	// add balance change accounts
+	if newSupply != token.GetTotalSupply().ToInt64() && ctx.IsDeliverTx() {
+		addressesChanged := []sdk.AccAddress{types.PegAccount}
+		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
+	}
+
+	// TODO: distribute fee
+
+	return sdk.ExecuteResult{}
+}
+
+func (app *MirrorSyncApp) generateAckPackage(code uint8, synPackage *types.MirrorSyncSynPackage) ([]byte, sdk.Error) {
+	ackPackage := &types.MirrorSyncAckPackage{
+		SyncSender:   synPackage.SyncSender,
+		ContractAddr: synPackage.ContractAddr,
+		SyncFee:      synPackage.SyncFee,
+		ErrorCode:    code,
+	}
+
+	encodedBytes, err := rlp.EncodeToBytes(ackPackage)
+	if err != nil {
+		return nil, sdk.ErrInternal("encode refund package error")
+	}
+	return encodedBytes, nil
 }
