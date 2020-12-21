@@ -133,6 +133,73 @@ func DeserializeTransferOutRefundPackage(serializedPackage []byte) (*TransferOut
 	return &tp, nil
 }
 
+type MirrorSynPackage struct {
+	MirrorSender     SmartChainAddress
+	ContractAddr     SmartChainAddress
+	BEP20Name        [32]byte
+	BEP20Symbol      [32]byte
+	BEP20TotalSupply *big.Int
+	BEP20Decimals    uint8
+	MirrorFee        *big.Int
+	ExpireTime       uint64
+}
+
+func DeserializeMirrorSynPackage(serializedPackage []byte) (*MirrorSynPackage, sdk.Error) {
+	var ms MirrorSynPackage
+	err := rlp.DecodeBytes(serializedPackage, &ms)
+	if err != nil {
+		return nil, ErrDeserializePackageFailed("deserialize mirror package failed")
+	}
+	return &ms, nil
+}
+
+const (
+	MirrorErrCodeExpired          uint8 = 1
+	MirrorErrCodeBEP2SymbolExists uint8 = 2
+	MirrorErrCodeWrongAlreadyBond uint8 = 3
+	MirrorErrCodeUnknown          uint8 = 4
+)
+
+type MirrorAckPackage struct {
+	MirrorSender SmartChainAddress
+	ContractAddr SmartChainAddress
+	Decimals     uint8
+	BEP2Symbol   [32]byte
+	MirrorFee    *big.Int
+	ErrorCode    uint8
+}
+
+const (
+	MirrorSyncErrCodeExpired      uint8 = 1
+	MirrorSyncErrNotBoundByMirror uint8 = 2
+	MirrorSyncErrCodeUnknown      uint8 = 3
+)
+
+type MirrorSyncSynPackage struct {
+	SyncSender       SmartChainAddress
+	ContractAddr     SmartChainAddress
+	BEP2Symbol       [32]byte
+	BEP20TotalSupply *big.Int
+	SyncFee          *big.Int
+	ExpireTime       uint64
+}
+
+func DeserializeMirrorSyncSynPackage(serializedPackage []byte) (*MirrorSyncSynPackage, sdk.Error) {
+	var ms MirrorSyncSynPackage
+	err := rlp.DecodeBytes(serializedPackage, &ms)
+	if err != nil {
+		return nil, ErrDeserializePackageFailed("deserialize mirror sync package failed")
+	}
+	return &ms, nil
+}
+
+type MirrorSyncAckPackage struct {
+	SyncSender   SmartChainAddress
+	ContractAddr SmartChainAddress
+	SyncFee      *big.Int
+	ErrorCode    uint8
+}
+
 func SymbolToBytes(symbol string) [32]byte {
 	// length of bound token symbol length should not be larger than 32
 	serializedBytes := [32]byte{}
