@@ -96,7 +96,9 @@ func (token *Token) SetTotalSupply(totalSupply utils.Fixed8) {
 }
 
 func (token *Token) SetOwner(addr sdk.AccAddress) {
-	token.Owner = addr
+	cp := make(sdk.AccAddress, len(addr.Bytes()))
+	copy(cp, addr)
+	token.Owner = cp
 }
 
 func (token Token) GetOwner() sdk.AccAddress {

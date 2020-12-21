@@ -41,6 +41,7 @@ func (msg TransferOwnershipMsg) ValidateBasic() sdk.Error {
 	if len(msg.NewOwner) != sdk.AddrLen {
 		return sdk.ErrInvalidAddress(fmt.Sprintf("Invalid newOwner, expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.NewOwner)))
 	}
+
 	err := types.ValidateTokenSymbol(msg.Symbol)
 	if err != nil {
 		return sdk.ErrInvalidCoins(err.Error())
