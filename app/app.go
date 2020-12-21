@@ -325,6 +325,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.AdjustTokenSymbolLength, upgradeConfig.AdjustTokenSymbolLengthHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP82, upgradeConfig.BEP82Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP100, upgradeConfig.BEP100Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())

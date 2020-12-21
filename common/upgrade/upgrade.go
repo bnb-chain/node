@@ -33,6 +33,7 @@ const (
 
 	AdjustTokenSymbolLength = "AdjustTokenSymbolLength"
 	BEP82                   = sdk.BEP82
+	BEP100 = "BEP100"
 )
 
 func UpgradeBEP10(before func(), after func()) {
