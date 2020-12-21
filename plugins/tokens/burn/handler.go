@@ -34,14 +34,14 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 	}
 
 	var coins sdk.Coins
-	if sdk.IsUpgrade(sdk.BEP82) {
-		coins = keeper.GetCoins(ctx, msg.From)
-	} else {
+	if !sdk.IsUpgrade(sdk.BEP82) {
 		if !token.IsOwner(msg.From) {
 			logger.Info("burn token failed", "reason", "not token's owner", "from", msg.From, "owner", token.GetOwner())
 			return sdk.ErrUnauthorized("only the owner of the token can burn the token").Result()
 		}
 		coins = keeper.GetCoins(ctx, token.GetOwner())
+	} else {
+		coins = keeper.GetCoins(ctx, msg.From)
 	}
 
 	balance := coins.AmountOf(symbol)

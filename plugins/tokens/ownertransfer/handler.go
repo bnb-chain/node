@@ -34,7 +34,7 @@ func handleOwnerTransfer(ctx sdk.Context, tokenMapper store.Mapper, msg Transfer
 	}
 
 	if !token.IsOwner(msg.From) {
-		logger.Info("transfer owner failed", "reason", "not token's owner", "from", msg.From, "owner", token.GetOwner())
+		logger.Info("transfer owner failed", "reason", "not token's owner")
 		return sdk.ErrUnauthorized("only the owner of the token can transfer the owner").Result()
 	}
 
