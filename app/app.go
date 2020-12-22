@@ -320,7 +320,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, upgradeConfig.BEP67Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, upgradeConfig.BEP70Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP100, upgradeConfig.BEP100Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP84, upgradeConfig.BEP84Height)
+	upgrade.Mgr.AddUpgradeHeight(sdk.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())

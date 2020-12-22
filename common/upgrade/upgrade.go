@@ -31,7 +31,7 @@ const (
 	BEP67 = "BEP67"  // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
 	BEP70 = "BEP70"  // https://github.com/binance-chain/BEPs/pull/70 BUSD Pair Upgrade
 
-	BEP100 = "BEP100"
+	BEP84 = "BEP84"
 )
 
 func UpgradeBEP10(before func(), after func()) {
