@@ -1,10 +1,7 @@
 package bridge
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
@@ -35,18 +32,15 @@ func RegisterCrossApps(keeper Keeper) {
 		panic(err)
 	}
 
-	// register new apps
-	if sdk.IsUpgrade(upgrade.BEP100) {
-		mirrorApp := NewMirrorApp(keeper)
-		err = keeper.ScKeeper.RegisterChannel(types.MirrorChannel, types.MirrorChannelID, mirrorApp)
-		if err != nil {
-			panic(err)
-		}
+	mirrorApp := NewMirrorApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.MirrorChannel, types.MirrorChannelID, mirrorApp)
+	if err != nil {
+		panic(err)
+	}
 
-		mirrorSyncApp := NewMirrorSyncApp(keeper)
-		err = keeper.ScKeeper.RegisterChannel(types.MirrorSyncChannel, types.MirrorSyncChannelID, mirrorSyncApp)
-		if err != nil {
-			panic(err)
-		}
+	mirrorSyncApp := NewMirrorSyncApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.MirrorSyncChannel, types.MirrorSyncChannelID, mirrorSyncApp)
+	if err != nil {
+		panic(err)
 	}
 }
