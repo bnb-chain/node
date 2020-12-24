@@ -18,10 +18,10 @@ func ValidatePairSymbol(symbol string) error {
 		return errors.New("invalid symbol: trading pair must contain an underscore ('_')")
 	}
 	for _, tokenSymbol := range tokenSymbols {
-		if types.IsValidMiniTokenSymbol(tokenSymbol) {
+		if types.IsValidMiniTokenSymbolLocal(tokenSymbol) {
 			continue
 		}
-		if err := types.ValidateTokenSymbol(tokenSymbol); err != nil {
+		if err := types.ValidateTokenSymbolLocal(tokenSymbol); err != nil {
 			return err
 		}
 	}

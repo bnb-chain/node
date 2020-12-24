@@ -59,7 +59,7 @@ func (c Commander) issueToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateIssueSymbol(symbol)
+	err = types.ValidateIssueSymbolLocal(symbol)
 	if err != nil {
 		return err
 	}
@@ -87,13 +87,13 @@ func (c Commander) mintToken(cmd *cobra.Command, args []string) error {
 	symbol := viper.GetString(flagSymbol)
 	amount := viper.GetInt64(flagAmount)
 
-	if types.IsValidMiniTokenSymbol(strings.ToUpper(symbol)) {
+	if types.IsValidMiniTokenSymbolLocal(strings.ToUpper(symbol)) {
 		err = checkMiniTokenSupplyAmount(amount)
 		if err != nil {
 			return err
 		}
 	} else {
-		err = types.ValidateTokenSymbol(symbol)
+		err = types.ValidateTokenSymbolLocal(symbol)
 		if err != nil {
 			return err
 		}

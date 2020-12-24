@@ -67,6 +67,8 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
 LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
+# Block height of token length adjustment upgrade
+AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
@@ -487,7 +489,8 @@ type UpgradeConfig struct {
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
-	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	LaunchBscUpgradeHeight        int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
@@ -498,20 +501,21 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 1,
-		BEP9Height:                 1,
-		BEP10Height:                1,
-		BEP19Height:                1,
-		BEP12Height:                1,
-		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: 1,
-		LotSizeUpgradeHeight:       1,
-		ListingRuleUpgradeHeight:   1,
-		FixZeroBalanceHeight:       1,
-		BEP8Height:                 1,
-		BEP67Height:                1,
-		BEP70Height:                1,
-		LaunchBscUpgradeHeight:     math.MaxInt64,
+		BEP6Height:                    1,
+		BEP9Height:                    1,
+		BEP10Height:                   1,
+		BEP19Height:                   1,
+		BEP12Height:                   1,
+		BEP3Height:                    1,
+		FixSignBytesOverflowHeight:    1,
+		LotSizeUpgradeHeight:          1,
+		ListingRuleUpgradeHeight:      1,
+		FixZeroBalanceHeight:          1,
+		BEP8Height:                    1,
+		BEP67Height:                   1,
+		BEP70Height:                   1,
+		LaunchBscUpgradeHeight:        1,
+		AdjustTokenSymbolLengthHeight: math.MaxInt64,
 	}
 }
 

@@ -45,7 +45,7 @@ func (c Commander) issueMiniToken(cmd *cobra.Command, args []string) error {
 	}
 
 	symbol := viper.GetString(flagSymbol)
-	err = types.ValidateIssueMiniSymbol(symbol)
+	err = types.ValidateIssueMiniSymbolLocal(symbol)
 	if err != nil {
 		return err
 	}
