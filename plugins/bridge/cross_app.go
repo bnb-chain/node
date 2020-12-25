@@ -646,7 +646,10 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	// mint or burn
-	newSupply := mirrorSyncPackage.BEP20TotalSupply.Int64()
+	newSupply, sdkErr := types.ConvertBSCAmountToBCAmount(token.GetContractDecimals(), sdk.NewIntFromBigInt(mirrorSyncPackage.BEP20TotalSupply))
+	if sdkErr != nil {
+		panic("convert bsc total supply error")
+	}
 	if newSupply > ctypes.TokenMaxTotalSupply {
 		ackPackage, sdkErr := app.generateAckPackage(types.MirrorSyncErrCodeUnknown, mirrorSyncPackage)
 		if sdkErr != nil {
@@ -674,6 +677,9 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			}}); sdkError != nil {
 			panic(sdkError.Error())
 		}
+	}
+	if err := app.bridgeKeeper.TokenMapper.UpdateTotalSupply(ctx, symbol, newSupply); err !=nil {
+		panic(err.Error())
 	}
 
 	// add balance change accounts
