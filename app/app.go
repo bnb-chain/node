@@ -10,7 +10,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -56,6 +55,7 @@ import (
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"

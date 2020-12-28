@@ -11,7 +11,7 @@ import (
 
 const (
 	Route                    = "tokensOwnershipTransfer"
-	TransferOwnershipMsgType = "transfer_ownership"
+	TransferOwnershipMsgType = "transferOwnership"
 )
 
 var _ sdk.Msg = TransferOwnershipMsg{}
@@ -42,9 +42,11 @@ func (msg TransferOwnershipMsg) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress(fmt.Sprintf("Invalid newOwner, expected address length is %d, actual length is %d", sdk.AddrLen, len(msg.NewOwner)))
 	}
 
-	err := types.ValidateTokenSymbol(msg.Symbol)
-	if err != nil {
-		return sdk.ErrInvalidCoins(err.Error())
+	if !types.IsValidMiniTokenSymbol(msg.Symbol) {
+		err := types.ValidateTokenSymbol(msg.Symbol)
+		if err != nil {
+			return sdk.ErrInvalidCoins(err.Error())
+		}
 	}
 	return nil
 }

@@ -124,7 +124,9 @@ func (token *MiniToken) GetContractAddress() string {
 }
 
 func (token *MiniToken) SetOwner(addr sdk.AccAddress) {
-	token.Owner = addr
+	cp := make(sdk.AccAddress, len(addr.Bytes()))
+	copy(cp, addr)
+	token.Owner = cp
 }
 
 func (token MiniToken) GetOwner() sdk.AccAddress {
