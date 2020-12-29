@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/types/fees"
+
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -533,11 +535,26 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 
 	// add balance change accounts
 	if ctx.IsDeliverTx() {
+		// distribute fee
+		mirrorFeeAmount, sdkErr := types.ConvertBSCAmountToBCAmount(int8(mirrorPackage.BEP20Decimals), sdk.NewIntFromBigInt(mirrorPackage.MirrorFee))
+		if sdkErr != nil {
+			panic("convert bsc amount error")
+		}
+
+		feeCoins := sdk.Coins{{
+			Denom:  sdk.NativeTokenSymbol,
+			Amount: mirrorFeeAmount,
+		}}
+		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
+			panic(sdkError.Error())
+		}
+
+		mirrorFee := sdk.NewFee(feeCoins, sdk.FeeForAll)
+		fees.Pool.AddAndCommitFee(fmt.Sprintf("MIRROR_%s", symbol), mirrorFee)
+
 		addressesChanged := []sdk.AccAddress{types.PegAccount}
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 	}
-
-	// TODO: distribute fee
 
 	return sdk.ExecuteResult{
 		Payload: ackPackage,
@@ -678,17 +695,32 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			panic(sdkError.Error())
 		}
 	}
-	if err := app.bridgeKeeper.TokenMapper.UpdateTotalSupply(ctx, symbol, newSupply); err !=nil {
+	if err := app.bridgeKeeper.TokenMapper.UpdateTotalSupply(ctx, symbol, newSupply); err != nil {
 		panic(err.Error())
 	}
 
 	// add balance change accounts
 	if newSupply != token.GetTotalSupply().ToInt64() && ctx.IsDeliverTx() {
+		// distribute fee
+		mirrorSyncFeeAmount, sdkErr := types.ConvertBSCAmountToBCAmount(token.GetContractDecimals(), sdk.NewIntFromBigInt(mirrorSyncPackage.SyncFee))
+		if sdkErr != nil {
+			panic("convert bsc amount error")
+		}
+
+		feeCoins := sdk.Coins{{
+			Denom:  sdk.NativeTokenSymbol,
+			Amount: mirrorSyncFeeAmount,
+		}}
+		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
+			panic(sdkError.Error())
+		}
+
+		mirrorFee := sdk.NewFee(feeCoins, sdk.FeeForAll)
+		fees.Pool.AddAndCommitFee(fmt.Sprintf("MIRROR_SYNC_%s", symbol), mirrorFee)
+
 		addressesChanged := []sdk.AccAddress{types.PegAccount}
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 	}
-
-	// TODO: distribute fee
 
 	return sdk.ExecuteResult{}
 }
