@@ -55,7 +55,7 @@ import (
 	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
+	"github.com/binance-chain/node/plugins/tokens/ownership"
 	"github.com/binance-chain/node/plugins/tokens/seturi"
 	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
@@ -369,7 +369,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		dextypes.ListMiniMsg{}.Type(),
 	)
 
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownertransfer.TransferOwnershipMsg{}.Type())
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownership.TransferOwnershipMsg{}.Type())
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {

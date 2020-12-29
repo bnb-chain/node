@@ -1,4 +1,4 @@
-package ownertransfer
+package ownership
 
 import (
 	"encoding/json"
@@ -64,5 +64,5 @@ func (msg TransferOwnershipMsg) GetSigners() []sdk.AccAddress {
 }
 
 func (msg TransferOwnershipMsg) GetInvolvedAddresses() []sdk.AccAddress {
-	return msg.GetSigners()
+	return append(msg.GetSigners(), msg.NewOwner)
 }

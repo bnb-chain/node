@@ -11,7 +11,7 @@ import (
 
 	"github.com/binance-chain/node/common/client"
 	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/ownertransfer"
+	"github.com/binance-chain/node/plugins/tokens/ownership"
 )
 
 const flagNewOwner = "new-owner"
@@ -54,7 +54,7 @@ func (c Commander) transferOwnership(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	msg := ownertransfer.NewTransferOwnershipMsg(from, symbol, newOwner)
+	msg := ownership.NewTransferOwnershipMsg(from, symbol, newOwner)
 
 	return client.SendOrPrintTx(cliCtx, txBldr, msg)
 }

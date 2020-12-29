@@ -1,4 +1,4 @@
-package ownertransfer
+package ownership
 
 import (
 	"testing"
