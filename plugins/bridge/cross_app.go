@@ -536,10 +536,10 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 	// add balance change accounts
 	if ctx.IsDeliverTx() {
 		// distribute fee
-		mirrorFeeAmount, sdkErr := types.ConvertBSCAmountToBCAmount(int8(mirrorPackage.BEP20Decimals), sdk.NewIntFromBigInt(mirrorPackage.MirrorFee))
-		if sdkErr != nil {
+		if !mirrorPackage.MirrorFee.IsInt64() {
 			panic("convert bsc amount error")
 		}
+		mirrorFeeAmount := mirrorPackage.MirrorFee.Int64()
 
 		feeCoins := sdk.Coins{{
 			Denom:  sdk.NativeTokenSymbol,
@@ -562,12 +562,16 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 }
 
 func (app *MirrorApp) generateAckPackage(code uint8, symbol string, synPackage *types.MirrorSynPackage) ([]byte, sdk.Error) {
+	bscMirrorFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, synPackage.MirrorFee.Int64())
+	if sdkErr != nil {
+		return nil, sdkErr
+	}
 	ackPackage := &types.MirrorAckPackage{
 		MirrorSender: synPackage.MirrorSender,
 		ContractAddr: synPackage.ContractAddr,
 		Decimals:     synPackage.BEP20Decimals,
 		BEP2Symbol:   types.SymbolToBytes(symbol),
-		MirrorFee:    synPackage.MirrorFee,
+		MirrorFee:    bscMirrorFee.BigInt(),
 		ErrorCode:    code,
 	}
 
@@ -702,10 +706,10 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	// add balance change accounts
 	if newSupply != token.GetTotalSupply().ToInt64() && ctx.IsDeliverTx() {
 		// distribute fee
-		mirrorSyncFeeAmount, sdkErr := types.ConvertBSCAmountToBCAmount(token.GetContractDecimals(), sdk.NewIntFromBigInt(mirrorSyncPackage.SyncFee))
-		if sdkErr != nil {
+		if !mirrorSyncPackage.SyncFee.IsInt64() {
 			panic("convert bsc amount error")
 		}
+		mirrorSyncFeeAmount := mirrorSyncPackage.SyncFee.Int64()
 
 		feeCoins := sdk.Coins{{
 			Denom:  sdk.NativeTokenSymbol,
@@ -726,10 +730,14 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 }
 
 func (app *MirrorSyncApp) generateAckPackage(code uint8, synPackage *types.MirrorSyncSynPackage) ([]byte, sdk.Error) {
+	bscSyncFee, sdkErr := types.ConvertBCAmountToBSCAmount(types.BSCBNBDecimals, synPackage.SyncFee.Int64())
+	if sdkErr != nil {
+		return nil, sdkErr
+	}
 	ackPackage := &types.MirrorSyncAckPackage{
 		SyncSender:   synPackage.SyncSender,
 		ContractAddr: synPackage.ContractAddr,
-		SyncFee:      synPackage.SyncFee,
+		SyncFee:      bscSyncFee.BigInt(),
 		ErrorCode:    code,
 	}
 
