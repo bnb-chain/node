@@ -127,28 +127,8 @@ func (token Token) String() string {
 		token.Name, token.Symbol, token.TotalSupply, token.Owner, token.Mintable)
 }
 
-func ValidateIssueSymbolLocal(symbol string) error {
-	if len(symbol) == 0 {
-		return errors.New("token symbol cannot be empty")
-	}
-
-	if strings.HasSuffix(symbol, TokenSymbolDotBSuffix) {
-		symbol = strings.TrimSuffix(symbol, TokenSymbolDotBSuffix)
-	}
-
-	// check len without .B suffix
-	symbolLen := len(symbol)
-	if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolNewMinLen {
-		return errors.New("length of token symbol is limited to 2~8")
-	}
-
-	if !utils.IsAlphaNum(symbol) {
-		return errors.New("token symbol should be alphanumeric")
-	}
-
-	return nil
-}
-
+// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.
+// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use TokenSymbolNewMinLen
 func ValidateIssueSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("token symbol cannot be empty")
@@ -160,14 +140,12 @@ func ValidateIssueSymbol(symbol string) error {
 
 	// check len without .B suffix
 	symbolLen := len(symbol)
-	if sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
 		if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolNewMinLen {
 			return errors.New("length of token symbol is limited to 2~8")
 		}
-	} else {
-		if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolMinLen {
-			return errors.New("length of token symbol is limited to 3~8")
-		}
+	} else if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolMinLen {
+		return errors.New("length of token symbol is limited to 3~8")
 	}
 
 	if !utils.IsAlphaNum(symbol) {
@@ -184,65 +162,6 @@ func ValidateTokenSymbols(coins sdk.Coins) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func ValidateTokenSymbolLocal(symbol string) error {
-	if len(symbol) == 0 {
-		return errors.New("suffixed token symbol cannot be empty")
-	}
-
-	// suffix exception for native token (less drama in existing tests)
-	if symbol == NativeTokenSymbol ||
-		symbol == NativeTokenSymbolDotBSuffixed {
-		return nil
-	}
-
-	parts, err := splitSuffixedTokenSymbol(symbol)
-	if err != nil {
-		return err
-	}
-
-	symbolPart := parts[0]
-
-	// since the native token was given a suffix exception above, do not allow it to have a suffix
-	if symbolPart == NativeTokenSymbol ||
-		symbolPart == NativeTokenSymbolDotBSuffixed {
-		return errors.New("native token symbol should not be suffixed with tx hash")
-	}
-
-	if strings.HasSuffix(symbolPart, TokenSymbolDotBSuffix) {
-		symbolPart = strings.TrimSuffix(symbolPart, TokenSymbolDotBSuffix)
-	}
-
-	// check len without .B suffix
-	if len(symbolPart) < TokenSymbolNewMinLen {
-		return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
-	}
-
-	if len(symbolPart) > TokenSymbolMaxLen {
-		return fmt.Errorf("token symbol part is too long, got %d chars", len(symbolPart))
-	}
-
-	if !utils.IsAlphaNum(symbolPart) {
-		return errors.New("token symbol part should be alphanumeric")
-	}
-
-	txHashPart := parts[1]
-
-	if len(txHashPart) != TokenSymbolTxHashSuffixLen {
-		return fmt.Errorf("token symbol tx hash suffix must be %d chars in length, got %d", TokenSymbolTxHashSuffixLen, len(txHashPart))
-	}
-
-	// prohibit non-hexadecimal chars in the suffix part
-	isHex, err := regexp.MatchString(fmt.Sprintf("[0-9A-F]{%d}", TokenSymbolTxHashSuffixLen), txHashPart)
-	if err != nil {
-		return err
-	}
-	if !isHex {
-		return fmt.Errorf("token symbol tx hash suffix must be hex with a length of %d", TokenSymbolTxHashSuffixLen)
-	}
-
 	return nil
 }
 
@@ -275,7 +194,9 @@ func ValidateTokenSymbol(symbol string) error {
 	}
 
 	// check len without .B suffix
-	if sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.
+	// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use TokenSymbolNewMinLen
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
 		if len(symbolPart) < TokenSymbolNewMinLen {
 			return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
 		}
