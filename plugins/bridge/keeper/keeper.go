@@ -54,16 +54,9 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, accountKeeper auth.Accou
 	}
 }
 
-func (k Keeper) RefundTransferIn(decimals int8, transferInClaim *types.TransferInSynPackage, refundReason types.RefundReason, excludeIdx []int) ([]byte, sdk.Error) {
-	excludeMap := make(map[int]bool, len(excludeIdx))
-	for _, transferInIdx := range excludeIdx {
-		excludeMap[transferInIdx] = true
-	}
+func (k Keeper) RefundTransferIn(decimals int8, transferInClaim *types.TransferInSynPackage, refundReason types.RefundReason) ([]byte, sdk.Error) {
 	refundBscAmounts := make([]*big.Int, 0, len(transferInClaim.RefundAddresses))
 	for idx := range transferInClaim.RefundAddresses {
-		if excludeMap[idx] {
-			continue
-		}
 		bscAmount, sdkErr := types.ConvertBCAmountToBSCAmount(decimals, transferInClaim.Amounts[idx].Int64())
 		if sdkErr != nil {
 			return nil, sdkErr

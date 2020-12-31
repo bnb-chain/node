@@ -499,18 +499,18 @@ type UpgradeConfig struct {
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
-	LaunchBscUpgradeHeight                          int64 `mapstructure:"LaunchBscUpgradeHeight"`
-	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
+	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 
-	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
-	BEP82Height                   int64 `mapstructure:"BEP82Height"`
-	BEP84Height                   int64 `mapstructure:"BEP84Height"`
-	FixFailAckPackageHeight       int64 `mapstructure:"FixFailAckPackageHeight"`
+	AdjustTokenSymbolLengthHeight                   int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
+	BEP82Height                                     int64 `mapstructure:"BEP82Height"`
+	BEP84Height                                     int64 `mapstructure:"BEP84Height"`
+	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
+	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
