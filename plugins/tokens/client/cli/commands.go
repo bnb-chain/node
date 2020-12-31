@@ -36,6 +36,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 			depositHTLTCmd(cmdr),
 			claimHTLTCmd(cmdr),
 			refundHTLTCmd(cmdr),
+			transferOwnershipCmd(cmdr),
 		)...)
 
 	tokenCmd.AddCommand(

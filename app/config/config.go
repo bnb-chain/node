@@ -7,7 +7,9 @@ import (
 	"text/template"
 
 	"github.com/cosmos/cosmos-sdk/server"
+
 	"github.com/spf13/viper"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 )
@@ -73,8 +75,13 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+<<<<<<< HEAD
 # Block height of token length adjustment upgrade
 AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
+=======
+>>>>>>> 39859a3a... remove token owner verification when burning token
+# Block height of BEP82 upgrade
+BEP82Height = {{ .UpgradeConfig.BEP82Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -497,6 +504,7 @@ type UpgradeConfig struct {
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 
 	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
+	BEP82Height                   int64 `mapstructure:"BEP82Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -517,6 +525,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP70Height:                   1,
 		LaunchBscUpgradeHeight:        1,
 		AdjustTokenSymbolLengthHeight: math.MaxInt64,
+		BEP82Height:                   math.MaxInt64,
 	}
 }
 

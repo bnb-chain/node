@@ -40,6 +40,7 @@ type Mapper interface {
 	UpdateTotalSupply(ctx sdk.Context, symbol string, supply int64) error
 	UpdateBind(ctx sdk.Context, symbol string, contractAddress string, decimals int8) error
 	UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) error
+	UpdateOwner(ctx sdk.Context, symbol string, newOwner sdk.AccAddress) error
 }
 
 var _ Mapper = mapper{}
@@ -194,6 +195,34 @@ func (m mapper) UpdateBind(ctx sdk.Context, symbol string, contractAddress strin
 	toBeUpdated := m.decodeToken(bz)
 	toBeUpdated.SetContractDecimals(decimals)
 	toBeUpdated.SetContractAddress(contractAddress)
+
+	store.Set(key, m.encodeToken(toBeUpdated))
+	return nil
+}
+
+func (m mapper) UpdateOwner(ctx sdk.Context, symbol string, newOwner sdk.AccAddress) error {
+	if len(symbol) == 0 {
+		return errors.New("symbol cannot be empty")
+	}
+
+	if len(newOwner) != sdk.AddrLen {
+		return sdk.ErrInvalidAddress(fmt.Sprintf("Invalid newOwner, expected address length is %d, actual length is %d", sdk.AddrLen, len(newOwner)))
+	}
+
+	var key []byte
+	if types.IsMiniTokenSymbol(symbol) {
+		key = m.calcMiniTokenKey(strings.ToUpper(symbol))
+	} else {
+		key = []byte(strings.ToUpper(symbol))
+	}
+	store := ctx.KVStore(m.key)
+	bz := store.Get(key)
+	if bz == nil {
+		return errors.New("token does not exist")
+	}
+
+	toBeUpdated := m.decodeToken(bz)
+	toBeUpdated.SetOwner(newOwner)
 
 	store.Set(key, m.encodeToken(toBeUpdated))
 	return nil

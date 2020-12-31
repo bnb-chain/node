@@ -39,6 +39,7 @@ type IToken interface {
 	SetContractDecimals(decimal int8)
 	GetContractDecimals() int8
 
+	SetOwner(addr sdk.AccAddress)
 	GetOwner() sdk.AccAddress
 	IsMintable() bool
 	IsOwner(addr sdk.AccAddress) bool
@@ -92,6 +93,12 @@ func (token Token) GetTotalSupply() utils.Fixed8 {
 
 func (token *Token) SetTotalSupply(totalSupply utils.Fixed8) {
 	token.TotalSupply = totalSupply
+}
+
+func (token *Token) SetOwner(addr sdk.AccAddress) {
+	cp := make(sdk.AccAddress, len(addr.Bytes()))
+	copy(cp, addr)
+	token.Owner = cp
 }
 
 func (token Token) GetOwner() sdk.AccAddress {
