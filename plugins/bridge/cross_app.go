@@ -13,6 +13,7 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	ctypes "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/bridge/types"
 )
 
@@ -290,7 +291,7 @@ func (app *TransferInApp) checkTransferInSynPackage(transferInPackage *types.Tra
 
 	for _, amount := range transferInPackage.Amounts {
 		// allow transfer 0 amount tokens
-		if sdk.IsUpgrade(sdk.FixFailAckPackage) {
+		if sdk.IsUpgrade(upgrade.FixFailAckPackage) {
 			if amount.Int64() < 0 {
 				return types.ErrInvalidAmount("amount to send should not be negative")
 			}

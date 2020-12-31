@@ -529,8 +529,8 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LaunchBscUpgradeHeight:        1,
 		AdjustTokenSymbolLengthHeight: math.MaxInt64,
 		BEP82Height:                   math.MaxInt64,
-		BEP84Height:                   1,
-		FixFailAckPackageHeight:       1,
+		BEP84Height:                   math.MaxInt64,
+		FixFailAckPackageHeight:       math.MaxInt64,
 	}
 }
 
