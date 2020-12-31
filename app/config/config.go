@@ -75,25 +75,14 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 # Block height of token length adjustment upgrade
 AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
-=======
->>>>>>> 39859a3a... remove token owner verification when burning token
 # Block height of BEP82 upgrade
 BEP82Height = {{ .UpgradeConfig.BEP82Height }}
-=======
-# Block height of BEP100 upgrade
-BEP100Height = {{ .UpgradeConfig.BEP100Height }}
->>>>>>> implement bep100
-=======
 # Block height of BEP84 upgrade
 BEP84Height = {{ .UpgradeConfig.BEP84Height }}
 # Block height of FixFailAckPackage upgrade
 FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
->>>>>>> add upgrade height for FixFailAckPackage
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -517,7 +506,6 @@ type UpgradeConfig struct {
 
 	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
 	BEP82Height                   int64 `mapstructure:"BEP82Height"`
-	BEP100Height                  int64 `mapstructure:"BEP100Height"`
 	BEP84Height                   int64 `mapstructure:"BEP84Height"`
 	FixFailAckPackageHeight       int64 `mapstructure:"FixFailAckPackageHeight"`
 }
@@ -541,8 +529,8 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LaunchBscUpgradeHeight:        1,
 		AdjustTokenSymbolLengthHeight: math.MaxInt64,
 		BEP82Height:                   math.MaxInt64,
-		BEP84Height:                   1,
-		FixFailAckPackageHeight:       1,
+		BEP84Height:                   math.MaxInt64,
+		FixFailAckPackageHeight:       math.MaxInt64,
 	}
 }
 
