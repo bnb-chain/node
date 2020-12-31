@@ -9,12 +9,14 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
 const (
 	MiniTokenSymbolMaxLen          = 8
 	MiniTokenSymbolMinLen          = 3
+	MiniTokenSymbolNewMinLen       = 2
 	MiniTokenSymbolSuffixLen       = 4 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	MiniTokenSymbolMSuffix         = "M"
@@ -158,6 +160,8 @@ func IsValidMiniTokenSymbol(symbol string) bool {
 	return ValidateMiniTokenSymbol(symbol) == nil
 }
 
+// This function is used by both client and server side, and the client needs to use MiniTokenSymbolNewMinLen for the validation.
+// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use MiniTokenSymbolNewMinLen
 func ValidateIssueMiniSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("token symbol cannot be empty")
@@ -169,7 +173,12 @@ func ValidateIssueMiniSymbol(symbol string) error {
 	}
 
 	// check len without suffix
-	if symbolLen := len(symbol); symbolLen > MiniTokenSymbolMaxLen || symbolLen < MiniTokenSymbolMinLen {
+	symbolLen := len(symbol)
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+		if symbolLen > MiniTokenSymbolMaxLen || symbolLen < MiniTokenSymbolNewMinLen {
+			return errors.New("length of token symbol is limited to 2~8")
+		}
+	} else if symbolLen > MiniTokenSymbolMaxLen || symbolLen < MiniTokenSymbolMinLen {
 		return errors.New("length of token symbol is limited to 3~8")
 	}
 
@@ -197,9 +206,16 @@ func ValidateMiniTokenSymbol(symbol string) error {
 
 	symbolPart := parts[0]
 	// check len without suffix
-	if len(symbolPart) < MiniTokenSymbolMinLen {
+	// This function is used by both client and server side, and the client needs to use MiniTokenSymbolNewMinLen for the validation.
+	// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use MiniTokenSymbolNewMinLen
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+		if len(symbolPart) < MiniTokenSymbolNewMinLen {
+			return fmt.Errorf("mini-token symbol part is too short, got %d chars", len(symbolPart))
+		}
+	} else if len(symbolPart) < MiniTokenSymbolMinLen {
 		return fmt.Errorf("mini-token symbol part is too short, got %d chars", len(symbolPart))
 	}
+
 	if len(symbolPart) > MiniTokenSymbolMaxLen {
 		return fmt.Errorf("mini-token symbol part is too long, got %d chars", len(symbolPart))
 	}

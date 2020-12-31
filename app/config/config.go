@@ -73,6 +73,8 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+# Block height of token length adjustment upgrade
+AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -493,25 +495,28 @@ type UpgradeConfig struct {
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
+
+	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 1,
-		BEP9Height:                 1,
-		BEP10Height:                1,
-		BEP19Height:                1,
-		BEP12Height:                1,
-		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: 1,
-		LotSizeUpgradeHeight:       1,
-		ListingRuleUpgradeHeight:   1,
-		FixZeroBalanceHeight:       1,
-		BEP8Height:                 1,
-		BEP67Height:                1,
-		BEP70Height:                1,
-		LaunchBscUpgradeHeight:     math.MaxInt64,
+		BEP6Height:                    1,
+		BEP9Height:                    1,
+		BEP10Height:                   1,
+		BEP19Height:                   1,
+		BEP12Height:                   1,
+		BEP3Height:                    1,
+		FixSignBytesOverflowHeight:    1,
+		LotSizeUpgradeHeight:          1,
+		ListingRuleUpgradeHeight:      1,
+		FixZeroBalanceHeight:          1,
+		BEP8Height:                    1,
+		BEP67Height:                   1,
+		BEP70Height:                   1,
+		LaunchBscUpgradeHeight:        1,
+		AdjustTokenSymbolLengthHeight: math.MaxInt64,
 	}
 }
 
