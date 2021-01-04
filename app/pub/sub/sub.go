@@ -31,6 +31,12 @@ func SubscribeEvent(sub *pubsub.Subscriber, cfg *config.PublicationConfig) error
 		}
 	}
 
+	if cfg.PublishMirror {
+		if err := SubscribeMirrorEvent(sub); err != nil {
+			return err
+		}
+	}
+
 	// commit events data from staging area to 'toPublish' when receiving `TxDeliverEvent`, represents the tx is successfully delivered.
 	if err := sub.Subscribe(TxDeliverTopic, func(event pubsub.Event) {
 		switch event.(type) {
@@ -71,6 +77,8 @@ type EventStore struct {
 	SlashData map[string][]SlashData
 	// store for cross chain transfer topic
 	CrossTransferData []bridge.CrossTransferEvent
+	// store for mirror topic
+	MirrorData []bridge.MirrorEvent
 }
 
 func newEventStore() *EventStore {
@@ -98,6 +106,9 @@ func commit(cfg *config.PublicationConfig) {
 	}
 	if cfg.PublishCrossTransfer {
 		commitCrossTransfer()
+	}
+	if cfg.PublishMirror {
+		commitMirror()
 	}
 	// clear stagingArea data
 	stagingArea = newEventStore()

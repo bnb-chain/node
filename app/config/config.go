@@ -316,6 +316,10 @@ type PublicationConfig struct {
 	CrossTransferTopic   string `mapstructure:"crossTransferTopic"`
 	CrossTransferKafka   string `mapstructure:"crossTransferKafka"`
 
+	PublishMirror bool   `mapstructure:"publishMirror"`
+	MirrorTopic   string `mapstructure:"mirrorTopic"`
+	MirrorKafka   string `mapstructure:"mirrorKafka"`
+
 	PublishSideProposal bool   `mapstructure:"publishSideProposal"`
 	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
 	SideProposalKafka   string `mapstructure:"sideProposalKafka"`

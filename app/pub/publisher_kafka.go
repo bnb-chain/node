@@ -35,6 +35,7 @@ type KafkaMarketDataPublisher struct {
 	distributionCodec     *goavro.Codec
 	slashingCodec         *goavro.Codec
 	crossTransferCodec    *goavro.Codec
+	mirrorCodec           *goavro.Codec
 	sideProposalCodec     *goavro.Codec
 	breatheBlockCodec     *goavro.Codec
 
@@ -295,6 +296,8 @@ func (publisher KafkaMarketDataPublisher) resolveTopic(tpe msgType) (topic strin
 		topic = Cfg.SlashingTopic
 	case crossTransferTpe:
 		topic = Cfg.CrossTransferTopic
+	case mirrorTpe:
+		topic = Cfg.MirrorTopic
 	case sideProposalType:
 		topic = Cfg.SideProposalTopic
 	case breatheBlockTpe:
@@ -385,6 +388,8 @@ func (publisher *KafkaMarketDataPublisher) marshal(msg AvroOrJsonMsg, tpe msgTyp
 		codec = publisher.slashingCodec
 	case crossTransferTpe:
 		codec = publisher.crossTransferCodec
+	case mirrorTpe:
+		codec = publisher.mirrorCodec
 	case sideProposalType:
 		codec = publisher.sideProposalCodec
 	case breatheBlockTpe:
@@ -419,6 +424,8 @@ func (publisher *KafkaMarketDataPublisher) initAvroCodecs() (err error) {
 	} else if publisher.slashingCodec, err = goavro.NewCodec(slashingSchema); err != nil {
 		return err
 	} else if publisher.crossTransferCodec, err = goavro.NewCodec(crossTransferSchema); err != nil {
+		return err
+	} else if publisher.mirrorCodec, err = goavro.NewCodec(mirrorSchema); err != nil {
 		return err
 	} else if publisher.sideProposalCodec, err = goavro.NewCodec(sideProposalsSchema); err != nil {
 		return err
