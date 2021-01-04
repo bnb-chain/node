@@ -1,7 +1,6 @@
 package burn
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -173,7 +172,6 @@ func TestHandleBurn(t *testing.T) {
 
 	burnMsg = NewMsg(acc2.GetAddress(), "NNB-000", 90000000)
 	sdkResult = handler(ctx, burnMsg)
-	fmt.Println(sdkResult.Log)
 	require.Equal(t, true, sdkResult.Code.IsOK())
 
 	account2 := accountKeeper.GetAccount(ctx, acc2.GetAddress()).(types.NamedAccount)
