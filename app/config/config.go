@@ -75,11 +75,8 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
-<<<<<<< HEAD
 # Block height of token length adjustment upgrade
 AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
-=======
->>>>>>> 39859a3a... remove token owner verification when burning token
 # Block height of BEP82 upgrade
 BEP82Height = {{ .UpgradeConfig.BEP82Height }}
 
