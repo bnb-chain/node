@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/types/fees"
-
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -585,6 +584,8 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 
 		addressesChanged := []sdk.AccAddress{types.PegAccount}
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
+
+		publishMirrorEvent(ctx, app.bridgeKeeper, mirrorPackage, symbol, supply, mirrorFeeAmount, relayerFee)
 	}
 
 	return sdk.ExecuteResult{
@@ -755,6 +756,8 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 
 		addressesChanged := []sdk.AccAddress{types.PegAccount}
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
+
+		publishMirrorSyncEvent(ctx, app.bridgeKeeper, mirrorSyncPackage, symbol, newSupply, mirrorSyncFeeAmount, relayerFee)
 	}
 
 	return sdk.ExecuteResult{}

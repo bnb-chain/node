@@ -147,6 +147,23 @@ func TestCrossTransferMarsha(t *testing.T) {
 	}
 }
 
+func TestMirrorMarsha(t *testing.T) {
+	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
+	msg := Mirrors{
+		Height:    10,
+		Num:       2,
+		Timestamp: time.Now().Unix(),
+		Mirrors: []Mirror{
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", Sender: "xxxx", RelayerFee: 1, Contract: "xxxx", BEP20Name: "ad", BEP20Symbol: "xxx", BEP2Symbol: "xx", TotalSupply: 1000, Decimals: 9, Fee: 100},
+			{TxHash: "xxxx", ChainId: "rialto", Type: "xx", Sender: "xxxx", RelayerFee: 0, Contract: "xxxx", BEP20Name: "ad", BEP20Symbol: "xxx", BEP2Symbol: "xx", TotalSupply: 1000, Decimals: 9, Fee: 100},
+		},
+	}
+	_, err := publisher.marshal(&msg, mirrorTpe)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSideProposalMarsha(t *testing.T) {
 	publisher := NewKafkaMarketDataPublisher(Logger, "", false)
 	msg := SideProposals{
