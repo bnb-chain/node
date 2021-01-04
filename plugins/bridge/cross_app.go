@@ -563,21 +563,22 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 		panic("generate ack package error")
 	}
 
+	// distribute fee
+	if !mirrorPackage.MirrorFee.IsInt64() {
+		panic("convert bsc amount error")
+	}
+	mirrorFeeAmount := mirrorPackage.MirrorFee.Int64()
+
+	feeCoins := sdk.Coins{{
+		Denom:  sdk.NativeTokenSymbol,
+		Amount: mirrorFeeAmount,
+	}}
+	if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
+		panic(sdkError.Error())
+	}
+
 	// add balance change accounts
 	if ctx.IsDeliverTx() {
-		// distribute fee
-		if !mirrorPackage.MirrorFee.IsInt64() {
-			panic("convert bsc amount error")
-		}
-		mirrorFeeAmount := mirrorPackage.MirrorFee.Int64()
-
-		feeCoins := sdk.Coins{{
-			Denom:  sdk.NativeTokenSymbol,
-			Amount: mirrorFeeAmount,
-		}}
-		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
-			panic(sdkError.Error())
-		}
 
 		mirrorFee := sdk.NewFee(feeCoins, sdk.FeeForAll)
 		fees.Pool.AddAndCommitFee(fmt.Sprintf("MIRROR_%s", symbol), mirrorFee)
@@ -735,20 +736,20 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		panic(err.Error())
 	}
 
+	mirrorSyncFeeAmount := mirrorSyncPackage.SyncFee.Int64()
+	feeCoins := sdk.Coins{{
+		Denom:  sdk.NativeTokenSymbol,
+		Amount: mirrorSyncFeeAmount,
+	}}
+	if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
+		panic(sdkError.Error())
+	}
+
 	// add balance change accounts
-	if newSupply != token.GetTotalSupply().ToInt64() && ctx.IsDeliverTx() {
+	if ctx.IsDeliverTx() {
 		// distribute fee
 		if !mirrorSyncPackage.SyncFee.IsInt64() {
 			panic("convert bsc amount error")
-		}
-		mirrorSyncFeeAmount := mirrorSyncPackage.SyncFee.Int64()
-
-		feeCoins := sdk.Coins{{
-			Denom:  sdk.NativeTokenSymbol,
-			Amount: mirrorSyncFeeAmount,
-		}}
-		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, types.PegAccount, feeCoins); sdkError != nil {
-			panic(sdkError.Error())
 		}
 
 		mirrorFee := sdk.NewFee(feeCoins, sdk.FeeForAll)
