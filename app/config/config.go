@@ -157,6 +157,11 @@ publishCrossTransfer = {{ .PublicationConfig.PublishCrossTransfer }}
 crossTransferTopic = "{{ .PublicationConfig.CrossTransferTopic }}"
 crossTransferKafka = "{{ .PublicationConfig.CrossTransferKafka }}"
 
+# Whether we want publish mirror events
+publishMirror = {{ .PublicationConfig.PublishMirror }}
+mirrorTopic = "{{ .PublicationConfig.MirrorTopic }}"
+mirrorKafka = "{{ .PublicationConfig.MirrorKafka }}"
+
 # Whether we want publish side proposals
 publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
 sideProposalTopic = "{{ .PublicationConfig.SideProposalTopic }}"
