@@ -59,7 +59,7 @@ func handleBurnToken(ctx sdk.Context, tokenMapper store.Mapper, keeper bank.Keep
 		}
 	}
 
-	_, _, sdkError := keeper.SubtractCoins(ctx, token.GetOwner(), sdk.Coins{{
+	_, _, sdkError := keeper.SubtractCoins(ctx, msg.From, sdk.Coins{{
 		Denom:  symbol,
 		Amount: burnAmount,
 	}})

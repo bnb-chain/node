@@ -1,6 +1,7 @@
 package burn
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -164,5 +165,19 @@ func TestHandleBurn(t *testing.T) {
 	sdkResult = handler(ctx, burnMsg)
 	require.Equal(t, false, sdkResult.Code.IsOK())
 	require.Contains(t, sdkResult.Log, "do not have enough token to burn")
+
+	acc.SetCoins(sdk.Coins{sdk.NewCoin("NNB-000", 0)})
+	acc2.SetCoins(sdk.Coins{sdk.NewCoin("NNB-000", 99999999)})
+	accountKeeper.SetAccount(ctx, acc2)
+	accountKeeper.SetAccount(ctx, acc)
+
+	burnMsg = NewMsg(acc2.GetAddress(), "NNB-000", 90000000)
+	sdkResult = handler(ctx, burnMsg)
+	fmt.Println(sdkResult.Log)
+	require.Equal(t, true, sdkResult.Code.IsOK())
+
+	account2 := accountKeeper.GetAccount(ctx, acc2.GetAddress()).(types.NamedAccount)
+	amount2 := account2.GetCoins().AmountOf("NNB-000")
+	require.Equal(t, int64(9999999), amount2)
 
 }
