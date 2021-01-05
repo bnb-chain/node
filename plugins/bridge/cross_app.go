@@ -604,6 +604,7 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 	tags = tags.AppendTag(types.TagMirrorSupply, []byte(fmt.Sprintf("%d", supply)))
 
 	return sdk.ExecuteResult{
+		Tags:    tags,
 		Payload: ackPackage,
 	}
 }
@@ -716,6 +717,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 
 		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", types.MirrorSyncErrNotBoundByMirror)))
 		return sdk.ExecuteResult{
+			Tags:    tags,
 			Payload: ackPackage,
 		}
 	}
@@ -732,6 +734,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		}
 		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", types.MirrorSyncErrInvalidSupply)))
 		return sdk.ExecuteResult{
+			Tags:    tags,
 			Payload: ackPackage,
 		}
 	}
