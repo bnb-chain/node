@@ -157,8 +157,9 @@ func DeserializeMirrorSynPackage(serializedPackage []byte) (*MirrorSynPackage, s
 const (
 	MirrorErrCodeExpired          uint8 = 1
 	MirrorErrCodeBEP2SymbolExists uint8 = 2
-	MirrorErrCodeWrongAlreadyBond uint8 = 3
-	MirrorErrCodeUnknown          uint8 = 4
+	MirrorErrCodeDecimalOverflow  uint8 = 3
+	MirrorErrCodeInvalidSymbol    uint8 = 4
+	MirrorErrCodeInvalidSupply    uint8 = 5
 )
 
 type MirrorAckPackage struct {
@@ -173,7 +174,7 @@ type MirrorAckPackage struct {
 const (
 	MirrorSyncErrCodeExpired      uint8 = 1
 	MirrorSyncErrNotBoundByMirror uint8 = 2
-	MirrorSyncErrCodeUnknown      uint8 = 3
+	MirrorSyncErrInvalidSupply    uint8 = 3
 )
 
 type MirrorSyncSynPackage struct {

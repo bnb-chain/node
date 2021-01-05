@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
@@ -481,17 +482,22 @@ func (app *MirrorApp) checkMirrorSynPackage(ctx sdk.Context, mirrorPackage *type
 	symbol := types.BytesToSymbol(mirrorPackage.BEP20Symbol)
 	err := ctypes.ValidateIssueSymbol(symbol)
 	if err != nil {
-		return types.MirrorErrCodeUnknown
+		return types.MirrorErrCodeInvalidSymbol
 	}
 
 	// check supply
 	supplyBigInt, cerr := types.ConvertBSCAmountToBCAmountBigInt(int8(mirrorPackage.BEP20Decimals), sdk.NewIntFromBigInt(mirrorPackage.BEP20TotalSupply))
 	if cerr != nil {
-		return types.MirrorErrCodeUnknown
+		return types.MirrorErrCodeInvalidSupply
 	}
 	maxSupply := sdk.NewInt(sdk.TokenMaxTotalSupply)
 	if supplyBigInt.GT(maxSupply) {
-		return types.MirrorErrCodeUnknown
+		return types.MirrorErrCodeInvalidSupply
+	}
+
+	// check decimals
+	if mirrorPackage.BEP20Decimals > math.MaxInt8 {
+		return types.MirrorErrCodeDecimalOverflow
 	}
 
 	return 0
@@ -504,15 +510,20 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 		panic("unmarshal mirror claim error")
 	}
 
+	tags := sdk.Tags{
+		sdk.MakeTag(types.TagMirrorContract, []byte(mirrorPackage.ContractAddr.String())),
+	}
+
 	errCode := app.checkMirrorSynPackage(ctx, mirrorPackage)
 	if errCode != 0 {
 		ackPackage, sdkErr := app.generateAckPackage(errCode, "", mirrorPackage)
 		if sdkErr != nil {
 			panic("generate ack package error")
 		}
-
+		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", errCode)))
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
+			Tags:    tags,
 		}
 	}
 
@@ -525,9 +536,10 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 		if sdkErr != nil {
 			panic("generate ack package error")
 		}
-
+		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", types.MirrorErrCodeBEP2SymbolExists)))
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
+			Tags:    tags,
 		}
 	}
 
@@ -579,7 +591,6 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 
 	// add balance change accounts
 	if ctx.IsDeliverTx() {
-
 		mirrorFee := sdk.NewFee(feeCoins, sdk.FeeForAll)
 		fees.Pool.AddAndCommitFee(fmt.Sprintf("MIRROR_%s", symbol), mirrorFee)
 
@@ -588,6 +599,9 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 
 		publishMirrorEvent(ctx, app.bridgeKeeper, mirrorPackage, symbol, supply, mirrorFeeAmount, relayerFee)
 	}
+
+	tags = tags.AppendTag(types.TagMirrorSymbol, []byte(symbol))
+	tags = tags.AppendTag(types.TagMirrorSupply, []byte(fmt.Sprintf("%d", supply)))
 
 	return sdk.ExecuteResult{
 		Payload: ackPackage,
@@ -669,6 +683,10 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		panic("unmarshal mirror claim error")
 	}
 
+	tags := sdk.Tags{
+		sdk.MakeTag(types.TagMirrorContract, []byte(mirrorSyncPackage.ContractAddr.String())),
+	}
+
 	errCode := app.checkMirrorSyncPackage(ctx, mirrorSyncPackage)
 	if errCode != 0 {
 		ackPackage, sdkErr := app.generateAckPackage(errCode, mirrorSyncPackage)
@@ -676,8 +694,10 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			panic("generate ack package error")
 		}
 
+		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", errCode)))
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
+			Tags:    tags,
 		}
 	}
 
@@ -694,6 +714,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			panic("generate ack package error")
 		}
 
+		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", types.MirrorSyncErrNotBoundByMirror)))
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
 		}
@@ -705,11 +726,11 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		panic("convert bsc total supply error")
 	}
 	if newSupply > ctypes.TokenMaxTotalSupply {
-		ackPackage, sdkErr := app.generateAckPackage(types.MirrorSyncErrCodeUnknown, mirrorSyncPackage)
+		ackPackage, sdkErr := app.generateAckPackage(types.MirrorSyncErrInvalidSupply, mirrorSyncPackage)
 		if sdkErr != nil {
 			panic("generate ack package error")
 		}
-
+		tags = tags.AppendTag(types.TagMirrorErrorCode, []byte(fmt.Sprintf("%d", types.MirrorSyncErrInvalidSupply)))
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
 		}
@@ -761,7 +782,19 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		publishMirrorSyncEvent(ctx, app.bridgeKeeper, mirrorSyncPackage, symbol, newSupply, mirrorSyncFeeAmount, relayerFee)
 	}
 
-	return sdk.ExecuteResult{}
+	// generate success payload
+	ackPackage, sdkErr := app.generateAckPackage(0, mirrorSyncPackage)
+	if sdkErr != nil {
+		panic("generate ack package error")
+	}
+
+	tags = tags.AppendTag(types.TagMirrorSymbol, []byte(symbol))
+	tags = tags.AppendTag(types.TagMirrorSupply, []byte(fmt.Sprintf("%d", newSupply)))
+
+	return sdk.ExecuteResult{
+		Payload: ackPackage,
+		Tags:    tags,
+	}
 }
 
 func (app *MirrorSyncApp) generateAckPackage(code uint8, synPackage *types.MirrorSyncSynPackage) ([]byte, sdk.Error) {

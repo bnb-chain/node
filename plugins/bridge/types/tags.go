@@ -13,6 +13,11 @@ const (
 	TagChannel      = "Channel"
 	TagRelayerFee   = "relayerFee"
 
+	TagMirrorContract  = "contract"
+	TagMirrorSymbol    = "symbol"
+	TagMirrorSupply    = "supply"
+	TagMirrorErrorCode = "errCode"
+
 	transferInSuccess = "transferInSuccess_%s_%s"
 	transferInRefund  = "transferInRefund_%s_%s"
 )

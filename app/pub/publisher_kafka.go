@@ -185,6 +185,16 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 			return
 		}
 	}
+	if Cfg.PublishMirror {
+		if _, ok := publisher.producers[Cfg.MirrorTopic]; !ok {
+			publisher.producers[Cfg.MirrorTopic], err =
+				publisher.connectWithRetry(strings.Split(Cfg.MirrorKafka, KafkaBrokerSep), config)
+		}
+		if err != nil {
+			Logger.Error("failed to create mirror producer", "err", err)
+			return
+		}
+	}
 	if Cfg.PublishSideProposal {
 		if _, ok := publisher.producers[Cfg.SideProposalTopic]; !ok {
 			publisher.producers[Cfg.SideProposalTopic], err =

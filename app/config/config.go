@@ -400,6 +400,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		CrossTransferTopic:   "crossTransfer",
 		CrossTransferKafka:   "127.0.0.1:9092",
 
+		PublishMirror: false,
+		MirrorTopic:   "mirror",
+		MirrorKafka:   "127.0.0.1:9092",
+
 		PublishSideProposal: false,
 		SideProposalTopic:   "sideProposal",
 		SideProposalKafka:   "127.0.0.1:9092",
@@ -436,6 +440,7 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishStaking ||
 		pubCfg.PublishSlashing ||
 		pubCfg.PublishCrossTransfer ||
+		pubCfg.PublishMirror ||
 		pubCfg.PublishSideProposal ||
 		pubCfg.PublishBreatheBlock
 }
