@@ -23,4 +23,7 @@ const (
 
 	MinTransferOutExpireTimeGap = 60 * time.Second
 	MinBindExpireTimeGap        = 600 * time.Second
+
+	BNBContractAddr     = "0x0000000000000000000000000000000000000000"
+	BNBContractDecimals = 18
 )

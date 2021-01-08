@@ -556,6 +556,7 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 	// set bep20 related fields
 	token.SetContractAddress(mirrorPackage.ContractAddr.String())
 	token.SetContractDecimals(int8(mirrorPackage.BEP20Decimals))
+	app.bridgeKeeper.SetContractDecimals(ctx, mirrorPackage.ContractAddr, int8(mirrorPackage.BEP20Decimals))
 
 	// issue token and mint
 	if err := app.bridgeKeeper.TokenMapper.NewToken(ctx, token); err != nil {
