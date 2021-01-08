@@ -35,12 +35,17 @@ github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20210111045950-27d3e31a39d
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20210111045950-27d3e31a39d5/go.mod h1:25UaVXWOjzVAmL4I6szOdC4SQz4wsBG6wpv68V2vK7w=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:yaElUUxWtv/TC/ldGtlKAvS1vKwokxgJ1d97I+6is80=
+<<<<<<< HEAD
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3 h1:b8SqtWmtHPhPQ2ADzUgO9sr+ChKL9ho4dTorBjGAAyY=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3.0.20201228031956-49e16d81196f h1:5K4JCgpDemgOZzBDbsZwRw9hCsY1ChJH8RY4hm39Myk=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3.0.20201228031956-49e16d81196f/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3.0.20210111070629-4633aab27f9d h1:DysYTQbvSpVmlMF5eAVtEzLlWw+ZiGNZSS4Gmcl9/Og=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.3.0.20210111070629-4633aab27f9d/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
+=======
+github.com/binance-chain/bnc-tendermint v0.32.3-binance.4 h1:CShRjCKBmpZwVBDgwnQpbUiZlBFYpM7UQYST542DcdM=
+github.com/binance-chain/bnc-tendermint v0.32.3-binance.4/go.mod h1:kN5dNxE8voFtDqx2HjbM8sBIH5cUuMtLg0XEHjqzUiY=
+>>>>>>> 7978af8c... upgrade tendermint to 0.32.3-binance.4 to fix memory leak issue in hotsync mode
 github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.4 h1:BhaV2iiGWfRC6iB8HHOYJeUDwtQMB2pUA4ah+KCbBhI=
 github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.4/go.mod h1:Zmh8GRdNJB8DULIOBar3JCZp6tSpcvM1NGKfE9U2EzA=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.3 h1:FFpFbkzlP2HUyxQCm0eoU6mkfgMNynfqZRbeWqlaLdQ=
