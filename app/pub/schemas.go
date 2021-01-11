@@ -892,7 +892,7 @@ const (
 	mirrorSchema = `
         {
             "type": "record",
-            "name": "Mirror",
+            "name": "Mirrors",
             "namespace": "com.company",
             "fields": [
                 { "name": "height", "type": "long"},
