@@ -739,20 +739,20 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			Payload: ackPackage,
 		}
 	}
-
-	if newSupply > token.GetTotalSupply().ToInt64() {
+	oldSupply := token.GetTotalSupply().ToInt64()
+	if newSupply > oldSupply {
 		if _, _, sdkError := app.bridgeKeeper.BankKeeper.AddCoins(ctx, token.GetOwner(),
 			sdk.Coins{{
 				Denom:  token.GetSymbol(),
-				Amount: newSupply - token.GetTotalSupply().ToInt64(),
+				Amount: newSupply - oldSupply,
 			}}); sdkError != nil {
 			panic(sdkError.Error())
 		}
-	} else if newSupply < token.GetTotalSupply().ToInt64() {
+	} else if newSupply < oldSupply {
 		if _, _, sdkError := app.bridgeKeeper.BankKeeper.SubtractCoins(ctx, token.GetOwner(),
 			sdk.Coins{{
 				Denom:  token.GetSymbol(),
-				Amount: token.GetTotalSupply().ToInt64() - newSupply,
+				Amount: oldSupply - newSupply,
 			}}); sdkError != nil {
 			panic(sdkError.Error())
 		}
@@ -783,7 +783,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		addressesChanged := []sdk.AccAddress{types.PegAccount}
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 
-		publishMirrorSyncEvent(ctx, app.bridgeKeeper, mirrorSyncPackage, symbol, newSupply, mirrorSyncFeeAmount, relayerFee)
+		publishMirrorSyncEvent(ctx, app.bridgeKeeper, mirrorSyncPackage, symbol, oldSupply, newSupply, mirrorSyncFeeAmount, relayerFee)
 	}
 
 	// generate success payload

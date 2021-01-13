@@ -915,6 +915,7 @@ const (
 								{ "name": "bep20Name", "type": "string" },
 								{ "name": "bep20Symbol", "type": "string" },
 								{ "name": "bep2Symbol", "type": "string" },
+								{ "name": "oldTotalSupply", "type": "long" },
 								{ "name": "totalSupply", "type": "long" },
 								{ "name": "decimals", "type": "int" },
 								{ "name": "fee", "type": "long" }

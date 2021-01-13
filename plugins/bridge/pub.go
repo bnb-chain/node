@@ -94,18 +94,19 @@ func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from strin
 }
 
 type MirrorEvent struct {
-	TxHash      string
-	ChainId     string
-	Type        string
-	RelayerFee  int64
-	Sender      string
-	Contract    string
-	BEP20Name   string
-	BEP20Symbol string
-	BEP2Symbol  string
-	TotalSupply int64
-	Decimals    int
-	Fee         int64
+	TxHash         string
+	ChainId        string
+	Type           string
+	RelayerFee     int64
+	Sender         string
+	Contract       string
+	BEP20Name      string
+	BEP20Symbol    string
+	BEP2Symbol     string
+	OldTotalSupply int64
+	TotalSupply    int64
+	Decimals       int
+	Fee            int64
 }
 
 func (event MirrorEvent) GetTopic() pubsub.Topic {
@@ -137,20 +138,21 @@ func publishMirrorEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.Mirr
 	}
 }
 
-func publishMirrorSyncEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSyncSynPackage, symbol string, supply int64, relayFee int64, fee int64) {
+func publishMirrorSyncEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSyncSynPackage, symbol string, oldSupply int64, supply int64, relayFee int64, fee int64) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
 			event := MirrorEvent{
-				TxHash:      txHashStr,
-				ChainId:     keeper.DestChainName,
-				Type:        MirrorSyncType,
-				RelayerFee:  relayFee,
-				Sender:      pkg.SyncSender.String(),
-				Contract:    pkg.ContractAddr.String(),
-				BEP2Symbol:  symbol,
-				TotalSupply: supply,
-				Fee:         fee,
+				TxHash:         txHashStr,
+				ChainId:        keeper.DestChainName,
+				Type:           MirrorSyncType,
+				RelayerFee:     relayFee,
+				Sender:         pkg.SyncSender.String(),
+				Contract:       pkg.ContractAddr.String(),
+				BEP2Symbol:     symbol,
+				OldTotalSupply: oldSupply,
+				TotalSupply:    supply,
+				Fee:            fee,
 			}
 			keeper.PbsbServer.Publish(event)
 		} else {

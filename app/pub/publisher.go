@@ -392,18 +392,19 @@ func PublishEvent(
 			for _, mirror := range eventData.MirrorData {
 				msgNum++
 				mr := Mirror{
-					TxHash:      mirror.TxHash,
-					ChainId:     mirror.ChainId,
-					Type:        mirror.Type,
-					RelayerFee:  mirror.RelayerFee,
-					Sender:      mirror.Sender,
-					Contract:    mirror.Contract,
-					BEP20Name:   mirror.BEP20Name,
-					BEP20Symbol: mirror.BEP20Symbol,
-					BEP2Symbol:  mirror.BEP2Symbol,
-					TotalSupply: mirror.TotalSupply,
-					Decimals:    mirror.Decimals,
-					Fee:         mirror.Fee,
+					TxHash:         mirror.TxHash,
+					ChainId:        mirror.ChainId,
+					Type:           mirror.Type,
+					RelayerFee:     mirror.RelayerFee,
+					Sender:         mirror.Sender,
+					Contract:       mirror.Contract,
+					BEP20Name:      mirror.BEP20Name,
+					BEP20Symbol:    mirror.BEP20Symbol,
+					BEP2Symbol:     mirror.BEP2Symbol,
+					OldTotalSupply: mirror.OldTotalSupply,
+					TotalSupply:    mirror.TotalSupply,
+					Decimals:       mirror.Decimals,
+					Fee:            mirror.Fee,
 				}
 
 				mirrors = append(mirrors, mr)
