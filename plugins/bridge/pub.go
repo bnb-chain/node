@@ -113,7 +113,7 @@ func (event MirrorEvent) GetTopic() pubsub.Topic {
 	return MirrorTopic
 }
 
-func publishMirrorEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSynPackage, symbol string, supply int64, relayFee int64, fee int64) {
+func publishMirrorEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSynPackage, symbol string, supply int64, fee int64, relayFee int64) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
@@ -138,7 +138,7 @@ func publishMirrorEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.Mirr
 	}
 }
 
-func publishMirrorSyncEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSyncSynPackage, symbol string, oldSupply int64, supply int64, relayFee int64, fee int64) {
+func publishMirrorSyncEvent(ctx types.Context, keeper keeper.Keeper, pkg *btype.MirrorSyncSynPackage, symbol string, oldSupply int64, supply int64, fee int64, relayFee int64) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
