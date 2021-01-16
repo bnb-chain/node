@@ -1,4 +1,21 @@
 # Changelog
+
+## 0.8.1
+FEATURES
+* [\#809](https://github.com/binance-chain/node/pull/809) [Token] Implement BEP84
+* [\#810](https://github.com/binance-chain/node/pull/810) [Token] Transfer ownership of BEP2/BEP8 token
+* [\#811](https://github.com/binance-chain/node/pull/811) [Token] change the symbol minimum length to 2
+* [\#815](https://github.com/binance-chain/node/pull/815) [Token] burn transaction sender token fix
+
+
+## 0.8.0-hf.2
+BUG FIXES
+[sync] fix memory leak issue in hotsync
+
+## 0.8.0-hf.1
+BUG FIXES
+[CLI] bnbcli API Server get token issue
+
 ## 0.8.0
 FEATURES
 [Stake] import stake module for side chain
