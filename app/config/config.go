@@ -79,6 +79,12 @@ BEP70Height = {{ .UpgradeConfig.BEP70Height }}
 AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
 # Block height of BEP82 upgrade
 BEP82Height = {{ .UpgradeConfig.BEP82Height }}
+# Block height of BEP84 upgrade
+BEP84Height = {{ .UpgradeConfig.BEP84Height }}
+# Block height of FixFailAckPackage upgrade
+FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
+# Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
+EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -150,6 +156,11 @@ slashingKafka = "{{ .PublicationConfig.SlashingKafka }}"
 publishCrossTransfer = {{ .PublicationConfig.PublishCrossTransfer }}
 crossTransferTopic = "{{ .PublicationConfig.CrossTransferTopic }}"
 crossTransferKafka = "{{ .PublicationConfig.CrossTransferKafka }}"
+
+# Whether we want publish mirror events
+publishMirror = {{ .PublicationConfig.PublishMirror }}
+mirrorTopic = "{{ .PublicationConfig.MirrorTopic }}"
+mirrorKafka = "{{ .PublicationConfig.MirrorKafka }}"
 
 # Whether we want publish side proposals
 publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
@@ -310,6 +321,10 @@ type PublicationConfig struct {
 	CrossTransferTopic   string `mapstructure:"crossTransferTopic"`
 	CrossTransferKafka   string `mapstructure:"crossTransferKafka"`
 
+	PublishMirror bool   `mapstructure:"publishMirror"`
+	MirrorTopic   string `mapstructure:"mirrorTopic"`
+	MirrorKafka   string `mapstructure:"mirrorKafka"`
+
 	PublishSideProposal bool   `mapstructure:"publishSideProposal"`
 	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
 	SideProposalKafka   string `mapstructure:"sideProposalKafka"`
@@ -385,6 +400,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		CrossTransferTopic:   "crossTransfer",
 		CrossTransferKafka:   "127.0.0.1:9092",
 
+		PublishMirror: false,
+		MirrorTopic:   "mirror",
+		MirrorKafka:   "127.0.0.1:9092",
+
 		PublishSideProposal: false,
 		SideProposalTopic:   "sideProposal",
 		SideProposalKafka:   "127.0.0.1:9092",
@@ -421,6 +440,7 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishStaking ||
 		pubCfg.PublishSlashing ||
 		pubCfg.PublishCrossTransfer ||
+		pubCfg.PublishMirror ||
 		pubCfg.PublishSideProposal ||
 		pubCfg.PublishBreatheBlock
 }
@@ -500,8 +520,11 @@ type UpgradeConfig struct {
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 
-	AdjustTokenSymbolLengthHeight int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
-	BEP82Height                   int64 `mapstructure:"BEP82Height"`
+	AdjustTokenSymbolLengthHeight                   int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
+	BEP82Height                                     int64 `mapstructure:"BEP82Height"`
+	BEP84Height                                     int64 `mapstructure:"BEP84Height"`
+	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
+	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -523,6 +546,9 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LaunchBscUpgradeHeight:        1,
 		AdjustTokenSymbolLengthHeight: math.MaxInt64,
 		BEP82Height:                   math.MaxInt64,
+		BEP84Height:                   math.MaxInt64,
+		FixFailAckPackageHeight:       math.MaxInt64,
+		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
 
