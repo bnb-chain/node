@@ -26,6 +26,8 @@ const (
 	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
 
+	EnableAccountScriptsForCrossChainTransfer = "EnableAccountScriptsForCrossChainTransfer"
+
 	//Nightingale upgrade
 	BEP8  = sdk.BEP8 // https://github.com/binance-chain/BEPs/pull/69 Mini token upgrade
 	BEP67 = "BEP67"  // https://github.com/binance-chain/BEPs/pull/67 Expiry time upgrade
@@ -33,6 +35,8 @@ const (
 
 	AdjustTokenSymbolLength = "AdjustTokenSymbolLength"
 	BEP82                   = sdk.BEP82
+	BEP84                   = "BEP84" // https://github.com/binance-chain/BEPs/pull/84 Mirror Sync Upgrade
+	FixFailAckPackage       = sdk.FixFailAckPackage
 )
 
 func UpgradeBEP10(before func(), after func()) {

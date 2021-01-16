@@ -31,4 +31,16 @@ func RegisterCrossApps(keeper Keeper) {
 	if err != nil {
 		panic(err)
 	}
+
+	mirrorApp := NewMirrorApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.MirrorChannel, types.MirrorChannelID, mirrorApp)
+	if err != nil {
+		panic(err)
+	}
+
+	mirrorSyncApp := NewMirrorSyncApp(keeper)
+	err = keeper.ScKeeper.RegisterChannel(types.MirrorSyncChannel, types.MirrorSyncChannelID, mirrorSyncApp)
+	if err != nil {
+		panic(err)
+	}
 }

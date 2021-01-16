@@ -385,6 +385,41 @@ func PublishEvent(
 			publisher.publish(&crossTransferMsg, crossTransferTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
 		}
 
+		if cfg.PublishMirror {
+			var msgNum int
+			mirrors := make([]Mirror, 0)
+
+			for _, mirror := range eventData.MirrorData {
+				msgNum++
+				mr := Mirror{
+					TxHash:         mirror.TxHash,
+					ChainId:        mirror.ChainId,
+					Type:           mirror.Type,
+					RelayerFee:     mirror.RelayerFee,
+					Sender:         mirror.Sender,
+					Contract:       mirror.Contract,
+					BEP20Name:      mirror.BEP20Name,
+					BEP20Symbol:    mirror.BEP20Symbol,
+					BEP2Symbol:     mirror.BEP2Symbol,
+					OldTotalSupply: mirror.OldTotalSupply,
+					TotalSupply:    mirror.TotalSupply,
+					Decimals:       mirror.Decimals,
+					Fee:            mirror.Fee,
+				}
+
+				mirrors = append(mirrors, mr)
+			}
+
+			mirrorsMsg := Mirrors{
+				Num:       msgNum,
+				Height:    toPublish.Height,
+				Timestamp: toPublish.Timestamp.Unix(),
+				Mirrors:   mirrors,
+			}
+			publisher.publish(&mirrorsMsg, mirrorTpe, toPublish.Height, toPublish.Timestamp.UnixNano())
+
+		}
+
 		if cfg.PublishBreatheBlock && toPublish.IsBreatheBlock {
 			breatheBlockMsg := BreatheBlockMsg{
 				Height:    toPublish.Height,

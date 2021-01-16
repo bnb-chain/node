@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/binance-chain/node/common/types"
 	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type msgType int8
@@ -23,6 +24,7 @@ const (
 	distributionTpe
 	slashingTpe
 	crossTransferTpe
+	mirrorTpe
 	sideProposalType
 	breatheBlockTpe
 )
@@ -56,6 +58,8 @@ func (this msgType) String() string {
 		return "Slashing"
 	case crossTransferTpe:
 		return "CrossTransfer"
+	case mirrorTpe:
+		return "Mirror"
 	case sideProposalType:
 		return "SideProposal"
 	case breatheBlockTpe:
@@ -80,6 +84,7 @@ var latestSchemaVersions = map[msgType]int{
 	distributionTpe:    0,
 	slashingTpe:        0,
 	crossTransferTpe:   0,
+	mirrorTpe:          0,
 	sideProposalType:   0,
 	breatheBlockTpe:    0,
 }

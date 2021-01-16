@@ -28,10 +28,10 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.19.1-0.20201231022933-cf246787bd66
+	github.com/cosmos/cosmos-sdk => github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20210111045950-27d3e31a39d5
 	github.com/tendermint/go-amino => github.com/binance-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/binance-chain/bnc-tendermint-iavl v0.12.0-binance.4
-	github.com/tendermint/tendermint => github.com/binance-chain/bnc-tendermint v0.32.3-binance.3
+	github.com/tendermint/tendermint => github.com/binance-chain/bnc-tendermint v0.32.3-binance.3.0.20210111070629-4633aab27f9d
 	github.com/zondax/ledger-cosmos-go => github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.3
 	golang.org/x/crypto => github.com/tendermint/crypto v0.0.0-20190823183015-45b1026d81ae
 )

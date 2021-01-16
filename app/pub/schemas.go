@@ -775,6 +775,44 @@ const (
         }
 	`
 
+	mirrorSchema = `
+        {
+            "type": "record",
+            "name": "Mirrors",
+            "namespace": "com.company",
+            "fields": [
+                { "name": "height", "type": "long"},
+                { "name": "num", "type": "int" },
+                { "name": "timestamp", "type": "long" },
+                { "name": "mirrors",
+                  	"type": {    
+                    	"type": "array",
+                    	"items": {
+                        	"type": "record",
+							"name": "Mirror",
+                        	"namespace": "com.company",
+                        	"fields": [
+                            	{ "name": "txHash", "type": "string" },
+                				{ "name": "chainId", "type": "string" },
+								{ "name": "type", "type": "string" },
+								{ "name": "relayerFee", "type": "long" },
+								{ "name": "sender", "type": "string" },
+								{ "name": "contract", "type": "string" },
+								{ "name": "bep20Name", "type": "string" },
+								{ "name": "bep20Symbol", "type": "string" },
+								{ "name": "bep2Symbol", "type": "string" },
+								{ "name": "oldTotalSupply", "type": "long" },
+								{ "name": "totalSupply", "type": "long" },
+								{ "name": "decimals", "type": "int" },
+								{ "name": "fee", "type": "long" }
+                        	]
+                    	}
+                  	}    
+                }
+            ]
+        }
+	`
+
 	sideProposalsSchema = `
         {
             "type": "record",
