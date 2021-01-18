@@ -75,12 +75,12 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
-# Block height of token length adjustment upgrade
-AdjustTokenSymbolLengthHeight = {{ .UpgradeConfig.AdjustTokenSymbolLengthHeight }}
 # Block height of BEP82 upgrade
 BEP82Height = {{ .UpgradeConfig.BEP82Height }}
 # Block height of BEP84 upgrade
 BEP84Height = {{ .UpgradeConfig.BEP84Height }}
+# Block height of BEP87 upgrade
+BEP87Height = {{ .UpgradeConfig.BEP87Height }}
 # Block height of FixFailAckPackage upgrade
 FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
 # Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
@@ -520,9 +520,9 @@ type UpgradeConfig struct {
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
 
-	AdjustTokenSymbolLengthHeight                   int64 `mapstructure:"AdjustTokenSymbolLengthHeight"`
 	BEP82Height                                     int64 `mapstructure:"BEP82Height"`
 	BEP84Height                                     int64 `mapstructure:"BEP84Height"`
+	BEP87Height                                     int64 `mapstructure:"BEP87Height"`
 	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 }
@@ -530,24 +530,24 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                    1,
-		BEP9Height:                    1,
-		BEP10Height:                   1,
-		BEP19Height:                   1,
-		BEP12Height:                   1,
-		BEP3Height:                    1,
-		FixSignBytesOverflowHeight:    1,
-		LotSizeUpgradeHeight:          1,
-		ListingRuleUpgradeHeight:      1,
-		FixZeroBalanceHeight:          1,
-		BEP8Height:                    1,
-		BEP67Height:                   1,
-		BEP70Height:                   1,
-		LaunchBscUpgradeHeight:        1,
-		AdjustTokenSymbolLengthHeight: math.MaxInt64,
-		BEP82Height:                   math.MaxInt64,
-		BEP84Height:                   math.MaxInt64,
-		FixFailAckPackageHeight:       math.MaxInt64,
+		BEP6Height:                 1,
+		BEP9Height:                 1,
+		BEP10Height:                1,
+		BEP19Height:                1,
+		BEP12Height:                1,
+		BEP3Height:                 1,
+		FixSignBytesOverflowHeight: 1,
+		LotSizeUpgradeHeight:       1,
+		ListingRuleUpgradeHeight:   1,
+		FixZeroBalanceHeight:       1,
+		BEP8Height:                 1,
+		BEP67Height:                1,
+		BEP70Height:                1,
+		LaunchBscUpgradeHeight:     1,
+		BEP82Height:                math.MaxInt64,
+		BEP84Height:                math.MaxInt64,
+		BEP87Height:                math.MaxInt64,
+		FixFailAckPackageHeight:    math.MaxInt64,
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }

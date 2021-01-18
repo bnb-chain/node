@@ -180,7 +180,7 @@ func ValidateIssueMiniSymbol(symbol string) error {
 
 	// check len without suffix
 	symbolLen := len(symbol)
-	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
 		if symbolLen > MiniTokenSymbolMaxLen || symbolLen < MiniTokenSymbolNewMinLen {
 			return errors.New("length of token symbol is limited to 2~8")
 		}
@@ -214,7 +214,7 @@ func ValidateMiniTokenSymbol(symbol string) error {
 	// check len without suffix
 	// This function is used by both client and server side, and the client needs to use MiniTokenSymbolNewMinLen for the validation.
 	// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use MiniTokenSymbolNewMinLen
-	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
 		if len(symbolPart) < MiniTokenSymbolNewMinLen {
 			return fmt.Errorf("mini-token symbol part is too short, got %d chars", len(symbolPart))
 		}
