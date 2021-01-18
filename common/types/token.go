@@ -147,7 +147,7 @@ func ValidateIssueSymbol(symbol string) error {
 
 	// check len without .B suffix
 	symbolLen := len(symbol)
-	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
 		if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolNewMinLen {
 			return errors.New("length of token symbol is limited to 2~8")
 		}
@@ -203,7 +203,7 @@ func ValidateTokenSymbol(symbol string) error {
 	// check len without .B suffix
 	// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.
 	// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use TokenSymbolNewMinLen
-	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.AdjustTokenSymbolLength) {
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
 		if len(symbolPart) < TokenSymbolNewMinLen {
 			return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
 		}
