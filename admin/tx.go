@@ -7,10 +7,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	"github.com/binance-chain/node/common/runtime"
+	"github.com/binance-chain/node/plugins/account"
+	"github.com/binance-chain/node/plugins/bridge"
 	"github.com/binance-chain/node/plugins/dex/order"
+	list "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens/burn"
 	"github.com/binance-chain/node/plugins/tokens/freeze"
 	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/binance-chain/node/plugins/tokens/ownership"
+	"github.com/binance-chain/node/plugins/tokens/seturi"
+	"github.com/binance-chain/node/plugins/tokens/swap"
 	"github.com/binance-chain/node/plugins/tokens/timelock"
 )
 
@@ -27,6 +33,18 @@ var transferOnlyModeBlackList = []string{
 	timelock.TimeRelockMsg{}.Type(),
 	issue.IssueMiniMsg{}.Type(),
 	issue.IssueTinyMsg{}.Type(),
+	seturi.SetURIMsg{}.Type(),
+	list.ListMsg{}.Type(),
+	list.ListMiniMsg{}.Type(),
+	ownership.TransferOwnershipMsg{}.Type(),
+	swap.HTLTMsg{}.Type(),
+	swap.DepositHTLTMsg{}.Type(),
+	swap.ClaimHTLTMsg{}.Type(),
+	swap.RefundHTLTMsg{}.Type(),
+	account.SetAccountFlagsMsg{}.Type(),
+	bridge.BindMsg{}.Type(),
+	bridge.UnbindMsg{}.Type(),
+	bridge.TransferOutMsg{}.Type(),
 }
 
 var TxBlackList = map[runtime.Mode][]string{

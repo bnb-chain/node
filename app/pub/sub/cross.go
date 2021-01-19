@@ -8,7 +8,7 @@ import (
 )
 
 func SubscribeCrossTransferEvent(sub *pubsub.Subscriber) error {
-	err := sub.Subscribe(bridge.Topic, func(event pubsub.Event) {
+	err := sub.Subscribe(bridge.CrossTransferTopic, func(event pubsub.Event) {
 		switch event.(type) {
 		case bridge.CrossTransferEvent:
 			crossTransferEvent := event.(bridge.CrossTransferEvent)

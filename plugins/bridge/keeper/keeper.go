@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -14,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/bridge/types"
 	"github.com/binance-chain/node/plugins/tokens/store"
 )
@@ -135,6 +137,12 @@ func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartCha
 }
 
 func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress) int8 {
+	if sdk.IsUpgrade(upgrade.FixFailAckPackage) {
+		if strings.ToLower(contractAddr.String()) == types.BNBContractAddr {
+			return types.BNBContractDecimals
+		}
+	}
+
 	key := types.GetContractDecimalsKey(contractAddr[:])
 
 	kvStore := ctx.KVStore(k.storeKey)

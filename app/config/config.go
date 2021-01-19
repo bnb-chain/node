@@ -7,7 +7,9 @@ import (
 	"text/template"
 
 	"github.com/cosmos/cosmos-sdk/server"
+
 	"github.com/spf13/viper"
+
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 )
@@ -73,6 +75,16 @@ BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 BEP67Height = {{ .UpgradeConfig.BEP67Height }}
 # Block height of BEP70 upgrade
 BEP70Height = {{ .UpgradeConfig.BEP70Height }}
+# Block height of BEP82 upgrade
+BEP82Height = {{ .UpgradeConfig.BEP82Height }}
+# Block height of BEP84 upgrade
+BEP84Height = {{ .UpgradeConfig.BEP84Height }}
+# Block height of BEP87 upgrade
+BEP87Height = {{ .UpgradeConfig.BEP87Height }}
+# Block height of FixFailAckPackage upgrade
+FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
+# Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
+EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -144,6 +156,11 @@ slashingKafka = "{{ .PublicationConfig.SlashingKafka }}"
 publishCrossTransfer = {{ .PublicationConfig.PublishCrossTransfer }}
 crossTransferTopic = "{{ .PublicationConfig.CrossTransferTopic }}"
 crossTransferKafka = "{{ .PublicationConfig.CrossTransferKafka }}"
+
+# Whether we want publish mirror events
+publishMirror = {{ .PublicationConfig.PublishMirror }}
+mirrorTopic = "{{ .PublicationConfig.MirrorTopic }}"
+mirrorKafka = "{{ .PublicationConfig.MirrorKafka }}"
 
 # Whether we want publish side proposals
 publishSideProposal = {{ .PublicationConfig.PublishSideProposal }}
@@ -304,6 +321,10 @@ type PublicationConfig struct {
 	CrossTransferTopic   string `mapstructure:"crossTransferTopic"`
 	CrossTransferKafka   string `mapstructure:"crossTransferKafka"`
 
+	PublishMirror bool   `mapstructure:"publishMirror"`
+	MirrorTopic   string `mapstructure:"mirrorTopic"`
+	MirrorKafka   string `mapstructure:"mirrorKafka"`
+
 	PublishSideProposal bool   `mapstructure:"publishSideProposal"`
 	SideProposalTopic   string `mapstructure:"sideProposalTopic"`
 	SideProposalKafka   string `mapstructure:"sideProposalKafka"`
@@ -379,6 +400,10 @@ func defaultPublicationConfig() *PublicationConfig {
 		CrossTransferTopic:   "crossTransfer",
 		CrossTransferKafka:   "127.0.0.1:9092",
 
+		PublishMirror: false,
+		MirrorTopic:   "mirror",
+		MirrorKafka:   "127.0.0.1:9092",
+
 		PublishSideProposal: false,
 		SideProposalTopic:   "sideProposal",
 		SideProposalKafka:   "127.0.0.1:9092",
@@ -415,6 +440,7 @@ func (pubCfg PublicationConfig) ShouldPublishAny() bool {
 		pubCfg.PublishStaking ||
 		pubCfg.PublishSlashing ||
 		pubCfg.PublishCrossTransfer ||
+		pubCfg.PublishMirror ||
 		pubCfg.PublishSideProposal ||
 		pubCfg.PublishBreatheBlock
 }
@@ -493,6 +519,12 @@ type UpgradeConfig struct {
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
 	BEP70Height int64 `mapstructure:"BEP70Height"`
+
+	BEP82Height                                     int64 `mapstructure:"BEP82Height"`
+	BEP84Height                                     int64 `mapstructure:"BEP84Height"`
+	BEP87Height                                     int64 `mapstructure:"BEP87Height"`
+	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
+	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -511,7 +543,12 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP8Height:                 1,
 		BEP67Height:                1,
 		BEP70Height:                1,
-		LaunchBscUpgradeHeight:     math.MaxInt64,
+		LaunchBscUpgradeHeight:     1,
+		BEP82Height:                math.MaxInt64,
+		BEP84Height:                math.MaxInt64,
+		BEP87Height:                math.MaxInt64,
+		FixFailAckPackageHeight:    math.MaxInt64,
+		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
 

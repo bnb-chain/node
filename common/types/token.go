@@ -9,12 +9,14 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 )
 
 const (
 	TokenSymbolMaxLen          = 8
 	TokenSymbolMinLen          = 3
+	TokenSymbolNewMinLen       = 2
 	TokenSymbolTxHashSuffixLen = 3 // probably enough. if it collides (unlikely) the issuer can just use another tx.
 	TokenSymbolDotBSuffix      = ".B"
 
@@ -37,6 +39,7 @@ type IToken interface {
 	SetContractDecimals(decimal int8)
 	GetContractDecimals() int8
 
+	SetOwner(addr sdk.AccAddress)
 	GetOwner() sdk.AccAddress
 	IsMintable() bool
 	IsOwner(addr sdk.AccAddress) bool
@@ -92,6 +95,12 @@ func (token *Token) SetTotalSupply(totalSupply utils.Fixed8) {
 	token.TotalSupply = totalSupply
 }
 
+func (token *Token) SetOwner(addr sdk.AccAddress) {
+	cp := make(sdk.AccAddress, len(addr.Bytes()))
+	copy(cp, addr)
+	token.Owner = cp
+}
+
 func (token Token) GetOwner() sdk.AccAddress {
 	return token.Owner
 }
@@ -125,6 +134,8 @@ func (token Token) String() string {
 		token.Name, token.Symbol, token.TotalSupply, token.Owner, token.Mintable)
 }
 
+// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.
+// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use TokenSymbolNewMinLen
 func ValidateIssueSymbol(symbol string) error {
 	if len(symbol) == 0 {
 		return errors.New("token symbol cannot be empty")
@@ -135,7 +146,12 @@ func ValidateIssueSymbol(symbol string) error {
 	}
 
 	// check len without .B suffix
-	if symbolLen := len(symbol); symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolMinLen {
+	symbolLen := len(symbol)
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
+		if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolNewMinLen {
+			return errors.New("length of token symbol is limited to 2~8")
+		}
+	} else if symbolLen > TokenSymbolMaxLen || symbolLen < TokenSymbolMinLen {
 		return errors.New("length of token symbol is limited to 3~8")
 	}
 
@@ -185,9 +201,16 @@ func ValidateTokenSymbol(symbol string) error {
 	}
 
 	// check len without .B suffix
-	if len(symbolPart) < TokenSymbolMinLen {
+	// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.
+	// If the UpgradeMgr.GetHeight == 0, that indicates the function is invoked by client side, and we should use TokenSymbolNewMinLen
+	if sdk.UpgradeMgr.GetHeight() == 0 || sdk.IsUpgrade(upgrade.BEP87) {
+		if len(symbolPart) < TokenSymbolNewMinLen {
+			return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
+		}
+	} else if len(symbolPart) < TokenSymbolMinLen {
 		return fmt.Errorf("token symbol part is too short, got %d chars", len(symbolPart))
 	}
+
 	if len(symbolPart) > TokenSymbolMaxLen {
 		return fmt.Errorf("token symbol part is too long, got %d chars", len(symbolPart))
 	}
