@@ -524,6 +524,7 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
 			Tags:    tags,
+			Err:     types.ErrInvalidMirror("invalid mirror package"),
 		}
 	}
 
@@ -540,6 +541,7 @@ func (app *MirrorApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayer
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
 			Tags:    tags,
+			Err:     types.ErrMirrorSymbolExists(fmt.Sprintf("symbol %s already exists", symbol)),
 		}
 	}
 
@@ -700,6 +702,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		return sdk.ExecuteResult{
 			Payload: ackPackage,
 			Tags:    tags,
+			Err:     types.ErrInvalidMirrorSync("invalid mirror sync package"),
 		}
 	}
 
@@ -720,6 +723,7 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		return sdk.ExecuteResult{
 			Tags:    tags,
 			Payload: ackPackage,
+			Err:     types.ErrNotBoundByMirror(fmt.Sprintf("token %s is not bound by mirror", token.GetSymbol())),
 		}
 	}
 
@@ -737,8 +741,10 @@ func (app *MirrorSyncApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 		return sdk.ExecuteResult{
 			Tags:    tags,
 			Payload: ackPackage,
+			Err:     types.ErrMirrorSyncInvalidSupply(fmt.Sprintf("mirror sync supply %d is invalid", newSupply)),
 		}
 	}
+
 	oldSupply := token.GetTotalSupply().ToInt64()
 	if newSupply > oldSupply {
 		if _, _, sdkError := app.bridgeKeeper.BankKeeper.AddCoins(ctx, token.GetOwner(),

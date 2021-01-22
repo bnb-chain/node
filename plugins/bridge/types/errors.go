@@ -24,6 +24,11 @@ const (
 	CodeTokenBindRelationChanged sdk.CodeType = 15
 	CodeTransferInExpire         sdk.CodeType = 16
 	CodeScriptsExecutionError    sdk.CodeType = 17
+	CodeInvalidMirror            sdk.CodeType = 18
+	CodeMirrorSymbolExists       sdk.CodeType = 19
+	CodeInvalidMirrorSync        sdk.CodeType = 20
+	CodeNotBoundByMirror         sdk.CodeType = 21
+	CodeMirrorSyncInvalidSupply  sdk.CodeType = 22
 )
 
 //----------------------------------------
@@ -95,4 +100,24 @@ func ErrTransferInExpire(msg string) sdk.Error {
 
 func ErrScriptsExecutionError(msg string) sdk.Error {
 	return sdk.NewError(DefaultCodespace, CodeScriptsExecutionError, msg)
+}
+
+func ErrInvalidMirror(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidMirror, msg)
+}
+
+func ErrMirrorSymbolExists(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeMirrorSymbolExists, msg)
+}
+
+func ErrInvalidMirrorSync(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeInvalidMirrorSync, msg)
+}
+
+func ErrNotBoundByMirror(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeNotBoundByMirror, msg)
+}
+
+func ErrMirrorSyncInvalidSupply(msg string) sdk.Error {
+	return sdk.NewError(DefaultCodespace, CodeMirrorSyncInvalidSupply, msg)
 }
