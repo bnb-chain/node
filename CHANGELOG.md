@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1-hf.1
+BUG FIXES
+* [\#823](https://github.com/binance-chain/node/pull/823) [Pub] return error when executing mirror or mirror sync request failed
+
 ## 0.8.1
 FEATURES
 * [\#809](https://github.com/binance-chain/node/pull/809) [Token] Implement BEP84
