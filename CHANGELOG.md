@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.1-hf.1
+## 0.8.2
 BUG FIXES
 * [\#823](https://github.com/binance-chain/node/pull/823) [Pub] return error when executing mirror or mirror sync request failed
 
