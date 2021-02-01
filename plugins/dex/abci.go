@@ -9,7 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/store"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/dex/utils"
@@ -201,7 +200,7 @@ func listPairs(keeper *DexKeeper, ctx sdk.Context, abciPrefix string) []types.Tr
 	pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
 	rs := make([]types.TradingPair, 0, len(pairs))
 	for _, pair := range pairs {
-		if keeper.GetPairType(pair.GetSymbol()) == order.PairType.MINI {
+		if keeper.GetPairType(pair.GetSymbol()) == types.PairType.MINI {
 			if abciPrefix == DexMiniAbciQueryPrefix {
 				rs = append(rs, pair)
 			}

@@ -37,6 +37,8 @@ const (
 	BEP84             = "BEP84"   // https://github.com/binance-chain/BEPs/pull/84 Mirror Sync Upgrade
 	BEP87             = "BEP87"   // https://github.com/binance-chain/BEPs/pull/87
 	FixFailAckPackage = sdk.FixFailAckPackage
+
+	BEPX = "BEPX" // TODO placeholder for DEX 1.5 New Market upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {

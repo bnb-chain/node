@@ -1,6 +1,7 @@
 package order
 
 import (
+	"github.com/binance-chain/node/common/upgrade"
 	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,6 +11,7 @@ import (
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
+	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
@@ -49,7 +51,7 @@ type DexOrderKeeper interface {
 
 	support(pair string) bool
 	supportUpgradeVersion() bool
-	supportPairType(pairType SymbolPairType) bool
+	supportPairType(pairType dexTypes.SymbolPairType) bool
 }
 
 // in the future, this may be distributed via Sharding
@@ -209,54 +211,57 @@ func (kp *BaseOrderKeeper) iterateAllOrders(iter func(string, string)) {
 	}
 }
 
-//------  BEP2OrderKeeper methods -----
-var _ DexOrderKeeper = &BEP2OrderKeeper{}
+//------  MainMarketOrderKeeper methods -----
+var _ DexOrderKeeper = &MainMarketOrderKeeper{}
 
-type BEP2OrderKeeper struct {
+type MainMarketOrderKeeper struct {
 	BaseOrderKeeper
 	symbolSelector BEP2SymbolSelector
 }
 
-// NewBEP2OrderKeeper - Returns the BEP2OrderKeeper
-func NewBEP2OrderKeeper() DexOrderKeeper {
-	return &BEP2OrderKeeper{
-		BaseOrderKeeper: NewBaseOrderKeeper("BEP2OrderKeeper"),
+// NewMainMarketOrderKeeper - Returns the MainMarketOrderKeeper
+func NewMainMarketOrderKeeper() DexOrderKeeper {
+	return &MainMarketOrderKeeper{
+		BaseOrderKeeper: NewBaseOrderKeeper("mainMarketOrderKeeper"),
 		symbolSelector:  BEP2SymbolSelector{},
 	}
 }
 
-func (kp *BEP2OrderKeeper) support(pair string) bool {
+func (kp *MainMarketOrderKeeper) support(pair string) bool {
 	if !sdk.IsUpgrade(sdk.BEP8) {
 		return true
 	}
 	return !dexUtils.IsMiniTokenTradingPair(pair)
 }
 
-func (kp *BEP2OrderKeeper) supportUpgradeVersion() bool {
+func (kp *MainMarketOrderKeeper) supportUpgradeVersion() bool {
 	return true
 }
 
-func (kp *BEP2OrderKeeper) supportPairType(pairType SymbolPairType) bool {
-	return PairType.BEP2 == pairType
+func (kp *MainMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
+	if sdk.IsUpgrade(upgrade.BEPX) {
+		return dexTypes.PairType.MAIN == pairType
+	}
+	return dexTypes.PairType.BEP2 == pairType
 }
 
-func (kp *BEP2OrderKeeper) initOrders(symbol string) {
+func (kp *MainMarketOrderKeeper) initOrders(symbol string) {
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 }
 
-func (kp *BEP2OrderKeeper) clearAfterMatch() {
+func (kp *MainMarketOrderKeeper) clearAfterMatch() {
 	kp.logger.Debug("clearAfterMatchBEP2...")
 	kp.roundOrders = make(map[string][]string, 256)
 	kp.roundIOCOrders = make(map[string][]string, 256)
 }
 
-func (kp *BEP2OrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
+func (kp *MainMarketOrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
 	for symbol := range kp.roundOrders {
 		iter(symbol)
 	}
 }
 
-func (kp *BEP2OrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
+func (kp *MainMarketOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
 	if orderInfo.CreatedHeight == height {
 		kp.roundOrders[symbol] = append(kp.roundOrders[symbol], orderInfo.Id)
@@ -272,11 +277,11 @@ func (kp *BEP2OrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, heig
 	}
 }
 
-func (kp *BEP2OrderKeeper) getRoundPairsNum() int {
+func (kp *MainMarketOrderKeeper) getRoundPairsNum() int {
 	return len(kp.roundOrders)
 }
 
-func (kp *BEP2OrderKeeper) getRoundOrdersNum() int {
+func (kp *MainMarketOrderKeeper) getRoundOrdersNum() int {
 	n := 0
 	for _, orders := range kp.roundOrders {
 		n += len(orders)
@@ -284,6 +289,6 @@ func (kp *BEP2OrderKeeper) getRoundOrdersNum() int {
 	return n
 }
 
-func (kp *BEP2OrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
+func (kp *MainMarketOrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
 	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, matchAllSymbols)
 }

@@ -5,12 +5,29 @@ import (
 	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
+type SymbolPairType uint8
+
+const (
+	BEP2TypeValue SymbolPairType = iota + 1
+	MiniTypeValue
+	MainTypeValue
+	GrowthTypeValue
+)
+
+var PairType = struct {
+	BEP2   SymbolPairType
+	MINI   SymbolPairType
+	MAIN   SymbolPairType
+	GROWTH SymbolPairType
+}{BEP2TypeValue, MiniTypeValue, MainTypeValue, GrowthTypeValue}
+
 type TradingPair struct {
-	BaseAssetSymbol  string        `json:"base_asset_symbol"`
-	QuoteAssetSymbol string        `json:"quote_asset_symbol"`
-	ListPrice        ctuils.Fixed8 `json:"list_price"`
-	TickSize         ctuils.Fixed8 `json:"tick_size"`
-	LotSize          ctuils.Fixed8 `json:"lot_size"`
+	BaseAssetSymbol  string         `json:"base_asset_symbol"`
+	QuoteAssetSymbol string         `json:"quote_asset_symbol"`
+	ListPrice        ctuils.Fixed8  `json:"list_price"`
+	TickSize         ctuils.Fixed8  `json:"tick_size"`
+	LotSize          ctuils.Fixed8  `json:"lot_size"`
+	PairType         SymbolPairType `json:"pair_type, omitEmpty=true"`
 }
 
 // NOTE: only for test use
@@ -27,6 +44,18 @@ func NewTradingPairWithLotSize(baseAsset, quoteAsset string, listPrice, lotSize 
 		ListPrice:        ctuils.Fixed8(listPrice),
 		TickSize:         ctuils.Fixed8(tickSize),
 		LotSize:          ctuils.Fixed8(lotSize),
+	}
+}
+
+func NewTradingPairWithLotSizeAndPairType(baseAsset, quoteAsset string, listPrice, lotSize int64, pairType SymbolPairType) TradingPair {
+	tickSize := utils.CalcTickSize(listPrice)
+	return TradingPair{
+		BaseAssetSymbol:  baseAsset,
+		QuoteAssetSymbol: quoteAsset,
+		ListPrice:        ctuils.Fixed8(listPrice),
+		TickSize:         ctuils.Fixed8(tickSize),
+		LotSize:          ctuils.Fixed8(lotSize),
+		PairType:         pairType,
 	}
 }
 
