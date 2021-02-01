@@ -31,17 +31,8 @@ import (
 )
 
 const (
-	BEP2TypeValue        = 1
-	MiniTypeValue        = 2
 	preferencePriceLevel = 500
 )
-
-type SymbolPairType int8
-
-var PairType = struct {
-	BEP2 SymbolPairType
-	MINI SymbolPairType
-}{BEP2TypeValue, MiniTypeValue}
 
 var BUSDSymbol string
 
@@ -58,7 +49,7 @@ type DexKeeper struct {
 	RoundOrderFees             FeeHolder // order (and trade) related fee of this round, str of addr bytes -> fee
 	CollectOrderInfoForPublish bool      //TODO separate for each order keeper
 	engines                    map[string]*me.MatchEng
-	pairsType                  map[string]SymbolPairType
+	pairsType                  map[string]dexTypes.SymbolPairType
 	logger                     tmlog.Logger
 	poolSize                   uint // number of concurrent channels, counted in the pow of 2
 	cdc                        *wire.Codec
@@ -67,10 +58,10 @@ type DexKeeper struct {
 
 func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper store.TradingPairMapper, codespace sdk.CodespaceType, concurrency uint, cdc *wire.Codec, collectOrderInfoForPublish bool) *DexKeeper {
 	logger := bnclog.With("module", "dexkeeper")
-	bep2OrderKeeper, miniOrderKeeper := NewBEP2OrderKeeper(), NewMiniOrderKeeper()
+	mainMarketOrderKeeper, growthMarketOrderKeeper := NewMainMarketOrderKeeper(), NewGrowthMarketOrderKeeper()
 	if collectOrderInfoForPublish {
-		bep2OrderKeeper.enablePublish()
-		miniOrderKeeper.enablePublish()
+		mainMarketOrderKeeper.enablePublish()
+		growthMarketOrderKeeper.enablePublish()
 	}
 
 	return &DexKeeper{
@@ -83,11 +74,11 @@ func NewDexKeeper(key sdk.StoreKey, am auth.AccountKeeper, tradingPairMapper sto
 		FeeManager:                 NewFeeManager(cdc, logger),
 		CollectOrderInfoForPublish: collectOrderInfoForPublish,
 		engines:                    make(map[string]*me.MatchEng),
-		pairsType:                  make(map[string]SymbolPairType),
+		pairsType:                  make(map[string]dexTypes.SymbolPairType),
 		poolSize:                   concurrency,
 		cdc:                        cdc,
 		logger:                     logger,
-		OrderKeepers:               []DexOrderKeeper{bep2OrderKeeper, miniOrderKeeper},
+		OrderKeepers:               []DexOrderKeeper{mainMarketOrderKeeper, growthMarketOrderKeeper},
 	}
 }
 
@@ -111,14 +102,12 @@ func (kp *DexKeeper) EnablePublish() {
 	}
 }
 
-func (kp *DexKeeper) GetPairType(symbol string) SymbolPairType {
+func (kp *DexKeeper) GetPairType(symbol string) dexTypes.SymbolPairType {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
-		if dexUtils.IsMiniTokenTradingPair(symbol) {
-			pairType = PairType.MINI
-		} else {
-			pairType = PairType.BEP2
-		}
+		err := fmt.Errorf("unkown type of symbol: %s", symbol)
+		kp.logger.Error(err.Error())
+		return dexTypes.PairType.UNKNOWN
 	}
 	return pairType
 }
@@ -261,9 +250,14 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	symbol := strings.ToUpper(pair.GetSymbol())
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
-	pairType := PairType.BEP2
-	if dexUtils.IsMiniTokenTradingPair(symbol) {
-		pairType = PairType.MINI
+	var pairType dexTypes.SymbolPairType
+	if sdk.IsUpgrade(upgrade.BEPX) {
+		pairType = pair.PairType
+	} else {
+		pairType = dexTypes.PairType.BEP2
+		if dexUtils.IsMiniTokenTradingPair(symbol) {
+			pairType = dexTypes.PairType.MINI
+		}
 	}
 	kp.pairsType[symbol] = pairType
 	for i := range kp.OrderKeepers {
@@ -471,6 +465,18 @@ func (kp *DexKeeper) ClearOrderChanges() {
 			orderKeeper.clearOrderChanges()
 		}
 	}
+}
+
+func (kp *DexKeeper) MigrateTradingPairType(ctx sdk.Context) {
+	for pairSymbol, pairType := range kp.pairsType {
+		kp.logger.Debug("Migrate pair %s, type %v", pairSymbol, pairType)
+		if pairType == dexTypes.PairType.BEP2 {
+			kp.pairsType[pairSymbol] = dexTypes.PairType.MAIN
+		} else {
+			kp.pairsType[pairSymbol] = dexTypes.PairType.GROWTH
+		}
+	}
+	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
 }
 
 func (kp *DexKeeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {
@@ -1062,7 +1068,7 @@ func (kp *DexKeeper) ReloadOrder(symbol string, orderInfo *OrderInfo, height int
 	kp.mustGetOrderKeeper(symbol).reloadOrder(symbol, orderInfo, height)
 }
 
-func (kp *DexKeeper) GetOrderChanges(pairType SymbolPairType) OrderChanges {
+func (kp *DexKeeper) GetOrderChanges(pairType dexTypes.SymbolPairType) OrderChanges {
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportPairType(pairType) {
 			return orderKeeper.getOrderChanges()
@@ -1089,7 +1095,7 @@ func (kp *DexKeeper) UpdateOrderChangeSync(change OrderChange, symbol string) {
 	kp.logger.Error("symbol is not supported %d", symbol)
 }
 
-func (kp *DexKeeper) GetOrderInfosForPub(pairType SymbolPairType) OrderInfoForPublish {
+func (kp *DexKeeper) GetOrderInfosForPub(pairType dexTypes.SymbolPairType) OrderInfoForPublish {
 	for _, orderKeeper := range kp.OrderKeepers {
 		if orderKeeper.supportPairType(pairType) {
 			return orderKeeper.getOrderInfosForPub()

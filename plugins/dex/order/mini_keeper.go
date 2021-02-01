@@ -5,6 +5,7 @@ import (
 
 	bnclog "github.com/binance-chain/node/common/log"
 	"github.com/binance-chain/node/common/upgrade"
+	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
 )
 
@@ -13,18 +14,18 @@ const (
 	defaultActiveMiniSymbolCount  int = 8
 )
 
-//order keeper for mini-token
-type MiniOrderKeeper struct {
+//order keeper for growth market
+type GrowthMarketOrderKeeper struct {
 	BaseOrderKeeper
 	symbolSelector MiniSymbolSelector
 }
 
-var _ DexOrderKeeper = &MiniOrderKeeper{}
+var _ DexOrderKeeper = &GrowthMarketOrderKeeper{}
 
-// NewBEP2OrderKeeper - Returns the MiniToken orderKeeper
-func NewMiniOrderKeeper() DexOrderKeeper {
-	return &MiniOrderKeeper{
-		BaseOrderKeeper: NewBaseOrderKeeper("dexMiniKeeper"),
+// NewMainMarketOrderKeeper - Returns the MiniToken orderKeeper
+func NewGrowthMarketOrderKeeper() DexOrderKeeper {
+	return &GrowthMarketOrderKeeper{
+		BaseOrderKeeper: NewBaseOrderKeeper("growthMarketKeeper"),
 		symbolSelector: MiniSymbolSelector{
 			make(map[string]uint32, 256),
 			make([]string, 0, 256),
@@ -33,7 +34,7 @@ func NewMiniOrderKeeper() DexOrderKeeper {
 }
 
 //override
-func (kp *MiniOrderKeeper) support(pair string) bool {
+func (kp *GrowthMarketOrderKeeper) support(pair string) bool {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return false
 	}
@@ -41,21 +42,24 @@ func (kp *MiniOrderKeeper) support(pair string) bool {
 }
 
 //override
-func (kp *MiniOrderKeeper) supportUpgradeVersion() bool {
+func (kp *GrowthMarketOrderKeeper) supportUpgradeVersion() bool {
 	return sdk.IsUpgrade(upgrade.BEP8)
 }
 
-func (kp *MiniOrderKeeper) supportPairType(pairType SymbolPairType) bool {
-	return PairType.MINI == pairType
+func (kp *GrowthMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
+	if sdk.IsUpgrade(upgrade.BEPX) {
+		return dexTypes.PairType.GROWTH == pairType
+	}
+	return dexTypes.PairType.MINI == pairType
 }
 
 // override
-func (kp *MiniOrderKeeper) initOrders(symbol string) {
+func (kp *GrowthMarketOrderKeeper) initOrders(symbol string) {
 	kp.allOrders[symbol] = map[string]*OrderInfo{}
 	kp.symbolSelector.addSymbolHash(symbol)
 }
 
-func (kp *MiniOrderKeeper) clearAfterMatch() {
+func (kp *GrowthMarketOrderKeeper) clearAfterMatch() {
 	kp.logger.Debug("clearAfterMatchMini...")
 	for _, symbol := range kp.symbolSelector.roundSelectedSymbols {
 		delete(kp.roundOrders, symbol)
@@ -64,17 +68,17 @@ func (kp *MiniOrderKeeper) clearAfterMatch() {
 	kp.symbolSelector.clearRoundMatchSymbol()
 }
 
-func (kp *MiniOrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
+func (kp *GrowthMarketOrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
 	for _, symbol := range kp.symbolSelector.roundSelectedSymbols {
 		iter(symbol)
 	}
 }
 
-func (kp *MiniOrderKeeper) getRoundPairsNum() int {
+func (kp *GrowthMarketOrderKeeper) getRoundPairsNum() int {
 	return len(kp.symbolSelector.roundSelectedSymbols)
 }
 
-func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
+func (kp *GrowthMarketOrderKeeper) getRoundOrdersNum() int {
 	n := 0
 	kp.iterateRoundSelectedPairs(func(symbol string) {
 		n += len(kp.roundOrders[symbol])
@@ -82,7 +86,7 @@ func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
 	return n
 }
 
-func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
+func (kp *GrowthMarketOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
 	//TODO confirm no round orders for mini symbol
 	if kp.collectOrderInfoForPublish {
@@ -93,6 +97,6 @@ func (kp *MiniOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, heig
 	}
 }
 
-func (kp *MiniOrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
+func (kp *GrowthMarketOrderKeeper) selectSymbolsToMatch(height int64, matchAllSymbols bool) []string {
 	return kp.symbolSelector.SelectSymbolsToMatch(kp.roundOrders, height, matchAllSymbols)
 }

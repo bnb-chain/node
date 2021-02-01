@@ -37,7 +37,7 @@ const (
 	BEP84             = "BEP84"   // https://github.com/binance-chain/BEPs/pull/84 Mirror Sync Upgrade
 	BEP87             = "BEP87"   // https://github.com/binance-chain/BEPs/pull/87
 	FixFailAckPackage = sdk.FixFailAckPackage
-
+	
 	ListRefactor         = sdk.ListRefactor
 	TradingPairPromotion = sdk.TradingPairPromotion
 )

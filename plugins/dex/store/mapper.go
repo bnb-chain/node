@@ -27,6 +27,7 @@ type TradingPairMapper interface {
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
 	DeleteRecentPrices(ctx sdk.Context, symbol string)
+	MigrateForMainAndGrowthMarket(ctx sdk.Context)
 }
 
 var _ TradingPairMapper = mapper{}
@@ -188,6 +189,26 @@ func (m mapper) DeleteRecentPrices(ctx sdk.Context, symbol string) {
 			bz = m.cdc.MustMarshalBinaryBare(prices)
 			store.Set(iter.Key(), bz)
 		}
+	}
+}
+
+func (m mapper) MigrateForMainAndGrowthMarket(ctx sdk.Context){
+	store := ctx.KVStore(m.key)
+	iter := store.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		if bytes.HasPrefix(iter.Key(), []byte(recentPricesKeyPrefix)) {
+			continue
+		}
+		pair := m.decodeTradingPair(iter.Value())
+		if cmn.IsMiniTokenSymbol(pair.BaseAssetSymbol) {
+			pair.PairType = types.PairType.GROWTH
+		}else{
+			pair.PairType = types.PairType.MAIN
+		}
+		value := m.encodeTradingPair(pair)
+		store.Set(iter.Key(), value)
 	}
 }
 
