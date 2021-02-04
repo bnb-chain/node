@@ -95,12 +95,16 @@ func (s *server) handleSimulateReq(cdc *wire.Codec, ctx context.CLIContext) http
 	return s.withTextPlainForm(s.limitReqSize(h))
 }
 
-func (s *server) handleBEP2PairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+func (s *server) handleMainPairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexAbciQueryPrefix)
 }
 
 func (s *server) handleMiniPairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
 	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexMiniAbciQueryPrefix)
+}
+
+func (s *server) handleGrowthPairsReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {
+	return dexapi.GetPairsReqHandler(cdc, ctx, dex.DexGrowthAbciQueryPrefix)
 }
 
 func (s *server) handleDexDepthReq(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {

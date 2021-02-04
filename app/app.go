@@ -831,6 +831,10 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 		app.ValAddrCache.ClearCache()
 	}
 
+	if sdk.IsUpgradeHeight(upgrade.BEPX) {
+		app.DexKeeper.MigrateTradingPairType(ctx)
+	}
+
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
 		var stakeUpdates pub.StakeUpdates

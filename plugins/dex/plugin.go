@@ -17,6 +17,7 @@ import (
 
 const DexAbciQueryPrefix = "dex"
 const DexMiniAbciQueryPrefix = "dex-mini"
+const DexGrowthAbciQueryPrefix = "dex-growth"
 const DelayedDaysForDelist = 3
 
 // InitPlugin initializes the dex plugin.

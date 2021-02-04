@@ -29,7 +29,7 @@ func (s *server) bindRoutes() *server {
 		Methods("POST")
 
 	// dex routes
-	r.HandleFunc(prefix+"/markets", s.handleBEP2PairsReq(s.cdc, s.ctx)).
+	r.HandleFunc(prefix+"/markets", s.handleMainPairsReq(s.cdc, s.ctx)).
 		Methods("GET")
 	r.HandleFunc(prefix+"/depth", s.handleDexDepthReq(s.cdc, s.ctx)).
 		Queries("symbol", "{symbol}", "limit", "{limit:[0-9]+}").
@@ -45,6 +45,9 @@ func (s *server) bindRoutes() *server {
 		Methods("GET")
 
 	r.HandleFunc(prefix+"/mini/markets", s.handleMiniPairsReq(s.cdc, s.ctx)).
+		Methods("GET")
+
+	r.HandleFunc(prefix+"/growth/markets", s.handleGrowthPairsReq(s.cdc, s.ctx)).
 		Methods("GET")
 
 	// tokens routes

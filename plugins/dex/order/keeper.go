@@ -105,11 +105,9 @@ func (kp *DexKeeper) EnablePublish() {
 func (kp *DexKeeper) GetPairType(symbol string) dexTypes.SymbolPairType {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
-		if dexUtils.IsMiniTokenTradingPair(symbol) {
-			pairType = dexTypes.PairType.MINI
-		} else {
-			pairType = dexTypes.PairType.BEP2
-		}
+		err := fmt.Errorf("unkown type of symbol: %s", symbol)
+		kp.logger.Error(err.Error())
+		return dexTypes.PairType.UNKNOWN
 	}
 	return pairType
 }
@@ -255,7 +253,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	var pairType dexTypes.SymbolPairType
 	if sdk.IsUpgrade(upgrade.BEPX) {
 		pairType = pair.PairType
-	}else {
+	} else {
 		pairType = dexTypes.PairType.BEP2
 		if dexUtils.IsMiniTokenTradingPair(symbol) {
 			pairType = dexTypes.PairType.MINI
@@ -467,6 +465,18 @@ func (kp *DexKeeper) ClearOrderChanges() {
 			orderKeeper.clearOrderChanges()
 		}
 	}
+}
+
+func (kp *DexKeeper) MigrateTradingPairType(ctx sdk.Context) {
+	for pairSymbol, pairType := range kp.pairsType {
+		kp.logger.Debug("Migrate pair %s, type %v", pairSymbol, pairType)
+		if pairType == dexTypes.PairType.BEP2 {
+			kp.pairsType[pairSymbol] = dexTypes.PairType.MAIN
+		} else {
+			kp.pairsType[pairSymbol] = dexTypes.PairType.GROWTH
+		}
+	}
+	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
 }
 
 func (kp *DexKeeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {

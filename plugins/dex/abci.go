@@ -26,7 +26,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 			return nil
 		}
 		switch path[1] {
-		case "pairs": // args: ["dex" or "dex-mini", "pairs", <offset>, <limit>]
+		case "pairs": // args: ["dex" or "dex-mini" or "dex-growth", "pairs", <offset>, <limit>]
 			if len(path) < 4 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),
@@ -82,7 +82,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 				Value: bz,
 			}
 		case "orderbook": // args: ["dex", "orderbook"]
-			if queryPrefix == DexMiniAbciQueryPrefix {
+			if queryPrefix != DexAbciQueryPrefix {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.ABCICodeOK),
 					Info: fmt.Sprintf(
@@ -200,7 +200,11 @@ func listPairs(keeper *DexKeeper, ctx sdk.Context, abciPrefix string) []types.Tr
 	pairs := keeper.PairMapper.ListAllTradingPairs(ctx)
 	rs := make([]types.TradingPair, 0, len(pairs))
 	for _, pair := range pairs {
-		if keeper.GetPairType(pair.GetSymbol()) == types.PairType.MINI {
+		if keeper.GetPairType(pair.GetSymbol()) == types.PairType.GROWTH {
+			if abciPrefix == DexGrowthAbciQueryPrefix {
+				rs = append(rs, pair)
+			}
+		} else if keeper.GetPairType(pair.GetSymbol()) == types.PairType.MINI {
 			if abciPrefix == DexMiniAbciQueryPrefix {
 				rs = append(rs, pair)
 			}

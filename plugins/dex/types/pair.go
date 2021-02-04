@@ -8,18 +8,20 @@ import (
 type SymbolPairType uint8
 
 const (
-	BEP2TypeValue SymbolPairType = iota + 1
+	UnknownTypeValue SymbolPairType = iota
+	BEP2TypeValue
 	MiniTypeValue
 	MainTypeValue
 	GrowthTypeValue
 )
 
 var PairType = struct {
+	UNKNOWN SymbolPairType
 	BEP2   SymbolPairType
 	MINI   SymbolPairType
 	MAIN   SymbolPairType
 	GROWTH SymbolPairType
-}{BEP2TypeValue, MiniTypeValue, MainTypeValue, GrowthTypeValue}
+}{UnknownTypeValue, BEP2TypeValue, MiniTypeValue, MainTypeValue, GrowthTypeValue}
 
 type TradingPair struct {
 	BaseAssetSymbol  string         `json:"base_asset_symbol"`
