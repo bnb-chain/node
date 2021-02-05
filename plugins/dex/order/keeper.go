@@ -251,7 +251,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	var pairType dexTypes.SymbolPairType
-	if sdk.IsUpgrade(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX) {
 		pairType = pair.PairType
 	} else {
 		pairType = dexTypes.PairType.BEP2
@@ -468,15 +468,44 @@ func (kp *DexKeeper) ClearOrderChanges() {
 }
 
 func (kp *DexKeeper) MigrateTradingPairType(ctx sdk.Context) {
+	kp.MigrateKeeperTradingPairType()
+	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
+}
+
+func (kp *DexKeeper) MigrateKeeperTradingPairType() {
+
 	for pairSymbol, pairType := range kp.pairsType {
 		kp.logger.Debug("Migrate pair %s, type %v", pairSymbol, pairType)
 		if pairType == dexTypes.PairType.BEP2 {
 			kp.pairsType[pairSymbol] = dexTypes.PairType.MAIN
-		} else {
+		} else if pairType == dexTypes.PairType.MINI {
 			kp.pairsType[pairSymbol] = dexTypes.PairType.GROWTH
 		}
 	}
-	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
+
+}
+
+func (kp *DexKeeper) PromoteGrowthPairToMainMarket(ctx sdk.Context) {
+
+}
+func (kp *DexKeeper) PromoteGrowth(pair string) error {
+	pairType, ok := kp.pairsType[pair]
+	if !ok {
+		return fmt.Errorf("failed to find pairType of symbol [%s]", pair)
+	}
+	if pairType != dexTypes.PairType.GROWTH {
+		return fmt.Errorf("failed to pairType [%s] of symbol is [%v]", pair, pairType)
+	}
+	orders := kp.mustGetOrderKeeper(pair).getAllOrdersForPair(pair)
+	kp.mustGetOrderKeeper(pair).deleteOrdersForPair(pair)
+
+	kp.pairsType[pair] = dexTypes.PairType.MAIN
+	
+	for _, orderInfo := range orders {
+		kp.mustGetOrderKeeper(pair).addToAllOrders(pair, *orderInfo)
+	}
+
+	return nil
 }
 
 func (kp *DexKeeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {

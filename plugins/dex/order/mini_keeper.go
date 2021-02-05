@@ -17,7 +17,7 @@ const (
 //order keeper for growth market
 type GrowthMarketOrderKeeper struct {
 	BaseOrderKeeper
-	symbolSelector MiniSymbolSelector
+	symbolSelector GrowthSymbolSelector
 }
 
 var _ DexOrderKeeper = &GrowthMarketOrderKeeper{}
@@ -26,7 +26,7 @@ var _ DexOrderKeeper = &GrowthMarketOrderKeeper{}
 func NewGrowthMarketOrderKeeper() DexOrderKeeper {
 	return &GrowthMarketOrderKeeper{
 		BaseOrderKeeper: NewBaseOrderKeeper("growthMarketKeeper"),
-		symbolSelector: MiniSymbolSelector{
+		symbolSelector: GrowthSymbolSelector{
 			make(map[string]uint32, 256),
 			make([]string, 0, 256),
 		},
@@ -47,7 +47,7 @@ func (kp *GrowthMarketOrderKeeper) supportUpgradeVersion() bool {
 }
 
 func (kp *GrowthMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
-	if sdk.IsUpgrade(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX){
 		return dexTypes.PairType.GROWTH == pairType
 	}
 	return dexTypes.PairType.MINI == pairType
