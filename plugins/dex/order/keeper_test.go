@@ -292,8 +292,8 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 	assert.Equal(int64(0), keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123457"].CumQty)
 	info123456_Changed := info123456
 	info123456_Changed.CumQty = 2000000
-	assert.Equal(info123456_Changed, *keeper2.GetOrderInfosForPub(PairType.BEP2)["123456"])
-	assert.Equal(info123457, *keeper2.GetOrderInfosForPub(PairType.BEP2)["123457"])
+	assert.Equal(info123456_Changed, *keeper2.GetOrderInfosForPub(dextypes.PairType.BEP2)["123456"])
+	assert.Equal(info123457, *keeper2.GetOrderInfosForPub(dextypes.PairType.BEP2)["123457"])
 	assert.Equal(1, len(keeper2.engines))
 	assert.Equal(int64(102000), keeper2.engines["XYZ-000_BNB"].LastTradePrice)
 	assert.Equal(int64(43), h)

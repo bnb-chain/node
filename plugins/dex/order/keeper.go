@@ -469,7 +469,7 @@ func (kp *DexKeeper) ClearOrderChanges() {
 
 func (kp *DexKeeper) MigrateTradingPairType(ctx sdk.Context) {
 	kp.MigrateKeeperTradingPairType()
-	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
+	kp.PairMapper.MigrateToMainAndGrowthMarket(ctx)
 }
 
 func (kp *DexKeeper) MigrateKeeperTradingPairType() {
@@ -488,7 +488,7 @@ func (kp *DexKeeper) MigrateKeeperTradingPairType() {
 func (kp *DexKeeper) PromoteGrowthPairToMainMarket(ctx sdk.Context, pairs []string) {
 	for _, pair := range pairs {
 		kp.PromoteGrowthToMain(pair)
-		kp.PairMapper.PromoteToMainMarket(ctx, pair)
+		kp.PairMapper.PromoteGrowthToMain(ctx, pair)
 	}
 }
 
