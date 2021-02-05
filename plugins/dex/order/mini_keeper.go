@@ -10,23 +10,23 @@ import (
 )
 
 const (
-	defaultMiniBlockMatchInterval int = 16
-	defaultActiveMiniSymbolCount  int = 8
+	defaultGrowthBlockMatchInterval int = 16
+	defaultActiveGrowthSymbolCount  int = 8
 )
 
 //order keeper for growth market
 type GrowthMarketOrderKeeper struct {
 	BaseOrderKeeper
-	symbolSelector MiniSymbolSelector
+	symbolSelector GrowthSymbolSelector
 }
 
 var _ DexOrderKeeper = &GrowthMarketOrderKeeper{}
 
-// NewMainMarketOrderKeeper - Returns the MiniToken orderKeeper
+// NewMainMarketOrderKeeper - Returns the Growth orderKeeper
 func NewGrowthMarketOrderKeeper() DexOrderKeeper {
 	return &GrowthMarketOrderKeeper{
 		BaseOrderKeeper: NewBaseOrderKeeper("growthMarketKeeper"),
-		symbolSelector: MiniSymbolSelector{
+		symbolSelector: GrowthSymbolSelector{
 			make(map[string]uint32, 256),
 			make([]string, 0, 256),
 		},
@@ -38,7 +38,7 @@ func (kp *GrowthMarketOrderKeeper) support(pair string) bool {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return false
 	}
-	return dexUtils.IsMiniTokenTradingPair(pair)
+	return dexUtils.IsMiniTokenTradingPair(pair) //TODO
 }
 
 //override
@@ -47,7 +47,7 @@ func (kp *GrowthMarketOrderKeeper) supportUpgradeVersion() bool {
 }
 
 func (kp *GrowthMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
-	if sdk.IsUpgrade(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX){
 		return dexTypes.PairType.GROWTH == pairType
 	}
 	return dexTypes.PairType.MINI == pairType
@@ -88,7 +88,7 @@ func (kp *GrowthMarketOrderKeeper) getRoundOrdersNum() int {
 
 func (kp *GrowthMarketOrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, height int64) {
 	kp.allOrders[symbol][orderInfo.Id] = orderInfo
-	//TODO confirm no round orders for mini symbol
+	//TODO confirm no round orders for growth symbol
 	if kp.collectOrderInfoForPublish {
 		if _, exists := kp.orderInfosForPub[orderInfo.Id]; !exists {
 			bnclog.Debug("add order to order changes map, during load snapshot, from active orders", "orderId", orderInfo.Id)

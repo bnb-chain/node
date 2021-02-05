@@ -98,21 +98,21 @@ func feeManagerCalcTradeFeeForSingleTransfer(t *testing.T, symbol string) {
 }
 
 func TestFeeManager_calcTradeFeeForSingleTransfer(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol := "ABC-000"
 	feeManagerCalcTradeFeeForSingleTransfer(t, symbol)
 }
 
 func TestFeeManager_calcTradeFeeForSingleTransferMini(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol := "ABC-000M"
 	feeManagerCalcTradeFeeForSingleTransfer(t, symbol)
 }
 
 func TestFeeManager_CalcTradesFee(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
@@ -169,7 +169,7 @@ func TestFeeManager_CalcTradesFee(t *testing.T) {
 }
 
 func TestFeeManager_CalcExpiresFee(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
@@ -223,14 +223,14 @@ func TestFeeManager_CalcExpiresFee(t *testing.T) {
 }
 
 func TestFeeManager_calcTradeFee(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol := "ABC-000"
 	feeManagerCalcTradeFee(t, symbol)
 }
 
 func TestFeeManager_calcTradeFeeMini(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol := "ABC-000M"
 	feeManagerCalcTradeFee(t, symbol)
@@ -281,7 +281,7 @@ func feeManagerCalcTradeFee(t *testing.T, symbol string) {
 }
 
 func TestFeeManager_CalcFixedFee(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol1 := "ABC-000"
 	symbol2 := "BTC-000"
@@ -289,7 +289,7 @@ func TestFeeManager_CalcFixedFee(t *testing.T) {
 }
 
 func TestFeeManager_CalcFixedFeeMini(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol1 := "ABC-000M"
 	symbol2 := "BTC-000M"
@@ -347,7 +347,7 @@ func feeManagerCalcFixedFee(t *testing.T, symbol1 string, symbol2 string) {
 }
 
 func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
@@ -441,7 +441,7 @@ func TestFeeManager_calcTradeFeeForSingleTransfer_SupportBUSD(t *testing.T) {
 }
 
 func TestFeeManager_CalcFixedFee_SupportBUSD(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())

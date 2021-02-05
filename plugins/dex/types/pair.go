@@ -37,6 +37,11 @@ func NewTradingPair(baseAssetSymbol, quoteAssetSymbol string, listPrice int64) T
 	lotSize := utils.CalcLotSize(listPrice)
 	return NewTradingPairWithLotSize(baseAssetSymbol, quoteAssetSymbol, listPrice, lotSize)
 }
+// NOTE: only for test use
+func NewTradingPairWithType(baseAssetSymbol, quoteAssetSymbol string, listPrice int64, pairType SymbolPairType) TradingPair {
+	lotSize := utils.CalcLotSize(listPrice)
+	return NewTradingPairWithLotSizeAndPairType(baseAssetSymbol, quoteAssetSymbol, listPrice, lotSize, pairType)
+}
 
 func NewTradingPairWithLotSize(baseAsset, quoteAsset string, listPrice, lotSize int64) TradingPair {
 	tickSize := utils.CalcTickSize(listPrice)

@@ -1,13 +1,13 @@
 package order
 
 import (
-	"github.com/binance-chain/node/common/upgrade"
 	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"
@@ -30,6 +30,7 @@ type DexOrderKeeper interface {
 	getOpenOrders(pair string, addr sdk.AccAddress) []store.OpenOrder
 	getAllOrders() map[string]map[string]*OrderInfo
 	deleteOrdersForPair(pair string)
+	addToAllOrders(symbol string, info OrderInfo)
 
 	iterateRoundSelectedPairs(func(string))
 	iterateAllOrders(func(symbol string, id string))
@@ -97,6 +98,14 @@ func (kp *BaseOrderKeeper) addOrder(symbol string, info OrderInfo, isRecovery bo
 
 	kp.allOrders[symbol][info.Id] = &info
 	kp.addRoundOrders(symbol, info)
+}
+
+func (kp *BaseOrderKeeper) addToAllOrders(symbol string, info OrderInfo) {
+	if _, ok := kp.allOrders[symbol]; !ok {
+		bnclog.Debug("init orderInfo map ", "symbol", symbol)
+		kp.allOrders[symbol] = map[string]*OrderInfo{}
+	}
+	kp.allOrders[symbol][info.Id] = &info
 }
 
 func (kp *BaseOrderKeeper) addRoundOrders(symbol string, info OrderInfo) {
@@ -216,14 +225,14 @@ var _ DexOrderKeeper = &MainMarketOrderKeeper{}
 
 type MainMarketOrderKeeper struct {
 	BaseOrderKeeper
-	symbolSelector BEP2SymbolSelector
+	symbolSelector MainSymbolSelector
 }
 
 // NewMainMarketOrderKeeper - Returns the MainMarketOrderKeeper
 func NewMainMarketOrderKeeper() DexOrderKeeper {
 	return &MainMarketOrderKeeper{
 		BaseOrderKeeper: NewBaseOrderKeeper("mainMarketOrderKeeper"),
-		symbolSelector:  BEP2SymbolSelector{},
+		symbolSelector:  MainSymbolSelector{},
 	}
 }
 
@@ -239,7 +248,7 @@ func (kp *MainMarketOrderKeeper) supportUpgradeVersion() bool {
 }
 
 func (kp *MainMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
-	if sdk.IsUpgrade(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX) {
 		return dexTypes.PairType.MAIN == pairType
 	}
 	return dexTypes.PairType.BEP2 == pairType

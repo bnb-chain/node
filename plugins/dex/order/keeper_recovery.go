@@ -252,6 +252,9 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 	}
 	logger.Info("replayed all tx. Starting match", "height", height)
 	kp.MatchSymbols(height, t, false) //no need to check result
+	if sdk.IsUpgradeHeight(upgrade.BEPX){
+		kp.MigrateKeeperTradingPairType()
+	}
 }
 
 func (kp *DexKeeper) ReplayOrdersFromBlock(ctx sdk.Context, bc *tmstore.BlockStore, stateDb dbm.DB, lastHeight, breatheHeight int64,

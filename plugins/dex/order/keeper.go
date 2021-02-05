@@ -105,7 +105,7 @@ func (kp *DexKeeper) EnablePublish() {
 func (kp *DexKeeper) GetPairType(symbol string) dexTypes.SymbolPairType {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
-		err := fmt.Errorf("unkown type of symbol: %s", symbol)
+		err := fmt.Errorf("unknown type of symbol: %s", symbol)
 		kp.logger.Error(err.Error())
 		return dexTypes.PairType.UNKNOWN
 	}
@@ -251,7 +251,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	var pairType dexTypes.SymbolPairType
-	if sdk.IsUpgrade(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX) {
 		pairType = pair.PairType
 	} else {
 		pairType = dexTypes.PairType.BEP2
@@ -468,15 +468,49 @@ func (kp *DexKeeper) ClearOrderChanges() {
 }
 
 func (kp *DexKeeper) MigrateTradingPairType(ctx sdk.Context) {
+	kp.MigrateKeeperTradingPairType()
+	kp.PairMapper.MigrateToMainAndGrowthMarket(ctx)
+}
+
+func (kp *DexKeeper) MigrateKeeperTradingPairType() {
+
 	for pairSymbol, pairType := range kp.pairsType {
 		kp.logger.Debug("Migrate pair %s, type %v", pairSymbol, pairType)
 		if pairType == dexTypes.PairType.BEP2 {
 			kp.pairsType[pairSymbol] = dexTypes.PairType.MAIN
-		} else {
+		} else if pairType == dexTypes.PairType.MINI {
 			kp.pairsType[pairSymbol] = dexTypes.PairType.GROWTH
 		}
 	}
-	kp.PairMapper.MigrateForMainAndGrowthMarket(ctx)
+
+}
+
+func (kp *DexKeeper) PromoteGrowthPairToMainMarket(ctx sdk.Context, pairs []string) {
+	for _, pair := range pairs {
+		kp.PromoteGrowthToMain(pair)
+		kp.PairMapper.PromoteGrowthToMain(ctx, pair)
+	}
+}
+
+func (kp *DexKeeper) PromoteGrowthToMain(pair string) {
+	pairType, ok := kp.pairsType[pair]
+	if !ok {
+		kp.logger.Error("failed to find pairType of symbol", "symbol", pair)
+		return
+	}
+	if pairType != dexTypes.PairType.GROWTH {
+		kp.logger.Error("pairType of symbol is not correct", "symbol", pair, "pairType", pairType)
+		return
+	}
+	orders := kp.mustGetOrderKeeper(pair).getAllOrdersForPair(pair)
+	kp.mustGetOrderKeeper(pair).deleteOrdersForPair(pair)
+
+	kp.pairsType[pair] = dexTypes.PairType.MAIN
+
+	for _, orderInfo := range orders {
+		kp.mustGetOrderKeeper(pair).addToAllOrders(pair, *orderInfo)
+	}
+
 }
 
 func (kp *DexKeeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {

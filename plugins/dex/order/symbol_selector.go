@@ -8,11 +8,11 @@ type SymbolSelector interface {
 	SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string
 }
 
-var _ SymbolSelector = &BEP2SymbolSelector{}
+var _ SymbolSelector = &MainSymbolSelector{}
 
-type BEP2SymbolSelector struct{}
+type MainSymbolSelector struct{}
 
-func (bss *BEP2SymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
+func (bss *MainSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
 	size := len(roundOrders)
 	if size == 0 {
 		return make([]string, 0)
@@ -24,22 +24,22 @@ func (bss *BEP2SymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 	return symbolsToMatch
 }
 
-type MiniSymbolSelector struct {
-	symbolsHash          map[string]uint32 //mini token pairs -> hash value for Round-Robin
-	roundSelectedSymbols []string          //mini token pairs to match in this round
+type GrowthSymbolSelector struct {
+	symbolsHash          map[string]uint32 //growth token pairs -> hash value for Round-Robin
+	roundSelectedSymbols []string          //growth token pairs to match in this round
 }
 
-var _ SymbolSelector = &MiniSymbolSelector{}
+var _ SymbolSelector = &GrowthSymbolSelector{}
 
-func (mss *MiniSymbolSelector) addSymbolHash(symbol string) {
+func (mss *GrowthSymbolSelector) addSymbolHash(symbol string) {
 	mss.symbolsHash[symbol] = crc32.ChecksumIEEE([]byte(symbol))
 }
 
-func (mss *MiniSymbolSelector) clearRoundMatchSymbol() {
+func (mss *GrowthSymbolSelector) clearRoundMatchSymbol() {
 	mss.roundSelectedSymbols = make([]string, 0)
 }
 
-func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
+func (mss *GrowthSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]string, height int64, matchAllSymbols bool) []string {
 	size := len(roundOrders)
 	if size == 0 {
 		return make([]string, 0)
@@ -50,7 +50,7 @@ func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 			symbolsToMatch = append(symbolsToMatch, symbol)
 		}
 	} else {
-		mss.selectMiniSymbolsToMatch(roundOrders, height, func(miniSymbols map[string]struct{}) {
+		mss.selectGrowthSymbolsToMatch(roundOrders, height, func(miniSymbols map[string]struct{}) {
 			for symbol := range miniSymbols {
 				symbolsToMatch = append(symbolsToMatch, symbol)
 			}
@@ -60,17 +60,17 @@ func (mss *MiniSymbolSelector) SelectSymbolsToMatch(roundOrders map[string][]str
 	return symbolsToMatch
 }
 
-func (mss *MiniSymbolSelector) selectMiniSymbolsToMatch(roundOrders map[string][]string, height int64, postSelect func(map[string]struct{})) {
+func (mss *GrowthSymbolSelector) selectGrowthSymbolsToMatch(roundOrders map[string][]string, height int64, postSelect func(map[string]struct{})) {
 	symbolsToMatch := make(map[string]struct{}, 256)
-	mss.selectActiveMiniSymbols(symbolsToMatch, roundOrders, defaultActiveMiniSymbolCount)
-	mss.selectMiniSymbolsRoundRobin(symbolsToMatch, roundOrders, height, defaultMiniBlockMatchInterval)
+	mss.selectActiveGrowthSymbols(symbolsToMatch, roundOrders, defaultActiveGrowthSymbolCount)
+	mss.selectGrowthSymbolsRoundRobin(symbolsToMatch, roundOrders, height, defaultGrowthBlockMatchInterval)
 	postSelect(symbolsToMatch)
 }
 
-func (mss *MiniSymbolSelector) selectActiveMiniSymbols(symbolsToMatch map[string]struct{}, roundOrdersMini map[string][]string, k int) {
+func (mss *GrowthSymbolSelector) selectActiveGrowthSymbols(symbolsToMatch map[string]struct{}, roundOrdersGrowth map[string][]string, k int) {
 	//use quick select to select top k symbols
-	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(roundOrdersMini))
-	for symbol, orders := range roundOrdersMini {
+	symbolOrderNumsSlice := make([]*SymbolWithOrderNumber, 0, len(roundOrdersGrowth))
+	for symbol, orders := range roundOrdersGrowth {
 		symbolOrderNumsSlice = append(symbolOrderNumsSlice, &SymbolWithOrderNumber{symbol, len(orders)})
 	}
 	topKSymbolOrderNums := findTopKLargest(symbolOrderNumsSlice, k)
@@ -80,9 +80,9 @@ func (mss *MiniSymbolSelector) selectActiveMiniSymbols(symbolsToMatch map[string
 	}
 }
 
-func (mss *MiniSymbolSelector) selectMiniSymbolsRoundRobin(symbolsToMatch map[string]struct{}, roundOrdersMini map[string][]string, height int64, matchInterval int) {
+func (mss *GrowthSymbolSelector) selectGrowthSymbolsRoundRobin(symbolsToMatch map[string]struct{}, roundOrdersGrowth map[string][]string, height int64, matchInterval int) {
 	m := height % int64(matchInterval)
-	for symbol := range roundOrdersMini {
+	for symbol := range roundOrdersGrowth {
 		symbolHash := mss.symbolsHash[symbol]
 		if int64(symbolHash%uint32(matchInterval)) == m {
 			symbolsToMatch[symbol] = struct{}{}
