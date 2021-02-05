@@ -485,27 +485,32 @@ func (kp *DexKeeper) MigrateKeeperTradingPairType() {
 
 }
 
-func (kp *DexKeeper) PromoteGrowthPairToMainMarket(ctx sdk.Context) {
-
+func (kp *DexKeeper) PromoteGrowthPairToMainMarket(ctx sdk.Context, pairs []string) {
+	for _, pair := range pairs {
+		kp.PromoteGrowthToMain(pair)
+		kp.PairMapper.PromoteToMainMarket(ctx, pair)
+	}
 }
-func (kp *DexKeeper) PromoteGrowth(pair string) error {
+
+func (kp *DexKeeper) PromoteGrowthToMain(pair string) {
 	pairType, ok := kp.pairsType[pair]
 	if !ok {
-		return fmt.Errorf("failed to find pairType of symbol [%s]", pair)
+		kp.logger.Error("failed to find pairType of symbol", "symbol", pair)
+		return
 	}
 	if pairType != dexTypes.PairType.GROWTH {
-		return fmt.Errorf("failed to pairType [%s] of symbol is [%v]", pair, pairType)
+		kp.logger.Error("pairType of symbol is not correct", "symbol", pair, "pairType", pairType)
+		return
 	}
 	orders := kp.mustGetOrderKeeper(pair).getAllOrdersForPair(pair)
 	kp.mustGetOrderKeeper(pair).deleteOrdersForPair(pair)
 
 	kp.pairsType[pair] = dexTypes.PairType.MAIN
-	
+
 	for _, orderInfo := range orders {
 		kp.mustGetOrderKeeper(pair).addToAllOrders(pair, *orderInfo)
 	}
 
-	return nil
 }
 
 func (kp *DexKeeper) doTransfer(ctx sdk.Context, tran *Transfer) sdk.Error {

@@ -27,7 +27,8 @@ type TradingPairMapper interface {
 	UpdateRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64, lastTradePrices map[string]int64)
 	GetRecentPrices(ctx sdk.Context, pricesStoreEvery, numPricesStored int64) map[string]*utils.FixedSizeRing
 	DeleteRecentPrices(ctx sdk.Context, symbol string)
-	MigrateForMainAndGrowthMarket(ctx sdk.Context)
+	MigrateToMainAndGrowthMarket(ctx sdk.Context)
+	PromoteGrowthToMain(ctx sdk.Context, symbol string)
 }
 
 var _ TradingPairMapper = mapper{}
@@ -192,7 +193,7 @@ func (m mapper) DeleteRecentPrices(ctx sdk.Context, symbol string) {
 	}
 }
 
-func (m mapper) MigrateForMainAndGrowthMarket(ctx sdk.Context){
+func (m mapper) MigrateToMainAndGrowthMarket(ctx sdk.Context) {
 	store := ctx.KVStore(m.key)
 	iter := store.Iterator(nil, nil)
 	defer iter.Close()
@@ -204,12 +205,27 @@ func (m mapper) MigrateForMainAndGrowthMarket(ctx sdk.Context){
 		pair := m.decodeTradingPair(iter.Value())
 		if cmn.IsMiniTokenSymbol(pair.BaseAssetSymbol) {
 			pair.PairType = types.PairType.GROWTH
-		}else{
+		} else {
 			pair.PairType = types.PairType.MAIN
 		}
 		value := m.encodeTradingPair(pair)
 		store.Set(iter.Key(), value)
 	}
+}
+
+func (m mapper) PromoteGrowthToMain(ctx sdk.Context, symbol string) {
+	store := ctx.KVStore(m.key)
+	bz := store.Get([]byte(symbol))
+
+	if bz == nil {
+		ctx.Logger().Error("failed to find symbol", "symbol", symbol)
+		return
+	}
+
+	pair := m.decodeTradingPair(bz)
+	pair.PairType = types.PairType.MAIN
+	value := m.encodeTradingPair(pair)
+	store.Set([]byte(symbol), value)
 }
 
 func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
