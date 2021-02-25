@@ -76,6 +76,8 @@ func MakeCMS(memDB *db.MemDB) sdk.CacheMultiStore {
 }
 
 func TestKeeper_MatchFailure(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -87,6 +89,8 @@ func TestKeeper_MatchFailure(t *testing.T) {
 	tradingPair.LotSize = -10000000 // negative LotSize should never happen
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
+	setChainVersionBEPX()
+	keeper.MigrateTradingPairType(ctx)
 
 	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 99000, 3000000)
 	ord := OrderInfo{msg, 42, 0, 42, 0, 0, "", 0}
@@ -124,6 +128,8 @@ func TestKeeper_MatchFailure(t *testing.T) {
 }
 
 func TestKeeper_MarkBreatheBlock(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -147,6 +153,8 @@ func TestKeeper_MarkBreatheBlock(t *testing.T) {
 }
 
 func Test_compressAndSave(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	//keeper := MakeKeeper(cdc)
@@ -196,6 +204,8 @@ func effectedStoredKVPairs(keeper *DexKeeper, ctx sdk.Context, keys []string) ma
 }
 
 func TestKeeper_SnapShotOrderBook(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -207,23 +217,7 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 3000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ-000_BNB", 101000, 1000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)
-	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
-	assert.Equal(1, len(keeper.GetAllOrders()))
-	assert.Equal(7, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
-	assert.Equal(1, len(keeper.engines))
+	addOrders(accAdd, keeper, assert)
 
 	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
 	storedKVPairs1 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys1)
@@ -236,6 +230,77 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	keeper2 := MakeKeeper(cdc)
 	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
 	assert.Equal(7, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
+	checkOrders(keeper2, assert, h)
+}
+
+func TestKeeper_SnapShotOrderBookMigrationDay(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPair("XYZ-000", "BNB", 1e8)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	addOrders(accAdd, keeper, assert)
+
+
+	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs1 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys1)
+	effectedStoredKeys2, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs2 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys2)
+	assert.Equal(storedKVPairs1, storedKVPairs2)
+
+	assert.Nil(err)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
+
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPX, 80)
+	keeper.MigrateTradingPairType(ctx)
+
+	keeper2 := MakeKeeper(cdc)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
+	assert.Equal(7, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
+	checkOrders(keeper2, assert, h)
+}
+
+func TestKeeper_SnapShotOrderBookAfterMigration(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
+	assert := assert.New(t)
+	cdc := MakeCodec()
+	keeper := MakeKeeper(cdc)
+	cms := MakeCMS(nil)
+	logger := log.NewTMLogger(os.Stdout)
+	ctx := sdk.NewContext(cms, abci.Header{}, sdk.RunTxModeCheck, logger)
+	accAdd, _ := MakeAddress()
+	tradingPair := dextypes.NewTradingPairWithType("XYZ-000", "BNB", 1e8, dextypes.PairType.MAIN)
+	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
+	keeper.AddEngine(tradingPair)
+
+	addOrders(accAdd, keeper, assert)
+
+
+	effectedStoredKeys1, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs1 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys1)
+	effectedStoredKeys2, err := keeper.SnapShotOrderBook(ctx, 43)
+	storedKVPairs2 := effectedStoredKVPairs(keeper, ctx, effectedStoredKeys2)
+	assert.Equal(storedKVPairs1, storedKVPairs2)
+
+	assert.Nil(err)
+	keeper.MarkBreatheBlock(ctx, 43, time.Now())
+
+	keeper2 := MakeKeeper(cdc)
+	h, err := keeper2.LoadOrderBookSnapshot(ctx, 43, utils.Now(), 0, 10)
+	assert.Equal(7, len(keeper2.GetAllOrdersForPair("XYZ-000_BNB")))
+	checkOrders(keeper2, assert, h)
+}
+
+func checkOrders(keeper2 *DexKeeper, assert *assert.Assertions, h int64) {
 	o123459 := keeper2.GetAllOrdersForPair("XYZ-000_BNB")["123459"]
 	assert.Equal(int64(98000), o123459.Price)
 	assert.Equal(int64(1000000), o123459.Quantity)
@@ -255,7 +320,29 @@ func TestKeeper_SnapShotOrderBook(t *testing.T) {
 	assert.Equal(int64(98000), sells[2].Price)
 }
 
+func addOrders(accAdd sdk.AccAddress, keeper *DexKeeper, assert *assert.Assertions) {
+	msg := NewNewOrderMsg(accAdd, "123456", Side.BUY, "XYZ-000_BNB", 102000, 3000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123457", Side.BUY, "XYZ-000_BNB", 101000, 1000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123458", Side.BUY, "XYZ-000_BNB", 99000, 5000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123459", Side.SELL, "XYZ-000_BNB", 98000, 1000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123460", Side.SELL, "XYZ-000_BNB", 97000, 5000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123461", Side.SELL, "XYZ-000_BNB", 95000, 5000000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	msg = NewNewOrderMsg(accAdd, "123462", Side.BUY, "XYZ-000_BNB", 96000, 1500000)
+	keeper.AddOrder(OrderInfo{msg, 42, 84, 42, 84, 0, "", 0}, false)
+	assert.Equal(1, len(keeper.GetAllOrders()))
+	assert.Equal(7, len(keeper.GetAllOrdersForPair("XYZ-000_BNB")))
+	assert.Equal(1, len(keeper.engines))
+}
+
 func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -304,6 +391,8 @@ func TestKeeper_SnapShotAndLoadAfterMatch(t *testing.T) {
 }
 
 func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -336,6 +425,8 @@ func TestKeeper_SnapShotOrderBookEmpty(t *testing.T) {
 }
 
 func TestKeeper_LoadOrderBookSnapshot(t *testing.T) {
+	setChainVersionBEP8()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -379,6 +470,8 @@ func MakeTxFromMsg(msgs []sdk.Msg, accountNumber, seqNum int64, privKey secp256k
 }
 
 func GenerateBlocksAndSave(storedb db.DB, withInvalidTx bool, cdc *wire.Codec) (*tmstore.BlockStore, db.DB) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	blockStore := tmstore.NewBlockStore(storedb)
 	statedb := db.NewMemDB()
 	lastCommit := &tmtypes.Commit{}
@@ -463,6 +556,8 @@ func GenerateBlocksAndSave(storedb db.DB, withInvalidTx bool, cdc *wire.Codec) (
 }
 
 func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -487,6 +582,8 @@ func TestKeeper_ReplayOrdersFromBlock(t *testing.T) {
 }
 
 func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -510,6 +607,8 @@ func TestKeeper_ReplayOrdersFromBlockWithInvalidTx(t *testing.T) {
 }
 
 func TestKeeper_InitOrderBookDay1(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
 	assert := assert.New(t)
 	cdc := MakeCodec()
 	keeper := MakeKeeper(cdc)
@@ -611,15 +710,32 @@ func TestKeeper_ExpireOrders(t *testing.T) {
 }
 
 func TestKeeper_ExpireOrdersBasedOnPrice(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	ctx, am, keeper := setup()
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, -1)
 	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
-	_, acc := testutils.NewAccount(ctx, am, 0)
-	addr := acc.GetAddress()
 	keeper.AddEngine(dextypes.NewTradingPair("ABC-000", "BNB", 1e6))
 	keeper.AddEngine(dextypes.NewTradingPair("XYZ-000M", "BNB", 1e6))
+
+	expireOrders(t, ctx, am, keeper)
+}
+
+func TestKeeper_ExpireOrdersBasedOnPriceForNewMarket(t *testing.T) {
+	setChainVersionBEPX()
+	defer resetChainVersion()
+	ctx, am, keeper := setup()
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP67, -1)
+	keeper.FeeManager.UpdateConfig(NewTestFeeConfig())
+	keeper.AddEngine(dextypes.NewTradingPairWithType("ABC-000", "BNB", 1e6, dextypes.PairType.GROWTH))
+	keeper.AddEngine(dextypes.NewTradingPairWithType("XYZ-000M", "BNB", 1e6, dextypes.PairType.MAIN))
+
+	expireOrders(t, ctx, am, keeper)
+}
+
+func expireOrders(t *testing.T, ctx sdk.Context, am auth.AccountKeeper, keeper *DexKeeper) {
+	_, acc := testutils.NewAccount(ctx, am, 0)
+	addr := acc.GetAddress()
 
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "1", Side.BUY, "ABC-000_BNB", 3e6, 3e6), 4999, 0, 5001, 0, 0, "", 0}, false)
 	keeper.AddOrder(OrderInfo{NewNewOrderMsg(addr, "2", Side.BUY, "ABC-000_BNB", 1e6, 1e6), 10000, 0, 10000, 0, 0, "", 0}, false)
@@ -768,7 +884,7 @@ func TestKeeper_UpdateLotSize(t *testing.T) {
 }
 
 func TestKeeper_UpdateLotSize_Mini(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	symbol := "XYZ-000M"
 	updateLotSize(t, symbol)
@@ -793,7 +909,7 @@ func TestOpenOrders_AfterMatch(t *testing.T) {
 }
 
 func TestOpenOrders_AfterMatch_Mini(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	addOrderAfterMatch(t, "NNB-123M")
 }
@@ -929,7 +1045,7 @@ func TestKeeper_DelistTradingPair(t *testing.T) {
 }
 
 func TestKeeper_DelistMiniTradingPair(t *testing.T) {
-	setChainVersion()
+	setChainVersionBEP8()
 	defer resetChainVersion()
 	assert := assert.New(t)
 	ctx, am, keeper := setup()
@@ -1164,9 +1280,46 @@ func TestKeeper_CanDelistMiniTradingPair(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func setChainVersion() {
+func TestKeeper_MigrateTradingPairType(t *testing.T) {
+	ctx, _, keeper := setup()
+	pair1 := dextypes.NewTradingPair("AAA-000M", types.NativeTokenSymbol, 1e8)
+	pair2 := dextypes.NewTradingPair("AAA-000", "BUSD-BD1", 1e8)
+
+	err := keeper.PairMapper.AddTradingPair(ctx, pair1)
+	err = keeper.PairMapper.AddTradingPair(ctx, pair2)
+	keeper.AddEngine(pair1)
+	keeper.AddEngine(pair2)
+	require.Nil(t, err)
+	require.Equal(t, keeper.pairsType["AAA-000M_BNB"],dextypes.PairType.MINI)
+	require.Equal(t, keeper.pairsType["AAA-000_BUSD-BD1"],dextypes.PairType.BEP2)
+
+	pairBEP2, _ := keeper.PairMapper.GetTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	pairMini, _ := keeper.PairMapper.GetTradingPair(ctx, "AAA-000M", "BNB")
+	require.Equal(t,pairBEP2.PairType,dextypes.PairType.UNKNOWN)
+	require.Equal(t,pairMini.PairType,dextypes.PairType.UNKNOWN)
+
+	keeper.MigrateTradingPairType(ctx)
+
+	require.Equal(t, keeper.pairsType["AAA-000M_BNB"],dextypes.PairType.GROWTH)
+	require.Equal(t, keeper.pairsType["AAA-000_BUSD-BD1"],dextypes.PairType.MAIN)
+
+	pairMain, _ := keeper.PairMapper.GetTradingPair(ctx, "AAA-000", "BUSD-BD1")
+	pairGrowth, _ := keeper.PairMapper.GetTradingPair(ctx, "AAA-000M", "BNB")
+	require.Equal(t,pairMain.PairType,dextypes.PairType.MAIN)
+	require.Equal(t,pairGrowth.PairType,dextypes.PairType.GROWTH)
+
+}
+
+
+func setChainVersionBEP8() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+}
+
+func setChainVersionBEPX() {
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPX, -1)
 }
 
 func resetChainVersion() {

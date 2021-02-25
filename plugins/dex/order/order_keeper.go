@@ -1,13 +1,13 @@
 package order
 
 import (
-	"github.com/binance-chain/node/common/upgrade"
 	"sync"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	bnclog "github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/common/utils"
 	me "github.com/binance-chain/node/plugins/dex/matcheng"
 	"github.com/binance-chain/node/plugins/dex/store"

@@ -38,7 +38,7 @@ func (kp *GrowthMarketOrderKeeper) support(pair string) bool {
 	if !sdk.IsUpgrade(upgrade.BEP8) {
 		return false
 	}
-	return dexUtils.IsMiniTokenTradingPair(pair)
+	return dexUtils.IsMiniTokenTradingPair(pair) //TODO
 }
 
 //override

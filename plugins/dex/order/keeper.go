@@ -105,7 +105,7 @@ func (kp *DexKeeper) EnablePublish() {
 func (kp *DexKeeper) GetPairType(symbol string) dexTypes.SymbolPairType {
 	pairType, ok := kp.pairsType[symbol]
 	if !ok {
-		err := fmt.Errorf("unkown type of symbol: %s", symbol)
+		err := fmt.Errorf("unknown type of symbol: %s", symbol)
 		kp.logger.Error(err.Error())
 		return dexTypes.PairType.UNKNOWN
 	}
