@@ -23,4 +23,6 @@ func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(order.OrderBookSnapshot{}, "dex/OrderBookSnapshot", nil)
 	cdc.RegisterConcrete(order.ActiveOrders{}, "dex/ActiveOrders", nil)
 	cdc.RegisterConcrete(store.RecentPrice{}, "dex/RecentPrice", nil)
+
+	cdc.RegisterConcrete(types.ListGrowthMarketMsg{}, "dex/ListGrowthMarketMsg", nil)
 }

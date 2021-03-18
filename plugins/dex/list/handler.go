@@ -25,6 +25,8 @@ func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper go
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)
 		case types.ListMiniMsg:
 			return handleListMini(ctx, keeper, tokenMapper, msg)
+		case types.ListGrowthMarketMsg:
+			return handleListGrowthMarket(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
