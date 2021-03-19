@@ -398,7 +398,9 @@ func (app *BinanceChain) initDex() {
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
-
+	upgrade.Mgr.RegisterBeginBlocker(sdk.ListRefactor, func(ctx sdk.Context) {
+		app.DexKeeper.MigrateTradingPairType(ctx)
+	})
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
 		return
@@ -832,10 +834,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
-	}
-
-	if sdk.IsUpgradeHeight(upgrade.BEPX) {
-		app.DexKeeper.MigrateTradingPairType(ctx)
 	}
 
 	if app.publicationConfig.ShouldPublishAny() &&

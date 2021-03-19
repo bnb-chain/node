@@ -251,7 +251,7 @@ func (kp *DexKeeper) AddEngine(pair dexTypes.TradingPair) *me.MatchEng {
 	eng := CreateMatchEng(symbol, pair.ListPrice.ToInt64(), pair.LotSize.ToInt64())
 	kp.engines[symbol] = eng
 	var pairType dexTypes.SymbolPairType
-	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		pairType = pair.PairType
 	} else {
 		pairType = dexTypes.PairType.BEP2

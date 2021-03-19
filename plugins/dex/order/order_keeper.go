@@ -248,7 +248,7 @@ func (kp *MainMarketOrderKeeper) supportUpgradeVersion() bool {
 }
 
 func (kp *MainMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
-	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX) {
+	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		return dexTypes.PairType.MAIN == pairType
 	}
 	return dexTypes.PairType.BEP2 == pairType

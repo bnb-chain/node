@@ -259,7 +259,7 @@ func TestKeeper_SnapShotOrderBookMigrationDay(t *testing.T) {
 	assert.Nil(err)
 	keeper.MarkBreatheBlock(ctx, 43, time.Now())
 
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPX, 80)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.ListRefactor, 80)
 	keeper.MigrateTradingPairType(ctx)
 
 	keeper2 := MakeKeeper(cdc)
@@ -1319,7 +1319,7 @@ func setChainVersionBEP8() {
 func setChainVersionBEPX() {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, -1)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP70, -1)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPX, -1)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.ListRefactor, -1)
 }
 
 func resetChainVersion() {

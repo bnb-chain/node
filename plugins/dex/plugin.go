@@ -36,6 +36,9 @@ func InitPlugin(
 	//dex mini handler
 	dexMiniHandler := createQueryHandler(dexKeeper, DexMiniAbciQueryPrefix)
 	appp.RegisterQueryHandler(DexMiniAbciQueryPrefix, dexMiniHandler)
+	//dex growth handler
+	dexGrowthHandler := createQueryHandler(dexKeeper, DexGrowthAbciQueryPrefix)
+	appp.RegisterQueryHandler(DexGrowthAbciQueryPrefix, dexGrowthHandler)
 }
 
 func createQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQueryHandler {

@@ -47,7 +47,7 @@ func (kp *GrowthMarketOrderKeeper) supportUpgradeVersion() bool {
 }
 
 func (kp *GrowthMarketOrderKeeper) supportPairType(pairType dexTypes.SymbolPairType) bool {
-	if sdk.IsUpgrade(upgrade.BEPX) && !sdk.IsUpgradeHeight(upgrade.BEPX){
+	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		return dexTypes.PairType.GROWTH == pairType
 	}
 	return dexTypes.PairType.MINI == pairType
