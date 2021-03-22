@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -25,7 +28,78 @@ func NewListHooks(orderKeeper *order.DexKeeper, tokenMapper tokens.Mapper) ListH
 	}
 }
 
-var _ gov.GovHooks = ListHooks{}
+var _ gov.ExtGovHooks = ListHooks{}
+
+func (hooks ListHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) error {
+	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
+		return fmt.Errorf("proposal type(%s) should be %s",
+			proposal.GetProposalType(), gov.ProposalTypeListTradingPair)
+	}
+
+	if proposal.GetStatus() != gov.StatusPassed {
+		return fmt.Errorf("proposal status(%s) should be Passed before you can list your token",
+			proposal.GetStatus())
+	}
+
+	listParams := gov.ListTradingPairParams{}
+	err := json.Unmarshal([]byte(proposal.GetDescription()), &listParams)
+	if err != nil {
+		return fmt.Errorf("illegal list params in proposal, params=%s", proposal.GetDescription())
+	}
+
+	if listParams.BaseAssetSymbol == "" {
+		return errors.New("base asset symbol should not be empty")
+	}
+
+	if listParams.QuoteAssetSymbol == "" {
+		return errors.New("quote asset symbol should not be empty")
+	}
+
+	if listParams.BaseAssetSymbol == listParams.QuoteAssetSymbol {
+		return errors.New("base token and quote token should not be the same")
+	}
+
+	if listParams.InitPrice <= 0 {
+		return errors.New("init price should larger than zero")
+	}
+
+	if types.IsMiniTokenSymbol(listParams.BaseAssetSymbol) {
+		if !hooks.tokenMapper.ExistsMini(ctx, listParams.BaseAssetSymbol) {
+			return errors.New("base token does not exist")
+		}
+		if listParams.QuoteAssetSymbol != types.NativeTokenSymbol && listParams.QuoteAssetSymbol != order.BUSDSymbol {
+			return errors.New("mini token can only be base symbol against BNB or BUSD")
+		}
+	} else {
+		if types.IsMiniTokenSymbol(listParams.QuoteAssetSymbol) {
+			return errors.New("mini token can not be listed as quote symbol")
+		}
+		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
+			return errors.New("base token does not exist")
+		}
+
+		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
+			return errors.New("quote token does not exist")
+		}
+	}
+
+	if err := hooks.orderKeeper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
+		return err
+	}
+
+	lotSize := hooks.orderKeeper.DetermineLotSize(listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol, listParams.InitPrice)
+
+	pair := dextypes.NewTradingPairWithLotSize(listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol, listParams.InitPrice, lotSize)
+	err = hooks.orderKeeper.PairMapper.AddTradingPair(ctx, pair)
+	if err != nil {
+		return err
+	}
+
+	hooks.orderKeeper.AddEngine(pair)
+	log.With("module", "dex").Info("List new Pair and created new match engine", "pair", pair)
+
+	return nil
+}
 
 func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
@@ -58,12 +132,34 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("expire time should after now")
 	}
 
-	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
-		return errors.New("base token does not exist")
-	}
+	if sdk.IsUpgrade("") { // todo
+		if types.IsMiniTokenSymbol(listParams.BaseAssetSymbol) {
+			if !hooks.tokenMapper.ExistsMini(ctx, listParams.BaseAssetSymbol) {
+				return errors.New("base token does not exist")
+			}
+			if listParams.QuoteAssetSymbol != types.NativeTokenSymbol && listParams.QuoteAssetSymbol != order.BUSDSymbol {
+				return errors.New("mini token can only be base symbol against BNB or BUSD")
+			}
+		} else {
+			if types.IsMiniTokenSymbol(listParams.QuoteAssetSymbol) {
+				return errors.New("mini token can not be listed as quote symbol")
+			}
+			if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
+				return errors.New("base token does not exist")
+			}
 
-	if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
-		return errors.New("quote token does not exist")
+			if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
+				return errors.New("quote token does not exist")
+			}
+		}
+	} else {
+		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
+			return errors.New("base token does not exist")
+		}
+
+		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
+			return errors.New("quote token does not exist")
+		}
 	}
 
 	if err := hooks.orderKeeper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
