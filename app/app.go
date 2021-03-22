@@ -604,12 +604,14 @@ func (app *BinanceChain) initGovHooks() {
 	scParamChangeHooks := paramHub.NewSCParamsChangeHook(app.Codec)
 	chanPermissionHooks := sidechain.NewChanPermissionSettingHook(app.Codec, &app.scKeeper)
 	delistHooks := list.NewDelistHooks(app.DexKeeper)
+	listPromotionHooks := list.NewPromotionHooks(app.DexKeeper)
 	app.govKeeper.AddHooks(gov.ProposalTypeListTradingPair, listHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeFeeChange, feeChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeCSCParamsChange, cscParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeSCParamsChange, scParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeManageChanPermission, chanPermissionHooks)
+	app.govKeeper.AddHooks(gov.ProposalTypeListPromotion, listPromotionHooks)
 }
 
 func (app *BinanceChain) initParams() {

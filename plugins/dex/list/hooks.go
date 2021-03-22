@@ -226,3 +226,64 @@ func (hooks DelistHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Propo
 
 	return nil
 }
+
+type PromotionHooks struct {
+	orderKeeper *order.DexKeeper
+}
+
+func NewPromotionHooks(orderKeeper *order.DexKeeper) PromotionHooks {
+	return PromotionHooks{
+		orderKeeper: orderKeeper,
+	}
+}
+
+func (hooks PromotionHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposal) error {
+	if proposal.GetProposalType() != gov.ProposalTypeListPromotion {
+		return errors.New(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
+	}
+	if !sdk.IsUpgrade(upgrade.TradingPairPromotion) {
+		return fmt.Errorf("proposal type %s is not supported", gov.ProposalTypeListPromotion)
+	}
+	promotionParams := gov.ListPromotionParams{}
+	err := json.Unmarshal([]byte(proposal.GetDescription()), &promotionParams)
+	if err != nil {
+		return fmt.Errorf("unmarshal list promotion params error, err=%s", err.Error())
+	}
+
+	if promotionParams.BaseAssetSymbol == "" {
+		return errors.New("base asset symbol should not be empty")
+	}
+
+	if err := hooks.orderKeeper.CanPromoteTradingPair(ctx, promotionParams.BaseAssetSymbol); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//func (hooks PromotionHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) error {
+//	if proposal.GetProposalType() != gov.ProposalTypeListPromotion {
+//		return errors.New(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
+//	}
+//	if !sdk.IsUpgrade(upgrade.TradingPairPromotion) {
+//		return fmt.Errorf("proposal type %s is not supported", gov.ProposalTypeListPromotion)
+//	}
+//	promotionParams := gov.ListPromotionParams{}
+//	err := json.Unmarshal([]byte(proposal.GetDescription()), &promotionParams)
+//	if err != nil {
+//		return fmt.Errorf("unmarshal list promotion params error, err=%s", err.Error())
+//	}
+//
+//	if promotionParams.BaseAssetSymbol == "" {
+//		return errors.New("base asset symbol should not be empty")
+//	}
+//
+//	if err := hooks.orderKeeper.CanPromoteTradingPair(ctx, promotionParams.BaseAssetSymbol); err != nil {
+//		return err
+//	}
+//
+//	if err := hooks.orderKeeper.PromoteGrowthToMainMarket(ctx, promotionParams.BaseAssetSymbol); err != nil {
+//		return err
+//	}
+//	return nil
+//}

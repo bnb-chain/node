@@ -1157,3 +1157,28 @@ func isMiniSymbolPair(baseAsset, quoteAsset string) bool {
 func (kp *DexKeeper) pairExistsBetween(ctx sdk.Context, symbolA, symbolB string) bool {
 	return kp.PairMapper.Exists(ctx, symbolA, symbolB) || kp.PairMapper.Exists(ctx, symbolB, symbolA)
 }
+
+func (kp *DexKeeper) CanPromoteTradingPair(ctx sdk.Context, baseAsset string) error {
+	baseAsset = strings.ToUpper(baseAsset)
+
+	_, err1 := kp.PairMapper.GetTradingPair(ctx, baseAsset, types.NativeTokenSymbol)
+	if err1 == nil { // todo && pairType is main market , return error
+		return errors.New("can not promote the asset from main market")
+	}
+
+	_, err2 := kp.PairMapper.GetTradingPair(ctx, baseAsset, BUSDSymbol)
+	if err2 == nil { // todo && pairType is main market , return error
+		return errors.New("can not promote the asset from main market")
+	}
+
+	if err1 != nil && err2 != nil {
+		return errors.New("the asset has not been listed in growth market")
+	}
+
+	return nil
+}
+
+func (kp *DexKeeper) PromoteGrowthToMainMarket(ctx sdk.Context, baseAsset string) error {
+
+	return nil // TODO to be implemented
+}
