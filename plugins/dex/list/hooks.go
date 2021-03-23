@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
+	"github.com/binance-chain/node/common/log"
+	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
+	dextypes "github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
 )
 
@@ -31,6 +31,11 @@ func NewListHooks(orderKeeper *order.DexKeeper, tokenMapper tokens.Mapper) ListH
 var _ gov.ExtGovHooks = ListHooks{}
 
 func (hooks ListHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) error {
+
+	if !sdk.IsUpgrade(upgrade.ListRefactor) {
+		return nil
+	}
+
 	if proposal.GetProposalType() != gov.ProposalTypeListTradingPair {
 		return fmt.Errorf("proposal type(%s) should be %s",
 			proposal.GetProposalType(), gov.ProposalTypeListTradingPair)
@@ -132,7 +137,7 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		return errors.New("expire time should after now")
 	}
 
-	if sdk.IsUpgrade("") { // todo
+	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		if types.IsMiniTokenSymbol(listParams.BaseAssetSymbol) {
 			if !hooks.tokenMapper.ExistsMini(ctx, listParams.BaseAssetSymbol) {
 				return errors.New("base token does not exist")
