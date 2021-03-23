@@ -1,17 +1,25 @@
 package list
 
 import (
+	"fmt"
+
 	"github.com/binance-chain/node/common/log"
 	ctypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg types.ListMiniMsg) sdk.Result {
+
+	if sdk.IsUpgrade("") { // todo
+		return sdk.ErrMsgNotSupported(fmt.Sprintf("msg type(%s) is not supported after height %d",
+			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(""))).Result()
+	}
 
 	// before BEP70 upgraded, we only support listing mini token against NativeToken
 	if sdk.IsUpgrade(upgrade.BEP70) {
