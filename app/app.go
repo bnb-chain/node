@@ -327,6 +327,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP87, upgradeConfig.BEP87Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
 
+	upgrade.Mgr.AddUpgradeHeight(upgrade.ListRefactor, upgradeConfig.ListRefactorHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.TradingPairPromotion, upgradeConfig.TradingPairPromotionHeight)
+
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())

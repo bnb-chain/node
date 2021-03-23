@@ -85,6 +85,10 @@ BEP87Height = {{ .UpgradeConfig.BEP87Height }}
 FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
 # Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
 EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
+# Block height of Refactor List Process upgrade
+ListRefactorHeight = {{ .UpgradeConfig.ListRefactorHeight }}
+# Block height of TradingPairPromotion upgrade
+TradingPairPromotionHeight = {{ .UpgradeConfig.TradingPairPromotionHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -525,6 +529,9 @@ type UpgradeConfig struct {
 	BEP87Height                                     int64 `mapstructure:"BEP87Height"`
 	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
+
+	ListRefactorHeight         int64 `mapstructure:"ListRefactorHeight"`
+	TradingPairPromotionHeight int64 `mapstructure:"TradingPairPromotionHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -544,11 +551,13 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                1,
 		BEP70Height:                1,
 		LaunchBscUpgradeHeight:     1,
-		BEP82Height:                math.MaxInt64,
-		BEP84Height:                math.MaxInt64,
-		BEP87Height:                math.MaxInt64,
-		FixFailAckPackageHeight:    math.MaxInt64,
-		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
+		BEP82Height:                1,
+		BEP84Height:                1,
+		BEP87Height:                1,
+		FixFailAckPackageHeight:    1,
+		EnableAccountScriptsForCrossChainTransferHeight: 1,
+		ListRefactorHeight:         math.MaxInt64,
+		TradingPairPromotionHeight: math.MaxInt64,
 	}
 }
 
