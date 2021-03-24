@@ -18,7 +18,7 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 
 	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		return sdk.ErrMsgNotSupported(fmt.Sprintf("msg type(%s) is not supported after height %d",
-			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(""))).Result()
+			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(upgrade.ListRefactor))).Result()
 	}
 
 	// before BEP70 upgraded, we only support listing mini token against NativeToken

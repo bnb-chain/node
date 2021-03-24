@@ -83,7 +83,7 @@ func handleList(ctx sdk.Context, keeper *order.DexKeeper, tokenMapper tokens.Map
 
 	if sdk.IsUpgrade(upgrade.ListRefactor) {
 		return sdk.ErrMsgNotSupported(fmt.Sprintf("msg type(%s) is not supported after height %d",
-			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(""))).Result()
+			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(upgrade.ListRefactor))).Result()
 	}
 
 	if err := checkListProposal(ctx, govKeeper, msg); err != nil {
