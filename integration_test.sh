@@ -38,6 +38,7 @@ function prepare_node() {
 	$(cd "./${home}/config" && sed -i -e "s/BEP8Height = 9223372036854775807/BEP8Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/BEP67Height = 9223372036854775807/BEP67Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/BEP70Height = 9223372036854775807/BEP70Height = 1/g" app.toml)
+	$(cd "./${home}/config" && sed -i -e "s/ListRefactorHeight = 9223372036854775807/ListRefactorHeight = 150/g" app.toml)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
@@ -385,5 +386,33 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 
 result=$(./bnbcli dex show -l ${mbc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
+
+## ROUND 7 ##
+
+sleep 1s
+# issue token
+result=$(expect ./issue.exp LBC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
+lbc_symbol=$(echo "${result}" | tail -n 1 | grep -o "LBC-[0-9A-Z]*")
+check_operation "Issue Token" "${result}" "${chain_operation_words}"
+
+sleep 1s
+# propose list
+((expire_time=$(date '+%s')+1000))
+lower_case_lbc_symbol=$(echo ${lbc_symbol} | tr 'A-Z' 'a-z')
+result=$(expect ./propose_list.exp ${chain_id} alice 200000000000:BNB ${lower_case_lbc_symbol} bnb 100000000 "list LBC/BNB" "list LBC/BNB" ${cli_home} ${expire_time} 5)
+check_operation "Propose list" "${result}" "${chain_operation_words}"
+
+sleep 2s
+# vote for propose
+result=$(expect ./vote.exp alice ${chain_id} 2 Yes ${cli_home})
+check_operation "Vote" "${result}" "${chain_operation_words}"
+
+sleep 3s
+# place buy order
+result=$(expect ./order.exp ${lbc_symbol}_BNB 1 100000000 1000000000 alice ${chain_id} gte ${cli_home})
+check_operation "Place Order" "${result}" "${chain_operation_words}"
+order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
+printf "Order ID: $order_id\n"
+
 
 exit_test 0
