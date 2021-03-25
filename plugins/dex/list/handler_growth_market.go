@@ -15,17 +15,13 @@ import (
 func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg types.ListGrowthMarketMsg) sdk.Result {
 
-	if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
-		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
-	}
-
 	if ctypes.NativeTokenSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, order.BUSDSymbol); err == nil {
 			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
 			// todo if pair type is main market, return error message: One token can only be listed on one market
 		}
 
-	} else if order.BUSDSymbol != msg.QuoteAssetSymbol {
+	} else if order.BUSDSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, ctypes.NativeTokenSymbol); err == nil {
 			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
 			// todo if pair type is main market, return error message: One token can only be listed on one market
