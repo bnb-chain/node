@@ -36,6 +36,7 @@ var transferOnlyModeBlackList = []string{
 	seturi.SetURIMsg{}.Type(),
 	list.ListMsg{}.Type(),
 	list.ListMiniMsg{}.Type(),
+	list.ListGrowthMarketMsg{}.Type(),
 	ownership.TransferOwnershipMsg{}.Type(),
 	swap.HTLTMsg{}.Type(),
 	swap.DepositHTLTMsg{}.Type(),

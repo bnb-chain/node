@@ -5,7 +5,6 @@ import (
 
 	"github.com/binance-chain/node/common/log"
 	ctypes "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/order"
 	"github.com/binance-chain/node/plugins/dex/types"
 	"github.com/binance-chain/node/plugins/tokens"
@@ -13,28 +12,33 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
-	msg types.ListMiniMsg) sdk.Result {
+func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
+	msg types.ListGrowthMarketMsg) sdk.Result {
 
-	if sdk.IsUpgrade(upgrade.ListRefactor) {
-		return sdk.ErrMsgNotSupported(fmt.Sprintf("msg type(%s) is not supported after height %d",
-			msg.Type(), sdk.UpgradeMgr.GetUpgradeHeight(upgrade.ListRefactor))).Result()
+	if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
+		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
 	}
 
-	// before BEP70 upgraded, we only support listing mini token against NativeToken
-	if sdk.IsUpgrade(upgrade.BEP70) {
-		if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ").Result()
+	if ctypes.NativeTokenSymbol == msg.QuoteAssetSymbol {
+		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, order.BUSDSymbol); err == nil {
+			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
+			// todo if pair type is main market, return error message: One token can only be listed on one market
+		}
+
+	} else if order.BUSDSymbol != msg.QuoteAssetSymbol {
+		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, ctypes.NativeTokenSymbol); err == nil {
+			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
+			// todo if pair type is main market, return error message: One token can only be listed on one market
 		}
 	} else {
-		if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol {
-			return sdk.ErrInvalidCoins("quote token is not valid ").Result()
-		}
+		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
 	}
 
 	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
+
+	// todo check if exists a trading pair taking msg.BaseAsset as base quote in main market
 
 	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {
@@ -51,6 +55,7 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 	}
 
 	lotSize := dexKeeper.DetermineLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice)
+
 	pair := types.NewTradingPairWithLotSize(msg.BaseAssetSymbol, msg.QuoteAssetSymbol, msg.InitPrice, lotSize)
 	err = dexKeeper.PairMapper.AddTradingPair(ctx, pair)
 	if err != nil {
@@ -60,7 +65,7 @@ func handleListMini(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tok
 	// this is done in memory! we must not run this block in checktx or simulate!
 	if ctx.IsDeliverTx() { // only add engine during DeliverTx
 		dexKeeper.AddEngine(pair)
-		log.With("module", "dex").Info("List new mini-token Pair and created new match engine", "pair", pair)
+		log.With("module", "dex").Info("List new pair on growth market and created new match engine", "pair", pair)
 	}
 
 	return sdk.Result{}

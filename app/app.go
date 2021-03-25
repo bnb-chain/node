@@ -374,6 +374,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownership.TransferOwnershipMsg{}.Type())
+
+	upgrade.Mgr.RegisterMsgTypes(upgrade.ListRefactor, dextypes.ListGrowthMarketMsg{}.Type())
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
