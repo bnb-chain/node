@@ -250,6 +250,8 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)].LastMatchHeight = 0
 			case dextypes.ListMsg:
 				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)].LastMatchHeight = 0
+			case dextypes.ListGrowthMarketMsg:
+				kp.engines[dexutils.Assets2TradingPair(msg.BaseAssetSymbol, msg.QuoteAssetSymbol)].LastMatchHeight = 0
 			}
 		}
 	}
