@@ -1,8 +1,6 @@
 package list
 
 import (
-	"fmt"
-
 	"github.com/binance-chain/node/common/log"
 	ctypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -21,14 +19,16 @@ func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMa
 
 	if ctypes.NativeTokenSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, order.BUSDSymbol); err == nil {
-			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
-			// todo if pair type is main market, return error message: One token can only be listed on one market
+			if pair.PairType == types.PairType.MAIN {
+				return sdk.ErrInvalidCoins("one token can only be listed in one market").Result()
+			}
 		}
 
-	} else if order.BUSDSymbol != msg.QuoteAssetSymbol {
+	} else if order.BUSDSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, ctypes.NativeTokenSymbol); err == nil {
-			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
-			// todo if pair type is main market, return error message: One token can only be listed on one market
+			if pair.PairType == types.PairType.MAIN {
+				return sdk.ErrInvalidCoins("one token can only be listed in one market").Result()
+			}
 		}
 	} else {
 		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
@@ -37,8 +37,6 @@ func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMa
 	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
-
-	// todo check if exists a trading pair taking msg.BaseAsset as base quote in main market
 
 	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {
