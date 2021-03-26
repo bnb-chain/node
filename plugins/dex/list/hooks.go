@@ -91,12 +91,14 @@ func (hooks ListHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) 
 		}
 	}
 	if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, baseAssetSymbol, types.NativeTokenSymbol); err != nil {
-		// TODO check if pair type is new market, return err: one token can only be listed in one market
-		log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		if pair.PairType == dextypes.PairType.GROWTH {
+			return errors.New("one token can only be listed in one market")
+		}
 	}
 	if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, baseAssetSymbol, order.BUSDSymbol); err != nil {
-		// TODO check if pair type is new market, return err: one token can only be listed in one market
-		log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		if pair.PairType == dextypes.PairType.GROWTH {
+			return errors.New("one token can only be listed in one market")
+		}
 	}
 
 	if err := hooks.orderKeeper.CanListTradingPair(ctx, baseAssetSymbol, quoteAssetSymbol); err != nil {
@@ -169,12 +171,14 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 			}
 		}
 		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, listParams.BaseAssetSymbol, types.NativeTokenSymbol); err != nil {
-			// TODO check if pair type is new market, return err: one token can only be listed in one market
-			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+			if pair.PairType == dextypes.PairType.GROWTH {
+				return errors.New("one token can only be listed in one market")
+			}
 		}
 		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, listParams.BaseAssetSymbol, order.BUSDSymbol); err != nil {
-			// TODO check if pair type is new market, return err: one token can only be listed in one market
-			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+			if pair.PairType == dextypes.PairType.GROWTH {
+				return errors.New("one token can only be listed in one market")
+			}
 		}
 	} else {
 		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
