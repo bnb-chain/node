@@ -52,54 +52,10 @@ func (hooks ListHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) 
 		return fmt.Errorf("illegal list params in proposal, params=%s", proposal.GetDescription())
 	}
 
-	if listParams.BaseAssetSymbol == "" {
-		return errors.New("base asset symbol should not be empty")
-	}
-
-	if listParams.QuoteAssetSymbol == "" {
-		return errors.New("quote asset symbol should not be empty")
-	}
-
 	baseAssetSymbol := strings.ToUpper(listParams.BaseAssetSymbol)
 	quoteAssetSymbol := strings.ToUpper(listParams.QuoteAssetSymbol)
 
-	if baseAssetSymbol == quoteAssetSymbol {
-		return errors.New("base token and quote token should not be the same")
-	}
-
-	if listParams.InitPrice <= 0 {
-		return errors.New("init price should larger than zero")
-	}
-
-	if types.IsMiniTokenSymbol(baseAssetSymbol) {
-		if !hooks.tokenMapper.ExistsMini(ctx, baseAssetSymbol) {
-			return errors.New("base token does not exist")
-		}
-		if quoteAssetSymbol != types.NativeTokenSymbol && quoteAssetSymbol != order.BUSDSymbol {
-			return errors.New("mini token can only be base symbol against BNB or BUSD")
-		}
-	} else {
-		if types.IsMiniTokenSymbol(quoteAssetSymbol) {
-			return errors.New("mini token can not be listed as quote symbol")
-		}
-		if !hooks.tokenMapper.ExistsBEP2(ctx, baseAssetSymbol) {
-			return errors.New("base token does not exist")
-		}
-
-		if !hooks.tokenMapper.ExistsBEP2(ctx, quoteAssetSymbol) {
-			return errors.New("quote token does not exist")
-		}
-	}
-	if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, baseAssetSymbol, types.NativeTokenSymbol); err != nil {
-		// TODO check if pair type is new market, return err: one token can only be listed in one market
-		log.Info(fmt.Sprintf("%s", pair)) // remove this log
-	}
-	if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, baseAssetSymbol, order.BUSDSymbol); err != nil {
-		// TODO check if pair type is new market, return err: one token can only be listed in one market
-		log.Info(fmt.Sprintf("%s", pair)) // remove this log
-	}
-
-	if err := hooks.orderKeeper.CanListTradingPair(ctx, baseAssetSymbol, quoteAssetSymbol); err != nil {
+	if err := checkListingPairOnMainMarket(hooks, ctx, strings.ToUpper(listParams.BaseAssetSymbol), strings.ToUpper(listParams.QuoteAssetSymbol)); err != nil {
 		return err
 	}
 
@@ -149,32 +105,8 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 	}
 
 	if sdk.IsUpgrade(upgrade.ListRefactor) {
-		if types.IsMiniTokenSymbol(strings.ToUpper(listParams.BaseAssetSymbol)) {
-			if !hooks.tokenMapper.ExistsMini(ctx, listParams.BaseAssetSymbol) {
-				return errors.New("base token does not exist")
-			}
-			if strings.ToUpper(listParams.QuoteAssetSymbol) != types.NativeTokenSymbol && strings.ToUpper(listParams.QuoteAssetSymbol) != order.BUSDSymbol {
-				return errors.New("mini token can only be base symbol against BNB or BUSD")
-			}
-		} else {
-			if types.IsMiniTokenSymbol(strings.ToUpper(listParams.QuoteAssetSymbol)) {
-				return errors.New("mini token can not be listed as quote symbol")
-			}
-			if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
-				return errors.New("base token does not exist")
-			}
-
-			if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.QuoteAssetSymbol) {
-				return errors.New("quote token does not exist")
-			}
-		}
-		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, listParams.BaseAssetSymbol, types.NativeTokenSymbol); err != nil {
-			// TODO check if pair type is new market, return err: one token can only be listed in one market
-			log.Info(fmt.Sprintf("%s", pair)) // remove this log
-		}
-		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, listParams.BaseAssetSymbol, order.BUSDSymbol); err != nil {
-			// TODO check if pair type is new market, return err: one token can only be listed in one market
-			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		if err := checkListingPairOnMainMarket(hooks, ctx, strings.ToUpper(listParams.BaseAssetSymbol), strings.ToUpper(listParams.QuoteAssetSymbol)); err != nil {
+			return err
 		}
 	} else {
 		if !hooks.tokenMapper.ExistsBEP2(ctx, listParams.BaseAssetSymbol) {
@@ -188,6 +120,54 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 
 	if err := hooks.orderKeeper.CanListTradingPair(ctx, listParams.BaseAssetSymbol, listParams.QuoteAssetSymbol); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+/**
+ * 1. Existence check
+ * 2. Mini asset can only be Base Asset against BNB/BUSD
+ * 3. Asset can only listed on one market:
+ *    a. if quote is BNB, check if exists Base/BUSD listed in new market already
+ *    b. if quote is BUSD, check if exists Base/BNB listed in new market already
+ *    c. else, check if exists Quote/BNB listed in new market already
+ */
+func checkListingPairOnMainMarket(hooks ListHooks, ctx sdk.Context, BaseAssetSymbol string, QuoteAssetSymbol string) error {
+	if types.IsMiniTokenSymbol(BaseAssetSymbol) {
+		if !hooks.tokenMapper.ExistsMini(ctx, BaseAssetSymbol) {
+			return errors.New("base token does not exist")
+		}
+		if QuoteAssetSymbol != types.NativeTokenSymbol && QuoteAssetSymbol != order.BUSDSymbol {
+			return errors.New("mini token can only be base symbol against BNB or BUSD")
+		}
+	} else {
+		if types.IsMiniTokenSymbol(QuoteAssetSymbol) {
+			return errors.New("mini token can not be listed as quote symbol")
+		}
+		if !hooks.tokenMapper.ExistsBEP2(ctx, BaseAssetSymbol) {
+			return errors.New("base token does not exist")
+		}
+
+		if !hooks.tokenMapper.ExistsBEP2(ctx, QuoteAssetSymbol) {
+			return errors.New("quote token does not exist")
+		}
+	}
+	if types.NativeTokenSymbol == QuoteAssetSymbol {
+		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, BaseAssetSymbol, order.BUSDSymbol); err == nil {
+			// TODO check if pair type is new market, return err: one token can only be listed in one market
+			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		}
+	} else if order.BUSDSymbol == QuoteAssetSymbol {
+		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, BaseAssetSymbol, types.NativeTokenSymbol); err == nil {
+			// TODO check if pair type is new market, return err: one token can only be listed in one market
+			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		}
+	} else {
+		if pair, err := hooks.orderKeeper.PairMapper.GetTradingPair(ctx, QuoteAssetSymbol, types.NativeTokenSymbol); err == nil {
+			// TODO check if pair type is new market, return err: one token can only be listed in one market
+			log.Info(fmt.Sprintf("%s", pair)) // remove this log
+		}
 	}
 
 	return nil
