@@ -23,7 +23,7 @@ const flagProposalId = "proposal-id"
 func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "",
+		Short: "list a trading pair, notice: it is unsupported after XX upgrade ", // todo fill the correct upgrade name
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, txbldr := client.PrepareCtx(cdc)
 
@@ -79,7 +79,7 @@ func listTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 func listMiniTradingPairCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-mini",
-		Short: "",
+		Short: "list a mini trading pair, notice: it is unsupported after XX upgrade ", // todo fill the correct upgrade name
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx, txbldr := client.PrepareCtx(cdc)
 
