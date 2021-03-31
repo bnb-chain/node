@@ -11,6 +11,7 @@ import (
 	"github.com/binance-chain/node/app/pub"
 	bnclog "github.com/binance-chain/node/common/log"
 	app "github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/common/upgrade"
 	"github.com/binance-chain/node/plugins/dex/utils"
 	"github.com/binance-chain/node/plugins/tokens"
 )
@@ -48,6 +49,11 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	logger.Info("Delist trading pairs", "blockHeight", height)
 	delistTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
 
+	if sdk.IsUpgrade(upgrade.TradingPairPromotion) {
+		logger.Info("Promote trading pairs", "blockHeight", height)
+		promoteTradingPairs(ctx, govKeeper, dexKeeper, blockTime)
+	}
+
 	logger.Info("Update tick size / lot size")
 	dexKeeper.UpdateTickSizeAndLotSize(ctx)
 
@@ -65,6 +71,61 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
 	return
+}
+
+func promoteTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {
+	logger := bnclog.With("module", "dex")
+	symbolsToPromote := getSymbolsToPromote(ctx, govKeeper, blockTime)
+	for _, symbol := range symbolsToPromote {
+		logger.Info("Promote asset", "symbol", symbol)
+		if err := dexKeeper.CanPromoteTradingPair(ctx, symbol); err != nil {
+			logger.Error("can not promote symbol", "symbol", symbol, "err", err.Error())
+			continue
+		}
+		if err := dexKeeper.PromoteGrowthToMainMarket(ctx, symbol); err != nil {
+			logger.Error("failed to promote symbol", "symbol", symbol, "err", err.Error())
+		} else {
+			// todo publish promotion event
+		}
+	}
+
+}
+
+func getSymbolsToPromote(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Time) []string {
+	logger := bnclog.With("module", "dex")
+
+	symbols := make([]string, 0)
+	periodToSearch := getPeriodToSearch(ctx, govKeeper, 0)
+
+	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
+		if proposal.GetSubmitTime().Add(periodToSearch).Before(blockTime) {
+			return true
+		}
+
+		if proposal.GetProposalType() == gov.ProposalTypeListPromotion {
+			var promoteParam gov.ListPromotionParams
+			err := json.Unmarshal([]byte(proposal.GetDescription()), &promoteParam)
+			if err != nil {
+				logger.Error("illegal promote params in proposal", "params", proposal.GetDescription())
+				return false
+			}
+			if promoteParam.IsExecuted {
+				return false
+			}
+			promoteParam.IsExecuted = true
+			bz, err := json.Marshal(promoteParam)
+			if err != nil {
+				logger.Error("marshal promote params error", "err", err.Error())
+				return false
+			}
+			proposal.SetDescription(string(bz))
+			govKeeper.SetProposal(ctx, proposal)
+			symbols = append(symbols, promoteParam.BaseAssetSymbol)
+		}
+		return false
+	})
+
+	return symbols
 }
 
 func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {
@@ -92,7 +153,7 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 	logger := bnclog.With("module", "dex")
 
 	symbols := make([]string, 0)
-	periodToSearch := getPeriodToSearch(ctx, govKeeper)
+	periodToSearch := getPeriodToSearch(ctx, govKeeper, DelayedDaysForDelist)
 
 	govKeeper.Iterate(ctx, nil, nil, gov.StatusPassed, -1, true, func(proposal gov.Proposal) bool {
 		// we do not need to search for all proposals
@@ -133,10 +194,12 @@ func getSymbolsToDelist(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.Ti
 	return symbols
 }
 
-func getPeriodToSearch(ctx sdk.Context, govKeeper gov.Keeper) time.Duration {
-	depositParams := govKeeper.GetDepositParams(ctx)
-	govMaxPeriod := depositParams.MaxDepositPeriod + gov.MaxVotingPeriod
-
+func getPeriodToSearch(ctx sdk.Context, govKeeper gov.Keeper, delayedDays time.Duration) time.Duration {
 	//add 2 days here for we search in breathe block, and the interval of breathe blocks is not exactly one day
-	return govMaxPeriod + ((DelayedDaysForDelist + 2) * 24 * time.Hour)
+	return getGovMaxPeriod(ctx, govKeeper) + ((delayedDays + 2) * 24 * time.Hour)
+}
+
+func getGovMaxPeriod(ctx sdk.Context, govKeeper gov.Keeper) time.Duration {
+	depositParams := govKeeper.GetDepositParams(ctx)
+	return depositParams.MaxDepositPeriod + gov.MaxVotingPeriod
 }
