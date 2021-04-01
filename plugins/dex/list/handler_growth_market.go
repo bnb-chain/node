@@ -21,10 +21,18 @@ func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMa
 			// todo if pair type is main market, return error message: One token can only be listed on one market
 		}
 
+		if dexKeeper.PairMapper.Exists(ctx, order.BUSDSymbol, msg.BaseAssetSymbol) {
+			// todo return error message: One token can only be listed on one market
+		}
+
 	} else if order.BUSDSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, ctypes.NativeTokenSymbol); err == nil {
 			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
 			// todo if pair type is main market, return error message: One token can only be listed on one market
+		}
+
+		if dexKeeper.PairMapper.Exists(ctx, ctypes.NativeTokenSymbol, msg.BaseAssetSymbol) {
+			// todo return error message: One token can only be listed on one market
 		}
 	} else {
 		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
@@ -33,8 +41,6 @@ func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMa
 	if err := dexKeeper.CanListTradingPair(ctx, msg.BaseAssetSymbol, msg.QuoteAssetSymbol); err != nil {
 		return sdk.ErrInvalidCoins(err.Error()).Result()
 	}
-
-	// todo check if exists a trading pair taking msg.BaseAsset as base quote in main market
 
 	baseToken, err := tokenMapper.GetToken(ctx, msg.BaseAssetSymbol)
 	if err != nil {

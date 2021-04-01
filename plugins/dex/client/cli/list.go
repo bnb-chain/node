@@ -138,6 +138,7 @@ func listGrowthMarketCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			baseAsset := viper.GetString(flagBaseAsset)
+			baseAsset = strings.ToUpper(baseAsset)
 			if !types.IsValidMiniTokenSymbol(baseAsset) {
 				err = types.ValidateTokenSymbol(baseAsset)
 				if err != nil {
@@ -146,12 +147,10 @@ func listGrowthMarketCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			quoteAsset := viper.GetString(flagQuoteAsset)
+			quoteAsset = strings.ToUpper(quoteAsset)
 			if quoteAsset != types.NativeTokenSymbol && !strings.HasPrefix(quoteAsset, "BUSD") {
 				return errors.New("invalid quote asset")
 			}
-
-			baseAsset = strings.ToUpper(baseAsset)
-			quoteAsset = strings.ToUpper(quoteAsset)
 
 			initPriceStr := viper.GetString(flagInitPrice)
 			initPrice, err := utils.ParsePrice(initPriceStr)
