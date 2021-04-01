@@ -23,6 +23,7 @@ func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
 		client.PostCommands(
 			listTradingPairCmd(cdc),
 			listMiniTradingPairCmd(cdc),
+			listGrowthMarketCmd(cdc),
 			client.LineBreak,
 			newOrderCmd(cdc),
 			cancelOrderCmd(cdc))...)

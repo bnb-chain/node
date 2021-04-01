@@ -28,6 +28,8 @@ const (
 	NativeTokenTotalSupply        = 2e16
 )
 
+var BUSDSymbol string
+
 type IToken interface {
 	GetName() string
 	GetSymbol() string

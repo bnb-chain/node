@@ -374,6 +374,10 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	)
 
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP82, ownership.TransferOwnershipMsg{}.Type())
+
+	upgrade.Mgr.RegisterMsgTypes(upgrade.ListRefactor, dextypes.ListGrowthMarketMsg{}.Type())
+
+	upgrade.Mgr.DismissMsgTypes(upgrade.ListRefactor, dextypes.ListMsg{}.Type(), dextypes.ListMiniMsg{}.Type())
 }
 
 func getABCIQueryBlackList(queryConfig *config.QueryConfig) map[string]bool {
@@ -398,6 +402,7 @@ func (app *BinanceChain) initDex() {
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
+	types.BUSDSymbol = app.dexConfig.BUSDSymbol
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {

@@ -2,6 +2,7 @@ package list
 
 import (
 	"encoding/json"
+	"github.com/binance-chain/node/common/upgrade"
 	"testing"
 	"time"
 
@@ -17,7 +18,13 @@ import (
 	dexTypes "github.com/binance-chain/node/plugins/dex/types"
 )
 
+func prepare() {
+	sdk.UpgradeMgr.AddUpgradeHeight(upgrade.ListRefactor, 100)
+	sdk.UpgradeMgr.SetHeight(200)
+}
+
 func TestIncorrectProposalType(t *testing.T) {
+	prepare()
 	hooks := NewListHooks(nil, nil)
 	proposal := gov.TextProposal{
 		ProposalType: gov.ProposalTypeText,
@@ -28,6 +35,7 @@ func TestIncorrectProposalType(t *testing.T) {
 }
 
 func TestIncorrectProposalStatus(t *testing.T) {
+	prepare()
 	hooks := NewListHooks(nil, nil)
 	proposal := gov.TextProposal{
 		ProposalType: gov.ProposalTypeListTradingPair,

@@ -387,6 +387,18 @@ check_operation "Place Order" "${result}" "${chain_operation_words}"
 result=$(./bnbcli dex show -l ${mbc_symbol}_BNB  --trust-node true)
 check_operation "Order Book" "${result}" "${order_book_words}"
 
+## ROUND 6 ##
+sleep 1s
+# issue GBC token
+result=$(expect ./issue.exp GBC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
+gbc_symbol=$(echo "${result}" | tail -n 1 | grep -o "GBC-[0-9A-Z]*")
+check_operation "Issue Token" "${result}" "${chain_operation_words}"
+
+sleep 2s
+# list GBC_BNB on growth market
+result=$(expect ./list_growth_market.exp ${gbc_symbol} BNB 100000000 bob ${chain_id} ${cli_home} 1)
+check_operation "List Trading Pair" "${result}" "${chain_operation_words}"
+
 ## ROUND 7 ##
 
 sleep 1s
@@ -413,6 +425,5 @@ result=$(expect ./order.exp ${lbc_symbol}_BNB 1 100000000 1000000000 alice ${cha
 check_operation "Place Order" "${result}" "${chain_operation_words}"
 order_id=$(echo "${result}" | tail -n 1 | grep -o "[0-9A-Z]\{4,\}-[0-9]*") # capture order id, not symbol
 printf "Order ID: $order_id\n"
-
 
 exit_test 0
