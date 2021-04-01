@@ -55,7 +55,7 @@ func (hooks ListHooks) OnProposalPassed(ctx sdk.Context, proposal gov.Proposal) 
 	baseAssetSymbol := strings.ToUpper(listParams.BaseAssetSymbol)
 	quoteAssetSymbol := strings.ToUpper(listParams.QuoteAssetSymbol)
 
-	if err := checkListingPairOnMainMarket(hooks, ctx, strings.ToUpper(listParams.BaseAssetSymbol), strings.ToUpper(listParams.QuoteAssetSymbol)); err != nil {
+	if err := checkListingPairOnMainMarket(hooks, ctx, baseAssetSymbol, quoteAssetSymbol); err != nil {
 		return err
 	}
 
