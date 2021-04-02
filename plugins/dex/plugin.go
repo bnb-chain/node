@@ -109,16 +109,7 @@ func getSymbolsToPromote(ctx sdk.Context, govKeeper gov.Keeper, blockTime time.T
 				logger.Error("illegal promote params in proposal", "params", proposal.GetDescription())
 				return false
 			}
-			if promoteParam.IsExecuted {
-				return false
-			}
-			promoteParam.IsExecuted = true
-			bz, err := json.Marshal(promoteParam)
-			if err != nil {
-				logger.Error("marshal promote params error", "err", err.Error())
-				return false
-			}
-			proposal.SetDescription(string(bz))
+			proposal.SetStatus(gov.StatusExecuted)
 			govKeeper.SetProposal(ctx, proposal)
 			symbols = append(symbols, promoteParam.BaseAssetSymbol)
 		}
