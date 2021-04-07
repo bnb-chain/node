@@ -24,7 +24,7 @@ func TestGrowthWrongBaseAssetAndQuoteAssetSymbol(t *testing.T) {
 	msg = NewListGrowthMarketMsg(sdk.AccAddress{}, "BTC-000", "BUSD", 1000)
 	err = msg.ValidateBasic()
 	require.NotNil(t, err, "msg should be error")
-	require.Contains(t, err.Error(), "quote token must be BNB or")
+	require.Contains(t, err.Error(), "quote token: suffixed token symbol")
 }
 
 func TestGrowthWrongInitPrice(t *testing.T) {

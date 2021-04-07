@@ -46,8 +46,11 @@ func (msg ListGrowthMarketMsg) ValidateBasic() sdk.Error {
 		}
 	}
 
-	if msg.QuoteAssetSymbol != types.NativeTokenSymbol && msg.QuoteAssetSymbol != types.BUSDSymbol {
-		return sdk.ErrInvalidCoins("quote token must be " + types.NativeTokenSymbol + " or " + types.BUSDSymbol)
+	if !types.IsValidMiniTokenSymbol(msg.QuoteAssetSymbol) {
+		err := types.ValidateTokenSymbol(msg.QuoteAssetSymbol)
+		if err != nil {
+			return sdk.ErrInvalidCoins("quote token: " + err.Error())
+		}
 	}
 
 	if msg.InitPrice <= 0 {

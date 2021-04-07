@@ -402,7 +402,6 @@ func (app *BinanceChain) initDex() {
 		app.publicationConfig.ShouldPublishAny())
 	app.DexKeeper.SubscribeParamChange(app.ParamHub)
 	app.DexKeeper.SetBUSDSymbol(app.dexConfig.BUSDSymbol)
-	types.BUSDSymbol = app.dexConfig.BUSDSymbol
 
 	// do not proceed if we are in a unit test and `CheckState` is unset.
 	if app.CheckState == nil {
