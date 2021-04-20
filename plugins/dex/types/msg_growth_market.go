@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/binance-chain/node/common/types"
+	"github.com/binance-chain/node/plugins/dex/order"
 )
 
 const ListGrowthMarketMsgType = "dexListGrowthMarket"
@@ -46,11 +47,8 @@ func (msg ListGrowthMarketMsg) ValidateBasic() sdk.Error {
 		}
 	}
 
-	if !types.IsValidMiniTokenSymbol(msg.QuoteAssetSymbol) {
-		err := types.ValidateTokenSymbol(msg.QuoteAssetSymbol)
-		if err != nil {
-			return sdk.ErrInvalidCoins("quote token: " + err.Error())
-		}
+	if msg.QuoteAssetSymbol != types.NativeTokenSymbol && msg.QuoteAssetSymbol != order.BUSDSymbol {
+		return sdk.ErrInvalidCoins("quote token must be " + types.NativeTokenSymbol + " or " + order.BUSDSymbol)
 	}
 
 	if msg.InitPrice <= 0 {

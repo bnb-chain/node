@@ -1,6 +1,8 @@
 package list
 
 import (
+	"fmt"
+
 	"github.com/binance-chain/node/common/log"
 	ctypes "github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/plugins/dex/order"
@@ -13,22 +15,20 @@ import (
 func handleListGrowthMarket(ctx sdk.Context, dexKeeper *order.DexKeeper, tokenMapper tokens.Mapper,
 	msg types.ListGrowthMarketMsg) sdk.Result {
 
-	if ctypes.NativeTokenSymbol != msg.QuoteAssetSymbol && order.BUSDSymbol != msg.QuoteAssetSymbol {
-		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
-	}
-
 	if ctypes.NativeTokenSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, order.BUSDSymbol); err == nil {
-			if pair.PairType == types.PairType.MAIN {
-				return sdk.ErrInvalidCoins("one token can only be listed in one market").Result()
-			}
+			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
+			// todo if pair type is main market, return error message: One token can only be listed on one market
+		} else if dexKeeper.PairMapper.Exists(ctx, order.BUSDSymbol, msg.BaseAssetSymbol) {
+			// todo return error message: One token can only be listed on one market
 		}
 
 	} else if order.BUSDSymbol == msg.QuoteAssetSymbol {
 		if pair, err := dexKeeper.PairMapper.GetTradingPair(ctx, msg.BaseAssetSymbol, ctypes.NativeTokenSymbol); err == nil {
-			if pair.PairType == types.PairType.MAIN {
-				return sdk.ErrInvalidCoins("one token can only be listed in one market").Result()
-			}
+			log.Info(fmt.Sprintf("%s", pair)) // todo remove this log
+			// todo if pair type is main market, return error message: One token can only be listed on one market
+		} else if dexKeeper.PairMapper.Exists(ctx, ctypes.NativeTokenSymbol, msg.BaseAssetSymbol) {
+			// todo return error message: One token can only be listed on one market
 		}
 	} else {
 		return sdk.ErrInvalidCoins("quote token is not valid ").Result()
