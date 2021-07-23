@@ -189,6 +189,12 @@ kafkaPassword = "{{ .PublicationConfig.KafkaPassword }}"
 # stop process when publish to Kafka failed
 stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
 
+# tls configuration
+tls = {{ .PublicationConfig.TLS }}
+clientCertPath = "{{ .PublicationConfig.ClientCertPath }}"
+clientKeyPath = "{{ .PublicationConfig.ClientKeyPath }}"
+caCertPath = "{{ .PublicationConfig.CaCertPath }}"
+
 # please modify the default value into the version of Kafka you are using
 # kafka broker version, default (and most recommended) is 2.1.0. Minimal supported version could be 0.8.2.0
 kafkaVersion = "{{ .PublicationConfig.KafkaVersion }}"
@@ -355,6 +361,12 @@ type PublicationConfig struct {
 	KafkaUserName   string `mapstructure:"kafkaUserName"`
 	KafkaPassword   string `mapstructure:"kafkaPassword"`
 
+	// tls configuration
+	TLS            bool   `mapstructure:"tls"`
+	ClientCertPath string `mapstructure:"clientCertPath"`
+	ClientKeyPath  string `mapstructure:"clientKeyPath"`
+	CaCertPath     string `mapstructure:"caCertPath"`
+
 	KafkaVersion string `mapstructure:"kafkaVersion"`
 }
 
@@ -424,6 +436,11 @@ func defaultPublicationConfig() *PublicationConfig {
 		KafkaUserName:   "",
 		KafkaPassword:   "",
 		StopOnKafkaFail: false,
+
+		TLS:            true,
+		ClientCertPath: "11",
+		ClientKeyPath:  "",
+		CaCertPath:     "",
 
 		KafkaVersion: "2.1.0",
 	}

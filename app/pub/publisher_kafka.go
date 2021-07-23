@@ -1,6 +1,8 @@
 package pub
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -44,6 +46,27 @@ type KafkaMarketDataPublisher struct {
 	producers        map[string]sarama.SyncProducer // topic -> producer
 }
 
+func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string) (*tls.Config, error) {
+	tlsConfig := tls.Config{}
+
+	cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
+	if err != nil {
+		return &tlsConfig, err
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+
+	caCert, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		return &tlsConfig, err
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	tlsConfig.RootCAs = caCertPool
+
+	tlsConfig.BuildNameToCertificate()
+	return &tlsConfig, err
+}
+
 func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config, err error) {
 	version, err := sarama.ParseKafkaVersion(Cfg.KafkaVersion)
 	if err != nil {
@@ -78,6 +101,17 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 		config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		config.Net.SASL.User = Cfg.KafkaUserName
 		config.Net.SASL.Password = Cfg.KafkaPassword
+	}
+
+	if Cfg.TLS {
+		config.Net.TLS.Enable = true
+		tlsConfig, err := NewTLSConfig(Cfg.ClientCertPath,
+			Cfg.ClientKeyPath, Cfg.CaCertPath)
+		if err != nil {
+			return nil, err
+		}
+		config.Net.TLS.Config = tlsConfig
+		Logger.Info("Enabled TLS")
 	}
 
 	// This MIGHT be kafka java client's equivalent max.in.flight.requests.per.connection
