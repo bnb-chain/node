@@ -46,7 +46,7 @@ type KafkaMarketDataPublisher struct {
 	producers        map[string]sarama.SyncProducer // topic -> producer
 }
 
-func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string) (*tls.Config, error) {
+func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string, skipVerify bool) (*tls.Config, error) {
 	tlsConfig := tls.Config{}
 	if len(clientCertFile) != 0 || len(clientKeyFile) != 0 {
 		cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
@@ -54,6 +54,7 @@ func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string) (*tls.Config
 			return &tlsConfig, err
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.BuildNameToCertificate()
 	}
 
 	if len(caCertFile) != 0 {
@@ -66,7 +67,8 @@ func NewTLSConfig(clientCertFile, clientKeyFile, caCertFile string) (*tls.Config
 		tlsConfig.RootCAs = caCertPool
 	}
 
-	tlsConfig.BuildNameToCertificate()
+	tlsConfig.InsecureSkipVerify = skipVerify
+
 	return &tlsConfig, nil
 }
 
@@ -108,14 +110,12 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 
 	if Cfg.TLS {
 		config.Net.TLS.Enable = true
-		if len(Cfg.ClientKeyPath) != 0 || len(Cfg.ClientCertPath) != 0 || len(Cfg.CaCertPath) == 0 {
-			tlsConfig, err := NewTLSConfig(Cfg.ClientCertPath,
-				Cfg.ClientKeyPath, Cfg.CaCertPath)
-			if err != nil {
-				return nil, err
-			}
-			config.Net.TLS.Config = tlsConfig
+		tlsConfig, err := NewTLSConfig(Cfg.ClientCertPath,
+			Cfg.ClientKeyPath, Cfg.CaCertPath, Cfg.InsecureSkipVerify)
+		if err != nil {
+			return nil, err
 		}
+		config.Net.TLS.Config = tlsConfig
 		Logger.Info("Enabled TLS")
 	}
 

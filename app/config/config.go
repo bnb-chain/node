@@ -191,6 +191,7 @@ stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
 
 # tls configuration
 tls = {{ .PublicationConfig.TLS }}
+insecureSkipVerify = {{ .PublicationConfig.InsecureSkipVerify }}
 clientCertPath = "{{ .PublicationConfig.ClientCertPath }}"
 clientKeyPath = "{{ .PublicationConfig.ClientKeyPath }}"
 caCertPath = "{{ .PublicationConfig.CaCertPath }}"
@@ -362,10 +363,11 @@ type PublicationConfig struct {
 	KafkaPassword   string `mapstructure:"kafkaPassword"`
 
 	// tls configuration
-	TLS            bool   `mapstructure:"tls"`
-	ClientCertPath string `mapstructure:"clientCertPath"`
-	ClientKeyPath  string `mapstructure:"clientKeyPath"`
-	CaCertPath     string `mapstructure:"caCertPath"`
+	TLS                bool   `mapstructure:"tls"`
+	InsecureSkipVerify bool   `mapstructure:"insecureSkipVerify"`
+	ClientCertPath     string `mapstructure:"clientCertPath"`
+	ClientKeyPath      string `mapstructure:"clientKeyPath"`
+	CaCertPath         string `mapstructure:"caCertPath"`
 
 	KafkaVersion string `mapstructure:"kafkaVersion"`
 }
@@ -437,10 +439,11 @@ func defaultPublicationConfig() *PublicationConfig {
 		KafkaPassword:   "",
 		StopOnKafkaFail: false,
 
-		TLS:            true,
-		ClientCertPath: "11",
-		ClientKeyPath:  "",
-		CaCertPath:     "",
+		TLS:                false,
+		InsecureSkipVerify: false,
+		ClientCertPath:     "",
+		ClientKeyPath:      "",
+		CaCertPath:         "",
 
 		KafkaVersion: "2.1.0",
 	}
