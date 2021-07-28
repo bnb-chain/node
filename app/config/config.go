@@ -189,12 +189,12 @@ kafkaPassword = "{{ .PublicationConfig.KafkaPassword }}"
 # stop process when publish to Kafka failed
 stopOnKafkaFail = {{ .PublicationConfig.StopOnKafkaFail }}
 
-# tls configuration
-tls = {{ .PublicationConfig.TLS }}
-insecureSkipVerify = {{ .PublicationConfig.InsecureSkipVerify }}
-clientCertPath = "{{ .PublicationConfig.ClientCertPath }}"
-clientKeyPath = "{{ .PublicationConfig.ClientKeyPath }}"
-caCertPath = "{{ .PublicationConfig.CaCertPath }}"
+# kafka tls configuration
+kafkaTLS = {{ .PublicationConfig.KafkaTLS }}
+kafkaInsecureSkipVerify = {{ .PublicationConfig.KafkaInsecureSkipVerify }}
+kafkaClientCertPath = "{{ .PublicationConfig.KafkaClientCertPath }}"
+kafkaClientKeyPath = "{{ .PublicationConfig.KafkaClientKeyPath }}"
+kafkaCaCertPath = "{{ .PublicationConfig.KafkaCaCertPath }}"
 
 # please modify the default value into the version of Kafka you are using
 # kafka broker version, default (and most recommended) is 2.1.0. Minimal supported version could be 0.8.2.0
@@ -362,12 +362,12 @@ type PublicationConfig struct {
 	KafkaUserName   string `mapstructure:"kafkaUserName"`
 	KafkaPassword   string `mapstructure:"kafkaPassword"`
 
-	// tls configuration
-	TLS                bool   `mapstructure:"tls"`
-	InsecureSkipVerify bool   `mapstructure:"insecureSkipVerify"`
-	ClientCertPath     string `mapstructure:"clientCertPath"`
-	ClientKeyPath      string `mapstructure:"clientKeyPath"`
-	CaCertPath         string `mapstructure:"caCertPath"`
+	// kafka tls configuration
+	KafkaTLS                bool   `mapstructure:"kafkaTLS"`
+	KafkaInsecureSkipVerify bool   `mapstructure:"kafkaInsecureSkipVerify"`
+	KafkaClientCertPath     string `mapstructure:"kafkaClientCertPath"`
+	KafkaClientKeyPath      string `mapstructure:"kafkaClientKeyPath"`
+	KafkaCaCertPath         string `mapstructure:"kafkaCaCertPath"`
 
 	KafkaVersion string `mapstructure:"kafkaVersion"`
 }
@@ -439,11 +439,11 @@ func defaultPublicationConfig() *PublicationConfig {
 		KafkaPassword:   "",
 		StopOnKafkaFail: false,
 
-		TLS:                false,
-		InsecureSkipVerify: false,
-		ClientCertPath:     "",
-		ClientKeyPath:      "",
-		CaCertPath:         "",
+		KafkaTLS:                false,
+		KafkaInsecureSkipVerify: false,
+		KafkaClientCertPath:     "",
+		KafkaClientKeyPath:      "",
+		KafkaCaCertPath:         "",
 
 		KafkaVersion: "2.1.0",
 	}

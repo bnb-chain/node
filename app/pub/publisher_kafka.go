@@ -108,10 +108,10 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 		config.Net.SASL.Password = Cfg.KafkaPassword
 	}
 
-	if Cfg.TLS {
+	if Cfg.KafkaTLS {
 		config.Net.TLS.Enable = true
-		tlsConfig, err := NewTLSConfig(Cfg.ClientCertPath,
-			Cfg.ClientKeyPath, Cfg.CaCertPath, Cfg.InsecureSkipVerify)
+		tlsConfig, err := NewTLSConfig(Cfg.KafkaClientCertPath,
+			Cfg.KafkaClientKeyPath, Cfg.KafkaCaCertPath, Cfg.KafkaInsecureSkipVerify)
 		if err != nil {
 			return nil, err
 		}
