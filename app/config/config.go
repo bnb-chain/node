@@ -69,6 +69,8 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
 LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
+# Block height of generic chain upgrade
+LaunchBgcUpgradeHeight = {{ .UpgradeConfig.LaunchBgcUpgradeHeight }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
@@ -514,6 +516,8 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 	// TODO: add upgrade name
 	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	// TODO: add upgrade name
+	LaunchBgcUpgradeHeight int64 `mapstructure:"LaunchBgcUpgradeHeight"`
 
 	// TODO: add upgrade name
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
@@ -544,6 +548,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                1,
 		BEP70Height:                1,
 		LaunchBscUpgradeHeight:     1,
+		LaunchBgcUpgradeHeight:     1,
 		BEP82Height:                math.MaxInt64,
 		BEP84Height:                math.MaxInt64,
 		BEP87Height:                math.MaxInt64,

@@ -168,7 +168,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
-		common.StakeStoreKey, common.TStakeStoreKey,
+		common.StakeStoreKey, common.StakeRewardStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
@@ -241,6 +241,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.PairStoreKey,
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
+		common.StakeRewardStoreKey,
 		common.SlashingStoreKey,
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
@@ -317,6 +318,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.ListingRuleUpgrade, upgradeConfig.ListingRuleUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixZeroBalance, upgradeConfig.FixZeroBalanceHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBscUpgrade, upgradeConfig.LaunchBscUpgradeHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.LaunchBgcUpgrade, upgradeConfig.LaunchBgcUpgradeHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.EnableAccountScriptsForCrossChainTransfer, upgradeConfig.EnableAccountScriptsForCrossChainTransferHeight)
 
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP8, upgradeConfig.BEP8Height)
@@ -332,6 +334,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
 		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.StakeRewardStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -524,6 +527,14 @@ func (app *BinanceChain) initStaking() {
 			// TODO: optimize these parameters
 			LooseTokens: sdk.NewDec(5e15),
 		})
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.LaunchBgcUpgrade, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		// init new param RewardDistributionBatchSize
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		params := app.stakeKeeper.GetParams(newCtx)
+		params.RewardDistributionBatchSize = 100
+		app.stakeKeeper.SetParams(newCtx, params)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())

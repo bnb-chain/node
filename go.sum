@@ -21,14 +21,13 @@ github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5
 github.com/bartekn/go-bip39 v0.0.0-20171116152956-a05967ea095d h1:1aAija9gr0Hyv4KfQcRcwlmFIrhkDmIj2dz5bkg/s/8=
 github.com/bartekn/go-bip39 v0.0.0-20171116152956-a05967ea095d/go.mod h1:icNx/6QdFblhsEjZehARqbNumymUT/ydwlLojFdv7Sk=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
-github.com/beorn7/perks v1.0.0 h1:HWo1m869IqiPhD389kmkxeTalrjNbbJTC8LXupb+sl0=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQkY=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/binance-chain/bnc-cosmos-sdk v0.25.0-binance.24 h1:niCO18xM7b02Bgs041aqc/L0VUZFDYbJb7l9uDeah1E=
-github.com/binance-chain/bnc-cosmos-sdk v0.25.0-binance.24/go.mod h1:nb0oQ4956Cmtx85AR3+k/PSnD2zZXv8OK8J41N8/jqs=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211202130955-5b494c07bf3b h1:lrMurPfxSnA1cYaCzKEQeguWhFeu1gwbkj2iauK6jWo=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211202130955-5b494c07bf3b/go.mod h1:nb0oQ4956Cmtx85AR3+k/PSnD2zZXv8OK8J41N8/jqs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:yaElUUxWtv/TC/ldGtlKAvS1vKwokxgJ1d97I+6is80=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.5 h1:t+gCaAoN3PLMFFayY8EtUkEftir9a0DM9uK2DR6ZCwU=

@@ -3,6 +3,7 @@ package issue
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -56,7 +57,7 @@ func (msg IssueMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.TotalSupply <= 0 || msg.TotalSupply > types.TokenMaxTotalSupply {
-		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + string(types.TokenMaxTotalSupply))
+		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + strconv.FormatInt(types.TokenMaxTotalSupply, 10))
 	}
 
 	return nil
@@ -115,7 +116,7 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply
 	if msg.Amount <= 0 || msg.Amount > types.TokenMaxTotalSupply {
-		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + string(types.TokenMaxTotalSupply))
+		return sdk.ErrInvalidCoins("total supply should be less than or equal to " + strconv.FormatInt(types.TokenMaxTotalSupply, 10))
 	}
 
 	return nil

@@ -48,6 +48,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *ord
 	paramKey := sdk.NewKVStoreKey("param")
 	paramTKey := sdk.NewTransientStoreKey("t_param")
 	stakeKey := sdk.NewKVStoreKey("stake")
+	stakeRewardKey := sdk.NewKVStoreKey("stake_reward")
 	stakeTKey := sdk.NewTransientStoreKey("t_stake")
 	govKey := sdk.NewKVStoreKey("gov")
 
@@ -58,6 +59,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *ord
 	ms.MountStoreWithDB(tokenKey, sdk.StoreTypeIAVL, memDB)
 	ms.MountStoreWithDB(paramKey, sdk.StoreTypeIAVL, memDB)
 	ms.MountStoreWithDB(stakeKey, sdk.StoreTypeIAVL, memDB)
+	ms.MountStoreWithDB(stakeRewardKey, sdk.StoreTypeIAVL, memDB)
 	ms.MountStoreWithDB(govKey, sdk.StoreTypeIAVL, memDB)
 	ms.LoadLatestVersion()
 
@@ -72,7 +74,7 @@ func MakeKeepers(cdc *codec.Codec) (ms sdkStore.CommitMultiStore, dexKeeper *ord
 	bankKeeper := bank.NewBaseKeeper(accKeeper)
 	stakeKeeper := stake.NewKeeper(
 		cdc,
-		stakeKey, stakeTKey,
+		stakeKey, stakeRewardKey, stakeTKey,
 		bankKeeper, nil, paramsKeeper.Subspace(stake.DefaultParamspace),
 		stake.DefaultCodespace,
 	)

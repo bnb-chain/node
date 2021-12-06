@@ -26,6 +26,9 @@ const (
 	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
 
+	// TODO: add upgrade name
+	LaunchBgcUpgrade = sdk.LaunchBgcUpgrade
+
 	EnableAccountScriptsForCrossChainTransfer = "EnableAccountScriptsForCrossChainTransfer"
 
 	//Nightingale upgrade
