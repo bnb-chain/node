@@ -28,6 +28,10 @@ github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQ
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211202130955-5b494c07bf3b h1:lrMurPfxSnA1cYaCzKEQeguWhFeu1gwbkj2iauK6jWo=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211202130955-5b494c07bf3b/go.mod h1:nb0oQ4956Cmtx85AR3+k/PSnD2zZXv8OK8J41N8/jqs=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206085526-1f3d310c9dcc h1:F3uKngwgVYe187x7+eqvnvJKvgXf6WJko3B8WZnKa/4=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206085526-1f3d310c9dcc/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206095208-a0ac61d60edb h1:JudIn12iUZQnJrutL92rInSsAANJSgZmkdOzOV+hKZg=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206095208-a0ac61d60edb/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:yaElUUxWtv/TC/ldGtlKAvS1vKwokxgJ1d97I+6is80=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.5 h1:t+gCaAoN3PLMFFayY8EtUkEftir9a0DM9uK2DR6ZCwU=

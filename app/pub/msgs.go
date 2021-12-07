@@ -1026,7 +1026,7 @@ func (msg *Distribution) toNativeMap() map[string]interface{} {
 }
 
 type Reward struct {
-	Validator sdk.AccAddress
+	Validator sdk.ValAddress
 	Delegator sdk.AccAddress
 	Tokens    int64
 	Amount    int64
