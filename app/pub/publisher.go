@@ -299,8 +299,8 @@ func PublishEvent(
 							Commission:     commission,
 							Rewards:        rewards,
 						}
-						msgNum += len(disData.Rewards)
 					}
+					msgNum++
 					distributions[chainId] = dis
 				}
 			}

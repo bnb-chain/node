@@ -834,7 +834,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var validatorUpdates abci.ValidatorUpdates
 	if isBreatheBlock {
 		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
-	} else if ctx.RouterCallRecord()["stake"] {
+	} else { //TODO: what does this for? if ctx.RouterCallRecord()["stake"]
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
 	ibc.EndBlocker(ctx, app.ibcKeeper)

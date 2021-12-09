@@ -32,6 +32,14 @@ github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206085526-1f3d310c9dc
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206085526-1f3d310c9dcc/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206095208-a0ac61d60edb h1:JudIn12iUZQnJrutL92rInSsAANJSgZmkdOzOV+hKZg=
 github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211206095208-a0ac61d60edb/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208022828-78768447166e h1:NZThaHltRBqhldxchxKIYce2YL0GaZ2WBumBi4Hv3f0=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208022828-78768447166e/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208030301-5649f1357f03 h1:l2sUOx2xntgOGnCieqYPbOEYJhLsnXKuC8s/Ee3tORE=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208030301-5649f1357f03/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208033416-34b64fa635e9 h1:JUdQE+mXKWCRsNnv2qtfnct0XLOgI6hhQ6F75RRi8X0=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208033416-34b64fa635e9/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208111652-b1862f171d6c h1:ZZ+KlgXEulxv2yvWvMqJVWEn0d1kfxSDROmmQ/qqgOA=
+github.com/binance-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20211208111652-b1862f171d6c/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2 h1:XcbcfisVItk92UKoGbtNT8nbcfadj3H3ayuM2srAfVs=
 github.com/binance-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:yaElUUxWtv/TC/ldGtlKAvS1vKwokxgJ1d97I+6is80=
 github.com/binance-chain/bnc-tendermint v0.32.3-binance.5 h1:t+gCaAoN3PLMFFayY8EtUkEftir9a0DM9uK2DR6ZCwU=
