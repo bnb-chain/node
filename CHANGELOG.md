@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.3
+IMPROVEMENTS
+* [\#836](https://github.com/binance-chain/node/pull/836) [Deps] Upgrade tendermint to v0.32.3-binance.6; upgrade cosmos-sdk to v0.25.0 binance.25
+
+
 ## 0.8.2
 BUG FIXES
 * [\#823](https://github.com/binance-chain/node/pull/823) [Pub] return error when executing mirror or mirror sync request failed
