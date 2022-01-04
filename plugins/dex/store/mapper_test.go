@@ -4,6 +4,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -193,7 +194,7 @@ func BenchmarkMapper_DeleteRecentPrices(b *testing.B) {
 	defer db.Close()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pairMapper.DeleteRecentPrices(ctx, string(i)+"_"+string(i))
+		pairMapper.DeleteRecentPrices(ctx, strconv.Itoa(i)+"_"+strconv.Itoa(i))
 	}
 }
 
@@ -208,14 +209,14 @@ func setupForBenchTest() (dbm.DB, TradingPairMapper, sdk.Context) {
 	cdc.RegisterConcrete(RecentPrice{}, "dex/RecentPrice", nil)
 	pairMapper := NewTradingPairMapper(cdc, key)
 	for i := 0; i < pairNum; i++ {
-		tradingPair := dextypes.NewTradingPair(string(i), string(i), 102000)
+		tradingPair := dextypes.NewTradingPair(strconv.Itoa(i), strconv.Itoa(i), 102000)
 		pairMapper.AddTradingPair(ctx, tradingPair)
 	}
 
 	for i := 0; i < numPricesStored; i++ {
 		lastPrices := make(map[string]int64, pairNum)
 		for j := 0; j < pairNum; j++ {
-			lastPrices[string(j)+"_"+string(j)] = 8
+			lastPrices[strconv.Itoa(j)+"_"+strconv.Itoa(j)] = 8
 		}
 		ctx = ctx.WithBlockHeight(int64(priceStoreEvery * (i + 1)))
 		pairMapper.UpdateRecentPrices(ctx, priceStoreEvery, numPricesStored, lastPrices)
