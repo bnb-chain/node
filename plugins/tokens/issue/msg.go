@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/binance-chain/node/common/types"
 	"github.com/binance-chain/node/common/upgrade"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // TODO: "route expressions can only contain alphanumeric characters", we need to change the cosmos sdk to support slash
