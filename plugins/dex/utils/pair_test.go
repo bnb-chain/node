@@ -3,6 +3,7 @@ package utils_test
 import (
 	"encoding/json"
 	"math/rand"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -46,7 +47,7 @@ func BenchmarkRecentPrices_Size(b *testing.B) {
 
 	recentPrices := make(map[string]*cmnutils.FixedSizeRing, 256)
 	for i := 0; i < 10; i++ {
-		recentPrices[string(i)] = pricesRing
+		recentPrices[strconv.Itoa(i)] = pricesRing
 	}
 
 	bz, _ := json.Marshal(pricesRing.Elements())
