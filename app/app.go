@@ -334,7 +334,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
 		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.StakeRewardStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBgcUpgrade, common.StakeRewardStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
