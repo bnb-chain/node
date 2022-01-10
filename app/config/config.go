@@ -69,8 +69,6 @@ ListingRuleUpgradeHeight = {{ .UpgradeConfig.ListingRuleUpgradeHeight }}
 FixZeroBalanceHeight = {{ .UpgradeConfig.FixZeroBalanceHeight }}
 # Block height of smart chain upgrade
 LaunchBscUpgradeHeight = {{ .UpgradeConfig.LaunchBscUpgradeHeight }}
-# Block height of generic chain upgrade
-LaunchBgcUpgradeHeight = {{ .UpgradeConfig.LaunchBgcUpgradeHeight }}
 # Block height of BEP8 upgrade
 BEP8Height = {{ .UpgradeConfig.BEP8Height }}
 # Block height of BEP67 upgrade
@@ -87,6 +85,8 @@ BEP87Height = {{ .UpgradeConfig.BEP87Height }}
 FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
 # Block height of EnableAccountScriptsForCrossChainTransferHeight upgrade
 EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
+# Block height of BEP128 upgrade
+BEP128Height = {{ .UpgradeConfig.BEP128Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -516,8 +516,6 @@ type UpgradeConfig struct {
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
 
 	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
-	// TODO: add bep nubmer
-	LaunchBgcUpgradeHeight int64 `mapstructure:"LaunchBgcUpgradeHeight"`
 
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`
@@ -528,6 +526,7 @@ type UpgradeConfig struct {
 	BEP87Height                                     int64 `mapstructure:"BEP87Height"`
 	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
+	BEP128Height                                    int64 `mapstructure:"BEP128Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -547,7 +546,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                1,
 		BEP70Height:                1,
 		LaunchBscUpgradeHeight:     1,
-		LaunchBgcUpgradeHeight:     1,
+		BEP128Height:               1,
 		BEP82Height:                math.MaxInt64,
 		BEP84Height:                math.MaxInt64,
 		BEP87Height:                math.MaxInt64,
