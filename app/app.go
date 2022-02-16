@@ -533,7 +533,7 @@ func (app *BinanceChain) initStaking() {
 		// init new param RewardDistributionBatchSize
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		params := app.stakeKeeper.GetParams(newCtx)
-		params.RewardDistributionBatchSize = 100
+		params.RewardDistributionBatchSize = 1000
 		app.stakeKeeper.SetParams(newCtx, params)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
