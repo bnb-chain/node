@@ -2,9 +2,9 @@ package admin
 
 import (
 	"fmt"
-	"math/rand"
-	"strconv"
-	"time"
+	"math/big"
+
+	"crypto/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -17,6 +17,7 @@ import (
 
 const (
 	flagPVPath = "pvpath"
+	randMax    = 2147483647
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
@@ -50,8 +51,8 @@ func setModeCmd(cdc *wire.Codec) *cobra.Command {
 			mode := args[0]
 			if mode == "0" || mode == "1" || mode == "2" {
 				cliCtx := context.NewCLIContext().WithCodec(cdc)
-				rand.Seed(time.Now().UnixNano())
-				nonce := strconv.Itoa(rand.Int())
+				nTmp, _ := rand.Int(rand.Reader, big.NewInt(randMax))
+				nonce := nTmp.Bytes()
 				sig, err := privKey.Sign([]byte(nonce))
 				if err != nil {
 					return err
@@ -85,8 +86,8 @@ func getModeCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			rand.Seed(time.Now().UnixNano())
-			nonce := strconv.Itoa(rand.Int())
+			nTmp, _ := rand.Int(rand.Reader, big.NewInt(randMax))
+			nonce := nTmp.Bytes()
 			sig, err := privKey.Sign([]byte(nonce))
 			if err != nil {
 				return err
