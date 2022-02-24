@@ -520,7 +520,6 @@ func (app *BinanceChain) initStaking() {
 			MinDelegationChange: 1e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
-			// TODO: optimize these parameters
 			LooseTokens: sdk.NewDec(5e15),
 		})
 	})
@@ -754,10 +753,6 @@ func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.Respo
 	if res.IsErr() {
 		txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 		app.Logger.Error("failed to process invalid tx during pre-deliver", "tx", txHash, "res", res.String())
-		// TODO(#446): comment out temporally for thread safety
-		//if app.publicationConfig.PublishOrderUpdates {
-		//	app.processErrAbciResponseForPub(txBytes)
-		//}
 	}
 	return res
 }
@@ -855,7 +850,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	pub.Pool.Clean()
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
-	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),

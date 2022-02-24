@@ -549,7 +549,6 @@ func (kp *DexKeeper) ClearAfterMatch() {
 }
 
 func (kp *DexKeeper) StoreTradePrices(ctx sdk.Context) {
-	// TODO: check block height != 0
 	if ctx.BlockHeight()%pricesStoreEvery == 0 {
 		lastTradePrices := make(map[string]int64, len(kp.engines))
 		for symbol, engine := range kp.engines {
@@ -961,7 +960,7 @@ func (kp *DexKeeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset
 	}
 
 	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	for _, pair := range tradingPairs { //TODO
+	for _, pair := range tradingPairs {
 		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
 			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
 			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",
