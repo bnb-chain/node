@@ -156,7 +156,6 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	//TODO output other fields: trades, stakeUpdate etc.
 	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\n", msg.Height, msg.Timestamp, orders)
 }
 

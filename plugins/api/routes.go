@@ -85,9 +85,6 @@ func (s *server) bindRoutes() *server {
 		Queries("offset", "{offset:[0-9]+}", "limit", "{limit:[0-9]+}").
 		Methods("GET")
 
-	// legacy plugin routes
-	// TODO: make these more like the above for simplicity.
-
 	// keys rest routes disabled for security. while the nodes with keys (validators) run in a secure ringfenced environment,
 	// disabling this is a precaution to protect third-party validators that might not have protected their networks adequately.
 	//keys.RegisterRoutes(r, true)

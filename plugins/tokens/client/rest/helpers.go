@@ -36,8 +36,6 @@ func GetBalances(
 	for _, coin := range coins {
 		denom := coin.Denom
 		exists := tokens.ExistsCC(ctx, denom)
-		// TODO: we probably actually want to show zero balances.
-		// if exists && !sdk.Int.IsZero(coins.AmountOf(denom)) {
 		if exists {
 			denoms[denom] = true
 		}

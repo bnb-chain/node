@@ -178,7 +178,7 @@ func (w *AsyncFileWriter) Stop() {
 }
 
 func (w *AsyncFileWriter) Write(msg []byte) (n int, err error) {
-	// TODO(wuzhenxing): for the underlying array may change, is there a better way to avoid copying slice?
+	// TODO: for the underlying array may change, is there a better way to avoid copying slice?
 	buf := make([]byte, len(msg))
 	copy(buf, msg)
 

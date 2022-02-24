@@ -67,7 +67,7 @@ type MiniToken struct {
 	Owner            sdk.AccAddress  `json:"owner"`
 	Mintable         bool            `json:"mintable"`
 	TokenType        SupplyRangeType `json:"token_type"`
-	TokenURI         string          `json:"token_uri"` //TODO set max length
+	TokenURI         string          `json:"token_uri"`
 	ContractAddress  string          `json:"contract_address,omitempty"`
 	ContractDecimals int8            `json:"contract_decimals,omitempty"`
 }
