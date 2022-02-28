@@ -118,6 +118,7 @@ enabled, and the genesis file will not be generated.
 		},
 	}
 
+	cmd.Flags().StringVar(&app.DefaultKeyPass, "kpass", "12345678", "defaultKeyPass for client keystore")
 	cmd.Flags().StringP(flagClientHome, "c", app.DefaultCLIHome, "client's home directory")
 	cmd.Flags().BoolP(flagOverwrite, "o", false, "overwrite the genesis.json file")
 	cmd.Flags().String(client.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")

@@ -21,7 +21,8 @@ import (
 	"github.com/binance-chain/node/wire"
 )
 
-const DefaultKeyPass = "12345678"
+//DefaultKeyPass only for private test net
+var DefaultKeyPass = "12345678"
 
 var (
 	// each genesis validators will self delegate 10000e8 native tokens to become a validator
