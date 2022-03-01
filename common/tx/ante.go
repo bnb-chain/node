@@ -17,7 +17,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/common/log"
 )
 
 const (

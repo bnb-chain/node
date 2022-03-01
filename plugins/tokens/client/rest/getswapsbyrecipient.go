@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/plugins/tokens/swap"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/wire"
 )
 
 // QuerySwapIDsByRecipientReqHandler creates an http request handler to query swapID list by recipient address

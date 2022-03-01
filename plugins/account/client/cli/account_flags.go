@@ -10,11 +10,11 @@ import (
 
 	clientFlags "github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/account"
-	"github.com/binance-chain/node/plugins/account/scripts"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/account"
+	"github.com/bnb-chain/node/plugins/account/scripts"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (

@@ -22,15 +22,15 @@ import (
 	paramhub "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
 	paramTypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
-	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/common/utils"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
-	dexTypes "github.com/binance-chain/node/plugins/dex/types"
-	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/wire"
+	bnclog "github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/utils"
+	me "github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	dexTypes "github.com/bnb-chain/node/plugins/dex/types"
+	dexUtils "github.com/bnb-chain/node/plugins/dex/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (

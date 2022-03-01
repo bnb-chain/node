@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/binance-chain/node/common/utils"
+	"github.com/bnb-chain/node/common/utils"
 )
 
 // OrderBook represents an order book at the current point block height, which is included in its struct.

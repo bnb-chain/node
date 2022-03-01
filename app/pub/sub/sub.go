@@ -3,8 +3,8 @@ package sub
 import (
 	"time"
 
-	"github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/plugins/bridge"
+	"github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/plugins/bridge"
 
 	"github.com/cosmos/cosmos-sdk/pubsub"
 )

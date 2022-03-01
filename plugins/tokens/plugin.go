@@ -8,12 +8,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
-	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/tokens/swap"
-	"github.com/binance-chain/node/plugins/tokens/timelock"
+	bnclog "github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/types"
+	app "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/plugins/tokens/timelock"
 )
 
 const abciQueryPrefix = "tokens"

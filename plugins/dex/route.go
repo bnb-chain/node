@@ -1,13 +1,13 @@
 package dex
 
 import (
-	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/plugins/dex/list"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/plugins/dex/list"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/tokens"
 )
 
 // Routes exports dex message routes

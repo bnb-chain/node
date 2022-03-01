@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/plugins/dex/store"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/wire"
 )
 
 func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc {

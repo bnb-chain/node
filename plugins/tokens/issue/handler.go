@@ -13,10 +13,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
-	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/types"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token issue message handler

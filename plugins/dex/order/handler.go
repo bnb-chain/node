@@ -12,11 +12,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	me "github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/utils"
 )
 
 type NewOrderResponse struct {
