@@ -16,9 +16,9 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/order"
 )
 
 var codec = amino.NewCodec()

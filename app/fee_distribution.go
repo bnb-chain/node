@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/app/pub"
+	"github.com/bnb-chain/node/common/log"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {

@@ -13,7 +13,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/testutils"
 )
 
 func setup() (sdk.Context, sdk.Handler, Keeper, auth.AccountKeeper) {

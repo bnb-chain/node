@@ -2,8 +2,8 @@
 
 ########################### SETUP #########################
 home=$HOME
-src="${home}/go/src/github.com/binance-chain/node"
-clipath="${home}/go/src/github.com/binance-chain/node/build/bnbcli"
+src="${home}/go/src/github.com/bnb-chain/node"
+clipath="${home}/go/src/github.com/bnb-chain/node/build/bnbcli"
 clihome="${home}/.bnbcli"
 chainId='test-chain-n4b735' # should be same with publisher/setup.sh or testnet/deploy.sh
 

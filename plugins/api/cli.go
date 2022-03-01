@@ -12,8 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 // ServeCommand will generate a long-running rest server

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 home=$HOME
-src="${home}/go/src/github.com/binance-chain/node"
-executable="${home}/go/src/github.com/binance-chain/node/build/bnbchaind"
-cli="${home}/go/src/github.com/binance-chain/node/build/bnbcli"
+src="${home}/go/src/github.com/bnb-chain/node"
+executable="${home}/go/src/github.com/bnb-chain/node/build/bnbchaind"
+cli="${home}/go/src/github.com/bnb-chain/node/build/bnbcli"
 
 ## clean history data
 #rm -r ${home}/.bnbchaind_val2

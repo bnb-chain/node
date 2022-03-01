@@ -15,10 +15,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
 //DefaultKeyPass only for private test net
