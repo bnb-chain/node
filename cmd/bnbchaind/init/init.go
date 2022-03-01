@@ -28,9 +28,9 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (

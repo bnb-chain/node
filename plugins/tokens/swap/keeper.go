@@ -11,7 +11,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	bnclog "github.com/binance-chain/node/common/log"
+	bnclog "github.com/bnb-chain/node/common/log"
 )
 
 var (

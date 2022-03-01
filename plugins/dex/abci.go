@@ -8,11 +8,11 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/store"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
+	app "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/utils"
 )
 
 const MaxDepthLevels = 1000    // matches UI requirement

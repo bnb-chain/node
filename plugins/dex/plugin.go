@@ -8,11 +8,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/app/pub"
-	bnclog "github.com/binance-chain/node/common/log"
-	app "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/app/pub"
+	bnclog "github.com/bnb-chain/node/common/log"
+	app "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex/utils"
+	"github.com/bnb-chain/node/plugins/tokens"
 )
 
 const DexAbciQueryPrefix = "dex"

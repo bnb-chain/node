@@ -1,6 +1,6 @@
 package tokens
 
-import "github.com/binance-chain/node/plugins/tokens/store"
+import "github.com/bnb-chain/node/plugins/tokens/store"
 
 type Mapper = store.Mapper
 

@@ -7,12 +7,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	paramapi "github.com/cosmos/cosmos-sdk/x/paramHub/client/rest"
 
-	hnd "github.com/binance-chain/node/plugins/api/handlers"
-	"github.com/binance-chain/node/plugins/dex"
-	dexapi "github.com/binance-chain/node/plugins/dex/client/rest"
-	tksapi "github.com/binance-chain/node/plugins/tokens/client/rest"
-	tkstore "github.com/binance-chain/node/plugins/tokens/store"
-	"github.com/binance-chain/node/wire"
+	hnd "github.com/bnb-chain/node/plugins/api/handlers"
+	"github.com/bnb-chain/node/plugins/dex"
+	dexapi "github.com/bnb-chain/node/plugins/dex/client/rest"
+	tksapi "github.com/bnb-chain/node/plugins/tokens/client/rest"
+	tkstore "github.com/bnb-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/wire"
 )
 
 // middleware (limits, parsing, etc)

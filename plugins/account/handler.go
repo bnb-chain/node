@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	common "github.com/binance-chain/node/common/types"
+	common "github.com/bnb-chain/node/common/types"
 )
 
 // NewHandler creates a set account flags handler

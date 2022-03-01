@@ -1,12 +1,12 @@
 package list
 
 import (
-	"github.com/binance-chain/node/common/log"
-	ctypes "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/common/log"
+	ctypes "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/tokens"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

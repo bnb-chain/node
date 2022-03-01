@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/binance-chain/node/common/utils"
+	"github.com/bnb-chain/node/common/utils"
 )
 
 type Fixed8 = utils.Fixed8

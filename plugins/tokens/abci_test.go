@@ -13,8 +13,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	bca "github.com/binance-chain/node/app"
-	common "github.com/binance-chain/node/common/types"
+	bca "github.com/bnb-chain/node/app"
+	common "github.com/bnb-chain/node/common/types"
 )
 
 // util objects

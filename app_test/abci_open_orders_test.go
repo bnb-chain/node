@@ -11,10 +11,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/store"
 )
 
 func Test_Success(t *testing.T) {

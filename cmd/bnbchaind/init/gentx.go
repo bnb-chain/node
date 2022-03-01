@@ -21,7 +21,7 @@ import (
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/app"
+	"github.com/bnb-chain/node/app"
 )
 
 const (

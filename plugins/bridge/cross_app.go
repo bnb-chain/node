@@ -12,10 +12,10 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/common/log"
-	ctypes "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/common/log"
+	ctypes "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/bridge/types"
 )
 
 var _ sdk.CrossChainApplication = &BindApp{}

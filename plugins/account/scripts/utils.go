@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	cmntypes "github.com/binance-chain/node/common/types"
+	cmntypes "github.com/bnb-chain/node/common/types"
 )
 
 func isFlagEnabled(ctx sdk.Context, am auth.AccountKeeper, addr sdk.AccAddress, targetFlag uint64) bool {
