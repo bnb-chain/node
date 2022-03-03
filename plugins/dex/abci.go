@@ -15,7 +15,6 @@ import (
 	"github.com/binance-chain/node/plugins/dex/utils"
 )
 
-// TODO: improve, should be configurable
 const MaxDepthLevels = 1000    // matches UI requirement
 const DefaultDepthLevels = 100 // matches UI requirement
 
@@ -91,7 +90,6 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 						queryPrefix, path),
 				}
 			}
-			//TODO: sync lock, validate pair
 			if len(path) < 3 {
 				return &abci.ResponseQuery{
 					Code: uint32(sdk.CodeUnknownRequest),

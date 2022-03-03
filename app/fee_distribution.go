@@ -77,8 +77,6 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 		avgTokens := sdk.Coins{}
 		roundingTokens := sdk.Coins{}
 		for _, token := range fee.Tokens {
-			// TODO: int64 is enough, will drop big.Int
-			// TODO: temporarily, the validators average the fees. Will change to use power as a weight to calc fees.
 			amount := token.Amount
 			avgAmount := amount / valSize
 			roundingAmount := amount - avgAmount*valSize

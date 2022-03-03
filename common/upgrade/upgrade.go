@@ -23,7 +23,6 @@ const (
 	ListingRuleUpgrade   = "ListingRuleUpgrade" // Remove restriction that only the owner of base asset can list trading pair
 	FixZeroBalance       = "FixZeroBalance"
 
-	// TODO: add upgrade name
 	LaunchBscUpgrade = sdk.LaunchBscUpgrade
 
 	EnableAccountScriptsForCrossChainTransfer = "EnableAccountScriptsForCrossChainTransfer"
