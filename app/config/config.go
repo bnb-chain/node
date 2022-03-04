@@ -546,7 +546,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                1,
 		BEP70Height:                1,
 		LaunchBscUpgradeHeight:     1,
-		BEP128Height:               1,
+		BEP128Height:               math.MaxInt64,
 		BEP82Height:                math.MaxInt64,
 		BEP84Height:                math.MaxInt64,
 		BEP87Height:                math.MaxInt64,
