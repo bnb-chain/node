@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+IMPROVEMENTS
+* [\#835](https://github.com/bnb-chain/node/pull/835) [Staking] Implement BEP128
+
 ## 0.8.3
 IMPROVEMENTS
 * [\#836](https://github.com/binance-chain/node/pull/836) [Deps] Upgrade tendermint to v0.32.3-binance.6; upgrade cosmos-sdk to v0.25.0 binance.25
