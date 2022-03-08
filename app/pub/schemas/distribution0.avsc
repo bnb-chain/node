@@ -1,0 +1,43 @@
+{
+    "type": "record",
+    "name": "Distribution",
+    "namespace": "org.binance.dex.model.avro",
+    "fields": [
+        { "name": "height", "type": "long" },
+        { "name": "timestamp", "type": "long" },
+        { "name": "numOfMsgs", "type": "int" },
+        { "name": "distributions", "type": {
+                "type": "map",
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "record",
+                        "name": "DistributionData",
+                        "namespace": "org.binance.dex.model.avro",
+                        "fields": [
+                            {"name": "validator", "type": "string"},
+                            {"name": "selfDelegator","type": "string"},
+                            {"name": "distributeAddr","type": "string"},
+                            {"name": "valTokens", "type": "long"},
+                            {"name": "totalReward", "type": "long"},
+                            {"name": "commission", "type": "long"},
+                            {"name": "rewards", "type":{
+                                "type": "array",
+                                "items": {
+                                    "type": "record",
+                                    "name": "Reward",
+                                    "namespace": "org.binance.dex.model.avro",
+                                    "fields":[
+                                        {"name": "delegator", "type": "string"},
+                                        {"name": "delegationTokens", "type": "long"},
+                                        {"name": "reward", "type": "long"}
+                                    ]
+                                }
+                            }}
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}
