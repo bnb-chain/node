@@ -276,29 +276,31 @@ func PublishEvent(
 					for i, disData := range disData {
 						rewards := make([]*Reward, len(disData.Rewards), len(disData.Rewards))
 						for i, reward := range disData.Rewards {
-							delegatorTokens, err := sdk.MulQuoDec(disData.ValTokens, reward.Shares, disData.ValShares)
-							if err != nil {
-								Logger.Error("error convert shares to tokens, delegator: %s", reward.AccAddr)
-								continue
-							}
 							rewardMsg := &Reward{
+								Validator: reward.ValAddr,
 								Delegator: reward.AccAddr,
 								Amount:    reward.Amount,
-								Tokens:    delegatorTokens.RawInt(),
+								Tokens:    reward.Tokens.RawInt(),
 							}
 							rewards[i] = rewardMsg
+						}
+						var valTokens, totalReward, commission int64
+						if disData.Validator != nil {
+							valTokens = disData.ValTokens.RawInt()
+							totalReward = disData.TotalReward.RawInt()
+							commission = disData.Commission.RawInt()
 						}
 						dis[i] = &Distribution{
 							Validator:      disData.Validator,
 							SelfDelegator:  disData.SelfDelegator,
 							DistributeAddr: disData.DistributeAddr,
-							ValTokens:      disData.ValTokens.RawInt(),
-							TotalReward:    disData.TotalReward.RawInt(),
-							Commission:     disData.Commission.RawInt(),
+							ValTokens:      valTokens,
+							TotalReward:    totalReward,
+							Commission:     commission,
 							Rewards:        rewards,
 						}
-						msgNum += len(disData.Rewards)
 					}
+					msgNum++
 					distributions[chainId] = dis
 				}
 			}
