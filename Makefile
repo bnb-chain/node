@@ -152,8 +152,9 @@ lint:
 ### Testing
 
 get_tools:
-	@echo "--> Installing tools"
-	./scripts/get_tools.sh
+	@echo "--> skip Installing tools"
+#	@echo "--> Installing tools"
+#	./scripts/get_tools.sh
 
 test:
 	make set_with_deadlock

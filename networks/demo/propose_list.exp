@@ -16,4 +16,4 @@ set timeout 30
 	spawn ./bnbcli gov submit-list-proposal --chain-id ${chain_id} --from ${from} --deposit ${deposit} --base-asset-symbol ${base_asset} --quote-asset-symbol ${quote_asset} --init-price ${init_price} --title ${title} --description ${description} --home ${home} --expire-time ${expire_time} --voting-period ${voting_period}
 	expect "Password*"
 	send "12345678\r"
-interact
+expect eof
