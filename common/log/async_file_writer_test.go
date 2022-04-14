@@ -1,7 +1,6 @@
 package log
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -13,12 +12,12 @@ func TestWriter(t *testing.T) {
 	w.Write([]byte("hello\n"))
 	w.Write([]byte("world\n"))
 	w.Stop()
-	files, _ := ioutil.ReadDir("./")
+	files, _ := os.ReadDir("./")
 	for _, f := range files {
 		fn := f.Name()
 		if strings.HasPrefix(fn, "hello") {
 			t.Log(fn)
-			content, _ := ioutil.ReadFile(fn)
+			content, _ := os.ReadFile(fn)
 			t.Log(content)
 			os.Remove(fn)
 		}

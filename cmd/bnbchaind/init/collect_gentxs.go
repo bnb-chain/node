@@ -3,7 +3,6 @@ package init
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -78,8 +77,8 @@ func genGenesisFile(cdc *codec.Codec, appInit server.AppInit, chainId, genTxDir,
 }
 
 func collectGenTxs(genTxsDir string, cdc *codec.Codec) (appGenTxs []auth.StdTx, err error) {
-	var fos []os.FileInfo
-	fos, err = ioutil.ReadDir(genTxsDir)
+	var fos []os.DirEntry
+	fos, err = os.ReadDir(genTxsDir)
 	if err != nil {
 		return
 	}
@@ -91,7 +90,7 @@ func collectGenTxs(genTxsDir string, cdc *codec.Codec) (appGenTxs []auth.StdTx, 
 		}
 
 		var jsonRawTx []byte
-		if jsonRawTx, err = ioutil.ReadFile(filename); err != nil {
+		if jsonRawTx, err = os.ReadFile(filename); err != nil {
 			return
 		}
 		var genStdTx auth.StdTx
