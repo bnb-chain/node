@@ -129,7 +129,7 @@ func TestMarshalToken(t *testing.T) {
 		Owner       sdk.AccAddress        `json:"owner"`
 		Mintable    bool                  `json:"mintable"`
 		TokenType   types.SupplyRangeType `json:"token_type"`
-		TokenURI    string                `json:"token_uri"` //TODO set max length
+		TokenURI    string                `json:"token_uri"`
 	}
 
 	emptyBeforeToken, err := json.Marshal(beforeToken{})
