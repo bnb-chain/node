@@ -67,7 +67,7 @@ func (publisher *KafkaMarketDataPublisher) newProducers() (config *sarama.Config
 	}
 
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
-	config.Producer.MaxMessageBytes = 100 * 1024 * 1024 // TODO(#66): 100M, same with QA environment, make this configurable
+	config.Producer.MaxMessageBytes = 100 * 1024 * 1024 // TODO(#66): 100M, make this configurable
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Successes = true
 	config.Producer.Retry.Max = 20
@@ -278,7 +278,7 @@ func (publisher KafkaMarketDataPublisher) publishEssentialMsg(essMsg EssMsg, top
 	filePath := fmt.Sprintf("%s/%d_%s.log", publisher.essentialLogPath, height, tpe.String())
 	toWrite := []byte(essMsg.EssentialMsg())
 	if len(toWrite) != 0 {
-		if err := ioutil.WriteFile(filePath, toWrite, 0644); err != nil {
+		if err := ioutil.WriteFile(filePath, toWrite, 0600); err != nil {
 			Logger.Error("failed to write essential log", "err", err)
 		}
 	}
