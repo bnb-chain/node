@@ -41,12 +41,12 @@ func TestInitCmd(t *testing.T) {
 }
 
 func setupClientHome(t *testing.T) func() {
-	clientDir, err := os.CreateTemp("", "mock-sdk-cmd")
+	clientDir, err := os.MkdirTemp("", "mock-sdk-cmd")
 	require.Nil(t, err)
-	viper.Set(flagClientHome, clientDir.Name())
+	viper.Set(flagClientHome, clientDir)
 	viper.Set(flagOverwriteKey, true)
 	return func() {
-		if err := os.RemoveAll(clientDir.Name()); err != nil {
+		if err := os.RemoveAll(clientDir); err != nil {
 			// TODO: Handle with #870
 			panic(err)
 		}
@@ -94,12 +94,12 @@ func TestEmptyState(t *testing.T) {
 }
 
 func TestStartStandAlone(t *testing.T) {
-	home, err := os.CreateTemp("", "mock-sdk-cmd")
+	home, err := os.MkdirTemp("", "mock-sdk-cmd")
 	require.Nil(t, err)
 	defer func() {
-		os.RemoveAll(home.Name())
+		os.RemoveAll(home)
 	}()
-	viper.Set(cli.HomeFlag, home.Name())
+	viper.Set(cli.HomeFlag, home)
 	viper.Set(client.FlagName, "moniker")
 	defer setupClientHome(t)()
 
@@ -116,7 +116,7 @@ func TestStartStandAlone(t *testing.T) {
 	err = initCmd.RunE(nil, nil)
 	require.NoError(t, err)
 
-	app, err := mock.NewApp(home.Name(), logger)
+	app, err := mock.NewApp(home, logger)
 	require.Nil(t, err)
 	svrAddr, _, err := server.FreeTCPAddr()
 	require.Nil(t, err)
@@ -133,12 +133,12 @@ func TestStartStandAlone(t *testing.T) {
 }
 
 func TestInitNodeValidatorFiles(t *testing.T) {
-	home, err := os.CreateTemp("", "mock-sdk-cmd")
+	home, err := os.MkdirTemp("", "mock-sdk-cmd")
 	require.Nil(t, err)
 	defer func() {
-		os.RemoveAll(home.Name())
+		os.RemoveAll(home)
 	}()
-	viper.Set(cli.HomeFlag, home.Name())
+	viper.Set(cli.HomeFlag, home)
 	viper.Set(client.FlagName, "moniker")
 	cfg, err := tcmd.ParseConfig()
 	require.Nil(t, err)
