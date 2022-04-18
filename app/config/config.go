@@ -87,6 +87,8 @@ FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
 EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
 # Block height of BEP128 upgrade
 BEP128Height = {{ .UpgradeConfig.BEP128Height }}
+# Block height of Disable Dex List upgrade
+DisableDexListHeight = {{ .UpgradeConfig.DisableDexListHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
