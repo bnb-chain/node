@@ -20,6 +20,10 @@ import (
 // NewHandler initialises dex message handlers
 func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper gov.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+		if sdk.IsUpgrade(upgrade.DisableDexList) {
+			errMsg := fmt.Sprintf("dex msg type: %v disabled", reflect.TypeOf(msg).Name())
+			return sdk.ErrUnknownRequest(errMsg).Result()
+		}
 		switch msg := msg.(type) {
 		case types.ListMsg:
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)

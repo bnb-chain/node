@@ -527,6 +527,7 @@ type UpgradeConfig struct {
 	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 	BEP128Height                                    int64 `mapstructure:"BEP128Height"`
+	DisableDexListHeight                            int64 `mapstructure:"DisableDexListHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -552,6 +553,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP87Height:                math.MaxInt64,
 		FixFailAckPackageHeight:    math.MaxInt64,
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
+		DisableDexListHeight:                            math.MaxInt64,
 	}
 }
 

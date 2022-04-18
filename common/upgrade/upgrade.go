@@ -38,6 +38,8 @@ const (
 	FixFailAckPackage = sdk.FixFailAckPackage
 
 	BEP128 = sdk.BEP128 // https://github.com/binance-chain/BEPs/pull/128 Staking reward distribution upgrade
+
+	DisableDexList = "DisableDexList"
 )
 
 func UpgradeBEP10(before func(), after func()) {
