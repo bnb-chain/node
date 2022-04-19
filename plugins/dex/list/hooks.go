@@ -32,6 +32,10 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
 	}
 
+	if sdk.IsUpgrade(upgrade.DisableDexList) {
+		return errors.New("list trading pair proposal is disabled")
+	}
+
 	listParams := gov.ListTradingPairParams{}
 	err := json.Unmarshal([]byte(proposal.GetDescription()), &listParams)
 	if err != nil {
