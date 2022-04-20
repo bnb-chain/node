@@ -12,11 +12,11 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/store"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/wire"
 )
 
 // PutOrderReqHandler creates an http request handler to create a new order transaction and return its binary tx

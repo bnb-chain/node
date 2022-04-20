@@ -21,10 +21,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/app"
-	appCfg "github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/app"
+	appCfg "github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 var (
@@ -91,6 +91,7 @@ Example:
 	app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
 	cmd.Flags().StringSlice(flagMonikers, nil, "specify monikers for nodes if needed")
 	cmd.Flags().String(flagNodeInfoOutputFile, "", "the file containing all node info with json format, if not specified, will just print it")
+	cmd.Flags().StringVar(&app.DefaultKeyPass, "kpass", "12345678", "defaultKeyPass for client keystore")
 
 	return cmd
 }

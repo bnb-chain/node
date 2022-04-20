@@ -15,9 +15,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/bridge/types"
-	"github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
 // Keeper maintains the link to data storage and

@@ -3,7 +3,7 @@ package bridge
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/plugins/bridge/types"
 )
 
 func Routes(keeper Keeper) map[string]sdk.Handler {

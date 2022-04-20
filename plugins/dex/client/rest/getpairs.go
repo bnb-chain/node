@@ -8,8 +8,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 const maxPairsLimit = 1000
