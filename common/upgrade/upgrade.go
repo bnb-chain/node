@@ -36,6 +36,8 @@ const (
 	BEP84             = "BEP84"   // https://github.com/bnb-chain/BEPs/pull/84 Mirror Sync Upgrade
 	BEP87             = "BEP87"   // https://github.com/bnb-chain/BEPs/pull/87
 	FixFailAckPackage = sdk.FixFailAckPackage
+
+	BEP128 = sdk.BEP128 // https://github.com/bnb-chain/BEPs/pull/128 Staking reward distribution upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {

@@ -781,6 +781,7 @@ const (
 											"name": "Reward",
 											"namespace": "org.binance.dex.model.avro",
 											"fields":[
+												{"name": "validator", "type": "string"},
 												{"name": "delegator", "type": "string"},
 												{"name": "delegationTokens", "type": "long"},
 												{"name": "reward", "type": "long"}

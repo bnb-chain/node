@@ -81,7 +81,7 @@ var latestSchemaVersions = map[msgType]int{
 	transferTpe:        1,
 	blockTpe:           0,
 	stakingTpe:         0,
-	distributionTpe:    0,
+	distributionTpe:    1,
 	slashingTpe:        0,
 	crossTransferTpe:   0,
 	mirrorTpe:          0,
@@ -1025,6 +1025,7 @@ func (msg *Distribution) toNativeMap() map[string]interface{} {
 }
 
 type Reward struct {
+	Validator sdk.ValAddress
 	Delegator sdk.AccAddress
 	Tokens    int64
 	Amount    int64
@@ -1036,6 +1037,7 @@ func (msg *Reward) String() string {
 
 func (msg *Reward) toNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
+	native["validator"] = msg.Validator.String()
 	native["delegator"] = msg.Delegator.String()
 	native["delegationTokens"] = msg.Tokens
 	native["reward"] = msg.Amount
