@@ -2,7 +2,6 @@ package pub
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -278,7 +277,7 @@ func (publisher KafkaMarketDataPublisher) publishEssentialMsg(essMsg EssMsg, top
 	filePath := fmt.Sprintf("%s/%d_%s.log", publisher.essentialLogPath, height, tpe.String())
 	toWrite := []byte(essMsg.EssentialMsg())
 	if len(toWrite) != 0 {
-		if err := ioutil.WriteFile(filePath, toWrite, 0600); err != nil {
+		if err := os.WriteFile(filePath, toWrite, 0600); err != nil {
 			Logger.Error("failed to write essential log", "err", err)
 		}
 	}

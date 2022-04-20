@@ -2,7 +2,6 @@ package init
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -61,7 +60,7 @@ following delegation and commission default parameters:
 			prepareFlagsForTxCreateValidator(config, nodeID, ip, valPubKey)
 			createValidatorCmd := cli.GetCmdCreateValidator(cdc)
 
-			w, err := ioutil.TempFile("", "gentx")
+			w, err := os.CreateTemp("", "gentx")
 			if err != nil {
 				return err
 			}
