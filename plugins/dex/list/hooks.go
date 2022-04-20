@@ -32,7 +32,7 @@ func (hooks ListHooks) OnProposalSubmitted(ctx sdk.Context, proposal gov.Proposa
 		panic(fmt.Sprintf("received wrong type of proposal %x", proposal.GetProposalType()))
 	}
 
-	if sdk.IsUpgrade(upgrade.DisableDexList) {
+	if sdk.IsUpgrade(upgrade.BEP142) {
 		return errors.New("list trading pair proposal is disabled")
 	}
 
