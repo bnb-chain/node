@@ -284,7 +284,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 	var tokens []string
 	if flag == true {
 		path := filepath.Join(*csvPath, "tokens.csv")
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -381,7 +381,7 @@ func initializeAccounts(tokens []string, flag bool) {
 					panic(err)
 				}
 				path := filepath.Join(*csvPath, fmt.Sprintf("transfers_%d.data", i))
-				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 				if err != nil {
 					panic(err)
 				}
@@ -609,7 +609,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
 		file := filepath.Join(*createPath, ts+"_"+name)
 		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
-		err = os.WriteFile(file, txBytes, 0644)
+		err = os.WriteFile(file, txBytes, 0600)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -725,7 +725,7 @@ func moveFiles(srcPath string, dstPath string, count int) {
 func save_txhash() {
 	if len(hashReturned.trans) > 0 {
 		path := filepath.Join(*csvPath, "txhash.csv")
-		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -743,7 +743,7 @@ func save_txhash() {
 
 func save_hextx() {
 	path := filepath.Join(*csvPath, "trans.csv")
-	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		panic(err)
 	}
