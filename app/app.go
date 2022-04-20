@@ -168,7 +168,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	app.stakeKeeper = stake.NewKeeper(
 		cdc,
-		common.StakeStoreKey, common.TStakeStoreKey,
+		common.StakeStoreKey, common.StakeRewardStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
 	)
@@ -241,6 +241,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.PairStoreKey,
 		common.ParamsStoreKey,
 		common.StakeStoreKey,
+		common.StakeRewardStoreKey,
 		common.SlashingStoreKey,
 		common.GovStoreKey,
 		common.TimeLockStoreKey,
@@ -303,7 +304,7 @@ func (app *BinanceChain) subscribeEvent(logger log.Logger) {
 	app.subscriber = sub
 }
 
-// setUpgradeConfig will overwrite default upgrade config
+// SetUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
@@ -326,12 +327,15 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP84, upgradeConfig.BEP84Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP87, upgradeConfig.BEP87Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP3, common.AtomicSwapStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
 		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP128, common.StakeRewardStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -523,6 +527,14 @@ func (app *BinanceChain) initStaking() {
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
 			LooseTokens: sdk.NewDec(5e15),
 		})
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP128, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		// init new param RewardDistributionBatchSize
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		params := app.stakeKeeper.GetParams(newCtx)
+		params.RewardDistributionBatchSize = 1000
+		app.stakeKeeper.SetParams(newCtx, params)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
@@ -818,7 +830,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	var validatorUpdates abci.ValidatorUpdates
 	if isBreatheBlock {
 		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
-	} else if ctx.RouterCallRecord()["stake"] {
+	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
 	ibc.EndBlocker(ctx, app.ibcKeeper)

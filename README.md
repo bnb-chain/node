@@ -34,8 +34,7 @@ $ export BNBCHAINPATH=~/go/src/github.com/binance-chain/node
 $ mkdir -p $BNBCHAINPATH
 $ git clone git@github.com:binance-chain/node.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
-$ make get_vendor_deps
-$ make install
+$ make build
 ```
 
 > If you want run bnbchaind with cleveldb as backend, please ensure leveldb is installed: https://github.com/google/leveldb#building,
@@ -52,8 +51,7 @@ You may need add BNBCHAINPATH to the environment variables.
 > md %BNBCHAINPATH%
 > git clone git@github.com:binance-chain/node.git %BNBCHAINPATH%
 > cd %BNBCHAINPATH%
-> make get_vendor_deps
-> make install
+> make build
 ```
 
 > If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set(win)/export(linux/mac) https_proxy=127.0.0.1:1080` if you still have https issues.
@@ -76,7 +74,7 @@ $ cat ~/.bnbchaind/config/genesis.json
 You may want to check the [Issuing assets](#issuing-assets) section below before you start, but this is how to start the node and begin generating blocks:
 
 ```bash
-$ bnbchaind start
+$ bnbchaind start --moniker ${YOURNAME}
 ```
 
 If everything worked you will see blocks being generated around every 1s in your console.
