@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 // queryOrderBook queries the store for the serialized order book for a given pair.

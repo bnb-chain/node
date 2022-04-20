@@ -18,11 +18,11 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/testutils"
-	"github.com/binance-chain/node/common/tx"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/tx"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 func newTestMsg(addrs ...sdk.AccAddress) *sdk.TestMsg {

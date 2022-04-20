@@ -7,11 +7,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
 type TokenBalance struct {
@@ -36,8 +36,6 @@ func GetBalances(
 	for _, coin := range coins {
 		denom := coin.Denom
 		exists := tokens.ExistsCC(ctx, denom)
-		// TODO: we probably actually want to show zero balances.
-		// if exists && !sdk.Int.IsZero(coins.AmountOf(denom)) {
 		if exists {
 			denoms[denom] = true
 		}

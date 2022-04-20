@@ -8,9 +8,9 @@ import (
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/app/pub/sub"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/app/pub/sub"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
 )
 
 const (

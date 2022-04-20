@@ -2,7 +2,7 @@ package commands
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -16,7 +16,7 @@ import (
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
@@ -55,7 +55,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 			txPath := viper.GetString(flagTransfersFile)
 			txBytes := make([]byte, 0)
 			if txPath != "" {
-				txBytes, err = ioutil.ReadFile(txPath)
+				txBytes, err = os.ReadFile(txPath)
 				if err != nil {
 					return err
 				}

@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/plugins/tokens/swap"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/wire"
 )
 
 // QuerySwapReqHandler creates an http request handler to query an AtomicSwap record by swapID

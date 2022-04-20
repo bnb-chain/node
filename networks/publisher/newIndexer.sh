@@ -2,7 +2,7 @@
 
 ########################### SETUP #########################
 home=$HOME
-src="${home}/go/src/github.com/binance-chain/node"
+src="${home}/go/src/github.com/bnb-chain/node"
 deamonhome="${home}/.bnbchaind"
 witnesshome="${home}/.bnbchaind_witness"
 clihome="${home}/.bnbcli"

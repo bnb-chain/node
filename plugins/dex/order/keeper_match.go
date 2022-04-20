@@ -4,8 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/common/utils"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/utils"
 )
 
 func (kp *DexKeeper) SelectSymbolsToMatch(height int64, matchAllSymbols bool) []string {

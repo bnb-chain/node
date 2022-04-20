@@ -8,9 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/tokens"
 )
 
 type ListHooks struct {

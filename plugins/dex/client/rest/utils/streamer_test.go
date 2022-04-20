@@ -7,10 +7,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 
-	util "github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/client/rest/utils"
-	"github.com/binance-chain/node/plugins/dex/store"
+	util "github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/client/rest/utils"
+	"github.com/bnb-chain/node/plugins/dex/store"
 )
 
 func TestStreamDepthResponse(t *testing.T) {

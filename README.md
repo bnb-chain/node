@@ -1,7 +1,7 @@
-BinanceChain
+BNB Beacon Chain
 ------------
 
-BinanceChain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. It targets fast block times, a native dApp layer and multi-token support with no smart contract VM.
+BNB Beacon Chain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. It targets fast block times, a native dApp layer and multi-token support with no smart contract VM.
 
 This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/examples/basecoin) and is already functional as a multi-asset cryptocurrency blockchain and DEX; see below for instructions on how to use it.
 
@@ -30,15 +30,14 @@ If you do not have golang yet, please [install it](https://golang.org/dl) or use
 ```bash
 $ export GOPATH=~/go
 $ export PATH=~/go/bin:$PATH
-$ export BNBCHAINPATH=~/go/src/github.com/binance-chain/node
+$ export BNBCHAINPATH=~/go/src/github.com/bnb-chain/node
 $ mkdir -p $BNBCHAINPATH
-$ git clone git@github.com:binance-chain/node.git $BNBCHAINPATH
+$ git clone git@github.com:bnb-chain/node.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
-$ make get_vendor_deps
-$ make install
+$ make build
 ```
 
-> If you want run bnbchaind with cleveldb as backend, please ensure leveldb is installed: https://github.com/google/leveldb#building, 
+> If you want run bnbchaind with cleveldb as backend, please ensure leveldb is installed: https://github.com/google/leveldb#building,
 > and change `make install` to `make install_c`
 > For mac, `brew install leveldb` would help. For linux, you can build from source
 
@@ -50,13 +49,12 @@ You may need add BNBCHAINPATH to the environment variables.
 
 ```bat
 > md %BNBCHAINPATH%
-> git clone git@github.com:binance-chain/node.git %BNBCHAINPATH%
+> git clone git@github.com:bnb-chain/node.git %BNBCHAINPATH%
 > cd %BNBCHAINPATH%
-> make get_vendor_deps
-> make install
+> make build
 ```
 
-> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set(win)/export(linux/mac) https_proxy=127.0.0.1:1080` if you still have https issues. 
+> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set(win)/export(linux/mac) https_proxy=127.0.0.1:1080` if you still have https issues.
 
 To test that installation worked, try to run the cli tool:
 
@@ -76,7 +74,7 @@ $ cat ~/.bnbchaind/config/genesis.json
 You may want to check the [Issuing assets](#issuing-assets) section below before you start, but this is how to start the node and begin generating blocks:
 
 ```bash
-$ bnbchaind start
+$ bnbchaind start --moniker ${YOURNAME}
 ```
 
 If everything worked you will see blocks being generated around every 1s in your console.

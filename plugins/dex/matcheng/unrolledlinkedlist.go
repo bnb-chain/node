@@ -75,7 +75,6 @@ func (b *bucket) insert(p *PriceLevel, compare Comparator) int {
 	k := len(b.elements)
 	i := sort.Search(k, func(i int) bool { return compare(b.elements[i].Price, p.Price) < 0 })
 	if i > 0 && compare(b.elements[i-1].Price, p.Price) == 0 {
-		//TODO: overwrite?
 		return 0 // duplicated
 	}
 	if i == k { // not found

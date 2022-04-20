@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -32,13 +31,13 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/tx"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/tx"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
@@ -285,7 +284,7 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 	var tokens []string
 	if flag == true {
 		path := filepath.Join(*csvPath, "tokens.csv")
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -382,7 +381,7 @@ func initializeAccounts(tokens []string, flag bool) {
 					panic(err)
 				}
 				path := filepath.Join(*csvPath, fmt.Sprintf("transfers_%d.data", i))
-				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 				if err != nil {
 					panic(err)
 				}
@@ -405,7 +404,7 @@ func createFolder(path string) {
 }
 
 func emptyFolder(path string) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		panic(err)
 	}
@@ -610,7 +609,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
 		file := filepath.Join(*createPath, ts+"_"+name)
 		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
-		err = ioutil.WriteFile(file, txBytes, 0644)
+		err = os.WriteFile(file, txBytes, 0600)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -633,7 +632,7 @@ func allocateSubmit() {
 	if err != nil {
 		panic(err)
 	}
-	files, err := ioutil.ReadDir(*submitPath)
+	files, err := os.ReadDir(*submitPath)
 	if err != nil {
 		panic(err)
 	}
@@ -642,7 +641,7 @@ func allocateSubmit() {
 	for i, file := range files {
 		matched := res.FindStringSubmatch(file.Name())
 		if matched != nil {
-			tran, err := ioutil.ReadFile(filepath.Join(*submitPath, file.Name()))
+			tran, err := os.ReadFile(filepath.Join(*submitPath, file.Name()))
 			if err != nil {
 				panic(err)
 			}
@@ -707,7 +706,7 @@ func doRecover() {
 }
 
 func moveFiles(srcPath string, dstPath string, count int) {
-	files, err := ioutil.ReadDir(srcPath)
+	files, err := os.ReadDir(srcPath)
 	if err != nil {
 		panic(err)
 	}
@@ -726,7 +725,7 @@ func moveFiles(srcPath string, dstPath string, count int) {
 func save_txhash() {
 	if len(hashReturned.trans) > 0 {
 		path := filepath.Join(*csvPath, "txhash.csv")
-		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -744,7 +743,7 @@ func save_txhash() {
 
 func save_hextx() {
 	path := filepath.Join(*csvPath, "trans.csv")
-	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	csvFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		panic(err)
 	}
@@ -755,7 +754,7 @@ func save_hextx() {
 	if err != nil {
 		panic(err)
 	}
-	files, err := ioutil.ReadDir(*createPath)
+	files, err := os.ReadDir(*createPath)
 	if err != nil {
 		panic(err)
 	}
@@ -763,7 +762,7 @@ func save_hextx() {
 		matched := res.FindStringSubmatch(file.Name())
 		if matched != nil {
 			ip, _ := accToIp[matched[1]]
-			txBytes, err := ioutil.ReadFile(filepath.Join(*createPath, file.Name()))
+			txBytes, err := os.ReadFile(filepath.Join(*createPath, file.Name()))
 			if err != nil {
 				panic(err)
 			}

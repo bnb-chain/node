@@ -7,10 +7,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/testutils"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
-	dextype "github.com/binance-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex/matcheng"
+	dextype "github.com/bnb-chain/node/plugins/dex/types"
 )
 
 func NewTestFeeConfig() FeeConfig {

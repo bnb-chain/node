@@ -2,9 +2,9 @@ package admin
 
 import (
 	"fmt"
-	"math/rand"
-	"strconv"
-	"time"
+	"math/big"
+
+	"crypto/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -12,11 +12,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
 	flagPVPath = "pvpath"
+	errRandF   = "failed to generate random int with error: %s"
+	randMax    = 2147483647
 )
 
 func AddCommands(cmd *cobra.Command, cdc *wire.Codec) {
@@ -50,8 +52,11 @@ func setModeCmd(cdc *wire.Codec) *cobra.Command {
 			mode := args[0]
 			if mode == "0" || mode == "1" || mode == "2" {
 				cliCtx := context.NewCLIContext().WithCodec(cdc)
-				rand.Seed(time.Now().UnixNano())
-				nonce := strconv.Itoa(rand.Int())
+				nonceB, err := rand.Int(rand.Reader, big.NewInt(randMax))
+				if err != nil {
+					return fmt.Errorf(errRandF, err.Error())
+				}
+				nonce := nonceB.Bytes()
 				sig, err := privKey.Sign([]byte(nonce))
 				if err != nil {
 					return err
@@ -85,8 +90,11 @@ func getModeCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			rand.Seed(time.Now().UnixNano())
-			nonce := strconv.Itoa(rand.Int())
+			nonceB, err := rand.Int(rand.Reader, big.NewInt(randMax))
+			if err != nil {
+				return fmt.Errorf(errRandF, err.Error())
+			}
+			nonce := nonceB.Bytes()
 			sig, err := privKey.Sign([]byte(nonce))
 			if err != nil {
 				return err
