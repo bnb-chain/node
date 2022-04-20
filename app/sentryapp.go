@@ -15,8 +15,8 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 var (

@@ -8,8 +8,8 @@ import (
 	"io"
 	"net/http"
 
-	cctx "github.com/binance-chain/node/common/client/context"
-	"github.com/binance-chain/node/wire"
+	cctx "github.com/bnb-chain/node/common/client/context"
+	"github.com/bnb-chain/node/wire"
 )
 
 // SimulateReqHandler simulates the execution of a single transaction, given its binary form

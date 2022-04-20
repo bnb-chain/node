@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/plugins/tokens/timelock"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/tokens/timelock"
+	"github.com/bnb-chain/node/wire"
 )
 
 func getTimeLocks(ctx context.CLIContext, cdc *wire.Codec, address sdk.AccAddress) ([]timelock.TimeLockRecord, error) {

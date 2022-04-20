@@ -11,8 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
-	"github.com/binance-chain/node/common/testutils"
-	common "github.com/binance-chain/node/common/types"
+	"github.com/bnb-chain/node/common/testutils"
+	common "github.com/bnb-chain/node/common/types"
 )
 
 func newAddr() sdk.AccAddress {

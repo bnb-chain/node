@@ -14,13 +14,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 
-	appPkg "github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/testutils"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	appPkg "github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
+	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 // this file has to named with suffix _test, this is a golang bug: https://github.com/golang/go/issues/24895

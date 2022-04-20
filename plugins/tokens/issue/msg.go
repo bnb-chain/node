@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

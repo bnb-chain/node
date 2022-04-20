@@ -30,9 +30,9 @@ If you do not have golang yet, please [install it](https://golang.org/dl) or use
 ```bash
 $ export GOPATH=~/go
 $ export PATH=~/go/bin:$PATH
-$ export BNBCHAINPATH=~/go/src/github.com/binance-chain/node
+$ export BNBCHAINPATH=~/go/src/github.com/bnb-chain/node
 $ mkdir -p $BNBCHAINPATH
-$ git clone git@github.com:binance-chain/node.git $BNBCHAINPATH
+$ git clone git@github.com:bnb-chain/node.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
 $ make build
 ```
@@ -49,7 +49,7 @@ You may need add BNBCHAINPATH to the environment variables.
 
 ```bat
 > md %BNBCHAINPATH%
-> git clone git@github.com:binance-chain/node.git %BNBCHAINPATH%
+> git clone git@github.com:bnb-chain/node.git %BNBCHAINPATH%
 > cd %BNBCHAINPATH%
 > make build
 ```

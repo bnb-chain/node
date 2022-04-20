@@ -17,8 +17,8 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/types"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/types"
 )
 
 var codec = amino.NewCodec()

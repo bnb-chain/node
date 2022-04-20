@@ -13,11 +13,11 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/plugins/dex/store"
-	"github.com/binance-chain/node/plugins/dex/types"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 func setupMultiStore() (sdk.MultiStore, *sdk.KVStoreKey, *sdk.KVStoreKey, *sdk.KVStoreKey) {
