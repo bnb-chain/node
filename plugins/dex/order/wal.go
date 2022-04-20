@@ -2,7 +2,6 @@ package order
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -60,7 +59,7 @@ type orderbookWAL struct {
 }
 
 func locateLatestFile(dirPath string) (string, error) {
-	files, err := ioutil.ReadDir(dirPath)
+	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return "", errors.Wrap(err, fmt.Sprintf("failed to list directory[%s] for WAL", dirPath))
 	}

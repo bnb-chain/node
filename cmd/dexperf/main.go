@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -405,7 +404,7 @@ func createFolder(path string) {
 }
 
 func emptyFolder(path string) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		panic(err)
 	}
@@ -610,7 +609,7 @@ func create(wg *sync.WaitGroup, s *sequence) {
 		ts := fmt.Sprintf("%d", time.Now().UnixNano())
 		file := filepath.Join(*createPath, ts+"_"+name)
 		fmt.Println("Acc-", item.txBldr.AccountNumber, "signed tran saved,", file)
-		err = ioutil.WriteFile(file, txBytes, 0600)
+		err = os.WriteFile(file, txBytes, 0600)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -633,7 +632,7 @@ func allocateSubmit() {
 	if err != nil {
 		panic(err)
 	}
-	files, err := ioutil.ReadDir(*submitPath)
+	files, err := os.ReadDir(*submitPath)
 	if err != nil {
 		panic(err)
 	}
@@ -642,7 +641,7 @@ func allocateSubmit() {
 	for i, file := range files {
 		matched := res.FindStringSubmatch(file.Name())
 		if matched != nil {
-			tran, err := ioutil.ReadFile(filepath.Join(*submitPath, file.Name()))
+			tran, err := os.ReadFile(filepath.Join(*submitPath, file.Name()))
 			if err != nil {
 				panic(err)
 			}
@@ -707,7 +706,7 @@ func doRecover() {
 }
 
 func moveFiles(srcPath string, dstPath string, count int) {
-	files, err := ioutil.ReadDir(srcPath)
+	files, err := os.ReadDir(srcPath)
 	if err != nil {
 		panic(err)
 	}
@@ -755,7 +754,7 @@ func save_hextx() {
 	if err != nil {
 		panic(err)
 	}
-	files, err := ioutil.ReadDir(*createPath)
+	files, err := os.ReadDir(*createPath)
 	if err != nil {
 		panic(err)
 	}
@@ -763,7 +762,7 @@ func save_hextx() {
 		matched := res.FindStringSubmatch(file.Name())
 		if matched != nil {
 			ip, _ := accToIp[matched[1]]
-			txBytes, err := ioutil.ReadFile(filepath.Join(*createPath, file.Name()))
+			txBytes, err := os.ReadFile(filepath.Join(*createPath, file.Name()))
 			if err != nil {
 				panic(err)
 			}

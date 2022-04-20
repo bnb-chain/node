@@ -304,7 +304,7 @@ func (app *BinanceChain) subscribeEvent(logger log.Logger) {
 	app.subscriber = sub
 }
 
-// setUpgradeConfig will overwrite default upgrade config
+// SetUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)

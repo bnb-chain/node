@@ -3,11 +3,10 @@ package handlers
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"io"
+	"net/http"
 
 	cctx "github.com/bnb-chain/node/common/client/context"
 	"github.com/bnb-chain/node/wire"
@@ -26,7 +25,7 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 
 		if err != nil {
 			errMsg := fmt.Sprintf("Malformed request body. Error: %s", err.Error())
