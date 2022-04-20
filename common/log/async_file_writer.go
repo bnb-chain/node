@@ -80,7 +80,7 @@ func (w *AsyncFileWriter) initLogFile() error {
 	)
 
 	realFilePath := w.timeFilePath(w.filePath)
-	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}
