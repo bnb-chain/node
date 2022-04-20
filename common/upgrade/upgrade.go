@@ -37,8 +37,8 @@ const (
 	BEP87             = "BEP87"   // https://github.com/bnb-chain/BEPs/pull/87
 	FixFailAckPackage = sdk.FixFailAckPackage
 
-	BEP128 = sdk.BEP128 // https://github.com/binance-chain/BEPs/pull/128 Staking reward distribution upgrade
-	BEP142 = "BEP142" // https://github.com/binance-chain/BEPs/pull/142 Dex Prune upgrade
+	BEP128 = sdk.BEP128 // https://github.com/bnb-chain/BEPs/pull/128 Staking reward distribution upgrade
+	BEP142 = "BEP142"   // https://github.com/bnb-chain/BEPs/pull/142 Dex Prune upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {
