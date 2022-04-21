@@ -1,12 +1,11 @@
 name: Release
 
-#on:
-#  push:
-#    # Publish `v1.2.3` tags as releases.
-#    tags:
-#      - v*
-
-on: ["push", "pull_request", "workflow_dispatch"]
+on:
+  push:
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+      - t*
 
 jobs:
   build:
@@ -143,8 +142,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.ref_name }}-${{ github.sha }}
-          release_name: ${{ github.ref_name }}-${{ github.sha }}
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
 #          body: |
 #            ${{ env.CHANGELOG }}
           draft: false
