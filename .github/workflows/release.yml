@@ -99,11 +99,11 @@ jobs:
           name: linux
           path: ./linux
 
-#      - name: Download Artifacts
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: macos
-#          path: ./macos
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: macos
+          path: ./macos
 
 #      - name: Download Artifacts
 #        uses: actions/download-artifact@v2
@@ -112,7 +112,7 @@ jobs:
 #          path: ./windows
 
       - run: zip -r linux.zip linux
-#      - run: zip -r macos.zip macos
+      - run: zip -r macos.zip macos
 #      - run: zip -r windows.zip windows
 
 #      - name: Download Config File
@@ -159,19 +159,19 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./linux.zip
-          asset_name: linux.zip
+          asset_name: bnbchain-linux-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
 
-#      - name: Upload Release Asset - MacOS
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-#          asset_path: ./macos.zip
-#          asset_name: macos.zip
-#          asset_content_type: application/octet-stream
-#
+      - name: Upload Release Asset - MacOS
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./macos.zip
+          asset_name: bnbchain-macos-${{ github.ref_name }}.zip
+          asset_content_type: application/octet-stream
+
 #      - name: Upload Release Asset - Windows
 #        uses: actions/upload-release-asset@v1
 #        env:
