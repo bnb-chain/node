@@ -8,11 +8,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/utils"
+	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 const flagBaseAsset = "base-asset-symbol"

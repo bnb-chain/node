@@ -15,13 +15,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/tendermint/tendermint/crypto"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
-const DefaultKeyPass = "12345678"
+//DefaultKeyPass only for private test net
+var DefaultKeyPass = "12345678"
 
 var (
 	// each genesis validators will self delegate 10000e8 native tokens to become a validator

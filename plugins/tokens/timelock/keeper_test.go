@@ -15,10 +15,10 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/testutils"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 func getAccountCache(cdc *codec.Codec, ms sdk.MultiStore) sdk.AccountCache {

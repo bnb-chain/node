@@ -17,12 +17,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/common/types"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/tokens/burn"
-	"github.com/binance-chain/node/plugins/tokens/freeze"
-	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/seturi"
+	"github.com/bnb-chain/node/common/types"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/tokens/burn"
+	"github.com/bnb-chain/node/plugins/tokens/freeze"
+	"github.com/bnb-chain/node/plugins/tokens/issue"
+	"github.com/bnb-chain/node/plugins/tokens/seturi"
 )
 
 func GetTradeAndOrdersRelatedAccounts(tradesToPublish []*Trade, orderChanges orderPkg.OrderChanges, orderInfosForPublish orderPkg.OrderInfoForPublish) []string {
@@ -532,7 +532,7 @@ func collectOrdersToPublish(
 
 	// the following two maps are used to update fee field we published
 	// more detail can be found at:
-	// https://github.com/binance-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+	// https://github.com/bnb-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
 

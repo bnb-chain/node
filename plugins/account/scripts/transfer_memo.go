@@ -5,7 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/binance-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/upgrade"
 )
 
 func RegisterTransferMemoCheckScript(am auth.AccountKeeper) {

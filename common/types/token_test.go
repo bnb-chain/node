@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/utils"
 )
 
 var issueMsgSymbolTestCases = []struct {
@@ -129,7 +129,7 @@ func TestMarshalToken(t *testing.T) {
 		Owner       sdk.AccAddress        `json:"owner"`
 		Mintable    bool                  `json:"mintable"`
 		TokenType   types.SupplyRangeType `json:"token_type"`
-		TokenURI    string                `json:"token_uri"` //TODO set max length
+		TokenURI    string                `json:"token_uri"`
 	}
 
 	emptyBeforeToken, err := json.Marshal(beforeToken{})

@@ -2,7 +2,6 @@ package init
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -21,7 +20,7 @@ import (
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/app"
+	"github.com/bnb-chain/node/app"
 )
 
 const (
@@ -61,7 +60,7 @@ following delegation and commission default parameters:
 			prepareFlagsForTxCreateValidator(config, nodeID, ip, valPubKey)
 			createValidatorCmd := cli.GetCmdCreateValidator(cdc)
 
-			w, err := ioutil.TempFile("", "gentx")
+			w, err := os.CreateTemp("", "gentx")
 			if err != nil {
 				return err
 			}

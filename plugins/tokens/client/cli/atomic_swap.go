@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
 )
 
 const (

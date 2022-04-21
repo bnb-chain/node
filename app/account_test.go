@@ -1,7 +1,7 @@
 package app
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -11,13 +11,13 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	common "github.com/binance-chain/node/common/types"
+	common "github.com/bnb-chain/node/common/types"
 )
 
 func BenchmarkGetAccount(b *testing.B) {
 	memDB := db.NewMemDB()
-	logger := log.NewTMLogger(ioutil.Discard)
-	testApp := NewBinanceChain(logger, memDB, ioutil.Discard)
+	logger := log.NewTMLogger(io.Discard)
+	testApp := NewBinanceChain(logger, memDB, io.Discard)
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())
@@ -48,8 +48,8 @@ func BenchmarkGetAccount(b *testing.B) {
 
 func BenchmarkSetAccount(b *testing.B) {
 	memDB := db.NewMemDB()
-	logger := log.NewTMLogger(ioutil.Discard)
-	testApp := NewBinanceChain(logger, memDB, ioutil.Discard)
+	logger := log.NewTMLogger(io.Discard)
+	testApp := NewBinanceChain(logger, memDB, io.Discard)
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())

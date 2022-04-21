@@ -16,7 +16,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/testutils"
 )
 
 func TearDown() {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/tendermint/tendermint/config"
 
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/common/log"
 )
 
 type Mode uint8

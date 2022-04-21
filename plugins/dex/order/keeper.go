@@ -19,15 +19,15 @@ import (
 	paramhub "github.com/cosmos/cosmos-sdk/x/paramHub/keeper"
 	paramTypes "github.com/cosmos/cosmos-sdk/x/paramHub/types"
 
-	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/common/utils"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/store"
-	dexTypes "github.com/binance-chain/node/plugins/dex/types"
-	dexUtils "github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/wire"
+	bnclog "github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/utils"
+	me "github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	dexTypes "github.com/bnb-chain/node/plugins/dex/types"
+	dexUtils "github.com/bnb-chain/node/plugins/dex/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
@@ -509,7 +509,6 @@ func (kp *DexKeeper) ClearAfterMatch() {
 }
 
 func (kp *DexKeeper) StoreTradePrices(ctx sdk.Context) {
-	// TODO: check block height != 0
 	if ctx.BlockHeight()%pricesStoreEvery == 0 {
 		lastTradePrices := make(map[string]int64, len(kp.engines))
 		for symbol, engine := range kp.engines {
@@ -920,7 +919,7 @@ func (kp *DexKeeper) CanDelistTradingPair(ctx sdk.Context, baseAsset, quoteAsset
 	}
 
 	tradingPairs := kp.PairMapper.ListAllTradingPairs(ctx)
-	for _, pair := range tradingPairs { //TODO
+	for _, pair := range tradingPairs {
 		if (pair.BaseAssetSymbol == symbolToCheck && pair.QuoteAssetSymbol != types.NativeTokenSymbol) ||
 			(pair.QuoteAssetSymbol == symbolToCheck && pair.BaseAssetSymbol != types.NativeTokenSymbol) {
 			return fmt.Errorf("trading pair %s_%s should not exist before delisting %s_%s",

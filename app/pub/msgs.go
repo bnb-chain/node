@@ -7,8 +7,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/types"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/common/types"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
 )
 
 type msgType int8
@@ -156,7 +156,6 @@ func (msg *ExecutionResults) ToNativeMap() map[string]interface{} {
 func (msg *ExecutionResults) EssentialMsg() string {
 	// mainly used to recover for large breathe block expiring message, there should be no trade on breathe block
 	orders := msg.Orders.EssentialMsg()
-	//TODO output other fields: trades, stakeUpdate etc.
 	return fmt.Sprintf("height:%d\ntime:%d\norders:\n%s\n", msg.Height, msg.Timestamp, orders)
 }
 
