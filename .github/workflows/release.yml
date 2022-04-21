@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.16.x]
-        os: [ubuntu-18.04, macos-11]
+        os: [ubuntu-18.04]
 #        os: [ubuntu-18.04, macos-11, windows-2019]
     env:
       GOPRIVATE: github.com/bnb-chain/*
@@ -84,9 +84,9 @@ jobs:
     needs: build
     runs-on: ubuntu-18.04
     steps:
-      - name: Set Env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
+#      - name: Set Env
+#        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+#
       - name: Checkout Code
         uses: actions/checkout@v2
 
@@ -100,11 +100,11 @@ jobs:
           name: linux
           path: ./linux
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: macos
-          path: ./macos
+#      - name: Download Artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: macos
+#          path: ./macos
 
 #      - name: Download Artifacts
 #        uses: actions/download-artifact@v2
@@ -113,7 +113,7 @@ jobs:
 #          path: ./windows
 
       - run: zip -r linux.zip linux
-      - run: zip -r macos.zip macos
+#      - run: zip -r macos.zip macos
 #      - run: zip -r windows.zip windows
 
 #      - name: Download Config File
@@ -143,8 +143,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}-${{ github.sha }}
+          release_name: ${{ github.ref_name }}-${{ github.sha }}
 #          body: |
 #            ${{ env.CHANGELOG }}
           draft: false
