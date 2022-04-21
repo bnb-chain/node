@@ -1,5 +1,5 @@
 build
-vendor
+#vendor
 .DS_Store
 
 # Binaries for programs and plugins
