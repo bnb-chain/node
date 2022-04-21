@@ -150,10 +150,9 @@ lint:
 
 ########################################
 ### Testing
-
-get_tools:
-	@echo "--> Installing tools"
-	./scripts/get_tools.sh
+update_vendor:
+	@echo "-->Updating vendor"
+	./script/update_vendor.sh
 
 test:
 	make set_with_deadlock
