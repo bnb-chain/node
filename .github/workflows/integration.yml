@@ -39,6 +39,5 @@ jobs:
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: make build
       - run: make integration_test
       - run: make test
