@@ -155,7 +155,7 @@ get_tools:
 	@echo "--> Installing tools"
 	./scripts/get_tools.sh
 
-test: get_tools
+test:
 	make set_with_deadlock
 	make test_unit
 	make test_race

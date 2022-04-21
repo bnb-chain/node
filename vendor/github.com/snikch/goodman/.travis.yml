@@ -1,0 +1,27 @@
+sudo: required
+language: go
+before_install:
+  - nvm install v6.9.2 && nvm use v6.9.2
+  - npm install -g dredd --no-optional
+  - npm install
+  - bundle install  
+go:
+  - 1.5
+  - 1.6
+  - 1.7
+  - 1.8
+  - 1.9
+env:
+  - GO15VENDOREXPERIMENT=1
+
+install:
+  - go get -u github.com/kardianos/govendor
+  - go install github.com/kardianos/govendor
+  - go build -race -o $GOPATH/bin/goodman github.com/snikch/goodman/cmd/goodman
+  - cd example && $GOPATH/bin/govendor sync && cd ..
+
+go_import_path: github.com/snikch/goodman
+script:
+  - go test github.com/snikch/goodman/{,/transaction,/hooks}
+  - bundle exec cucumber
+  - make -C example dredd

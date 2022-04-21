@@ -1,0 +1,43 @@
+FORMAT: 1A
+
+# My Api
+## GET /message
++ Response 200 (text/html; charset=utf-8)
+    + Body
+
+            Hello World!
+
+# Group Users
+
+## Endpoint [/users]
+
+### Retrieve all users [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "users" [{
+                    "Id": 1,
+                    "Name": "Dom",
+                    "Email": "ddelnano@gmail.com"
+                }]
+            }
+
+## Endpoint [/users/{id}]
+
++ Parameters
+    - id: 1 - (number) - Unique identifier for a user
+
+### Getting a single user [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "Id": 1,
+                "Name": "Dom",
+                "Email": "ddelnano@gmail.com"
+            }

@@ -1,0 +1,8 @@
+syntax = "proto3";
+package common;
+
+message BootstrapMessage {
+    string ChannelId = 1;
+    bytes PeerInfo = 2;
+    string addr = 3;
+}

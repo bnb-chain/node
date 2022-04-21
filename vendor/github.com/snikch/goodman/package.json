@@ -1,0 +1,22 @@
+{
+  "name": "goodman",
+  "version": "1.0.0",
+  "description": "Goodman is a [Dredd](https://github.com/apiaryio/dredd) hook handler implementation in Go. The API may change, please Vendor this library.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snikch/goodman.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/snikch/goodman/issues"
+  },
+  "homepage": "https://github.com/snikch/goodman#readme",
+  "devDependencies": {
+    "dredd": "^2.2.0"
+  }
+}

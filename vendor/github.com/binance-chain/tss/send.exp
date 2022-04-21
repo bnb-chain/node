@@ -1,0 +1,14 @@
+#!/usr/bin/expect
+
+set home [lindex $argv 0]
+set from [lindex $argv 1]
+
+set timeout 300
+	spawn ./tbnbcli send --amount 1000:BNB --to tbnb1mh3w2kxmdmnvctt7t5nu7hhz9jnp422edqdw2d --from $from --chain-id Binance-Chain-Nile --node https://data-seed-pre-0-s1.binance.org:443 --trust-node
+	expect "Password*"
+	send "123456789\r"
+	expect "> please set channel id of this session*"
+	send "18368134266\r"
+	expect "> please input password*"
+	send "123456789\r"
+expect eof

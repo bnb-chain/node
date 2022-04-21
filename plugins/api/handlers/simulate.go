@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"io"
 	"net/http"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	cctx "github.com/bnb-chain/node/common/client/context"
 	"github.com/bnb-chain/node/wire"

@@ -14,10 +14,8 @@ require (
 	github.com/linkedin/goavro v0.0.0-20180427201934-fa8f6a30176c
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
-	github.com/sasha-s/go-deadlock v0.2.1-0.20180822072021-d68e2bc52ae3 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0

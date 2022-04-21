@@ -5,9 +5,9 @@ on: ["push", "pull_request", "workflow_dispatch"]
 jobs:
   integration-test:
     runs-on: ubuntu-latest
-    env:
-      GOPRIVATE: github.com/bnb-chain/*
-      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+#    env:
+#      GOPRIVATE: github.com/bnb-chain/*
+#      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup go
@@ -35,10 +35,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gomod-
       - run: sudo apt-get update -y && sudo apt-get install -y expect
-      - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+#      - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: make build
       - run: make integration_test
+      - run: go install golang.org/x/tools/cmd/goimports@latest
       - run: make test

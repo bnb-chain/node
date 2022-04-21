@@ -1,0 +1,2 @@
+# github.com/russross/blackfriday v1.5.2
+github.com/russross/blackfriday

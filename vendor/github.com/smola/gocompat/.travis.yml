@@ -1,0 +1,37 @@
+language: go
+
+env:
+  - ENABLE_CGO=0 GO111MODULE=on
+
+install:
+  - go mod download
+
+script:
+  - go test -coverprofile=coverage.txt -covermode=atomic ./...
+  - CODECOV_TAGS=$TRAVIS_OS_NAME
+  - if [[ $TRAVIS_OS_NAME = osx ]]; then CODECOV_TAGS=$CODECOV_TAGS,${TRAVIS_OSX_IMAGE/./} ; fi
+  - CODECOV_TAGS=$CODECOV_TAGS,go${TRAVIS_GO_VERSION//./}
+  - bash <(curl -s https://codecov.io/bash) -f "coverage.txt" -cF $CODECOV_TAGS
+
+jobs:
+  include:
+    - {os: linux,                         go: 1.11.x}
+    - {os: linux,                         go: tip}
+    - {os: osx,   xcode_image: xcode10.1, go: 1.11.x}
+    - stage: deploy
+      go: 1.11.x
+      if: tag IS present
+      os: linux
+      script:
+        - go mod download
+        - go get github.com/mitchellh/gox
+        - gox ./cmd/gocompat/...
+        - for f in gocompat_* ; do tar cvzf $f.tar.gz $f ; done
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file_glob: true
+        file: gocompat_*.tar.gz
+        skip_cleanup: true
+        on:
+          tags: true

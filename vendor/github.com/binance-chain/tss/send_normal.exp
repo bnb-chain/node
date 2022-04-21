@@ -1,0 +1,9 @@
+#!/usr/bin/expect
+
+set to [lindex $argv 0]
+
+set timeout 300
+	spawn ./tbnbcli send --amount 1000000:BNB --to $to --from tss_airdrop --chain-id Binance-Chain-Nile --node https://data-seed-pre-0-s1.binance.org:443 --trust-node
+	expect "Password*"
+	send "123456789\r"
+expect eof
