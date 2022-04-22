@@ -5,6 +5,8 @@ on: ["push", "pull_request", "workflow_dispatch"]
 jobs:
   integration-test:
     runs-on: ubuntu-latest
+    env:
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup go
@@ -25,7 +27,7 @@ jobs:
       - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
       - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       # used to debug workflow
-#      - name: Setup tmate session
-#        uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: make integration_test
       - run: make test
