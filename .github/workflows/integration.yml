@@ -23,7 +23,7 @@ jobs:
             ${{ runner.os }}-go-
       - run: sudo apt-get update -y && sudo apt-get install -y expect
       - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-      - run: go env -w "github.com/bnb-chain/*"
+      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
