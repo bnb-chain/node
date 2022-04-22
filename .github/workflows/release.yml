@@ -52,8 +52,6 @@ jobs:
 
       - name: Build Binary for ${{matrix.os}}
         run: make build
-      - run: mv build bnb-chain-node-binary
-      - run: zip -r bnb-chain-node-binary.zip bnb-chain-node-binary
 
       # ==============================
       #       Upload artifacts
@@ -64,21 +62,21 @@ jobs:
         if: matrix.os == 'ubuntu-18.04'
         with:
           name: linux
-          path: ./bnb-chain-node-binary.zip
+          path: ./build
 
       - name: Upload MacOS Build
         uses: actions/upload-artifact@v2
         if: matrix.os == 'macos-11'
         with:
           name: macos
-          path: ./bnb-chain-node-binary.zip
+          path: ./build
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v2
         if: matrix.os == 'windows-2019'
         with:
           name: windows
-          path: ./bnb-chain-node-binary.zip
+          path: ./build
 
   release:
     name: Release
@@ -96,19 +94,25 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: linux
-          path: ./linux.zip
+          path: ./linux
 
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
           name: macos
-          path: ./macos.zip
+          path: ./macos
 
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
           name: windows
-          path: ./windows.zip
+          path: ./windows
+
+      - name: Zip Binaries
+      - run: |
+          zip -r linux.zip linux
+          zip -r macos.zip macos
+          zip -r windows.zip windows
 
       - name: Create Release
         id: create_release
