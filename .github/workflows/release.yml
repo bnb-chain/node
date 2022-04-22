@@ -108,11 +108,9 @@ jobs:
           name: windows
           path: ./windows
 
-      - name: Zip Binaries
-      - run: |
-          zip -r linux.zip linux
-          zip -r macos.zip macos
-          zip -r windows.zip windows
+      - run: zip -r linux.zip linux
+      - run: zip -r macos.zip macos
+      - run: zip -r windows.zip windows
 
       - name: Create Release
         id: create_release
