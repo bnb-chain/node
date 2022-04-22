@@ -12,10 +12,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.16.x]
-        os: [ubuntu-18.04, macos-11]
-    env:
-      GOPRIVATE: github.com/bnb-chain/*
-      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        os: [ubuntu-18.04, macos-11, windows-2019]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Code
@@ -42,16 +39,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
+      - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
 
       # ==============================
       #       Linux/Macos/Windows Build
       # ==============================
 
+#       used to debug workflow
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+
       - name: Build Binary for ${{matrix.os}}
         run: make build
-      - run: mv build bnbchain-binaries
-      - run: zip -r bnbchain-binaries.zip bnbchain-binaries
+      - run: mv build bnb-chain-node-binary
+      - run: zip -r bnb-chain-node-binary.zip bnb-chain-node-binary
 
       # ==============================
       #       Upload artifacts
@@ -62,21 +64,21 @@ jobs:
         if: matrix.os == 'ubuntu-18.04'
         with:
           name: linux
-          path: ./bnbchain-binaries.zip
+          path: ./bnb-chain-node-binary.zip
 
       - name: Upload MacOS Build
         uses: actions/upload-artifact@v2
         if: matrix.os == 'macos-11'
         with:
           name: macos
-          path: ./bnbchain-binaries.zip
+          path: ./bnb-chain-node-binary.zip
 
       - name: Upload Windows Build
         uses: actions/upload-artifact@v2
         if: matrix.os == 'windows-2019'
         with:
           name: windows
-          path: ./bnbchain-binaries.zip
+          path: ./bnb-chain-node-binary.zip
 
   release:
     name: Release
@@ -102,6 +104,12 @@ jobs:
           name: macos
           path: ./macos.zip
 
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: windows
+          path: ./windows.zip
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -123,7 +131,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./linux.zip
-          asset_name: bnbchain-linux-${{ github.ref_name }}.zip
+          asset_name: bnb-chain-node-binary-linux-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset - MacOS
@@ -133,5 +141,15 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./macos.zip
-          asset_name: bnbchain-macos-${{ github.ref_name }}.zip
+          asset_name: bnb-chain-node-binary-macos-${{ github.ref_name }}.zip
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Asset - Windows
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./windows.zip
+          asset_name: bnb-chain-node-binary-windows-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
