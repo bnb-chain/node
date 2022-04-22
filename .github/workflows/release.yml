@@ -1,0 +1,157 @@
+name: Release
+
+on:
+  push:
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+jobs:
+  build:
+    name: Build Release
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        os: [ubuntu-18.04, macos-11, windows-2019]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          # * Build cache (Mac)
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
+      - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+
+      # ==============================
+      #       Linux/Macos/Windows Build
+      # ==============================
+
+#       used to debug workflow
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+
+      - name: Build Binary for ${{matrix.os}}
+        run: make build
+
+      # ==============================
+      #       Upload artifacts
+      # ==============================
+
+      - name: Upload Linux Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'ubuntu-18.04'
+        with:
+          name: linux
+          path: ./build
+
+      - name: Upload MacOS Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'macos-11'
+        with:
+          name: macos
+          path: ./build
+
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'windows-2019'
+        with:
+          name: windows
+          path: ./build
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # ==============================
+      #       Download artifacts
+      # ==============================
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: linux
+          path: ./linux
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: macos
+          path: ./macos
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: windows
+          path: ./windows
+
+      - run: zip -r linux.zip linux
+      - run: zip -r macos.zip macos
+      - run: zip -r windows.zip windows
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      # Check downloaded files
+      - run: ls
+
+      - name: Upload Release Asset - Linux
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./linux.zip
+          asset_name: bnb-chain-node-binary-linux-${{ github.ref_name }}.zip
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Asset - MacOS
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./macos.zip
+          asset_name: bnb-chain-node-binary-macos-${{ github.ref_name }}.zip
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Asset - Windows
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./windows.zip
+          asset_name: bnb-chain-node-binary-windows-${{ github.ref_name }}.zip
+          asset_content_type: application/octet-stream

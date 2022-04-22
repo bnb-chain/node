@@ -9,4 +9,4 @@ set timeout 30
 	send "12345678\r"
 	expect "Repeat*"
 	send "12345678\r"
-interact
+expect eof

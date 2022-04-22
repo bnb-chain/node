@@ -80,7 +80,7 @@ define buildwindows
 endef
 
 
-build: get_tools
+build:
 ifeq ($(OS),Windows_NT)
 	$(call buildwindows)
 else
@@ -155,7 +155,7 @@ get_tools:
 	@echo "--> Installing tools"
 	./scripts/get_tools.sh
 
-test:
+test: get_tools
 	make set_with_deadlock
 	make test_unit
 	make test_race
