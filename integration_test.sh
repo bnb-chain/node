@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 cd ./build
 if [ $? -ne 0 ]; then
 	echo "path build does not exists"
@@ -65,7 +67,6 @@ function check_operation() {
 
 
 secret=$(prepare_node)
-
 result=$(expect ./recover.exp "${secret}" "alice" true)
 check_operation "Recover Key" "${result}" "${keys_operation_words}"
 

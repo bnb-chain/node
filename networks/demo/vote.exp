@@ -10,4 +10,4 @@ set timeout 30
 	spawn ./bnbcli gov vote --from ${from} --chain-id ${chain_id} --proposal-id ${proposal_id} --option ${option} --home ${home}
 	expect "Password*"
 	send "12345678\r"
-interact
+expect eof
