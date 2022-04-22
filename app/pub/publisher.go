@@ -48,7 +48,7 @@ func PublishEvent(
 	ToPublishEventCh <-chan *sub.ToPublishEvent) {
 	for toPublish := range ToPublishEventCh {
 		eventData := toPublish.EventData
-		Logger.Debug("publisher queue status", "size", len(ToPublishCh))
+		//Logger.Debug("publisher queue status", "size", len(ToPublishCh))
 		if cfg.PublishStaking {
 			var msgNum int
 			var validators []*Validator
