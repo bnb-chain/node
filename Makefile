@@ -193,7 +193,14 @@ integration_test: build
 
 ########################################
 ### Pre Commit
-pre_commit: build test format
+pre_commit: build test format lint
+
+install_lint:
+	which golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
+	golangci-lint --version
+
+lint: install_lint
+	golangci-lint run
 
 ########################################
 ### Local validator nodes using docker and docker-compose
@@ -227,3 +234,4 @@ localnet-stop:
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: build install test test_unit build-linux build-docker-node localnet-start localnet-stop
+.PHONY: lint install_lint

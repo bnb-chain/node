@@ -178,17 +178,17 @@ func main() {
 	if tokens == nil {
 		path := filepath.Join(*csvPath, "tokens.csv")
 		file, err := os.Open(path)
-		defer file.Close()
 		if err != nil {
 			panic(err)
 		}
+		defer file.Close()
 		s := bufio.NewScanner(file)
 		for s.Scan() {
 			tokens = append(tokens, s.Text())
 		}
 		fmt.Println("issued tokens:", tokens)
 	}
-	initializeAccounts(tokens, *initiateAccount)
+	tokens = initializeAccounts(tokens, *initiateAccount)
 
 	if *runCreate == true {
 		createFolder(*createPath)
@@ -351,12 +351,12 @@ func generateTokens(sIndex int, eIndex int, flag bool) []string {
 	return tokens
 }
 
-func initializeAccounts(tokens []string, flag bool) {
+func initializeAccounts(tokens []string, flag bool) []string {
 	tokens = append(tokens, "BNB")
 	if flag == true {
 		type Transfer struct {
-			To     string `json:to`
-			Amount string `json:amount`
+			To     string `json:"to"`
+			Amount string `json:"amount"`
 		}
 		b := 0
 		transfers := make([]Transfer, 2000)
@@ -395,6 +395,7 @@ func initializeAccounts(tokens []string, flag bool) {
 		}
 	}
 	tokens = tokens[:len(tokens)-1]
+	return tokens
 }
 
 func createFolder(path string) {

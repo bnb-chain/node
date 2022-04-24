@@ -74,5 +74,8 @@ func transferNativeTokensToValidators(ctx sdk.Context, coinKeeper bank.Keeper,
 	inputs := []bank.Input{
 		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach*int64(numValidators))}),
 	}
-	coinKeeper.InputOutputCoins(ctx, inputs, outputs)
+	_, sdkErr := coinKeeper.InputOutputCoins(ctx, inputs, outputs)
+	if sdkErr != nil {
+		panic(sdkErr)
+	}
 }

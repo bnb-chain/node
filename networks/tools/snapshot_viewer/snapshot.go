@@ -56,7 +56,7 @@ func prepareCms(root string, appDB *db.GoLevelDB) sdk.CommitMultiStore {
 	}
 	err := cms.LoadLatestVersion()
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Print(err.Error())
 		panic(err)
 	}
 	return cms
@@ -144,9 +144,15 @@ func analyseSnapshot(height int64, home string) {
 func uncompress(bz []byte) []byte {
 	b := bytes.NewReader(bz)
 	var out bytes.Buffer
-	r, _ := zlib.NewReader(b)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		panic(err)
+	}
 	defer r.Close()
-	io.Copy(&out, r)
+	_, err = io.Copy(&out, r)
+	if err != nil {
+		panic(err)
+	}
 	return out.Bytes()
 }
 
