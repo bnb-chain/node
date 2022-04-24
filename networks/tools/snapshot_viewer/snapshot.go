@@ -149,10 +149,7 @@ func uncompress(bz []byte) []byte {
 		panic(err)
 	}
 	defer r.Close()
-	_, err = io.Copy(&out, r)
-	if err != nil {
-		panic(err)
-	}
+	_, _ = io.Copy(&out, r)
 	return out.Bytes()
 }
 
