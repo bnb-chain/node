@@ -114,7 +114,7 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	}
 
 	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), swap.RandomNumberHash) {
-		return ErrMismatchedRandomNumber(fmt.Sprintf("Mismatched random number")).Result()
+		return ErrMismatchedRandomNumber("Mismatched random number").Result()
 	}
 
 	if !swap.CrossChain && swap.InAmount.IsZero() {

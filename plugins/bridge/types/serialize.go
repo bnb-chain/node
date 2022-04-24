@@ -210,7 +210,7 @@ func SymbolToBytes(symbol string) [32]byte {
 }
 
 func BytesToSymbol(symbolBytes [32]byte) string {
-	tokenSymbolBytes := make([]byte, 32, 32)
+	tokenSymbolBytes := make([]byte, 32)
 	copy(tokenSymbolBytes[:], symbolBytes[:])
 	return string(bytes.Trim(tokenSymbolBytes, "\x00"))
 }

@@ -110,7 +110,7 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.Symbol == types.NativeTokenSymbol {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("cannot mint native token"))
+		return sdk.ErrInvalidCoins("cannot mint native token")
 	}
 
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply

@@ -32,7 +32,10 @@ func SetupMultiStoreWithDBForUnitTest() (dbm.DB, sdk.MultiStore, *sdk.KVStoreKey
 	ms.MountStoreWithDB(capKey2, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(capKey3, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(common.PairStoreKey, sdk.StoreTypeIAVL, db)
-	ms.LoadLatestVersion()
+	err := ms.LoadLatestVersion()
+	if err != nil {
+		panic(err)
+	}
 	return db, ms, capKey, capKey2, capKey3
 }
 
@@ -53,7 +56,7 @@ func PrivAndAddr() (crypto.PrivKey, sdk.AccAddress) {
 func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, sdk.Account) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
-	acc.SetCoins(NewNativeTokens(free))
+	_ = acc.SetCoins(NewNativeTokens(free))
 	am.SetAccount(ctx, acc)
 	return privKey, acc
 }
@@ -61,7 +64,7 @@ func NewAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.Priv
 func NewNamedAccount(ctx sdk.Context, am auth.AccountKeeper, free int64) (crypto.PrivKey, types.NamedAccount) {
 	privKey, addr := PrivAndAddr()
 	acc := am.NewAccountWithAddress(ctx, addr)
-	acc.SetCoins(NewNativeTokens(free))
+	_ = acc.SetCoins(NewNativeTokens(free))
 
 	baseAcc := auth.BaseAccount{
 		Address:       acc.GetAddress(),
@@ -84,7 +87,7 @@ func NewAccountForPub(ctx sdk.Context, am auth.AccountKeeper, free, locked, free
 	acc := am.NewAccountWithAddress(ctx, addr)
 	coins := NewNativeTokens(free)
 	coins = append(coins, sdk.NewCoin(symbol, free))
-	acc.SetCoins(coins)
+	_ = acc.SetCoins(coins)
 
 	appAcc := acc.(*types.AppAccount)
 	lockedCoins := NewNativeTokens(locked)

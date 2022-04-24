@@ -22,7 +22,7 @@ func issueTinyTokenCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
 	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
 	cmd.Flags().String(flagTokenUri, "", "uri of the token information")
-	cmd.MarkFlagRequired(flagTotalSupply)
+	_ = cmd.MarkFlagRequired(flagTotalSupply)
 	return cmd
 }
 

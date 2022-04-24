@@ -67,8 +67,7 @@ func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedS
 	effectedStoreKeys = make([]string, 0)
 	for pair, eng := range kp.engines {
 		buys, sells := eng.Book.GetAllLevels()
-		var snapshot OrderBookSnapshot
-		snapshot = OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
+		snapshot := OrderBookSnapshot{Buys: buys, Sells: sells, LastTradePrice: eng.LastTradePrice}
 		if sdk.IsUpgrade(upgrade.BEP8) {
 			snapshot.LastMatchHeight = eng.LastMatchHeight
 		}
@@ -91,7 +90,7 @@ func (kp *DexKeeper) SnapShotOrderBook(ctx sdk.Context, height int64) (effectedS
 		}
 	}
 	sort.Strings(msgKeys)
-	msgs := make([]OrderInfo, len(msgKeys), len(msgKeys))
+	msgs := make([]OrderInfo, len(msgKeys))
 	for i, key := range msgKeys {
 		msgs[i] = *allOrders[idSymbolMap[key]][key]
 	}
@@ -139,19 +138,28 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 		var bw bytes.Buffer
 		r, err := zlib.NewReader(b)
 		if err != nil {
-			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s]", key))
+			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s], err: %v", key, err))
 		}
-		io.Copy(&bw, r)
+		_, err = io.Copy(&bw, r)
+		if err != nil {
+			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s]: err: %v", key, err))
+		}
 		var ob OrderBookSnapshot
 		err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ob)
 		if err != nil {
 			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", key))
 		}
 		for _, pl := range ob.Buys {
-			eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
+			err := eng.Book.InsertPriceLevel(&pl, me.BUYSIDE)
+			if err != nil {
+				panic(fmt.Sprintf("failed to insert buy price level [%s], err: %v", key, err))
+			}
 		}
 		for _, pl := range ob.Sells {
-			eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
+			err := eng.Book.InsertPriceLevel(&pl, me.SELLSIDE)
+			if err != nil {
+				panic(fmt.Sprintf("failed to insert sell price level [%s], err: %v", key, err))
+			}
 		}
 		eng.LastTradePrice = ob.LastTradePrice
 		if sdk.IsUpgrade(upgrade.BEP8) {
@@ -173,7 +181,10 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active order [%s]", key))
 	}
-	io.Copy(&bw, r)
+	_, err = io.Copy(&bw, r)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal snapshort for active order [%s]: err: %v", key, err))
+	}
 	var ao ActiveOrders
 	err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ao)
 	if err != nil {
@@ -230,7 +241,10 @@ func (kp *DexKeeper) replayOneBlocks(logger log.Logger, block *tmtypes.Block, st
 					height, t,
 					height, t,
 					0, txHash.String(), txSource}
-				kp.AddOrder(orderInfo, true)
+				err := kp.AddOrder(orderInfo, true)
+				if err != nil {
+					logger.Error("Failed to replay NreOrderMsg", "err", err)
+				}
 				logger.Info("Added Order", "order", msg)
 			case CancelOrderMsg:
 				err := kp.RemoveOrder(msg.RefId, msg.Symbol, func(ord me.OrderPart) {

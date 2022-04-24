@@ -242,7 +242,10 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
 				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					_, err := me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					if err != nil {
+						panic(err)
+					}
 				}
 			}
 		}
@@ -259,7 +262,10 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
 				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					_, err := me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					if err != nil {
+						panic(err)
+					}
 				}
 			}
 		}

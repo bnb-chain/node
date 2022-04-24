@@ -44,7 +44,7 @@ func (msg CrossTransfer) ToNativeMap() map[string]interface{} {
 	native["contract"] = msg.Contract
 	native["decimals"] = msg.Decimals
 	native["relayerFee"] = msg.RelayerFee
-	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
+	to := make([]map[string]interface{}, len(msg.To))
 	for idx, t := range msg.To {
 		to[idx] = t.ToNativeMap()
 	}
@@ -67,7 +67,7 @@ func (msg CrossTransfers) String() string {
 func (msg CrossTransfers) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
-	transfers := make([]map[string]interface{}, len(msg.Transfers), len(msg.Transfers))
+	transfers := make([]map[string]interface{}, len(msg.Transfers))
 	for idx, t := range msg.Transfers {
 		transfers[idx] = t.ToNativeMap()
 	}

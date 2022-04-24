@@ -39,7 +39,7 @@ func createAbciQueryHandler(keeper *DexKeeper, abciQueryPrefix string) app.AbciQ
 			pairs := listPairs(keeper, ctx, queryPrefix)
 			var offset, limit, end int
 			var err error
-			if pairs == nil || len(pairs) == 0 {
+			if len(pairs) == 0 {
 				pairs = make([]types.TradingPair, 0)
 				goto respond
 			}

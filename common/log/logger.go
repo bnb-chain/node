@@ -30,7 +30,10 @@ func NewAsyncFileLogger(filePath string, buffSize int64) tmlog.Logger {
 	}
 
 	fileWriter = NewAsyncFileWriter(filePath, buffSize)
-	fileWriter.Start()
+	err := fileWriter.Start()
+	if err != nil {
+		panic(err)
+	}
 
 	return tmlog.NewTMLogger(fileWriter)
 }

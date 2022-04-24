@@ -17,8 +17,7 @@ func OpenOrdersReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerF
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		symbol := r.FormValue("symbol")

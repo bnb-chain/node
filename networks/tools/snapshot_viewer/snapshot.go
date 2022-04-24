@@ -93,7 +93,7 @@ func getSnapshot(height int64, root string) (obs map[string]order.OrderBookSnaps
 			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", string(iter.Key())))
 		}
 		obs[string(iter.Key())] = ob
-		fmt.Println(fmt.Sprintf("%#v", ob))
+		fmt.Printf("%#v\n", ob)
 	}
 
 	activeOrderKeyPrefix := genActiveOrdersSnapshotKey(height)
@@ -110,7 +110,7 @@ func getSnapshot(height int64, root string) (obs map[string]order.OrderBookSnaps
 	//fmt.Println(fmt.Sprintf("%#v", ao))
 	fmt.Println("active orders")
 	for _, oi := range ao.Orders {
-		fmt.Println(fmt.Sprintf("%#v", oi))
+		fmt.Printf("%#v\n", oi)
 	}
 	fmt.Println("order book size", obSize)
 	fmt.Println("active order size", aoSize)
