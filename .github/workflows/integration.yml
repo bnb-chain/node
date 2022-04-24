@@ -1,6 +1,7 @@
 name: integration-ci
 
-on: ["push", "pull_request", "workflow_dispatch"]
+on: ["workflow_dispatch"]
+#on: ["push", "pull_request", "workflow_dispatch"]
 
 jobs:
   integration-test:
