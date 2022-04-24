@@ -140,10 +140,7 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 		if err != nil {
 			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s], err: %v", key, err))
 		}
-		_, err = io.Copy(&bw, r)
-		if err != nil {
-			panic(fmt.Sprintf("failed to unzip snapshort for orderbook [%s]: err: %v", key, err))
-		}
+		_, _ = io.Copy(&bw, r)
 		var ob OrderBookSnapshot
 		err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ob)
 		if err != nil {
@@ -181,10 +178,7 @@ func (kp *DexKeeper) LoadOrderBookSnapshot(ctx sdk.Context, latestBlockHeight in
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal snapshort for active order [%s]", key))
 	}
-	_, err = io.Copy(&bw, r)
-	if err != nil {
-		panic(fmt.Sprintf("failed to unmarshal snapshort for active order [%s]: err: %v", key, err))
-	}
+	_, _ = io.Copy(&bw, r)
 	var ao ActiveOrders
 	err = kp.cdc.UnmarshalBinaryLengthPrefixed(bw.Bytes(), &ao)
 	if err != nil {
