@@ -19,11 +19,10 @@ jobs:
             ~/go/bin
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: lint-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            lint-
       - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
       - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
-      - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
       - name: golangci-lint
         run: make lint
