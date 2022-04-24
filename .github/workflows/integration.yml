@@ -17,13 +17,16 @@ jobs:
         uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
+          path: ~/go/bin
+          key: tools-v0
+      - uses: actions/cache@v2
+        with:
           path: |
-            ~/go/bin
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: integration-ci-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            integration-ci-
+            ${{ runner.os }}-go-
       - run: sudo apt-get update -y && sudo apt-get install -y expect
       - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
       - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
