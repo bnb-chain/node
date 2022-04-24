@@ -144,9 +144,13 @@ format:
 
 ########################################
 ### Lint
-lint:
+install_lint:
+	which golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
+	golangci-lint --version
+
+lint: install_lint
 	@echo "-->Lint"
-	golint $(PACKAGES)
+	golangci-lint run
 
 ########################################
 ### Testing
@@ -194,13 +198,6 @@ integration_test: build
 ########################################
 ### Pre Commit
 pre_commit: build test format lint
-
-install_lint:
-	which golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
-	golangci-lint --version
-
-lint: install_lint
-	golangci-lint run
 
 ########################################
 ### Local validator nodes using docker and docker-compose
