@@ -9,7 +9,7 @@ import (
 )
 
 // queryOrderBook queries the store for the serialized order book for a given pair.
-func queryOrderBook(_cdc *wire.Codec, ctx context.CLIContext, pair string, levels int) (*[]byte, error) {
+func queryOrderBook(_ *wire.Codec, ctx context.CLIContext, pair string, levels int) (*[]byte, error) {
 	path := fmt.Sprintf("dex/orderbook/%s/%d", pair, levels)
 	bz, err := ctx.Query(path, nil)
 	if err != nil {

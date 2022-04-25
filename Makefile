@@ -171,13 +171,13 @@ set_with_deadlock:
 	cp go.sum go.sum_bak
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.RWMutex/deadlock.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.Mutex/deadlock.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/"  | xargs -n 1 goimports -w
 
 # cleanes up after you ran test_with_deadlock
 cleanup_after_test_with_deadlock:
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.RWMutex/sync.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.Mutex/sync.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/" | xargs -n 1 goimports -w
 	find . -name "*.go.mutex_bak" | grep -v "vendor/" | xargs rm
 	mv go.mod_bak go.mod
 	mv go.sum_bak go.sum

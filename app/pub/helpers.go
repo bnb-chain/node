@@ -281,9 +281,19 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 		if tran.IsExpire() {
 			if tran.IsExpiredWithFee() {
 				// we only got expire of Ioc here, gte orders expire is handled in breathe block
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{OrderId: tran.Oid, Reason: orderPkg.IocNoFill, Fee: tran.Fee.String(), Symbol: tran.Symbol}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{
+					OrderId: tran.Oid,
+					Reason:  orderPkg.IocNoFill,
+					Fee:     tran.Fee.String(),
+					Symbol:  tran.Symbol,
+				}
 			} else {
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{OrderId: tran.Oid, Reason: orderPkg.IocExpire, Fee: tran.Fee.String(), Symbol: tran.Symbol}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{
+					OrderId: tran.Oid,
+					Reason:  orderPkg.IocExpire,
+					Fee:     tran.Fee.String(),
+					Symbol:  tran.Symbol,
+				}
 			}
 		}
 	}
@@ -358,7 +368,12 @@ func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper,
 	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
 	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireHolderCh <- orderPkg.ExpireHolder{OrderId: tran.Oid, Reason: orderPkg.Expired, Fee: tran.Fee.String(), Symbol: tran.Symbol}
+			expireHolderCh <- orderPkg.ExpireHolder{
+				OrderId: tran.Oid,
+				Reason:  orderPkg.Expired,
+				Fee:     tran.Fee.String(),
+				Symbol:  tran.Symbol,
+			}
 		}
 	}
 	dexKeeper.DelistTradingPair(ctx, symbol, collectorForExpires)
