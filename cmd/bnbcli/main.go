@@ -102,5 +102,5 @@ func main() {
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
-	executor.Execute()
+	_ = executor.Execute()
 }

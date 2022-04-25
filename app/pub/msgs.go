@@ -191,7 +191,7 @@ func (msg *trades) String() string {
 func (msg *trades) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
-	ts := make([]map[string]interface{}, len(msg.Trades), len(msg.Trades))
+	ts := make([]map[string]interface{}, len(msg.Trades))
 	for idx, trade := range msg.Trades {
 		ts[idx] = trade.toNativeMap()
 	}
@@ -266,7 +266,7 @@ func (msg *Orders) String() string {
 func (msg *Orders) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
-	os := make([]map[string]interface{}, len(msg.Orders), len(msg.Orders))
+	os := make([]map[string]interface{}, len(msg.Orders))
 	for idx, o := range msg.Orders {
 		os[idx] = o.toNativeMap()
 	}
@@ -372,7 +372,7 @@ func (msg *Proposals) String() string {
 func (msg *Proposals) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
-	ps := make([]map[string]interface{}, len(msg.Proposals), len(msg.Proposals))
+	ps := make([]map[string]interface{}, len(msg.Proposals))
 	for idx, p := range msg.Proposals {
 		ps[idx] = p.toNativeMap()
 	}
@@ -396,7 +396,7 @@ func (msg *SideProposals) ToNativeMap() map[string]interface{} {
 	native["numOfMsgs"] = msg.NumOfMsgs
 	native["height"] = msg.Height
 	native["timestamp"] = msg.Timestamp
-	ps := make([]map[string]interface{}, len(msg.Proposals), len(msg.Proposals))
+	ps := make([]map[string]interface{}, len(msg.Proposals))
 	for idx, p := range msg.Proposals {
 		ps[idx] = p.toNativeMap()
 	}
@@ -468,7 +468,7 @@ func (msg *StakeUpdates) String() string {
 func (msg *StakeUpdates) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["numOfMsgs"] = msg.NumOfMsgs
-	ps := make([]map[string]interface{}, len(msg.CompletedUnbondingDelegations), len(msg.CompletedUnbondingDelegations))
+	ps := make([]map[string]interface{}, len(msg.CompletedUnbondingDelegations))
 	for idx, p := range msg.CompletedUnbondingDelegations {
 		ps[idx] = p.toNativeMap()
 	}
@@ -505,12 +505,12 @@ func (msg *OrderBookDelta) String() string {
 func (msg *OrderBookDelta) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["symbol"] = msg.Symbol
-	bs := make([]map[string]interface{}, len(msg.Buys), len(msg.Buys))
+	bs := make([]map[string]interface{}, len(msg.Buys))
 	for idx, buy := range msg.Buys {
 		bs[idx] = buy.ToNativeMap()
 	}
 	native["buys"] = bs
-	ss := make([]map[string]interface{}, len(msg.Sells), len(msg.Sells))
+	ss := make([]map[string]interface{}, len(msg.Sells))
 	for idx, sell := range msg.Sells {
 		ss[idx] = sell.ToNativeMap()
 	}
@@ -536,7 +536,7 @@ func (msg *Books) ToNativeMap() map[string]interface{} {
 	native["timestamp"] = msg.Timestamp
 	native["numOfMsgs"] = msg.NumOfMsgs
 	if msg.NumOfMsgs > 0 {
-		bs := make([]map[string]interface{}, len(msg.Books), len(msg.Books))
+		bs := make([]map[string]interface{}, len(msg.Books))
 		for idx, book := range msg.Books {
 			bs[idx] = book.ToNativeMap()
 		}
@@ -591,7 +591,7 @@ func (msg *Account) String() string {
 func (msg *Account) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["owner"] = sdk.AccAddress(msg.Owner).String()
-	bs := make([]map[string]interface{}, len(msg.Balances), len(msg.Balances))
+	bs := make([]map[string]interface{}, len(msg.Balances))
 	for idx, b := range msg.Balances {
 		bs[idx] = b.ToNativeMap()
 	}
@@ -616,7 +616,7 @@ func (msg *Accounts) ToNativeMap() map[string]interface{} {
 	native["height"] = msg.Height
 	native["numOfMsgs"] = msg.NumOfMsgs
 	if msg.NumOfMsgs > 0 {
-		as := make([]map[string]interface{}, len(msg.Accounts), len(msg.Accounts))
+		as := make([]map[string]interface{}, len(msg.Accounts))
 		for idx, a := range msg.Accounts {
 			as[idx] = a.ToNativeMap()
 		}
@@ -650,7 +650,7 @@ type BlockFee struct {
 }
 
 func (msg BlockFee) MarshalJSON() ([]byte, error) {
-	bech32Strs := make([]string, len(msg.Validators), len(msg.Validators))
+	bech32Strs := make([]string, len(msg.Validators))
 	for id, val := range msg.Validators {
 		bech32Strs[id] = sdk.AccAddress(val).String()
 	}
@@ -672,7 +672,7 @@ func (msg BlockFee) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
 	native["fee"] = msg.Fee
-	validators := make([]string, len(msg.Validators), len(msg.Validators))
+	validators := make([]string, len(msg.Validators))
 	for idx, addr := range msg.Validators {
 		validators[idx] = sdk.AccAddress(addr).String()
 	}
@@ -708,7 +708,7 @@ func (msg Receiver) String() string {
 func (msg Receiver) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["addr"] = msg.Addr
-	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	coins := make([]map[string]interface{}, len(msg.Coins))
 	for idx, c := range msg.Coins {
 		coins[idx] = c.ToNativeMap()
 	}
@@ -732,7 +732,7 @@ func (msg Transfer) ToNativeMap() map[string]interface{} {
 	native["txhash"] = msg.TxHash
 	native["memo"] = msg.Memo
 	native["from"] = msg.From
-	to := make([]map[string]interface{}, len(msg.To), len(msg.To))
+	to := make([]map[string]interface{}, len(msg.To))
 	for idx, t := range msg.To {
 		to[idx] = t.ToNativeMap()
 	}
@@ -755,7 +755,7 @@ func (msg Transfers) String() string {
 func (msg Transfers) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
-	transfers := make([]map[string]interface{}, len(msg.Transfers), len(msg.Transfers))
+	transfers := make([]map[string]interface{}, len(msg.Transfers))
 	for idx, t := range msg.Transfers {
 		transfers[idx] = t.ToNativeMap()
 	}
@@ -885,7 +885,7 @@ type Input struct {
 func (msg Input) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["address"] = msg.Address
-	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	coins := make([]map[string]interface{}, len(msg.Coins))
 	for idx, c := range msg.Coins {
 		coins[idx] = c.ToNativeMap()
 	}
@@ -905,7 +905,7 @@ type Output struct {
 func (msg Output) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["address"] = msg.Address
-	coins := make([]map[string]interface{}, len(msg.Coins), len(msg.Coins))
+	coins := make([]map[string]interface{}, len(msg.Coins))
 	for idx, c := range msg.Coins {
 		coins[idx] = c.ToNativeMap()
 	}
@@ -959,7 +959,7 @@ func (msg *DistributionMsg) ToNativeMap() map[string]interface{} {
 
 	distributions := make(map[string]interface{})
 	for chainId, v := range msg.Distributions {
-		items := make([]map[string]interface{}, len(v), len(v))
+		items := make([]map[string]interface{}, len(v))
 		for idx, item := range v {
 			items[idx] = item.toNativeMap()
 		}
@@ -1016,7 +1016,7 @@ func (msg *Distribution) toNativeMap() map[string]interface{} {
 	native["valTokens"] = msg.ValTokens
 	native["totalReward"] = msg.TotalReward
 	native["commission"] = msg.Commission
-	as := make([]map[string]interface{}, len(msg.Rewards), len(msg.Rewards))
+	as := make([]map[string]interface{}, len(msg.Rewards))
 	for idx, reward := range msg.Rewards {
 		as[idx] = reward.toNativeMap()
 	}
@@ -1064,7 +1064,7 @@ func (msg *SlashMsg) ToNativeMap() map[string]interface{} {
 
 	slashData := make(map[string]interface{})
 	for chainId, v := range msg.SlashData {
-		items := make([]map[string]interface{}, len(v), len(v))
+		items := make([]map[string]interface{}, len(v))
 		for idx, item := range v {
 			items[idx] = item.toNativeMap()
 		}
@@ -1123,7 +1123,7 @@ func (msg *Slash) toNativeMap() map[string]interface{} {
 	}
 	native["submitterReward"] = msg.SubmitterReward
 
-	vsc := make([]map[string]interface{}, len(msg.ValidatorsCompensation), len(msg.ValidatorsCompensation))
+	vsc := make([]map[string]interface{}, len(msg.ValidatorsCompensation))
 	for idx, compensation := range msg.ValidatorsCompensation {
 		vsc[idx] = compensation.toNativeMap()
 	}

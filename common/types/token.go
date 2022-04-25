@@ -141,9 +141,7 @@ func ValidateIssueSymbol(symbol string) error {
 		return errors.New("token symbol cannot be empty")
 	}
 
-	if strings.HasSuffix(symbol, TokenSymbolDotBSuffix) {
-		symbol = strings.TrimSuffix(symbol, TokenSymbolDotBSuffix)
-	}
+	symbol = strings.TrimSuffix(symbol, TokenSymbolDotBSuffix)
 
 	// check len without .B suffix
 	symbolLen := len(symbol)
@@ -196,9 +194,7 @@ func ValidateTokenSymbol(symbol string) error {
 		return errors.New("native token symbol should not be suffixed with tx hash")
 	}
 
-	if strings.HasSuffix(symbolPart, TokenSymbolDotBSuffix) {
-		symbolPart = strings.TrimSuffix(symbolPart, TokenSymbolDotBSuffix)
-	}
+	symbolPart = strings.TrimSuffix(symbolPart, TokenSymbolDotBSuffix)
 
 	// check len without .B suffix
 	// This function is used by both client and server side, and the client needs to use TokenSymbolNewMinLen for the validation.

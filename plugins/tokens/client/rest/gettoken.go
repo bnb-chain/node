@@ -46,8 +46,7 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext, isMini bool) ht
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +84,6 @@ func GetTokenReqHandler(cdc *wire.Codec, ctx context.CLIContext, isMini bool) ht
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

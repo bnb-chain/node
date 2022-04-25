@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	flagOverwrite    = "overwrite"
-	flagClientHome   = "home-client"
+	flagOverwrite  = "overwrite"
+	flagClientHome = "home-client"
+	//nolint:deadcode,varcheck
 	flagOverwriteKey = "overwrite-key"
 	flagMoniker      = "moniker"
 	flagAccPrefix    = "acc-prefix"

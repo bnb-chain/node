@@ -70,10 +70,6 @@ func (kp *MiniOrderKeeper) iterateRoundSelectedPairs(iter func(string)) {
 	}
 }
 
-func (kp *MiniOrderKeeper) getRoundPairsNum() int {
-	return len(kp.symbolSelector.roundSelectedSymbols)
-}
-
 func (kp *MiniOrderKeeper) getRoundOrdersNum() int {
 	n := 0
 	kp.iterateRoundSelectedPairs(func(symbol string) {

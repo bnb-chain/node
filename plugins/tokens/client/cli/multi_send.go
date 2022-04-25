@@ -53,7 +53,7 @@ func MultiSendCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			txPath := viper.GetString(flagTransfersFile)
-			txBytes := make([]byte, 0)
+			var txBytes []byte
 			if txPath != "" {
 				txBytes, err = os.ReadFile(txPath)
 				if err != nil {

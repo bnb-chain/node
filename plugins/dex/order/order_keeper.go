@@ -143,15 +143,15 @@ func (kp *BaseOrderKeeper) getOpenOrders(pair string, addr sdk.AccAddress) []sto
 			openOrders = append(
 				openOrders,
 				store.OpenOrder{
-					order.Id,
-					pair,
-					utils.Fixed8(order.Price),
-					utils.Fixed8(order.Quantity),
-					utils.Fixed8(order.CumQty),
-					order.CreatedHeight,
-					order.CreatedTimestamp,
-					order.LastUpdatedHeight,
-					order.LastUpdatedTimestamp,
+					Id:                   order.Id,
+					Symbol:               pair,
+					Price:                utils.Fixed8(order.Price),
+					Quantity:             utils.Fixed8(order.Quantity),
+					CumQty:               utils.Fixed8(order.CumQty),
+					CreatedHeight:        order.CreatedHeight,
+					CreatedTimestamp:     order.CreatedTimestamp,
+					LastUpdatedHeight:    order.LastUpdatedHeight,
+					LastUpdatedTimestamp: order.LastUpdatedTimestamp,
 				})
 		}
 	}
@@ -270,10 +270,6 @@ func (kp *BEP2OrderKeeper) reloadOrder(symbol string, orderInfo *OrderInfo, heig
 			kp.orderInfosForPub[orderInfo.Id] = orderInfo
 		}
 	}
-}
-
-func (kp *BEP2OrderKeeper) getRoundPairsNum() int {
-	return len(kp.roundOrders)
 }
 
 func (kp *BEP2OrderKeeper) getRoundOrdersNum() int {

@@ -153,7 +153,7 @@ func (w *AsyncFileWriter) flushBuffer() {
 func (w *AsyncFileWriter) SyncWrite(msg []byte) {
 	w.rotateFile()
 	if w.fd != nil {
-		w.fd.Write(msg)
+		_, _ = w.fd.Write(msg)
 	}
 }
 

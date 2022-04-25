@@ -47,6 +47,7 @@ func (s *server) withUrlEncForm(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+//nolint:unused
 // withMultipartForm parses multipart/form-data forms
 func (s *server) withMultipartForm(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

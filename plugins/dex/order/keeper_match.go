@@ -160,8 +160,7 @@ func (kp *DexKeeper) matchAndDistributeTradesForSymbol(symbol string, height, ti
 		}
 		return // no need to handle IOC
 	}
-	var iocIDs []string
-	iocIDs = orderKeeper.getRoundIOCOrdersForPair(symbol)
+	iocIDs := orderKeeper.getRoundIOCOrdersForPair(symbol)
 	for _, id := range iocIDs {
 		if msg, ok := orders[id]; ok {
 			delete(orders, id)

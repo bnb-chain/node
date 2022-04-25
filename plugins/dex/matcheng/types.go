@@ -221,7 +221,3 @@ func (l *MergedPriceLevel) AddOrders(orders []*OrderPart) {
 type TakerSideOrders struct {
 	*MergedPriceLevel
 }
-
-func (m TakerSideOrders) length() int {
-	return len(m.orders)
-}

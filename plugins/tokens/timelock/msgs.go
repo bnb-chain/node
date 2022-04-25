@@ -147,7 +147,7 @@ func (msg TimeRelockMsg) ValidateBasic() sdk.Error {
 	if len(msg.Description) == 0 &&
 		msg.Amount.IsZero() &&
 		msg.LockTime == 0 {
-		return ErrInvalidRelock(DefaultCodespace, fmt.Sprintf("nothing to update for time lock"))
+		return ErrInvalidRelock(DefaultCodespace, "nothing to update for time lock")
 	}
 
 	if sdk.IsUpgrade(sdk.BEP8) {

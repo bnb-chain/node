@@ -51,5 +51,5 @@ func main() {
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)
-	executor.Execute()
+	_ = executor.Execute()
 }

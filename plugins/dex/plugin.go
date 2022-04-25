@@ -64,7 +64,6 @@ func EndBreatheBlock(ctx sdk.Context, dexKeeper *DexKeeper, govKeeper gov.Keeper
 	if _, err := dexKeeper.SnapShotOrderBook(ctx, height); err != nil {
 		logger.Error("Failed to snapshot order book", "blockHeight", height, "err", err)
 	}
-	return
 }
 
 func delistTradingPairs(ctx sdk.Context, govKeeper gov.Keeper, dexKeeper *DexKeeper, blockTime time.Time) {

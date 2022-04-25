@@ -14,7 +14,7 @@ type FixedSizeRing struct {
 
 func NewFixedSizedRing(cap int64) *FixedSizeRing {
 	return &FixedSizeRing{
-		buf:  make([]interface{}, cap, cap),
+		buf:  make([]interface{}, cap),
 		tail: 0,
 		size: 0,
 		cap:  cap,
