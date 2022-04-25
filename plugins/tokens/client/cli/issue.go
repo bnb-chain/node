@@ -29,7 +29,7 @@ func issueTokenCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the new token")
 	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
 	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
-	cmd.MarkFlagRequired(flagTotalSupply)
+	_ = cmd.MarkFlagRequired(flagTotalSupply)
 	return cmd
 }
 
@@ -42,7 +42,7 @@ func mintTokenCmd(cmdr Commander) *cobra.Command {
 
 	cmd.Flags().StringP(flagSymbol, "s", "", "symbol of the token")
 	cmd.Flags().Int64P(flagAmount, "n", 0, "amount to mint")
-	cmd.MarkFlagRequired(flagAmount)
+	_ = cmd.MarkFlagRequired(flagAmount)
 	return cmd
 }
 

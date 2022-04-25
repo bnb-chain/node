@@ -106,7 +106,7 @@ func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.
 	err = tokenMapper.UpdateTotalSupply(ctx, symbol, newTotalSupply)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "update total supply failed: "+err.Error())
-		return sdk.ErrInternal(fmt.Sprintf("update total supply failed")).Result()
+		return sdk.ErrInternal("update total supply failed").Result()
 	}
 
 	_, _, sdkError := bankKeeper.AddCoins(ctx, token.GetOwner(),

@@ -144,9 +144,13 @@ format:
 
 ########################################
 ### Lint
-lint:
+install_lint:
+	which golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	golangci-lint --version
+
+lint: install_lint
 	@echo "-->Lint"
-	golint $(PACKAGES)
+	golangci-lint run
 
 ########################################
 ### Testing
@@ -167,13 +171,13 @@ set_with_deadlock:
 	cp go.sum go.sum_bak
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.RWMutex/deadlock.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.Mutex/deadlock.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/"  | xargs -n 1 goimports -w
 
 # cleanes up after you ran test_with_deadlock
 cleanup_after_test_with_deadlock:
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.RWMutex/sync.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.Mutex/sync.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/" | xargs -n 1 goimports -w
 	find . -name "*.go.mutex_bak" | grep -v "vendor/" | xargs rm
 	mv go.mod_bak go.mod
 	mv go.sum_bak go.sum
@@ -193,7 +197,7 @@ integration_test: build
 
 ########################################
 ### Pre Commit
-pre_commit: build test format
+pre_commit: build test format lint
 
 ########################################
 ### Local validator nodes using docker and docker-compose
@@ -227,3 +231,4 @@ localnet-stop:
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: build install test test_unit build-linux build-docker-node localnet-start localnet-stop
+.PHONY: lint install_lint

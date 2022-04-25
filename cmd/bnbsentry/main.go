@@ -9,8 +9,6 @@ import (
 	"github.com/bnb-chain/node/app"
 )
 
-const flagSequentialABCI = "seq-abci"
-
 func main() {
 	cdc := app.Codec
 	ctx := app.ServerContext
@@ -30,5 +28,5 @@ func main() {
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)
 
-	executor.Execute()
+	_ = executor.Execute()
 }

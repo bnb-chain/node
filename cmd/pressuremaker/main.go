@@ -70,7 +70,10 @@ func initConfig() {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
-	viper.Unmarshal(&cfg)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		fmt.Println("Can't unmarshal config:", err)
+		os.Exit(1)
+	}
 }
 
 var rootCmd = &cobra.Command{

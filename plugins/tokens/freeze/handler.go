@@ -52,7 +52,7 @@ func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth
 	newFrozenTokens := account.GetFrozenCoins().Plus(sdk.Coins{{Denom: symbol, Amount: freezeAmount}})
 	newFreeTokens := account.GetCoins().Minus(sdk.Coins{{Denom: symbol, Amount: freezeAmount}})
 	account.SetFrozenCoins(newFrozenTokens)
-	account.SetCoins(newFreeTokens)
+	_ = account.SetCoins(newFreeTokens)
 	accKeeper.SetAccount(ctx, account)
 	logger.Info("finish freezing token", "NewFrozenToken", newFrozenTokens, "NewFreeTokens", newFreeTokens)
 	return sdk.Result{}
@@ -81,7 +81,7 @@ func handleUnfreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper au
 	newFrozenTokens := account.GetFrozenCoins().Minus(sdk.Coins{{Denom: symbol, Amount: unfreezeAmount}})
 	newFreeTokens := account.GetCoins().Plus(sdk.Coins{{Denom: symbol, Amount: unfreezeAmount}})
 	account.SetFrozenCoins(newFrozenTokens)
-	account.SetCoins(newFreeTokens)
+	_ = account.SetCoins(newFreeTokens)
 	accKeeper.SetAccount(ctx, account)
 	logger.Debug("finish unfreezing token", "NewFrozenToken", newFrozenTokens, "NewFreeTokens", newFreeTokens)
 	return sdk.Result{}

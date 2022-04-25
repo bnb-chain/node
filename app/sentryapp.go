@@ -147,11 +147,11 @@ func newMapTxCache(size int) mapTxCache {
 	}
 }
 
-func (c mapTxCache) size() int {
+func (c *mapTxCache) size() int {
 	return len(c.pool)
 }
 
-func (c mapTxCache) nextRound() {
+func (c *mapTxCache) nextRound() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	victims := make([]string, 0)
@@ -170,18 +170,18 @@ func (c mapTxCache) nextRound() {
 	}
 }
 
-func (c mapTxCache) add(hash string) {
+func (c *mapTxCache) add(hash string) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	c.pool[hash] = &surviveTx{survive: 1, rechecked: true}
 }
 
-func (c mapTxCache) delete(hash string) {
+func (c *mapTxCache) delete(hash string) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	delete(c.pool, hash)
 }
 
-func (c mapTxCache) get(hash string) *surviveTx {
+func (c *mapTxCache) get(hash string) *surviveTx {
 	return c.pool[hash]
 }

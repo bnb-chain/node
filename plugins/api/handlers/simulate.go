@@ -21,8 +21,7 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-		return
+		_, _ = w.Write([]byte(message))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +67,6 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

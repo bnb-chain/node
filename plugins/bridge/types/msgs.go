@@ -72,7 +72,7 @@ func (msg BindMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.ContractDecimals < 0 {
-		return ErrInvalidDecimals(fmt.Sprintf("decimals should be no less than 0"))
+		return ErrInvalidDecimals("decimals should be no less than 0")
 	}
 
 	if msg.ExpireTime <= 0 {

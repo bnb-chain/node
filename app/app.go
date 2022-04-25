@@ -135,7 +135,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
+		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{CollectAccountBalance: ServerContext.PublishAccountBalance, CollectTxs: ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
 		Codec:              cdc,
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
@@ -840,8 +840,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
-		var stakeUpdates pub.StakeUpdates
-		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
+		stakeUpdates := pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
 			app.publish(tradesToPublish, &proposals, &sideProposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 
@@ -962,7 +961,7 @@ func (app *BinanceChain) AccountHandler(chainApp types.ChainApp, req abci.Reques
 				// let api server return 204 No Content
 				res = abci.ResponseQuery{
 					Code:  uint32(sdk.ABCICodeOK),
-					Value: make([]byte, 0, 0),
+					Value: make([]byte, 0),
 				}
 			}
 		} else {

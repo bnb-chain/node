@@ -44,6 +44,7 @@ func openAppDB(root string) *db.GoLevelDB {
 	return openDB(root, "application")
 }
 
+//nolint:unused,deadcode
 func getState(root string) state.State {
 	stateDb := openDB(root, "state")
 	defer stateDb.Close()
@@ -65,6 +66,7 @@ func prepareCms(root string, appDB *db.GoLevelDB, height int64) sdk.CommitMultiS
 	return cms
 }
 
+//nolint:unused,deadcode
 func accountKeyDecoder(key []byte) string {
 	prefix := []byte("account:")
 	key = key[len(prefix):]
@@ -73,7 +75,10 @@ func accountKeyDecoder(key []byte) string {
 
 func accountValueDecoder(value []byte) interface{} {
 	acc := types.AppAccount{}
-	codec.UnmarshalBinaryBare(value, &acc)
+	err := codec.UnmarshalBinaryBare(value, &acc)
+	if err != nil {
+		panic(err)
+	}
 	return acc
 }
 
@@ -95,7 +100,7 @@ func getAccountNumber(height int64, root string) {
 	}
 
 	tree.Iterate(func(key []byte, value []byte) bool {
-		if bytes.Compare([]byte("globalAccountNumber"), key) != 0 {
+		if !bytes.Equal([]byte("globalAccountNumber"), key) {
 			num++
 			accNum := accountValueDecoder(value).(types.AppAccount).AccountNumber
 			if accNum > maxAccountNum {
@@ -135,7 +140,7 @@ func getNode(key []byte, cms sdk.CommitMultiStore) *iavl.Node {
 	var innerGetNode func(key []byte, node *iavl.Node, t *iavl.ImmutableTree) *iavl.Node
 	innerGetNode = func(key []byte, node *iavl.Node, t *iavl.ImmutableTree) *iavl.Node {
 		if iavl.IsLeaf(node) {
-			if bytes.Compare(iavl.Key(node), key) != 0 {
+			if !bytes.Equal(iavl.Key(node), key) {
 				return nil
 			} else {
 				return node
@@ -174,7 +179,7 @@ func analysisAccByNum(height, accNum int64, home string) {
 	if height > 0 {
 		prevAccState = getAccByNum(home, height-1, accNum)
 		if prevAccState.Address == nil {
-			fmt.Println(fmt.Sprintf("acc number %v does not exist", accNum))
+			fmt.Printf("acc number %v does not exist\n", accNum)
 			return
 		}
 	}

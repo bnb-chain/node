@@ -306,10 +306,6 @@ func dexFeeWrap(fee sdk.Coin) types.Fee {
 	return types.NewFee(sdk.Coins{fee}, types.FeeForProposer)
 }
 
-func isNativeToken(symbol string) bool {
-	return symbol == types.NativeTokenSymbol
-}
-
 func (m *FeeManager) ExpireFees() (int64, int64) {
 	return m.FeeConfig.ExpireFeeNative, m.FeeConfig.ExpireFee
 }

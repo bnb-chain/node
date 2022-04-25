@@ -102,7 +102,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("update token info error", "err", sdkErr.Error(), "symbol", symbol)
 			return sdk.ExecuteResult{
-				Err: sdk.ErrInternal(fmt.Sprintf("update token bind info error")),
+				Err: sdk.ErrInternal("update token bind info error"),
 			}
 		}
 
@@ -438,7 +438,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	// emit peg related event
-	var totalAmount int64 = 0
+	var totalAmount int64
 	tags := types.GenerateTransferInTags(transferInPackage.ReceiverAddresses, symbol, transferInPackage.Amounts, false)
 	if totalTransferInAmount != nil {
 		totalAmount = totalTransferInAmount.AmountOf(symbol)

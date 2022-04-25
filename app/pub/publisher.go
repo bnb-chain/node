@@ -65,7 +65,7 @@ func PublishEvent(
 
 			if eventData.StakeData != nil {
 				if len(eventData.StakeData.Validators) > 0 {
-					validators = make([]*Validator, len(eventData.StakeData.Validators), len(eventData.StakeData.Validators))
+					validators = make([]*Validator, len(eventData.StakeData.Validators))
 					msgNum += len(eventData.StakeData.Validators)
 					var i int
 					for _, val := range eventData.StakeData.Validators {
@@ -77,7 +77,7 @@ func PublishEvent(
 				if len(eventData.StakeData.RemovedValidators) > 0 {
 					removedValidators = make(map[string][]sdk.ValAddress)
 					for chainId, removedVals := range eventData.StakeData.RemovedValidators {
-						vals := make([]sdk.ValAddress, len(removedVals), len(removedVals))
+						vals := make([]sdk.ValAddress, len(removedVals))
 						msgNum += len(removedVals)
 						var i int
 						for _, val := range removedVals {
@@ -90,7 +90,7 @@ func PublishEvent(
 				if len(eventData.StakeData.Delegations) > 0 || len(eventData.StakeData.RemovedDelegations) > 0 {
 					delegationsMap = make(map[string][]*Delegation)
 					for chainId, dels := range eventData.StakeData.Delegations {
-						delegations := make([]*Delegation, len(dels), len(dels))
+						delegations := make([]*Delegation, len(dels))
 						msgNum += len(dels)
 						var i int
 						for _, del := range dels {
@@ -120,7 +120,7 @@ func PublishEvent(
 				if len(eventData.StakeData.UnbondingDelegations) > 0 {
 					ubdsMap = make(map[string][]*UnbondingDelegation)
 					for chainId, ubds := range eventData.StakeData.UnbondingDelegations {
-						unbondingDelegations := make([]*UnbondingDelegation, len(ubds), len(ubds))
+						unbondingDelegations := make([]*UnbondingDelegation, len(ubds))
 						msgNum += len(ubds)
 						var i int
 						for _, ubd := range ubds {
@@ -134,7 +134,7 @@ func PublishEvent(
 				if len(eventData.StakeData.ReDelegations) > 0 {
 					redsMap = make(map[string][]*ReDelegation)
 					for chainId, reds := range eventData.StakeData.ReDelegations {
-						redelgations := make([]*ReDelegation, len(reds), len(reds))
+						redelgations := make([]*ReDelegation, len(reds))
 						msgNum += len(reds)
 						var i int
 						for _, red := range reds {
@@ -148,7 +148,7 @@ func PublishEvent(
 				if len(eventData.StakeData.CompletedUBDs) > 0 {
 					completedUBDsMap = make(map[string][]*CompletedUnbondingDelegation)
 					for chainId, ubds := range eventData.StakeData.CompletedUBDs {
-						comUBDs := make([]*CompletedUnbondingDelegation, len(ubds), len(ubds))
+						comUBDs := make([]*CompletedUnbondingDelegation, len(ubds))
 						msgNum += len(ubds)
 						for i, ubd := range ubds {
 							comUBDs[i] = &CompletedUnbondingDelegation{
@@ -163,7 +163,7 @@ func PublishEvent(
 				if len(eventData.StakeData.CompletedREDs) > 0 {
 					completedREDsMap = make(map[string][]*CompletedReDelegation)
 					for chainId, reds := range eventData.StakeData.CompletedREDs {
-						comREDs := make([]*CompletedReDelegation, len(reds), len(reds))
+						comREDs := make([]*CompletedReDelegation, len(reds))
 						msgNum += len(reds)
 						for i, red := range reds {
 							comREDs[i] = &CompletedReDelegation{
@@ -178,7 +178,7 @@ func PublishEvent(
 				if len(eventData.StakeData.DelegateEvents) > 0 {
 					delegateEventsMap = make(map[string][]*DelegateEvent)
 					for chainId, des := range eventData.StakeData.DelegateEvents {
-						dess := make([]*DelegateEvent, len(des), len(des))
+						dess := make([]*DelegateEvent, len(des))
 						msgNum += len(des)
 						for i, de := range des {
 							dess[i] = &DelegateEvent{
@@ -197,7 +197,7 @@ func PublishEvent(
 				if len(eventData.StakeData.UndelegateEvents) > 0 {
 					undelegateEventsMap = make(map[string][]*UndelegateEvent)
 					for chainId, v := range eventData.StakeData.UndelegateEvents {
-						vv := make([]*UndelegateEvent, len(v), len(v))
+						vv := make([]*UndelegateEvent, len(v))
 						msgNum += len(v)
 						for i, ude := range v {
 							vv[i] = &UndelegateEvent{
@@ -216,7 +216,7 @@ func PublishEvent(
 				if len(eventData.StakeData.RedelegateEvents) > 0 {
 					redelegateEventsMap = make(map[string][]*RedelegateEvent)
 					for chainId, v := range eventData.StakeData.RedelegateEvents {
-						vv := make([]*RedelegateEvent, len(v), len(v))
+						vv := make([]*RedelegateEvent, len(v))
 						msgNum += len(v)
 						for i, ude := range v {
 							vv[i] = &RedelegateEvent{
@@ -237,7 +237,7 @@ func PublishEvent(
 					electedValidatorsMap = make(map[string][]*Validator)
 					for chainId, vals := range eventData.StakeData.ElectedValidators {
 						msgNum += len(vals)
-						electedVals := make([]*Validator, len(vals), len(vals))
+						electedVals := make([]*Validator, len(vals))
 						for i := range vals {
 							val := Validator(vals[i])
 							electedVals[i] = &val
@@ -272,9 +272,9 @@ func PublishEvent(
 			distributions := make(map[string][]*Distribution)
 			if eventData.StakeData != nil {
 				for chainId, disData := range eventData.StakeData.Distribution {
-					dis := make([]*Distribution, len(disData), len(disData))
+					dis := make([]*Distribution, len(disData))
 					for i, disData := range disData {
-						rewards := make([]*Reward, len(disData.Rewards), len(disData.Rewards))
+						rewards := make([]*Reward, len(disData.Rewards))
 						for i, reward := range disData.Rewards {
 							rewardMsg := &Reward{
 								Validator: reward.ValAddr,
@@ -318,7 +318,7 @@ func PublishEvent(
 			var msgNum int
 			slashData := make(map[string][]*Slash)
 			for chainId, slashes := range eventData.SlashData {
-				slashDataPerChain := make([]*Slash, len(slashes), len(slashes))
+				slashDataPerChain := make([]*Slash, len(slashes))
 				for i, slash := range slashes {
 
 					vc := make([]*AllocatedAmt, len(slash.ValidatorsCompensation))
@@ -587,7 +587,7 @@ func addClosedOrder(closedToPublish []*Order, toRemoveOrderIdCh chan OrderSymbol
 }
 
 func Stop(publisher MarketDataPublisher) {
-	if IsLive == false {
+	if !IsLive {
 		Logger.Error("publication module has already been stopped")
 		return
 	}
@@ -628,7 +628,7 @@ func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64
 	numOfMsgs := len(accountsToPublish)
 
 	idx := 0
-	accs := make([]Account, numOfMsgs, numOfMsgs)
+	accs := make([]Account, numOfMsgs)
 	for _, acc := range accountsToPublish {
 		if fee, ok := feeToPublish[acc.Owner]; ok {
 			acc.Fee = fee
@@ -644,8 +644,8 @@ func publishAccount(publisher MarketDataPublisher, height int64, timestamp int64
 func publishOrderBookDelta(publisher MarketDataPublisher, height int64, timestamp int64, changedPriceLevels orderPkg.ChangedPriceLevelsMap) {
 	var deltas []OrderBookDelta
 	for pair, pls := range changedPriceLevels {
-		buys := make([]PriceLevel, len(pls.Buys), len(pls.Buys))
-		sells := make([]PriceLevel, len(pls.Sells), len(pls.Sells))
+		buys := make([]PriceLevel, len(pls.Buys))
+		sells := make([]PriceLevel, len(pls.Sells))
 		idx := 0
 		for price, qty := range pls.Buys {
 			buys[idx] = PriceLevel{price, qty}

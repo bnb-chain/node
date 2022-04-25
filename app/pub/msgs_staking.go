@@ -46,7 +46,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	removedValidators := make(map[string]interface{})
 	for id, v := range msg.RemovedValidators {
-		rvs := make([]string, len(v), len(v))
+		rvs := make([]string, len(v))
 		for id, rv := range v {
 			rvs[id] = rv.String()
 		}
@@ -56,7 +56,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	delegations := make(map[string]interface{})
 	for chainId, v := range msg.Delegations {
-		dels := make([]map[string]interface{}, len(v), len(v))
+		dels := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			dels[id] = vv.toNativeMap()
 		}
@@ -67,7 +67,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	unBondingDelegations := make(map[string]interface{})
 	for chainId, v := range msg.UnbondingDelegations {
-		ubds := make([]map[string]interface{}, len(v), len(v))
+		ubds := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			ubds[id] = vv.toNativeMap()
 		}
@@ -78,7 +78,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	reDelegations := make(map[string]interface{})
 	for chainId, v := range msg.ReDelegations {
-		reds := make([]map[string]interface{}, len(v), len(v))
+		reds := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			reds[id] = vv.toNativeMap()
 		}
@@ -89,7 +89,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	completedUBDs := make(map[string]interface{})
 	for chainId, v := range msg.CompletedUBDs {
-		cubds := make([]map[string]interface{}, len(v), len(v))
+		cubds := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			cubds[id] = vv.toNativeMap()
 		}
@@ -100,7 +100,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	completedREDs := make(map[string]interface{})
 	for chainId, v := range msg.CompletedREDs {
-		creds := make([]map[string]interface{}, len(v), len(v))
+		creds := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			creds[id] = vv.toNativeMap()
 		}
@@ -111,7 +111,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	delegateEvents := make(map[string]interface{})
 	for chainId, v := range msg.DelegateEvents {
-		deles := make([]map[string]interface{}, len(v), len(v))
+		deles := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			deles[id] = vv.toNativeMap()
 		}
@@ -121,7 +121,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	unDelegateEvents := make(map[string]interface{})
 	for chainId, v := range msg.UndelegateEvents {
-		undeles := make([]map[string]interface{}, len(v), len(v))
+		undeles := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			undeles[id] = vv.toNativeMap()
 		}
@@ -131,7 +131,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	reDelegateEvents := make(map[string]interface{})
 	for chainId, v := range msg.RedelegateEvents {
-		redeles := make([]map[string]interface{}, len(v), len(v))
+		redeles := make([]map[string]interface{}, len(v))
 		for id, vv := range v {
 			redeles[id] = vv.toNativeMap()
 		}
@@ -141,7 +141,7 @@ func (msg *StakingMsg) ToNativeMap() map[string]interface{} {
 
 	electedValidators := make(map[string]interface{})
 	for id, v := range msg.ElectedValidators {
-		evs := make([]map[string]interface{}, len(v), len(v))
+		evs := make([]map[string]interface{}, len(v))
 		for id, ev := range v {
 			evs[id] = ev.toNativeMap()
 		}

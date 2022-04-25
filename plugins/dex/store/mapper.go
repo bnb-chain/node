@@ -192,7 +192,7 @@ func (m mapper) encodeRecentPrices(recentPrices map[string]int64) []byte {
 	numSymbol := len(recentPrices)
 	symbols := make([]string, numSymbol)
 	i := 0
-	for symbol, _ := range recentPrices {
+	for symbol := range recentPrices {
 		symbols[i] = symbol
 		i++
 	}

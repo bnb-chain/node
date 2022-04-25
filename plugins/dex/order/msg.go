@@ -145,12 +145,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
 func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
-	var id string
-	ctx, err := context.EnsureSequence(ctx)
-	if err != nil {
-		return NewOrderMsg{}, err
-	}
-	id = GenerateOrderID(ctx.Sequence, sender)
+	id := GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,

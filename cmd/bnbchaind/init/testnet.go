@@ -88,7 +88,7 @@ Example:
 	cmd.Flags().String(client.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 
 	cmd.Flags().StringVar(&app.ServerContext.Bech32PrefixAccAddr, flagAccPrefix, "bnb", "bech32 prefix for AccAddress")
-	app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
+	_ = app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
 	cmd.Flags().StringSlice(flagMonikers, nil, "specify monikers for nodes if needed")
 	cmd.Flags().String(flagNodeInfoOutputFile, "", "the file containing all node info with json format, if not specified, will just print it")
 	cmd.Flags().StringVar(&app.DefaultKeyPass, "kpass", "12345678", "defaultKeyPass for client keystore")
@@ -201,7 +201,10 @@ func createGenesisFiles(cdc *codec.Codec, chainId string, genFiles []string, app
 	}
 
 	for i := 0; i < len(genTxsJson); i++ {
-		ExportGenesisFileWithTime(genFiles[i], chainId, nil, appState, genTime)
+		err = ExportGenesisFileWithTime(genFiles[i], chainId, nil, appState, genTime)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

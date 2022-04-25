@@ -36,29 +36,32 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 			config := ctx.Config
 			config.SetRoot(viper.GetString(cli.HomeFlag))
 			appCtx := configPkg.NewDefaultContext()
-			appCtx.ParseAppConfigInPlace()
+			err := appCtx.ParseAppConfigInPlace()
+			if err != nil {
+				return err
+			}
 			app.SetUpgradeConfig(appCtx.BinanceChainConfig.UpgradeConfig)
 
 			logger.Info("setup block db")
-			blockDB, err := node.DefaultDBProvider(&node.DBContext{"blockstore", config})
+			blockDB, err := node.DefaultDBProvider(&node.DBContext{ID: "blockstore", Config: config})
 			if err != nil {
 				return err
 			}
 
 			logger.Info("setup state db")
-			stateDB, err := node.DefaultDBProvider(&node.DBContext{"state", config})
+			stateDB, err := node.DefaultDBProvider(&node.DBContext{ID: "state", Config: config})
 			if err != nil {
 				return err
 			}
 
 			logger.Info("setup tx db")
-			txDB, err := node.DefaultDBProvider(&node.DBContext{"tx_index", config})
+			txDB, err := node.DefaultDBProvider(&node.DBContext{ID: "tx_index", Config: config})
 			if err != nil {
 				return err
 			}
 
 			logger.Info("setup application db")
-			appDB, err := node.DefaultDBProvider(&node.DBContext{"application", config})
+			appDB, err := node.DefaultDBProvider(&node.DBContext{ID: "application", Config: config})
 			if err != nil {
 				return err
 			}
@@ -96,7 +99,7 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Int64(flagHeight, 0, "specify a syncable height (the height must haven't been pruned")
-	cmd.MarkFlagRequired(flagHeight)
+	_ = cmd.MarkFlagRequired(flagHeight)
 
 	return cmd
 }

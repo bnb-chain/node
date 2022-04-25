@@ -77,7 +77,11 @@ func accountKeyDecoder(key []byte) string {
 
 func accountValueDecoder(value []byte) interface{} {
 	acc := types.AppAccount{}
-	codec.UnmarshalBinaryBare(value, &acc)
+	err := codec.UnmarshalBinaryBare(value, &acc)
+	if err != nil {
+		fmt.Printf("unmarshal account %v err: %s\n", value, err)
+		panic(err)
+	}
 	return acc
 }
 
@@ -140,9 +144,6 @@ func diff(node1 *iavl.Node, tree1 *iavl.ImmutableTree,
 	} else if iavl.IsLeaf(node1) || iavl.IsLeaf(node2) {
 		fmt.Println("node1 and node2 have different hierarchy")
 		return
-	} else {
-		// ignore inner nodes
-		// fmt.Printf("\t%s\n<=> %s\n", node1, node2)
 	}
 	diff(iavl.GetLeftNode(node1, tree1), tree1, iavl.GetLeftNode(node2, tree2), tree2, keyDecoder, valueDecoder)
 	diff(iavl.GetRightNode(node1, tree1), tree1, iavl.GetRightNode(node2, tree2), tree2, keyDecoder, valueDecoder)
@@ -201,7 +202,7 @@ func getNode(key []byte, cms sdk.CommitMultiStore) *iavl.Node {
 	var innerGetNode func(key []byte, node *iavl.Node, t *iavl.ImmutableTree) *iavl.Node
 	innerGetNode = func(key []byte, node *iavl.Node, t *iavl.ImmutableTree) *iavl.Node {
 		if iavl.IsLeaf(node) {
-			if bytes.Compare(iavl.Key(node), key) != 0 {
+			if !bytes.Equal(iavl.Key(node), key) {
 				return nil
 			} else {
 				return node

@@ -22,9 +22,9 @@ type SlashData struct {
 
 func SubscribeSlashEvent(sub *pubsub.Subscriber) error {
 	err := sub.Subscribe(slashing.Topic, func(event pubsub.Event) {
-		switch event.(type) {
+		switch event := event.(type) {
 		case slashing.SideSlashEvent:
-			sideSlashEvent := event.(slashing.SideSlashEvent)
+			sideSlashEvent := event
 			if toPublish.EventData.SlashData == nil {
 				toPublish.EventData.SlashData = make(map[string][]SlashData)
 			}

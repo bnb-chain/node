@@ -31,8 +31,7 @@ func GetBalances(
 
 	// must do it this way because GetTokenList relies on store.Iterator
 	// which we can't use from a CLIContext
-	var denoms map[string]bool
-	denoms = map[string]bool{}
+	denoms := map[string]bool{}
 	for _, coin := range coins {
 		denom := coin.Denom
 		exists := tokens.ExistsCC(ctx, denom)
@@ -41,10 +40,8 @@ func GetBalances(
 		}
 	}
 
-	symbs := make([]string, 0, len(denoms))
 	bals := make([]TokenBalance, 0, len(denoms))
 	for symb := range denoms {
-		symbs = append(symbs, symb)
 		// count locked and frozen coins
 		var locked, frozen int64
 		lockedc, err := getLockedCC(cdc, ctx, addr)

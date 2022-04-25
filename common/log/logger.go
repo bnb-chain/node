@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"os"
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
@@ -30,7 +31,10 @@ func NewAsyncFileLogger(filePath string, buffSize int64) tmlog.Logger {
 	}
 
 	fileWriter = NewAsyncFileWriter(filePath, buffSize)
-	fileWriter.Start()
+	err := fileWriter.Start()
+	if err != nil {
+		fmt.Printf("Failed to start file writer in NewAsyncFileLogger: %v", err)
+	}
 
 	return tmlog.NewTMLogger(fileWriter)
 }
