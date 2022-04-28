@@ -13,7 +13,8 @@ IMPROVEMENTS
 * [\#847](https://github.com/bnb-chain/node/pull/847) [Code] Rename import path binance-chain with bnb-chain
 * [\#852](https://github.com/bnb-chain/node/pull/852) [R4R] Replace ioutil with io/os
 * [\#853](https://github.com/bnb-chain/node/pull/853) [R4R] Change file permissions
-* [\#857](https://github.com/bnb-chain/node/pull/857) [\#858](https://github.com/bnb-chain/node/pull/858) [CI] CI integration
+* [\#857](https://github.com/bnb-chain/node/pull/857) [CI] Add workflows to check tests and build release
+* [\#858](https://github.com/bnb-chain/node/pull/858) [CI] Add linter workflow
 * [\#859](https://github.com/bnb-chain/node/pull/859) [Deps] Fix checksum mismatch issue of btcd
 * [\#860](https://github.com/bnb-chain/node/pull/860) [Deps] Upgrade tendermint to v0.32.3-binance.7; upgrade cosmos-sdk to v0.25.0 binance.27
 
