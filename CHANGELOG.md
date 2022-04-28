@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.1
+IMPROVEMENTS
+* [\#839](https://github.com/bnb-chain/node/pull/839) [CLIENT] Crypto-level random for client
+* [\#840](https://github.com/bnb-chain/node/pull/840) [Code] Remove testnet demo deploy script
+* [\#841](https://github.com/bnb-chain/node/pull/841) [CLI] Add cli param to set DefaultKeyPass
+* [\#842](https://github.com/bnb-chain/node/pull/842) [Deps] Upgrade go to 1.1.7
+* [\#843](https://github.com/bnb-chain/node/pull/843) [Code] Remove useless code
+* [\#844](https://github.com/bnb-chain/node/pull/844) [Build] Add go compiler build flags
+* [\#845](https://github.com/bnb-chain/node/pull/845) [Code] Tidy todo comments
+* [\#846](https://github.com/bnb-chain/node/pull/846) [Code] Change wording binance to bnb
+* [\#847](https://github.com/bnb-chain/node/pull/847) [Code] Rename import path binance-chain with bnb-chain
+* [\#852](https://github.com/bnb-chain/node/pull/852) [R4R] Replace ioutil with io/os
+* [\#853](https://github.com/bnb-chain/node/pull/853) [R4R] Change file permissions
+* [\#857](https://github.com/bnb-chain/node/pull/857) [CI] Add workflows to check tests and build release
+* [\#858](https://github.com/bnb-chain/node/pull/858) [CI] Add linter workflow
+* [\#859](https://github.com/bnb-chain/node/pull/859) [Deps] Fix checksum mismatch issue of btcd
+* [\#860](https://github.com/bnb-chain/node/pull/860) [Deps] Upgrade tendermint to v0.32.3-binance.7; upgrade cosmos-sdk to v0.25.0 binance.27
+
 ## 0.9.0
 IMPROVEMENTS
 * [\#835](https://github.com/bnb-chain/node/pull/835) [Staking] Implement BEP128
@@ -40,7 +58,7 @@ IMPROVEMENTS
 
 ## 0.7.2-hf.1
 BUG FIXES
-* [\#766](https://github.com/bnb-chain/node/pull/766)[Dex] remove orderInfo from orderInfoForPub when publish anything
+* [\#766](https://github.com/bnb-chain/node/pull/766) [Dex] remove orderInfo from orderInfoForPub when publish anything
 
 ## 0.7.2
 BUG FIXES
@@ -90,8 +108,8 @@ IMPROVEMENTS
 
 BUG FIXES
 * [\#641](https://github.com/bnb-chain/node/pull/641) [Dex] add max lock time in time lock plugin
-* [\#633]( https://github.com/bnb-chain/node/pull/633)[CLI] fix offline mode issue for sending order
-* [\#651]( https://github.com/bnb-chain/node/pull/651)[API] add account flag in api-server account query response
+* [\#633]( https://github.com/bnb-chain/node/pull/633) [CLI] fix offline mode issue for sending order
+* [\#651]( https://github.com/bnb-chain/node/pull/651) [API] add account flag in api-server account query response
 
 ## 0.6.1-hf.3
 BUG FIXES
@@ -167,9 +185,9 @@ BUG FIXES
 
 IMPROVEMENTS
 * [\#466](https://github.com/bnb-chain/node/pull/466)  Recover from last running mode when restarts
-* [\#546](https://github.com/bnb-chain/node/pull/546)[Upgrade] Set UpgradeConfig before all other initializations
-* [\#545](https://github.com/bnb-chain/node/pull/545)[Publish] Change order creatation time and lastupdate time to nanosecond
-* [\#540](https://github.com/bnb-chain/node/pull/540)[Validator] Modify validator query interface
+* [\#546](https://github.com/bnb-chain/node/pull/546) [Upgrade] Set UpgradeConfig before all other initializations
+* [\#545](https://github.com/bnb-chain/node/pull/545) [Publish] Change order creatation time and lastupdate time to nanosecond
+* [\#540](https://github.com/bnb-chain/node/pull/540) [Validator] Modify validator query interface
 * [\#535](https://github.com/bnb-chain/node/pull/535) [Validator] Upgrade logic for splitting validator address
 * [\#533](https://github.com/bnb-chain/node/pull/533) [Publish] Include txhash in published transfers
 
