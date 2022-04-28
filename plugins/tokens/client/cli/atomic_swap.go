@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
 )
 
 const (
@@ -86,14 +86,14 @@ func (c Commander) initiateHTLT(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate random number")
 		}
 		randomNumberHash = swap.CalculateRandomHash(randomNumber, timestamp)
-		fmt.Println(fmt.Sprintf("Random number: %s", hex.EncodeToString(randomNumber)))
+		fmt.Printf("Random number: %s\n", hex.EncodeToString(randomNumber))
 	} else {
 		randomNumberHash, err = hex.DecodeString(randomNumberHashStr)
 		if err != nil {
 			return err
 		}
 	}
-	fmt.Println(fmt.Sprintf("Timestamp: %d\nRandom number hash: %s", timestamp, hex.EncodeToString(randomNumberHash)))
+	fmt.Printf("Timestamp: %d\nRandom number hash: %s\n", timestamp, hex.EncodeToString(randomNumberHash))
 	heightSpan := viper.GetInt64(flagHeightSpan)
 	crossChain := viper.GetBool(flagCrossChain)
 	// build message
@@ -265,6 +265,9 @@ func (c Commander) querySwap(cmd *cobra.Command, args []string) error {
 		output, err = c.Cdc.MarshalJSONIndent(atomicSwap, "", "  ")
 	} else {
 		output, err = c.Cdc.MarshalJSON(atomicSwap)
+	}
+	if err != nil {
+		return err
 	}
 	fmt.Println(string(output))
 

@@ -10,18 +10,18 @@ export GO111MODULE = on
 PACKAGES=$(shell go list ./...)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
-COSMOS_RELEASE := $(shell grep 'github.com/binance-chain/bnc-cosmos-sdk' go.mod |awk '{print $$4}')
-TENDER_RELEASE := $(shell grep 'github.com/binance-chain/bnc-tendermint' go.mod| grep -v iavl| awk '{print $$4}')
+COSMOS_RELEASE := $(shell grep 'github.com/bnb-chain/bnc-cosmos-sdk' go.mod |awk '{print $$4}')
+TENDER_RELEASE := $(shell grep 'github.com/bnb-chain/bnc-tendermint' go.mod| grep -v iavl| awk '{print $$4}')
 
 BUILD_TAGS = netgo
 
 BUILD_CLI_TAGS = netgo
-BUILD_FLAGS = -mod=readonly -tags "${BUILD_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
-BUILD_CLI_FLAGS = -tags "${BUILD_CLI_TAGS}" -ldflags "-X github.com/binance-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/binance-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/binance-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
+BUILD_FLAGS = -mod=readonly -tags "${BUILD_TAGS}" -ldflags "-w -s -X github.com/bnb-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/bnb-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/bnb-chain/node/version.TendermintRelease=${TENDER_RELEASE}" -trimpath
+BUILD_CLI_FLAGS = -tags "${BUILD_CLI_TAGS}" -ldflags "-X github.com/bnb-chain/node/version.GitCommit=${COMMIT_HASH} -X github.com/bnb-chain/node/version.CosmosRelease=${COSMOS_RELEASE} -X github.com/bnb-chain/node/version.TendermintRelease=${TENDER_RELEASE}"
 # Without -lstdc++ on CentOS we will encounter link error, solution comes from: https://stackoverflow.com/a/29285011/1147187
 BUILD_CGOFLAGS = CGO_ENABLED=1 CGO_LDFLAGS="-lleveldb -lsnappy -lstdc++"
 BUILD_CFLAGS = ${BUILD_FLAGS} -tags "cleveldb"
-BUILD_TESTNET_FLAGS = ${BUILD_CLI_FLAGS} -ldflags "-X github.com/binance-chain/node/app.Bech32PrefixAccAddr=tbnb"
+BUILD_TESTNET_FLAGS = ${BUILD_CLI_FLAGS} -ldflags "-X github.com/bnb-chain/node/app.Bech32PrefixAccAddr=tbnb"
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -80,7 +80,7 @@ define buildwindows
 endef
 
 
-build: get_tools
+build:
 ifeq ($(OS),Windows_NT)
 	$(call buildwindows)
 else
@@ -144,9 +144,13 @@ format:
 
 ########################################
 ### Lint
-lint:
+install_lint:
+	which golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	golangci-lint --version
+
+lint: install_lint
 	@echo "-->Lint"
-	golint $(PACKAGES)
+	golangci-lint run
 
 ########################################
 ### Testing
@@ -155,7 +159,7 @@ get_tools:
 	@echo "--> Installing tools"
 	./scripts/get_tools.sh
 
-test:
+test: get_tools
 	make set_with_deadlock
 	make test_unit
 	make test_race
@@ -167,13 +171,13 @@ set_with_deadlock:
 	cp go.sum go.sum_bak
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.RWMutex/deadlock.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/sync.Mutex/deadlock.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/"  | xargs -n 1 goimports -w
 
 # cleanes up after you ran test_with_deadlock
 cleanup_after_test_with_deadlock:
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.RWMutex/sync.RWMutex/'
 	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 sed -i.mutex_bak 's/deadlock.Mutex/sync.Mutex/'
-	find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w
+	find . -name "*.go" | grep -v "vendor/" | grep -v ".git/" | xargs -n 1 goimports -w
 	find . -name "*.go.mutex_bak" | grep -v "vendor/" | xargs rm
 	mv go.mod_bak go.mod
 	mv go.sum_bak go.sum
@@ -193,7 +197,7 @@ integration_test: build
 
 ########################################
 ### Pre Commit
-pre_commit: build test format
+pre_commit: build test format lint
 
 ########################################
 ### Local validator nodes using docker and docker-compose
@@ -227,3 +231,4 @@ localnet-stop:
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: build install test test_unit build-linux build-docker-node localnet-start localnet-stop
+.PHONY: lint install_lint

@@ -11,9 +11,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 const miniTokenKeyPrefix = "mini"

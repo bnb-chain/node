@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/types"
+	"github.com/bnb-chain/node/common/types"
 )
 
 func (m mapper) UpdateMiniTokenURI(ctx sdk.Context, symbol string, uri string) error {

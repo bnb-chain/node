@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/binance-chain/node/common/utils"
+	"github.com/bnb-chain/node/common/utils"
 )
 
 type LevelIndex struct {
@@ -257,10 +257,7 @@ func allocateResidual(toAlloc *int64, orders []OrderPart, lotSize int64) bool {
 
 	*toAlloc = residual
 	//assert *toAlloc == 0
-	if compareBuy(*toAlloc, 0) != 0 {
-		return false
-	}
-	return true
+	return compareBuy(*toAlloc, 0) == 0
 }
 
 // totalLot * orderLeft / totalLeft, orderLeft <= totalLeft

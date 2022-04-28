@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/issue"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/tokens/issue"
 )
 
 const (
@@ -28,7 +28,7 @@ func issueMiniTokenCmd(cmdr Commander) *cobra.Command {
 	cmd.Flags().Int64P(flagTotalSupply, "n", 0, "total supply of the new token")
 	cmd.Flags().Bool(flagMintable, false, "whether the token can be minted")
 	cmd.Flags().String(flagTokenUri, "", "uri of the token information")
-	cmd.MarkFlagRequired(flagTotalSupply)
+	_ = cmd.MarkFlagRequired(flagTotalSupply)
 	return cmd
 }
 

@@ -9,9 +9,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/ownership"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/tokens/ownership"
 )
 
 const flagNewOwner = "new-owner"

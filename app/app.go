@@ -36,30 +36,30 @@ import (
 	tmstore "github.com/tendermint/tendermint/store"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/binance-chain/node/admin"
-	"github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/app/pub"
-	appsub "github.com/binance-chain/node/app/pub/sub"
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/runtime"
-	"github.com/binance-chain/node/common/tx"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/account"
-	"github.com/binance-chain/node/plugins/bridge"
-	bTypes "github.com/binance-chain/node/plugins/bridge/types"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/list"
-	"github.com/binance-chain/node/plugins/dex/order"
-	dextypes "github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/ownership"
-	"github.com/binance-chain/node/plugins/tokens/seturi"
-	"github.com/binance-chain/node/plugins/tokens/swap"
-	"github.com/binance-chain/node/plugins/tokens/timelock"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/admin"
+	"github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/app/pub"
+	appsub "github.com/bnb-chain/node/app/pub/sub"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/runtime"
+	"github.com/bnb-chain/node/common/tx"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/account"
+	"github.com/bnb-chain/node/plugins/bridge"
+	bTypes "github.com/bnb-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/list"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/plugins/tokens/issue"
+	"github.com/bnb-chain/node/plugins/tokens/ownership"
+	"github.com/bnb-chain/node/plugins/tokens/seturi"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/plugins/tokens/timelock"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
@@ -135,7 +135,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 
 	// create the applicationsimulate object
 	var app = &BinanceChain{
-		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{ServerContext.PublishAccountBalance, ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
+		BaseApp:            baseapp.NewBaseApp(appName /*, cdc*/, logger, db, decoders, sdk.CollectConfig{CollectAccountBalance: ServerContext.PublishAccountBalance, CollectTxs: ServerContext.PublishTransfer || ServerContext.PublishBlock}, baseAppOptions...),
 		Codec:              cdc,
 		queryHandlers:      make(map[string]types.AbciQueryHandler),
 		baseConfig:         ServerContext.BaseConfig,
@@ -304,7 +304,7 @@ func (app *BinanceChain) subscribeEvent(logger log.Logger) {
 	app.subscriber = sub
 }
 
-// setUpgradeConfig will overwrite default upgrade config
+// SetUpgradeConfig will overwrite default upgrade config
 func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	// register upgrade height
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP6, upgradeConfig.BEP6Height)
@@ -524,7 +524,6 @@ func (app *BinanceChain) initStaking() {
 			MinDelegationChange: 1e8,
 		})
 		app.stakeKeeper.SetPool(newCtx, stake.Pool{
-			// TODO: optimize these parameters
 			LooseTokens: sdk.NewDec(5e15),
 		})
 	})
@@ -766,10 +765,6 @@ func (app *BinanceChain) PreDeliverTx(req abci.RequestDeliverTx) (res abci.Respo
 	if res.IsErr() {
 		txHash := cmn.HexBytes(tmhash.Sum(req.Tx)).String()
 		app.Logger.Error("failed to process invalid tx during pre-deliver", "tx", txHash, "res", res.String())
-		// TODO(#446): comment out temporally for thread safety
-		//if app.publicationConfig.PublishOrderUpdates {
-		//	app.processErrAbciResponseForPub(txBytes)
-		//}
 	}
 	return res
 }
@@ -844,8 +839,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	if app.publicationConfig.ShouldPublishAny() &&
 		pub.IsLive {
-		var stakeUpdates pub.StakeUpdates
-		stakeUpdates = pub.CollectStakeUpdatesForPublish(completedUbd)
+		stakeUpdates := pub.CollectStakeUpdatesForPublish(completedUbd)
 		if height >= app.publicationConfig.FromHeightInclusive {
 			app.publish(tradesToPublish, &proposals, &sideProposals, &stakeUpdates, blockFee, ctx, height, blockTime.UnixNano())
 
@@ -866,7 +860,6 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	pub.Pool.Clean()
 	//match may end with transaction failure, which is better to save into
 	//the EndBlock response. However, current cosmos doesn't support this.
-	//future TODO: add failure info.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),
@@ -967,7 +960,7 @@ func (app *BinanceChain) AccountHandler(chainApp types.ChainApp, req abci.Reques
 				// let api server return 204 No Content
 				res = abci.ResponseQuery{
 					Code:  uint32(sdk.ABCICodeOK),
-					Value: make([]byte, 0, 0),
+					Value: make([]byte, 0),
 				}
 			}
 		} else {

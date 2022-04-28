@@ -12,15 +12,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 // ServeCommand will generate a long-running rest server
 // that exposes functionality similar to the cli, but over http
 func ServeCommand(cdc *wire.Codec) *cobra.Command {
 	flagListenAddr := "laddr"
-	flagCORS := "cors"
 	flagMaxOpenConnections := "max-open"
 
 	cmd := &cobra.Command{
@@ -63,7 +62,6 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagListenAddr, "tcp://localhost:8080", "The address for the server to listen on")
-	cmd.Flags().String(flagCORS, "", "Set the domains that can make CORS requests (* for all)")
 	cmd.Flags().String(sdk.FlagChainID, "", "The chain ID to connect to")
 	cmd.Flags().String(sdk.FlagNode, "tcp://localhost:26657", "Address of the node to connect to")
 	cmd.Flags().Int(flagMaxOpenConnections, 1000, "The number of maximum open connections")

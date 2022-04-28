@@ -5,13 +5,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 // queryOrderBook queries the store for the serialized order book for a given pair.
-func queryOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string, levels int) (*[]byte, error) {
-	var path string
-	path = fmt.Sprintf("dex/orderbook/%s/%d", pair, levels)
+func queryOrderBook(_ *wire.Codec, ctx context.CLIContext, pair string, levels int) (*[]byte, error) {
+	path := fmt.Sprintf("dex/orderbook/%s/%d", pair, levels)
 	bz, err := ctx.Query(path, nil)
 	if err != nil {
 		return nil, err
@@ -43,8 +42,7 @@ func GetOrderBook(cdc *wire.Codec, ctx context.CLIContext, pair string, levels i
 }
 
 func queryOpenOrders(cdc *wire.Codec, ctx context.CLIContext, pair string, addr string) (*[]byte, error) {
-	var path string
-	path = fmt.Sprintf("dex/openorders/%s/%s", pair, addr)
+	path := fmt.Sprintf("dex/openorders/%s/%s", pair, addr)
 	if bz, err := ctx.Query(path, nil); err != nil {
 		return nil, err
 	} else {

@@ -16,7 +16,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/common/log"
 )
 
 const (
@@ -151,7 +151,6 @@ func NewAnteHandler(am auth.AccountKeeper) sdk.AnteHandler {
 		}
 
 		// collect signer accounts
-		// TODO: abort if there is more than one signer?
 		var signerAccs = make([]sdk.Account, len(signerAddrs))
 		txHash, _ := ctx.Value(baseapp.TxHashKey).(string)
 		chainID := ctx.ChainID()
@@ -321,7 +320,6 @@ func processSig(txHash string,
 
 func calcAndCollectFees(ctx sdk.Context, am auth.AccountKeeper, acc sdk.Account, msg sdk.Msg, txHash string) sdk.Result {
 	// first sig pays the fees
-	// TODO: Add min fees
 	// Can this function be moved outside of the loop?
 
 	fee, err := calculateFees(msg)

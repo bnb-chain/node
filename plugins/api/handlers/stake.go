@@ -12,7 +12,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 // ValidatorQueryReqHandler queries the whole validator set
@@ -62,8 +62,7 @@ func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Hand
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-		return
+		_, _ = w.Write([]byte(message))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +82,7 @@ func ValidatorQueryReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Hand
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(convertToValidatorOutputs(validators))
+		_ = json.NewEncoder(w).Encode(convertToValidatorOutputs(validators))
 	}
 }
 
@@ -93,8 +92,7 @@ func DelegatorUnbondindDelegationsQueryReqHandler(cdc *wire.Codec, ctx context.C
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-		return
+		_, _ = w.Write([]byte(message))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +129,6 @@ func DelegatorUnbondindDelegationsQueryReqHandler(cdc *wire.Codec, ctx context.C
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(unbondingDelegations)
+		_ = json.NewEncoder(w).Encode(unbondingDelegations)
 	}
 }

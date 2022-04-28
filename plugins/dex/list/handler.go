@@ -9,12 +9,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	"github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/utils"
+	"github.com/bnb-chain/node/plugins/tokens"
 )
 
 // NewHandler initialises dex message handlers
@@ -58,12 +58,12 @@ func checkListProposal(ctx sdk.Context, govKeeper gov.Keeper, msg types.ListMsg)
 		return fmt.Errorf("list time expired, expire_time=%s", listParams.ExpireTime.String())
 	}
 
-	if strings.ToUpper(msg.BaseAssetSymbol) != strings.ToUpper(listParams.BaseAssetSymbol) {
+	if !strings.EqualFold(msg.BaseAssetSymbol, listParams.BaseAssetSymbol) {
 		return fmt.Errorf("base asset symbol(%s) is not identical to symbol in proposal(%s)",
 			msg.BaseAssetSymbol, listParams.BaseAssetSymbol)
 	}
 
-	if strings.ToUpper(msg.QuoteAssetSymbol) != strings.ToUpper(listParams.QuoteAssetSymbol) {
+	if !strings.EqualFold(msg.QuoteAssetSymbol, listParams.QuoteAssetSymbol) {
 		return fmt.Errorf("quote asset symbol(%s) is not identical to symbol in proposal(%s)",
 			msg.QuoteAssetSymbol, listParams.QuoteAssetSymbol)
 	}

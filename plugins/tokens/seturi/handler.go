@@ -7,9 +7,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/log"
-	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/common/log"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
 func NewHandler(tokenMapper store.Mapper) sdk.Handler {
@@ -41,7 +41,7 @@ func handleSetURI(ctx sdk.Context, tokenMapper store.Mapper, msg SetURIMsg) sdk.
 	}
 
 	if len(msg.TokenURI) < 1 {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("token uri should not be empty")).Result()
+		return sdk.ErrInvalidCoins("token uri should not be empty").Result()
 	}
 
 	if len(msg.TokenURI) > common.MaxTokenURILength {
@@ -50,7 +50,7 @@ func handleSetURI(ctx sdk.Context, tokenMapper store.Mapper, msg SetURIMsg) sdk.
 	err = tokenMapper.UpdateMiniTokenURI(ctx, symbol, msg.TokenURI)
 	if err != nil {
 		logger.Error(errLogMsg, "reason", "update token uri failed: "+err.Error())
-		return sdk.ErrInternal(fmt.Sprintf("update token uri failed")).Result()
+		return sdk.ErrInternal("update token uri failed").Result()
 	}
 
 	logger.Info("finished update token uri")

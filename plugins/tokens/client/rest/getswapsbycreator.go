@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/plugins/tokens/swap"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/tokens/swap"
+	"github.com/bnb-chain/node/wire"
 )
 
 // QuerySwapIDsByCreatorReqHandler creates an http request handler to query swapID list by creator address
@@ -22,8 +22,7 @@ func QuerySwapIDsByCreatorReqHandler(
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +94,6 @@ func QuerySwapIDsByCreatorReqHandler(
 		}
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

@@ -3,14 +3,14 @@ package sub
 import (
 	"github.com/cosmos/cosmos-sdk/pubsub"
 
-	"github.com/binance-chain/node/plugins/bridge"
+	"github.com/bnb-chain/node/plugins/bridge"
 )
 
 func SubscribeMirrorEvent(sub *pubsub.Subscriber) error {
 	err := sub.Subscribe(bridge.MirrorTopic, func(event pubsub.Event) {
-		switch event.(type) {
+		switch event := event.(type) {
 		case bridge.MirrorEvent:
-			mirrorEvent := event.(bridge.MirrorEvent)
+			mirrorEvent := event
 			if stagingArea.MirrorData == nil {
 				stagingArea.MirrorData = make([]bridge.MirrorEvent, 0, 1)
 			}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -110,7 +110,7 @@ func (msg MintMsg) ValidateBasic() sdk.Error {
 	}
 
 	if msg.Symbol == types.NativeTokenSymbol {
-		return sdk.ErrInvalidCoins(fmt.Sprintf("cannot mint native token"))
+		return sdk.ErrInvalidCoins("cannot mint native token")
 	}
 
 	// handler will check:  msg.Amount + token.TotalSupply <= types.MaxTotalSupply

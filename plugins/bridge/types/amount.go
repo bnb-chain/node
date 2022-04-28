@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	cmmtypes "github.com/binance-chain/node/common/types"
+	cmmtypes "github.com/bnb-chain/node/common/types"
 )
 
 func ConvertBSCAmountToBCAmountBigInt(contractDecimals int8, bscAmount sdk.Int) (sdk.Int, sdk.Error) {

@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/binance-chain/node/common/types"
+	"github.com/bnb-chain/node/common/types"
 )
 
 func PrepareCtx(cdc *codec.Codec) (context.CLIContext, txbuilder.TxBuilder) {

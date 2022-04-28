@@ -1,7 +1,7 @@
 package bridge
 
 import (
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/wire"
 )
 
 // Register concrete types on wire codec

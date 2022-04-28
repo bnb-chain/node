@@ -25,11 +25,11 @@ import (
 	"github.com/tendermint/tendermint/snapshot"
 	tmstore "github.com/tendermint/tendermint/store"
 
-	"github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/common"
-	bnclog "github.com/binance-chain/node/common/log"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/common"
+	bnclog "github.com/bnb-chain/node/common/log"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex/order"
 )
 
 // If a new config is created, change some of the default tendermint settings
@@ -144,12 +144,12 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 			case order.NewOrderMsg:
 				app.Logger.Info("failed to process NewOrderMsg", "oid", msg.Id)
 				// The error on deliver should be rare and only impact witness publisher's performance
-				app.DexKeeper.UpdateOrderChangeSync(order.OrderChange{msg.Id, order.FailedBlocking, "", msg}, msg.Symbol)
+				app.DexKeeper.UpdateOrderChangeSync(order.OrderChange{Id: msg.Id, Tpe: order.FailedBlocking, MsgForFailedTx: msg}, msg.Symbol)
 			case order.CancelOrderMsg:
 				app.Logger.Info("failed to process CancelOrderMsg", "oid", msg.RefId)
 				// The error on deliver should be rare and only impact witness publisher's performance
 				// OrderInfo must has been in keeper.orderInfosForPub
-				app.DexKeeper.UpdateOrderChangeSync(order.OrderChange{msg.RefId, order.FailedBlocking, "", msg}, msg.Symbol)
+				app.DexKeeper.UpdateOrderChangeSync(order.OrderChange{Id: msg.RefId, Tpe: order.FailedBlocking, MsgForFailedTx: msg}, msg.Symbol)
 			default:
 				// deliberately do nothing for message other than NewOrderMsg
 				// in future, we may publish fail status of send msg

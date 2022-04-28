@@ -15,8 +15,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	cmn "github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/testutils"
+	cmn "github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/testutils"
 )
 
 func newCLIContext() context.CLIContext {

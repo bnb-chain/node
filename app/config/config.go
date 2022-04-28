@@ -339,7 +339,7 @@ type PublicationConfig struct {
 
 	// DO NOT put this option in config file
 	// deliberately make it only a command line arguments
-	// https://github.com/binance-chain/node/issues/161#issuecomment-438600434
+	// https://github.com/bnb-chain/node/issues/161#issuecomment-438600434
 	FromHeightInclusive int64
 
 	PublishKafka bool `mapstructure:"publishKafka"`
@@ -514,8 +514,7 @@ type UpgradeConfig struct {
 	LotSizeUpgradeHeight       int64 `mapstructure:"LotSizeUpgradeHeight"`
 	ListingRuleUpgradeHeight   int64 `mapstructure:"ListingRuleUpgradeHeight"`
 	FixZeroBalanceHeight       int64 `mapstructure:"FixZeroBalanceHeight"`
-
-	LaunchBscUpgradeHeight int64 `mapstructure:"LaunchBscUpgradeHeight"`
+	LaunchBscUpgradeHeight     int64 `mapstructure:"LaunchBscUpgradeHeight"`
 
 	BEP8Height  int64 `mapstructure:"BEP8Height"`
 	BEP67Height int64 `mapstructure:"BEP67Height"`

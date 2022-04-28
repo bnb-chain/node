@@ -5,7 +5,7 @@ import (
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/common/log"
 )
 
 type MatchEng struct {
@@ -242,7 +242,7 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 				me.Book.RemovePriceLevel(p.Price, BUYSIDE)
 			} else {
 				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
+					_, _ = me.Book.RemoveOrder(droppedIds[i], BUYSIDE, p.Price)
 				}
 			}
 		}
@@ -259,7 +259,8 @@ func (me *MatchEng) DropFilledOrder() (droppedIds []string) {
 				me.Book.RemovePriceLevel(p.Price, SELLSIDE)
 			} else {
 				for i := toRemoveStartIdx; i < toRemoveEndIdx; i++ {
-					me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+					_, _ = me.Book.RemoveOrder(droppedIds[i], SELLSIDE, p.Price)
+
 				}
 			}
 		}

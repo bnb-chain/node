@@ -2,7 +2,6 @@ package order
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -23,6 +22,7 @@ var NewWALDeccoder = cs.NewWALDecoder
 
 const (
 	// must be greater than 4K orders
+	// nolint:deadcode,unused,varcheck
 	maxMsgSizeBytes = 4 * 1024 * 1024 // 4MB
 	walFileName     = "orderbook_wal"
 )
@@ -60,7 +60,7 @@ type orderbookWAL struct {
 }
 
 func locateLatestFile(dirPath string) (string, error) {
-	files, err := ioutil.ReadDir(dirPath)
+	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return "", errors.Wrap(err, fmt.Sprintf("failed to list directory[%s] for WAL", dirPath))
 	}
@@ -160,13 +160,3 @@ type WALSearchOptions struct {
 	// IgnoreDataCorruptionErrors set to true will result in skipping data corruption errors.
 	IgnoreDataCorruptionErrors bool
 }
-
-type nilWAL struct{}
-
-func (nilWAL) Write(m WALMessage)     {}
-func (nilWAL) WriteSync(m WALMessage) {}
-func (nilWAL) File() *os.File         { return nil }
-
-func (nilWAL) Start() error { return nil }
-func (nilWAL) Stop() error  { return nil }
-func (nilWAL) Wait()        {}

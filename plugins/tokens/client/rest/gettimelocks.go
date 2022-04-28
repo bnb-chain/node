@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 
-	"github.com/binance-chain/node/plugins/tokens/timelock"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/tokens/timelock"
+	"github.com/bnb-chain/node/wire"
 )
 
 func getTimeLocks(ctx context.CLIContext, cdc *wire.Codec, address sdk.AccAddress) ([]timelock.TimeLockRecord, error) {
@@ -44,8 +44,7 @@ func GetTimeLocksReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Handle
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +90,6 @@ func GetTimeLocksReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.Handle
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

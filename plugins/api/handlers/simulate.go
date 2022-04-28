@@ -3,14 +3,14 @@ package handlers
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	cctx "github.com/binance-chain/node/common/client/context"
-	"github.com/binance-chain/node/wire"
+	cctx "github.com/bnb-chain/node/common/client/context"
+	"github.com/bnb-chain/node/wire"
 )
 
 // SimulateReqHandler simulates the execution of a single transaction, given its binary form
@@ -21,12 +21,11 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-		return
+		_, _ = w.Write([]byte(message))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 
 		if err != nil {
 			errMsg := fmt.Sprintf("Malformed request body. Error: %s", err.Error())
@@ -68,6 +67,6 @@ func SimulateReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFun
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

@@ -16,9 +16,9 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/order"
 )
 
 var codec = amino.NewCodec()
@@ -56,7 +56,7 @@ func prepareCms(root string, appDB *db.GoLevelDB) sdk.CommitMultiStore {
 	}
 	err := cms.LoadLatestVersion()
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Print(err.Error())
 		panic(err)
 	}
 	return cms
@@ -93,7 +93,7 @@ func getSnapshot(height int64, root string) (obs map[string]order.OrderBookSnaps
 			panic(fmt.Sprintf("failed to unmarshal snapshort for orderbook [%s]", string(iter.Key())))
 		}
 		obs[string(iter.Key())] = ob
-		fmt.Println(fmt.Sprintf("%#v", ob))
+		fmt.Printf("%#v\n", ob)
 	}
 
 	activeOrderKeyPrefix := genActiveOrdersSnapshotKey(height)
@@ -110,7 +110,7 @@ func getSnapshot(height int64, root string) (obs map[string]order.OrderBookSnaps
 	//fmt.Println(fmt.Sprintf("%#v", ao))
 	fmt.Println("active orders")
 	for _, oi := range ao.Orders {
-		fmt.Println(fmt.Sprintf("%#v", oi))
+		fmt.Printf("%#v\n", oi)
 	}
 	fmt.Println("order book size", obSize)
 	fmt.Println("active order size", aoSize)
@@ -144,9 +144,12 @@ func analyseSnapshot(height int64, home string) {
 func uncompress(bz []byte) []byte {
 	b := bytes.NewReader(bz)
 	var out bytes.Buffer
-	r, _ := zlib.NewReader(b)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		panic(err)
+	}
 	defer r.Close()
-	io.Copy(&out, r)
+	_, _ = io.Copy(&out, r)
 	return out.Bytes()
 }
 

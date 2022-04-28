@@ -19,16 +19,16 @@ import (
 
 	"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/binance-chain/node/admin"
-	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common"
-	"github.com/binance-chain/node/common/types"
-	accountcmd "github.com/binance-chain/node/plugins/account/client/cli"
-	apiserv "github.com/binance-chain/node/plugins/api"
-	bridgecmd "github.com/binance-chain/node/plugins/bridge/client/cli"
-	dexcmd "github.com/binance-chain/node/plugins/dex/client/cli"
-	tokencmd "github.com/binance-chain/node/plugins/tokens/client/cli"
-	"github.com/binance-chain/node/version"
+	"github.com/bnb-chain/node/admin"
+	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/types"
+	accountcmd "github.com/bnb-chain/node/plugins/account/client/cli"
+	apiserv "github.com/bnb-chain/node/plugins/api"
+	bridgecmd "github.com/bnb-chain/node/plugins/bridge/client/cli"
+	dexcmd "github.com/bnb-chain/node/plugins/dex/client/cli"
+	tokencmd "github.com/bnb-chain/node/plugins/tokens/client/cli"
+	"github.com/bnb-chain/node/version"
 )
 
 // rootCmd is the entry point for this binary
@@ -102,5 +102,5 @@ func main() {
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)
-	executor.Execute()
+	_ = executor.Execute()
 }

@@ -13,11 +13,11 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/testutils"
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/tokens/store"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/testutils"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/wire"
 )
 
 func setup() (sdk.Context, sdk.Handler, auth.AccountKeeper, store.Mapper) {

@@ -28,14 +28,15 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/app"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 const (
-	flagOverwrite    = "overwrite"
-	flagClientHome   = "home-client"
+	flagOverwrite  = "overwrite"
+	flagClientHome = "home-client"
+	//nolint:deadcode,varcheck
 	flagOverwriteKey = "overwrite-key"
 	flagMoniker      = "moniker"
 	flagAccPrefix    = "acc-prefix"
@@ -118,6 +119,7 @@ enabled, and the genesis file will not be generated.
 		},
 	}
 
+	cmd.Flags().StringVar(&app.DefaultKeyPass, "kpass", "12345678", "defaultKeyPass for client keystore")
 	cmd.Flags().StringP(flagClientHome, "c", app.DefaultCLIHome, "client's home directory")
 	cmd.Flags().BoolP(flagOverwrite, "o", false, "overwrite the genesis.json file")
 	cmd.Flags().String(client.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")

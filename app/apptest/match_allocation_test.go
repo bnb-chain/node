@@ -17,14 +17,14 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 
-	"github.com/binance-chain/node/app"
-	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/app"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
 var testFeeConfig order.FeeConfig

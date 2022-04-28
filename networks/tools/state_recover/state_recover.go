@@ -20,7 +20,7 @@ import (
 	"github.com/tendermint/tendermint/state"
 	tmstore "github.com/tendermint/tendermint/store"
 
-	"github.com/binance-chain/node/common"
+	"github.com/bnb-chain/node/common"
 )
 
 var cdc = amino.NewCodec()
@@ -52,6 +52,7 @@ func calcValidatorsKey(height int64) []byte {
 	return []byte(fmt.Sprintf("validatorsKey:%v", height))
 }
 
+//nolint:deadcode,unused
 func calcConsensusParamsKey(height int64) []byte {
 	return []byte(fmt.Sprintf("consensusParamsKey:%v", height))
 }
@@ -102,17 +103,17 @@ func resetBlockChainState(height int64, rootDir string) {
 		blockState.LastBlockTime = block.Time
 		blockState.NextValidators, err = state.LoadValidators(stateDb, height+2)
 		if err != nil {
-			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			cmn.Exit("failed to load validator info")
 			return
 		}
 		blockState.Validators, err = state.LoadValidators(stateDb, height+1)
 		if err != nil {
-			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			cmn.Exit("failed to load validator info")
 			return
 		}
 		blockState.LastValidators, err = state.LoadValidators(stateDb, height)
 		if err != nil {
-			cmn.Exit(fmt.Sprintf("failed to load validator info"))
+			cmn.Exit("failed to load validator info")
 			return
 		}
 		blockState.LastHeightConsensusParamsChanged = 1
@@ -122,7 +123,7 @@ func resetBlockChainState(height int64, rootDir string) {
 		}
 		blockState.ConsensusParams, err = state.LoadConsensusParams(stateDb, height)
 		if err != nil {
-			cmn.Exit(fmt.Sprintf("failed to load consensusparam info"))
+			cmn.Exit("failed to load consensusparam info")
 			return
 		}
 		blockState.LastResultsHash = nextBlock.LastResultsHash
@@ -181,6 +182,7 @@ func setLatestVersion(batch db.DB, version int64) {
 	batch.Set([]byte("s/latest"), latestBytes)
 }
 
+//nolint:deadcode
 func MountStoresIAVL(cms store.CommitMultiStore, keys ...*sdk.KVStoreKey) {
 	for _, key := range keys {
 		cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, nil)

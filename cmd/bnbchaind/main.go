@@ -14,9 +14,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 
-	"github.com/binance-chain/node/app"
-	bnbInit "github.com/binance-chain/node/cmd/bnbchaind/init"
-	"github.com/binance-chain/node/version"
+	"github.com/bnb-chain/node/app"
+	bnbInit "github.com/bnb-chain/node/cmd/bnbchaind/init"
+	"github.com/bnb-chain/node/version"
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
@@ -51,5 +51,5 @@ func main() {
 
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)
-	executor.Execute()
+	_ = executor.Execute()
 }

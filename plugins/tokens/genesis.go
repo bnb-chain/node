@@ -4,8 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/plugins/tokens/store"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
 type GenesisToken struct {
@@ -74,5 +74,8 @@ func transferNativeTokensToValidators(ctx sdk.Context, coinKeeper bank.Keeper,
 	inputs := []bank.Input{
 		bank.NewInput(nativeTokenOwner, sdk.Coins{sdk.NewCoin(types.NativeTokenSymbol, amtForEach*int64(numValidators))}),
 	}
-	coinKeeper.InputOutputCoins(ctx, inputs, outputs)
+	_, sdkErr := coinKeeper.InputOutputCoins(ctx, inputs, outputs)
+	if sdkErr != nil {
+		panic(sdkErr)
+	}
 }

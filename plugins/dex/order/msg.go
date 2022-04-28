@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/types"
 )
 
 const (
@@ -145,8 +145,7 @@ func NewNewOrderMsg(sender sdk.AccAddress, id string, side int8,
 // NewNewOrderMsgAuto constructs a new NewOrderMsg and auto-assigns its order ID
 func NewNewOrderMsgAuto(txBuilder txbuilder.TxBuilder, sender sdk.AccAddress, side int8,
 	symbol string, price int64, qty int64) (NewOrderMsg, error) {
-	var id string
-	id = GenerateOrderID(txBuilder.Sequence+1, sender)
+	id := GenerateOrderID(txBuilder.Sequence+1, sender)
 	return NewOrderMsg{
 		Sender:      sender,
 		Id:          id,

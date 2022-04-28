@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/binance-chain/node/plugins/dex"
-	"github.com/binance-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/plugins/dex"
+	"github.com/bnb-chain/node/plugins/dex/store"
 )
 
 func write(w io.Writer, data string) error {

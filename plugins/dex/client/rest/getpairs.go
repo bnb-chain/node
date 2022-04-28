@@ -8,8 +8,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/wire"
 )
 
 const maxPairsLimit = 1000
@@ -23,7 +23,7 @@ func listAllTradingPairs(ctx context.CLIContext, cdc *wire.Codec, prefix string,
 	}
 	pairs := make([]types.TradingPair, 0)
 	err = cdc.UnmarshalBinaryLengthPrefixed(bz, &pairs)
-	return pairs, nil
+	return pairs, err
 }
 
 // GetPairsReqHandler creates an http request handler to list
@@ -38,8 +38,7 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext, abciQueryPrefix
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +96,6 @@ func GetPairsReqHandler(cdc *wire.Codec, ctx context.CLIContext, abciQueryPrefix
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

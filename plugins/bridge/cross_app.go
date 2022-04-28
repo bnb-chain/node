@@ -12,10 +12,10 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
-	"github.com/binance-chain/node/common/log"
-	ctypes "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	"github.com/binance-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/common/log"
+	ctypes "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/bridge/types"
 )
 
 var _ sdk.CrossChainApplication = &BindApp{}
@@ -102,7 +102,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 		if sdkErr != nil {
 			log.With("module", "bridge").Error("update token info error", "err", sdkErr.Error(), "symbol", symbol)
 			return sdk.ExecuteResult{
-				Err: sdk.ErrInternal(fmt.Sprintf("update token bind info error")),
+				Err: sdk.ErrInternal("update token bind info error"),
 			}
 		}
 
@@ -438,7 +438,7 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	// emit peg related event
-	var totalAmount int64 = 0
+	var totalAmount int64
 	tags := types.GenerateTransferInTags(transferInPackage.ReceiverAddresses, symbol, transferInPackage.Amounts, false)
 	if totalTransferInAmount != nil {
 		totalAmount = totalTransferInAmount.AmountOf(symbol)

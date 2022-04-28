@@ -10,9 +10,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/tokens"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/tokens"
+	"github.com/bnb-chain/node/wire"
 )
 
 // BalanceReqHandler creates an http request handler to get an individual token balance of a given address
@@ -28,8 +28,7 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CLIContext, tokens tokens.Ma
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -89,6 +88,6 @@ func BalanceReqHandler(cdc *wire.Codec, ctx context.CLIContext, tokens tokens.Ma
 			return
 		}
 
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

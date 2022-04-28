@@ -13,4 +13,4 @@ set timeout 30
 	}
 	expect "Password*"
 	send "12345678\r"
-interact
+expect eof

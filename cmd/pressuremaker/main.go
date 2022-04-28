@@ -15,10 +15,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 
-	"github.com/binance-chain/node/app/config"
-	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/cmd/pressuremaker/utils"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/app/config"
+	"github.com/bnb-chain/node/app/pub"
+	"github.com/bnb-chain/node/cmd/pressuremaker/utils"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
 )
 
 type PressureMakerConfig struct {
@@ -70,7 +70,10 @@ func initConfig() {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
-	viper.Unmarshal(&cfg)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		fmt.Println("Can't unmarshal config:", err)
+		os.Exit(1)
+	}
 }
 
 var rootCmd = &cobra.Command{

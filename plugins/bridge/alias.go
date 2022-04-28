@@ -1,8 +1,8 @@
 package bridge
 
 import (
-	"github.com/binance-chain/node/plugins/bridge/keeper"
-	"github.com/binance-chain/node/plugins/bridge/types"
+	"github.com/bnb-chain/node/plugins/bridge/keeper"
+	"github.com/bnb-chain/node/plugins/bridge/types"
 )
 
 var (

@@ -80,7 +80,7 @@ func (w *AsyncFileWriter) initLogFile() error {
 	)
 
 	realFilePath := w.timeFilePath(w.filePath)
-	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	fd, err = os.OpenFile(realFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (w *AsyncFileWriter) flushBuffer() {
 func (w *AsyncFileWriter) SyncWrite(msg []byte) {
 	w.rotateFile()
 	if w.fd != nil {
-		w.fd.Write(msg)
+		_, _ = w.fd.Write(msg)
 	}
 }
 
@@ -178,7 +178,7 @@ func (w *AsyncFileWriter) Stop() {
 }
 
 func (w *AsyncFileWriter) Write(msg []byte) (n int, err error) {
-	// TODO(wuzhenxing): for the underlying array may change, is there a better way to avoid copying slice?
+	// TODO: for the underlying array may change, is there a better way to avoid copying slice?
 	buf := make([]byte, len(msg))
 	copy(buf, msg)
 

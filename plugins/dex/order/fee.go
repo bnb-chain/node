@@ -11,12 +11,12 @@ import (
 
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	cmnUtils "github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/utils"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	cmnUtils "github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/utils"
+	"github.com/bnb-chain/node/wire"
 )
 
 type FeeType uint8
@@ -294,10 +294,6 @@ func (m *FeeManager) CalcFixedFee(balances sdk.Coins, eventType transferEventTyp
 // for each trade, the fee only contains one kind of token. And distribution type is always FeeForProposer
 func dexFeeWrap(fee sdk.Coin) sdk.Fee {
 	return sdk.NewFee(sdk.Coins{fee}, sdk.FeeForProposer)
-}
-
-func isNativeToken(symbol string) bool {
-	return symbol == types.NativeTokenSymbol
 }
 
 func (m *FeeManager) ExpireFees() (int64, int64) {

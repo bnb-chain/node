@@ -315,6 +315,7 @@ func toPriceLevel(pi PriceLevelInterface, side int8) *PriceLevel {
 	return nil
 }
 
+//nolint:deadcode,unused
 func printOrderQueueString(q *bt.BTree, side int8) string {
 	var buffer bytes.Buffer
 	q.Ascend(func(i bt.Item) bool {

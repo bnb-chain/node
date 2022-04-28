@@ -6,10 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/binance-chain/node/app"
+	"github.com/bnb-chain/node/app"
 )
-
-const flagSequentialABCI = "seq-abci"
 
 func main() {
 	cdc := app.Codec
@@ -30,5 +28,5 @@ func main() {
 	// prepare and add flags
 	executor := cli.PrepareBaseCmd(rootCmd, "BC", app.DefaultNodeHome)
 
-	executor.Execute()
+	_ = executor.Execute()
 }

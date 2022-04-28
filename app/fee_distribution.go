@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/app/pub"
-	"github.com/binance-chain/node/common/log"
+	"github.com/bnb-chain/node/app/pub"
+	"github.com/bnb-chain/node/common/log"
 )
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
@@ -69,7 +69,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 	if fee.Type == sdk.FeeForProposer {
 		// The proposer's account must be initialized before it becomes a proposer.
 		proposerAcc := am.GetAccount(ctx, proposerAccAddr)
-		proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
+		_ = proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 		am.SetAccount(ctx, proposerAcc)
 	} else if fee.Type == sdk.FeeForAll {
 		log.Info("Distributing the fees to all the validators",
@@ -77,8 +77,6 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 		avgTokens := sdk.Coins{}
 		roundingTokens := sdk.Coins{}
 		for _, token := range fee.Tokens {
-			// TODO: int64 is enough, will drop big.Int
-			// TODO: temporarily, the validators average the fees. Will change to use power as a weight to calc fees.
 			amount := token.Amount
 			avgAmount := amount / valSize
 			roundingAmount := amount - avgAmount*valSize
@@ -93,7 +91,7 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 
 		if avgTokens.IsZero() {
 			proposerAcc := am.GetAccount(ctx, proposerAccAddr)
-			proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
+			_ = proposerAcc.SetCoins(proposerAcc.GetCoins().Plus(fee.Tokens))
 			am.SetAccount(ctx, proposerAcc)
 		} else {
 			for _, voteInfo := range voteInfos {
@@ -102,12 +100,12 @@ func distributeFee(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddr
 				validatorAcc := am.GetAccount(ctx, accAddr)
 				if bytes.Equal(proposerValAddr, validator.Address) {
 					if !roundingTokens.IsZero() {
-						validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))
+						_ = validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(roundingTokens))
 					}
 				} else if publishBlockFee {
 					validators = append(validators, string(accAddr))
 				}
-				validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(avgTokens))
+				_ = validatorAcc.SetCoins(validatorAcc.GetCoins().Plus(avgTokens))
 				am.SetAccount(ctx, validatorAcc)
 			}
 		}

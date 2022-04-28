@@ -55,7 +55,7 @@ func (msg Mirrors) String() string {
 func (msg Mirrors) ToNativeMap() map[string]interface{} {
 	var native = make(map[string]interface{})
 	native["height"] = msg.Height
-	mirrors := make([]map[string]interface{}, len(msg.Mirrors), len(msg.Mirrors))
+	mirrors := make([]map[string]interface{}, len(msg.Mirrors))
 	for idx, t := range msg.Mirrors {
 		mirrors[idx] = t.ToNativeMap()
 	}

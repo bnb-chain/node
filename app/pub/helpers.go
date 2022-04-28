@@ -17,12 +17,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
-	"github.com/binance-chain/node/common/types"
-	orderPkg "github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/tokens/burn"
-	"github.com/binance-chain/node/plugins/tokens/freeze"
-	"github.com/binance-chain/node/plugins/tokens/issue"
-	"github.com/binance-chain/node/plugins/tokens/seturi"
+	"github.com/bnb-chain/node/common/types"
+	orderPkg "github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/tokens/burn"
+	"github.com/bnb-chain/node/plugins/tokens/freeze"
+	"github.com/bnb-chain/node/plugins/tokens/issue"
+	"github.com/bnb-chain/node/plugins/tokens/seturi"
 )
 
 func GetTradeAndOrdersRelatedAccounts(tradesToPublish []*Trade, orderChanges orderPkg.OrderChanges, orderInfosForPublish orderPkg.OrderInfoForPublish) []string {
@@ -55,7 +55,7 @@ func GetTradeAndOrdersRelatedAccounts(tradesToPublish []*Trade, orderChanges ord
 
 func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Block {
 	txs := pool.GetTxs()
-	transactionsToPublish := make([]Transaction, 0, 0)
+	transactionsToPublish := make([]Transaction, 0)
 	timeStamp := header.GetTime().Format(time.RFC3339Nano)
 	txs.Range(func(key, value interface{}) bool {
 		txhash := key.(string)
@@ -181,7 +181,7 @@ func GetBlockPublished(pool *sdk.Pool, header abci.Header, blockHash []byte) *Bl
 }
 
 func GetTransferPublished(pool *sdk.Pool, height, blockTime int64) *Transfers {
-	transferToPublish := make([]Transfer, 0, 0)
+	transferToPublish := make([]Transfer, 0)
 	txs := pool.GetTxs()
 	txs.Range(func(key, value interface{}) bool {
 		txhash := key.(string)
@@ -281,9 +281,19 @@ func MatchAndAllocateAllForPublish(dexKeeper *orderPkg.DexKeeper, ctx sdk.Contex
 		if tran.IsExpire() {
 			if tran.IsExpiredWithFee() {
 				// we only got expire of Ioc here, gte orders expire is handled in breathe block
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocNoFill, tran.Fee.String(), tran.Symbol}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{
+					OrderId: tran.Oid,
+					Reason:  orderPkg.IocNoFill,
+					Fee:     tran.Fee.String(),
+					Symbol:  tran.Symbol,
+				}
 			} else {
-				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.IocExpire, tran.Fee.String(), tran.Symbol}
+				iocExpireFeeHolderCh <- orderPkg.ExpireHolder{
+					OrderId: tran.Oid,
+					Reason:  orderPkg.IocExpire,
+					Fee:     tran.Fee.String(),
+					Symbol:  tran.Symbol,
+				}
 			}
 		}
 	}
@@ -343,13 +353,12 @@ func ExpireOrdersForPublish(
 	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
 	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired, tran.Fee.String(), tran.Symbol}
+			expireHolderCh <- orderPkg.ExpireHolder{OrderId: tran.Oid, Reason: orderPkg.Expired, Fee: tran.Fee.String(), Symbol: tran.Symbol}
 		}
 	}
 	dexKeeper.ExpireOrders(ctx, blockTime, collectorForExpires)
 	close(expireHolderCh)
 	wg.Wait()
-	return
 }
 
 func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper, symbol string) {
@@ -359,13 +368,17 @@ func DelistTradingPairForPublish(ctx sdk.Context, dexKeeper *orderPkg.DexKeeper,
 	go updateExpireFeeForPublish(dexKeeper, &wg, expireHolderCh)
 	var collectorForExpires = func(tran orderPkg.Transfer) {
 		if tran.IsExpire() {
-			expireHolderCh <- orderPkg.ExpireHolder{tran.Oid, orderPkg.Expired, tran.Fee.String(), tran.Symbol}
+			expireHolderCh <- orderPkg.ExpireHolder{
+				OrderId: tran.Oid,
+				Reason:  orderPkg.Expired,
+				Fee:     tran.Fee.String(),
+				Symbol:  tran.Symbol,
+			}
 		}
 	}
 	dexKeeper.DelistTradingPair(ctx, symbol, collectorForExpires)
 	close(expireHolderCh)
 	wg.Wait()
-	return
 }
 
 func CollectProposalsForPublish(passed, failed []gov.SimpleProposal) (Proposals, SideProposals) {
@@ -405,7 +418,7 @@ func updateExpireFeeForPublish(
 	defer wg.Done()
 	for expHolder := range expHolderCh {
 		Logger.Debug("transfer collector for order", "orderId", expHolder.OrderId)
-		change := orderPkg.OrderChange{expHolder.OrderId, expHolder.Reason, expHolder.Fee, nil}
+		change := orderPkg.OrderChange{Id: expHolder.OrderId, Tpe: expHolder.Reason, SingleFee: expHolder.Fee}
 		dexKeeper.UpdateOrderChangeSync(change, expHolder.Symbol)
 	}
 }
@@ -428,7 +441,7 @@ func filterChangedOrderBooksByOrders(
 		}
 		allSymbols[symbol] = struct{}{}
 		if _, ok := res[symbol]; !ok {
-			res[symbol] = orderPkg.ChangedPriceLevelsPerSymbol{make(map[int64]int64), make(map[int64]int64)}
+			res[symbol] = orderPkg.ChangedPriceLevelsPerSymbol{Buys: make(map[int64]int64), Sells: make(map[int64]int64)}
 			buyQtyDiff[symbol] = make(map[int64]int64)
 			sellQtyDiff[symbol] = make(map[int64]int64)
 		}
@@ -532,7 +545,7 @@ func collectOrdersToPublish(
 
 	// the following two maps are used to update fee field we published
 	// more detail can be found at:
-	// https://github.com/binance-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
+	// https://github.com/bnb-chain/docs-site/wiki/Fee-Calculation,-Collection-and-Distribution#publication
 	chargedCancels := make(map[string]int)
 	chargedExpires := make(map[string]int)
 

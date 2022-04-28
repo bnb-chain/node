@@ -12,11 +12,11 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	txbuilder "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/binance-chain/node/common/client"
-	"github.com/binance-chain/node/common/utils"
-	"github.com/binance-chain/node/plugins/dex/order"
-	"github.com/binance-chain/node/plugins/dex/store"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/client"
+	"github.com/bnb-chain/node/common/utils"
+	"github.com/bnb-chain/node/plugins/dex/order"
+	"github.com/bnb-chain/node/plugins/dex/store"
+	"github.com/bnb-chain/node/wire"
 )
 
 // PutOrderReqHandler creates an http request handler to create a new order transaction and return its binary tx
@@ -60,8 +60,7 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 	throw := func(w http.ResponseWriter, status int, err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(err.Error()))
-		return
+		_, _ = w.Write([]byte(err.Error()))
 	}
 	accDecoder := authcmd.GetAccountDecoder(cdc)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +166,6 @@ func PutOrderReqHandler(cdc *wire.Codec, ctx context.CLIContext, accStoreName st
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+		_, _ = w.Write(output)
 	}
 }

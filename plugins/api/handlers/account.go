@@ -12,10 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 
-	"github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/utils"
-	tkclient "github.com/binance-chain/node/plugins/tokens/client/rest"
-	"github.com/binance-chain/node/wire"
+	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/utils"
+	tkclient "github.com/bnb-chain/node/plugins/tokens/client/rest"
+	"github.com/bnb-chain/node/wire"
 )
 
 // AccountReqHandler queries for an account and returns its information.
@@ -34,8 +34,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 	throw := func(w http.ResponseWriter, status int, message string) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-		return
+		_, _ = w.Write([]byte(message))
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +77,7 @@ func AccountReqHandler(cdc *wire.Codec, ctx context.CLIContext) http.HandlerFunc
 
 		w.Header().Set("Content-Type", responseType)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}
 }
 
@@ -104,7 +103,7 @@ func toTokenBalances(acc *types.AppAccount) []tkclient.TokenBalance {
 		}
 	}
 
-	res := make([]tkclient.TokenBalance, len(balances), len(balances))
+	res := make([]tkclient.TokenBalance, len(balances))
 	i := 0
 	for _, balance := range balances {
 		res[i] = *balance

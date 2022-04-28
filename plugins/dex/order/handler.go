@@ -11,11 +11,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 
-	common "github.com/binance-chain/node/common/types"
-	"github.com/binance-chain/node/common/upgrade"
-	me "github.com/binance-chain/node/plugins/dex/matcheng"
-	"github.com/binance-chain/node/plugins/dex/types"
-	"github.com/binance-chain/node/plugins/dex/utils"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	me "github.com/bnb-chain/node/plugins/dex/matcheng"
+	"github.com/bnb-chain/node/plugins/dex/types"
+	"github.com/bnb-chain/node/plugins/dex/utils"
 )
 
 type NewOrderResponse struct {
@@ -92,7 +92,7 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 		toLockCoins = sdk.Coins{{Denom: baseAssetSymbol, Amount: msg.Quantity}}
 	}
 
-	acc.SetCoins(freeBalance.Minus(toLockCoins))
+	_ = acc.SetCoins(freeBalance.Minus(toLockCoins))
 	acc.SetLockedCoins(acc.GetLockedCoins().Plus(toLockCoins))
 	keeper.am.SetAccount(ctx, acc)
 	return nil
@@ -203,7 +203,7 @@ func handleCancelOrder(
 	if !transfer.FeeFree() {
 		acc := dexKeeper.am.GetAccount(ctx, msg.Sender)
 		fee = dexKeeper.FeeManager.CalcFixedFee(acc.GetCoins(), transfer.eventType, transfer.inAsset, dexKeeper.GetEngines())
-		acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
+		_ = acc.SetCoins(acc.GetCoins().Minus(fee.Tokens))
 		dexKeeper.am.SetAccount(ctx, acc)
 	}
 
