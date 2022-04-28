@@ -40,12 +40,12 @@ github.com/binance-chain/tss v0.1.2 h1:AyTedSG5HG/WAvM9PDPWjTXQ+dvNdHg3x1c+1a584
 github.com/binance-chain/tss v0.1.2/go.mod h1:p6u8c5+JQI46aytQFQY7qg2FPwVjcS6Dwaui0U6WrRw=
 github.com/binance-chain/tss-lib v1.0.0 h1:r6Yj8g8zwiVwOAdVBu2D36Nvbxeq9qPWdVi+pqGkqQI=
 github.com/binance-chain/tss-lib v1.0.0/go.mod h1:5mmPQOOkBIjHxyGVesSUB2AemcZj5YkMJ+HPZY4Jd38=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-binance.25 h1:9MmdsfuBi5YdY/D4ci3/YLZ7sarwOu9CosnJEO13uHA=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-binance.25/go.mod h1:MX4eWWUtVhyAd9vzzT56PaK4s1jBl7kPhWLwEI0x2EA=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-binance.27 h1:6DaF+3rt/kzxXe0mz5DPPS8OVpoJWuoVDULM/Jgzsfg=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-binance.27/go.mod h1:lEe0gmlRgWblp501fTEWfdELNaS90IQMrXO9ibwpgf0=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
-github.com/bnb-chain/bnc-tendermint v0.32.3-binance.6 h1:6H6b/+Yk1hzfF4iHLe6ACv7eZ+vNZC8jk663O2gzkT8=
-github.com/bnb-chain/bnc-tendermint v0.32.3-binance.6/go.mod h1:+5NnQZbpAijzpby/yOYlBwJjzvkXZKr6MGWZ9oI0p4Y=
+github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7 h1:wJBrhLAm9P+Jjm/clTxynAZJl63xD7LatKmL5e3YzbY=
+github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7/go.mod h1:EJSMv0Dh5v91CiHn+2pOnl1a3sdRVjpdekJ20AyYmlQ=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4 h1:w8pAAx1N0lmVf0Lxs1prYuDikXwirOb9T7y2yw8zOBw=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4/go.mod h1:Zmh8GRdNJB8DULIOBar3JCZp6tSpcvM1NGKfE9U2EzA=
 github.com/bnb-chain/ledger-cosmos-go v0.9.9-binance.3 h1:a+QLVLaP32v9gfRDKHH2AcRkzYLTWbC8UxYTJkXRSec=
