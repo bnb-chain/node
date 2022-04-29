@@ -4,7 +4,7 @@ checksum() {
 }
 change_log_file="./CHANGELOG.md"
 version="## $@"
-version_prefix="## v"
+version_prefix="## "
 start=0
 CHANGE_LOG=""
 while read line; do
@@ -23,7 +23,7 @@ MAINNET_ZIP_SUM="$(checksum mainnet_config.zip)"
 TESTNET_ZIP_SUM="$(checksum testnet_config.zip)"
 LINUX_BIN_SUM="$(checksum linux_binary.zip)"
 MAC_BIN_SUM="$(checksum macos_binary.zip)"
-WINDOWS_BIN_SUM="$(checksum window_binary.zip)"
+WINDOWS_BIN_SUM="$(checksum windows_binary.zip)"
 OUTPUT=$(cat <<-END
 ## Changelog\n
 ${CHANGE_LOG}\n
@@ -34,7 +34,7 @@ ${CHANGE_LOG}\n
 | testnet_config.zip | ${TESTNET_ZIP_SUM} |\n
 | linux_binary.zip | ${LINUX_BIN_SUM} |\n
 | macos_binary.zip  | ${MAC_BIN_SUM} |\n
-| window_binary.zip  | ${WINDOWS_BIN_SUM} |\n
+| windows_binary.zip  | ${WINDOWS_BIN_SUM} |\n
 END
 )
 

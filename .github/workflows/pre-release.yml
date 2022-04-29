@@ -1,10 +1,10 @@
-name: Pre-release
+name: pre-release
 
 on:
   push:
     # Publish `pre-v1.2.3` tags as releases.
     tags:
-      - pre-*
+      - pre-v*
 
 jobs:
   build:
@@ -111,7 +111,7 @@ jobs:
       - run: zip -r linux_binary.zip linux
       - run: zip -r macos_binary.zip macos
       - run: zip -r windows_binary.zip windows
-      - run: zip -r mainet_config.zip asset/mainnet
+      - run: zip -r mainnet_config.zip asset/mainnet
       - run: zip -r testnet_config.zip asset/testnet
 
       - name: Generate Change Log
@@ -166,4 +166,24 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./windows_binary.zip
           asset_name: windows_binary.zip
+          asset_content_type: application/octet-stream
+
+      - name: Upload Mainnet Config
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./mainnet_config.zip
+          asset_name: mainnet_config.zip
+          asset_content_type: application/octet-stream
+
+      - name: Upload Testnet Config
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./testnet_config.zip
+          asset_name: testnet_config.zip
           asset_content_type: application/octet-stream
