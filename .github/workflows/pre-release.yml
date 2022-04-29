@@ -4,7 +4,7 @@ on:
   push:
     # Publish `v1.2.3` tags as releases.
     tags:
-      - v*
+      - pre-*
 
 jobs:
   build:
@@ -112,16 +112,6 @@ jobs:
       - run: zip -r macos.zip macos
       - run: zip -r windows.zip windows
 
-      - name: Generate Change Log
-        id: changelog
-        run: |
-          chmod 755 ./.github/generate_change_log.sh
-          CHANGELOG=$(./.github/generate_change_log.sh ${{ env.RELEASE_VERSION}})
-          
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -143,7 +133,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./linux.zip
-          asset_name: linux.zip
+          asset_name: bnb-chain-node-binary-linux-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset - MacOS
@@ -153,7 +143,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./macos.zip
-          asset_name: macos.zip
+          asset_name: bnb-chain-node-binary-macos-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset - Windows
@@ -163,5 +153,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./windows.zip
-          asset_name: windows.zip
+          asset_name: bnb-chain-node-binary-windows-${{ github.ref_name }}.zip
           asset_content_type: application/octet-stream
