@@ -9,7 +9,7 @@ start=0
 CHANGE_LOG=""
 echo version
 while read line; do
-    if [[ $line == *"$version_prefix"* ]] && [ $start == 1 ]; then
+    if [[ $line == *"$version_prefix"* ]] && [ $start == 0 ]; then
         start=1
         continue
     fi
