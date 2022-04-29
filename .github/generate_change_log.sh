@@ -37,5 +37,6 @@ ${CHANGE_LOG}\n
 | windows_binary.zip  | ${WINDOWS_BIN_SUM} |\n
 END
 )
+echo ${CHANGE_LOG}
 echo ${OUTPUT}
 echo -e ${OUTPUT}
