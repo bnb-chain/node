@@ -124,8 +124,6 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - run: echo  $GITHUB_ENV
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -134,6 +132,8 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           release_name: ${{ github.ref_name }}
+          body: |
+            ${{ env.CHANGELOG }}
           draft: false
           prerelease: false
 

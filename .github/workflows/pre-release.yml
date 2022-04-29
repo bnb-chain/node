@@ -114,16 +114,6 @@ jobs:
       - run: zip -r mainnet_config.zip asset/mainnet
       - run: zip -r testnet_config.zip asset/testnet
 
-      - name: Generate Change Log
-        id: changelog
-        run: |
-          chmod 755 ./.github/generate_change_log.sh
-          CHANGELOG=$(./.github/generate_change_log.sh ${{ env.RELEASE_VERSION}})
-          
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -132,8 +122,11 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           release_name: ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+          body: |
+            versing: ${{ env.RELEASE_VERSION}}
+            git commit: ${{ github.sha }}
+          draft: true
+          prerelease: true
 
       # Check downloaded files
       - run: ls
