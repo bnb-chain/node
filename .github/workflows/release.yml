@@ -108,9 +108,11 @@ jobs:
           name: windows
           path: ./windows
 
-      - run: zip -r linux.zip linux
-      - run: zip -r macos.zip macos
-      - run: zip -r windows.zip windows
+      - run: zip -r linux_binary.zip linux
+      - run: zip -r macos_binary.zip macos
+      - run: zip -r windows_binary.zip windows
+      - run: zip -r mainet_config.zip asset/mainnet
+      - run: zip -r testnet_config.zip asset/testnet
 
       - name: Generate Change Log
         id: changelog
@@ -142,8 +144,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./linux.zip
-          asset_name: linux.zip
+          asset_path: ./linux_binary.zip
+          asset_name: linux_binary.zip
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset - MacOS
@@ -152,8 +154,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./macos.zip
-          asset_name: macos.zip
+          asset_path: ./macos_binary.zip
+          asset_name: macos_binary.zip
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset - Windows
@@ -162,6 +164,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./windows.zip
-          asset_name: windows.zip
+          asset_path: ./windows_binary.zip
+          asset_name: windows_binary.zip
           asset_content_type: application/octet-stream

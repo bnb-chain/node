@@ -19,20 +19,22 @@ while read line; do
         CHANGE_LOG+="$line\n"
     fi
 done < ${change_log_file}
-LINUX_BIN_SUM="$(checksum ./linux/linux.zip)"
-MAC_BIN_SUM="$(checksum ./macos/macos.zip)"
-WINDOWS_BIN_SUM="$(checksum ./windows/window.zip)"
+MAINNET_ZIP_SUM="$(checksum mainnet_config.zip)"
+TESTNET_ZIP_SUM="$(checksum testnet_config.zip)"
+LINUX_BIN_SUM="$(checksum linux_binary.zip)"
+MAC_BIN_SUM="$(checksum macos_binary.zip)"
+WINDOWS_BIN_SUM="$(checksum window_binary.zip)"
 OUTPUT=$(cat <<-END
 ## Changelog\n
 ${CHANGE_LOG}\n
 ## Assets\n
 |    Assets    | Sha256 Checksum  |\n
 | :-----------: |------------|\n
-| mainnet.zip | ${MAINNET_ZIP_SUM} |\n
-| testnet.zip | ${TESTNET_ZIP_SUM} |\n
-| linux.zip | ${LINUX_BIN_SUM} |\n
-| macos.zip  | ${MAC_BIN_SUM} |\n
-| window.zip  | ${WINDOWS_BIN_SUM} |\n
+| mainnet_config.zip | ${MAINNET_ZIP_SUM} |\n
+| testnet_config.zip | ${TESTNET_ZIP_SUM} |\n
+| linux_binary.zip | ${LINUX_BIN_SUM} |\n
+| macos_binary.zip  | ${MAC_BIN_SUM} |\n
+| window_binary.zip  | ${WINDOWS_BIN_SUM} |\n
 END
 )
 
