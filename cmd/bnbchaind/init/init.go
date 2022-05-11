@@ -90,9 +90,9 @@ enabled, and the genesis file will not be generated.
 				return errors.New("must specify --name (validator moniker)")
 			}
 
-			valOperAddr, secret := createValOperAccount(viper.GetString(flagClientHome), config.Moniker)
+			valOperAddr, secret := CreateValOperAccount(viper.GetString(flagClientHome), config.Moniker)
 			memo := fmt.Sprintf("%s@%s:26656", nodeID, "127.0.0.1")
-			genTx := prepareCreateValidatorTx(cdc, chainID, config.Moniker, memo, valOperAddr, pubKey)
+			genTx := PrepareCreateValidatorTx(cdc, chainID, config.Moniker, memo, valOperAddr, pubKey)
 			appState, err := appInit.AppGenState(cdc, []json.RawMessage{genTx})
 			if err != nil {
 				return err
@@ -102,7 +102,7 @@ enabled, and the genesis file will not be generated.
 				return fmt.Errorf("genesis.json file already exists: %v", genFile)
 			}
 			ExportGenesisFileWithTime(genFile, chainID, nil, appState, utils.Now())
-			writeConfigFile(config)
+			WriteConfigFile(config)
 
 			bech32ifyPubKey, err := sdk.Bech32ifyConsPub(pubKey)
 			if err != nil {
@@ -131,7 +131,7 @@ enabled, and the genesis file will not be generated.
 	return cmd
 }
 
-func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
+func PrepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
 	msg := stake.MsgCreateValidatorProposal{
 		MsgCreateValidator: stake.NewMsgCreateValidator(
@@ -157,7 +157,7 @@ func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	return txBytes
 }
 
-func writeConfigFile(config *cfg.Config) {
+func WriteConfigFile(config *cfg.Config) {
 	configFilePath := filepath.Join(config.RootDir, "config", "config.toml")
 	cfg.WriteConfigFile(configFilePath, config)
 }

@@ -86,7 +86,7 @@ func InitializeNodeValidatorFiles(config *cfg.Config) (nodeID string, valPubKey 
 	return nodeID, valPubKey
 }
 
-func createValOperAccount(clientDir, keyName string) (sdk.ValAddress, string) {
+func CreateValOperAccount(clientDir, keyName string) (sdk.ValAddress, string) {
 	accAddr, secret, err := server.GenerateSaveCoinKey(clientDir, keyName, app.DefaultKeyPass, true)
 	if err != nil {
 		panic(err)

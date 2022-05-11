@@ -138,7 +138,7 @@ func initTestnet(config *cfg.Config, cdc *codec.Codec, appInit server.AppInit) e
 		ip := getIP(i, viper.GetString(flagStartingIPAddress))
 		nodeId, valPubKey := InitializeNodeValidatorFiles(config)
 
-		addr, _ := createValOperAccount(clientDir, config.Moniker)
+		addr, _ := CreateValOperAccount(clientDir, config.Moniker)
 		if bech32ifyPubKey, err := sdk.Bech32ifyConsPub(valPubKey); err != nil {
 			return err
 		} else {
@@ -185,7 +185,7 @@ func prepareClientDir(clientDir string) {
 func prepareGenTx(cdc *codec.Codec, chainId, name, nodeId, ip, gentxsDir string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
 	memo := fmt.Sprintf("%s@%s:26656", nodeId, ip)
-	txBytes := prepareCreateValidatorTx(cdc, chainId, name, memo, valOperAddr, valPubKey)
+	txBytes := PrepareCreateValidatorTx(cdc, chainId, name, memo, valOperAddr, valPubKey)
 	err := writeFile(fmt.Sprintf("%v.json", name), gentxsDir, txBytes)
 	if err != nil {
 		panic(err)
