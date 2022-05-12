@@ -7,9 +7,6 @@ import (
 	"text/template"
 )
 
-// DefaultDirPerm is the default permissions used when creating directories.
-const DefaultDirPerm = 0700
-
 var configTemplate *template.Template
 
 func init() {

@@ -1,9 +1,9 @@
-name: multi-node-test
+name: multi-nodes-test
 
 on: ["push", "pull_request", "workflow_dispatch"]
 
 jobs:
-  multi-node-test:
+  multi-nodes-test:
     runs-on: ubuntu-latest
     env:
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
