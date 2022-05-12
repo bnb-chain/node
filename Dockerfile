@@ -13,8 +13,8 @@ COPY . /bnb-chain/node
 RUN apk update && \
     apk add --update --no-cache $PACKAGES
 
-RUN --mount=type=secret,id=github-token go env -w GOPRIVATE="github.com/bnb-chain/*" &&  \
-    git config --global url."https://$(cat /run/secrets/github-token)@github.com".insteadOf "https://github.com" && \
+RUN --mount=type=secret,id=GH_ACCESS_TOKEN go env -w GOPRIVATE="github.com/bnb-chain/*" &&  \
+    git config --global url."https://$(cat /run/secrets/GH_ACCESS_TOKEN)@github.com".insteadOf "https://github.com" && \
     pwd && \
     make build
 
