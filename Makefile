@@ -229,7 +229,7 @@ localnet-stop:
 
 # docker commands
 docker.build:
-	docker build -t binance/bnbdnode --secret id=GH_ACCESS_TOKEN .
+	DOCKER_BUILDKIT=1 docker build -t binance/bnbdnode --secret id=GH_ACCESS_TOKEN .
 
 docker.generate:
 	go run ./cmd/gen_devnet
