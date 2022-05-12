@@ -24,5 +24,8 @@ jobs:
       - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
       - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       - run: make docker.build docker.generate docker.start
+      # used to debug workflow
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: sleep 1m
       - run: make multi-node-test
