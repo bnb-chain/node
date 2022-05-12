@@ -10,7 +10,9 @@ import (
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	bankClient "github.com/cosmos/cosmos-sdk/x/bank/client"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tidwall/gjson"
 	"golang.org/x/xerrors"
@@ -43,14 +45,26 @@ func GetNodeInfo(i int) (*NodeInfo, error) {
 	}
 	// load validator key
 	privValKeyFile := path.Join(nodePath, "testnoded", "config", "priv_validator_key.json")
-	privValStateFile := path.Join(nodePath, "testnoded", "data", "priv_validator_state.json")
-	filePV := privval.LoadFilePV(privValKeyFile, privValStateFile)
+	keyJSONBytes, err := os.ReadFile(privValKeyFile)
+	if err != nil {
+		return nil, xerrors.Errorf("read file %s failed: %w", privValKeyFile, err)
+	}
+	pvKey := privval.FilePVKey{}
+	cdc := amino.NewCodec()
+	cryptoAmino.RegisterAmino(cdc)
+	privval.RegisterRemoteSignerMsg(cdc)
+	err = cdc.UnmarshalJSON(keyJSONBytes, &pvKey)
+	if err != nil {
+		return nil, xerrors.Errorf("Error reading PrivValidator key from %v: %v", privValKeyFile, err)
+	}
+	pvKey.PubKey = pvKey.PrivKey.PubKey()
+	pvKey.Address = pvKey.PubKey.Address()
 	return &NodeInfo{
 		Mnemonic:      mnemonic,
 		ValidatorAddr: cosmosTypes.ValAddress(keyManager.GetAddr()),
 		DelegatorAddr: cosmosTypes.AccAddress(keyManager.GetAddr()),
 		Addr:          keyManager.GetAddr(),
-		PubKey:        filePV.GetPubKey(),
+		PubKey:        pvKey.PrivKey.PubKey(),
 		KeyManager:    keyManager,
 	}, nil
 }

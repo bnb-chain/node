@@ -25,7 +25,7 @@ jobs:
       - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       - run: make docker.build docker.generate docker.start
       # used to debug workflow
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
       - run: sleep 1m
       - run: make multi-node-test
