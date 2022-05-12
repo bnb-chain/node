@@ -227,6 +227,9 @@ localnet-start: localnet-stop
 localnet-stop:
 	docker-compose down
 
+docker.build:
+	docker build -t binance/bnbdnode --secret id=github-token,src=github-token.txt .
+
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html

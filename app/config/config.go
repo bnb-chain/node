@@ -87,6 +87,8 @@ FixFailAckPackageHeight = {{ .UpgradeConfig.FixFailAckPackageHeight }}
 EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight }}
 # Block height of BEP128 upgrade
 BEP128Height = {{ .UpgradeConfig.BEP128Height }}
+# Block height of BEP145 upgrade
+BEP145Height = {{ .UpgradeConfig.BEP145Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -526,6 +528,7 @@ type UpgradeConfig struct {
 	FixFailAckPackageHeight                         int64 `mapstructure:"FixFailAckPackageHeight"`
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 	BEP128Height                                    int64 `mapstructure:"BEP128Height"`
+	BEP145Height                                    int64 `mapstructure:"BEP145Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -544,6 +547,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP8Height:                 1,
 		BEP67Height:                1,
 		BEP70Height:                1,
+		BEP145Height:               1,
 		LaunchBscUpgradeHeight:     1,
 		BEP128Height:               math.MaxInt64,
 		BEP82Height:                math.MaxInt64,

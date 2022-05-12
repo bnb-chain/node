@@ -48,7 +48,7 @@ services:
 
   node{{ .Index }}:
     container_name: node{{ .Index }}
-    image: "bnb-chain-node"
+    image: "binance/bnbdnode"
     restart: always
     working_dir: /bnbchaind
     command: bnbchaind start --home /bnbchaind/testnoded
