@@ -582,7 +582,6 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP87Height:                       math.MaxInt64,
 		BEP171Height:                      math.MaxInt64,
 		FixFailAckPackageHeight:           math.MaxInt64,
-
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
