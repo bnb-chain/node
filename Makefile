@@ -240,7 +240,7 @@ docker.start:
 docker.stop:
 	docker compose -f build/devnet/docker-compose.yml down
 
-multi-node-test:
+multi-nodes-test:
 	go run ./cmd/test_client
 
 # To avoid unintended conflicts with file names, always add to .PHONY

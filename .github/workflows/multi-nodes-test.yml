@@ -27,5 +27,5 @@ jobs:
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: sleep 1m
-      - run: make multi-node-test
+      - run: sleep 10
+      - run: make multi-nodes-test
