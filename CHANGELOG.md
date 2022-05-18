@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2
+IMPROVEMENTS
+* [\#865](https://github.com/bnb-chain/node/pull/865) [CI] Build state recover tool in release job
+* [\#869](https://github.com/bnb-chain/node/pull/869) [Deps] Upgrade cosmos-sdk to v0.25.0 binance.28
+
 ## 0.9.1
 IMPROVEMENTS
 * [\#839](https://github.com/bnb-chain/node/pull/839) [CLIENT] Crypto-level random for client

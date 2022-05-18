@@ -90,6 +90,7 @@ else
 	go build $(BUILD_FLAGS) -o build/bnbsentry ./cmd/bnbsentry
 	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
 	go build $(BUILD_FLAGS) -o build/lightd ./cmd/lightd
+	go build $(BUILD_FLAGS) -o build/state_recover ./networks/tools/state_recover
 endif
 
 
@@ -101,6 +102,7 @@ ifeq ($(OS),Windows_NT)
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry.exe ./cmd/bnbsentry
 	go build $(BUILD_FLAGS) -o build/pressuremaker.exe ./cmd/pressuremaker
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd.exe ./cmd/lightd
+	go build $(BUILD_FLAGS) -o build/state_recover.exe ./networks/tools/state_recover
 else
 	go build $(BUILD_CLI_FLAGS) -o build/bnbcli ./cmd/bnbcli
 	go build $(BUILD_TESTNET_FLAGS) -o build/tbnbcli ./cmd/bnbcli
@@ -108,6 +110,7 @@ else
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/bnbsentry ./cmd/bnbsentry
 	go build $(BUILD_FLAGS) -o build/pressuremaker ./cmd/pressuremaker
 	$(BUILD_CGOFLAGS) go build $(BUILD_CFLAGS) -o build/lightd ./cmd/lightd
+	go build $(BUILD_FLAGS) -o build/state_recover ./networks/tools/state_recover
 endif
 
 build-windows:
