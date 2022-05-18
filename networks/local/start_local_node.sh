@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-ORG="BiJie"
-REPO="$ORG/BinanceChain"
+ORG="name_it"
+REPO="$ORG/BnbChain"
 
 cli_home="./testnodecli"
 home="./testnoded"
