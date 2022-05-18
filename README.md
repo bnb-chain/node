@@ -3,7 +3,20 @@ BNB Beacon Chain
 
 BNB Beacon Chain is a blockchain with a flexible set of native assets and pluggable modules. It uses [tendermint](https://tendermint.com) for consensus and app logic is written in golang. It targets fast block times, a native dApp layer and multi-token support with no smart contract VM.
 
-This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/examples/basecoin) and is already functional as a multi-asset cryptocurrency blockchain and DEX; see below for instructions on how to use it.
+[![Reference](
+https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
+)](https://docs.bnbchain.world/docs/learn/beaconIntro)
+[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/z2VpC455eU)
+
+Beacon Chain has the basic features of most blockchains:
+- Sending and receiving BNB and digital assets
+- Issuing new digital assets (we have a standard called BEP-2)
+- Mint/burn, freeze/unfreeze, lock/unlock of digital assets
+
+It has DEX and trading-specific functionality:
+- Propose exchange listing for trading pairs
+- Creating maker/taker orders for traders
+- Listing assets from other chains using atomic swaps (BEP-3)
 
 ## Overview
 
@@ -13,8 +26,6 @@ This is a fork of [basecoin](https://github.com/cosmos/cosmos-sdk/tree/master/ex
 * No PoW means block times are very fast.
 * UXTO/account does not matter as we just use the [cosmos](https://github.com/cosmos/cosmos-sdk/tree/master/x/bank) bank.
 * Features like the DEX will run directly on the node as apps written in golang.
-
-<img src="https://d.pr/i/5kNDH1+" alt="tendermint architecture" width="500" />
 
 [Read](https://tendermint.readthedocs.io/en/master/introduction.html) [more](https://blog.cosmos.network/tendermint-explained-bringing-bft-based-pos-to-the-public-blockchain-domain-f22e274a0fdb) about Tendermint and ABCI.
 
@@ -37,11 +48,6 @@ $ cd $BNBCHAINPATH
 $ make build
 ```
 
-> If you want run bnbchaind with cleveldb as backend, please ensure leveldb is installed: https://github.com/google/leveldb#building,
-> and change `make install` to `make install_c`
-> For mac, `brew install leveldb` would help. For linux, you can build from source
-
-
 **Windows**
 
 If you are working on windows, `GOPATH` and `PATH` should already be set when you install golang.
@@ -53,8 +59,6 @@ You may need add BNBCHAINPATH to the environment variables.
 > cd %BNBCHAINPATH%
 > make build
 ```
-
-> If you encounter some network issues when downloading the dependencies, make sure you have configured shadowsocks correctly and switch to global mode. Run `set(win)/export(linux/mac) https_proxy=127.0.0.1:1080` if you still have https issues.
 
 To test that installation worked, try to run the cli tool:
 
@@ -86,6 +90,10 @@ When you make a change you probably want to reset your chain, remember to kill t
 ```bash
 $ bnbchaind unsafe_reset_all
 ```
+
+### Join mainnet/testnet
+
+Please refer to the document for joining [mainnet](https://docs.bnbchain.world/docs/beaconchain/develop/node/join-mainnet) or [testnnet](https://docs.bnbchain.world/docs/beaconchain/develop/node/join-testnet).
 
 ## Assets
 
@@ -202,14 +210,9 @@ $ curl -s http://localhost:8080/api/v1/depth?symbol=XYZ_BNB&limit=5 | json_pp
 {"asks":[["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"]],"bids":[["0.10000000","1.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"],["0.00000000","0.00000000"]]}
 ```
 
-### Future
+## Contribution
+It is welcomed to contribute to this repo from everyone. If you'd like to contribute, please fork, fix, commit and submit a pull request to review and merge into the main code base. Please make sure your contributions adhere to our coding guidelines:
 
-#### Pegging
-
-If we use a native asset (BNB) as an ICO quote currency this will be straightforward as a plugin, but other examples of how to peg ethereum tokens to assets on tendermint chains do exist e.g.
-
-* [Peggy](https://github.com/cosmos/peggy) [read more](https://blog.cosmos.network/understanding-the-value-proposition-of-cosmos-ecaef63350d#f158)
-
-#### Others
-
-To add: [ICO], [Staking], [Freezing], [Burning]
+- Code must adhere to the official Go formatting guidelines (i.e. please use gofmt tool).
+- Code must be documented adhering to the official Go commentary guidelines.
+- Pull requests need to be based on and opened against the master branch.
