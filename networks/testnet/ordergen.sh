@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 
-# This script is still working in progress. Basically it should be used under private-2 box in our jumpservers because kafka is deployed their
-
-# For dev
-#clipath='/home/bijieprd/gowork/src/github.com/bnb-chain/node/build/bnbcli'
-#clihome='/server/bnc/node0/gaiacli'
-#chainId='chain-rKZsqV'
-
-clipath='/root/zjubfd/src/github.com/bnb-chain/node/build/bnbcli'
+# This script is still working in progress.
+clipath='/root/go/src/github.com/bnb-chain/node/build/bnbcli'
 clihome='/server/bnc/node0/gaiacli'
 chainId='chain-bnb'
 
