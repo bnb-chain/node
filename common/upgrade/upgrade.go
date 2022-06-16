@@ -38,6 +38,7 @@ const (
 	FixFailAckPackage = sdk.FixFailAckPackage
 
 	BEP128 = sdk.BEP128 // https://github.com/bnb-chain/BEPs/pull/128 Staking reward distribution upgrade
+	BEP151 = "BEP151"   // https://github.com/bnb-chain/BEPs/pull/151 Dex Prune Upgrade
 )
 
 func UpgradeBEP10(before func(), after func()) {

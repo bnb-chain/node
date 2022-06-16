@@ -24,6 +24,9 @@ func NewHandler(keeper *order.DexKeeper, tokenMapper tokens.Mapper, govKeeper go
 		case types.ListMsg:
 			return handleList(ctx, keeper, tokenMapper, govKeeper, msg)
 		case types.ListMiniMsg:
+			if sdk.IsUpgrade(upgrade.BEP151) {
+				return sdk.ErrMsgNotSupported("ListMiniMsg disabled in BEP-151").Result()
+			}
 			return handleListMini(ctx, keeper, tokenMapper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
