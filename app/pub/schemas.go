@@ -80,7 +80,7 @@ const (
                                     { "name": "lastExecutedPrice", "type": "long" },
                                     { "name": "lastExecutedQty", "type": "long" },
                                     { "name": "cumQty", "type": "long" },
-                                    { "name": "fee", "type": "string" }, 
+                                    { "name": "fee", "type": "string" },
                                     { "name": "orderCreationTime", "type": "long" },
                                     { "name": "transactionTime", "type": "long" },
                                     { "name": "timeInForce", "type": "int" },
@@ -257,7 +257,7 @@ const (
                 { "name": "num", "type": "int" },
                 { "name": "timestamp", "type": "long" },
                 { "name": "transfers",
-                  "type": {    
+                  "type": {
                       "type": "array",
                     "items": {
                         "type": "record",
@@ -267,7 +267,7 @@ const (
                             { "name": "txhash", "type": "string" },
                             { "name": "memo", "type": "string" },
                             { "name": "from", "type": "string" },
-                            { "name": "to", 
+                            { "name": "to",
                                   "type": {
                                      "type": "array",
                                     "items": {
@@ -288,7 +288,7 @@ const (
                                                             { "name": "amount", "type": "long" }
                                                         ]
                                                       }
-                                                }    
+                                                }
                                             }
                                         ]
                                     }
@@ -296,7 +296,7 @@ const (
                             }
                         ]
                     }
-                  }    
+                  }
                 }
             ]
         }
@@ -853,7 +853,7 @@ const (
                 { "name": "num", "type": "int" },
                 { "name": "timestamp", "type": "long" },
                 { "name": "transfers",
-                  "type": {    
+                  "type": {
                     "type": "array",
                     "items": {
                         "type": "record",
@@ -868,7 +868,7 @@ const (
                             { "name": "denom", "type": "string" },
                             { "name": "contract", "type": "string" },
                             { "name": "decimals", "type": "int" },
-                            { "name": "to", 
+                            { "name": "to",
                                   "type": {
                                      "type": "array",
                                     "items": {
@@ -884,7 +884,7 @@ const (
                             }
                         ]
                     }
-                  }    
+                  }
                 }
             ]
         }
@@ -900,7 +900,7 @@ const (
                 { "name": "num", "type": "int" },
                 { "name": "timestamp", "type": "long" },
                 { "name": "mirrors",
-                  	"type": {    
+                  	"type": {
                     	"type": "array",
                     	"items": {
                         	"type": "record",
@@ -922,7 +922,7 @@ const (
 								{ "name": "fee", "type": "long" }
                         	]
                     	}
-                  	}    
+                  	}
                 }
             ]
         }
