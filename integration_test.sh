@@ -40,7 +40,6 @@ function prepare_node() {
 	$(cd "./${home}/config" && sed -i -e "s/BEP8Height = 9223372036854775807/BEP8Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/BEP67Height = 9223372036854775807/BEP67Height = 1/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/BEP70Height = 9223372036854775807/BEP70Height = 1/g" app.toml)
-#	$(cd "./${home}/config" && sed -i -e "s/BEP151Height = 9223372036854775807/BEP151Height = 1/g" app.toml)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
