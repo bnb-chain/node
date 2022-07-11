@@ -27,6 +27,9 @@ func NewHandler(dexKeeper *DexKeeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case NewOrderMsg:
+			if sdk.IsUpgrade(upgrade.BEP151) {
+				return sdk.ErrMsgNotSupported("NewOrderMsg disabled in BEP-151").Result()
+			}
 			return handleNewOrder(ctx, dexKeeper, msg)
 		case CancelOrderMsg:
 			return handleCancelOrder(ctx, dexKeeper, msg)
