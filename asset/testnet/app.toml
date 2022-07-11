@@ -57,7 +57,7 @@ EnableAccountScriptsForCrossChainTransferHeight = 7841000
 #Block height of BEP128 upgrade
 BEP128Height = 23551600
 #Block height of BEP151 upgrade
-BEP151Height = 28250121
+BEP151Height = 28250000
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
