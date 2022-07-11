@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+IMPROVEMENTS
+* [\#875](https://github.com/bnb-chain/node/pull/875) [DEX] Implement BEP151
+
 ## 0.9.2
 IMPROVEMENTS
 * [\#865](https://github.com/bnb-chain/node/pull/865) [CI] Build state recover tool in release job
