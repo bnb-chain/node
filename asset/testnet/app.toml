@@ -169,7 +169,7 @@ kafkaVersion = "2.1.0"
 [log]
 
 # Write logs to console instead of file
-logToConsole = false
+logToConsole = true
 
 ## The below parameters take effect only when logToConsole is false
 # Log file root, if not set, use home path
