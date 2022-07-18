@@ -26,7 +26,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/keeper"
+	sTypes "github.com/cosmos/cosmos-sdk/x/stake/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -171,6 +173,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.StakeStoreKey, common.StakeRewardStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
+		sdk.ChainID(app.crossChainConfig.BscIbcChainId),
+		app.crossChainConfig.BscChainId,
 	)
 
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -329,6 +333,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -535,6 +540,11 @@ func (app *BinanceChain) initStaking() {
 		params := app.stakeKeeper.GetParams(newCtx)
 		params.RewardDistributionBatchSize = 1000
 		app.stakeKeeper.SetParams(newCtx, params)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP153, func(ctx sdk.Context) {
+		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), sTypes.CrossStakeChannelID, sdk.ChannelAllow)
+		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
+		app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
