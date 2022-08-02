@@ -542,7 +542,12 @@ func (app *BinanceChain) initStaking() {
 		app.stakeKeeper.SetParams(newCtx, params)
 	})
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP153, func(ctx sdk.Context) {
-		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), sTypes.CrossStakeChannelID, sdk.ChannelAllow)
+		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
+		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.CrossStakeChannelID, sdk.ChannelAllow)
+		_, sdkErr := app.scKeeper.SaveChannelSettingChangeToIbc(ctx, chainId, sTypes.CrossStakeChannelID, sdk.ChannelAllow)
+		if sdkErr != nil {
+			panic(sdkErr.Error())
+		}
 		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
 		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
 		if err != nil {
