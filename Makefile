@@ -194,6 +194,10 @@ test_unit:
 	@echo "--> Running go test"
 	@go test $(PACKAGES)
 
+test_coverage:
+	@echo "--> Running go test"
+	@go test $(PACKAGES) -race -coverprofile=coverage.txt -covermode=atomic
+
 integration_test: build
 	@echo "-->Integration Test"
 	@./integration_test.sh
