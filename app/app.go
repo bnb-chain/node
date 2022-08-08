@@ -329,6 +329,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHH, upgradeConfig.BEPHHHHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -816,7 +817,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	app.DexKeeper.StoreTradePrices(ctx)
 
-	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
+	var blockFee pub.BlockFee
+	if sdk.IsUpgrade(upgrade.BEPHHH) {
+		blockFee = distributeFeeBEPHHH(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee, app.stakeKeeper)
+	} else {
+		blockFee = distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
+	}
 
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
