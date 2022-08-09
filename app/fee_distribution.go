@@ -68,7 +68,6 @@ func (vac *ValAddrCache) GetDistributionAddr(ctx sdk.Context, consAddr sdk.ConsA
 }
 
 func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
-	// TODO: needs to add BSC ratio Fee
 	fee := fees.Pool.BlockFees()
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
