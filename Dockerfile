@@ -4,45 +4,30 @@ FROM golang:1.17-alpine AS build-env
 ENV PACKAGES make git libc-dev bash gcc linux-headers eudev-dev curl ca-certificates
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/bnb-chain/node
+WORKDIR /bnb-chain/node
 
 # Add source files
-COPY . .
+COPY . /bnb-chain/node
 
 # Install minimum necessary dependencies, build Cosmos SDK, remove packages
-RUN apk add --no-cache $PACKAGES && \
-    make build && \
-    make install
+RUN apk update && \
+    apk add --update --no-cache $PACKAGES
 
-# # Final image
-FROM alpine:3.16.0
+RUN --mount=type=secret,id=GH_ACCESS_TOKEN go env -w GOPRIVATE="github.com/bnb-chain/*" &&  \
+    git config --global url."https://$(cat /run/secrets/GH_ACCESS_TOKEN)@github.com".insteadOf "https://github.com" && \
+    pwd && \
+    make build
 
-# Install dependencies
-RUN apk add --update ca-certificates tini bash
+# Final image
+FROM alpine:edge
 
-ARG USER=bnbchain
-ARG USER_UID=1000
-ARG USER_GID=1000
-
-ENV DEFAULT_CONFIG=/configs
-ENV HOME=/data
-
-RUN addgroup -g ${USER_GID} ${USER} \
-  && adduser -u ${USER_UID} -G ${USER} --shell /sbin/nologin --no-create-home -D ${USER} \
-  && addgroup ${USER} tty
-RUN mkdir -p ${HOME} ${DEFAULT_CONFIG} 
-WORKDIR ${HOME}
+# Install ca-certificates
+RUN apk add --update ca-certificates
+WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env /go/bin/bnbchaind /usr/bin/bnbchaind
-COPY --from=build-env /go/bin/bnbcli /usr/bin/bnbcli
-COPY docker-entrypoint.sh /
-COPY ./asset/ ${DEFAULT_CONFIG}/
-
-RUN chown -R ${USER_UID}:${USER_GID} ${HOME} \
-  && chmod +x /docker-entrypoint.sh
-
-USER ${USER}:${USER}
+COPY --from=build-env /bnb-chain/node/build/bnbchaind /usr/bin/bnbchaind
+COPY --from=build-env /bnb-chain/node/build/bnbcli /usr/bin/bnbcli
 
 # Run gaiad by default, omit entrypoint to ease using container with gaiacli
-CMD ["/sbin/tini", "--", "/docker-entrypoint.sh"]
+CMD ["bnbchaind"]

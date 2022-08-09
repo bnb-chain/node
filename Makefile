@@ -234,6 +234,22 @@ localnet-start: localnet-stop
 localnet-stop:
 	docker-compose down
 
+# docker commands
+docker.build:
+	DOCKER_BUILDKIT=1 docker build -t binance/bnbdnode --secret id=GH_ACCESS_TOKEN .
+
+docker.generate:
+	go run ./cmd/gen_devnet
+
+docker.start:
+	docker compose -f build/devnet/docker-compose.yml up -d
+
+docker.stop:
+	docker compose -f build/devnet/docker-compose.yml down
+
+multi-nodes-test:
+	go run ./cmd/test_client
+
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
