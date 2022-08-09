@@ -30,6 +30,7 @@ type ValAddrCache struct {
 
 func (vac *ValAddrCache) ClearCache() {
 	vac.cache = make(map[string]sdk.AccAddress)
+	vac.distributionAddrCache = make(map[string]sdk.AccAddress)
 }
 
 func (vac *ValAddrCache) SetAccAddr(consAddr sdk.ConsAddress, accAddr sdk.AccAddress) {
