@@ -23,15 +23,15 @@ const (
 var _ sdk.Msg = BindMsg{}
 
 type BindMsg struct {
-	From             sdk.AccAddress    `json:"from"`
-	Symbol           string            `json:"symbol"`
-	Amount           int64             `json:"amount"`
-	ContractAddress  SmartChainAddress `json:"contract_address"`
-	ContractDecimals int8              `json:"contract_decimals"`
-	ExpireTime       int64             `json:"expire_time"`
+	From             sdk.AccAddress        `json:"from"`
+	Symbol           string                `json:"symbol"`
+	Amount           int64                 `json:"amount"`
+	ContractAddress  sdk.SmartChainAddress `json:"contract_address"`
+	ContractDecimals int8                  `json:"contract_decimals"`
+	ExpireTime       int64                 `json:"expire_time"`
 }
 
-func NewBindMsg(from sdk.AccAddress, symbol string, amount int64, contractAddress SmartChainAddress, contractDecimals int8, expireTime int64) BindMsg {
+func NewBindMsg(from sdk.AccAddress, symbol string, amount int64, contractAddress sdk.SmartChainAddress, contractDecimals int8, expireTime int64) BindMsg {
 	return BindMsg{
 		From:             from,
 		Amount:           amount,
@@ -169,13 +169,13 @@ func ParseBindStatus(input string) (BindStatus, error) {
 var _ sdk.Msg = TransferOutMsg{}
 
 type TransferOutMsg struct {
-	From       sdk.AccAddress    `json:"from"`
-	To         SmartChainAddress `json:"to"`
-	Amount     sdk.Coin          `json:"amount"`
-	ExpireTime int64             `json:"expire_time"`
+	From       sdk.AccAddress        `json:"from"`
+	To         sdk.SmartChainAddress `json:"to"`
+	Amount     sdk.Coin              `json:"amount"`
+	ExpireTime int64                 `json:"expire_time"`
 }
 
-func NewTransferOutMsg(from sdk.AccAddress, to SmartChainAddress, amount sdk.Coin, expireTime int64) TransferOutMsg {
+func NewTransferOutMsg(from sdk.AccAddress, to sdk.SmartChainAddress, amount sdk.Coin, expireTime int64) TransferOutMsg {
 	return TransferOutMsg{
 		From:       from,
 		To:         to,

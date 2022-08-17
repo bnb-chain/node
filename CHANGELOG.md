@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1
+IMPROVEMENTS
+* [\#879](https://github.com/bnb-chain/node/pull/879) [Staking] Implement BEP153: Native Staking on BSC
+
 ## 0.10.0
 IMPROVEMENTS
 * [\#875](https://github.com/bnb-chain/node/pull/875) [DEX] Implement BEP151
