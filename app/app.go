@@ -545,8 +545,9 @@ func (app *BinanceChain) initStaking() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP153, func(ctx sdk.Context) {
 		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
 		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.CrossStakeChannelID, sdk.ChannelAllow)
-		stakingContract, _ := hex.DecodeString("0000000000000000000000000000000000002001")
-		_, sdkErr := app.scKeeper.CreateNewChannelToIbc(ctx, chainId, sTypes.CrossStakeChannelID, sdk.RewardNotFromSystem, stakingContract)
+		stakeContractAddr := "0000000000000000000000000000000000002001"
+		stakeContractBytes, _ := hex.DecodeString(stakeContractAddr)
+		_, sdkErr := app.scKeeper.CreateNewChannelToIbc(ctx, chainId, sTypes.CrossStakeChannelID, sdk.RewardNotFromSystem, stakeContractBytes)
 		if sdkErr != nil {
 			panic(sdkErr.Error())
 		}
