@@ -56,6 +56,8 @@ FixFailAckPackageHeight = 146060000
 EnableAccountScriptsForCrossChainTransferHeight = 146060000
 #Block height of BEP128 upgrade
 BEP128Height =234560000
+#Block height of BEP151 upgrade
+BEP151Height = 264000000
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
