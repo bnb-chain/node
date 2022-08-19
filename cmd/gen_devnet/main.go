@@ -62,6 +62,9 @@ func main() {
 		binanceChainConfig.UpgradeConfig.BEP12Height = 1
 		binanceChainConfig.UpgradeConfig.BEP67Height = 1
 		binanceChainConfig.UpgradeConfig.BEP70Height = 1
+		binanceChainConfig.UpgradeConfig.BEP128Height = 1
+		binanceChainConfig.UpgradeConfig.BEP151Height = 1
+		binanceChainConfig.UpgradeConfig.BEPHHHHeight = 1
 		appConfigFilePath := filepath.Join(ctxConfig.RootDir, "config", "app.toml")
 		config.WriteConfigFile(appConfigFilePath, binanceChainConfig)
 		// pk

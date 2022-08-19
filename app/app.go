@@ -367,6 +367,13 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
+	//upgrade.Mgr.RegisterMsgTypes(upgrade.BEPHHH,
+	//	stake.MsgCreateValidator{}.Type(),
+	//	stake.MsgEditValidator{}.Type(),
+	//	stake.MsgDelegate{}.Type(),
+	//	stake.MsgRedelegate{}.Type(),
+	//	stake.MsgUndelegate{}.Type(),
+	//)
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		issue.IssueMiniMsg{}.Type(),
@@ -536,6 +543,14 @@ func (app *BinanceChain) initStaking() {
 		params := app.stakeKeeper.GetParams(newCtx)
 		params.RewardDistributionBatchSize = 1000
 		app.stakeKeeper.SetParams(newCtx, params)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHH, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		params := app.stakeKeeper.GetParams(newCtx)
+		params.MaxStakeSnapshots = 30
+		params.MaxValidators = 11
+		app.stakeKeeper.SetParams(ctx, params)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
@@ -834,6 +849,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	sidechain.EndBlock(ctx, app.scKeeper)
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
+	// todo: get validatorUpdates in slashing EndBlocker
 	if isBreatheBlock {
 		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
 	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
