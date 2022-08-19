@@ -2,7 +2,7 @@
 
 ## 0.10.1
 IMPROVEMENTS
-* [\#882](https://github.com/bnb-chain/node/pull/875) [DEX] Add BEP151 Mainnet Height
+* [\#882](https://github.com/bnb-chain/node/pull/882) [DEX] Add BEP151 Mainnet Height
 
 ## 0.10.0
 IMPROVEMENTS
