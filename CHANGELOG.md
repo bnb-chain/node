@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.1
+FEATURES
+* [\#878](https://github.com/bnb-chain/node/pull/878) [CI] Add ci script to docker image
+
+IMPROVEMENTS
+* [\#879](https://github.com/bnb-chain/node/pull/879) [Staking] Implement BEP153: Native Staking on BSC
+
 ## 0.10.0
 IMPROVEMENTS
 * [\#875](https://github.com/bnb-chain/node/pull/875) [DEX] Implement BEP151

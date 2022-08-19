@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func BytesToAddress(b []byte) SmartChainAddress {
-	var a SmartChainAddress
+func BytesToAddress(b []byte) sdk.SmartChainAddress {
+	var a sdk.SmartChainAddress
 	a.SetBytes(b)
 	return a
 }
@@ -17,8 +17,8 @@ func BytesToAddress(b []byte) SmartChainAddress {
 func TestBindMsg(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
-	nonEmptySmartChainAddr := SmartChainAddress(BytesToAddress([]byte{1}))
-	emptySmartChainAddr := SmartChainAddress(BytesToAddress([]byte{0}))
+	nonEmptySmartChainAddr := sdk.SmartChainAddress(BytesToAddress([]byte{1}))
+	emptySmartChainAddr := sdk.SmartChainAddress(BytesToAddress([]byte{0}))
 
 	tests := []struct {
 		bindMsg      BindMsg

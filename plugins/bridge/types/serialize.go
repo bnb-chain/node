@@ -18,7 +18,7 @@ const (
 type BindSynPackage struct {
 	PackageType  BindPackageType
 	TokenSymbol  [32]byte
-	ContractAddr SmartChainAddress
+	ContractAddr sdk.SmartChainAddress
 	TotalSupply  *big.Int
 	PeggyAmount  *big.Int
 	Decimals     uint8
@@ -67,10 +67,10 @@ type ApproveBindAckPackage struct {
 
 type TransferInSynPackage struct {
 	TokenSymbol       [32]byte
-	ContractAddress   SmartChainAddress
+	ContractAddress   sdk.SmartChainAddress
 	Amounts           []*big.Int
 	ReceiverAddresses []sdk.AccAddress
-	RefundAddresses   []SmartChainAddress
+	RefundAddresses   []sdk.SmartChainAddress
 	ExpireTime        uint64
 }
 
@@ -84,17 +84,17 @@ func DeserializeTransferInSynPackage(serializedPackage []byte) (*TransferInSynPa
 }
 
 type TransferInRefundPackage struct {
-	ContractAddr    SmartChainAddress
+	ContractAddr    sdk.SmartChainAddress
 	RefundAmounts   []*big.Int
-	RefundAddresses []SmartChainAddress
+	RefundAddresses []sdk.SmartChainAddress
 	RefundReason    RefundReason
 }
 
 type TransferOutSynPackage struct {
 	TokenSymbol     [32]byte
-	ContractAddress SmartChainAddress
+	ContractAddress sdk.SmartChainAddress
 	Amount          *big.Int
-	Recipient       SmartChainAddress
+	Recipient       sdk.SmartChainAddress
 	RefundAddress   sdk.AccAddress
 	ExpireTime      uint64
 }
@@ -135,8 +135,8 @@ func DeserializeTransferOutRefundPackage(serializedPackage []byte) (*TransferOut
 }
 
 type MirrorSynPackage struct {
-	MirrorSender     SmartChainAddress
-	ContractAddr     SmartChainAddress
+	MirrorSender     sdk.SmartChainAddress
+	ContractAddr     sdk.SmartChainAddress
 	BEP20Name        [32]byte
 	BEP20Symbol      [32]byte
 	BEP20TotalSupply *big.Int
@@ -163,8 +163,8 @@ const (
 )
 
 type MirrorAckPackage struct {
-	MirrorSender SmartChainAddress
-	ContractAddr SmartChainAddress
+	MirrorSender sdk.SmartChainAddress
+	ContractAddr sdk.SmartChainAddress
 	Decimals     uint8
 	BEP2Symbol   [32]byte
 	MirrorFee    *big.Int
@@ -178,8 +178,8 @@ const (
 )
 
 type MirrorSyncSynPackage struct {
-	SyncSender       SmartChainAddress
-	ContractAddr     SmartChainAddress
+	SyncSender       sdk.SmartChainAddress
+	ContractAddr     sdk.SmartChainAddress
 	BEP2Symbol       [32]byte
 	BEP20TotalSupply *big.Int
 	SyncFee          *big.Int
@@ -196,8 +196,8 @@ func DeserializeMirrorSyncSynPackage(serializedPackage []byte) (*MirrorSyncSynPa
 }
 
 type MirrorSyncAckPackage struct {
-	SyncSender   SmartChainAddress
-	ContractAddr SmartChainAddress
+	SyncSender   sdk.SmartChainAddress
+	ContractAddr sdk.SmartChainAddress
 	SyncFee      *big.Int
 	ErrorCode    uint8
 }

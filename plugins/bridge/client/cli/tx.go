@@ -53,7 +53,7 @@ func BindCmd(cdc *codec.Codec) *cobra.Command {
 			expireTime := viper.GetInt64(flagExpireTime)
 
 			// build message
-			contractAddress, err := types.NewSmartChainAddress(contractAddressStr)
+			contractAddress, err := sdk.NewSmartChainAddress(contractAddressStr)
 			if err != nil {
 				return err
 			}
@@ -133,7 +133,7 @@ func TransferOutCmd(cdc *codec.Codec) *cobra.Command {
 			}
 
 			// build message
-			toAddress, err := types.NewSmartChainAddress(toAddressStr)
+			toAddress, err := sdk.NewSmartChainAddress(toAddressStr)
 			if err != nil {
 				return err
 			}

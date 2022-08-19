@@ -27,7 +27,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/keeper"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -171,6 +170,8 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.StakeStoreKey, common.StakeRewardStoreKey, common.TStakeStoreKey,
 		app.CoinKeeper, app.Pool, app.ParamHub.Subspace(stake.DefaultParamspace),
 		app.RegisterCodespace(stake.DefaultCodespace),
+		sdk.ChainID(app.crossChainConfig.BscIbcChainId),
+		app.crossChainConfig.BscChainId,
 	)
 
 	app.ValAddrCache = NewValAddrCache(app.stakeKeeper)
@@ -329,6 +330,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixFailAckPackage, upgradeConfig.FixFailAckPackageHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHH, upgradeConfig.BEPHHHHeight)
 
 	// register store keys of upgrade
@@ -544,6 +546,28 @@ func (app *BinanceChain) initStaking() {
 		params.RewardDistributionBatchSize = 1000
 		app.stakeKeeper.SetParams(newCtx, params)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP153, func(ctx sdk.Context) {
+		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
+		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.CrossStakeChannelID, sdk.ChannelAllow)
+		stakeContractAddr := "0000000000000000000000000000000000002001"
+		stakeContractBytes, _ := hex.DecodeString(stakeContractAddr)
+		_, sdkErr := app.scKeeper.CreateNewChannelToIbc(ctx, chainId, sTypes.CrossStakeChannelID, sdk.RewardNotFromSystem, stakeContractBytes)
+		if sdkErr != nil {
+			panic(sdkErr.Error())
+		}
+		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
+		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+		if err != nil {
+			panic(err)
+		}
+	})
+	if sdk.IsUpgrade(sdk.BEP153) {
+		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
+		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+		if err != nil {
+			panic(err)
+		}
+	}
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHH, func(ctx sdk.Context) {
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)

@@ -124,7 +124,7 @@ func (k Keeper) GetBindRequest(ctx sdk.Context, symbol string) (types.BindReques
 	return bindRequest, nil
 }
 
-func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress, decimals int8) {
+func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr sdk.SmartChainAddress, decimals int8) {
 	key := types.GetContractDecimalsKey(contractAddr[:])
 
 	kvStore := ctx.KVStore(k.storeKey)
@@ -136,7 +136,7 @@ func (k Keeper) SetContractDecimals(ctx sdk.Context, contractAddr types.SmartCha
 	kvStore.Set(key, []byte{byte(decimals)})
 }
 
-func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr types.SmartChainAddress) int8 {
+func (k Keeper) GetContractDecimals(ctx sdk.Context, contractAddr sdk.SmartChainAddress) int8 {
 	if sdk.IsUpgrade(upgrade.FixFailAckPackage) {
 		if strings.ToLower(contractAddr.String()) == types.BNBContractAddr {
 			return types.BNBContractDecimals

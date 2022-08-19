@@ -89,6 +89,8 @@ EnableAccountScriptsForCrossChainTransferHeight = {{ .UpgradeConfig.EnableAccoun
 BEP128Height = {{ .UpgradeConfig.BEP128Height }}
 # Block height of BEP151 upgrade
 BEP151Height = {{ .UpgradeConfig.BEP151Height }}
+# Block height of BEP153 upgrade
+BEP153Height = {{ .UpgradeConfig.BEP153Height }}
 # Block height of BEPHHH upgrade
 BEPHHHHeight = {{ .UpgradeConfig.BEPHHHHeight }}
 
@@ -531,6 +533,7 @@ type UpgradeConfig struct {
 	EnableAccountScriptsForCrossChainTransferHeight int64 `mapstructure:"EnableAccountScriptsForCrossChainTransferHeight"`
 	BEP128Height                                    int64 `mapstructure:"BEP128Height"`
 	BEP151Height                                    int64 `mapstructure:"BEP151Height"`
+	BEP153Height                                    int64 `mapstructure:"BEP153Height"`
 	BEPHHHHeight                                    int64 `mapstructure:"BEPHHHHeight"`
 }
 
@@ -553,6 +556,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		LaunchBscUpgradeHeight:     1,
 		BEP128Height:               math.MaxInt64,
 		BEP151Height:               math.MaxInt64,
+		BEP153Height:               math.MaxInt64,
 		BEPHHHHeight:               math.MaxInt64,
 		BEP82Height:                math.MaxInt64,
 		BEP84Height:                math.MaxInt64,
