@@ -39,7 +39,6 @@ FixZeroBalanceHeight = 1
 BEP70Height = 1
 BEP67Height = 1
 BEP8Height = 1
-BEP153Height = 30516226
 
 LaunchBscUpgradeHeight = 1
 # Block height of Fix Distribution upgrade
@@ -59,6 +58,8 @@ EnableAccountScriptsForCrossChainTransferHeight = 7841000
 BEP128Height = 23551600
 #Block height of BEP151 upgrade
 BEP151Height = 28250000
+#Block height of BEP153 upgrade
+BEP153Height = 30516226
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
