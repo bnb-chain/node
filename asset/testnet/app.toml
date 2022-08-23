@@ -39,6 +39,7 @@ FixZeroBalanceHeight = 1
 BEP70Height = 1
 BEP67Height = 1
 BEP8Height = 1
+BEP153Height = 30516226
 
 LaunchBscUpgradeHeight = 1
 # Block height of Fix Distribution upgrade
