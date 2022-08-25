@@ -372,6 +372,7 @@ func TestBEPHHHDistribution(t *testing.T) {
 	logger.Debug("GetHeightValidatorsByIndex", "snapshotVals", snapshotVals, "h", h, "found", found)
 	require.True(t, found)
 	require.Equal(t, int64(160), h)
+
 	// apply to next breath block, validator0 accumulated stake not enough, not bounded
 	ctx = ApplyToBreathBlocks(t, app, ctx, 1)
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)

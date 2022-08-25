@@ -28,6 +28,26 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
       - run: make integration_test
+  coverage-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.16
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/bin
+          key: tools-v0
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - run: make test
       - run: make test_coverage
       - name: Upload coverage to Codecov
