@@ -83,21 +83,25 @@ func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	// distrubute proposer rewards
 	proposerRewards := sdk.Coins{}
 	feeForAllRewards := sdk.Coins{}
-	var baseProposerRewardRatio int64 = 1  // 1%
-	var bonusProposerRewardRatio int64 = 4 // 4%
+	var baseProposerRewardRatio sdk.Dec = stakeKeeper.BaseProposerRewardRatio(ctx)
+	var bonusProposerRewardRatio sdk.Dec = stakeKeeper.BonusProposerRewardRatio(ctx)
 	voteNum := int64(len(ctx.VoteInfos()))
 	currentValidators, _, _ := stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	validatorNum := int64(len(currentValidators))
-	// at the first breath block after BEPHHH activation, the validator snapshot is empty
-	// we distribute the fee to proposer directly (voteNum should never be 0)
-	if validatorNum == 0 {
-		validatorNum = voteNum
-	}
 	for _, token := range fee.Tokens {
-		amount := token.Amount
-		proposerAmount := (amount*baseProposerRewardRatio + amount*bonusProposerRewardRatio*voteNum/validatorNum) / 100
-		proposerRewards = append(proposerRewards, sdk.NewCoin(token.Denom, proposerAmount))
-		feeForAllRewards = append(feeForAllRewards, sdk.NewCoin(token.Denom, amount-proposerAmount))
+		amount := sdk.NewDec(token.Amount)
+		baseProposerReward := amount.Mul(baseProposerRewardRatio)
+		var bonusProposerReward sdk.Dec
+		if validatorNum == 0 {
+			// at the first breath block after BEPHHH activation, the validator snapshot is empty
+			// we distribute the bonusProposerReward to proposer directly (voteNum should never be 0)
+			bonusProposerReward = amount.Mul(bonusProposerRewardRatio)
+		} else {
+			bonusProposerReward = amount.Mul(bonusProposerRewardRatio).MulInt(voteNum).QuoInt(validatorNum)
+		}
+		proposerAmount := baseProposerReward.Add(bonusProposerReward)
+		proposerRewards = append(proposerRewards, sdk.NewCoin(token.Denom, proposerAmount.RawInt()))
+		feeForAllRewards = append(feeForAllRewards, sdk.NewCoin(token.Denom, amount.Sub(proposerAmount).RawInt()))
 	}
 	var err error
 	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, stake.FeeForAllAccAddr, feeForAllRewards); err != nil {
@@ -108,6 +112,7 @@ func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	}
 	ctx.Logger().Debug("distributeFeeBEPHHH", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
 
+	// TODO: design event for fee distribution
 	//if publishBlockFee {
 	//	blockFee.Fee = fee.String()
 	//	for _, validator := range currentValidators {

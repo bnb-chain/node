@@ -357,8 +357,8 @@ func TestBEPHHHDistribution(t *testing.T) {
 	validator0Balance := app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr)
 	feeForAllBalance := app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr)
 	logger.Debug("feeBalances", "validator0", validator0Balance, "feeForAll", feeForAllBalance)
-	require.Equal(t, app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr), sdk.Coins{sdk.NewCoin("BNB", 50000000)})
-	require.Equal(t, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr), sdk.Coins{sdk.NewCoin("BNB", 950000008)})
+	require.Equal(t, sdk.Coins{sdk.NewCoin("BNB", 50000000)}, app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr))
+	require.Equal(t, sdk.Coins{sdk.NewCoin("BNB", 950000008)}, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr))
 
 	// check validator just staked
 	newValidator, found := app.stakeKeeper.GetValidator(ctx, sdk.ValAddress(accs[0].Address))

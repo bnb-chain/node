@@ -569,6 +569,9 @@ func (app *BinanceChain) initStaking() {
 		params := app.stakeKeeper.GetParams(newCtx)
 		params.MaxStakeSnapshots = 30
 		params.MaxValidators = 11
+		params.BaseProposerRewardRatio = sdk.NewDec(1e6)  // 1%
+		params.BonusProposerRewardRatio = sdk.NewDec(4e6) // 4%
+		params.FeeFromBscToBcRatio = sdk.NewDec(1e7)      // 10%
 		app.stakeKeeper.SetParams(ctx, params)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
