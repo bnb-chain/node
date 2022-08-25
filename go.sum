@@ -26,8 +26,8 @@ github.com/binance-chain/go-sdk v1.2.7 h1:JB8O37BNgYCgwrYBlpFHOe/S7kGLdBmHj4gIFL
 github.com/binance-chain/go-sdk v1.2.7/go.mod h1:WFOTNRkp3JmWEuGAmNFw+7WbK7DG8ZzEWmw4Ym4Mb0M=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1 h1:8mAtw1Tp/BhhTrsXmXM60H1fihcvcKLfo2ZSxShaXKw=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1/go.mod h1:FI6WAujuiBpoSavYreux2zTKyrUkngXDlRJczxsDK5M=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220818164415-3539dc9dd28c h1:aBuDDbELVOMZJse1msfaeJn/BBdJ8r1eH8qkVhzs9ao=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220818164415-3539dc9dd28c/go.mod h1:+0MJRhSM5hb/ZvvoWOVt7LaihYM1Ax+PxnAMK/lHHUs=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220825201154-670de5052cd4 h1:YFM1ovpIwLzmBbfeBj7ygzp9F23QHe3QNRT0MaREajQ=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220825201154-670de5052cd4/go.mod h1:+0MJRhSM5hb/ZvvoWOVt7LaihYM1Ax+PxnAMK/lHHUs=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
 github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7 h1:wJBrhLAm9P+Jjm/clTxynAZJl63xD7LatKmL5e3YzbY=
@@ -260,8 +260,8 @@ github.com/tendermint/btcd v0.1.1 h1:0VcxPfflS2zZ3RiOAHkBiFUcPvbtRj5O7zHmcJWHV7s
 github.com/tendermint/btcd v0.1.1/go.mod h1:DC6/m53jtQzr/NFmMNEu0rxf18/ktVoVtMrnDD5pN+U=
 github.com/tendermint/crypto v0.0.0-20190823183015-45b1026d81ae h1:AOXNM7c2Vvo45SjAgeWF8Wy+NS7/NCqzRNpUc+HPAec=
 github.com/tendermint/crypto v0.0.0-20190823183015-45b1026d81ae/go.mod h1:z4YtwM70uOnk8h0pjJYlj3zdYwi9l03By6iAIF5j/Pk=
-github.com/tidwall/gjson v1.14.2 h1:6BBkirS0rAHjumnjHF6qgy5d2YAJ1TLIaFE2lzfOLqo=
-github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
+github.com/tidwall/gjson v1.14.3 h1:9jvXn7olKEHU1S9vwoMGliaT8jq1vJ7IH/n9zD9Dnlw=
+github.com/tidwall/gjson v1.14.3/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=

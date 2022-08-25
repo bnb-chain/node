@@ -6,7 +6,7 @@ import (
 	"github.com/binance-chain/go-sdk/client/rpc"
 	sdkTypes "github.com/binance-chain/go-sdk/common/types"
 	"github.com/binance-chain/go-sdk/keys"
-	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/types"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	bankClient "github.com/cosmos/cosmos-sdk/x/bank/client"
 	"github.com/cosmos/cosmos-sdk/x/stake"
@@ -80,7 +80,7 @@ func Staking() error {
 	}
 	log.Printf("chainId: %s\n", chainId)
 	log.Printf("node0 status")
-	PrettyPrint(status)
+	log.Println(Pretty(status))
 	node1RpcAddr := "tcp://127.0.0.1:8101"
 	c1 := rpc.NewRPCClient(node1RpcAddr, sdkTypes.ProdNetwork)
 	status, err = c1.Status()
@@ -88,7 +88,7 @@ func Staking() error {
 		return xerrors.Errorf("get status error: %w", err)
 	}
 	log.Printf("node1 status")
-	PrettyPrint(status)
+	log.Println(Pretty(status))
 
 	// binance client
 	bc0 := NewBinanceChainClient(node0RpcAddr, sdkTypes.ProdNetwork, chainId)
@@ -117,7 +117,7 @@ func Staking() error {
 	log.Printf("node1 address: %s", node1Info.Addr)
 
 	// transfer 2000000000000 BNB to node1
-	sendCoinsMsg := bankClient.CreateMsg(node0Info.DelegatorAddr, node1Info.DelegatorAddr, cosmosTypes.Coins{cosmosTypes.NewCoin("BNB", 2000000000000)})
+	sendCoinsMsg := bankClient.CreateMsg(node0Info.DelegatorAddr, node1Info.DelegatorAddr, cosmosTypes.Coins{cosmosTypes.NewCoin("BNB", 20000000000000)})
 	_, err = bc0.Connect(node0Info.KeyManager).SignAndSendMsgs([]cosmosTypes.Msg{sendCoinsMsg}, nil)
 	if err != nil {
 		return xerrors.Errorf("failed to send coins: %w", err)
@@ -136,26 +136,25 @@ func Staking() error {
 		DelegatorAddr: node1Info.DelegatorAddr,
 		ValidatorAddr: node1Info.ValidatorAddr,
 		PubKey:        node1Info.PubKey,
-		Delegation:    app.DefaultSelfDelegationToken,
+		Delegation:    cosmosTypes.NewCoin(types.NativeTokenSymbol, 20000e8),
 	}
 	_, err = bc0.Connect(node1Info.KeyManager).SignAndSendMsgs([]cosmosTypes.Msg{stakeMsg}, nil)
 	if err != nil {
 		return xerrors.Errorf("failed to stake: %w", err)
 	}
-
 	// verify validator change
 	validators, err = c0.GetStakeValidators()
 	if err != nil {
 		return xerrors.Errorf("get validators error: %w", err)
 	}
-	PrettyPrint(validators)
+	log.Println(Pretty(validators))
 	return nil
 }
 
-func PrettyPrint(v interface{}) {
+func Pretty(v interface{}) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		panic(err)
 	}
-	log.Println(string(b))
+	return string(b)
 }

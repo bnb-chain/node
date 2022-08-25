@@ -1,8 +1,11 @@
 package app
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
+	sTypes "github.com/cosmos/cosmos-sdk/x/stake/types"
 	"io"
 	"math"
 	"os"
@@ -369,13 +372,11 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
-	//upgrade.Mgr.RegisterMsgTypes(upgrade.BEPHHH,
-	//	stake.MsgCreateValidator{}.Type(),
-	//	stake.MsgEditValidator{}.Type(),
-	//	stake.MsgDelegate{}.Type(),
-	//	stake.MsgRedelegate{}.Type(),
-	//	stake.MsgUndelegate{}.Type(),
-	//)
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEPHHH,
+		stake.MsgEditValidator{}.Type(),
+		stake.MsgRedelegate{}.Type(),
+		stake.MsgUndelegate{}.Type(),
+	)
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
 		issue.IssueMiniMsg{}.Type(),
@@ -561,14 +562,8 @@ func (app *BinanceChain) initStaking() {
 			panic(err)
 		}
 	})
-	if sdk.IsUpgrade(sdk.BEP153) {
-		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
-		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
-		if err != nil {
-			panic(err)
-		}
-	}
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHH, func(ctx sdk.Context) {
+		stake.MigrateValidatorDistributionAddr(ctx, app.stakeKeeper)
 		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		params := app.stakeKeeper.GetParams(newCtx)

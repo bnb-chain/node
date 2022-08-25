@@ -15,8 +15,9 @@ import (
 
 func NewValAddrCache(stakeKeeper stake.Keeper) *ValAddrCache {
 	cache := &ValAddrCache{
-		cache:       make(map[string]sdk.AccAddress),
-		stakeKeeper: stakeKeeper,
+		cache:                 make(map[string]sdk.AccAddress),
+		distributionAddrCache: make(map[string]sdk.AccAddress),
+		stakeKeeper:           stakeKeeper,
 	}
 
 	return cache
@@ -69,6 +70,7 @@ func (vac *ValAddrCache) GetDistributionAddr(ctx sdk.Context, consAddr sdk.ConsA
 
 func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
+	ctx.Logger().Debug("distributeFeeBEPHHH", "height", ctx.BlockHeader().Height, "fee", fee)
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
 		// no fees in this block
@@ -84,21 +86,27 @@ func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	var baseProposerRewardRatio int64 = 1  // 1%
 	var bonusProposerRewardRatio int64 = 4 // 4%
 	voteNum := int64(len(ctx.VoteInfos()))
-	// TODO: ensure it's the right way to get current validators
-	currentValidators := stakeKeeper.GetLastValidators(ctx)
+	currentValidators, _, _ := stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	validatorNum := int64(len(currentValidators))
+	// at the first breath block after BEPHHH activation, the validator snapshot is empty
+	// we distribute the fee to proposer directly (voteNum should never be 0)
+	if validatorNum == 0 {
+		validatorNum = voteNum
+	}
 	for _, token := range fee.Tokens {
 		amount := token.Amount
 		proposerAmount := (amount*baseProposerRewardRatio + amount*bonusProposerRewardRatio*voteNum/validatorNum) / 100
 		proposerRewards = append(proposerRewards, sdk.NewCoin(token.Denom, proposerAmount))
 		feeForAllRewards = append(feeForAllRewards, sdk.NewCoin(token.Denom, amount-proposerAmount))
 	}
-	proposerDistributionAcc := am.GetAccount(ctx, proposerDistributionAddr)
-	_ = proposerDistributionAcc.SetCoins(proposerDistributionAcc.GetCoins().Plus(proposerRewards))
-	am.SetAccount(ctx, proposerDistributionAcc)
-	feeForAllAcc := am.GetAccount(ctx, stake.FeeForAllAccAddr)
-	_ = feeForAllAcc.SetCoins(feeForAllAcc.GetCoins().Plus(feeForAllRewards))
-	am.SetAccount(ctx, feeForAllAcc)
+	var err error
+	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, stake.FeeForAllAccAddr, feeForAllRewards); err != nil {
+		panic(err)
+	}
+	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, proposerDistributionAddr, proposerRewards); err != nil {
+		panic(err)
+	}
+	ctx.Logger().Debug("distributeFeeBEPHHH", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
 
 	//if publishBlockFee {
 	//	blockFee.Fee = fee.String()
