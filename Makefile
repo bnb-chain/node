@@ -143,7 +143,7 @@ install_c:
 format:
 	@echo "-->Formatting"
 	$(shell go fmt ./...)
-	$(shell find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w)
+	bash scripts/importssort.sh
 
 ########################################
 ### Lint

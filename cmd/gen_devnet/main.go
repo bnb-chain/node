@@ -3,14 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/bnb-chain/node/app"
 	"github.com/bnb-chain/node/app/config"
 	bnbInit "github.com/bnb-chain/node/cmd/bnbchaind/init"
 	"github.com/bnb-chain/node/common/utils"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 var (

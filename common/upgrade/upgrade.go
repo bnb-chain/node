@@ -1,6 +1,8 @@
 package upgrade
 
-import sdk "github.com/cosmos/cosmos-sdk/types"
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
 
 var Mgr = sdk.UpgradeMgr
 

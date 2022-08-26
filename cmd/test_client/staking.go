@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"path"
+
 	"github.com/binance-chain/go-sdk/client/rpc"
 	sdkTypes "github.com/binance-chain/go-sdk/common/types"
 	"github.com/binance-chain/go-sdk/keys"
-	"github.com/bnb-chain/node/common/types"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	bankClient "github.com/cosmos/cosmos-sdk/x/bank/client"
 	"github.com/cosmos/cosmos-sdk/x/stake"
@@ -16,9 +19,8 @@ import (
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tidwall/gjson"
 	"golang.org/x/xerrors"
-	"log"
-	"os"
-	"path"
+
+	"github.com/bnb-chain/node/common/types"
 )
 
 type NodeInfo struct {

@@ -7,9 +7,7 @@ import (
 	"text/template"
 
 	"github.com/cosmos/cosmos-sdk/server"
-
 	"github.com/spf13/viper"
-
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 )

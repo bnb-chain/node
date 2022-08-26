@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-	cmn "github.com/tendermint/tendermint/libs/common"
 	"text/template"
+
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var configTemplate *template.Template

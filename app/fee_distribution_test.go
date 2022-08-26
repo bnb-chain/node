@@ -2,13 +2,6 @@ package app
 
 import (
 	"fmt"
-	"github.com/bnb-chain/node/common/upgrade"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/mock"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tidwall/gjson"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,15 +11,20 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/mock"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-
+	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tidwall/gjson"
 
 	"github.com/bnb-chain/node/app/pub"
 	"github.com/bnb-chain/node/common/testutils"
 	"github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/wire"
 )
 
@@ -160,11 +158,7 @@ func GenAccounts(n int) (accounts []Account) {
 func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	// config
 	upgrade.Mgr.Reset()
-	homePath := "asset/mainnet"
-	viper.Set("home", homePath)
-	ServerContext.ParseAppConfigInPlace()
 	context := ServerContext
-	interceptLoadConfigInPlace(context)
 	ServerContext.BreatheBlockInterval = BREATHE_BLOCK_INTERVAL
 	ServerContext.LaunchBscUpgradeHeight = 1
 	ServerContext.BEP128Height = 2
@@ -186,7 +180,7 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	logger.Info("BscIbcChainId", "BscIbcChainId", ServerContext.BscIbcChainId)
 
 	// read genesis
-	genesisJsonFile, err := os.Open("../" + homePath + "/genesis.json")
+	genesisJsonFile, err := os.Open("../asset/mainnet/genesis.json")
 	if err != nil {
 		panic(err)
 	}
@@ -252,7 +246,7 @@ func ApplyBlock(t *testing.T, app *BinanceChain, ctx sdk.Context, txs []auth.Std
 	height := ctx.BlockHeader().Height + 1
 	logger.Debug("ApplyBlock", "height", height)
 	header := abci.Header{Height: height}
-	validators := app.stakeKeeper.GetBondedValidatorsByPower(ctx)
+	validators := app.stakeKeeper.GetSortedBondedValidators(ctx)
 	//logger.Debug("ApplyBlock", "validators", validators)
 	header.ProposerAddress = validators[0].ConsAddress()
 	lastCommitInfo := abci.LastCommitInfo{
@@ -350,8 +344,8 @@ func TestBEPHHHDistribution(t *testing.T) {
 	)
 	txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
 	ctx = ApplyBlock(t, app, ctx, txs)
-	validators = app.stakeKeeper.GetAllValidators(ctx)
-	require.Len(t, validators, 12)
+	require.Equal(t, int64(12), app.stakeKeeper.GetAllValidatorsCount(ctx))
+	validators = app.stakeKeeper.GetSortedBondedValidators(ctx)
 	// check fees
 	logger.Debug("feeAddrs", "validator0", validators[0].DistributionAddr, "feeForAll", stake.FeeForAllAccAddr)
 	validator0Balance := app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr)

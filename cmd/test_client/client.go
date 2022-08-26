@@ -2,16 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"log"
+
 	"github.com/binance-chain/go-sdk/client/rpc"
 	sdkTypes "github.com/binance-chain/go-sdk/common/types"
 	"github.com/binance-chain/go-sdk/keys"
-	"github.com/bnb-chain/node/app"
-	"github.com/bnb-chain/node/wire"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	context "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 	"golang.org/x/xerrors"
-	"log"
+
+	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/wire"
 )
 
 // bnbcli sdk version
