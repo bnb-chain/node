@@ -335,6 +335,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHH, upgradeConfig.BEPHHHHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHHPhase2, upgradeConfig.BEPHHHPhase2Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -373,7 +374,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		oracle.ClaimMsg{}.Type(),
 	)
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEPHHH,
+		stake.MsgCreateValidator{}.Type(),
 		stake.MsgEditValidator{}.Type(),
+		stake.MsgDelegate{}.Type(),
 		stake.MsgRedelegate{}.Type(),
 		stake.MsgUndelegate{}.Type(),
 	)
@@ -573,6 +576,9 @@ func (app *BinanceChain) initStaking() {
 		params.BonusProposerRewardRatio = sdk.NewDec(4e6) // 4%
 		params.FeeFromBscToBcRatio = sdk.NewDec(1e7)      // 10%
 		app.stakeKeeper.SetParams(ctx, params)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHHPhase2, func(ctx sdk.Context) {
+		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())

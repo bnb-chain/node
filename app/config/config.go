@@ -91,6 +91,8 @@ BEP151Height = {{ .UpgradeConfig.BEP151Height }}
 BEP153Height = {{ .UpgradeConfig.BEP153Height }}
 # Block height of BEPHHH upgrade
 BEPHHHHeight = {{ .UpgradeConfig.BEPHHHHeight }}
+# Block height of BEPHHHPhase2 upgrade
+BEPHHHPhase2Height = {{ .UpgradeConfig.BEPHHHPhase2Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -533,6 +535,7 @@ type UpgradeConfig struct {
 	BEP151Height                                    int64 `mapstructure:"BEP151Height"`
 	BEP153Height                                    int64 `mapstructure:"BEP153Height"`
 	BEPHHHHeight                                    int64 `mapstructure:"BEPHHHHeight"`
+	BEPHHHPhase2Height                              int64 `mapstructure:"BEPHHHPhase2Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -556,6 +559,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP151Height:               math.MaxInt64,
 		BEP153Height:               math.MaxInt64,
 		BEPHHHHeight:               math.MaxInt64,
+		BEPHHHPhase2Height:         math.MaxInt64,
 		BEP82Height:                math.MaxInt64,
 		BEP84Height:                math.MaxInt64,
 		BEP87Height:                math.MaxInt64,

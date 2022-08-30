@@ -165,6 +165,7 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	ServerContext.BEP151Height = 3
 	ServerContext.BEP153Height = 4
 	ServerContext.BEPHHHHeight = 6
+	ServerContext.BEPHHHPhase2Height = 159
 	ServerContext.Config.StateSyncReactor = false
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(context.Bech32PrefixAccAddr, context.Bech32PrefixAccPub)
@@ -174,6 +175,7 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	// create app
 	app := NewBinanceChain(logger, memDB, io.Discard)
 	logger.Info("BEPHHHHeight", "BEPHHHHeight", ServerContext.BEPHHHHeight)
+	logger.Info("BEPHHHPhase2Height", "BEPHHHPhase2Height", ServerContext.BEPHHHPhase2Height)
 	logger.Info("BreatheBlockInterval", "BreatheBlockInterval", ServerContext.BreatheBlockInterval)
 	logger.Info("IbcChainId", "IbcChainId", ServerContext.IbcChainId)
 	logger.Info("BscChainId", "BscChainId", ServerContext.BscChainId)
@@ -190,8 +192,6 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 		panic(err)
 	}
 	stateBytes := gjson.Get(string(genesisByteValue), "app_state").String()
-	//fmt.Println(stateBytes)
-
 	n := 100
 	accounts := GenAccounts(n)
 	app.SetCheckState(abci.Header{})
@@ -200,10 +200,8 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 		Validators:    []abci.ValidatorUpdate{},
 		AppStateBytes: []byte(stateBytes),
 	})
-	// it is required in fee distribution during end block
-	//app.ValAddrCache.SetAccAddr(sdk.ConsAddress(valAddr), appAcc.Address)
 	ctx := app.BaseApp.DeliverState.Ctx
-	for i := 0; i < 10; i++ {
+	for i := 0; i < n; i++ {
 		appAcc := accounts[i].AppAccount
 		if app.AccountKeeper.GetAccount(ctx, accounts[i].Address) == nil {
 			appAcc.BaseAccount.AccountNumber = app.AccountKeeper.GetNextAccountNumber(ctx)
@@ -299,7 +297,7 @@ func TestBEPHHHDistribution(t *testing.T) {
 	ctx = ApplyEmptyBlocks(t, app, ctx, 6)
 	validators = app.stakeKeeper.GetAllValidators(ctx)
 	require.Equal(t, 11, len(validators))
-	//logger.Info("validators", "validators", validators)
+	// logger.Info("validators", "validators", validators)
 	// migrate validator to add distribution address
 	require.True(t, len(validators[0].DistributionAddr) != 0, "distribution address should not be empty")
 	require.Lenf(t, validators[0].StakeSnapshots, 0, "no snapshot yet")
@@ -327,19 +325,31 @@ func TestBEPHHHDistribution(t *testing.T) {
 	require.True(t, found, "get snapshot in the first breath block after active BEPHHH")
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 2)
 	require.False(t, found, "only one snapshot")
-	// pass 30 breath blocks
-	ctx = ApplyToBreathBlocks(t, app, ctx, 30)
+	// pass 28 breath blocks
+	ctx = ApplyToBreathBlocks(t, app, ctx, 28)
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	logger.Debug("GetHeightValidatorsByIndex", "snapshotVals", snapshotVals, "h", h, "found", found)
+	require.True(t, found)
+	require.Len(t, snapshotVals[0].StakeSnapshots, 29)
+	// try to create validator
+	bondCoin := sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt())
+	commissionMsg := stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec())
+	description := stake.NewDescription("validator0", "", "", "")
+	createValidatorMsg := stake.NewMsgCreateValidator(
+		sdk.ValAddress(accs[0].Address), accs[0].Priv.PubKey(), bondCoin, description, commissionMsg,
+	)
+	require.Panics(t, func() {
+		txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
+	})
+	// pass one more breath block, activate BEPHHHPhase2
+	ctx = ApplyToBreathBlocks(t, app, ctx, 2)
+	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	require.True(t, found)
 	require.Len(t, snapshotVals[0].StakeSnapshots, 30)
 	require.True(t, app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr).IsZero())
 	require.Equal(t, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr), sdk.Coins{sdk.NewCoin("BNB", 8)})
 	// create new validators, stake number is 16 times of original validators
-	bondCoin := sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt())
-	commissionMsg := stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec())
-	description := stake.NewDescription("validator0", "", "", "")
-	createValidatorMsg := stake.NewMsgCreateValidator(
+	createValidatorMsg = stake.NewMsgCreateValidator(
 		sdk.ValAddress(accs[0].Address), accs[0].Priv.PubKey(), bondCoin, description, commissionMsg,
 	)
 	txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
@@ -375,10 +385,12 @@ func TestBEPHHHDistribution(t *testing.T) {
 	require.Len(t, snapshotVals, 11)
 	require.Equal(t, int64(165), h)
 	require.NotEqual(t, snapshotVals[0].OperatorAddr, accs[0].ValAddress)
+
 	// check fees after distribution
 	feeForAllBalance = app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr)
 	logger.Debug("feeBalances", "validator0", validator0Balance, "feeForAll", feeForAllBalance)
 	require.Equal(t, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr), sdk.Coins{sdk.NewCoin("BNB", 1)})
+
 	// iter all validators, check their fees
 	distributionAddrBalanceSum := feeForAllBalance
 	var expectedBalance sdk.Coin
