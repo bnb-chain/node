@@ -334,8 +334,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHH, upgradeConfig.BEPHHHHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.BEPHHHPhase2, upgradeConfig.BEPHHHPhase2Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159, upgradeConfig.BEP159Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159Phase2, upgradeConfig.BEP159Phase2Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -373,7 +373,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
 	)
-	upgrade.Mgr.RegisterMsgTypes(upgrade.BEPHHH,
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP159,
 		stake.MsgCreateValidator{}.Type(),
 		stake.MsgEditValidator{}.Type(),
 		stake.MsgDelegate{}.Type(),
@@ -565,11 +565,11 @@ func (app *BinanceChain) initStaking() {
 			panic(err)
 		}
 	})
-	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHH, func(ctx sdk.Context) {
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159, func(ctx sdk.Context) {
 		stake.MigrateValidatorDistributionAddr(ctx, app.stakeKeeper)
-		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
-		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
-		params := app.stakeKeeper.GetParams(newCtx)
+		params := app.stakeKeeper.GetParams(ctx)
+		params.RewardDistributionBatchSize = 1000
+		params.MinDelegationChange = 1e8
 		params.MaxStakeSnapshots = 30
 		params.MaxValidators = 11
 		params.BaseProposerRewardRatio = sdk.NewDec(1e6)  // 1%
@@ -577,7 +577,7 @@ func (app *BinanceChain) initStaking() {
 		params.FeeFromBscToBcRatio = sdk.NewDec(1e7)      // 10%
 		app.stakeKeeper.SetParams(ctx, params)
 	})
-	upgrade.Mgr.RegisterBeginBlocker(sdk.BEPHHHPhase2, func(ctx sdk.Context) {
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159Phase2, func(ctx sdk.Context) {
 		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
@@ -861,8 +861,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	app.DexKeeper.StoreTradePrices(ctx)
 
 	var blockFee pub.BlockFee
-	if sdk.IsUpgrade(upgrade.BEPHHH) {
-		blockFee = distributeFeeBEPHHH(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee, app.stakeKeeper)
+	if sdk.IsUpgrade(upgrade.BEP159) {
+		blockFee = distributeFeeBEP159(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee, app.stakeKeeper)
 	} else {
 		blockFee = distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
 	}

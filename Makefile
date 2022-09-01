@@ -202,6 +202,9 @@ integration_test: build
 	@echo "-->Integration Test"
 	@./integration_test.sh
 
+bep159_integration_test: build
+	@echo "-->BEP159 Integration Test"
+	@bash ./scripts/bep159_integration_test.sh
 ########################################
 ### Pre Commit
 pre_commit: build test format lint
@@ -251,7 +254,7 @@ docker.clean:
 	rm -rf build/devnet
 
 multi-nodes-test:
-	go run ./cmd/test_client
+	STAKE_ENV=multi go run ./cmd/test_client
 
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.

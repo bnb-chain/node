@@ -68,9 +68,9 @@ func (vac *ValAddrCache) GetDistributionAddr(ctx sdk.Context, consAddr sdk.ConsA
 	return distributionAddr
 }
 
-func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
+func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
-	ctx.Logger().Debug("distributeFeeBEPHHH", "height", ctx.BlockHeader().Height, "fee", fee)
+	ctx.Logger().Debug("distributeFeeBEP159", "height", ctx.BlockHeader().Height, "fee", fee)
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
 		// no fees in this block
@@ -93,7 +93,7 @@ func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 		baseProposerReward := amount.Mul(baseProposerRewardRatio)
 		var bonusProposerReward sdk.Dec
 		if validatorNum == 0 {
-			// at the first breath block after BEPHHH activation, the validator snapshot is empty
+			// at the first breath block after BEP159 activation, the validator snapshot is empty
 			// we distribute the bonusProposerReward to proposer directly (voteNum should never be 0)
 			bonusProposerReward = amount.Mul(bonusProposerRewardRatio)
 		} else {
@@ -110,7 +110,7 @@ func distributeFeeBEPHHH(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, proposerDistributionAddr, proposerRewards); err != nil {
 		panic(err)
 	}
-	ctx.Logger().Debug("distributeFeeBEPHHH", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
+	ctx.Logger().Debug("distributeFeeBEP159", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
 
 	// TODO: design event for fee distribution
 	//if publishBlockFee {

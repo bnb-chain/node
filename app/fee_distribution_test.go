@@ -155,7 +155,7 @@ func GenAccounts(n int) (accounts []Account) {
 	return
 }
 
-func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
+func setupTestForBEP159Test() (*BinanceChain, sdk.Context, []Account) {
 	// config
 	upgrade.Mgr.Reset()
 	context := ServerContext
@@ -164,8 +164,8 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	ServerContext.BEP128Height = 2
 	ServerContext.BEP151Height = 3
 	ServerContext.BEP153Height = 4
-	ServerContext.BEPHHHHeight = 6
-	ServerContext.BEPHHHPhase2Height = 159
+	ServerContext.BEP159Height = 6
+	ServerContext.BEP159Phase2Height = 159
 	ServerContext.Config.StateSyncReactor = false
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(context.Bech32PrefixAccAddr, context.Bech32PrefixAccPub)
@@ -174,8 +174,8 @@ func setupTestForBEPHHHTest() (*BinanceChain, sdk.Context, []Account) {
 	config.Seal()
 	// create app
 	app := NewBinanceChain(logger, memDB, io.Discard)
-	logger.Info("BEPHHHHeight", "BEPHHHHeight", ServerContext.BEPHHHHeight)
-	logger.Info("BEPHHHPhase2Height", "BEPHHHPhase2Height", ServerContext.BEPHHHPhase2Height)
+	logger.Info("BEP159Height", "BEP159Height", ServerContext.BEP159Height)
+	logger.Info("BEP159Phase2Height", "BEP159Phase2Height", ServerContext.BEP159Phase2Height)
 	logger.Info("BreatheBlockInterval", "BreatheBlockInterval", ServerContext.BreatheBlockInterval)
 	logger.Info("IbcChainId", "IbcChainId", ServerContext.IbcChainId)
 	logger.Info("BscChainId", "BscChainId", ServerContext.BscChainId)
@@ -286,14 +286,14 @@ func ApplyToBreathBlocks(t *testing.T, app *BinanceChain, ctx sdk.Context, breat
 	return ApplyEmptyBlocks(t, app, ctx, blockNum)
 }
 
-func TestBEPHHHDistribution(t *testing.T) {
-	app, ctx, accs := setupTestForBEPHHHTest()
+func TestBEP159Distribution(t *testing.T) {
+	app, ctx, accs := setupTestForBEP159Test()
 	// check genesis validators
 	validators := app.stakeKeeper.GetAllValidators(ctx)
 	//logger.Info("validators", "validators", validators)
 	require.Equal(t, 11, len(validators))
 	require.True(t, len(validators[0].DistributionAddr) == 0, "distribution address should be empty")
-	// active BEPHHH
+	// active BEP159
 	ctx = ApplyEmptyBlocks(t, app, ctx, 6)
 	validators = app.stakeKeeper.GetAllValidators(ctx)
 	require.Equal(t, 11, len(validators))
@@ -305,7 +305,7 @@ func TestBEPHHHDistribution(t *testing.T) {
 	snapshotVals, h, found := app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	logger.Debug("GetHeightValidatorsByIndex", "snapshotVals", snapshotVals, "h", h, "found", found)
 	require.False(t, found, "no validators snapshot yet")
-	// no fee got at the beginning of BEPHHH activation
+	// no fee got at the beginning of BEP159 activation
 	require.True(t, app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr).IsZero())
 	require.True(t, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr).IsZero())
 	// transfer tx to make some fees
@@ -322,7 +322,7 @@ func TestBEPHHHDistribution(t *testing.T) {
 	require.False(t, validators[0].AccumulatedStake.IsZero(), "had AccumulatedStake")
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	logger.Debug("GetHeightValidatorsByIndex", "snapshotVals", snapshotVals, "h", h, "found", found)
-	require.True(t, found, "get snapshot in the first breath block after active BEPHHH")
+	require.True(t, found, "get snapshot in the first breath block after active BEP159")
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 2)
 	require.False(t, found, "only one snapshot")
 	// pass 28 breath blocks
@@ -341,7 +341,7 @@ func TestBEPHHHDistribution(t *testing.T) {
 	require.Panics(t, func() {
 		txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
 	})
-	// pass one more breath block, activate BEPHHHPhase2
+	// pass one more breath block, activate BEP159Phase2
 	ctx = ApplyToBreathBlocks(t, app, ctx, 2)
 	snapshotVals, h, found = app.stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
 	require.True(t, found)

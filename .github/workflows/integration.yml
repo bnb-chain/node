@@ -27,7 +27,7 @@ jobs:
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: make integration_test
+      - run: make bep159_integration_test integration_test
   coverage-test:
     runs-on: ubuntu-latest
     steps:

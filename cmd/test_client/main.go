@@ -10,6 +10,7 @@ func main() {
 	err := Staking()
 	if err != nil {
 		log.Printf("%+v\n", err)
+		panic(err)
 	}
 	log.Printf("----- end delist -----")
 }
