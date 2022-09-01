@@ -5,11 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/binance-chain/go-sdk/types/msg"
-	"github.com/binance-chain/go-sdk/types/tx"
-	"github.com/bnb-chain/node/common/types"
-	stake "github.com/cosmos/cosmos-sdk/x/stake/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"log"
 	"math/rand"
 	"os"
@@ -19,14 +14,20 @@ import (
 	"github.com/binance-chain/go-sdk/client/rpc"
 	sdkTypes "github.com/binance-chain/go-sdk/common/types"
 	"github.com/binance-chain/go-sdk/keys"
+	"github.com/binance-chain/go-sdk/types/msg"
+	"github.com/binance-chain/go-sdk/types/tx"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	bankClient "github.com/cosmos/cosmos-sdk/x/bank/client"
+	stake "github.com/cosmos/cosmos-sdk/x/stake/types"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tidwall/gjson"
 	"golang.org/x/xerrors"
+
+	"github.com/bnb-chain/node/common/types"
 )
 
 var (

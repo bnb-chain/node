@@ -1,11 +1,10 @@
-package init
-
 /*
 Why we overwrite the Init/Testnet functions in cosmos-sdk:
 1. Cosmos moved init/testnet cmds to the gaia packages which we never and should not imports.
 2. Cosmos has a different init/testnet workflow from ours. Also, the init cmd has some bugs.
 3. After overwrite, the code is cleaner and easier to maintain.
 */
+package init
 
 import (
 	"encoding/json"
