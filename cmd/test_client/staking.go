@@ -416,6 +416,7 @@ func assert(cond bool, msg string) {
 	}
 }
 
+// nolint
 func StakingBackup() error {
 	// rpc client
 	node0RpcAddr := "tcp://127.0.0.1:8100"
