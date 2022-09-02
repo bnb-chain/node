@@ -48,13 +48,12 @@ services:
     container_name: node{{ .Index }}
     image: "binance/bnbdnode"
     restart: always
-    working_dir: /bnbchaind
-    command: bnbchaind start --home /bnbchaind/testnoded
+    command: bnbchaind start --home /data/testnoded
     ports:
       - "{{ .PortExpose1 }}:26656"
       - "{{ .PortExpose2 }}:26657"
     volumes:
-      - ./node{{ .Index }}:/bnbchaind:Z
+      - ./node{{ .Index }}:/data:Z
     networks:
       localnet:
         ipv4_address: 172.20.0.{{ .PortIP }}
