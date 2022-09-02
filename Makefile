@@ -239,7 +239,7 @@ localnet-stop:
 
 # docker commands
 docker.build:
-	DOCKER_BUILDKIT=1 docker build -t binance/bnbdnode .
+	docker build -t binance/bnbdnode .
 
 docker.generate:
 	go run ./cmd/gen_devnet
