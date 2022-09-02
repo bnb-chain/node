@@ -13,7 +13,7 @@ jobs:
           go-version: 1.16
       - run: make docker.build docker.generate docker.start
       # used to debug workflow
-      #      - name: Setup tmate session
-      #        uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: sleep 20
       - run: make multi-nodes-test
