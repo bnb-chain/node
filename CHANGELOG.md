@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.2
+FEATURES
+* [\#878](https://github.com/bnb-chain/node/pull/878) [CI] Add ci script to build docker image
+* [\#879](https://github.com/bnb-chain/node/pull/879) [Staking] Implement BEP153: Native Staking on BSC
+
 ## 0.10.1
 IMPROVEMENTS
 * [\#882](https://github.com/bnb-chain/node/pull/882) [DEX] Add BEP151 Mainnet Height

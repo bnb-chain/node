@@ -58,6 +58,8 @@ EnableAccountScriptsForCrossChainTransferHeight = 7841000
 BEP128Height = 23551600
 #Block height of BEP151 upgrade
 BEP151Height = 28250000
+#Block height of BEP153 upgrade
+BEP153Height = 30516226
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -169,7 +171,7 @@ kafkaVersion = "2.1.0"
 [log]
 
 # Write logs to console instead of file
-logToConsole = false
+logToConsole = true
 
 ## The below parameters take effect only when logToConsole is false
 # Log file root, if not set, use home path
