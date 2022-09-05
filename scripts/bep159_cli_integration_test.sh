@@ -77,8 +77,6 @@ check_operation "Recover Key" "${result}" "${keys_operation_words}"
 
 bob_secret="bottom quick strong ranch section decide pepper broken oven demand coin run jacket curious business achieve mule bamboo remain vote kid rigid bench rubber"
 bob_val_addr=bva1ddt3ls9fjcd8mh69ujdg3fxc89qle2a7k8spre
-bob_pubkey=bcap1zcjduepqes09r5x3kqnv7nlrcrveh5sxsrqxw222wu8999fa2wpnjher4yxst89v4a
-bob_pubkey_new=bcap1zcjduepqcde4hk9kac248hqr3vqxle049f9l5zc58rcacy6nphuay5wt6c5q3ydes7
 result=$(expect ./recover.exp "${bob_secret}" "bob" true)
 check_operation "Add Key" "${result}" "${keys_operation_words}"
 carl_secret="mad calm portion vendor fine weather thunder ensure simple fish enrich genre plate kind minor random where crop hero soda isolate pelican provide chimney"
@@ -95,9 +93,45 @@ carl_addr=$(./bnbcli keys list --home ${cli_home} | grep carl | grep -o "bnb1[0-
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 sleep 2
-result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${carl_addr})
+result=$(expect ./send.exp ${cli_home} alice ${chain_id} "10000000000:BNB" ${carl_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 sleep 2
+
+#$ ./bnbcli --home ./testnodecli staking -h
+#staking commands
+#
+#Usage:
+#  bnbcli staking [command]
+#
+#Available Commands:
+#  create-validator               create new validator initialized with a self-delegation to it
+#  remove-validator               remove validator
+#  edit-validator                 edit and existing validator account
+#  delegate                       delegate liquid tokens to a validator
+#  redelegate                     redelegate illiquid tokens from one validator to another
+#  unbond                         unbond shares from a validator
+#
+#  validator                      Query a validator
+#  validators                     Query for all validators
+#  parameters                     Query the current staking parameters information
+#  delegation                     Query a delegation based on address and validator address
+#  delegations                    Query all delegations made from one delegator
+#  pool                           Query the current staking pool values
+#  redelegation                   Query a redelegation record based on delegator and a source and destination validator address
+#  redelegations                  Query all redelegations records for one delegator
+#  unbonding-delegation           Query an unbonding-delegation record based on delegator and validator address
+#  unbonding-delegations          Query all unbonding-delegations records for one delegator
+#
+#Flags:
+#  -h, --help   help for staking
+#
+#Global Flags:
+#  -e, --encoding string   Binary encoding (hex|b64|btc) (default "hex")
+#      --home string       directory for config and data (default "/Users/owen/.bnbcli")
+#  -o, --output string     Output format (text|json) (default "text")
+#      --trace             print out full stack trace on errors
+#
+#Use "bnbcli staking [command] --help" for more information about a command.
 
 # get parameters
 result=$(./bnbcli staking parameters --home ${cli_home} --trust-node)
@@ -126,22 +160,18 @@ check_operation "Get Delegation" "${result}" "Validator"
 result=$(./bnbcli staking pool --home ${cli_home} --trust-node)
 
 # create validator
-result=$(expect ./create-validator-open.exp ${cli_home} bob ${chain_id} ${bob_pubkey})
+result=$(expect ./create-validator-open.exp ${cli_home} bob ${chain_id})
 check_operation "create validator open" "${result}" "${chain_operation_words}"
 sleep 2
-result=$(./bnbcli staking validators --home ${cli_home} --trust-node)
-check_operation "Get Validators" "${result}" "Operator"
 result=$(./bnbcli staking validator ${bob_val_addr} --home ${cli_home} --trust-node)
-check_operation "Get Validator" "${result}" "bob"
-check_operation "Get Validator" "${result}" "${bob_pubkey}"
+check_operation "Get Validators" "${result}" "bob"
 
 # edit validator
-result=$(expect ./edit-validator.exp ${cli_home} bob ${chain_id} ${bob_pubkey_new})
+result=$(expect ./edit-validator.exp ${cli_home} bob ${chain_id})
 check_operation "edit validator" "${result}" "${chain_operation_words}"
 sleep 2
 result=$(./bnbcli staking validator ${bob_val_addr} --home ${cli_home} --trust-node)
-check_operation "Get Validator" "${result}" "bob-new"
-check_operation "Get Validator" "${result}" "${bob_pubkey_new}"
+check_operation "Get Validators" "${result}" "bob-new"
 bob_val_addr=$(echo "${result}" | grep Operator | grep -o "bva[0-9a-zA-Z]*")
 
 # delegate
@@ -177,7 +207,7 @@ check_operation "Get Unbonding-Delegations" "${result}" "delegator_addr"
 result=$(./bnbcli staking unbonding-delegation --address-delegator ${carl_addr} --validator ${validator_address} --home ${cli_home} --trust-node)
 check_operation "Get Unbonding-Delegation" "${result}" "Delegator"
 
-# run test with go-sdk
 go run ../cmd/test_client
 
+echo '-----bep159 integration test done-----'
 exit_test 0
