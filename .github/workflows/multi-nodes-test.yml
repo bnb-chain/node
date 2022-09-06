@@ -12,10 +12,10 @@ jobs:
         with:
           go-version: 1.16
       - run: make docker.build docker.generate docker.start
-      # used to debug workflow
-#      - name: Setup tmate session
-#        uses: mxschmitt/action-tmate@v3
       # fix docker permission issue
       - run: chmod 766 -R ~/work/node/node/build/devnet
       - run: sleep 20
+      # used to debug workflow
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: make multi-nodes-test
