@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
+	"github.com/cosmos/cosmos-sdk/pubsub"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
@@ -93,7 +94,7 @@ func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
 	log.With("module", "bridge").Info("unbind token success", "symbol", msg.Symbol, "contract_addr", token.GetContractDecimals())
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
-		publishBindSuccessEvent(ctx, keeper, msg.From.String(), []CrossReceiver{}, msg.Symbol, TransferUnBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol),
+		publishBindSuccessEvent(ctx, keeper, msg.From.String(), []pubsub.CrossReceiver{}, msg.Symbol, TransferUnBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol),
 			token.GetContractAddress(), token.GetContractDecimals())
 	}
 
@@ -213,7 +214,7 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
-		publishCrossChainEvent(ctx, keeper, msg.From.String(), []CrossReceiver{
+		publishCrossChainEvent(ctx, keeper, msg.From.String(), []pubsub.CrossReceiver{
 			{types.PegAccount.String(), bindRequest.DeductedAmount}}, symbol, TransferBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	}
 	pegTags := sdk.Tags{}
@@ -303,7 +304,7 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
-		publishCrossChainEvent(ctx, keeper, msg.From.String(), []CrossReceiver{
+		publishCrossChainEvent(ctx, keeper, msg.From.String(), []pubsub.CrossReceiver{
 			{types.PegAccount.String(), msg.Amount.Amount}}, symbol, TransferOutType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
 	}
 

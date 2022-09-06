@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
+	"github.com/cosmos/cosmos-sdk/pubsub"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/fees"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -65,7 +66,7 @@ func (app *BindApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.E
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
 			{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, 0)
 	}
 	return sdk.ExecuteResult{}
@@ -108,7 +109,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		app.bridgeKeeper.SetContractDecimals(ctx, bindRequest.ContractAddress, bindRequest.ContractDecimals)
 		if ctx.IsDeliverTx() {
-			publishBindSuccessEvent(ctx, app.bridgeKeeper, sdk.PegAccount.String(), []CrossReceiver{}, symbol, TransferApproveBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
+			publishBindSuccessEvent(ctx, app.bridgeKeeper, sdk.PegAccount.String(), []pubsub.CrossReceiver{}, symbol, TransferApproveBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 		}
 		log.With("module", "bridge").Info("bind token success", "symbol", symbol, "contract_addr", bindRequest.ContractAddress.String())
 	} else {
@@ -123,7 +124,7 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		if ctx.IsDeliverTx() {
 			app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-			publishBindSuccessEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+			publishBindSuccessEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
 				{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
 		}
 	}
@@ -197,7 +198,7 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundPackage.RefundAddr})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
 			{refundPackage.RefundAddr.String(), refundPackage.RefundAmount.Int64()}}, symbol, TransferAckRefundType, 0)
 	}
 	return sdk.ExecuteResult{
@@ -242,7 +243,7 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, transferOutPackage.RefundAddress})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []CrossReceiver{
+		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
 			{transferOutPackage.RefundAddress.String(), bcAmount}}, symbol, TransferFailAckRefundType, 0)
 	}
 
@@ -425,16 +426,19 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	if ctx.IsDeliverTx() {
+		fmt.Println("transferIn success")
 		addressesChanged := append(transferInPackage.ReceiverAddresses, types.PegAccount)
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
-		to := make([]CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
+		to := make([]pubsub.CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
 		for idx, receiverAddr := range transferInPackage.ReceiverAddresses {
-			to = append(to, CrossReceiver{
+			to = append(to, pubsub.CrossReceiver{
 				Addr:   receiverAddr.String(),
 				Amount: transferInPackage.Amounts[idx].Int64(),
 			})
 		}
 		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), to, symbol, TransferInType, relayerFee)
+	} else {
+		fmt.Println("transferIn failed")
 	}
 
 	// emit peg related event

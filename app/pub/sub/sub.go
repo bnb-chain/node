@@ -76,7 +76,7 @@ type EventStore struct {
 	// store for slash topic
 	SlashData map[string][]SlashData
 	// store for cross chain transfer topic
-	CrossTransferData []bridge.CrossTransferEvent
+	CrossTransferData []pubsub.CrossTransferEvent
 	// store for mirror topic
 	MirrorData []bridge.MirrorEvent
 }
