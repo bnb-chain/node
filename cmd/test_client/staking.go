@@ -360,15 +360,6 @@ func Staking() error {
 	if err != nil {
 		return xerrors.Errorf("query unbonding delegations by validator error: %w", err)
 	}
-	// qeury redelegations by validator
-	redelegationsByValidator, err := c0.GetRedelegationsByValidator(topValAddr)
-	log.Printf("query redelegations by validator: %+v, err: %v\n", redelegationsByValidator, err)
-	redelegationsByValidator, err = c0.GetRedelegationsByValidator(validator0Addr)
-	log.Printf("query redelegations by validator: %+v, err: %v\n", redelegationsByValidator, err)
-	if err != nil {
-		return xerrors.Errorf("query redelegations by validator error: %w", err)
-	}
-	assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
 	// delegate to top validator and then redelegate
 	delegator0, err := GenKeyManagerWithBNB(c0, bobKM)
 	if err != nil {
@@ -397,15 +388,21 @@ func Staking() error {
 	if err != nil {
 		return xerrors.Errorf("query redelegation error: %w", err)
 	}
+	assert(redelegation != nil, "redelegation should not be nil")
 	// query redelegations
 	redelegations, err := c0.QueryRedelegations(delegator0.GetAddr())
 	log.Printf("query redelegations: %+v, err: %v\n", redelegations, err)
 	if err != nil {
 		return xerrors.Errorf("query redelegations error: %w", err)
 	}
+	assert(len(redelegations) > 0, "redelegations should not be empty")
 	// query redelegations by source validator
-	redelegationsByValidator, err = c0.GetRedelegationsByValidator(topValAddr)
+	redelegationsByValidator, err := c0.GetRedelegationsByValidator(topValAddr)
 	log.Printf("query redelegations by validator: %+v, err: %v\n", redelegationsByValidator, err)
+	if err != nil {
+		return xerrors.Errorf("query redelegations by validator error: %w", err)
+	}
+	assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
 
 	return nil
 }
