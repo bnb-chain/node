@@ -16,6 +16,6 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
       # fix docker permission issue
-      - run: chown 777 -R ~/work/node/node/build/devnet
+      - run: chmod 766 -R ~/work/node/node/build/devnet
       - run: sleep 20
       - run: make multi-nodes-test
