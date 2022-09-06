@@ -292,6 +292,7 @@ func (msg *Delegation) toNativeMap() map[string]interface{} {
 	native["delegator"] = msg.DelegatorAddr.String()
 	native["validator"] = msg.ValidatorAddr.String()
 	native["shares"] = msg.Shares.RawInt()
+	native["cross_stake"] = msg.CrossStake
 	return native
 }
 
@@ -316,6 +317,7 @@ func (msg *UnbondingDelegation) toNativeMap() map[string]interface{} {
 		Amount: msg.Balance.Amount,
 	}
 	native["balance"] = balance.ToNativeMap()
+	native["cross_stake"] = msg.CrossStake
 	native["minTime"] = msg.MinTime.Unix()
 	return native
 }
