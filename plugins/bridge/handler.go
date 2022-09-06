@@ -214,8 +214,16 @@ func handleBindMsg(ctx sdk.Context, keeper Keeper, msg BindMsg) sdk.Result {
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
-		publishCrossChainEvent(ctx, keeper, msg.From.String(), []pubsub.CrossReceiver{
-			{types.PegAccount.String(), bindRequest.DeductedAmount}}, symbol, TransferBindType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
+		publishCrossChainEvent(
+			ctx,
+			keeper,
+			msg.From.String(),
+			[]pubsub.CrossReceiver{
+				{Addr: types.PegAccount.String(), Amount: bindRequest.DeductedAmount}},
+			symbol,
+			TransferBindType,
+			relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol),
+		)
 	}
 	pegTags := sdk.Tags{}
 	for _, coin := range transferAmount {
@@ -304,8 +312,16 @@ func handleTransferOutMsg(ctx sdk.Context, keeper Keeper, msg TransferOutMsg) sd
 
 	if ctx.IsDeliverTx() {
 		keeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, msg.From})
-		publishCrossChainEvent(ctx, keeper, msg.From.String(), []pubsub.CrossReceiver{
-			{types.PegAccount.String(), msg.Amount.Amount}}, symbol, TransferOutType, relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol))
+		publishCrossChainEvent(
+			ctx,
+			keeper,
+			msg.From.String(),
+			[]pubsub.CrossReceiver{
+				{Addr: types.PegAccount.String(), Amount: msg.Amount.Amount}},
+			symbol,
+			TransferOutType,
+			relayFee.Tokens.AmountOf(cmmtypes.NativeTokenSymbol),
+		)
 	}
 
 	pegTags := sdk.Tags{}

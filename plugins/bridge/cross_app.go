@@ -66,8 +66,16 @@ func (app *BindApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte) sdk.E
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
-			{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, 0)
+		publishCrossChainEvent(
+			ctx,
+			app.bridgeKeeper,
+			types.PegAccount.String(),
+			[]pubsub.CrossReceiver{
+				{Addr: bindRequest.From.String(), Amount: bindRequest.DeductedAmount}},
+			symbol,
+			TransferFailBindType,
+			0,
+		)
 	}
 	return sdk.ExecuteResult{}
 }
@@ -124,8 +132,18 @@ func (app *BindApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, relayerFe
 
 		if ctx.IsDeliverTx() {
 			app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, bindRequest.From})
-			publishBindSuccessEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
-				{bindRequest.From.String(), bindRequest.DeductedAmount}}, symbol, TransferFailBindType, relayerFee, bindRequest.ContractAddress.String(), bindRequest.ContractDecimals)
+			publishBindSuccessEvent(
+				ctx,
+				app.bridgeKeeper,
+				types.PegAccount.String(),
+				[]pubsub.CrossReceiver{
+					{Addr: bindRequest.From.String(), Amount: bindRequest.DeductedAmount}},
+				symbol,
+				TransferFailBindType,
+				relayerFee,
+				bindRequest.ContractAddress.String(),
+				bindRequest.ContractDecimals,
+			)
 		}
 	}
 
@@ -198,8 +216,16 @@ func (app *TransferOutApp) ExecuteAckPackage(ctx sdk.Context, payload []byte) sd
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, refundPackage.RefundAddr})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
-			{refundPackage.RefundAddr.String(), refundPackage.RefundAmount.Int64()}}, symbol, TransferAckRefundType, 0)
+		publishCrossChainEvent(
+			ctx,
+			app.bridgeKeeper,
+			types.PegAccount.String(),
+			[]pubsub.CrossReceiver{
+				{Addr: refundPackage.RefundAddr.String(), Amount: refundPackage.RefundAmount.Int64()}},
+			symbol,
+			TransferAckRefundType,
+			0,
+		)
 	}
 	return sdk.ExecuteResult{
 		Tags: sdk.Tags{sdk.GetPegOutTag(symbol, refundPackage.RefundAmount.Int64())},
@@ -243,8 +269,16 @@ func (app *TransferOutApp) ExecuteFailAckPackage(ctx sdk.Context, payload []byte
 
 	if ctx.IsDeliverTx() {
 		app.bridgeKeeper.Pool.AddAddrs([]sdk.AccAddress{types.PegAccount, transferOutPackage.RefundAddress})
-		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), []pubsub.CrossReceiver{
-			{transferOutPackage.RefundAddress.String(), bcAmount}}, symbol, TransferFailAckRefundType, 0)
+		publishCrossChainEvent(
+			ctx,
+			app.bridgeKeeper,
+			types.PegAccount.String(),
+			[]pubsub.CrossReceiver{
+				{Addr: transferOutPackage.RefundAddress.String(), Amount: bcAmount}},
+			symbol,
+			TransferFailAckRefundType,
+			0,
+		)
 	}
 
 	return sdk.ExecuteResult{
