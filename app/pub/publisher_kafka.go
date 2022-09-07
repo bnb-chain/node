@@ -240,7 +240,7 @@ func (publisher *KafkaMarketDataPublisher) prepareMessage(
 
 func (publisher *KafkaMarketDataPublisher) publish(avroMessage AvroOrJsonMsg, tpe msgType, height, timestamp int64) {
 	topic := publisher.resolveTopic(tpe)
-
+	fmt.Println(avroMessage)
 	if msg, err := publisher.marshal(avroMessage, tpe); err == nil {
 		kafkaMsg := publisher.prepareMessage(topic, strconv.FormatInt(height, 10), timestamp, tpe, msg)
 		if partition, offset, err := publisher.publishWithRetry(kafkaMsg, topic); err == nil {

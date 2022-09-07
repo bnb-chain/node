@@ -90,6 +90,7 @@ func PublishEvent(
 				if len(eventData.StakeData.Delegations) > 0 || len(eventData.StakeData.RemovedDelegations) > 0 {
 					delegationsMap = make(map[string][]*Delegation)
 					for chainId, dels := range eventData.StakeData.Delegations {
+						fmt.Println(dels)
 						delegations := make([]*Delegation, len(dels))
 						msgNum += len(dels)
 						var i int
@@ -246,7 +247,7 @@ func PublishEvent(
 					}
 				}
 			}
-
+			fmt.Println(delegationsMap)
 			msg := StakingMsg{
 				NumOfMsgs: msgNum,
 				Height:    toPublish.Height,
