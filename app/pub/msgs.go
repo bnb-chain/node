@@ -80,7 +80,7 @@ var latestSchemaVersions = map[msgType]int{
 	blockFeeTpe:        0,
 	transferTpe:        1,
 	blockTpe:           0,
-	stakingTpe:         0,
+	stakingTpe:         1,
 	distributionTpe:    1,
 	slashingTpe:        0,
 	crossTransferTpe:   0,

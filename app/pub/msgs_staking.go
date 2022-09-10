@@ -385,10 +385,11 @@ func (msg *CompletedReDelegation) toNativeMap() map[string]interface{} {
 }
 
 type DelegateEvent struct {
-	Delegator sdk.AccAddress
-	Validator sdk.ValAddress
-	Amount    Coin
-	TxHash    string
+	Delegator  sdk.AccAddress
+	Validator  sdk.ValAddress
+	Amount     Coin
+	TxHash     string
+	CrossStake bool
 }
 
 func (msg *DelegateEvent) String() string {
@@ -401,6 +402,7 @@ func (msg *DelegateEvent) toNativeMap() map[string]interface{} {
 	native["validator"] = msg.Validator.String()
 	native["amount"] = msg.Amount.ToNativeMap()
 	native["txHash"] = msg.TxHash
+	native["crossStake"] = msg.CrossStake
 	return native
 }
 

@@ -247,6 +247,7 @@ const (
             ]
         }
     `
+
 	transfersSchema = `
         {
             "type": "record",
@@ -301,6 +302,7 @@ const (
             ]
         }
     `
+
 	blockDatasSchema = `
 		{
 			"namespace":"com.company",
@@ -699,7 +701,8 @@ const (
 								{"name": "delegator", "type": "string"},
 								{"name": "validator", "type": "string"},
 								{"name": "amount", "type": "org.binance.dex.model.avro.Coin"},
-								{"name": "txHash", "type": "string"}
+								{"name": "txHash", "type": "string"},
+								{"name": "crossStake", "type": "boolean"}
 							]
 						}
 					}

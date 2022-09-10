@@ -188,7 +188,8 @@ func PublishEvent(
 									Denom:  de.Denom,
 									Amount: de.Amount,
 								},
-								TxHash: de.TxHash,
+								TxHash:     de.TxHash,
+								CrossStake: de.CrossStake,
 							}
 						}
 						delegateEventsMap[chainId] = dess
