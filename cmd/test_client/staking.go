@@ -212,7 +212,7 @@ func Staking() error {
 		MaxChangeRate: maxChangeRate,
 	}
 	c0.SetKeyManager(validator0)
-	txRes, err := c0.CreateValidator(amount, msg.Description(des), commission, consensusPubKey, rpc.Commit, tx.WithChainID(chainId))
+	txRes, err := c0.CreateValidatorOpen(amount, msg.Description(des), commission, sdkTypes.MustBech32ifyConsPub(consensusPubKey), rpc.Commit, tx.WithChainID(chainId))
 	if err != nil {
 		return xerrors.Errorf("create validator error: %w", err)
 	}
@@ -249,7 +249,8 @@ func Staking() error {
 	des2 := sdkTypes.Description{Moniker: "node1_v2"}
 	consensusPrivKey2 := ed25519.GenPrivKey()
 	consensusPubKey2 := consensusPrivKey2.PubKey()
-	txRes, err = c0.EditValidator(msg.Description(des2), nil, consensusPubKey2, rpc.Commit, tx.WithChainID(chainId))
+	consensusPubKey2Str := sdkTypes.MustBech32ifyConsPub(consensusPubKey2)
+	txRes, err = c0.EditValidator(msg.Description(des2), nil, consensusPubKey2Str, rpc.Commit, tx.WithChainID(chainId))
 	if err != nil {
 		return xerrors.Errorf("edit validator error: %w", err)
 	}
@@ -263,7 +264,7 @@ func Staking() error {
 	assert(validator != nil, "validator should not be nil")
 	assert(bytes.Equal(validator.OperatorAddr, validator0.GetAddr()), "validator address should be equal")
 	assert(validator.Description == des2, "validator description should be equal")
-	assert(validator.ConsPubKey == sdkTypes.MustBech32ifyConsPub(consensusPubKey2), "validator cons pub key should be equal")
+	assert(validator.ConsPubKey == consensusPubKey2Str, "validator cons pub key should be equal")
 	tokenBeforeDelegate := validator.Tokens
 	// delegate
 	delegator, err := GenKeyManagerWithBNB(c0, bobKM)

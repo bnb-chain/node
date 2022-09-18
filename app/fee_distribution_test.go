@@ -335,9 +335,14 @@ func TestBEP159Distribution(t *testing.T) {
 	bondCoin := sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt())
 	commissionMsg := stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec())
 	description := stake.NewDescription("validator0", "", "", "")
-	createValidatorMsg := stake.NewMsgCreateValidator(
-		sdk.ValAddress(accs[0].Address), accs[0].Priv.PubKey(), bondCoin, description, commissionMsg,
-	)
+	createValidatorMsg := stake.MsgCreateValidatorOpen{
+		Description:   description,
+		Commission:    commissionMsg,
+		DelegatorAddr: accs[0].Address,
+		ValidatorAddr: sdk.ValAddress(accs[0].Address),
+		PubKey:        sdk.MustBech32ifyConsPub(accs[0].Priv.PubKey()),
+		Delegation:    bondCoin,
+	}
 	require.Panics(t, func() {
 		txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
 	})
@@ -349,9 +354,14 @@ func TestBEP159Distribution(t *testing.T) {
 	require.True(t, app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr).IsZero())
 	require.Equal(t, app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr), sdk.Coins{sdk.NewCoin("BNB", 8)})
 	// create new validators, stake number is 16 times of original validators
-	createValidatorMsg = stake.NewMsgCreateValidator(
-		sdk.ValAddress(accs[0].Address), accs[0].Priv.PubKey(), bondCoin, description, commissionMsg,
-	)
+	createValidatorMsg = stake.MsgCreateValidatorOpen{
+		Description:   description,
+		Commission:    commissionMsg,
+		DelegatorAddr: accs[0].Address,
+		ValidatorAddr: sdk.ValAddress(accs[0].Address),
+		PubKey:        sdk.MustBech32ifyConsPub(accs[0].Priv.PubKey()),
+		Delegation:    bondCoin,
+	}
 	txs = GenSimTxs(app, []sdk.Msg{createValidatorMsg}, true, accs[0].Priv)
 	ctx = ApplyBlock(t, app, ctx, txs)
 	require.Equal(t, int64(12), app.stakeKeeper.GetAllValidatorsCount(ctx))

@@ -207,7 +207,7 @@ bep159_integration_test: build
 	@bash ./scripts/bep159_integration_test.sh
 ########################################
 ### Pre Commit
-pre_commit: build test format lint
+pre_commit: build test_unit bep159_integration_test integration_test format lint multi-nodes-test
 
 ########################################
 ### Local validator nodes using docker and docker-compose

@@ -25,8 +25,8 @@ github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQ
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1 h1:8mAtw1Tp/BhhTrsXmXM60H1fihcvcKLfo2ZSxShaXKw=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1/go.mod h1:FI6WAujuiBpoSavYreux2zTKyrUkngXDlRJczxsDK5M=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220906024056-82deed0b8eae h1:Xs5mwBsu8W+fhDwzgG3PxzWyjddb7l4xvc3RtX6NJYM=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220906024056-82deed0b8eae/go.mod h1:uubVkZZp4vjoGMrsRuLYo/9o7o4gBCVqduL3H2RJ6lw=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220918164105-ce86298b6808 h1:6HgbZj+cgTmttKba1uq27O7XPzsfB28z5OHULuNg6uY=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.0-rc0.0.20220918164105-ce86298b6808/go.mod h1:LeZRVmfcrEEHVxV6/A6D5AwRCNUN5PB4SR0hv6HbdUc=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
 github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7 h1:wJBrhLAm9P+Jjm/clTxynAZJl63xD7LatKmL5e3YzbY=
@@ -197,8 +197,8 @@ github.com/onsi/ginkgo v1.10.3/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.1 h1:K0jcRCwNQM3vFGh1ppMtDh/+7ApJrjldlX8fA0jDTLQ=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
-github.com/owen-reorg/bnc-go-sdk v0.0.0-20220905135624-9b2b7d34d76b h1:m+o2Sn8jNZapUy0GDxVq5OW4B41RS4yNew5rWGNvACM=
-github.com/owen-reorg/bnc-go-sdk v0.0.0-20220905135624-9b2b7d34d76b/go.mod h1:Et944AMlNUod/ir1/P3kkvYY5xq4bcE6HF6LM+SiSN8=
+github.com/owen-reorg/bnc-go-sdk v0.0.0-20220918164926-755e13c53596 h1:cVjE07t0ce6v9T91H5Sshn1ggdZOXk4SPIGqJK5tnlk=
+github.com/owen-reorg/bnc-go-sdk v0.0.0-20220918164926-755e13c53596/go.mod h1:Et944AMlNUod/ir1/P3kkvYY5xq4bcE6HF6LM+SiSN8=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.4.0 h1:u3Z1r+oOXJIkxqw34zVhyPgjBsm6X2wn21NWs/HfSeg=
 github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
@@ -364,8 +364,8 @@ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211019181941-9d821ace8654/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 h1:v6hYoSR9T5oet+pMXwUWkbiVqx/63mlHjefrHmxwfeY=
-golang.org/x/sys v0.0.0-20220829200755-d48e67d00261/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 h1:ohgcoMbSofXygzo6AD2I1kz3BFmW1QArPYTtwEM3UXc=
+golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

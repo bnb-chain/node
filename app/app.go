@@ -374,7 +374,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		oracle.ClaimMsg{}.Type(),
 	)
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP159,
-		stake.MsgCreateValidator{}.Type(),
+		stake.MsgCreateValidatorOpen{}.Type(),
 		stake.MsgEditValidator{}.Type(),
 		stake.MsgDelegate{}.Type(),
 		stake.MsgRedelegate{}.Type(),
