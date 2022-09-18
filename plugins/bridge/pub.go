@@ -1,6 +1,8 @@
 package bridge
 
 import (
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -30,32 +32,12 @@ const (
 	MirrorSyncType string = "MISY"
 )
 
-type CrossTransferEvent struct {
-	TxHash     string
-	ChainId    string
-	Type       string
-	RelayerFee int64
-	From       string
-	Denom      string
-	Contract   string
-	Decimals   int
-	To         []CrossReceiver
-}
-
-type CrossReceiver struct {
-	Addr   string
-	Amount int64
-}
-
-func (event CrossTransferEvent) GetTopic() pubsub.Topic {
-	return CrossTransferTopic
-}
-
-func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string, to []CrossReceiver, symbol string, eventType string, relayerFee int64) {
+func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string, to []pubsub.CrossReceiver, symbol string, eventType string, relayerFee int64) {
 	if keeper.PbsbServer != nil {
+		fmt.Println("transferIn success")
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
-			event := CrossTransferEvent{
+			event := pubsub.CrossTransferEvent{
 				TxHash:     txHashStr,
 				ChainId:    keeper.DestChainName,
 				RelayerFee: relayerFee,
@@ -66,16 +48,17 @@ func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string
 			}
 			keeper.PbsbServer.Publish(event)
 		} else {
+			fmt.Println("transferIn failed")
 			ctx.Logger().With("module", "bridge").Error("failed to get txhash, will not publish cross transfer event ")
 		}
 	}
 }
 
-func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from string, to []CrossReceiver, symbol string, eventType string, relayerFee int64, contract string, decimals int8) {
+func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from string, to []pubsub.CrossReceiver, symbol string, eventType string, relayerFee int64, contract string, decimals int8) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
-			event := CrossTransferEvent{
+			event := pubsub.CrossTransferEvent{
 				TxHash:     txHashStr,
 				ChainId:    keeper.DestChainName,
 				RelayerFee: relayerFee,
