@@ -46,6 +46,9 @@ function prepare_node() {
 	$(cd "./${home}/config" && sed -i -e "s/BEP159Height = 9223372036854775807/BEP159Height = 3/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/BEP159Phase2Height = 9223372036854775807/BEP159Phase2Height = 11/g" app.toml)
 	$(cd "./${home}/config" && sed -i -e "s/breatheBlockInterval = 0/breatheBlockInterval = 5/g" app.toml)
+#	$(cd "./${home}/config" && sed -i -e "s/publishStaking = false/publishStaking = true/g" app.toml)
+#	$(cd "./${home}/config" && sed -i -e "s/publishKafka = false/publishKafka = true/g" app.toml)
+#	$(cd "./${home}/config" && sed -i -e "s/publishLocal = false/publishLocal = true/g" app.toml)
 
 	# stop and start node
 	ps -ef  | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9

@@ -2,6 +2,7 @@ package pub
 
 import (
 	"fmt"
+	"github.com/linkedin/goavro"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -248,7 +249,7 @@ func (msg *Validator) toNativeMap() map[string]interface{} {
 	native["feeAddr"] = msg.FeeAddr.String()
 	native["operatorAddr"] = msg.OperatorAddr.String()
 	if msg.ConsPubKey != nil {
-		native["consAddr"] = sdk.ConsAddress(msg.ConsPubKey.Address()).String()
+		native["consAddr"] = goavro.Union("string", sdk.ConsAddress(msg.ConsPubKey.Address()).String())
 	}
 	native["jailed"] = msg.Jailed
 
@@ -275,6 +276,9 @@ func (msg *Validator) toNativeMap() map[string]interface{} {
 
 	native["distributionAddr"] = msg.DistributionAddr.String()
 	native["sideChainId"] = msg.SideChainId
+	if msg.SideChainId == "" {
+		native["sideChainId"] = stake.ChainIDForBeaconChain
+	}
 	native["sideConsAddr"] = sdk.HexAddress(msg.SideConsAddr)
 	native["sideFeeAddr"] = sdk.HexAddress(msg.SideFeeAddr)
 

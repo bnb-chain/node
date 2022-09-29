@@ -25,8 +25,8 @@ github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQ
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1 h1:8mAtw1Tp/BhhTrsXmXM60H1fihcvcKLfo2ZSxShaXKw=
 github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1/go.mod h1:FI6WAujuiBpoSavYreux2zTKyrUkngXDlRJczxsDK5M=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20220918171020-914316fc1632 h1:xH7U0NBXXBYPxTsSWPrQ7ju5OrTilFZ2TkoypNl/b2k=
-github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20220918171020-914316fc1632/go.mod h1:LeZRVmfcrEEHVxV6/A6D5AwRCNUN5PB4SR0hv6HbdUc=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20220929130429-a5d3a4b55826 h1:LKnijTJ0y1ACcTLOF9288pFx+jWQtZzAt340Bqaw1xY=
+github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20220929130429-a5d3a4b55826/go.mod h1:xxDzp7alqs+73d9MokFRNdUWuyFOepvqe00RzOYaczg=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
 github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7 h1:wJBrhLAm9P+Jjm/clTxynAZJl63xD7LatKmL5e3YzbY=
@@ -65,7 +65,7 @@ github.com/dave/astrid v0.0.0-20170323122508-8c2895878b14/go.mod h1:Sth2QfxfATb/
 github.com/dave/brenda v1.1.0/go.mod h1:4wCUr6gSlu5/1Tk7akE5X7UorwiQ8Rij0SKH3/BGMOM=
 github.com/dave/courtney v0.3.0/go.mod h1:BAv3hA06AYfNUjfjQr+5gc6vxeBVOupLqrColj+QSD8=
 github.com/dave/dst v0.23.1/go.mod h1:LjPcLEauK4jC5hQ1fE/wr05O41zK91Pr4Qs22Ljq7gs=
-github.com/dave/dst v0.27.0/go.mod h1:eF/UOVnw9Ech3NkZFCdtujtISJFRYf11+I93p+RI5S4=
+github.com/dave/dst v0.27.1/go.mod h1:eF/UOVnw9Ech3NkZFCdtujtISJFRYf11+I93p+RI5S4=
 github.com/dave/gopackages v0.0.0-20170318123100-46e7023ec56e/go.mod h1:i00+b/gKdIDIxuLDFob7ustLAVqhsZRk2qVZrArELGQ=
 github.com/dave/jennifer v1.2.0/go.mod h1:fIb+770HOpJ2fmN9EPPKOqm1vMGhB+TwXKMZhrIygKg=
 github.com/dave/jennifer v1.5.0/go.mod h1:4MnyiFIlZS3l5tSDn8VnzE6ffAhYBMB2SZntBsZGUok=
@@ -364,8 +364,8 @@ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211019181941-9d821ace8654/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 h1:ohgcoMbSofXygzo6AD2I1kz3BFmW1QArPYTtwEM3UXc=
-golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec h1:BkDtF2Ih9xZ7le9ndzTA7KJow28VbQW3odyk/8drmuI=
+golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
