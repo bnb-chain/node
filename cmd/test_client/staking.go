@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -206,6 +207,23 @@ func Staking() error {
 	maxChangeRate, _ := sdkTypes.NewDecFromStr("1")
 	consensusPrivKey := ed25519.GenPrivKey()
 	consensusPubKey := consensusPrivKey.PubKey()
+	// save consensus key to file for later usage
+	filePVKey := privval.FilePVKey{
+		Address: consensusPubKey.Address(),
+		PubKey:  consensusPubKey,
+		PrivKey: consensusPrivKey,
+	}
+	cdc := amino.NewCodec()
+	cryptoAmino.RegisterAmino(cdc)
+	privval.RegisterRemoteSignerMsg(cdc)
+	jsonBytes, err := cdc.MarshalJSONIndent(filePVKey, "", "  ")
+	if err != nil {
+		return xerrors.Errorf("marshal json error: %w", err)
+	}
+	err = ioutil.WriteFile("priv_validator_key.json", jsonBytes, 0600)
+	if err != nil {
+		return xerrors.Errorf("write file error: %w", err)
+	}
 	commission := sdkTypes.CommissionMsg{
 		Rate:          rate,
 		MaxRate:       maxRate,
