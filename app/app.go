@@ -569,6 +569,7 @@ func (app *BinanceChain) initStaking() {
 		stake.MigrateValidatorDistributionAddr(ctx, app.stakeKeeper)
 		params := app.stakeKeeper.GetParams(ctx)
 		params.RewardDistributionBatchSize = 1000
+		params.MinSelfDelegation = 20000e8
 		params.MinDelegationChange = 1e8
 		params.MaxStakeSnapshots = 30
 		params.MaxValidators = 11
@@ -581,6 +582,7 @@ func (app *BinanceChain) initStaking() {
 		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
+	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
 }
 
@@ -657,6 +659,8 @@ func (app *BinanceChain) initGovHooks() {
 	app.govKeeper.AddHooks(gov.ProposalTypeSCParamsChange, scParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeManageChanPermission, chanPermissionHooks)
+	bcParamChangeHooks := paramHub.NewBCParamsChangeHook(app.Codec)
+	app.govKeeper.AddHooks(gov.ProposalTypeParameterChange, bcParamChangeHooks)
 }
 
 func (app *BinanceChain) initParams() {

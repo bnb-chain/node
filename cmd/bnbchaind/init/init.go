@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bnb-chain/node/common/types"
 	"os"
 	"path/filepath"
 
@@ -136,7 +137,7 @@ func PrepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 		MsgCreateValidator: stake.NewMsgCreateValidator(
 			valOperAddr,
 			valPubKey,
-			app.DefaultSelfDelegationToken,
+			sdk.NewCoin(types.NativeTokenSymbol, 90000e8),
 			stake.NewDescription(name, "", "", ""),
 			stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 		),

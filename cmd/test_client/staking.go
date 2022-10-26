@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/binance-chain/go-sdk/client/rpc"
@@ -18,8 +19,6 @@ import (
 	"github.com/binance-chain/go-sdk/types/msg"
 	"github.com/binance-chain/go-sdk/types/tx"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
-	bankClient "github.com/cosmos/cosmos-sdk/x/bank/client"
-	stake "github.com/cosmos/cosmos-sdk/x/stake/types"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -27,8 +26,6 @@ import (
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tidwall/gjson"
 	"golang.org/x/xerrors"
-
-	"github.com/bnb-chain/node/common/types"
 )
 
 var (
@@ -126,9 +123,14 @@ func getConfigFromEnv() Config {
 	}
 	switch env {
 	case "integration":
+		seedPath := path.Join("build", "testnoded", "secret")
+		content, err := os.ReadFile(seedPath)
+		if err != nil {
+			panic(err)
+		}
 		return Config{
 			RPCAddr: "tcp://127.0.0.1:26657",
-			Secret:  "bottom quick strong ranch section decide pepper broken oven demand coin run jacket curious business achieve mule bamboo remain vote kid rigid bench rubber",
+			Secret:  strings.TrimSpace(string(content)),
 		}
 	case "multi":
 		node, err := GetNodeInfo(0)
@@ -147,6 +149,72 @@ func getConfigFromEnv() Config {
 type Config struct {
 	RPCAddr string `json:"rpc_addr"` // rpc address to connect to
 	Secret  string `json:"secret"`   // account which has enough coin to send
+}
+
+func ChangeParameterViaGov() error {
+	config := getConfigFromEnv()
+	node0RpcAddr := config.RPCAddr
+	c0 := rpc.NewRPCClient(node0RpcAddr, sdkTypes.ProdNetwork)
+	status, err := c0.Status()
+	chainId := status.NodeInfo.Network
+	txWithChainID = tx.WithChainID(chainId)
+	if err != nil {
+		return xerrors.Errorf("get status error: %w", err)
+	}
+	log.Printf("chainId: %s\n", chainId)
+	log.Printf("node0 status")
+	log.Println(Pretty(status))
+	// validator
+	secret := config.Secret
+	log.Printf("secret: %s", secret)
+	validatorKm, err := keys.NewMnemonicKeyManager(secret)
+	if err != nil {
+		return xerrors.Errorf("new key manager failed: %w", err)
+	}
+	log.Printf("validator address: %s\n", validatorKm.GetAddr())
+	// query params
+	params, err := c0.ABCIQuery("/param/params", []byte{})
+	if err != nil {
+		return xerrors.Errorf("query params error: %w", err)
+	}
+	log.Println("params:", string(params.Response.Value))
+	// submit proposal
+	depositCoins := sdkTypes.Coins{sdkTypes.Coin{Denom: "BNB", Amount: 1000e8}}
+	description := `{"description":"test","bc_params":[{"type":"params/StakeParamSet","value":{"unbonding_time":"600000000000","max_validators":11,"bond_denom":"BNB","min_self_delegation":"100000000","min_delegation_change":"100000000","reward_distribution_batch_size":"1000","max_stake_snapshots":30,"base_proposer_reward_ratio":"1000000","bonus_proposer_reward_ratio":"4000000","fee_from_bsc_to_bc_ratio":"10000000"}}]}`
+	c0.SetKeyManager(validatorKm)
+	txRes, err := c0.SubmitProposal("Change parameter", description, msg.ProposalTypeParameterChange, depositCoins, time.Second, rpc.Commit, txWithChainID)
+	log.Printf("submit proposal tx: %+v, err: %+v", txRes, err)
+	if err != nil {
+		return xerrors.Errorf("submit proposal error: %w", err)
+	}
+	proposals, err := c0.GetProposals(sdkTypes.StatusNil, 1)
+	if err != nil {
+		return xerrors.Errorf("get proposals error: %w", err)
+	}
+	proposal := proposals[0]
+	log.Printf("proposal: %+v", proposal)
+	txRes, err = c0.Vote(proposal.GetProposalID(), msg.OptionYes, rpc.Commit, txWithChainID)
+	log.Printf("vote tx: %+v, err: %+v", txRes, err)
+	if err != nil {
+		return xerrors.Errorf("vote error: %w", err)
+	}
+	// query proposal again
+	time.Sleep(3 * time.Second)
+	proposals, err = c0.GetProposals(sdkTypes.StatusNil, 1)
+	if err != nil {
+		return xerrors.Errorf("get proposals error: %w", err)
+	}
+	proposal = proposals[0]
+	log.Printf("proposal: %+v", proposal)
+	assert(proposal.GetStatus() == sdkTypes.StatusPassed, "proposal should be passed")
+	// query params
+	params, err = c0.ABCIQuery("/param/params", []byte{})
+	if err != nil {
+		return xerrors.Errorf("query params error: %w", err)
+	}
+	log.Println("params:", string(params.Response.Value))
+	assert(strings.Contains(string(params.Response.Value), `"unbonding_time":"600000000000"`), "params should be changed")
+	return nil
 }
 
 func Staking() error {
@@ -430,89 +498,6 @@ func assert(cond bool, msg string) {
 	if !cond {
 		panic(msg)
 	}
-}
-
-// nolint
-func StakingBackup() error {
-	// rpc client
-	node0RpcAddr := "tcp://127.0.0.1:8100"
-	c0 := rpc.NewRPCClient(node0RpcAddr, sdkTypes.ProdNetwork)
-	status, err := c0.Status()
-	chainId := status.NodeInfo.Network
-	if err != nil {
-		return xerrors.Errorf("get status error: %w", err)
-	}
-	log.Printf("chainId: %s\n", chainId)
-	log.Printf("node0 status")
-	log.Println(Pretty(status))
-	node1RpcAddr := "tcp://127.0.0.1:8101"
-	c1 := rpc.NewRPCClient(node1RpcAddr, sdkTypes.ProdNetwork)
-	status, err = c1.Status()
-	if err != nil {
-		return xerrors.Errorf("get status error: %w", err)
-	}
-	log.Printf("node1 status")
-	log.Println(Pretty(status))
-
-	// binance client
-	bc0 := NewBinanceChainClient(node0RpcAddr, sdkTypes.ProdNetwork, chainId)
-	//chainIdOption := func(msg *tx.StdSignMsg) *tx.StdSignMsg {
-	//	msg.ChainID = chainId
-	//	return msg
-	//}
-
-	// current validator
-	validators, err := c0.GetStakeValidators()
-	if err != nil {
-		return xerrors.Errorf("get validators error: %w", err)
-	}
-	log.Printf("validators: %+v\n", validators)
-
-	// accounts
-	node0Info, err := GetNodeInfo(0)
-	if err != nil {
-		return xerrors.Errorf("get node0 info error: %w", err)
-	}
-	log.Printf("node0 address: %s", node0Info.Addr)
-	node1Info, err := GetNodeInfo(1)
-	if err != nil {
-		return xerrors.Errorf("get node1 info error: %w", err)
-	}
-	log.Printf("node1 address: %s", node1Info.Addr)
-
-	// transfer 2000000000000 BNB to node1
-	sendCoinsMsg := bankClient.CreateMsg(node0Info.DelegatorAddr, node1Info.DelegatorAddr, cosmosTypes.Coins{cosmosTypes.NewCoin("BNB", 20000000000000)})
-	_, err = bc0.Connect(node0Info.KeyManager).SignAndSendMsgs([]cosmosTypes.Msg{sendCoinsMsg}, nil)
-	if err != nil {
-		return xerrors.Errorf("failed to send coins: %w", err)
-	}
-	node1Account, err := bc0.Account(node1Info.Addr)
-	if err != nil {
-		return xerrors.Errorf("get bob account error: %w", err)
-	}
-	log.Printf("node1 account: %+v\n", node1Account)
-
-	// stake
-	stakeMsg := stake.MsgCreateValidator{
-		Description: stake.Description{
-			Moniker: "node1",
-		},
-		DelegatorAddr: node1Info.DelegatorAddr,
-		ValidatorAddr: node1Info.ValidatorAddr,
-		PubKey:        node1Info.PubKey,
-		Delegation:    cosmosTypes.NewCoin(types.NativeTokenSymbol, 20000e8),
-	}
-	_, err = bc0.Connect(node1Info.KeyManager).SignAndSendMsgs([]cosmosTypes.Msg{stakeMsg}, nil)
-	if err != nil {
-		return xerrors.Errorf("failed to stake: %w", err)
-	}
-	// verify validator change
-	validators, err = c0.GetStakeValidators()
-	if err != nil {
-		return xerrors.Errorf("get validators error: %w", err)
-	}
-	log.Println(Pretty(validators))
-	return nil
 }
 
 func Pretty(v interface{}) string {

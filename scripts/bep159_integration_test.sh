@@ -97,10 +97,10 @@ carl_addr=$(./bnbcli keys list --home ${cli_home} | grep carl | grep -o "bnb1[0-
 # send
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${bob_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${carl_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 
 # get parameters
 result=$(./bnbcli staking parameters --home ${cli_home} --trust-node)
@@ -131,7 +131,7 @@ result=$(./bnbcli staking pool --home ${cli_home} --trust-node)
 # create validator
 result=$(expect ./create-validator-open.exp ${cli_home} bob ${chain_id} ${bob_pubkey})
 check_operation "create validator open" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 result=$(./bnbcli staking validators --home ${cli_home} --trust-node)
 check_operation "Get Validators" "${result}" "Operator"
 result=$(./bnbcli staking validator ${bob_val_addr} --home ${cli_home} --trust-node)
@@ -141,7 +141,7 @@ check_operation "Get Validator" "${result}" "${bob_pubkey}"
 # edit validator
 result=$(expect ./edit-validator.exp ${cli_home} bob ${chain_id} ${bob_pubkey_new})
 check_operation "edit validator" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 result=$(./bnbcli staking validator ${bob_val_addr} --home ${cli_home} --trust-node)
 check_operation "Get Validator" "${result}" "bob-new"
 check_operation "Get Validator" "${result}" "${bob_pubkey_new}"
@@ -150,19 +150,19 @@ bob_val_addr=$(echo "${result}" | grep Operator | grep -o "bva[0-9a-zA-Z]*")
 # delegate
 result=$(expect ./delegate.exp ${cli_home} carl ${chain_id} "1000000000:BNB" ${validator_address})
 check_operation "delegate" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 result=$(./bnbcli staking delegation --address-delegator ${carl_addr} --validator ${validator_address} --home ${cli_home} --trust-node)
 check_operation "Get Delegation" "${result}" "Validator"
 
 # redelegate
 result=$(expect ./redelegate.exp ${cli_home} carl ${chain_id} "600000000:BNB" ${validator_address} ${bob_val_addr})
 check_operation "redelegate" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 
 # undelegate
 result=$(expect ./undelegate.exp ${cli_home} carl ${chain_id} "400000000:BNB" ${validator_address})
 check_operation "undelegate" "${result}" "${chain_operation_words}"
-sleep 2
+sleep 3
 
 # get redelegations
 result=$(./bnbcli staking redelegations ${carl_addr} --home ${cli_home} --trust-node)
@@ -181,6 +181,6 @@ result=$(./bnbcli staking unbonding-delegation --address-delegator ${carl_addr} 
 check_operation "Get Unbonding-Delegation" "${result}" "Delegator"
 
 # run test with go-sdk
-go run ../cmd/test_client
+cd .. && go run ./cmd/test_client
 
 exit_test 0
