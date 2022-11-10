@@ -127,18 +127,8 @@ func saveSnapshot(s *SnapShot, path string) error {
 	return ioutil.WriteFile(fmt.Sprintf("%s/%d.json", path, s.Height), data, 0644)
 }
 
+//nolint
 func TestFee() error {
-	//status, err := c.Status()
-	//if err != nil {
-	//	return xerrors.Errorf("get status failed: %v", err)
-	//}
-	//log.Printf("status: %+v", status)
-	//height := status.SyncInfo.LatestBlockHeight
-	//blockResults, err := c.BlockResults(nil)
-	//if err != nil {
-	//	return xerrors.Errorf("get block results failed: %v", err)
-	//}
-	//log.Printf("block results: %+v", blockResults)
 	latestSnap := &SnapShot{}
 	for {
 		snapshot, err := GetSnapshot()
@@ -156,5 +146,4 @@ func TestFee() error {
 		}
 		latestSnap = snapshot
 	}
-	return nil
 }
