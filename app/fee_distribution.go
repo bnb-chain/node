@@ -70,7 +70,7 @@ func (vac *ValAddrCache) GetDistributionAddr(ctx sdk.Context, consAddr sdk.ConsA
 
 func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
 	fee := fees.Pool.BlockFees()
-	ctx.Logger().Debug("distributeFeeBEP159", "height", ctx.BlockHeader().Height, "fee", fee)
+	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "height", ctx.BlockHeader().Height, "fee", fee)
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
 	if fee.IsEmpty() {
 		// no fees in this block
@@ -85,9 +85,14 @@ func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	feeForAllRewards := sdk.Coins{}
 	var baseProposerRewardRatio sdk.Dec = stakeKeeper.BaseProposerRewardRatio(ctx)
 	var bonusProposerRewardRatio sdk.Dec = stakeKeeper.BonusProposerRewardRatio(ctx)
-	voteNum := int64(len(ctx.VoteInfos()))
-	currentValidators, _, _ := stakeKeeper.GetHeightValidatorsByIndex(ctx, 1)
-	validatorNum := int64(len(currentValidators))
+	validatorNum := int64(len(ctx.VoteInfos()))
+	var voteNum int64 = 0
+	for _, voteInfo := range ctx.VoteInfos() {
+		if voteInfo.SignedLastBlock {
+			voteNum++
+		}
+	}
+	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "voteNum", voteNum, "validatorNum", validatorNum, "baseProposerRewardRatio", baseProposerRewardRatio, "bonusProposerRewardRatio", bonusProposerRewardRatio)
 	for _, token := range fee.Tokens {
 		amount := sdk.NewDec(token.Amount)
 		baseProposerReward := amount.Mul(baseProposerRewardRatio)
@@ -110,7 +115,7 @@ func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, proposerDistributionAddr, proposerRewards); err != nil {
 		panic(err)
 	}
-	ctx.Logger().Debug("distributeFeeBEP159", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
+	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
 
 	// TODO: design event for fee distribution
 	//if publishBlockFee {
