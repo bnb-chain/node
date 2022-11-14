@@ -45,7 +45,7 @@ $ export BNBCHAINPATH=~/go/src/github.com/bnb-chain/node
 $ mkdir -p $BNBCHAINPATH
 $ git clone git@github.com:bnb-chain/node.git $BNBCHAINPATH
 $ cd $BNBCHAINPATH
-$ make build
+$ make install
 ```
 
 **Windows**
@@ -57,7 +57,7 @@ You may need add BNBCHAINPATH to the environment variables.
 > md %BNBCHAINPATH%
 > git clone git@github.com:bnb-chain/node.git %BNBCHAINPATH%
 > cd %BNBCHAINPATH%
-> make build
+> make install
 ```
 
 To test that installation worked, try to run the cli tool:
