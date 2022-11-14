@@ -89,7 +89,7 @@ require (
 
 replace (
 	github.com/binance-chain/go-sdk => github.com/owen-reorg/bnc-go-sdk v0.0.0-20220918164926-755e13c53596
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20221110155014-633dcc7b9b7b
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.25.3-0.20221114175722-5618b1ffb8c7
 	github.com/tendermint/go-amino => github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4
 	github.com/tendermint/tendermint => github.com/bnb-chain/bnc-tendermint v0.32.3-binance.3.0.20221109023026-379ddbab19d1
