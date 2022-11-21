@@ -460,7 +460,6 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 	}
 
 	if ctx.IsDeliverTx() {
-		fmt.Println("transferIn success")
 		addressesChanged := append(transferInPackage.ReceiverAddresses, types.PegAccount)
 		app.bridgeKeeper.Pool.AddAddrs(addressesChanged)
 		to := make([]pubsub.CrossReceiver, 0, len(transferInPackage.ReceiverAddresses))
@@ -471,8 +470,6 @@ func (app *TransferInApp) ExecuteSynPackage(ctx sdk.Context, payload []byte, rel
 			})
 		}
 		publishCrossChainEvent(ctx, app.bridgeKeeper, types.PegAccount.String(), to, symbol, TransferInType, relayerFee)
-	} else {
-		fmt.Println("transferIn failed")
 	}
 
 	// emit peg related event
