@@ -61,7 +61,7 @@ BEP151Height = 28250000
 #Block height of BEP153 upgrade
 BEP153Height = 30516226
 #Block height of BEP173 upgrade
-BEP173Height = 30516226
+BEP173Height = 9223372036854775807
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
