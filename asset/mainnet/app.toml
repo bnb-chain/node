@@ -58,6 +58,10 @@ EnableAccountScriptsForCrossChainTransferHeight = 146060000
 BEP128Height = 234560000
 #Block height of BEP151 upgrade
 BEP151Height = 264000000
+#Block height of BEP153 upgrade
+BEP153Height = 284376000
+#Block height of BEP173 upgrade
+BEP173Height = 284376000
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address

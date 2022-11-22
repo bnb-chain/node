@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.3
+IMPROVEMENTS
+* [\#886](https://github.com/bnb-chain/node/pull/875) [Staking] Fix issues for reward recon service
+
+FEATURES
+* [\#892](https://github.com/bnb-chain/node/pull/892) [Gov] Implement BEP173: Enable Text Proposal on BNB Smart Chain
+
 ## 0.10.2
 FEATURES
 * [\#878](https://github.com/bnb-chain/node/pull/878) [CI] Add ci script to build docker image
