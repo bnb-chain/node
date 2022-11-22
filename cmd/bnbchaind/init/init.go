@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bnb-chain/node/common/types"
 	"os"
 	"path/filepath"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/types"
 	"github.com/bnb-chain/node/common/utils"
 	"github.com/bnb-chain/node/wire"
 )

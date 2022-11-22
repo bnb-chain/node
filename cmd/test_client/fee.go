@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+
 	"github.com/binance-chain/go-sdk/client/rpc"
 	sdkTypes "github.com/binance-chain/go-sdk/common/types"
 	"golang.org/x/xerrors"
-	"io/ioutil"
-	"log"
 )
 
 var (

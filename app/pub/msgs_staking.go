@@ -2,11 +2,11 @@ package pub
 
 import (
 	"fmt"
-	"github.com/linkedin/goavro"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/linkedin/goavro"
 )
 
 // staking message

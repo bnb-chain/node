@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -233,14 +234,14 @@ func Staking() error {
 	log.Printf("node0 status")
 	log.Println(Pretty(status))
 	// bob
-	bob_secret := config.Secret
-	bobKM, err := keys.NewMnemonicKeyManager(bob_secret)
+	validatorSecret := config.Secret
+	valKM, err := keys.NewMnemonicKeyManager(validatorSecret)
 	if err != nil {
 		return xerrors.Errorf("new key manager failed: %w", err)
 	}
-	log.Printf("bob address: %s\n", bobKM.GetAddr())
+	log.Printf("bob address: %s\n", valKM.GetAddr())
 	// create a random account
-	validator0, err := GenKeyManagerWithBNB(c0, bobKM)
+	validator0, err := GenKeyManagerWithBNB(c0, valKM)
 	if err != nil {
 		return xerrors.Errorf("GenKeyManager err: %w", err)
 	}
@@ -353,7 +354,7 @@ func Staking() error {
 	assert(validator.ConsPubKey == consensusPubKey2Str, "validator cons pub key should be equal")
 	tokenBeforeDelegate := validator.Tokens
 	// delegate
-	delegator, err := GenKeyManagerWithBNB(c0, bobKM)
+	delegator, err := GenKeyManagerWithBNB(c0, valKM)
 	if err != nil {
 		return xerrors.Errorf("GenKeyManager err: %w", err)
 	}
@@ -448,7 +449,7 @@ func Staking() error {
 		return xerrors.Errorf("query unbonding delegations by validator error: %w", err)
 	}
 	// delegate to top validator and then redelegate
-	delegator0, err := GenKeyManagerWithBNB(c0, bobKM)
+	delegator0, err := GenKeyManagerWithBNB(c0, valKM)
 	if err != nil {
 		return xerrors.Errorf("GenKeyManager err: %w", err)
 	}
@@ -490,7 +491,23 @@ func Staking() error {
 		return xerrors.Errorf("query redelegations by validator error: %w", err)
 	}
 	assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
-
+	// validator self undelegate under selfMinDelegation
+	valAccAddr := valKM.GetAddr()
+	valValAddr := sdkTypes.ValAddress(valAccAddr)
+	val, err := c0.QueryDelegation(valAccAddr, valValAddr)
+	if err != nil {
+		return xerrors.Errorf("query delegation error: %w", err)
+	}
+	log.Printf("validator delegation: %+v", val)
+	c0.SetKeyManager(valKM)
+	amt, err := strconv.ParseInt(val.Shares.String(), 10, 64)
+	if err != nil {
+		return xerrors.Errorf("shares marshal error: %w", err)
+	}
+	coin := sdkTypes.Coin{Denom: "BNB", Amount: amt}
+	txRes, err = c0.Undelegate(valValAddr, coin, rpc.Commit, tx.WithChainID(chainId))
+	assert(err == nil, fmt.Sprintf("undelegate error: %v", err))
+	assert(txRes.Code == 0, fmt.Sprintf("undelegate tx return err, tx: %+v", txRes))
 	return nil
 }
 
