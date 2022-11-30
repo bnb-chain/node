@@ -550,6 +550,7 @@ func Staking() error {
 	return nil
 }
 
+//nolint
 func UndelegateTest() error {
 	rand.Seed(time.Now().UnixNano())
 	// rpc client
@@ -645,7 +646,7 @@ func BackgroundTx(c0 *rpc.HTTP, km keys.KeyManager, duration time.Duration) erro
 	}
 	startTime := time.Now()
 	for {
-		if (time.Now().Sub(startTime)) > 3*time.Minute {
+		if time.Since(startTime) > 3*time.Minute {
 			return nil
 		}
 		c0.SetKeyManager(km)
