@@ -492,23 +492,180 @@ func Staking() error {
 	}
 	assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
 	// validator self undelegate under selfMinDelegation
-	valAccAddr := valKM.GetAddr()
+	valAccAddr := validator0.GetAddr()
 	valValAddr := sdkTypes.ValAddress(valAccAddr)
 	val, err := c0.QueryDelegation(valAccAddr, valValAddr)
 	if err != nil {
 		return xerrors.Errorf("query delegation error: %w", err)
 	}
 	log.Printf("validator delegation: %+v", val)
-	c0.SetKeyManager(valKM)
 	amt, err := strconv.ParseInt(val.Shares.String(), 10, 64)
 	if err != nil {
 		return xerrors.Errorf("shares marshal error: %w", err)
 	}
-	coin := sdkTypes.Coin{Denom: "BNB", Amount: amt}
+	coin := sdkTypes.Coin{Denom: "BNB", Amount: amt - 1}
+	c0.SetKeyManager(validator0)
 	txRes, err = c0.Undelegate(valValAddr, coin, rpc.Commit, tx.WithChainID(chainId))
 	assert(err == nil, fmt.Sprintf("undelegate error: %v", err))
 	assert(txRes.Code == 0, fmt.Sprintf("undelegate tx return err, tx: %+v", txRes))
+	// check jailed
+	validator, err = c0.QueryValidator(valValAddr)
+	if err != nil {
+		return xerrors.Errorf("query validator error: %w", err)
+	}
+	log.Printf("validator: %+v", validator)
+	assert(validator.Jailed, "validator should be jailed")
+	// unjail
+	c0.SetKeyManager(validator0)
+	txRes, err = c0.Unjail(valValAddr, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("unjail tx: %+v, err: %v\n", txRes, err)
+	assert(err == nil && txRes.Code != 0, "unjail should return error")
+	assert(strings.Contains(txRes.Log, "validator's self delegation less than minimum; cannot be unjailed"), "unjail should return error")
+	// delegate again
+	c0.SetKeyManager(valKM)
+	transfer := msg.Transfer{ToAddr: valAccAddr, Coins: sdkTypes.Coins{coin}}
+	txRes, err = c0.SendToken([]msg.Transfer{transfer}, rpc.Commit, tx.WithChainID(chainId))
+	assert(err == nil && txRes.Code == 0, fmt.Sprintf("send token tx: %+v, error: %v", txRes, err))
+	c0.SetKeyManager(validator0)
+	txRes, err = c0.Delegate(valValAddr, coin, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("delegate to validator tx: %+v, err: %v\n", txRes, err)
+	assert(err == nil && txRes.Code == 0, "delegate should not return error")
+	// unjail again
+	txRes, err = c0.Unjail(valValAddr, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("unjail tx: %+v, err: %v\n", txRes, err)
+	assert(err == nil && txRes.Code != 0, "unjail should return error")
+	assert(strings.Contains(txRes.Log, "validator still jailed, cannot yet be unjailed"), "unjail should return error")
+	// change parameter, wait enough time, unjail again should success
+	//time.Sleep(60 * time.Second)
+	//txRes, err = c0.Unjail(valValAddr, rpc.Commit, tx.WithChainID(chainId))
+	//log.Printf("unjail tx: %+v, err: %v\n", txRes, err)
+	//assert(err == nil && txRes.Code == 0, "unjail should not return error")
+	//// check jailed again
+	//validator, err = c0.QueryValidator(valValAddr)
+	//if err != nil {
+	//	return xerrors.Errorf("query validator error: %w", err)
+	//}
+	//log.Printf("validator: %+v", validator)
+	//assert(!validator.Jailed, "validator should not be jailed")
 	return nil
+}
+
+func UndelegateTest() error {
+	rand.Seed(time.Now().UnixNano())
+	// rpc client
+	config := getConfigFromEnv()
+	node0RpcAddr := config.RPCAddr
+	c0 := rpc.NewRPCClient(node0RpcAddr, sdkTypes.ProdNetwork)
+	status, err := c0.Status()
+	chainId := status.NodeInfo.Network
+	txWithChainID = tx.WithChainID(chainId)
+	if err != nil {
+		return xerrors.Errorf("get status error: %w", err)
+	}
+	log.Printf("chainId: %s\n", chainId)
+	log.Printf("node0 status")
+	log.Println(Pretty(status))
+	// bob
+	validatorSecret := config.Secret
+	valKM, err := keys.NewMnemonicKeyManager(validatorSecret)
+	if err != nil {
+		return xerrors.Errorf("new key manager failed: %w", err)
+	}
+	log.Printf("bob address: %s\n", valKM.GetAddr())
+	validators, err := c0.QueryTopValidators(10)
+	if err != nil {
+		return xerrors.Errorf("query validators error: %w", err)
+	}
+	log.Printf("validators: %s", Pretty(validators))
+	log.Printf("validator count: %d", len(validators))
+	// create a random account
+	validator0, err := GenKeyManagerWithBNB(c0, valKM)
+	if err != nil {
+		return xerrors.Errorf("GenKeyManager err: %w", err)
+	}
+	log.Printf("validator0 address: %s\n", validator0.GetAddr())
+	// create validator
+	amount := sdkTypes.Coin{Denom: "BNB", Amount: 123e8}
+	des := sdkTypes.Description{Moniker: "node1"}
+	rate, _ := sdkTypes.NewDecFromStr("1")
+	maxRate, _ := sdkTypes.NewDecFromStr("1")
+	maxChangeRate, _ := sdkTypes.NewDecFromStr("1")
+	consensusPrivKey := ed25519.GenPrivKey()
+	consensusPubKey := consensusPrivKey.PubKey()
+	// save consensus key to file for later usage
+	filePVKey := privval.FilePVKey{
+		Address: consensusPubKey.Address(),
+		PubKey:  consensusPubKey,
+		PrivKey: consensusPrivKey,
+	}
+	cdc := amino.NewCodec()
+	cryptoAmino.RegisterAmino(cdc)
+	privval.RegisterRemoteSignerMsg(cdc)
+	jsonBytes, err := cdc.MarshalJSONIndent(filePVKey, "", "  ")
+	if err != nil {
+		return xerrors.Errorf("marshal json error: %w", err)
+	}
+	err = ioutil.WriteFile("priv_validator_key.json", jsonBytes, 0600)
+	if err != nil {
+		return xerrors.Errorf("write file error: %w", err)
+	}
+	commission := sdkTypes.CommissionMsg{
+		Rate:          rate,
+		MaxRate:       maxRate,
+		MaxChangeRate: maxChangeRate,
+	}
+	c0.SetKeyManager(validator0)
+	txRes, err := c0.CreateValidatorOpen(amount, msg.Description(des), commission, sdkTypes.MustBech32ifyConsPub(consensusPubKey), rpc.Commit, tx.WithChainID(chainId))
+	if err != nil {
+		return xerrors.Errorf("create validator error: %w", err)
+	}
+	log.Printf("create validator tx: %+v\n", txRes)
+	assert(txRes.Code == 0, "create validator tx return err")
+	err = BackgroundTx(c0, valKM, time.Minute)
+	if err != nil {
+		return xerrors.Errorf("BackgroundTx error: %w", err)
+	}
+	c0.SetKeyManager(validator0)
+	txRes, err = c0.Undelegate(sdkTypes.ValAddress(validator0.GetAddr()), amount, rpc.Commit, tx.WithChainID(chainId))
+	if err != nil {
+		return xerrors.Errorf("undelegate error: %w", err)
+	}
+	log.Printf("undelegate tx: %+v\n", txRes)
+	err = BackgroundTx(c0, valKM, time.Minute)
+	if err != nil {
+		return xerrors.Errorf("BackgroundTx error: %w", err)
+	}
+	return nil
+}
+
+func BackgroundTx(c0 *rpc.HTTP, km keys.KeyManager, duration time.Duration) error {
+	newKm, err := GenKeyManagerWithBNB(c0, km)
+	if err != nil {
+		return xerrors.Errorf("GenKeyManager err: %w", err)
+	}
+	startTime := time.Now()
+	for {
+		if (time.Now().Sub(startTime)) > 3*time.Minute {
+			return nil
+		}
+		c0.SetKeyManager(km)
+		transfer := msg.Transfer{ToAddr: newKm.GetAddr(), Coins: sdkTypes.Coins{sdkTypes.Coin{
+			Denom:  "BNB",
+			Amount: 10,
+		}}}
+		txRes, err := c0.SendToken([]msg.Transfer{transfer}, rpc.Commit, txWithChainID)
+		if err != nil {
+			return xerrors.Errorf("send token error: %w", err)
+		}
+		assert(txRes.Code == 0, fmt.Sprintf("send token error, tx: %+v", txRes))
+		validators, err := c0.QueryTopValidators(10)
+		if err != nil {
+			return xerrors.Errorf("query validators error: %w", err)
+		}
+		log.Printf("validators: %s", Pretty(validators))
+		log.Printf("validator count: %d", len(validators))
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func assert(cond bool, msg string) {

@@ -379,6 +379,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgDelegate{}.Type(),
 		stake.MsgRedelegate{}.Type(),
 		stake.MsgUndelegate{}.Type(),
+		slashing.MsgUnjail{}.Type(),
 	)
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
