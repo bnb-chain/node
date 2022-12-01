@@ -40,6 +40,7 @@ const (
 	BEP128 = sdk.BEP128 // https://github.com/bnb-chain/BEPs/pull/128 Staking reward distribution upgrade
 	BEP151 = "BEP151"   // https://github.com/bnb-chain/BEPs/pull/151 Decommission Decentralized Exchange
 	BEP153 = sdk.BEP153 // https://github.com/bnb-chain/BEPs/pull/153 Native Staking
+	BEP173 = sdk.BEP173 // https://github.com/bnb-chain/BEPs/pull/173 Text Proposal
 )
 
 func UpgradeBEP10(before func(), after func()) {

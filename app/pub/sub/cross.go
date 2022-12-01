@@ -10,10 +10,10 @@ import (
 func SubscribeCrossTransferEvent(sub *pubsub.Subscriber) error {
 	err := sub.Subscribe(bridge.CrossTransferTopic, func(event pubsub.Event) {
 		switch event := event.(type) {
-		case bridge.CrossTransferEvent:
+		case pubsub.CrossTransferEvent:
 			crossTransferEvent := event
 			if stagingArea.CrossTransferData == nil {
-				stagingArea.CrossTransferData = make([]bridge.CrossTransferEvent, 0, 1)
+				stagingArea.CrossTransferData = make([]pubsub.CrossTransferEvent, 0, 1)
 			}
 			stagingArea.CrossTransferData = append(stagingArea.CrossTransferData, crossTransferEvent)
 
@@ -35,9 +35,9 @@ func SubscribeOracleEvent(sub *pubsub.Subscriber) error {
 			// no need to publish into CrossTransferData if no balance change.
 			if crossFailEvent.RelayerFee > 0 {
 				if stagingArea.CrossTransferData == nil {
-					stagingArea.CrossTransferData = make([]bridge.CrossTransferEvent, 0, 1)
+					stagingArea.CrossTransferData = make([]pubsub.CrossTransferEvent, 0, 1)
 				}
-				stagingArea.CrossTransferData = append(stagingArea.CrossTransferData, bridge.CrossTransferEvent{
+				stagingArea.CrossTransferData = append(stagingArea.CrossTransferData, pubsub.CrossTransferEvent{
 					TxHash:     crossFailEvent.TxHash,
 					ChainId:    crossFailEvent.ChainId,
 					Type:       bridge.CrossAppFailedType,

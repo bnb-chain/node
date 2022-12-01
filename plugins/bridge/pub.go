@@ -30,32 +30,11 @@ const (
 	MirrorSyncType string = "MISY"
 )
 
-type CrossTransferEvent struct {
-	TxHash     string
-	ChainId    string
-	Type       string
-	RelayerFee int64
-	From       string
-	Denom      string
-	Contract   string
-	Decimals   int
-	To         []CrossReceiver
-}
-
-type CrossReceiver struct {
-	Addr   string
-	Amount int64
-}
-
-func (event CrossTransferEvent) GetTopic() pubsub.Topic {
-	return CrossTransferTopic
-}
-
-func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string, to []CrossReceiver, symbol string, eventType string, relayerFee int64) {
+func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string, to []pubsub.CrossReceiver, symbol string, eventType string, relayerFee int64) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
-			event := CrossTransferEvent{
+			event := pubsub.CrossTransferEvent{
 				TxHash:     txHashStr,
 				ChainId:    keeper.DestChainName,
 				RelayerFee: relayerFee,
@@ -71,11 +50,11 @@ func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string
 	}
 }
 
-func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from string, to []CrossReceiver, symbol string, eventType string, relayerFee int64, contract string, decimals int8) {
+func publishBindSuccessEvent(ctx types.Context, keeper keeper.Keeper, from string, to []pubsub.CrossReceiver, symbol string, eventType string, relayerFee int64, contract string, decimals int8) {
 	if keeper.PbsbServer != nil {
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
-			event := CrossTransferEvent{
+			event := pubsub.CrossTransferEvent{
 				TxHash:     txHashStr,
 				ChainId:    keeper.DestChainName,
 				RelayerFee: relayerFee,
