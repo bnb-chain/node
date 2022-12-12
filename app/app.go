@@ -378,7 +378,6 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		stake.MsgCreateValidatorOpen{}.Type(),
 		stake.MsgEditValidator{}.Type(),
 		stake.MsgDelegate{}.Type(),
-		stake.MsgRedelegate{}.Type(),
 		stake.MsgUndelegate{}.Type(),
 		slashing.MsgUnjail{}.Type(),
 	)
