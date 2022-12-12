@@ -1,8 +1,6 @@
 package bridge
 
 import (
-	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -34,7 +32,6 @@ const (
 
 func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string, to []pubsub.CrossReceiver, symbol string, eventType string, relayerFee int64) {
 	if keeper.PbsbServer != nil {
-		fmt.Println("transferIn success")
 		txHash := ctx.Value(baseapp.TxHashKey)
 		if txHashStr, ok := txHash.(string); ok {
 			event := pubsub.CrossTransferEvent{
@@ -48,7 +45,6 @@ func publishCrossChainEvent(ctx types.Context, keeper keeper.Keeper, from string
 			}
 			keeper.PbsbServer.Publish(event)
 		} else {
-			fmt.Println("transferIn failed")
 			ctx.Logger().With("module", "bridge").Error("failed to get txhash, will not publish cross transfer event ")
 		}
 	}
