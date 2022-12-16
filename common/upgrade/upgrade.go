@@ -41,6 +41,7 @@ const (
 	BEP151 = "BEP151"   // https://github.com/bnb-chain/BEPs/pull/151 Decommission Decentralized Exchange
 	BEP153 = sdk.BEP153 // https://github.com/bnb-chain/BEPs/pull/153 Native Staking
 	BEP173 = sdk.BEP173 // https://github.com/bnb-chain/BEPs/pull/173 Text Proposal
+	BEP174 = sdk.BEP174 // https://github.com/bnb-chain/BEPs/pull/174 BEP174TODO: Add bsc chainID to encodeSigHeader
 )
 
 func UpgradeBEP10(before func(), after func()) {
