@@ -1,0 +1,12 @@
+#!/usr/bin/expect
+
+set home [lindex $argv 0]
+set from [lindex $argv 1]
+set chain_id [lindex $argv 2]
+set pubkey [lindex $argv 3]
+
+set timeout 30
+    spawn ./bnbcli staking create-validator-open --home $home --from $from --chain-id=$chain_id --amount 2000000000000:BNB --pubkey $pubkey --moniker bob --commission-rate 1 --commission-max-rate 1 --commission-max-change-rate 1
+	expect "Password*"
+	send "12345678\r"
+expect eof

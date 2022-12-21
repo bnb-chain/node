@@ -1,0 +1,13 @@
+#!/usr/bin/expect
+
+set home [lindex $argv 0]
+set from [lindex $argv 1]
+set chain_id [lindex $argv 2]
+set amount [lindex $argv 3]
+set validator_addr [lindex $argv 4]
+
+set timeout 30
+    spawn ./bnbcli staking undelegate --home $home --from $from --chain-id=$chain_id --amount $amount --validator $validator_addr
+	expect "Password*"
+	send "12345678\r"
+expect eof

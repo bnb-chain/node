@@ -9,22 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bnb-chain/node/common/upgrade"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/tendermint/go-amino"
-	abcicli "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkFees "github.com/cosmos/cosmos-sdk/types/fees"
@@ -39,8 +23,21 @@ import (
 	sTypes "github.com/cosmos/cosmos-sdk/x/sidechain/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/go-amino"
+	abcicli "github.com/tendermint/tendermint/abci/client"
+	"github.com/tendermint/tendermint/abci/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	ctypes "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/plugins/dex"
 	"github.com/bnb-chain/node/plugins/tokens"
 	"github.com/bnb-chain/node/wire"
@@ -49,7 +46,7 @@ import (
 // util objects
 var (
 	memDB                             = dbm.NewMemDB()
-	logger                            = log.NewTMLogger(os.Stdout)
+	logger                            = log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500000e8), sdk.NewCoin("BTC-000", 200e8)})
 	testScParams = `[{"type": "params/StakeParamSet","value": {"unbonding_time": "604800000000000","max_validators": 11,"bond_denom": "BNB","min_self_delegation": "5000000000000","min_delegation_change": "100000000","reward_distribution_batch_size":"1000"}},{"type": "params/SlashParamSet","value": {"max_evidence_age": "259200000000000","signed_blocks_window": "0","min_signed_per_window": "0","double_sign_unbond_duration": "9223372036854775807","downtime_unbond_duration": "172800000000000","too_low_del_unbond_duration": "86400000000000","slash_fraction_double_sign": "0","slash_fraction_downtime": "0","double_sign_slash_amount": "1000000000000","downtime_slash_amount": "5000000000","submitter_reward": "100000000000","downtime_slash_fee": "1000000000"}},{"type": "params/OracleParamSet","value": {"ConsensusNeeded": "70000000"}},{"type": "params/IbcParamSet","value": {"relayer_fee": "1000000"}}]`

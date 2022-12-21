@@ -7,9 +7,7 @@ import (
 	"text/template"
 
 	"github.com/cosmos/cosmos-sdk/server"
-
 	"github.com/spf13/viper"
-
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/common"
 )
@@ -91,6 +89,10 @@ BEP128Height = {{ .UpgradeConfig.BEP128Height }}
 BEP151Height = {{ .UpgradeConfig.BEP151Height }}
 # Block height of BEP153 upgrade
 BEP153Height = {{ .UpgradeConfig.BEP153Height }}
+# Block height of BEP159 upgrade
+BEP159Height = {{ .UpgradeConfig.BEP159Height }}
+# Block height of BEP159Phase2 upgrade
+BEP159Phase2Height = {{ .UpgradeConfig.BEP159Phase2Height }}
 # Block height of BEP173 upgrade
 BEP173Height = {{ .UpgradeConfig.BEP173Height }}
 # Block height of FixDoubleSignChainIdHeight upgrade
@@ -536,6 +538,8 @@ type UpgradeConfig struct {
 	BEP128Height                                    int64 `mapstructure:"BEP128Height"`
 	BEP151Height                                    int64 `mapstructure:"BEP151Height"`
 	BEP153Height                                    int64 `mapstructure:"BEP153Height"`
+	BEP159Height                                    int64 `mapstructure:"BEP159Height"`
+	BEP159Phase2Height                              int64 `mapstructure:"BEP159Phase2Height"`
 	BEP173Height                                    int64 `mapstructure:"BEP173Height"`
 	FixDoubleSignChainIdHeight                      int64 `mapstructure:"FixDoubleSignChainIdHeight"`
 }
@@ -560,6 +564,8 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP128Height:               math.MaxInt64,
 		BEP151Height:               math.MaxInt64,
 		BEP153Height:               math.MaxInt64,
+		BEP159Height:               math.MaxInt64,
+		BEP159Phase2Height:         math.MaxInt64,
 		BEP173Height:               math.MaxInt64,
 		FixDoubleSignChainIdHeight: math.MaxInt64,
 		BEP82Height:                math.MaxInt64,
