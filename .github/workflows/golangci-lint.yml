@@ -25,5 +25,8 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
+      - run: go mod tidy && go mod download
       - name: golangci-lint
         run: make lint

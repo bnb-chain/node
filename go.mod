@@ -88,7 +88,7 @@ require (
 )
 
 replace (
-	github.com/binance-chain/go-sdk => github.com/owen-reorg/bnc-go-sdk v0.0.0-20221130201638-e8d0681a81e4
+	github.com/binance-chain/go-sdk => github.com/bnb-chain/go-sdk v1.2.8
 	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.25.4-0.20221221115251-f9e69ff1b273
 	github.com/tendermint/go-amino => github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4

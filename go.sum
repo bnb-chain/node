@@ -32,6 +32,8 @@ github.com/bnb-chain/bnc-tendermint v0.32.3-binance.3.0.20221109023026-379ddbab1
 github.com/bnb-chain/bnc-tendermint v0.32.3-binance.3.0.20221109023026-379ddbab19d1/go.mod h1:EJSMv0Dh5v91CiHn+2pOnl1a3sdRVjpdekJ20AyYmlQ=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4 h1:w8pAAx1N0lmVf0Lxs1prYuDikXwirOb9T7y2yw8zOBw=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.4/go.mod h1:Zmh8GRdNJB8DULIOBar3JCZp6tSpcvM1NGKfE9U2EzA=
+github.com/bnb-chain/go-sdk v1.2.8 h1:UvxrVvmzvmTpgbdGqQaJJ5DNPzjO9xByScVrWRDNhMk=
+github.com/bnb-chain/go-sdk v1.2.8/go.mod h1:Et944AMlNUod/ir1/P3kkvYY5xq4bcE6HF6LM+SiSN8=
 github.com/bnb-chain/ledger-cosmos-go v0.9.9-binance.3 h1:a+QLVLaP32v9gfRDKHH2AcRkzYLTWbC8UxYTJkXRSec=
 github.com/bnb-chain/ledger-cosmos-go v0.9.9-binance.3/go.mod h1:TULULYTvPuWBxFIZFy6KjJaxJzbHeUderYNB1YhD6N0=
 github.com/btcsuite/btcd v0.0.0-20190115013929-ed77733ec07d/go.mod h1:d3C0AkH6BRcvO8T0UEPu53cnw4IbV63x1bEjildYhO0=
@@ -181,8 +183,6 @@ github.com/onsi/ginkgo v1.10.3/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.1 h1:K0jcRCwNQM3vFGh1ppMtDh/+7ApJrjldlX8fA0jDTLQ=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
-github.com/owen-reorg/bnc-go-sdk v0.0.0-20221130201638-e8d0681a81e4 h1:R+oZ2pVJrf4vBzqO5pBkuQDoGCz7OfoS4acrvjd57/o=
-github.com/owen-reorg/bnc-go-sdk v0.0.0-20221130201638-e8d0681a81e4/go.mod h1:Et944AMlNUod/ir1/P3kkvYY5xq4bcE6HF6LM+SiSN8=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.4.0 h1:u3Z1r+oOXJIkxqw34zVhyPgjBsm6X2wn21NWs/HfSeg=
 github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
