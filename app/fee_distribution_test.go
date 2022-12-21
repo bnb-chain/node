@@ -367,6 +367,7 @@ func TestBEP159Distribution(t *testing.T) {
 	require.Equal(t, int64(12), app.stakeKeeper.GetAllValidatorsCount(ctx))
 	validators = app.stakeKeeper.GetSortedBondedValidators(ctx)
 	// check fees
+	ctx = ApplyBlock(t, app, ctx, []auth.StdTx{})
 	logger.Debug("feeAddrs", "validator0", validators[0].DistributionAddr, "feeForAll", stake.FeeForAllAccAddr)
 	validator0Balance := app.CoinKeeper.GetCoins(ctx, validators[0].DistributionAddr)
 	feeForAllBalance := app.CoinKeeper.GetCoins(ctx, stake.FeeForAllAccAddr)
@@ -433,33 +434,34 @@ func TestBEP159Distribution(t *testing.T) {
 		require.False(t, feeAddrBalance.IsZero(), "feeAddrBalance should be zero")
 	}
 
-	// two more breath block, one for delegator to get into snapshot, one to get rewards
-	// validator1 delegate to validator0
-	delegateMsg := stake.NewMsgDelegate(accs[1].Address, sdk.ValAddress(accs[0].Address), sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt()))
-	txs = GenSimTxs(app, []sdk.Msg{delegateMsg}, true, accs[1].Priv)
-	ctx = ApplyBlock(t, app, ctx, txs)
-	delegatorBalance := app.CoinKeeper.GetCoins(ctx, accs[1].Address)
-	logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
-
-	// need 1 breath block to get into snapshot
-	ctx = ApplyToBreathBlocks(t, app, ctx, 1)
-	require.Equal(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
-	delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
-	logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
-	// validator2 delegate to validator0
-	delegateMsg = stake.NewMsgDelegate(accs[2].Address, sdk.ValAddress(accs[0].Address), sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt()))
-	txs = GenSimTxs(app, []sdk.Msg{delegateMsg}, true, accs[2].Priv)
-	ctx = ApplyBlock(t, app, ctx, txs)
-
-	// need 1 breath block to get into distribution addr
-	ctx = ApplyToBreathBlocks(t, app, ctx, 1)
-	require.Equal(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
-	delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
-	logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
-
-	// need 1 more block to distribute rewards
-	ctx = ApplyEmptyBlocks(t, app, ctx, 1)
-	require.NotEqual(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
-	delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
-	logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
+	// open this when delegate opens
+	//// two more breath block, one for delegator to get into snapshot, one to get rewards
+	//// validator1 delegate to validator0
+	//delegateMsg := stake.NewMsgDelegate(accs[1].Address, sdk.ValAddress(accs[0].Address), sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt()))
+	//txs = GenSimTxs(app, []sdk.Msg{delegateMsg}, true, accs[1].Priv)
+	//ctx = ApplyBlock(t, app, ctx, txs)
+	//delegatorBalance := app.CoinKeeper.GetCoins(ctx, accs[1].Address)
+	//logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
+	//
+	//// need 1 breath block to get into snapshot
+	//ctx = ApplyToBreathBlocks(t, app, ctx, 1)
+	//require.Equal(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
+	//delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
+	//logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
+	//// validator2 delegate to validator0
+	//delegateMsg = stake.NewMsgDelegate(accs[2].Address, sdk.ValAddress(accs[0].Address), sdk.NewCoin("BNB", sdk.NewDecWithoutFra(10000*16).RawInt()))
+	//txs = GenSimTxs(app, []sdk.Msg{delegateMsg}, true, accs[2].Priv)
+	//ctx = ApplyBlock(t, app, ctx, txs)
+	//
+	//// need 1 breath block to get into distribution addr
+	//ctx = ApplyToBreathBlocks(t, app, ctx, 1)
+	//require.Equal(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
+	//delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
+	//logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
+	//
+	//// need 1 more block to distribute rewards
+	//ctx = ApplyEmptyBlocks(t, app, ctx, 1)
+	//require.NotEqual(t, delegatorBalance, app.CoinKeeper.GetCoins(ctx, accs[1].Address))
+	//delegatorBalance = app.CoinKeeper.GetCoins(ctx, accs[1].Address)
+	//logger.Debug("delegatorBalance", "delegatorBalance", delegatorBalance)
 }

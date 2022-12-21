@@ -69,16 +69,24 @@ func (vac *ValAddrCache) GetDistributionAddr(ctx sdk.Context, consAddr sdk.ConsA
 }
 
 func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *ValAddrCache, publishBlockFee bool, stakeKeeper stake.Keeper) (blockFee pub.BlockFee) {
-	fee := fees.Pool.BlockFees()
-	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "height", ctx.BlockHeader().Height, "fee", fee)
 	blockFee = pub.BlockFee{Height: ctx.BlockHeader().Height}
-	if fee.IsEmpty() {
-		// no fees in this block
+	prevBlockFee := stakeKeeper.BankKeeper.GetCoins(ctx, stake.FeeCollectorAddr)
+	prevProposerDistributionAddr := stakeKeeper.GetPrevProposerDistributionAddr(ctx)
+	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "height", ctx.BlockHeader().Height, "prevBlockFee", prevBlockFee)
+	// set fee in current block
+	currentBlockFee := fees.Pool.BlockFees().Tokens
+	if !currentBlockFee.IsZero() {
+		if _, _, err := stakeKeeper.BankKeeper.AddCoins(ctx, stake.FeeCollectorAddr, currentBlockFee); err != nil {
+			panic(err)
+		}
+		proposerValAddr := ctx.BlockHeader().ProposerAddress
+		proposerDistributionAddr := valAddrCache.GetDistributionAddr(ctx, proposerValAddr)
+		stakeKeeper.SetPrevProposerDistributionAddr(ctx, proposerDistributionAddr)
+	}
+	// distribute previous block fee
+	if prevBlockFee.IsZero() {
 		return
 	}
-
-	proposerValAddr := ctx.BlockHeader().ProposerAddress
-	proposerDistributionAddr := valAddrCache.GetDistributionAddr(ctx, proposerValAddr)
 
 	// distrubute proposer rewards
 	proposerRewards := sdk.Coins{}
@@ -93,7 +101,7 @@ func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 		}
 	}
 	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "voteNum", voteNum, "validatorNum", validatorNum, "baseProposerRewardRatio", baseProposerRewardRatio, "bonusProposerRewardRatio", bonusProposerRewardRatio)
-	for _, token := range fee.Tokens {
+	for _, token := range prevBlockFee {
 		amount := sdk.NewDec(token.Amount)
 		baseProposerReward := amount.Mul(baseProposerRewardRatio)
 		var bonusProposerReward sdk.Dec
@@ -109,13 +117,13 @@ func distributeFeeBEP159(ctx sdk.Context, am auth.AccountKeeper, valAddrCache *V
 		feeForAllRewards = append(feeForAllRewards, sdk.NewCoin(token.Denom, amount.Sub(proposerAmount).RawInt()))
 	}
 	var err error
-	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, stake.FeeForAllAccAddr, feeForAllRewards); err != nil {
+	if _, err = stakeKeeper.BankKeeper.SendCoins(ctx, stake.FeeCollectorAddr, stake.FeeForAllAccAddr, feeForAllRewards); err != nil {
 		panic(err)
 	}
-	if _, _, err = stakeKeeper.BankKeeper.AddCoins(ctx, proposerDistributionAddr, proposerRewards); err != nil {
+	if _, err = stakeKeeper.BankKeeper.SendCoins(ctx, stake.FeeCollectorAddr, prevProposerDistributionAddr, proposerRewards); err != nil {
 		panic(err)
 	}
-	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "proposerDistributionAddr", proposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
+	ctx.Logger().Info("FeeCalculation distributeFeeBEP159", "prevProposerDistributionAddr", prevProposerDistributionAddr, "proposerRewards", proposerRewards, "feeForAllRewards", feeForAllRewards)
 
 	// TODO: design event for fee distribution
 	//if publishBlockFee {

@@ -319,7 +319,7 @@ func Staking() error {
 	}
 	log.Printf("top validators: %+v\n", topValidators)
 	assert(len(topValidators) == 1, "top validators should be 1")
-	topValidator := topValidators[0]
+	//topValidator := topValidators[0]
 	// query validator
 	validator, err := c0.QueryValidator(sdkTypes.ValAddress(validator0.GetAddr()))
 	if err != nil {
@@ -352,145 +352,145 @@ func Staking() error {
 	assert(bytes.Equal(validator.OperatorAddr, validator0.GetAddr()), "validator address should be equal")
 	assert(validator.Description == des2, "validator description should be equal")
 	assert(validator.ConsPubKey == consensusPubKey2Str, "validator cons pub key should be equal")
-	tokenBeforeDelegate := validator.Tokens
-	// delegate
-	delegator, err := GenKeyManagerWithBNB(c0, valKM)
-	if err != nil {
-		return xerrors.Errorf("GenKeyManager err: %w", err)
-	}
-	c0.SetKeyManager(delegator)
-	var delegateAmount int64 = 5e8
-	delegateCoin := sdkTypes.Coin{Denom: "BNB", Amount: delegateAmount}
-	txRes, err = c0.Delegate(sdkTypes.ValAddress(validator0.GetAddr()), delegateCoin, rpc.Commit, tx.WithChainID(chainId))
-	if err != nil {
-		return xerrors.Errorf("delegate error: %w", err)
-	}
-	assert(txRes.Code == 0, fmt.Sprintf("delegate tx return err, tx: %+v", txRes))
-	// check delegation
-	validator, err = c0.QueryValidator(sdkTypes.ValAddress(validator0.GetAddr()))
-	if err != nil {
-		return xerrors.Errorf("query validator error: %w", err)
-	}
-	log.Printf("query validator: %+v\n", validator)
-	tokenAfterDelegate := validator.Tokens
-	assert(tokenAfterDelegate.Sub(tokenBeforeDelegate).Equal(sdkTypes.NewDec(delegateAmount)), "delegate tokens should be equal")
-	// query delegation
-	delegationQuery, err := c0.QueryDelegation(delegator.GetAddr(), sdkTypes.ValAddress(validator0.GetAddr()))
-	if err != nil {
-		return xerrors.Errorf("query delegation error: %w", err)
-	}
-	log.Printf("query delegation: %+v\n", delegationQuery)
-	assert(delegationQuery.Delegation.Shares.Equal(sdkTypes.NewDec(delegateAmount)), "delegation shares should be equal")
-	assert(delegationQuery.Balance.IsEqual(delegateCoin), "delegation balance should be equal")
-	// query delegations
-	delegations, err := c0.QueryDelegations(delegator.GetAddr())
-	if err != nil {
-		return xerrors.Errorf("query delegations error: %w", err)
-	}
-	log.Printf("query delegations: %+v\n", delegations)
-	// check redelegate preparation
-	topValAddr := topValidator.OperatorAddr
-	validator0Addr := sdkTypes.ValAddress(validator0.GetAddr())
-	topValidatorBeforeRedelegate, err := c0.QueryValidator(topValAddr)
-	if err != nil {
-		return xerrors.Errorf("query validator error: %w", err)
-	}
-	log.Printf("top validator before redelegate: %+v\n", topValidatorBeforeRedelegate)
-	// redelegate from validator0 to top validator, should success immediately
-	var redelegateAmount int64 = 2e8
-	redelegateCoin := sdkTypes.Coin{Denom: "BNB", Amount: redelegateAmount}
-	c0.SetKeyManager(delegator)
-	txRes, err = c0.Redelegate(validator0Addr, topValAddr, redelegateCoin, rpc.Commit, tx.WithChainID(chainId))
-	if err != nil {
-		return xerrors.Errorf("redelegate error: %w", err)
-	}
-	assert(txRes.Code == 0, fmt.Sprintf("redelegate tx return err, tx: %+v", txRes))
-	topValidatorAfterRedelegate, err := c0.QueryValidator(topValAddr)
-	if err != nil {
-		return xerrors.Errorf("query validator error: %w", err)
-	}
-	log.Printf("top validator after redelegate: %+v\n", topValidatorAfterRedelegate)
-	assert(topValidatorAfterRedelegate.Tokens.Sub(topValidatorBeforeRedelegate.Tokens).Equal(sdkTypes.NewDec(redelegateAmount)), "redelegate tokens should be equal")
-	// undelegate
-	c0.SetKeyManager(delegator)
-	txRes, err = c0.Undelegate(topValAddr, redelegateCoin, rpc.Commit, tx.WithChainID(chainId))
-	if err != nil {
-		return xerrors.Errorf("undelegate error: %w", err)
-	}
-	assert(txRes.Code == 0, fmt.Sprintf("undelegate tx return err, tx: %+v", txRes))
-	topValidatorAfterUndelegate, err := c0.QueryValidator(topValAddr)
-	if err != nil {
-		return xerrors.Errorf("query validator error: %w", err)
-	}
-	log.Printf("top validator after undelegate: %+v\n", topValidatorAfterUndelegate)
-	assert(topValidatorAfterUndelegate.Tokens.Equal(topValidatorBeforeRedelegate.Tokens), "check undelegation token change")
-	// query pool
-	pool, err := c0.GetPool()
-	if err != nil {
-		return xerrors.Errorf("get pool error: %w", err)
-	}
-	log.Printf("pool: %+v\n", pool)
-	// query unbonding delegation
-	unbondingDelegation, err := c0.QueryUnbondingDelegation(topValAddr, delegator.GetAddr())
-	log.Printf("query unbonding delegation: %+v, err: %v\n", unbondingDelegation, err)
-	if err != nil {
-		return xerrors.Errorf("query unbonding delegation error: %w", err)
-	}
-	// query unbonding delegations
-	unbondingDelegations, err := c0.QueryUnbondingDelegations(delegator.GetAddr())
-	log.Printf("query unbonding delegations: %+v, err: %v\n", unbondingDelegations, err)
-	if err != nil {
-		return xerrors.Errorf("query unbonding delegations error: %w", err)
-	}
-	// query unbonding delegations by validator
-	unbondingDelegationsByValidator, err := c0.GetUnBondingDelegationsByValidator(topValAddr)
-	log.Printf("query unbonding delegations by validator: %+v, err: %v\n", unbondingDelegationsByValidator, err)
-	if err != nil {
-		return xerrors.Errorf("query unbonding delegations by validator error: %w", err)
-	}
-	// delegate to top validator and then redelegate
-	delegator0, err := GenKeyManagerWithBNB(c0, valKM)
-	if err != nil {
-		return xerrors.Errorf("GenKeyManager err: %w", err)
-	}
-	c0.SetKeyManager(delegator0)
-	txRes, err = c0.Delegate(topValAddr, delegateCoin, rpc.Commit, tx.WithChainID(chainId))
-	log.Printf("delegate to top validator tx: %+v, err: %v\n", txRes, err)
-	if err != nil {
-		return xerrors.Errorf("delegate error: %w", err)
-	}
-	assert(txRes.Code == 0, fmt.Sprintf("delegate tx return err, tx: %+v", txRes))
-	c0.SetKeyManager(delegator0)
-	log.Printf("dest validator: %+v\n", topValAddr)
-	log.Printf("validator0 val address: %+v\n", sdkTypes.ValAddress(validator0.GetAddr()))
-	log.Printf("delegator address: %+v\n", delegator0.GetAddr())
-	txRes, err = c0.Redelegate(topValAddr, sdkTypes.ValAddress(validator0.GetAddr()), delegateCoin, rpc.Commit, tx.WithChainID(chainId))
-	log.Printf("redelegate to validator0 tx: %+v, err: %v\n", txRes, err)
-	if err != nil {
-		return xerrors.Errorf("redelegate error: %w", err)
-	}
-	assert(txRes.Code == 0, fmt.Sprintf("redelegate tx return err, tx: %+v", txRes))
-	// query redelegation
-	redelegation, err := c0.QueryRedelegation(delegator0.GetAddr(), topValAddr, sdkTypes.ValAddress(validator0.GetAddr()))
-	log.Printf("query redelegation: %+v, err: %v\n", redelegation, err)
-	if err != nil {
-		return xerrors.Errorf("query redelegation error: %w", err)
-	}
-	assert(redelegation != nil, "redelegation should not be nil")
-	// query redelegations
-	redelegations, err := c0.QueryRedelegations(delegator0.GetAddr())
-	log.Printf("query redelegations: %+v, err: %v\n", redelegations, err)
-	if err != nil {
-		return xerrors.Errorf("query redelegations error: %w", err)
-	}
-	assert(len(redelegations) > 0, "redelegations should not be empty")
-	// query redelegations by source validator
-	redelegationsByValidator, err := c0.GetRedelegationsByValidator(topValAddr)
-	log.Printf("query redelegations by validator: %+v, err: %v\n", redelegationsByValidator, err)
-	if err != nil {
-		return xerrors.Errorf("query redelegations by validator error: %w", err)
-	}
-	assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
+	//tokenBeforeDelegate := validator.Tokens
+	//// delegate
+	//delegator, err := GenKeyManagerWithBNB(c0, valKM)
+	//if err != nil {
+	//	return xerrors.Errorf("GenKeyManager err: %w", err)
+	//}
+	//c0.SetKeyManager(delegator)
+	//var delegateAmount int64 = 5e8
+	//delegateCoin := sdkTypes.Coin{Denom: "BNB", Amount: delegateAmount}
+	//txRes, err = c0.Delegate(sdkTypes.ValAddress(validator0.GetAddr()), delegateCoin, rpc.Commit, tx.WithChainID(chainId))
+	//if err != nil {
+	//	return xerrors.Errorf("delegate error: %w", err)
+	//}
+	//assert(txRes.Code == 0, fmt.Sprintf("delegate tx return err, tx: %+v", txRes))
+	//// check delegation
+	//validator, err = c0.QueryValidator(sdkTypes.ValAddress(validator0.GetAddr()))
+	//if err != nil {
+	//	return xerrors.Errorf("query validator error: %w", err)
+	//}
+	//log.Printf("query validator: %+v\n", validator)
+	//tokenAfterDelegate := validator.Tokens
+	//assert(tokenAfterDelegate.Sub(tokenBeforeDelegate).Equal(sdkTypes.NewDec(delegateAmount)), "delegate tokens should be equal")
+	//// query delegation
+	//delegationQuery, err := c0.QueryDelegation(delegator.GetAddr(), sdkTypes.ValAddress(validator0.GetAddr()))
+	//if err != nil {
+	//	return xerrors.Errorf("query delegation error: %w", err)
+	//}
+	//log.Printf("query delegation: %+v\n", delegationQuery)
+	//assert(delegationQuery.Delegation.Shares.Equal(sdkTypes.NewDec(delegateAmount)), "delegation shares should be equal")
+	//assert(delegationQuery.Balance.IsEqual(delegateCoin), "delegation balance should be equal")
+	//// query delegations
+	//delegations, err := c0.QueryDelegations(delegator.GetAddr())
+	//if err != nil {
+	//	return xerrors.Errorf("query delegations error: %w", err)
+	//}
+	//log.Printf("query delegations: %+v\n", delegations)
+	//// check redelegate preparation
+	//topValAddr := topValidator.OperatorAddr
+	//validator0Addr := sdkTypes.ValAddress(validator0.GetAddr())
+	//topValidatorBeforeRedelegate, err := c0.QueryValidator(topValAddr)
+	//if err != nil {
+	//	return xerrors.Errorf("query validator error: %w", err)
+	//}
+	//log.Printf("top validator before redelegate: %+v\n", topValidatorBeforeRedelegate)
+	//// redelegate from validator0 to top validator, should success immediately
+	//var redelegateAmount int64 = 2e8
+	//redelegateCoin := sdkTypes.Coin{Denom: "BNB", Amount: redelegateAmount}
+	//c0.SetKeyManager(delegator)
+	//txRes, err = c0.Redelegate(validator0Addr, topValAddr, redelegateCoin, rpc.Commit, tx.WithChainID(chainId))
+	//if err != nil {
+	//	return xerrors.Errorf("redelegate error: %w", err)
+	//}
+	//assert(txRes.Code == 0, fmt.Sprintf("redelegate tx return err, tx: %+v", txRes))
+	//topValidatorAfterRedelegate, err := c0.QueryValidator(topValAddr)
+	//if err != nil {
+	//	return xerrors.Errorf("query validator error: %w", err)
+	//}
+	//log.Printf("top validator after redelegate: %+v\n", topValidatorAfterRedelegate)
+	//assert(topValidatorAfterRedelegate.Tokens.Sub(topValidatorBeforeRedelegate.Tokens).Equal(sdkTypes.NewDec(redelegateAmount)), "redelegate tokens should be equal")
+	//// undelegate
+	//c0.SetKeyManager(delegator)
+	//txRes, err = c0.Undelegate(topValAddr, redelegateCoin, rpc.Commit, tx.WithChainID(chainId))
+	//if err != nil {
+	//	return xerrors.Errorf("undelegate error: %w", err)
+	//}
+	//assert(txRes.Code == 0, fmt.Sprintf("undelegate tx return err, tx: %+v", txRes))
+	//topValidatorAfterUndelegate, err := c0.QueryValidator(topValAddr)
+	//if err != nil {
+	//	return xerrors.Errorf("query validator error: %w", err)
+	//}
+	//log.Printf("top validator after undelegate: %+v\n", topValidatorAfterUndelegate)
+	//assert(topValidatorAfterUndelegate.Tokens.Equal(topValidatorBeforeRedelegate.Tokens), "check undelegation token change")
+	//// query pool
+	//pool, err := c0.GetPool()
+	//if err != nil {
+	//	return xerrors.Errorf("get pool error: %w", err)
+	//}
+	//log.Printf("pool: %+v\n", pool)
+	//// query unbonding delegation
+	//unbondingDelegation, err := c0.QueryUnbondingDelegation(topValAddr, delegator.GetAddr())
+	//log.Printf("query unbonding delegation: %+v, err: %v\n", unbondingDelegation, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query unbonding delegation error: %w", err)
+	//}
+	//// query unbonding delegations
+	//unbondingDelegations, err := c0.QueryUnbondingDelegations(delegator.GetAddr())
+	//log.Printf("query unbonding delegations: %+v, err: %v\n", unbondingDelegations, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query unbonding delegations error: %w", err)
+	//}
+	//// query unbonding delegations by validator
+	//unbondingDelegationsByValidator, err := c0.GetUnBondingDelegationsByValidator(topValAddr)
+	//log.Printf("query unbonding delegations by validator: %+v, err: %v\n", unbondingDelegationsByValidator, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query unbonding delegations by validator error: %w", err)
+	//}
+	//// delegate to top validator and then redelegate
+	//delegator0, err := GenKeyManagerWithBNB(c0, valKM)
+	//if err != nil {
+	//	return xerrors.Errorf("GenKeyManager err: %w", err)
+	//}
+	//c0.SetKeyManager(delegator0)
+	//txRes, err = c0.Delegate(topValAddr, delegateCoin, rpc.Commit, tx.WithChainID(chainId))
+	//log.Printf("delegate to top validator tx: %+v, err: %v\n", txRes, err)
+	//if err != nil {
+	//	return xerrors.Errorf("delegate error: %w", err)
+	//}
+	//assert(txRes.Code == 0, fmt.Sprintf("delegate tx return err, tx: %+v", txRes))
+	//c0.SetKeyManager(delegator0)
+	//log.Printf("dest validator: %+v\n", topValAddr)
+	//log.Printf("validator0 val address: %+v\n", sdkTypes.ValAddress(validator0.GetAddr()))
+	//log.Printf("delegator address: %+v\n", delegator0.GetAddr())
+	//txRes, err = c0.Redelegate(topValAddr, sdkTypes.ValAddress(validator0.GetAddr()), delegateCoin, rpc.Commit, tx.WithChainID(chainId))
+	//log.Printf("redelegate to validator0 tx: %+v, err: %v\n", txRes, err)
+	//if err != nil {
+	//	return xerrors.Errorf("redelegate error: %w", err)
+	//}
+	//assert(txRes.Code == 0, fmt.Sprintf("redelegate tx return err, tx: %+v", txRes))
+	//// query redelegation
+	//redelegation, err := c0.QueryRedelegation(delegator0.GetAddr(), topValAddr, sdkTypes.ValAddress(validator0.GetAddr()))
+	//log.Printf("query redelegation: %+v, err: %v\n", redelegation, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query redelegation error: %w", err)
+	//}
+	//assert(redelegation != nil, "redelegation should not be nil")
+	//// query redelegations
+	//redelegations, err := c0.QueryRedelegations(delegator0.GetAddr())
+	//log.Printf("query redelegations: %+v, err: %v\n", redelegations, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query redelegations error: %w", err)
+	//}
+	//assert(len(redelegations) > 0, "redelegations should not be empty")
+	//// query redelegations by source validator
+	//redelegationsByValidator, err := c0.GetRedelegationsByValidator(topValAddr)
+	//log.Printf("query redelegations by validator: %+v, err: %v\n", redelegationsByValidator, err)
+	//if err != nil {
+	//	return xerrors.Errorf("query redelegations by validator error: %w", err)
+	//}
+	//assert(len(redelegationsByValidator) > 0, "redelegations by validator should not be empty")
 	// validator self undelegate under selfMinDelegation
 	valAccAddr := validator0.GetAddr()
 	valValAddr := sdkTypes.ValAddress(valAccAddr)
