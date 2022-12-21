@@ -24,10 +24,10 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			stagingArea.StakeData = &StakeData{}
 		}
 		switch e := event.(type) {
-		case stake.SideDistributionEvent:
+		case stake.DistributionEvent:
 			sub.Logger.Debug(fmt.Sprintf("distribution event: %v \n", e))
-			toPublish.EventData.StakeData.appendDistribution(e.SideChainId, e.Data)
-		case stake.SideCompletedUBDEvent:
+			toPublish.EventData.StakeData.appendDistribution(e.ChainId, e.Data)
+		case stake.CompletedUBDEvent:
 			sub.Logger.Debug(fmt.Sprintf("completed UBD event: %v \n", e))
 			ubds := make([]CompletedUBD, len(e.CompUBDs))
 			for i, ubd := range e.CompUBDs {
@@ -38,15 +38,12 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 				}
 				ubds[i] = cUBD
 			}
-			toPublish.EventData.StakeData.appendCompletedUBD(e.SideChainId, ubds)
-		case stake.SideCompletedREDEvent:
+			toPublish.EventData.StakeData.appendCompletedUBD(e.ChainId, ubds)
+		case stake.CompletedREDEvent:
 			sub.Logger.Debug(fmt.Sprintf("completed RED event: %v \n", e))
-			toPublish.EventData.StakeData.appendCompletedRED(e.SideChainId, e.CompREDs)
+			toPublish.EventData.StakeData.appendCompletedRED(e.ChainId, e.CompREDs)
 		case stake.ValidatorUpdateEvent:
 			sub.Logger.Debug(fmt.Sprintf("validator update event: %v \n", e))
-			if len(e.Validator.SideChainId) == 0 { // ignore bbc validator update events
-				return
-			}
 			if e.IsFromTx {
 				stagingArea.StakeData.appendValidator(e.Validator)
 			} else {
@@ -54,59 +51,59 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			}
 		case stake.ValidatorRemovedEvent:
 			sub.Logger.Debug(fmt.Sprintf("validator removed event: %v \n", e))
-			chainId := e.SideChainId
+			chainId := e.ChainId
 			if len(chainId) == 0 {
-				return // ignore bbc validator
+				chainId = stake.ChainIDForBeaconChain
 			}
 			if e.IsFromTx {
 				stagingArea.StakeData.appendRemovedValidator(chainId, e.Operator)
 			} else {
 				toPublish.EventData.StakeData.appendRemovedValidator(chainId, e.Operator)
 			}
-		case stake.SideDelegationUpdateEvent:
+		case stake.DelegationUpdateEvent:
 			sub.Logger.Debug(fmt.Sprintf("delegation update event: %v \n", e))
 			key := string(append(e.Delegation.DelegatorAddr.Bytes(), e.Delegation.ValidatorAddr.Bytes()...))
 			if e.IsFromTx {
-				stagingArea.StakeData.appendDelegation(e.SideChainId, key, e.Delegation)
+				stagingArea.StakeData.appendDelegation(e.ChainId, key, e.Delegation)
 			} else {
-				toPublish.EventData.StakeData.appendDelegation(e.SideChainId, key, e.Delegation)
+				toPublish.EventData.StakeData.appendDelegation(e.ChainId, key, e.Delegation)
 			}
-		case stake.SideDelegationRemovedEvent:
+		case stake.DelegationRemovedEvent:
 			sub.Logger.Debug(fmt.Sprintf("delegation removed event: %v \n", e))
 			if e.IsFromTx {
-				stagingArea.StakeData.appendRemovedDelegation(e.SideChainId, e.DvPair)
+				stagingArea.StakeData.appendRemovedDelegation(e.ChainId, e.DvPair)
 			} else {
-				toPublish.EventData.StakeData.appendRemovedDelegation(e.SideChainId, e.DvPair)
+				toPublish.EventData.StakeData.appendRemovedDelegation(e.ChainId, e.DvPair)
 			}
-		case stake.SideUBDUpdateEvent:
+		case stake.UBDUpdateEvent:
 			sub.Logger.Debug(fmt.Sprintf("unbonding delegation update event: %v \n", e))
 			key := string(append(e.UBD.DelegatorAddr.Bytes(), e.UBD.ValidatorAddr.Bytes()...))
 			if e.IsFromTx {
-				stagingArea.StakeData.appendUBD(e.SideChainId, key, e.UBD)
+				stagingArea.StakeData.appendUBD(e.ChainId, key, e.UBD)
 			} else {
-				toPublish.EventData.StakeData.appendUBD(e.SideChainId, key, e.UBD)
+				toPublish.EventData.StakeData.appendUBD(e.ChainId, key, e.UBD)
 			}
-		case stake.SideREDUpdateEvent:
+		case stake.REDUpdateEvent:
 			sub.Logger.Debug(fmt.Sprintf("redelegation update event: %v \n", e))
 			key := string(append(e.RED.DelegatorAddr.Bytes(), append(e.RED.ValidatorSrcAddr.Bytes(), e.RED.ValidatorDstAddr.Bytes()...)...))
 			if e.IsFromTx {
-				stagingArea.StakeData.appendRED(e.SideChainId, key, e.RED)
+				stagingArea.StakeData.appendRED(e.ChainId, key, e.RED)
 			} else {
-				toPublish.EventData.StakeData.appendRED(e.SideChainId, key, e.RED)
+				toPublish.EventData.StakeData.appendRED(e.ChainId, key, e.RED)
 			}
-		case stake.SideDelegateEvent:
+		case stake.ChainDelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("delegate event: %v \n", e))
-			stagingArea.StakeData.appendDelegateEvent(e.SideChainId, e.DelegateEvent)
-		case stake.SideUndelegateEvent:
+			stagingArea.StakeData.appendDelegateEvent(e.ChainId, e.DelegateEvent)
+		case stake.ChainUndelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("undelegate event: %v \n", e))
-			stagingArea.StakeData.appendUnDelegateEvent(e.SideChainId, e.UndelegateEvent)
-		case stake.SideRedelegateEvent:
+			stagingArea.StakeData.appendUnDelegateEvent(e.ChainId, e.UndelegateEvent)
+		case stake.ChainRedelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("redelegate event: %v \n", e))
-			stagingArea.StakeData.appendReDelegateEvent(e.SideChainId, e.RedelegateEvent)
-		case stake.SideElectedValidatorsEvent:
+			stagingArea.StakeData.appendReDelegateEvent(e.ChainId, e.RedelegateEvent)
+		case stake.ElectedValidatorsEvent:
 			sub.Logger.Debug(fmt.Sprintf("elected validators event: %v \n", e))
 			validators := make(map[string][]stake.Validator)
-			validators[e.SideChainId] = e.Validators
+			validators[e.ChainId] = e.Validators
 			toPublish.EventData.StakeData.ElectedValidators = validators
 		default:
 			sub.Logger.Info("unknown event type")

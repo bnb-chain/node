@@ -5,16 +5,12 @@ on: ["push", "pull_request", "workflow_dispatch"]
 jobs:
   integration-test:
     runs-on: ubuntu-latest
-    env:
-      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.16
-      - name: Checkout
-        uses: actions/checkout@v2
+          go-version: 1.17
       - uses: actions/cache@v2
         with:
           path: ~/go/bin
@@ -28,10 +24,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: sudo apt-get update -y && sudo apt-get install -y expect
-      - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: make integration_test
+      - run: make bep159_integration_test integration_test
+  coverage-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/bin
+          key: tools-v0
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - run: make test
+      - run: make test_coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3

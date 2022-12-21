@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.16
+          go-version: 1.17
       - uses: actions/checkout@v3
       - uses: actions/cache@v2
         with:
@@ -25,7 +25,5 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - run: git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
       - name: golangci-lint
         run: make lint

@@ -143,7 +143,7 @@ install_c:
 format:
 	@echo "-->Formatting"
 	$(shell go fmt ./...)
-	$(shell find . -name "*.go" | grep -v "vendor/" | xargs -n 1 goimports -w)
+	bash scripts/importssort.sh
 
 ########################################
 ### Lint
@@ -194,13 +194,20 @@ test_unit:
 	@echo "--> Running go test"
 	@go test $(PACKAGES)
 
+test_coverage:
+	@echo "--> Running go test"
+	@go test $(PACKAGES) -race -coverprofile=coverage.txt -covermode=atomic
+
 integration_test: build
 	@echo "-->Integration Test"
 	@./integration_test.sh
 
+bep159_integration_test: build
+	@echo "-->BEP159 Integration Test"
+	@bash ./scripts/bep159_integration_test.sh
 ########################################
 ### Pre Commit
-pre_commit: build test format lint
+pre_commit: build test_unit bep159_integration_test integration_test format lint multi-nodes-test
 
 ########################################
 ### Local validator nodes using docker and docker-compose
@@ -229,6 +236,25 @@ localnet-start: localnet-stop
 # Stop testnet
 localnet-stop:
 	docker-compose down
+
+# docker commands
+docker.build:
+	docker build -t binance/bnbdnode .
+
+docker.generate:
+	go run ./cmd/gen_devnet
+
+docker.start:
+	docker compose -f build/devnet/docker-compose.yml up -d
+
+docker.stop:
+	docker compose -f build/devnet/docker-compose.yml down
+
+docker.clean:
+	rm -rf build/devnet
+
+multi-nodes-test:
+	STAKE_ENV=multi go run ./cmd/test_client
 
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.

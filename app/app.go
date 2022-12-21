@@ -30,7 +30,6 @@ import (
 	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/keeper"
 	sTypes "github.com/cosmos/cosmos-sdk/x/stake/types"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -335,6 +334,8 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP128, upgradeConfig.BEP128Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP151, upgradeConfig.BEP151Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159, upgradeConfig.BEP159Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159Phase2, upgradeConfig.BEP159Phase2Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP173, upgradeConfig.BEP173Height)
 
 	// register store keys of upgrade
@@ -372,6 +373,13 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 		bridge.UnbindMsg{}.Type(),
 		bridge.TransferOutMsg{}.Type(),
 		oracle.ClaimMsg{}.Type(),
+	)
+	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP159,
+		stake.MsgCreateValidatorOpen{}.Type(),
+		stake.MsgEditValidator{}.Type(),
+		stake.MsgDelegate{}.Type(),
+		stake.MsgUndelegate{}.Type(),
+		slashing.MsgUnjail{}.Type(),
 	)
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP8,
@@ -558,16 +566,24 @@ func (app *BinanceChain) initStaking() {
 			panic(err)
 		}
 	})
-
-	if sdk.IsUpgrade(sdk.BEP153) {
-		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
-		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
-		if err != nil {
-			panic(err)
-		}
-	}
-
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159, func(ctx sdk.Context) {
+		stake.MigrateValidatorDistributionAddr(ctx, app.stakeKeeper)
+		params := app.stakeKeeper.GetParams(ctx)
+		params.RewardDistributionBatchSize = 1000
+		params.MinSelfDelegation = 20000e8
+		params.MinDelegationChange = 1e8
+		params.MaxStakeSnapshots = 30
+		params.MaxValidators = 11
+		params.BaseProposerRewardRatio = sdk.NewDec(1e6)  // 1%
+		params.BonusProposerRewardRatio = sdk.NewDec(4e6) // 4%
+		params.FeeFromBscToBcRatio = sdk.NewDec(1e7)      // 10%
+		app.stakeKeeper.SetParams(ctx, params)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159Phase2, func(ctx sdk.Context) {
+		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
+	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
+	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
 }
 
@@ -611,6 +627,19 @@ func (app *BinanceChain) initSlashing() {
 			DowntimeSlashFee:         10e8,
 		})
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159, func(ctx sdk.Context) {
+		// write slash params to beacon chain when upgrade to BEP159
+		app.slashKeeper.SetParams(ctx, slashing.Params{
+			MaxEvidenceAge:           60 * 60 * 24 * 3 * time.Second, // 3 days
+			DoubleSignUnbondDuration: math.MaxInt64,                  // forever
+			DowntimeUnbondDuration:   60 * 60 * 24 * 2 * time.Second, // 2 days
+			TooLowDelUnbondDuration:  60 * 60 * 24 * time.Second,     // 1 day
+			DoubleSignSlashAmount:    10000e8,
+			SubmitterReward:          1000e8,
+			DowntimeSlashAmount:      50e8,
+			DowntimeSlashFee:         10e8,
+		})
+	})
 }
 
 func (app *BinanceChain) initIbc() {
@@ -644,6 +673,8 @@ func (app *BinanceChain) initGovHooks() {
 	app.govKeeper.AddHooks(gov.ProposalTypeSCParamsChange, scParamChangeHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeDelistTradingPair, delistHooks)
 	app.govKeeper.AddHooks(gov.ProposalTypeManageChanPermission, chanPermissionHooks)
+	bcParamChangeHooks := paramHub.NewBCParamsChangeHook(app.Codec)
+	app.govKeeper.AddHooks(gov.ProposalTypeParameterChange, bcParamChangeHooks)
 }
 
 func (app *BinanceChain) initParams() {
@@ -847,7 +878,12 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	app.DexKeeper.StoreTradePrices(ctx)
 
-	blockFee := distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
+	var blockFee pub.BlockFee
+	if sdk.IsUpgrade(upgrade.BEP159) {
+		blockFee = distributeFeeBEP159(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee, app.stakeKeeper)
+	} else {
+		blockFee = distributeFee(ctx, app.AccountKeeper, app.ValAddrCache, app.publicationConfig.PublishBlockFee)
+	}
 
 	passed, failed := gov.EndBlocker(ctx, app.govKeeper)
 	var proposals pub.Proposals
@@ -859,6 +895,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	sidechain.EndBlock(ctx, app.scKeeper)
 	var completedUbd []stake.UnbondingDelegation
 	var validatorUpdates abci.ValidatorUpdates
+	// todo: get validatorUpdates in slashing EndBlocker
 	if isBreatheBlock {
 		validatorUpdates, completedUbd = stake.EndBreatheBlock(ctx, app.stakeKeeper)
 	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
