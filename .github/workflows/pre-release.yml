@@ -12,18 +12,18 @@ jobs:
     strategy:
       matrix:
         go-version: [1.17.x]
-        os: [ubuntu-18.04, macos-11, windows-2019]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           # In order:
           # * Module download cache
@@ -58,22 +58,22 @@ jobs:
       # ==============================
 
       - name: Upload Linux Build
-        uses: actions/upload-artifact@v2
-        if: matrix.os == 'ubuntu-18.04'
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'ubuntu-latest'
         with:
           name: linux
           path: ./build
 
       - name: Upload MacOS Build
-        uses: actions/upload-artifact@v2
-        if: matrix.os == 'macos-11'
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'macos-latest'
         with:
           name: macos
           path: ./build
 
       - name: Upload Windows Build
-        uses: actions/upload-artifact@v2
-        if: matrix.os == 'windows-2019'
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'windows-latest'
         with:
           name: windows
           path: ./build
@@ -81,29 +81,32 @@ jobs:
   release:
     name: Release
     needs: build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
+      - name: Set Env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # ==============================
       #       Download artifacts
       # ==============================
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux
           path: ./linux
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: macos
           path: ./macos
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: windows
           path: ./windows
@@ -115,67 +118,19 @@ jobs:
       - run: zip -r testnet_config.zip asset/testnet
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@latest
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          release_name: ${{ env.RELEASE_VERSION }}
           body: |
             git commit: ${{ github.sha }}
           draft: true
           prerelease: true
-
-      # Check downloaded files
-      - run: ls
-
-      - name: Upload Release Asset - Linux
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./linux_binary.zip
-          asset_name: linux_binary.zip
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Asset - MacOS
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./macos_binary.zip
-          asset_name: macos_binary.zip
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Asset - Windows
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./windows_binary.zip
-          asset_name: windows_binary.zip
-          asset_content_type: application/octet-stream
-
-      - name: Upload Mainnet Config
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./mainnet_config.zip
-          asset_name: mainnet_config.zip
-          asset_content_type: application/octet-stream
-
-      - name: Upload Testnet Config
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./testnet_config.zip
-          asset_name: testnet_config.zip
-          asset_content_type: application/octet-stream
+          files: |
+            ./linux_binary.zip
+            ./macos_binary.zip
+            ./windows_binary.zip
+            ./mainnet_config.zip
+            ./testnet_config.zip

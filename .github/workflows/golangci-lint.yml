@@ -13,11 +13,11 @@ jobs:
         with:
           go-version: 1.17
       - uses: actions/checkout@v3
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/go/bin/golangci-lint
           key: golangci-lint-1.45.2
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
