@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.10.4
+FEATURES
+* [\#880](https://github.com/bnb-chain/node/pull/880) [BEP] BEP-159: Introduce A New Staking Mechanism on BNB Beacon Chain
+
+IMPROVEMENT
+* [\#899](https://github.com/bnb-chain/node/pull/899) [ci] update unmaintained tools to use maintained tools
+
+BUG FIX
+* [\#897](https://github.com/bnb-chain/node/pull/897) [fix] add bsc chainID to encodeSigHeader when submitting evidence for slashing
+
+
 ## 0.10.3
 IMPROVEMENTS
 * [\#886](https://github.com/bnb-chain/node/pull/875) [Staking] Fix issues for reward recon service
