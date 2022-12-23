@@ -1,0 +1,21 @@
+name: multi-nodes-test
+
+on: ["push", "pull_request", "workflow_dispatch"]
+
+jobs:
+  multi-nodes-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+      - run: make docker.build docker.generate docker.start
+      # fix docker permission issue
+      - run: chmod 777 -R ~/work/node/node/build/devnet
+      - run: sleep 20
+      # used to debug workflow
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+      - run: make multi-nodes-test

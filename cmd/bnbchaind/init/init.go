@@ -1,11 +1,10 @@
-package init
-
 /*
 Why we overwrite the Init/Testnet functions in cosmos-sdk:
 1. Cosmos moved init/testnet cmds to the gaia packages which we never and should not imports.
 2. Cosmos has a different init/testnet workflow from ours. Also, the init cmd has some bugs.
 3. After overwrite, the code is cleaner and easier to maintain.
 */
+package init
 
 import (
 	"encoding/json"
@@ -29,6 +28,7 @@ import (
 	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/common/types"
 	"github.com/bnb-chain/node/common/utils"
 	"github.com/bnb-chain/node/wire"
 )
@@ -90,9 +90,9 @@ enabled, and the genesis file will not be generated.
 				return errors.New("must specify --name (validator moniker)")
 			}
 
-			valOperAddr, secret := createValOperAccount(viper.GetString(flagClientHome), config.Moniker)
+			valOperAddr, secret := CreateValOperAccount(viper.GetString(flagClientHome), config.Moniker)
 			memo := fmt.Sprintf("%s@%s:26656", nodeID, "127.0.0.1")
-			genTx := prepareCreateValidatorTx(cdc, chainID, config.Moniker, memo, valOperAddr, pubKey)
+			genTx := PrepareCreateValidatorTx(cdc, chainID, config.Moniker, memo, valOperAddr, pubKey)
 			appState, err := appInit.AppGenState(cdc, []json.RawMessage{genTx})
 			if err != nil {
 				return err
@@ -102,7 +102,7 @@ enabled, and the genesis file will not be generated.
 				return fmt.Errorf("genesis.json file already exists: %v", genFile)
 			}
 			ExportGenesisFileWithTime(genFile, chainID, nil, appState, utils.Now())
-			writeConfigFile(config)
+			WriteConfigFile(config)
 
 			bech32ifyPubKey, err := sdk.Bech32ifyConsPub(pubKey)
 			if err != nil {
@@ -131,13 +131,13 @@ enabled, and the genesis file will not be generated.
 	return cmd
 }
 
-func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
+func PrepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	valOperAddr sdk.ValAddress, valPubKey crypto.PubKey) json.RawMessage {
 	msg := stake.MsgCreateValidatorProposal{
 		MsgCreateValidator: stake.NewMsgCreateValidator(
 			valOperAddr,
 			valPubKey,
-			app.DefaultSelfDelegationToken,
+			sdk.NewCoin(types.NativeTokenSymbol, 90000e8),
 			stake.NewDescription(name, "", "", ""),
 			stake.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 		),
@@ -157,7 +157,7 @@ func prepareCreateValidatorTx(cdc *codec.Codec, chainId, name, memo string,
 	return txBytes
 }
 
-func writeConfigFile(config *cfg.Config) {
+func WriteConfigFile(config *cfg.Config) {
 	configFilePath := filepath.Join(config.RootDir, "config", "config.toml")
 	cfg.WriteConfigFile(configFilePath, config)
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/common"
@@ -86,7 +85,7 @@ func InitializeNodeValidatorFiles(config *cfg.Config) (nodeID string, valPubKey 
 	return nodeID, valPubKey
 }
 
-func createValOperAccount(clientDir, keyName string) (sdk.ValAddress, string) {
+func CreateValOperAccount(clientDir, keyName string) (sdk.ValAddress, string) {
 	accAddr, secret, err := server.GenerateSaveCoinKey(clientDir, keyName, app.DefaultKeyPass, true)
 	if err != nil {
 		panic(err)

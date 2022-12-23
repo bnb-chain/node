@@ -62,6 +62,12 @@ BEP151Height = 28250000
 BEP153Height = 30516226
 #Block height of BEP173 upgrade
 BEP173Height = 9223372036854775807
+#Block height of FixDoubleSignChainIdHeight upgrade
+FixDoubleSignChainIdHeight = 34587202
+#Block height of BEP159Height upgrade
+BEP159Height = 34587202
+#Block height of BEP159Phase2Height upgrade
+BEP159Phase2Height = 34963303
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
