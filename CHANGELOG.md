@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.5
+BUG FIX
+* [\#904](https://github.com/bnb-chain/node/pull/904) [fix] register cross stake channel after node restart
+
 ## v0.10.4
 FEATURES
 * [\#880](https://github.com/bnb-chain/node/pull/880) [BEP] BEP-159: Introduce A New Staking Mechanism on BNB Beacon Chain
