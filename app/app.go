@@ -27,7 +27,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
-	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/keeper"
 	sTypes "github.com/cosmos/cosmos-sdk/x/stake/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -62,6 +61,7 @@ import (
 	"github.com/bnb-chain/node/plugins/tokens/swap"
 	"github.com/bnb-chain/node/plugins/tokens/timelock"
 	"github.com/bnb-chain/node/wire"
+	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 )
 
 const (
@@ -586,6 +586,14 @@ func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
+
+	if sdk.IsUpgrade(sdk.BEP153) {
+		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
+		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (app *BinanceChain) initGov() {
