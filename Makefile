@@ -254,7 +254,7 @@ docker.clean:
 	rm -rf build/devnet
 
 multi-nodes-test:
-	STAKE_ENV=multi go run ./cmd/test_client
+	cd ./e2e && STAKE_ENV=multi go run .
 
 # To avoid unintended conflicts with file names, always add to .PHONY
 # unless there is a reason not to.

@@ -43,7 +43,7 @@ type NodeInfo struct {
 }
 
 func GetNodeInfo(i int) (*NodeInfo, error) {
-	nodePath := path.Join("build", "devnet", fmt.Sprintf("node%d", i))
+	nodePath := path.Join("..", "build", "devnet", fmt.Sprintf("node%d", i))
 	seedPath := path.Join(nodePath, "testnodecli", "key_seed.json")
 	content, err := os.ReadFile(seedPath)
 	if err != nil {
@@ -124,7 +124,7 @@ func getConfigFromEnv() Config {
 	}
 	switch env {
 	case "integration":
-		seedPath := path.Join("build", "testnoded", "secret")
+		seedPath := path.Join("..", "build", "testnoded", "secret")
 		content, err := os.ReadFile(seedPath)
 		if err != nil {
 			panic(err)
