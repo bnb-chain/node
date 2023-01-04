@@ -124,7 +124,7 @@ func getConfigFromEnv() Config {
 	}
 	switch env {
 	case "integration":
-		seedPath := path.Join("build", "testnoded", "secret")
+		seedPath := path.Join("..", "build", "testnoded", "secret")
 		content, err := os.ReadFile(seedPath)
 		if err != nil {
 			panic(err)

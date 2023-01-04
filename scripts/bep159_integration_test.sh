@@ -181,6 +181,6 @@ bob_val_addr=$(echo "${result}" | grep Operator | grep -o "bva[0-9a-zA-Z]*")
 #check_operation "Get Unbonding-Delegation" "${result}" "Delegator"
 
 # run test with go-sdk
-cd .. && go run ./cmd/test_client
+cd ../e2e && go run .
 
 exit_test 0
