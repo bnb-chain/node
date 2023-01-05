@@ -13,7 +13,7 @@ Beacon Chain has the basic features of most blockchains:
 - Issuing new digital assets (we have a standard called BEP-2)
 - Mint/burn, freeze/unfreeze, lock/unlock of digital assets
 
-Besides it get many other rich features:
+Besides, it has many other rich features:
 - Staking/governance for both Beacon Chain and BNB Smart Chain.
 - Cross chain communication.
 - Atomic swap support.
