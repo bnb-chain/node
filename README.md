@@ -120,7 +120,7 @@ testnode        local   bnb1elavnu4uyzt43hw380vhw0m2zl7djz0xeac60t      bnbp1add
 Check a balance with this command, e.g.:
 
 ```bash
-$  ./build/bnbcli account bnb1elavnu4uyzt43hw380vhw0m2zl7djz0xeac60t  --chain-id ${chainId} |jq
+$  ./build/bnbcli account bnb1elavnu4uyzt43hw380vhw0m2zl7djz0xeac60t --chain-id ${chainId} | jq
 ```
 
 ### Sending assets
