@@ -36,7 +36,7 @@ Besides it get many other rich features:
 #### Requirement
 Go version above 1.17 is required.
 
-Please [install it](https://golang.org/dl) or use brew on macOS: `brew install go` and `brew install dep`.
+Please [install it](https://go.dev/doc/install) or use brew on macOS: `brew install go`.
 
 #### Build from Source
 
