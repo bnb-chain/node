@@ -26,8 +26,7 @@ Besides it get many other rich features:
 * Full nodes are not validator nodes, but anyone can get a copy of the whole blockchain and validate it.
 * No PoW means block times are very fast.
 * UXTO/account does not matter as we just use the [cosmos](https://github.com/cosmos/cosmos-sdk/tree/master/x/bank) bank.
-* Features like the DEX will run directly on the node as apps written in golang(deprecated now).
-
+* Features like the DEX (deprecated now) will run directly on the node as apps written in golang.
 [Read](https://tendermint.readthedocs.io/en/master/introduction.html) [more](https://blog.cosmos.network/tendermint-explained-bringing-bft-based-pos-to-the-public-blockchain-domain-f22e274a0fdb) about Tendermint and ABCI.
 
 ## Getting Started
