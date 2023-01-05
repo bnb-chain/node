@@ -99,7 +99,7 @@ Please refer to the document for joining [mainnet](https://docs.bnbchain.world/d
 Assets may be issued through `bnbcli` while the blockchain is running; see here for an example:
 
 ```bash
-$ chainId=`cat ~/.bnbchaind/config/genesis.json  |jq .chain_id --raw-output`
+$ chainId=`cat ~/.bnbchaind/config/genesis.json | jq .chain_id --raw-output`
 # Input password "12345678"
 $ ./build/bnbcli token issue --trust-node --symbol FBTC --token-name FunBitCoin  --total-supply  10000000000  --from testnode  --chain-id ${chainId}
 ```
