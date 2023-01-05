@@ -145,7 +145,7 @@ $  ./build/bnbcli tx 40C2B27B056A63DFE5BCE32709F160F53633C0EBEBBD05E1AC26419D353
 Then you can check the balance of pepe's key to see that he now has 100 satoshi units of `FBTC-4C9`:
 
 ```bash
-$ ./build/bnbcli account bnb1u5mvgkqt9rmj4fut60rnpqfv0a865pwnn90v9q  --chain-id ${chainId} |jq
+$ ./build/bnbcli account bnb1u5mvgkqt9rmj4fut60rnpqfv0a865pwnn90v9q  --chain-id ${chainId} | jq
 {
   "type": "bnbchain/Account",
   "value": {
