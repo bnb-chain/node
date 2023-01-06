@@ -27,7 +27,7 @@ Besides, it has many other rich features:
 * No PoW means block times are very fast.
 * UXTO/account does not matter as we just use the [cosmos](https://github.com/cosmos/cosmos-sdk/tree/master/x/bank) bank.
 * Features like the DEX (deprecated now) will run directly on the node as apps written in golang.
-[Read](https://tendermint.readthedocs.io/en/master/introduction.html) [more](https://blog.cosmos.network/tendermint-explained-bringing-bft-based-pos-to-the-public-blockchain-domain-f22e274a0fdb) about Tendermint and ABCI.
+  [Read](https://tendermint.readthedocs.io/en/master/introduction.html) [more](https://blog.cosmos.network/tendermint-explained-bringing-bft-based-pos-to-the-public-blockchain-domain-f22e274a0fdb) about Tendermint and ABCI.
 
 ## Getting Started
 
@@ -67,7 +67,7 @@ You may want to check the [Issuing assets](#issuing-assets) section below before
 $ ./build/bnbchaind start --moniker testnode
 ```
 
-If everything worked you will see blocks being generated around every 1s in your console, like 
+If everything worked you will see blocks being generated around every 1s in your console, like
 ```shell
 I[2023-01-05|20:39:46.960] Starting ABCI with Tendermint                module=main 
 I[2023-01-05|20:39:47.016] Loading order book snapshot from last breathe block module=main blockHeight=0
