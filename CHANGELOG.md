@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.6
+IMPROVEMENT
+* [\#908](https://github.com/bnb-chain/node/pull/908) [docs] update the readme to latest working one
+* [\#907](https://github.com/bnb-chain/node/pull/907) [fix] remove bnb-chain go-sdk dep
+
 ## v0.10.5
 BUG FIX
 * [\#904](https://github.com/bnb-chain/node/pull/904) [fix] register cross stake channel after node restart
