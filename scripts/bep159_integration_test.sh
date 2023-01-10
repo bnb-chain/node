@@ -106,6 +106,10 @@ sleep 5s
 result=$(./bnbcli staking parameters --home ${cli_home} --trust-node)
 check_operation "Query Staking Parameters" "${result}" "proposer"
 
+# get params side-params
+result=$(./bnbcli params side-params --home ${cli_home} --trust-node --side-chain-id bsc)
+check_operation "Query Staking Parameters" "${result}" "StakeParamSet"
+
 # get validators
 result=$(./bnbcli staking validators --home ${cli_home} --trust-node)
 check_operation "Get Validators" "${result}" "Operator"
