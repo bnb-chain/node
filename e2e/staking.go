@@ -107,7 +107,7 @@ func GenKeyManagerWithBNB(client *rpc.HTTP, tokenFrom keys.KeyManager) (km keys.
 	client.SetKeyManager(tokenFrom)
 	transfer := msg.Transfer{ToAddr: km.GetAddr(), Coins: sdkTypes.Coins{sdkTypes.Coin{
 		Denom:  "BNB",
-		Amount: 150e8,
+		Amount: 3000000000000,
 	}}}
 	txRes, err := client.SendToken([]msg.Transfer{transfer}, rpc.Commit, txWithChainID)
 	if err != nil {
@@ -200,7 +200,7 @@ func ChangeParameterViaGov() error {
 		return xerrors.Errorf("vote error: %w", err)
 	}
 	// query proposal again
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 	proposals, err = c0.GetProposals(sdkTypes.StatusNil, 1)
 	if err != nil {
 		return xerrors.Errorf("get proposals error: %w", err)
@@ -547,10 +547,73 @@ func Staking() error {
 	//}
 	//log.Printf("validator: %+v", validator)
 	//assert(!validator.Jailed, "validator should not be jailed")
+
 	return nil
 }
 
-//nolint
+func SidechainValidatorUpdateConsAddrLimitTest() error {
+	rand.Seed(time.Now().UnixNano())
+	// rpc client
+	config := getConfigFromEnv()
+	node0RpcAddr := config.RPCAddr
+	c0 := rpc.NewRPCClient(node0RpcAddr, sdkTypes.ProdNetwork)
+	status, err := c0.Status()
+	chainId := status.NodeInfo.Network
+	txWithChainID = tx.WithChainID(chainId)
+	if err != nil {
+		return xerrors.Errorf("get status error: %w", err)
+	}
+	log.Printf("chainId: %s\n", chainId)
+	log.Printf("node0 status")
+	log.Println(Pretty(status))
+	// bob
+	validatorSecret := config.Secret
+	valKM, err := keys.NewMnemonicKeyManager(validatorSecret)
+	if err != nil {
+		return xerrors.Errorf("new key manager failed: %w", err)
+	}
+	log.Printf("bob address: %s\n", valKM.GetAddr())
+	// create a random account
+	validator0, err := GenKeyManagerWithBNB(c0, valKM)
+	if err != nil {
+		return xerrors.Errorf("GenKeyManager err: %w", err)
+	}
+	log.Printf("validator0 address: %s\n", validator0.GetAddr())
+
+	// edit sidechain validator consaddr
+	sideConsAddr := GenerateRandomBytes(20)
+	sideFeeAddr := GenerateRandomBytes(20)
+	description := msg.Description{
+		Moniker: "side-validator",
+	}
+	c0.SetKeyManager(validator0)
+	amount := sdkTypes.Coin{Denom: "BNB", Amount: 2000000000000}
+	rate, _ := sdkTypes.NewDecFromStr("1")
+	maxRate, _ := sdkTypes.NewDecFromStr("1")
+	maxChangeRate, _ := sdkTypes.NewDecFromStr("1")
+	commission := sdkTypes.CommissionMsg{
+		Rate:          rate,
+		MaxRate:       maxRate,
+		MaxChangeRate: maxChangeRate,
+	}
+	txRes, err := c0.CreateSideChainValidator(amount, description, commission, sideChainId, sideFeeAddr, sideConsAddr, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("create side chain validator tx: %+v, err: %v\n", txRes, err)
+	assert(err == nil && txRes.Code == 0, "create side chain validator should not return error")
+	sideConsAddr2 := GenerateRandomBytes(20)
+	c0.SetKeyManager(validator0)
+	txRes, err = c0.EditSideChainValidator(sideChainId, description, nil, nil, sideConsAddr2, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("edit side chain validator tx: %+v, err: %v\n", txRes, err)
+	assert(err == nil && txRes.Code == 0, "edit side chain validator should not return error")
+	sideConsAddr3 := GenerateRandomBytes(20)
+	c0.SetKeyManager(validator0)
+	txRes, err = c0.EditSideChainValidator(sideChainId, description, nil, nil, sideConsAddr3, rpc.Commit, tx.WithChainID(chainId))
+	log.Printf("edit side chain validator tx: %+v, err: %v\n", txRes, err)
+	assert(txRes.Code != 0, "edit side chain validator should return error")
+	assert(strings.Contains(txRes.Log, "ConsAddr cannot be changed more than once in one month"), "edit side chain validator should return error")
+	return nil
+}
+
+// nolint
 func UndelegateTest() error {
 	rand.Seed(time.Now().UnixNano())
 	// rpc client
@@ -681,4 +744,13 @@ func Pretty(v interface{}) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+func GenerateRandomBytes(n int) []byte {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
