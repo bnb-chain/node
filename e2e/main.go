@@ -18,6 +18,11 @@ func main() {
 		log.Printf("%+v\n", err)
 		panic(err)
 	}
+	err = SidechainValidatorUpdateConsAddrLimitTest()
+	if err != nil {
+		log.Printf("%+v\n", err)
+		panic(err)
+	}
 	//err = TestFee()
 	//if err != nil {
 	//	log.Printf("TestFee failed: %v\n", err)
