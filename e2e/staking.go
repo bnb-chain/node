@@ -609,7 +609,7 @@ func SidechainValidatorUpdateConsAddrLimitTest() error {
 	txRes, err = c0.EditSideChainValidator(sideChainId, description, nil, nil, sideConsAddr3, rpc.Commit, tx.WithChainID(chainId))
 	log.Printf("edit side chain validator tx: %+v, err: %v\n", txRes, err)
 	assert(txRes.Code != 0, "edit side chain validator should return error")
-	assert(strings.Contains(txRes.Log, "ConsAddr cannot be changed more than once in one month"), "edit side chain validator should return error")
+	assert(strings.Contains(txRes.Log, "ConsAddr cannot be changed more than once in 30 days"), "edit side chain validator should return error")
 	return nil
 }
 
