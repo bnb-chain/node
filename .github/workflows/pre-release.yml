@@ -51,6 +51,8 @@ jobs:
 #        uses: mxschmitt/action-tmate@v3
 
       - name: Build Binary for ${{matrix.os}}
+        env:
+          CGO_ENABLED: "0"
         run: make build
 
       # ==============================
