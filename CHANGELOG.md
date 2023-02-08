@@ -1,8 +1,13 @@
 # Changelog
 
+## v0.10.7
+IMPROVEMENT
+* [\#919](https://github.com/bnb-chain/node/pull/919) [Deps] dep: bump cosmos-sdk to v0.25.8
+
+
 ## v0.10.6
 IMPROVEMENT
-* [\#908](https://github.com/bnb-chain/node/pull/908) [docs] update the readme to latest working one
+* [\#908](https://github.com/bnb-chain/node/pull/908) [docs] update the readme to the latest working one
 * [\#907](https://github.com/bnb-chain/node/pull/907) [fix] remove bnb-chain go-sdk dep
 
 ## v0.10.5
