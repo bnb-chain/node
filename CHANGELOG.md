@@ -2,7 +2,8 @@
 
 ## v0.10.7
 IMPROVEMENT
-* [\#919](https://github.com/bnb-chain/node/pull/919) [Deps] dep: bump cosmos-sdk to v0.25.8
+* [\#921](https://github.com/bnb-chain/node/pull/921) [config] add LimitConsAddrUpdateIntervalHeight and BEP159Height in assets
+* [\#919](https://github.com/bnb-chain/node/pull/919) [deps] bump cosmos-sdk to v0.25.8
 
 
 ## v0.10.6
