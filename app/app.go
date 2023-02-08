@@ -27,6 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/sidechain"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/keeper"
 	sTypes "github.com/cosmos/cosmos-sdk/x/stake/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -61,7 +62,6 @@ import (
 	"github.com/bnb-chain/node/plugins/tokens/swap"
 	"github.com/bnb-chain/node/plugins/tokens/timelock"
 	"github.com/bnb-chain/node/wire"
-	cStake "github.com/cosmos/cosmos-sdk/x/stake/cross_stake"
 )
 
 const (
@@ -336,6 +336,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP153, upgradeConfig.BEP153Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159, upgradeConfig.BEP159Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP159Phase2, upgradeConfig.BEP159Phase2Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.LimitConsAddrUpdateInterval, upgradeConfig.LimitConsAddrUpdateIntervalHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP173, upgradeConfig.BEP173Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 
