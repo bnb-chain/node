@@ -74,6 +74,7 @@ func main() {
 		binanceChainConfig.UpgradeConfig.BEP153Height = 2
 		binanceChainConfig.UpgradeConfig.BEP159Height = 3
 		binanceChainConfig.UpgradeConfig.BEP159Phase2Height = 6
+		binanceChainConfig.UpgradeConfig.LimitConsAddrUpdateIntervalHeight = 6
 		binanceChainConfig.BreatheBlockInterval = 5
 		appConfigFilePath := filepath.Join(ctxConfig.RootDir, "config", "app.toml")
 		config.WriteConfigFile(appConfigFilePath, binanceChainConfig)

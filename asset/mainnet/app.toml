@@ -63,10 +63,6 @@ BEP153Height = 284376000
 #Block height of BEP173 upgrade
 BEP173Height = 284376000
 FixDoubleSignChainIdHeight = 9223372036854775807
-# Block height of BEP159Height upgrade
-BEP159Height = 298721375
-# Block height of LimitConsAddrUpdateInterval upgrade
-LimitConsAddrUpdateIntervalHeight = 298721375
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
