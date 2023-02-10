@@ -564,7 +564,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP67Height:                       1,
 		BEP70Height:                       1,
 		LaunchBscUpgradeHeight:            1,
-		LimitConsAddrUpdateIntervalHeight: 1,
+		LimitConsAddrUpdateIntervalHeight: math.MaxInt64,
 		BEP128Height:                      math.MaxInt64,
 		BEP151Height:                      math.MaxInt64,
 		BEP153Height:                      math.MaxInt64,

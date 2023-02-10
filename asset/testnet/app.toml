@@ -68,8 +68,6 @@ FixDoubleSignChainIdHeight = 34587202
 BEP159Height = 34587202
 #Block height of BEP159Phase2Height upgrade
 BEP159Phase2Height = 34963303
-# Block height of LimitConsAddrUpdateInterval upgrade
-LimitConsAddrUpdateIntervalHeight = 36174050
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
