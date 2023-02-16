@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bnb-chain/node/cmd/bnbcli/utils"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -84,6 +85,7 @@ func main() {
 		client.LineBreak,
 		apiserv.ServeCommand(cdc),
 		keys.Commands(),
+		utils.Commands(),
 		client.LineBreak,
 		version.VersionCmd,
 	)
