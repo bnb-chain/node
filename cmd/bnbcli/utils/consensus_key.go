@@ -2,10 +2,10 @@ package utils
 
 import (
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/privval"
 
+	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/privval"
 )
 
 const (
