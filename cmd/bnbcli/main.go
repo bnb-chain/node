@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -11,16 +9,16 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
-	sidecmd "github.com/cosmos/cosmos-sdk/x/sidechain/client/cli"
-
 	paramcmd "github.com/cosmos/cosmos-sdk/x/paramHub/client/cli"
+	sidecmd "github.com/cosmos/cosmos-sdk/x/sidechain/client/cli"
 	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
-
+	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/libs/cli"
 
 	"github.com/bnb-chain/node/admin"
 	"github.com/bnb-chain/node/app"
+	"github.com/bnb-chain/node/cmd/bnbcli/utils"
 	"github.com/bnb-chain/node/common"
 	"github.com/bnb-chain/node/common/types"
 	accountcmd "github.com/bnb-chain/node/plugins/account/client/cli"
@@ -84,6 +82,7 @@ func main() {
 		client.LineBreak,
 		apiserv.ServeCommand(cdc),
 		keys.Commands(),
+		utils.Commands(),
 		client.LineBreak,
 		version.VersionCmd,
 	)
