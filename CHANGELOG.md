@@ -1,8 +1,20 @@
 # Changelog
 
+## v0.10.7
+FEATURES
+* [\#921](https://github.com/bnb-chain/node/pull/921) [config] add LimitConsAddrUpdateIntervalHeight and BEP159Height in assets
+* [\#917](https://github.com/bnb-chain/node/pull/917) [Staking] limit sidechain consensus addr update interval
+
+IMPROVEMENT
+* [\#919](https://github.com/bnb-chain/node/pull/919) [deps] bump cosmos-sdk to v0.25.8
+* [\#915](https://github.com/bnb-chain/node/pull/915) [deps] update deps that were reported in OSV issues
+
+BUG FIX
+* [\#914](https://github.com/bnb-chain/node/pull/914) [fix] fix bnbcli params side-params error
+
 ## v0.10.6
 IMPROVEMENT
-* [\#908](https://github.com/bnb-chain/node/pull/908) [docs] update the readme to latest working one
+* [\#908](https://github.com/bnb-chain/node/pull/908) [docs] update the readme to the latest working one
 * [\#907](https://github.com/bnb-chain/node/pull/907) [fix] remove bnb-chain go-sdk dep
 
 ## v0.10.5

@@ -93,6 +93,8 @@ BEP153Height = {{ .UpgradeConfig.BEP153Height }}
 BEP159Height = {{ .UpgradeConfig.BEP159Height }}
 # Block height of BEP159Phase2 upgrade
 BEP159Phase2Height = {{ .UpgradeConfig.BEP159Phase2Height }}
+# Block height of LimitConsAddrUpdateInterval upgrade
+LimitConsAddrUpdateIntervalHeight = {{ .UpgradeConfig.LimitConsAddrUpdateIntervalHeight }}
 # Block height of BEP173 upgrade
 BEP173Height = {{ .UpgradeConfig.BEP173Height }}
 # Block height of FixDoubleSignChainIdHeight upgrade
@@ -540,6 +542,7 @@ type UpgradeConfig struct {
 	BEP153Height                                    int64 `mapstructure:"BEP153Height"`
 	BEP159Height                                    int64 `mapstructure:"BEP159Height"`
 	BEP159Phase2Height                              int64 `mapstructure:"BEP159Phase2Height"`
+	LimitConsAddrUpdateIntervalHeight               int64 `mapstructure:"LimitConsAddrUpdateIntervalHeight"`
 	BEP173Height                                    int64 `mapstructure:"BEP173Height"`
 	FixDoubleSignChainIdHeight                      int64 `mapstructure:"FixDoubleSignChainIdHeight"`
 }
@@ -547,31 +550,32 @@ type UpgradeConfig struct {
 func defaultUpgradeConfig() *UpgradeConfig {
 	// make the upgraded functions enabled by default
 	return &UpgradeConfig{
-		BEP6Height:                 1,
-		BEP9Height:                 1,
-		BEP10Height:                1,
-		BEP19Height:                1,
-		BEP12Height:                1,
-		BEP3Height:                 1,
-		FixSignBytesOverflowHeight: 1,
-		LotSizeUpgradeHeight:       1,
-		ListingRuleUpgradeHeight:   1,
-		FixZeroBalanceHeight:       1,
-		BEP8Height:                 1,
-		BEP67Height:                1,
-		BEP70Height:                1,
-		LaunchBscUpgradeHeight:     1,
-		BEP128Height:               math.MaxInt64,
-		BEP151Height:               math.MaxInt64,
-		BEP153Height:               math.MaxInt64,
-		BEP159Height:               math.MaxInt64,
-		BEP159Phase2Height:         math.MaxInt64,
-		BEP173Height:               math.MaxInt64,
-		FixDoubleSignChainIdHeight: math.MaxInt64,
-		BEP82Height:                math.MaxInt64,
-		BEP84Height:                math.MaxInt64,
-		BEP87Height:                math.MaxInt64,
-		FixFailAckPackageHeight:    math.MaxInt64,
+		BEP6Height:                        1,
+		BEP9Height:                        1,
+		BEP10Height:                       1,
+		BEP19Height:                       1,
+		BEP12Height:                       1,
+		BEP3Height:                        1,
+		FixSignBytesOverflowHeight:        1,
+		LotSizeUpgradeHeight:              1,
+		ListingRuleUpgradeHeight:          1,
+		FixZeroBalanceHeight:              1,
+		BEP8Height:                        1,
+		BEP67Height:                       1,
+		BEP70Height:                       1,
+		LaunchBscUpgradeHeight:            1,
+		LimitConsAddrUpdateIntervalHeight: math.MaxInt64,
+		BEP128Height:                      math.MaxInt64,
+		BEP151Height:                      math.MaxInt64,
+		BEP153Height:                      math.MaxInt64,
+		BEP159Height:                      math.MaxInt64,
+		BEP159Phase2Height:                math.MaxInt64,
+		BEP173Height:                      math.MaxInt64,
+		FixDoubleSignChainIdHeight:        math.MaxInt64,
+		BEP82Height:                       math.MaxInt64,
+		BEP84Height:                       math.MaxInt64,
+		BEP87Height:                       math.MaxInt64,
+		FixFailAckPackageHeight:           math.MaxInt64,
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
