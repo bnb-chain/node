@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/binance-chain/go-sdk/client/rpc"
-	sdkTypes "github.com/binance-chain/go-sdk/common/types"
-	"github.com/binance-chain/go-sdk/keys"
-	"github.com/binance-chain/go-sdk/types/msg"
-	"github.com/binance-chain/go-sdk/types/tx"
+	"github.com/bnb-chain/go-sdk/client/rpc"
+	sdkTypes "github.com/bnb-chain/go-sdk/common/types"
+	"github.com/bnb-chain/go-sdk/keys"
+	"github.com/bnb-chain/go-sdk/types/msg"
+	"github.com/bnb-chain/go-sdk/types/tx"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
@@ -331,7 +331,7 @@ func Staking() error {
 	assert(validator.Tokens.String() == "12300000000", "validator tokens should be 123e8")
 	assert(validator.Description == des, "validator description should be equal")
 	assert(validator.Commission.Rate.Equal(rate), "validator rate should be equal")
-	assert(validator.ConsPubKey == sdkTypes.MustBech32ifyConsPub(consensusPubKey), "validator cons pub key should be equal")
+	assert(sdkTypes.MustBech32ifyConsPub(validator.ConsPubKey) == sdkTypes.MustBech32ifyConsPub(consensusPubKey), "validator cons pub key should be equal")
 	// edit validator
 	des2 := sdkTypes.Description{Moniker: "node1_v2"}
 	consensusPrivKey2 := ed25519.GenPrivKey()
@@ -351,7 +351,7 @@ func Staking() error {
 	assert(validator != nil, "validator should not be nil")
 	assert(bytes.Equal(validator.OperatorAddr, validator0.GetAddr()), "validator address should be equal")
 	assert(validator.Description == des2, "validator description should be equal")
-	assert(validator.ConsPubKey == consensusPubKey2Str, "validator cons pub key should be equal")
+	assert(sdkTypes.MustBech32ifyConsPub(validator.ConsPubKey) == consensusPubKey2Str, "validator cons pub key should be equal")
 	//tokenBeforeDelegate := validator.Tokens
 	//// delegate
 	//delegator, err := GenKeyManagerWithBNB(c0, valKM)
