@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.8
+FEATURES
+* [\#895](https://github.com/bnb-chain/node/pull/895) [BEP] feat: add bep 171 upgrade
+* [\#924](https://github.com/bnb-chain/node/pull/924) [cli] feat: add gen-consensus-key command in bnbcli
+
 ## v0.10.7
 FEATURES
 * [\#921](https://github.com/bnb-chain/node/pull/921) [config] add LimitConsAddrUpdateIntervalHeight and BEP159Height in assets

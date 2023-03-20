@@ -45,6 +45,7 @@ const (
 	BEP159                      = sdk.BEP159 // https://github.com/bnb-chain/BEPs/pull/159 New Staking Mechanism
 	BEP159Phase2                = sdk.BEP159Phase2
 	LimitConsAddrUpdateInterval = sdk.LimitConsAddrUpdateInterval
+	BEP171                      = sdk.BEP171 // https://github.com/bnb-chain/BEPs/pull/171 Security Enhancement for Cross-Chain Module
 	BEP173                      = sdk.BEP173 // https://github.com/bnb-chain/BEPs/pull/173 Text Proposal
 	FixDoubleSignChainId        = sdk.FixDoubleSignChainId
 )
