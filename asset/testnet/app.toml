@@ -70,6 +70,8 @@ BEP159Height = 34587202
 BEP159Phase2Height = 34963303
 # Block height of LimitConsAddrUpdateInterval upgrade
 LimitConsAddrUpdateIntervalHeight = 36174050
+# Block height of BEP171 upgrade
+BEP171Height = 37691120
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
