@@ -1,4 +1,4 @@
-//nolint
+// nolint
 package version
 
 import "fmt"
@@ -12,7 +12,7 @@ var (
 	Version string
 )
 
-const NodeVersion = "v0.10.8"
+const NodeVersion = "v0.10.9"
 
 func init() {
 	Version = fmt.Sprintf("BNB Beacon Chain Release: %s;", NodeVersion)
