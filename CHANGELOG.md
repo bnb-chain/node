@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.9
+
+BUG FIX
+* [\#914](https://github.com/bnb-chain/node/pull/930) [deps] deps: bump cosmos-sdk to v0.26.1
+
 ## v0.10.8
 FEATURES
 * [\#895](https://github.com/bnb-chain/node/pull/895) [BEP] feat: add bep 171 upgrade
