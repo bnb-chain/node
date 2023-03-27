@@ -563,11 +563,6 @@ func (app *BinanceChain) initStaking() {
 		if sdkErr != nil {
 			panic(sdkErr.Error())
 		}
-		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
-		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
-		if err != nil {
-			panic(err)
-		}
 	})
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159, func(ctx sdk.Context) {
 		stake.MigrateValidatorDistributionAddr(ctx, app.stakeKeeper)
@@ -589,12 +584,11 @@ func (app *BinanceChain) initStaking() {
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
 
-	if sdk.IsUpgrade(sdk.BEP153) {
-		crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
-		err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
-		if err != nil {
-			panic(err)
-		}
+	// register cross stake channel
+	crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
+	err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -938,8 +932,8 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	fees.Pool.Clear()
 	// just clean it, no matter use it or not.
 	pub.Pool.Clean()
-	//match may end with transaction failure, which is better to save into
-	//the EndBlock response. However, current cosmos doesn't support this.
+	// match may end with transaction failure, which is better to save into
+	// the EndBlock response. However, current cosmos doesn't support this.
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),
@@ -1191,7 +1185,7 @@ func (app *BinanceChain) publish(tradesToPublish []*pub.Trade, proposalsToPublis
 		accountsToPublish,
 		latestPriceLevels,
 		blockFee,
-		app.DexKeeper.RoundOrderFees, //only use DexKeeper RoundOrderFees
+		app.DexKeeper.RoundOrderFees, // only use DexKeeper RoundOrderFees
 		transferToPublish,
 		blockToPublish)
 
