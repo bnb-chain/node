@@ -66,6 +66,10 @@ import (
 
 const (
 	appName = "BNBChain"
+
+	bscValidatorSetContractAddr = "0000000000000000000000000000000000001000"
+	slashIndicatorContractAddr  = "0000000000000000000000000000000000001001"
+	stakeContractAddr           = "0000000000000000000000000000000000002001"
 )
 
 // default home directories for expected binaries
@@ -490,6 +494,21 @@ func (app *BinanceChain) initSideChain() {
 			BscSideChainId: ServerContext.BscChainId,
 		})
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP126, func(ctx sdk.Context) {
+		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
+
+		validatorSetAddr, _ := sdk.NewSmartChainAddress(bscValidatorSetContractAddr)
+		_, sdkErr := app.scKeeper.AddSystemRewardOperator(ctx, chainId, validatorSetAddr)
+		if sdkErr != nil {
+			panic(sdkErr.Error())
+		}
+
+		slashIndicatorAddr, _ := sdk.NewSmartChainAddress(slashIndicatorContractAddr)
+		_, sdkErr = app.scKeeper.AddSystemRewardOperator(ctx, chainId, slashIndicatorAddr)
+		if sdkErr != nil {
+			panic(sdkErr.Error())
+		}
+	})
 }
 
 func (app *BinanceChain) initOracle() {
@@ -558,9 +577,8 @@ func (app *BinanceChain) initStaking() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP153, func(ctx sdk.Context) {
 		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
 		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.CrossStakeChannelID, sdk.ChannelAllow)
-		stakeContractAddr := "0000000000000000000000000000000000002001"
 		stakeContractBytes, _ := hex.DecodeString(stakeContractAddr)
-		_, sdkErr := app.scKeeper.CreateNewChannelToIbc(ctx, chainId, sTypes.CrossStakeChannelID, sdk.RewardNotFromSystem, stakeContractBytes)
+		_, sdkErr := app.scKeeper.CreateNewCrossChainChannel(ctx, chainId, sTypes.CrossStakeChannelID, sdk.RewardNotFromSystem, stakeContractBytes)
 		if sdkErr != nil {
 			panic(sdkErr.Error())
 		}
