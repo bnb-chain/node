@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.10
+FEATURES
+* [\#936](https://github.com/bnb-chain/node/pull/936) [BEP]: enable bep171 upgrade on mainnet #936
+
 ## v0.10.9
 
 BUG FIX
