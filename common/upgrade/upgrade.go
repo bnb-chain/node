@@ -39,6 +39,7 @@ const (
 	BEP87             = "BEP87"   // https://github.com/bnb-chain/BEPs/pull/87
 	FixFailAckPackage = sdk.FixFailAckPackage
 
+	BEP126                      = sdk.BEP126 // https://github.com/bnb-chain/BEPs/pull/126 Fast finality upgrade
 	BEP128                      = sdk.BEP128 // https://github.com/bnb-chain/BEPs/pull/128 Staking reward distribution upgrade
 	BEP151                      = "BEP151"   // https://github.com/bnb-chain/BEPs/pull/151 Decommission Decentralized Exchange
 	BEP153                      = sdk.BEP153 // https://github.com/bnb-chain/BEPs/pull/153 Native Staking
