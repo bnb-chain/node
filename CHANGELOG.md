@@ -2,10 +2,13 @@
 
 ## v0.10.10
 FEATURES
-* [\#936](https://github.com/bnb-chain/node/pull/936) [BEP]: enable bep171 upgrade on mainnet #936
+* [\#936](https://github.com/bnb-chain/node/pull/936) [BEP]: enable bep171 upgrade on mainnet
+
+BUG FIX
+* [\#934](https://github.com/bnb-chain/node/pull/934) [fix] fix channel not registered error
+
 
 ## v0.10.9
-
 BUG FIX
 * [\#930](https://github.com/bnb-chain/node/pull/930) [deps] deps: bump cosmos-sdk to v0.26.1
 
