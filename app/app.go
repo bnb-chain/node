@@ -502,12 +502,6 @@ func (app *BinanceChain) initSideChain() {
 		if sdkErr != nil {
 			panic(sdkErr.Error())
 		}
-
-		slashIndicatorAddr, _ := sdk.NewSmartChainAddress(slashIndicatorContractAddr)
-		_, sdkErr = app.scKeeper.AddSystemRewardOperator(ctx, chainId, slashIndicatorAddr)
-		if sdkErr != nil {
-			panic(sdkErr.Error())
-		}
 	})
 }
 
