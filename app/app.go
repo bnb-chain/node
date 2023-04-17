@@ -664,6 +664,22 @@ func (app *BinanceChain) initSlashing() {
 			DowntimeSlashFee:         10e8,
 		})
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP126, func(ctx sdk.Context) {
+		// write slash params to beacon chain when upgrade to BEP126
+		app.slashKeeper.SetParams(ctx, slashing.Params{
+			MaxEvidenceAge:              60 * 60 * 24 * 3 * time.Second, // 3 days
+			DoubleSignUnbondDuration:    math.MaxInt64,                  // forever
+			DowntimeUnbondDuration:      60 * 60 * 24 * 2 * time.Second, // 2 days
+			MaliciousVoteUnbondDuration: math.MaxInt64,                  // forever
+			TooLowDelUnbondDuration:     60 * 60 * 24 * time.Second,     // 1 day
+			DoubleSignSlashAmount:       10000e8,
+			MaliciousVoteSlashAmount:    10000e8,
+			SubmitterReward:             1000e8,
+			DowntimeSlashAmount:         50e8,
+			DowntimeSlashFee:            10e8,
+			MaliciousVoteSlashFee:       2000e8,
+		})
+	})
 }
 
 func (app *BinanceChain) initIbc() {
