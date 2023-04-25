@@ -1,8 +1,12 @@
 # Changelog
 
+## v0.10.12
+FEATURES
+* [\#935](https://github.com/bnb-chain/node/pull/935) [BEP] feat: implement bep126
+
 ## v0.10.10
 FEATURES
-* [\#936](https://github.com/bnb-chain/node/pull/936) [BEP]: enable bep171 upgrade on mainnet #936
+* [\#936](https://github.com/bnb-chain/node/pull/936) [BEP] feat: enable bep171 upgrade on mainnet
 
 ## v0.10.9
 
