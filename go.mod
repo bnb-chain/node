@@ -75,9 +75,9 @@ require (
 	github.com/zondax/hid v0.9.0 // indirect
 	github.com/zondax/ledger-cosmos-go v0.9.9 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
@@ -88,10 +88,10 @@ require (
 )
 
 replace (
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.25.6-0.20230424105606-1dbea4cd2cc9
+	github.com/cosmos/cosmos-sdk => github.com/forcodedancing/bnc-cosmos-sdk v0.25.6-0.20230425031324-f65cb1e6ae20
 	github.com/tendermint/go-amino => github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.5
-	github.com/tendermint/tendermint => github.com/bnb-chain/bnc-tendermint v0.32.3-bc.9
+	github.com/tendermint/tendermint => github.com/forcodedancing/bnc-tendermint v0.32.3-binance.7.0.20230425030627-abe816894382
 	github.com/zondax/ledger-cosmos-go => github.com/bnb-chain/ledger-cosmos-go v0.9.10-0.20230201065744-d644bede1667
 	golang.org/x/crypto => github.com/tendermint/crypto v0.0.0-20190823183015-45b1026d81ae
 )
