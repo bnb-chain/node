@@ -99,6 +99,8 @@ LimitConsAddrUpdateIntervalHeight = {{ .UpgradeConfig.LimitConsAddrUpdateInterva
 BEP173Height = {{ .UpgradeConfig.BEP173Height }}
 # Block height of FixDoubleSignChainIdHeight upgrade
 FixDoubleSignChainIdHeight = {{ .UpgradeConfig.FixDoubleSignChainIdHeight }}
+# Block height of BEP126 upgrade
+BEP126Height = {{ .UpgradeConfig.BEP126Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -546,6 +548,7 @@ type UpgradeConfig struct {
 	BEP171Height                                    int64 `mapstructure:"BEP171Height"`
 	BEP173Height                                    int64 `mapstructure:"BEP173Height"`
 	FixDoubleSignChainIdHeight                      int64 `mapstructure:"FixDoubleSignChainIdHeight"`
+	BEP126Height                                    int64 `mapstructure:"BEP126Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -566,6 +569,7 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP70Height:                       1,
 		LaunchBscUpgradeHeight:            1,
 		LimitConsAddrUpdateIntervalHeight: math.MaxInt64,
+		BEP126Height:               	   math.MaxInt64,
 		BEP128Height:                      math.MaxInt64,
 		BEP151Height:                      math.MaxInt64,
 		BEP153Height:                      math.MaxInt64,
@@ -578,7 +582,6 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP87Height:                       math.MaxInt64,
 		BEP171Height:                      math.MaxInt64,
 		FixFailAckPackageHeight:           math.MaxInt64,
-
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 	}
 }
