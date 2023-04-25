@@ -4,12 +4,15 @@
 FEATURES
 * [\#935](https://github.com/bnb-chain/node/pull/935) [BEP] feat: implement bep126
 
+## v0.10.11
+BUG FIX
+* [\#942](https://github.com/bnb-chain/node/pull/942) [deps] deps: bump cosmos-sdk to v0.26.2
+
 ## v0.10.10
 FEATURES
 * [\#936](https://github.com/bnb-chain/node/pull/936) [BEP] feat: enable bep171 upgrade on mainnet
 
 ## v0.10.9
-
 BUG FIX
 * [\#930](https://github.com/bnb-chain/node/pull/930) [deps] deps: bump cosmos-sdk to v0.26.1
 
