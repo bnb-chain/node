@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.13
+BUG FIX
+* [\#950](https://github.com/bnb-chain/node/pull/950) [deps] fix: bump cosmos sdk to fix validator unmarshal issue
+
 ## v0.10.12
 FEATURES
 * [\#935](https://github.com/bnb-chain/node/pull/935) [BEP] feat: implement bep126
