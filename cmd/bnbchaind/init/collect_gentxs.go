@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bnb-chain/node/app"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -49,6 +50,8 @@ func CollectGenTxsCmd(cdc *codec.Codec, appInit server.AppInit) *cobra.Command {
 	cmd.Flags().StringP(flagGenTxDir, "i", "",
 		"override default \"gentx\" directory from which collect and execute "+
 			"genesis transactions; default [--home]/config/gentx/")
+	cmd.Flags().StringVar(&app.ServerContext.Bech32PrefixAccAddr, flagAccPrefix, "bnb", "bech32 prefix for AccAddress")
+	_ = app.ServerContext.BindPFlag("addr.bech32PrefixAccAddr", cmd.Flags().Lookup(flagAccPrefix))
 	return cmd
 }
 
