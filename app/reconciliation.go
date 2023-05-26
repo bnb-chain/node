@@ -11,7 +11,7 @@ import (
 const globalAccountNumber = "globalAccountNumber"
 
 // reconBalance will do reconciliation for accounts balances.
-func (app *BinanceChain) reconBalance(ctx sdk.Context) error {
+func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 	currentHeight := ctx.BlockHeight()
 
 	ctx.Logger().Debug("account changes")
@@ -29,7 +29,6 @@ func (app *BinanceChain) reconBalance(ctx sdk.Context) error {
 		ctx.Logger().Error(err)
 		panic(err)
 	}
-	return nil
 }
 
 func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins) {
