@@ -49,6 +49,7 @@ const (
 	BEP171                      = sdk.BEP171 // https://github.com/bnb-chain/BEPs/pull/171 Security Enhancement for Cross-Chain Module
 	BEP173                      = sdk.BEP173 // https://github.com/bnb-chain/BEPs/pull/173 Text Proposal
 	FixDoubleSignChainId        = sdk.FixDoubleSignChainId
+	SecurityEnhancement         = sdk.SecurityEnhancement
 )
 
 func UpgradeBEP10(before func(), after func()) {

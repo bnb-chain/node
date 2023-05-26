@@ -345,6 +345,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP173, upgradeConfig.BEP173Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.SecurityEnhancement, upgradeConfig.SecurityEnhancementHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -953,6 +954,11 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	pub.Pool.Clean()
 	// match may end with transaction failure, which is better to save into
 	// the EndBlock response. However, current cosmos doesn't support this.
+
+	if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
+		app.reconBalance(ctx)
+	}
+
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),

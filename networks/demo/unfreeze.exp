@@ -8,9 +8,9 @@ set home [lindex $argv 4]
 
 set timeout 30
 	if {"${home}" == ""} {
-		spawn ./bnbcli token freeze -s $symbol  -n $amount --from $from --chain-id $chain_id
+		spawn ./bnbcli token unfreeze -s $symbol  -n $amount --from $from --chain-id $chain_id
 	} else {
-		spawn ./bnbcli token freeze --home $home -s $symbol -n $amount --from $from --chain-id $chain_id
+		spawn ./bnbcli token unfreeze --home $home -s $symbol -n $amount --from $from --chain-id $chain_id
 	}
 	expect "Password*"
 	send "12345678\r"
