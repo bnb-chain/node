@@ -221,7 +221,6 @@ function token() {
   # unfreeze token
   result=$(expect ./unfreeze.exp ${btc_symbol} 100000000 bob ${chain_id} ${cli_home})
   check_operation "Freeze Token" "${result}" "${chain_operation_words}"
-
 }
 
 function gov() {

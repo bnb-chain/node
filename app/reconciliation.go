@@ -51,8 +51,11 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coin
 		if err != nil {
 			panic("failed to unmarshal diff value " + err.Error())
 		}
-		ctx.Logger().Debug("diff account", "address", acc1.GetAddress(), "coins", acc1.GetCoins().String())
-		currentCoins = currentCoins.Plus(acc1.GetCoins())
+		nacc1 := acc1.(types.NamedAccount)
+		ctx.Logger().Debug("diff account", "address", nacc1.GetAddress(), "coins", nacc1.GetCoins().String())
+		currentCoins = currentCoins.Plus(nacc1.GetCoins())
+		currentCoins = currentCoins.Plus(nacc1.GetFrozenCoins())
+		currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 
 		var acc2 sdk.Account
 		_, v = iavlStore.GetTree().GetVersioned([]byte(k), version)
@@ -61,19 +64,17 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coin
 			if err != nil {
 				panic("failed to unmarshal previous value " + err.Error())
 			}
-			ctx.Logger().Debug("pre account", "address", acc2.GetAddress(), "coins", acc2.GetCoins().String())
-			preCoins = preCoins.Plus(acc2.GetCoins())
+			nacc2 := acc2.(types.NamedAccount)
+
+			ctx.Logger().Debug("pre account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
+			preCoins = preCoins.Plus(nacc2.GetCoins())
+			preCoins = preCoins.Plus(nacc2.GetFrozenCoins())
+			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 		}
 	}
+	iavlStore.ResetDiff()
 
-	if len(currentCoins) > 0 {
-		ctx.Logger().Debug("diff coins", "coins", currentCoins.String())
-	}
-	if len(preCoins) > 0 {
-		ctx.Logger().Debug("previous coins", "coins", preCoins.String())
-	}
-
-	ctx.Logger().Debug("changes", "diff", currentCoins.String(), "previous", preCoins.String())
+	ctx.Logger().Debug("account changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
 }
@@ -111,15 +112,9 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins)
 			})
 		}
 	}
+	iavlStore.ResetDiff()
 
-	if len(currentCoins) > 0 {
-		ctx.Logger().Debug("diff coins", "coins", currentCoins.String())
-	}
-	if len(preCoins) > 0 {
-		ctx.Logger().Debug("previous coins", "coins", preCoins.String())
-	}
-
-	ctx.Logger().Debug("changes", "diff", currentCoins.String(), "previous", preCoins.String())
+	ctx.Logger().Debug("token changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
 }
