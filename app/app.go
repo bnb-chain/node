@@ -269,6 +269,18 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		cmn.Exit(err.Error())
 	}
 
+	// enable diff for reconciliation
+	accountIavl, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
+	if !ok {
+		cmn.Exit("cannot convert account store to ival store")
+	}
+	accountIavl.EnableDiff()
+	tokenIavl, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
+	if !ok {
+		cmn.Exit("cannot convert token store to ival store")
+	}
+	tokenIavl.EnableDiff()
+
 	// init app cache
 	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
 	app.SetAccountStoreCache(cdc, accountStore, app.baseConfig.AccountCacheSize)

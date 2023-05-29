@@ -14,10 +14,7 @@ const globalAccountNumber = "globalAccountNumber"
 func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 	currentHeight := ctx.BlockHeight()
 
-	ctx.Logger().Debug("account changes")
 	accPre, accCurrent := app.getAccountChanges(ctx)
-
-	ctx.Logger().Debug("token changes")
 	tokenPre, tokenCurrent := app.getTokenChanges(ctx)
 
 	left := tokenPre.Plus(accCurrent)
@@ -34,7 +31,7 @@ func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins) {
 	iavlStore, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
 	if !ok {
-		panic("cannot convert to ival")
+		panic("cannot convert to ival store")
 	}
 
 	preCoins := sdk.Coins{}
@@ -82,7 +79,7 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coin
 func (app *BinanceChain) getTokenChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins) {
 	iavlStore, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
 	if !ok {
-		panic("cannot convert to ival")
+		panic("cannot convert to ival store")
 	}
 
 	preCoins := sdk.Coins{}
