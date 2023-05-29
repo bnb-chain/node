@@ -11,7 +11,6 @@ import (
 	"github.com/bnb-chain/node/common/log"
 	"github.com/bnb-chain/node/common/types"
 	common "github.com/bnb-chain/node/common/types"
-	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/plugins/tokens/store"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,21 +23,24 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case IssueMsg:
-			if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-				return sdk.ErrMsgNotSupported("IssueMsg disabled in SecurityEnhancement upgrade").Result()
-			}
+			// TODO: disable for recon testing
+			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
+			//	return sdk.ErrMsgNotSupported("IssueMsg disabled in SecurityEnhancement upgrade").Result()
+			//}
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		case MintMsg:
 			return handleMintToken(ctx, tokenMapper, keeper, msg)
 		case IssueMiniMsg:
-			if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-				return sdk.ErrMsgNotSupported("IssueMiniMsg disabled in SecurityEnhancement upgrade").Result()
-			}
+			// TODO: disable for recon testing
+			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
+			//	return sdk.ErrMsgNotSupported("IssueMiniMsg disabled in SecurityEnhancement upgrade").Result()
+			//}
 			return handleIssueMiniToken(ctx, tokenMapper, keeper, msg)
 		case IssueTinyMsg:
-			if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-				return sdk.ErrMsgNotSupported("IssueTinyMsg disabled in SecurityEnhancement upgrade").Result()
-			}
+			// TODO: disable for recon testing
+			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
+			//	return sdk.ErrMsgNotSupported("IssueTinyMsg disabled in SecurityEnhancement upgrade").Result()
+			//}
 			return handleIssueTinyToken(ctx, tokenMapper, keeper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()

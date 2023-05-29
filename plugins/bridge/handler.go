@@ -8,7 +8,6 @@ import (
 
 	"github.com/bnb-chain/node/common/log"
 	cmmtypes "github.com/bnb-chain/node/common/types"
-	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/plugins/bridge/types"
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
@@ -22,9 +21,10 @@ func NewHandler(keeper Keeper) sdk.Handler {
 		case TransferOutMsg:
 			return handleTransferOutMsg(ctx, keeper, msg)
 		case BindMsg:
-			if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-				return sdk.ErrMsgNotSupported("BindMsg disabled in SecurityEnhancement upgrade").Result()
-			}
+			// TODO: disable for recon testing
+			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
+			//	return sdk.ErrMsgNotSupported("BindMsg disabled in SecurityEnhancement upgrade").Result()
+			//}
 			return handleBindMsg(ctx, keeper, msg)
 		case UnbindMsg:
 			return handleUnbindMsg(ctx, keeper, msg)
