@@ -6,13 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnb-chain/node/common/log"
-	cmmtypes "github.com/bnb-chain/node/common/types"
-	"github.com/bnb-chain/node/plugins/bridge/types"
 	"github.com/cosmos/cosmos-sdk/bsc/rlp"
 	"github.com/cosmos/cosmos-sdk/pubsub"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	"github.com/bnb-chain/node/common/log"
+	cmmtypes "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/bridge/types"
 )
 
 func NewHandler(keeper Keeper) sdk.Handler {
@@ -21,10 +23,9 @@ func NewHandler(keeper Keeper) sdk.Handler {
 		case TransferOutMsg:
 			return handleTransferOutMsg(ctx, keeper, msg)
 		case BindMsg:
-			// TODO: disable for recon testing
-			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-			//	return sdk.ErrMsgNotSupported("BindMsg disabled in SecurityEnhancement upgrade").Result()
-			//}
+			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
+				return sdk.ErrMsgNotSupported("BindMsg disabled in DisableMessagesPhase1 upgrade").Result()
+			}
 			return handleBindMsg(ctx, keeper, msg)
 		case UnbindMsg:
 			return handleUnbindMsg(ctx, keeper, msg)

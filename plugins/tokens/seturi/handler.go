@@ -2,24 +2,24 @@ package seturi
 
 import (
 	"fmt"
-
 	"reflect"
 	"strings"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/bnb-chain/node/common/log"
 	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/plugins/tokens/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func NewHandler(tokenMapper store.Mapper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case SetURIMsg:
-			// TODO: disable for recon testing
-			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-			//	return sdk.ErrMsgNotSupported("SetURIMsg disabled in SecurityEnhancement upgrade").Result()
-			//}
+			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
+				return sdk.ErrMsgNotSupported("SetURIMsg disabled in DisableMessagesPhase1 upgrade").Result()
+			}
 			return handleSetURI(ctx, tokenMapper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()

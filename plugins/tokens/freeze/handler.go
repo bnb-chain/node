@@ -5,12 +5,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/bnb-chain/node/common/log"
-	common "github.com/bnb-chain/node/common/types"
-	"github.com/bnb-chain/node/plugins/tokens/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
+	"github.com/bnb-chain/node/common/log"
+	common "github.com/bnb-chain/node/common/types"
+	"github.com/bnb-chain/node/common/upgrade"
+	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
 // NewHandler creates a new token freeze message handler
@@ -18,10 +20,9 @@ func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper b
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
-			// TODO: disable for recon testing
-			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-			//	return sdk.ErrMsgNotSupported("FreezeMsg disabled in SecurityEnhancement upgrade").Result()
-			//}
+			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
+				return sdk.ErrMsgNotSupported("FreezeMsg disabled in DisableMessagesPhase1 upgrade").Result()
+			}
 			return handleFreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
 		case UnfreezeMsg:
 			return handleUnfreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)

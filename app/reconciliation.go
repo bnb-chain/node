@@ -2,10 +2,12 @@ package app
 
 import (
 	"fmt"
-	"github.com/bnb-chain/node/common"
-	"github.com/bnb-chain/node/common/types"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/bnb-chain/node/common"
+	"github.com/bnb-chain/node/common/types"
 )
 
 const globalAccountNumber = "globalAccountNumber"

@@ -47,23 +47,13 @@ function prepare_node() {
   $(cd "./${home}/config" && sed -i -e "s/BEP159Phase2Height = 9223372036854775807/BEP159Phase2Height = 11/g" app.toml)
   $(cd "./${home}/config" && sed -i -e "s/LimitConsAddrUpdateIntervalHeight = 9223372036854775807/LimitConsAddrUpdateIntervalHeight = 11/g" app.toml)
   $(cd "./${home}/config" && sed -i -e "s/breatheBlockInterval = 0/breatheBlockInterval = 5/g" app.toml)
-  #	$(cd "./${home}/config" && sed -i -e "s/publishStaking = false/publishStaking = true/g" app.toml)
-  #	$(cd "./${home}/config" && sed -i -e "s/publishKafka = false/publishKafka = true/g" app.toml)
-  #	$(cd "./${home}/config" && sed -i -e "s/publishLocal = false/publishLocal = true/g" app.toml)
+  $(cd "./${home}/config" && sed -i -e "s/EnableReconciliationHeight = 9223372036854775807/EnableReconciliationHeight = 3/g" app.toml)
 
   # stop and start node
   ps -ef | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
   ./bnbchaind start --home ${home} >./testnoded/node.log 2>&1 &
 
   echo ${secret}
-}
-
-function apply_upgrade() {
-  $(cd "./${home}/config" && sed -i -e "s/SecurityEnhancementHeight = 9223372036854775807/SecurityEnhancementHeight = 15/g" app.toml)
-
-  # stop and start node
-  ps -ef | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9
-  ./bnbchaind start --home ${home} >./testnoded/node.log 2>&1 &
 }
 
 function exit_test() {
@@ -110,30 +100,9 @@ result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" $
 check_operation "Send Token" "${result}" "${chain_operation_words}"
 
 sleep 1
+# send
 result=$(expect ./send.exp ${cli_home} alice ${chain_id} "100000000000000:BNB" ${carl_addr})
 check_operation "Send Token" "${result}" "${chain_operation_words}"
-
-sleep 1
-# issue token
-result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
-btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
-check_operation "Issue Token" "${result}" "${chain_operation_words}"
-
-sleep 1
-# bind
-result=$(expect ./bind.exp ${btc_symbol} 0x6aade9709155a8386c63c1d2e5939525b960b4e7 10000000000000 4083424190 bob ${chain_id} ${cli_home})
-check_operation "BindBind Token" "${result}" "${chain_operation_words}"
-
-sleep 1
-# issue token
-result=$(expect ./issue.exp ETH Ethereum 1000000000000000 true bob ${chain_id} ${cli_home})
-eth_symbol=$(echo "${result}" | tail -n 1 | grep -o "ETH-[0-9A-Z]*")
-check_operation "Issue Token" "${result}" "${chain_operation_words}"
-
-sleep 1
-# freeze token
-result=$(expect ./freeze.exp ${btc_symbol} 100000000 bob ${chain_id} ${cli_home})
-check_operation "Freeze Token" "${result}" "${chain_operation_words}"
 
 # staking related
 function staking() {
@@ -192,9 +161,27 @@ function staking() {
 
 # token related
 function token() {
-  # issue token failed, due to upgrade
-  result=$(expect ./issue.exp USDT USDT 1000000000000000 true bob ${chain_id} ${cli_home})
-  check_operation "Mint Token" "${result}" "ERROR:"
+  sleep 1
+  # issue token
+  result=$(expect ./issue.exp BTC Bitcoin 1000000000000000 true bob ${chain_id} ${cli_home})
+  btc_symbol=$(echo "${result}" | tail -n 1 | grep -o "BTC-[0-9A-Z]*")
+  check_operation "Issue Token" "${result}" "${chain_operation_words}"
+
+  sleep 1
+  # bind
+  result=$(expect ./bind.exp ${btc_symbol} 0x6aade9709155a8386c63c1d2e5939525b960b4e7 10000000000000 4083424190 bob ${chain_id} ${cli_home})
+  check_operation "BindBind Token" "${result}" "${chain_operation_words}"
+
+  sleep 1
+  # issue token
+  result=$(expect ./issue.exp ETH Ethereum 1000000000000000 true bob ${chain_id} ${cli_home})
+  eth_symbol=$(echo "${result}" | tail -n 1 | grep -o "ETH-[0-9A-Z]*")
+  check_operation "Issue Token" "${result}" "${chain_operation_words}"
+
+  sleep 1
+  # freeze token
+  result=$(expect ./freeze.exp ${btc_symbol} 100000000 bob ${chain_id} ${cli_home})
+  check_operation "Freeze Token" "${result}" "${chain_operation_words}"
 
   sleep 1
   # send
@@ -223,6 +210,7 @@ function token() {
   check_operation "Freeze Token" "${result}" "${chain_operation_words}"
 }
 
+# gov related
 function gov() {
   sleep 1
   # propose list
@@ -238,8 +226,8 @@ function gov() {
 
 }
 
+# account related
 function account() {
-
   sleep 1
   ## query account balance
   result=$(./bnbcli account $bob_addr --trust-node)
@@ -283,8 +271,8 @@ function account() {
 
 }
 
+# swap related
 function swap() {
-
   sleep 1
   # Create an atomic swap
   result=$(expect ./HTLT-cross-chain.exp 2000 "100000000:BNB" "100000000:BNB" $bob_addr 0xf2fbB6C41271064613D6f44C7EE9A6c471Ec9B25 alice ${chain_id} ${cli_home})
@@ -380,6 +368,7 @@ function swap() {
 
 }
 
+# bridge related
 function bridge() {
   echo "skip, due to  crosschain needed"
   #  sleep 1
@@ -393,7 +382,6 @@ function bridge() {
   #  check_operation "Unbind" "${result}" "${chain_operation_words}"
 }
 
-apply_upgrade
 sleep 10
 
 token

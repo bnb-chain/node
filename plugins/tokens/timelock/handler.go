@@ -5,16 +5,17 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/bnb-chain/node/common/upgrade"
 )
 
 func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case TimeLockMsg:
-			// TODO: disable for recon testing
-			//if sdk.IsUpgrade(upgrade.SecurityEnhancement) {
-			//	return sdk.ErrMsgNotSupported("TimeLockMsg disabled in SecurityEnhancement upgrade").Result()
-			//}
+			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
+				return sdk.ErrMsgNotSupported("TimeLockMsg disabled in DisableMessagesPhase1 upgrade").Result()
+			}
 			return handleTimeLock(ctx, keeper, msg)
 		case TimeUnlockMsg:
 			return handleTimeUnlock(ctx, keeper, msg)
