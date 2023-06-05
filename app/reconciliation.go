@@ -16,8 +16,19 @@ const globalAccountNumber = "globalAccountNumber"
 func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 	currentHeight := ctx.BlockHeight()
 
-	accPre, accCurrent := app.getAccountChanges(ctx)
-	tokenPre, tokenCurrent := app.getTokenChanges(ctx)
+	accountStore, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
+	if !ok {
+		panic("cannot convert account store to ival store")
+	}
+	accPre, accCurrent := app.getAccountChanges(ctx, accountStore)
+	accountStore.ResetDiff()
+
+	tokenStore, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
+	if !ok {
+		panic("cannot convert token store to ival store")
+	}
+	tokenPre, tokenCurrent := app.getTokenChanges(ctx, tokenStore)
+	tokenStore.ResetDiff()
 
 	left := tokenPre.Plus(accCurrent)
 	right := tokenCurrent.Plus(accPre)
@@ -30,17 +41,12 @@ func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 	}
 }
 
-func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins) {
-	iavlStore, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
-	if !ok {
-		panic("cannot convert to ival store")
-	}
-
+func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
 	preCoins := sdk.Coins{}
 	currentCoins := sdk.Coins{}
 
-	diff := iavlStore.GetDiff()
-	version := iavlStore.GetTree().Version() - 1
+	diff := accountStore.GetDiff()
+	version := accountStore.GetTree().Version() - 1
 	for k, v := range diff {
 		if k == globalAccountNumber {
 			continue
@@ -57,7 +63,7 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coin
 		currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 
 		var acc2 sdk.Account
-		_, v = iavlStore.GetTree().GetVersioned([]byte(k), version)
+		_, v = accountStore.GetTree().GetVersioned([]byte(k), version)
 		if v != nil { // it is not a new account
 			err = app.Codec.UnmarshalBinaryBare(v, &acc2)
 			if err != nil {
@@ -71,24 +77,17 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context) (sdk.Coins, sdk.Coin
 			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 		}
 	}
-	iavlStore.ResetDiff()
-
 	ctx.Logger().Debug("account changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
 }
 
-func (app *BinanceChain) getTokenChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins) {
-	iavlStore, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
-	if !ok {
-		panic("cannot convert to ival store")
-	}
-
+func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
 	preCoins := sdk.Coins{}
 	currentCoins := sdk.Coins{}
 
-	diff := iavlStore.GetDiff()
-	version := iavlStore.GetTree().Version() - 1
+	diff := tokenStore.GetDiff()
+	version := tokenStore.GetTree().Version() - 1
 	for k, v := range diff {
 		var token1 types.IToken
 		err := app.Codec.UnmarshalBinaryBare(v, &token1)
@@ -100,7 +99,7 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins)
 		})
 
 		var token2 types.IToken
-		_, v = iavlStore.GetTree().GetVersioned([]byte(k), version)
+		_, v = tokenStore.GetTree().GetVersioned([]byte(k), version)
 		if v != nil { // it is not a new token
 			err = app.Codec.UnmarshalBinaryBare(v, &token2)
 			if err != nil {
@@ -111,8 +110,6 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context) (sdk.Coins, sdk.Coins)
 			})
 		}
 	}
-	iavlStore.ResetDiff()
-
 	ctx.Logger().Debug("token changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
