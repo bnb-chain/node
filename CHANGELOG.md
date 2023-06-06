@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.14
+FEATURES
+* [\#953](https://github.com/bnb-chain/node/pull/953) [cli] feat:support setting acc prefix when collecting gentxs
+* [\#957](https://github.com/bnb-chain/node/pull/957) [deps] deps: bump cosmos-sdk to v0.26.5
+
 ## v0.10.13
 BUG FIX
 * [\#950](https://github.com/bnb-chain/node/pull/950) [deps] fix: bump cosmos sdk to fix validator unmarshal issue
