@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store"
@@ -12,9 +13,15 @@ import (
 
 const globalAccountNumber = "globalAccountNumber"
 
+// unbalancedBlockHeightKey for saving unbalanced block height for reconciliation
+var unbalancedBlockHeightKey = []byte("0x01")
+
 // reconBalance will do reconciliation for accounts balances.
 func (app *BinanceChain) reconBalance(ctx sdk.Context) {
-	currentHeight := ctx.BlockHeight()
+	height, exists := app.getUnbalancedBlockHeight(ctx)
+	if exists {
+		panic(fmt.Sprintf("unbalanced state at block height %d, please use hardfork to bypass it", height))
+	}
 
 	accountStore, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
 	if !ok {
@@ -30,14 +37,14 @@ func (app *BinanceChain) reconBalance(ctx sdk.Context) {
 	tokenPre, tokenCurrent := app.getTokenChanges(ctx, tokenStore)
 	tokenStore.ResetDiff()
 
-	left := tokenPre.Plus(accCurrent)
-	right := tokenCurrent.Plus(accPre)
+	// accPre and tokenPre are positive, there will be no overflow
+	accountDiff := accCurrent.Plus(accPre.Negative())
+	tokenDiff := tokenCurrent.Plus(tokenPre.Negative())
 
-	if !left.IsEqual(right) {
-		err := fmt.Sprintf("unbalanced at block %d, pre: %s, current: %s \n",
-			currentHeight, left.String(), right.String())
-		ctx.Logger().Error(err)
-		panic(err)
+	if !accountDiff.IsEqual(tokenDiff) {
+		ctx.Logger().Error(fmt.Sprintf("unbalanced at block %d, account diff: %s, token diff: %s \n",
+			ctx.BlockHeight(), accountDiff.String(), tokenDiff.String()))
+		app.saveUnbalancedBlockHeight(ctx)
 	}
 }
 
@@ -77,7 +84,8 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 		}
 	}
-	ctx.Logger().Debug("account changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
+	ctx.Logger().Debug("account changes", "diff", currentCoins.String(), "previous", preCoins.String(),
+		"version", version, "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
 }
@@ -110,7 +118,25 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.Iavl
 			})
 		}
 	}
-	ctx.Logger().Debug("token changes", "diff", currentCoins.String(), "previous", preCoins.String(), "height", ctx.BlockHeight())
+	ctx.Logger().Debug("token changes", "diff", currentCoins.String(), "previous", preCoins.String(),
+		"version", version, "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
+}
+
+func (app *BinanceChain) saveUnbalancedBlockHeight(ctx sdk.Context) {
+	reconStore := app.GetCommitMultiStore().GetCommitStore(common.ReconStoreKey).(*store.IavlStore)
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz[:], uint64(ctx.BlockHeight()))
+	reconStore.Set(unbalancedBlockHeightKey, bz)
+}
+
+func (app *BinanceChain) getUnbalancedBlockHeight(ctx sdk.Context) (uint64, bool) {
+	reconStore := app.GetCommitMultiStore().GetCommitStore(common.ReconStoreKey).(*store.IavlStore)
+
+	bz := reconStore.Get(unbalancedBlockHeightKey)
+	if bz == nil {
+		return 0, false
+	}
+	return binary.BigEndian.Uint64(bz), true
 }

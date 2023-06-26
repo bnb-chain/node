@@ -170,7 +170,7 @@ function token() {
   sleep 1
   # bind
   result=$(expect ./bind.exp ${btc_symbol} 0x6aade9709155a8386c63c1d2e5939525b960b4e7 10000000000000 4083424190 bob ${chain_id} ${cli_home})
-  check_operation "BindBind Token" "${result}" "${chain_operation_words}"
+  check_operation "Bind Token" "${result}" "${chain_operation_words}"
 
   sleep 1
   # issue token

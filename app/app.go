@@ -258,6 +258,7 @@ func NewBinanceChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseApp
 		common.BridgeStoreKey,
 		common.OracleStoreKey,
 		common.IbcStoreKey,
+		common.ReconStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
