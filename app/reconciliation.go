@@ -17,25 +17,14 @@ const globalAccountNumber = "globalAccountNumber"
 var unbalancedBlockHeightKey = []byte("0x01")
 
 // reconBalance will do reconciliation for accounts balances.
-func (app *BinanceChain) reconBalance(ctx sdk.Context) {
+func (app *BinanceChain) reconBalance(ctx sdk.Context, accountIavl *store.IavlStore, tokenIavl *store.IavlStore) {
 	height, exists := app.getUnbalancedBlockHeight(ctx)
 	if exists {
 		panic(fmt.Sprintf("unbalanced state at block height %d, please use hardfork to bypass it", height))
 	}
 
-	accountStore, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
-	if !ok {
-		panic("cannot convert account store to ival store")
-	}
-	accPre, accCurrent := app.getAccountChanges(ctx, accountStore)
-	accountStore.ResetDiff()
-
-	tokenStore, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
-	if !ok {
-		panic("cannot convert token store to ival store")
-	}
-	tokenPre, tokenCurrent := app.getTokenChanges(ctx, tokenStore)
-	tokenStore.ResetDiff()
+	accPre, accCurrent := app.getAccountChanges(ctx, accountIavl)
+	tokenPre, tokenCurrent := app.getTokenChanges(ctx, tokenIavl)
 
 	// accPre and tokenPre are positive, there will be no overflow
 	accountDiff := accCurrent.Plus(accPre.Negative())

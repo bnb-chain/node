@@ -970,9 +970,13 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 	// match may end with transaction failure, which is better to save into
 	// the EndBlock response. However, current cosmos doesn't support this.
 
+	accountIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
+	tokenIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
 	if sdk.IsUpgrade(upgrade.EnableReconciliation) {
-		app.reconBalance(ctx)
+		app.reconBalance(ctx, accountIavl, tokenIavl)
 	}
+	accountIavl.ResetDiff()
+	tokenIavl.ResetDiff()
 
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
