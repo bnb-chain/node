@@ -33,7 +33,7 @@ import (
 )
 
 // If a new config is created, change some of the default tendermint settings
-func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error) {
+func interceptLoadConfigInPlace(context *config.BNBBeaconChainContext) (err error) {
 	tmpConf := tmcfg.DefaultConfig()
 	err = viper.Unmarshal(tmpConf)
 	if err != nil {
@@ -58,7 +58,7 @@ func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error)
 
 	appConfigFilePath := filepath.Join(rootDir, "config/", config.AppConfigFileName+".toml")
 	if _, err := os.Stat(appConfigFilePath); os.IsNotExist(err) {
-		config.WriteConfigFile(appConfigFilePath, ServerContext.BinanceChainConfig)
+		config.WriteConfigFile(appConfigFilePath, ServerContext.BNBBeaconChainConfig)
 	} else {
 		err = context.ParseAppConfigInPlace()
 		if err != nil {
@@ -69,7 +69,7 @@ func interceptLoadConfigInPlace(context *config.BinanceChainContext) (err error)
 	return nil
 }
 
-func newLogger(ctx *config.BinanceChainContext) log.Logger {
+func newLogger(ctx *config.BNBBeaconChainContext) log.Logger {
 	if ctx.LogConfig.LogToConsole {
 		return bnclog.NewConsoleLogger()
 	} else {
@@ -90,7 +90,7 @@ func newLogger(ctx *config.BinanceChainContext) log.Logger {
 // PersistentPreRunEFn returns a PersistentPreRunE function for cobra
 // that initailizes the passed in context with a properly configured
 // logger and config object
-func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Command, []string) error {
+func PersistentPreRunEFn(context *config.BNBBeaconChainContext) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		if cmd.Name() == version.VersionCmd.Name() {
 			return nil
@@ -123,7 +123,7 @@ func PersistentPreRunEFn(context *config.BinanceChainContext) func(*cobra.Comman
 	}
 }
 
-func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
+func (app *BNBBeaconChain) processErrAbciResponseForPub(txBytes []byte) {
 	defer func() {
 		if r := recover(); r != nil {
 			stackTrace := fmt.Sprintf("recovered: %v\nstack:\n%v", r, string(debug.Stack()))
@@ -158,7 +158,7 @@ func (app *BinanceChain) processErrAbciResponseForPub(txBytes []byte) {
 	}
 }
 
-func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
+func (app *BNBBeaconChain) getLastBreatheBlockHeight() int64 {
 	// we should only sync to breathe block height
 	latestBlockHeight := app.LastBlockHeight()
 	var timeOfLatestBlock time.Time
@@ -182,7 +182,7 @@ func (app *BinanceChain) getLastBreatheBlockHeight() int64 {
 	return height
 }
 
-func (app *BinanceChain) reInitChain() error {
+func (app *BNBBeaconChain) reInitChain() error {
 	app.DexKeeper.Init(
 		app.CheckState.Ctx,
 		app.baseConfig.BreatheBlockInterval,

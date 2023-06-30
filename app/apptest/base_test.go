@@ -16,7 +16,6 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	cfg "github.com/tendermint/tendermint/config"
-	. "github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -80,7 +79,7 @@ func (tc *TestClient) CheckTxSync(msg sdk.Msg, cdc *wire.Codec) (*types.Response
 var (
 	memDB                             = db.NewMemDB()
 	logger                            = log.NewTMLogger(os.Stdout)
-	testApp                           = app.NewBinanceChain(logger, memDB, os.Stdout)
+	testApp                           = app.NewBNBBeaconChain(logger, memDB, os.Stdout)
 	genAccs, addrs, pubKeys, privKeys = mock.CreateGenAccounts(4,
 		sdk.Coins{sdk.NewCoin("BNB", 500e8), sdk.NewCoin("BTC-000", 200e8)})
 	testClient = NewTestClient(testApp)
@@ -91,7 +90,7 @@ func TearDown() {
 	os.RemoveAll(cfg.DefaultConfig().DBDir())
 }
 
-func InitAccounts(ctx sdk.Context, app *app.BinanceChain) *[]sdk.Account {
+func InitAccounts(ctx sdk.Context, app *app.BNBBeaconChain) *[]sdk.Account {
 	for _, acc := range genAccs {
 		aacc := &common.AppAccount{
 			BaseAccount: auth.BaseAccount{
@@ -106,7 +105,7 @@ func InitAccounts(ctx sdk.Context, app *app.BinanceChain) *[]sdk.Account {
 	return &genAccs
 }
 
-func ResetAccounts(ctx sdk.Context, app *app.BinanceChain, ccy1 int64, ccy2 int64, ccy3 int64) {
+func ResetAccounts(ctx sdk.Context, app *app.BNBBeaconChain, ccy1 int64, ccy2 int64, ccy3 int64) {
 	for _, acc := range genAccs {
 		a := app.AccountKeeper.GetAccount(ctx, acc.GetAddress())
 		a.SetCoins(sdk.Coins{sdk.NewCoin("BNB", ccy1), sdk.NewCoin("BTC-000", ccy2), sdk.NewCoin("ETH-000", ccy3)})
@@ -122,7 +121,7 @@ func Address(i int) sdk.AccAddress {
 	return addrs[i]
 }
 
-func NewTestClient(a *app.BinanceChain) *TestClient {
+func NewTestClient(a *app.BNBBeaconChain) *TestClient {
 	a.SetCheckState(types.Header{})
 	a.SetAnteHandler(NewMockAnteHandler(a.Codec)) // clear AnteHandler to skip the signature verification step
 	return &TestClient{abcicli.NewLocalClient(nil, a), app.MakeCodec()}
@@ -136,7 +135,7 @@ func GetLocked(ctx sdk.Context, add sdk.AccAddress, ccy string) int64 {
 	return testApp.AccountKeeper.GetAccount(ctx, add).(common.NamedAccount).GetLockedCoins().AmountOf(ccy)
 }
 
-func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
+func setGenesis(bapp *app.BNBBeaconChain, tokens []tokens.GenesisToken, accs ...*common.AppAccount) error {
 	genaccs := make([]app.GenesisAccount, len(accs))
 	for i, acc := range accs {
 		pk := GenPrivKey().PubKey()
@@ -167,7 +166,7 @@ func setGenesis(bapp *app.BinanceChain, tokens []tokens.GenesisToken, accs ...*c
 func TestGenesis(t *testing.T) {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "sdk/app")
 	db := dbm.NewMemDB()
-	bapp := app.NewBinanceChain(logger, db, os.Stdout)
+	bapp := app.NewBNBBeaconChain(logger, db, os.Stdout)
 
 	// Construct some genesis bytes to reflect democoin/types/AppAccount
 	addr := sdk.AccAddress(secp256k1.GenPrivKey().PubKey().Address())

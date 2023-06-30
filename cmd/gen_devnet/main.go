@@ -33,7 +33,7 @@ func main() {
 	// init nodes
 	cdc := app.Codec
 	ctx := app.ServerContext
-	appInit := app.BinanceAppInit()
+	appInit := app.BNBAppInit()
 	ctxConfig := ctx.Config
 	sdkConfig := sdk.GetConfig()
 	sdkConfig.SetBech32PrefixForAccount(ctx.Bech32PrefixAccAddr, ctx.Bech32PrefixAccPub)
@@ -58,26 +58,26 @@ func main() {
 			}
 		}
 		// app.toml
-		binanceChainConfig := ServerContext.BinanceChainConfig
-		binanceChainConfig.UpgradeConfig.BEP3Height = 1
-		binanceChainConfig.UpgradeConfig.BEP8Height = 1
-		binanceChainConfig.UpgradeConfig.BEP12Height = 1
-		binanceChainConfig.UpgradeConfig.BEP67Height = 1
-		binanceChainConfig.UpgradeConfig.BEP70Height = 1
-		binanceChainConfig.UpgradeConfig.BEP82Height = 1
-		binanceChainConfig.UpgradeConfig.BEP84Height = 1
-		binanceChainConfig.UpgradeConfig.BEP87Height = 1
-		binanceChainConfig.UpgradeConfig.FixFailAckPackageHeight = 1
-		binanceChainConfig.UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight = 1
-		binanceChainConfig.UpgradeConfig.BEP128Height = 1
-		binanceChainConfig.UpgradeConfig.BEP151Height = 1
-		binanceChainConfig.UpgradeConfig.BEP153Height = 2
-		binanceChainConfig.UpgradeConfig.BEP159Height = 3
-		binanceChainConfig.UpgradeConfig.BEP159Phase2Height = 6
-		binanceChainConfig.UpgradeConfig.LimitConsAddrUpdateIntervalHeight = 6
-		binanceChainConfig.BreatheBlockInterval = 5
+		BNBBeaconChainConfig := ServerContext.BNBBeaconChainConfig
+		BNBBeaconChainConfig.UpgradeConfig.BEP3Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP8Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP12Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP67Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP70Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP82Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP84Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP87Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.FixFailAckPackageHeight = 1
+		BNBBeaconChainConfig.UpgradeConfig.EnableAccountScriptsForCrossChainTransferHeight = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP128Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP151Height = 1
+		BNBBeaconChainConfig.UpgradeConfig.BEP153Height = 2
+		BNBBeaconChainConfig.UpgradeConfig.BEP159Height = 3
+		BNBBeaconChainConfig.UpgradeConfig.BEP159Phase2Height = 6
+		BNBBeaconChainConfig.UpgradeConfig.LimitConsAddrUpdateIntervalHeight = 6
+		BNBBeaconChainConfig.BreatheBlockInterval = 5
 		appConfigFilePath := filepath.Join(ctxConfig.RootDir, "config", "app.toml")
-		config.WriteConfigFile(appConfigFilePath, binanceChainConfig)
+		config.WriteConfigFile(appConfigFilePath, BNBBeaconChainConfig)
 		// pk
 		nodeID, pubKey := bnbInit.InitializeNodeValidatorFiles(ctxConfig)
 		ctxConfig.Moniker = nodeName

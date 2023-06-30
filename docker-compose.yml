@@ -3,7 +3,7 @@ version: '3'
 services:
   bnbdnode0:
     container_name: bnbdnode0
-    image: "binance/bnbdnode"
+    image: "bnbchain/bnbdnode"
     ports:
       - "26656-26657:26656-26657"
     environment:
@@ -17,7 +17,7 @@ services:
 
   bnbdnode1:
     container_name: bnbdnode1
-    image: "binance/bnbdnode"
+    image: "bnbchain/bnbdnode"
     ports:
       - "26659-26660:26656-26657"
     environment:
@@ -31,7 +31,7 @@ services:
 
   bnbdnode2:
     container_name: bnbdnode2
-    image: "binance/bnbdnode"
+    image: "bnbchain/bnbdnode"
     environment:
       - ID=2
       - LOG=${LOG:-bnbchaind.log}
@@ -45,7 +45,7 @@ services:
 
   bnbdnode3:
     container_name: bnbdnode3
-    image: "binance/bnbdnode"
+    image: "bnbchain/bnbdnode"
     environment:
       - ID=3
       - LOG=${LOG:-bnbchaind.log}
