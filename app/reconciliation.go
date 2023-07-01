@@ -43,37 +43,39 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 
 	diff := accountStore.GetDiff()
 	version := accountStore.GetTree().Version() - 1
-	for k, v := range diff {
+	for k := range diff {
 		if k == globalAccountNumber {
 			continue
 		}
-		var acc1 sdk.Account
-		err := app.Codec.UnmarshalBinaryBare(v, &acc1)
-		if err != nil {
-			panic("failed to unmarshal diff value " + err.Error())
+		v := accountStore.Get([]byte(k))
+		if v != nil {
+			var acc1 sdk.Account
+			err := app.Codec.UnmarshalBinaryBare(v, &acc1)
+			if err != nil {
+				panic("failed to unmarshal current value " + err.Error())
+			}
+			nacc1 := acc1.(types.NamedAccount)
+			ctx.Logger().Debug("current account", "address", nacc1.GetAddress(), "coins", nacc1.GetCoins().String())
+			currentCoins = currentCoins.Plus(nacc1.GetCoins())
+			currentCoins = currentCoins.Plus(nacc1.GetFrozenCoins())
+			currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 		}
-		nacc1 := acc1.(types.NamedAccount)
-		ctx.Logger().Debug("diff account", "address", nacc1.GetAddress(), "coins", nacc1.GetCoins().String())
-		currentCoins = currentCoins.Plus(nacc1.GetCoins())
-		currentCoins = currentCoins.Plus(nacc1.GetFrozenCoins())
-		currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 
-		var acc2 sdk.Account
 		_, v = accountStore.GetTree().GetVersioned([]byte(k), version)
 		if v != nil { // it is not a new account
-			err = app.Codec.UnmarshalBinaryBare(v, &acc2)
+			var acc2 sdk.Account
+			err := app.Codec.UnmarshalBinaryBare(v, &acc2)
 			if err != nil {
 				panic("failed to unmarshal previous value " + err.Error())
 			}
 			nacc2 := acc2.(types.NamedAccount)
-
 			ctx.Logger().Debug("pre account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
 			preCoins = preCoins.Plus(nacc2.GetCoins())
 			preCoins = preCoins.Plus(nacc2.GetFrozenCoins())
 			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 		}
 	}
-	ctx.Logger().Debug("account changes", "diff", currentCoins.String(), "previous", preCoins.String(),
+	ctx.Logger().Debug("account changes", "current", currentCoins.String(), "previous", preCoins.String(),
 		"version", version, "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
@@ -85,29 +87,34 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.Iavl
 
 	diff := tokenStore.GetDiff()
 	version := tokenStore.GetTree().Version() - 1
-	for k, v := range diff {
-		var token1 types.IToken
-		err := app.Codec.UnmarshalBinaryBare(v, &token1)
-		if err != nil {
-			panic("failed to unmarshal diff value " + err.Error())
+	for k := range diff {
+		v := tokenStore.Get([]byte(k))
+		if v != nil {
+			var token1 types.IToken
+			err := app.Codec.UnmarshalBinaryBare(v, &token1)
+			if err != nil {
+				panic("failed to unmarshal current value " + err.Error())
+			}
+			ctx.Logger().Debug("current token", "symbol", token1.GetSymbol(), "supply", token1.GetTotalSupply().ToInt64())
+			currentCoins = currentCoins.Plus(sdk.Coins{
+				sdk.NewCoin(token1.GetSymbol(), token1.GetTotalSupply().ToInt64()),
+			})
 		}
-		currentCoins = currentCoins.Plus(sdk.Coins{
-			sdk.NewCoin(token1.GetSymbol(), token1.GetTotalSupply().ToInt64()),
-		})
 
-		var token2 types.IToken
 		_, v = tokenStore.GetTree().GetVersioned([]byte(k), version)
 		if v != nil { // it is not a new token
-			err = app.Codec.UnmarshalBinaryBare(v, &token2)
+			var token2 types.IToken
+			err := app.Codec.UnmarshalBinaryBare(v, &token2)
 			if err != nil {
 				panic("failed to unmarshal previous value " + err.Error())
 			}
+			ctx.Logger().Debug("previous token", "symbol", token2.GetSymbol(), "supply", token2.GetTotalSupply().ToInt64())
 			preCoins = preCoins.Plus(sdk.Coins{
 				sdk.NewCoin(token2.GetSymbol(), token2.GetTotalSupply().ToInt64()),
 			})
 		}
 	}
-	ctx.Logger().Debug("token changes", "diff", currentCoins.String(), "previous", preCoins.String(),
+	ctx.Logger().Debug("token changes", "current", currentCoins.String(), "previous", preCoins.String(),
 		"version", version, "height", ctx.BlockHeight())
 
 	return preCoins, currentCoins
