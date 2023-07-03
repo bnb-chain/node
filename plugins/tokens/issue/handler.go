@@ -15,7 +15,6 @@ import (
 	"github.com/bnb-chain/node/common/log"
 	"github.com/bnb-chain/node/common/types"
 	common "github.com/bnb-chain/node/common/types"
-	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/plugins/tokens/store"
 )
 
@@ -24,21 +23,12 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case IssueMsg:
-			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
-				return sdk.ErrMsgNotSupported("IssueMsg disabled in DisableMessagesPhase1 upgrade").Result()
-			}
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
 		case MintMsg:
 			return handleMintToken(ctx, tokenMapper, keeper, msg)
 		case IssueMiniMsg:
-			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
-				return sdk.ErrMsgNotSupported("IssueMiniMsg disabled in DisableMessagesPhase1 upgrade").Result()
-			}
 			return handleIssueMiniToken(ctx, tokenMapper, keeper, msg)
 		case IssueTinyMsg:
-			if sdk.IsUpgrade(upgrade.DisableMessagesPhase1) {
-				return sdk.ErrMsgNotSupported("IssueTinyMsg disabled in DisableMessagesPhase1 upgrade").Result()
-			}
 			return handleIssueTinyToken(ctx, tokenMapper, keeper, msg)
 		default:
 			errMsg := "Unrecognized msg type: " + reflect.TypeOf(msg).Name()
@@ -72,7 +62,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 	return issue(ctx, logger, tokenMapper, bankKeeper, token)
 }
 
-// Mint MiniToken is also handled by this function
+//Mint MiniToken is also handled by this function
 func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)

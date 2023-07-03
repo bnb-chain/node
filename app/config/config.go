@@ -103,8 +103,6 @@ FixDoubleSignChainIdHeight = {{ .UpgradeConfig.FixDoubleSignChainIdHeight }}
 BEP126Height = {{ .UpgradeConfig.BEP126Height }}
 # Block height of reconciliation upgrade
 EnableReconciliationHeight = {{ .UpgradeConfig.EnableReconciliationHeight }}
-# Block height of disable messages phase1 upgrade
-DisableMessagesPhase1Height = {{ .UpgradeConfig.DisableMessagesPhase1Height }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -554,7 +552,6 @@ type UpgradeConfig struct {
 	FixDoubleSignChainIdHeight                      int64 `mapstructure:"FixDoubleSignChainIdHeight"`
 	BEP126Height                                    int64 `mapstructure:"BEP126Height"`
 	EnableReconciliationHeight                      int64 `mapstructure:"EnableReconciliationHeight"`
-	DisableMessagesPhase1Height                     int64 `mapstructure:"DisableMessagesPhase1Height"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -590,7 +587,6 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		FixFailAckPackageHeight:           math.MaxInt64,
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
 		EnableReconciliationHeight:                      math.MaxInt64,
-		DisableMessagesPhase1Height:                     math.MaxInt64,
 	}
 }
 

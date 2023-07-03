@@ -359,7 +359,6 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.EnableReconciliation, upgradeConfig.EnableReconciliationHeight)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.DisableMessagesPhase1, upgradeConfig.DisableMessagesPhase1Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())

@@ -1,11 +1,11 @@
 package app
 
 import (
-	"github.com/stretchr/testify/require"
 	"math"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Reconciliation_Overflow(t *testing.T) {

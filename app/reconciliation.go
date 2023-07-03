@@ -69,7 +69,7 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 				panic("failed to unmarshal previous value " + err.Error())
 			}
 			nacc2 := acc2.(types.NamedAccount)
-			ctx.Logger().Debug("pre account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
+			ctx.Logger().Debug("previous account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
 			preCoins = preCoins.Plus(nacc2.GetCoins())
 			preCoins = preCoins.Plus(nacc2.GetFrozenCoins())
 			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
