@@ -1,7 +1,7 @@
-FROM golang:1.17-alpine AS build-env
+FROM golang:1.19-alpine AS build-env
 
 # Set up dependencies
-ENV PACKAGES make git libc-dev bash gcc linux-headers eudev-dev curl ca-certificates
+ENV PACKAGES make cmake git libc-dev bash gcc linux-headers eudev-dev curl ca-certificates build-base libc-dev
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/bnb-chain/node
@@ -18,7 +18,7 @@ RUN apk add --no-cache $PACKAGES && \
 FROM alpine:3.16.0
 
 # Install dependencies
-RUN apk add --update ca-certificates tini bash
+RUN apk add --update ca-certificates tini bash gcc
 
 ARG USER=bnbchain
 ARG USER_UID=1000

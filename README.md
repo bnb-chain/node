@@ -34,7 +34,7 @@ Besides, it has many other rich features:
 ### Environment setup
 
 #### Requirement
-Go version above 1.17 is required.
+Go version above 1.19 is required.
 
 Please [install it](https://go.dev/doc/install) or use brew on macOS: `brew install go`.
 
