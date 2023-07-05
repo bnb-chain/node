@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,7 +45,7 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 	diff := accountStore.GetDiff()
 	version := accountStore.GetTree().Version() - 1
 	for k := range diff {
-		if k == globalAccountNumber {
+		if strings.Contains(k, globalAccountNumber) {
 			continue
 		}
 		v := accountStore.Get([]byte(k))
@@ -52,13 +53,14 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 			var acc1 sdk.Account
 			err := app.Codec.UnmarshalBinaryBare(v, &acc1)
 			if err != nil {
-				panic("failed to unmarshal current value " + err.Error())
+				ctx.Logger().Error("failed to unmarshal current account value", "err", err.Error())
+			} else {
+				nacc1 := acc1.(types.NamedAccount)
+				ctx.Logger().Debug("current account", "address", nacc1.GetAddress(), "coins", nacc1.GetCoins().String())
+				currentCoins = currentCoins.Plus(nacc1.GetCoins())
+				currentCoins = currentCoins.Plus(nacc1.GetFrozenCoins())
+				currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 			}
-			nacc1 := acc1.(types.NamedAccount)
-			ctx.Logger().Debug("current account", "address", nacc1.GetAddress(), "coins", nacc1.GetCoins().String())
-			currentCoins = currentCoins.Plus(nacc1.GetCoins())
-			currentCoins = currentCoins.Plus(nacc1.GetFrozenCoins())
-			currentCoins = currentCoins.Plus(nacc1.GetLockedCoins())
 		}
 
 		_, v = accountStore.GetTree().GetVersioned([]byte(k), version)
@@ -66,13 +68,14 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 			var acc2 sdk.Account
 			err := app.Codec.UnmarshalBinaryBare(v, &acc2)
 			if err != nil {
-				panic("failed to unmarshal previous value " + err.Error())
+				ctx.Logger().Error("failed to unmarshal previous account value", "err", err.Error())
+			} else {
+				nacc2 := acc2.(types.NamedAccount)
+				ctx.Logger().Debug("previous account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
+				preCoins = preCoins.Plus(nacc2.GetCoins())
+				preCoins = preCoins.Plus(nacc2.GetFrozenCoins())
+				preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 			}
-			nacc2 := acc2.(types.NamedAccount)
-			ctx.Logger().Debug("previous account", "address", nacc2.GetAddress(), "coins", nacc2.GetCoins().String())
-			preCoins = preCoins.Plus(nacc2.GetCoins())
-			preCoins = preCoins.Plus(nacc2.GetFrozenCoins())
-			preCoins = preCoins.Plus(nacc2.GetLockedCoins())
 		}
 	}
 	ctx.Logger().Debug("account changes", "current", currentCoins.String(), "previous", preCoins.String(),
@@ -93,12 +96,13 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.Iavl
 			var token1 types.IToken
 			err := app.Codec.UnmarshalBinaryBare(v, &token1)
 			if err != nil {
-				panic("failed to unmarshal current value " + err.Error())
+				ctx.Logger().Error("failed to unmarshal current token value", "err", err.Error())
+			} else {
+				ctx.Logger().Debug("current token", "symbol", token1.GetSymbol(), "supply", token1.GetTotalSupply().ToInt64())
+				currentCoins = currentCoins.Plus(sdk.Coins{
+					sdk.NewCoin(token1.GetSymbol(), token1.GetTotalSupply().ToInt64()),
+				})
 			}
-			ctx.Logger().Debug("current token", "symbol", token1.GetSymbol(), "supply", token1.GetTotalSupply().ToInt64())
-			currentCoins = currentCoins.Plus(sdk.Coins{
-				sdk.NewCoin(token1.GetSymbol(), token1.GetTotalSupply().ToInt64()),
-			})
 		}
 
 		_, v = tokenStore.GetTree().GetVersioned([]byte(k), version)
@@ -106,12 +110,13 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.Iavl
 			var token2 types.IToken
 			err := app.Codec.UnmarshalBinaryBare(v, &token2)
 			if err != nil {
-				panic("failed to unmarshal previous value " + err.Error())
+				ctx.Logger().Error("failed to unmarshal previous token value", "err", err.Error())
+			} else {
+				ctx.Logger().Debug("previous token", "symbol", token2.GetSymbol(), "supply", token2.GetTotalSupply().ToInt64())
+				preCoins = preCoins.Plus(sdk.Coins{
+					sdk.NewCoin(token2.GetSymbol(), token2.GetTotalSupply().ToInt64()),
+				})
 			}
-			ctx.Logger().Debug("previous token", "symbol", token2.GetSymbol(), "supply", token2.GetTotalSupply().ToInt64())
-			preCoins = preCoins.Plus(sdk.Coins{
-				sdk.NewCoin(token2.GetSymbol(), token2.GetTotalSupply().ToInt64()),
-			})
 		}
 	}
 	ctx.Logger().Debug("token changes", "current", currentCoins.String(), "previous", preCoins.String(),

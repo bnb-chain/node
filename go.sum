@@ -141,8 +141,8 @@ github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1m
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/etcd-io/bbolt v1.3.3 h1:gSJmxrs37LgTqR/oyJBWok6k6SvXEUerFTbltIhXkBM=
 github.com/etcd-io/bbolt v1.3.3/go.mod h1:ZF2nL25h33cCyBtcyWeZ2/I3HQOfTP+0PIEvHjkjCrw=
-github.com/forcodedancing/bnc-cosmos-sdk v0.25.8-0.20230703024407-9ad6aa9bac8c h1:p1DAUpuonFQeVCUZPi8BryjNXvZFXOhuDa22zE364fA=
-github.com/forcodedancing/bnc-cosmos-sdk v0.25.8-0.20230703024407-9ad6aa9bac8c/go.mod h1:XiDYVT+XqECR+AyCBO4KBsrbL/d1x2UTsVU36SvHxI8=
+github.com/forcodedancing/bnc-cosmos-sdk v0.25.8-0.20230705071422-875aa9cf6664 h1:ZgRdXdvAMFVkGAMNiu+LDb2u9ID0Gq+DC4tqEBBiyxo=
+github.com/forcodedancing/bnc-cosmos-sdk v0.25.8-0.20230705071422-875aa9cf6664/go.mod h1:XiDYVT+XqECR+AyCBO4KBsrbL/d1x2UTsVU36SvHxI8=
 github.com/fortytw2/leaktest v1.2.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=

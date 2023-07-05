@@ -47,7 +47,7 @@ function prepare_node() {
   $(cd "./${home}/config" && sed -i -e "s/BEP159Phase2Height = 9223372036854775807/BEP159Phase2Height = 11/g" app.toml)
   $(cd "./${home}/config" && sed -i -e "s/LimitConsAddrUpdateIntervalHeight = 9223372036854775807/LimitConsAddrUpdateIntervalHeight = 11/g" app.toml)
   $(cd "./${home}/config" && sed -i -e "s/breatheBlockInterval = 0/breatheBlockInterval = 5/g" app.toml)
-  $(cd "./${home}/config" && sed -i -e "s/EnableReconciliationHeight = 9223372036854775807/EnableReconciliationHeight = 3/g" app.toml)
+  $(cd "./${home}/config" && sed -i -e "s/BEP255Height = 9223372036854775807/BEP255Height = 3/g" app.toml)
 
   # stop and start node
   ps -ef | grep bnbchaind | grep testnoded | awk '{print $2}' | xargs kill -9

@@ -358,7 +358,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP173, upgradeConfig.BEP173Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
-	upgrade.Mgr.AddUpgradeHeight(upgrade.EnableReconciliation, upgradeConfig.EnableReconciliationHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP255, upgradeConfig.BEP255Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -366,7 +366,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
 		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP128, common.StakeRewardStoreKey.Name())
-	upgrade.Mgr.RegisterStoreKeys(upgrade.EnableReconciliation, common.ReconStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP255, common.ReconStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -971,7 +971,7 @@ func (app *BinanceChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) a
 
 	accountIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
 	tokenIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
-	if sdk.IsUpgrade(upgrade.EnableReconciliation) {
+	if sdk.IsUpgrade(upgrade.BEP255) {
 		app.reconBalance(ctx, accountIavl, tokenIavl)
 	}
 	accountIavl.ResetDiff()
