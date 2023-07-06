@@ -26,3 +26,6 @@ app/apptest/data
 app_test/data
 plugins/param/data
 plugins/tokens/data
+
+# e2e temp files
+e2e/priv_validator_key.json
