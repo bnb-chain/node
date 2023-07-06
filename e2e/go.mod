@@ -1,6 +1,6 @@
 module github.com/bnb-chain/node/e2e
 
-go 1.17
+go 1.19
 
 require (
 	github.com/bnb-chain/go-sdk v1.3.2
