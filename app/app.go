@@ -614,6 +614,11 @@ func (app *BNBBeaconChain) initStaking() {
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159Phase2, func(ctx sdk.Context) {
 		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP255, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.stakeKeeper.ClearUpSideVoteAddrs(newCtx)
+	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
