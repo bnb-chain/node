@@ -205,9 +205,14 @@ integration_test: build
 bep159_integration_test: build
 	@echo "-->BEP159 Integration Test"
 	@bash ./scripts/bep159_integration_test.sh
+
+recon_integration_test: build
+	@echo "-->Recon Integration Test"
+	@bash ./scripts/recon_integration_test.sh
+
 ########################################
 ### Pre Commit
-pre_commit: build test_unit bep159_integration_test integration_test format lint multi-nodes-test
+pre_commit: build test_unit recon_integration_test bep159_integration_test integration_test format lint multi-nodes-test
 
 ########################################
 ### Local validator nodes using docker and docker-compose

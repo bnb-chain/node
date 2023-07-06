@@ -1,0 +1,16 @@
+#!/usr/bin/expect
+
+set symbol [lindex $argv 0]
+set from [lindex $argv 1]
+set chain_id [lindex $argv 2]
+set home [lindex $argv 3]
+
+set timeout 30
+	if {"${home}" == ""} {
+		spawn ./bnbcli bridge unbind --symbol $symbol --from $from --chain-id $chain_id
+	} else {
+		spawn ./bnbcli bridge unbind --home $home --symbol $symbol --from $from --chain-id $chain_id
+	}
+	expect "Password*"
+	send "12345678\r"
+expect eof
