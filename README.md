@@ -45,6 +45,15 @@ $ git clone git@github.com:bnb-chain/node.git
 $ cd node && make build
 ```
 
+If you get such error when running the node with self built binary:
+```shell
+Caught SIGILL in blst_cgo_init, consult <blst>/bindinds/go/README.md.
+```
+please try to add the following environment variables and build again:
+```shell
+export CGO_CFLAGS="-O -D__BLST_PORTABLE__"
+export CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
+```
 
 To test that installation worked, try to run the cli tool:
 
