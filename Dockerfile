@@ -2,6 +2,8 @@ FROM golang:1.19-alpine AS build-env
 
 # Set up dependencies
 ENV PACKAGES make cmake git libc-dev bash gcc linux-headers eudev-dev curl ca-certificates build-base libc-dev
+ENV CGO_CFLAGS="-O -D__BLST_PORTABLE__"
+ENV CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/bnb-chain/node
