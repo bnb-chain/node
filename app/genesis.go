@@ -21,7 +21,7 @@ import (
 	"github.com/bnb-chain/node/wire"
 )
 
-//DefaultKeyPass only for private test net
+// DefaultKeyPass only for private test net
 var DefaultKeyPass = "12345678"
 
 var (
@@ -75,14 +75,14 @@ func (ga *GenesisAccount) ToAppAccount() (acc *types.AppAccount) {
 	}
 }
 
-func BinanceAppInit() server.AppInit {
+func BNBAppInit() server.AppInit {
 	return server.AppInit{
-		AppGenState: BinanceAppGenState,
+		AppGenState: BNBAppGenState,
 	}
 }
 
 // AppGenState sets up the app_state and appends the cool app state
-func BinanceAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState json.RawMessage, err error) {
+func BNBAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (appState json.RawMessage, err error) {
 	if len(appGenTxs) == 0 {
 		err = errors.New("must provide at least 1 genesis transaction")
 		return

@@ -155,7 +155,7 @@ func GenAccounts(n int) (accounts []Account) {
 	return
 }
 
-func setupTestForBEP159Test() (*BinanceChain, sdk.Context, []Account) {
+func setupTestForBEP159Test() (*BNBBeaconChain, sdk.Context, []Account) {
 	// config
 	upgrade.Mgr.Reset()
 	context := ServerContext
@@ -173,7 +173,7 @@ func setupTestForBEP159Test() (*BinanceChain, sdk.Context, []Account) {
 	config.SetBech32PrefixForConsensusNode(context.Bech32PrefixConsAddr, context.Bech32PrefixConsPub)
 	config.Seal()
 	// create app
-	app := NewBinanceChain(logger, memDB, io.Discard)
+	app := NewBNBBeaconChain(logger, memDB, io.Discard)
 	logger.Info("BEP159Height", "BEP159Height", ServerContext.BEP159Height)
 	logger.Info("BEP159Phase2Height", "BEP159Phase2Height", ServerContext.BEP159Phase2Height)
 	logger.Info("BreatheBlockInterval", "BreatheBlockInterval", ServerContext.BreatheBlockInterval)
@@ -212,7 +212,7 @@ func setupTestForBEP159Test() (*BinanceChain, sdk.Context, []Account) {
 	return app, ctx, accounts
 }
 
-func GenSimTxs(app *BinanceChain, msgs []sdk.Msg, expSimPass bool, privs ...crypto.PrivKey,
+func GenSimTxs(app *BNBBeaconChain, msgs []sdk.Msg, expSimPass bool, privs ...crypto.PrivKey,
 ) (txs []auth.StdTx) {
 	accSeqMap := make(map[string][2]int64)
 	ctx := app.CheckState.Ctx
@@ -240,7 +240,7 @@ func GenSimTxs(app *BinanceChain, msgs []sdk.Msg, expSimPass bool, privs ...cryp
 	return txs
 }
 
-func ApplyBlock(t *testing.T, app *BinanceChain, ctx sdk.Context, txs []auth.StdTx) (newCtx sdk.Context) {
+func ApplyBlock(t *testing.T, app *BNBBeaconChain, ctx sdk.Context, txs []auth.StdTx) (newCtx sdk.Context) {
 	height := ctx.BlockHeader().Height + 1
 	logger.Debug("ApplyBlock", "height", height)
 	header := abci.Header{Height: height}
@@ -272,7 +272,7 @@ func ApplyBlock(t *testing.T, app *BinanceChain, ctx sdk.Context, txs []auth.Std
 	return
 }
 
-func ApplyEmptyBlocks(t *testing.T, app *BinanceChain, ctx sdk.Context, blockNum int) (newCtx sdk.Context) {
+func ApplyEmptyBlocks(t *testing.T, app *BNBBeaconChain, ctx sdk.Context, blockNum int) (newCtx sdk.Context) {
 	currentCtx := ctx
 	for i := 0; i < blockNum; i++ {
 		currentCtx = ApplyBlock(t, app, currentCtx, []auth.StdTx{})
@@ -280,7 +280,7 @@ func ApplyEmptyBlocks(t *testing.T, app *BinanceChain, ctx sdk.Context, blockNum
 	return currentCtx
 }
 
-func ApplyToBreathBlocks(t *testing.T, app *BinanceChain, ctx sdk.Context, breathBlockNum int) (newCtx sdk.Context) {
+func ApplyToBreathBlocks(t *testing.T, app *BNBBeaconChain, ctx sdk.Context, breathBlockNum int) (newCtx sdk.Context) {
 	currentHeight := ctx.BlockHeader().Height
 	blockNum := BREATHE_BLOCK_INTERVAL*breathBlockNum - int(currentHeight%int64(BREATHE_BLOCK_INTERVAL))
 	return ApplyEmptyBlocks(t, app, ctx, blockNum)

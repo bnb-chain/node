@@ -225,7 +225,7 @@ func createConfigFiles(config *cfg.Config, monikers []string, nodeDirs []string,
 
 		appConfigFilePath := filepath.Join(config.RootDir, "config/", appCfg.AppConfigFileName+".toml")
 		if _, err := os.Stat(appConfigFilePath); os.IsNotExist(err) {
-			appCfg.WriteConfigFile(appConfigFilePath, app.ServerContext.BinanceChainConfig)
+			appCfg.WriteConfigFile(appConfigFilePath, app.ServerContext.BNBBeaconChainConfig)
 		}
 	}
 }

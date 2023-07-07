@@ -20,11 +20,11 @@ import (
 )
 
 func newApp(logger log.Logger, db dbm.DB, storeTracer io.Writer) abci.Application {
-	return app.NewBinanceChain(logger, db, storeTracer)
+	return app.NewBNBBeaconChain(logger, db, storeTracer)
 }
 
 func exportAppStateAndTMValidators(logger log.Logger, db dbm.DB, storeTracer io.Writer) (json.RawMessage, []tmtypes.GenesisValidator, error) {
-	dapp := app.NewBinanceChain(logger, db, storeTracer)
+	dapp := app.NewBNBBeaconChain(logger, db, storeTracer)
 	return dapp.ExportAppStateAndValidators()
 }
 
@@ -38,7 +38,7 @@ func main() {
 		PersistentPreRunE: app.PersistentPreRunEFn(ctx),
 	}
 
-	appInit := app.BinanceAppInit()
+	appInit := app.BNBAppInit()
 	rootCmd.AddCommand(bnbInit.InitCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	rootCmd.AddCommand(bnbInit.TestnetFilesCmd(ctx.ToCosmosServerCtx(), cdc, appInit))
 	rootCmd.AddCommand(bnbInit.CollectGenTxsCmd(cdc, appInit))

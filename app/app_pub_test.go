@@ -57,11 +57,11 @@ func prepareGenTx(cdc *codec.Codec, chainId string,
 	return txBytes
 }
 
-func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *BinanceChain, sdk.Account, sdk.Account) {
+func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *BNBBeaconChain, sdk.Account, sdk.Account) {
 	logger := log.NewNopLogger()
 	db := dbm.NewMemDB()
 
-	app := NewBinanceChain(logger, db, os.Stdout)
+	app := NewBNBBeaconChain(logger, db, os.Stdout)
 	app.SetAnteHandler(nil)
 	app.SetDeliverState(abci.Header{})
 	am := app.AccountKeeper
@@ -74,7 +74,7 @@ func setupAppTest(t *testing.T) (*assert.Assertions, *require.Assertions, *Binan
 	// set ante handler to nil to skip the sig verification. the side effect is that we also skip the tx fee collection.
 	chainId := "chain-pub"
 	genTx := prepareGenTx(app.Codec, chainId, sdk.ValAddress(proposerAcc.GetAddress()), proposerPubKey)
-	appState, _ := BinanceAppGenState(app.Codec, []json.RawMessage{genTx})
+	appState, _ := BNBAppGenState(app.Codec, []json.RawMessage{genTx})
 	appGenState, _ := wire.MarshalJSONIndent(app.Codec, appState)
 	app.InitChain(abci.RequestInitChain{AppStateBytes: appGenState})
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 42, Time: time.Unix(0, 100), ProposerAddress: proposerValAddr}})

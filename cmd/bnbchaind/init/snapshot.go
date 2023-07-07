@@ -40,7 +40,7 @@ func SnapshotCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			app.SetUpgradeConfig(appCtx.BinanceChainConfig.UpgradeConfig)
+			app.SetUpgradeConfig(appCtx.BNBBeaconChainConfig.UpgradeConfig)
 
 			logger.Info("setup block db")
 			blockDB, err := node.DefaultDBProvider(&node.DBContext{ID: "blockstore", Config: config})
