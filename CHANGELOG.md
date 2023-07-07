@@ -1,8 +1,13 @@
 # Changelog
 
+## v0.10.15
+FEATURES
+* [\#956](https://github.com/bnb-chain/node/pull/956) [BEP] feat: implement bep255
+* [\#964](https://github.com/bnb-chain/node/pull/964) [fix] fix: clear side vote addresses
+
 ## v0.10.14
 FEATURES
-* [\#953](https://github.com/bnb-chain/node/pull/953) [cli] feat:support setting acc prefix when collecting gentxs
+* [\#953](https://github.com/bnb-chain/node/pull/953) [cli] feat: support setting acc prefix when collecting gentxs
 * [\#957](https://github.com/bnb-chain/node/pull/957) [deps] deps: bump cosmos-sdk to v0.26.5
 
 ## v0.10.13
