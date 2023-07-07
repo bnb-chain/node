@@ -21,7 +21,7 @@ import (
 var (
 	db           = dbm.NewMemDB()
 	logger       = log.NewTMLogger(os.Stdout)
-	app          = bca.NewBinanceChain(logger, db, os.Stdout)
+	app          = bca.NewBNBBeaconChain(logger, db, os.Stdout)
 	pk           = ed25519.GenPrivKey().PubKey()
 	addr         = sdk.AccAddress(pk.Address())
 	token1Ptr, _ = common.NewToken("XXX", "XXX-000", 10000000000, addr, false)
