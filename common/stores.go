@@ -20,6 +20,7 @@ const (
 	OracleStoreName      = "oracle"
 	IbcStoreName         = "ibc"
 	SideChainStoreName   = "sc"
+	ReconStoreName       = "recon"
 
 	StakeTransientStoreName  = "transient_stake"
 	ParamsTransientStoreName = "transient_params"
@@ -44,6 +45,7 @@ var (
 	OracleStoreKey      = sdk.NewKVStoreKey(OracleStoreName)
 	IbcStoreKey         = sdk.NewKVStoreKey(IbcStoreName)
 	SideChainStoreKey   = sdk.NewKVStoreKey(SideChainStoreName)
+	ReconStoreKey       = sdk.NewKVStoreKey(ReconStoreName)
 
 	TStakeStoreKey  = sdk.NewTransientStoreKey(StakeTransientStoreName)
 	TParamsStoreKey = sdk.NewTransientStoreKey(ParamsTransientStoreName)
@@ -66,6 +68,7 @@ var (
 		SideChainStoreName:       SideChainStoreKey,
 		BridgeStoreName:          BridgeStoreKey,
 		OracleStoreName:          OracleStoreKey,
+		ReconStoreName:           ReconStoreKey,
 		StakeTransientStoreName:  TStakeStoreKey,
 		ParamsTransientStoreName: TParamsStoreKey,
 	}
@@ -88,6 +91,7 @@ var (
 		SideChainStoreName,
 		BridgeStoreName,
 		OracleStoreName,
+		ReconStoreName,
 	}
 )
 

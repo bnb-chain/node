@@ -10,7 +10,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.19
       - uses: actions/cache@v3
         with:
           path: ~/go/bin
@@ -27,7 +27,7 @@ jobs:
       # used to debug workflow
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
-      - run: make bep159_integration_test integration_test
+      - run: make bep159_integration_test recon_integration_test integration_test
   coverage-test:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.19
       - uses: actions/cache@v3
         with:
           path: ~/go/bin

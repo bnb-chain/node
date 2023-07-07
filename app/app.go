@@ -258,6 +258,7 @@ func NewBNBBeaconChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseA
 		common.BridgeStoreKey,
 		common.OracleStoreKey,
 		common.IbcStoreKey,
+		common.ReconStoreKey,
 	)
 	app.SetAnteHandler(tx.NewAnteHandler(app.AccountKeeper))
 	app.SetPreChecker(tx.NewTxPreChecker())
@@ -268,6 +269,18 @@ func NewBNBBeaconChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseA
 	if err != nil {
 		cmn.Exit(err.Error())
 	}
+
+	// enable diff for reconciliation
+	accountIavl, ok := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
+	if !ok {
+		cmn.Exit("cannot convert account store to ival store")
+	}
+	accountIavl.EnableDiff()
+	tokenIavl, ok := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
+	if !ok {
+		cmn.Exit("cannot convert token store to ival store")
+	}
+	tokenIavl.EnableDiff()
 
 	// init app cache
 	accountStore := app.BaseApp.GetCommitMultiStore().GetKVStore(common.AccountStoreKey)
@@ -345,6 +358,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP173, upgradeConfig.BEP173Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP255, upgradeConfig.BEP255Height)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -352,6 +366,7 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.RegisterStoreKeys(upgrade.LaunchBscUpgrade, common.IbcStoreKey.Name(), common.SideChainStoreKey.Name(),
 		common.SlashingStoreKey.Name(), common.BridgeStoreKey.Name(), common.OracleStoreKey.Name())
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP128, common.StakeRewardStoreKey.Name())
+	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP255, common.ReconStoreKey.Name())
 
 	// register msg types of upgrade
 	upgrade.Mgr.RegisterMsgTypes(upgrade.BEP9,
@@ -598,6 +613,11 @@ func (app *BNBBeaconChain) initStaking() {
 	})
 	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP159Phase2, func(ctx sdk.Context) {
 		stake.MigrateWhiteLabelOracleRelayer(ctx, app.stakeKeeper)
+	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.BEP255, func(ctx sdk.Context) {
+		storePrefix := app.scKeeper.GetSideChainStorePrefix(ctx, ServerContext.BscChainId)
+		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
+		app.stakeKeeper.ClearUpSideVoteAddrs(newCtx)
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
@@ -953,6 +973,15 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 	pub.Pool.Clean()
 	// match may end with transaction failure, which is better to save into
 	// the EndBlock response. However, current cosmos doesn't support this.
+
+	accountIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.AccountStoreKey).(*store.IavlStore)
+	tokenIavl, _ := app.GetCommitMultiStore().GetCommitStore(common.TokenStoreKey).(*store.IavlStore)
+	if sdk.IsUpgrade(upgrade.BEP255) {
+		app.reconBalance(ctx, accountIavl, tokenIavl)
+	}
+	accountIavl.ResetDiff()
+	tokenIavl.ResetDiff()
+
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),
