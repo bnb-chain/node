@@ -18,7 +18,7 @@ const globalAccountNumber = "globalAccountNumber"
 var unbalancedBlockHeightKey = []byte("0x01")
 
 // reconBalance will do reconciliation for accounts balances.
-func (app *BinanceChain) reconBalance(ctx sdk.Context, accountIavl *store.IavlStore, tokenIavl *store.IavlStore) {
+func (app *BNBBeaconChain) reconBalance(ctx sdk.Context, accountIavl *store.IavlStore, tokenIavl *store.IavlStore) {
 	height, exists := app.getUnbalancedBlockHeight(ctx)
 	if exists {
 		panic(fmt.Sprintf("unbalanced state at block height %d, please use hardfork to bypass it", height))
@@ -38,7 +38,7 @@ func (app *BinanceChain) reconBalance(ctx sdk.Context, accountIavl *store.IavlSt
 	}
 }
 
-func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
+func (app *BNBBeaconChain) getAccountChanges(ctx sdk.Context, accountStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
 	preCoins := sdk.Coins{}
 	currentCoins := sdk.Coins{}
 
@@ -84,7 +84,7 @@ func (app *BinanceChain) getAccountChanges(ctx sdk.Context, accountStore *store.
 	return preCoins, currentCoins
 }
 
-func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
+func (app *BNBBeaconChain) getTokenChanges(ctx sdk.Context, tokenStore *store.IavlStore) (sdk.Coins, sdk.Coins) {
 	preCoins := sdk.Coins{}
 	currentCoins := sdk.Coins{}
 
@@ -125,14 +125,14 @@ func (app *BinanceChain) getTokenChanges(ctx sdk.Context, tokenStore *store.Iavl
 	return preCoins, currentCoins
 }
 
-func (app *BinanceChain) saveUnbalancedBlockHeight(ctx sdk.Context) {
+func (app *BNBBeaconChain) saveUnbalancedBlockHeight(ctx sdk.Context) {
 	reconStore := app.GetCommitMultiStore().GetCommitStore(common.ReconStoreKey).(*store.IavlStore)
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz[:], uint64(ctx.BlockHeight()))
 	reconStore.Set(unbalancedBlockHeightKey, bz)
 }
 
-func (app *BinanceChain) getUnbalancedBlockHeight(ctx sdk.Context) (uint64, bool) {
+func (app *BNBBeaconChain) getUnbalancedBlockHeight(ctx sdk.Context) (uint64, bool) {
 	reconStore := app.GetCommitMultiStore().GetCommitStore(common.ReconStoreKey).(*store.IavlStore)
 
 	bz := reconStore.Get(unbalancedBlockHeightKey)

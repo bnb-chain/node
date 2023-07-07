@@ -17,7 +17,7 @@ import (
 func BenchmarkGetAccount(b *testing.B) {
 	memDB := db.NewMemDB()
 	logger := log.NewTMLogger(io.Discard)
-	testApp := NewBinanceChain(logger, memDB, io.Discard)
+	testApp := NewBNBBeaconChain(logger, memDB, io.Discard)
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())
@@ -49,7 +49,7 @@ func BenchmarkGetAccount(b *testing.B) {
 func BenchmarkSetAccount(b *testing.B) {
 	memDB := db.NewMemDB()
 	logger := log.NewTMLogger(io.Discard)
-	testApp := NewBinanceChain(logger, memDB, io.Discard)
+	testApp := NewBNBBeaconChain(logger, memDB, io.Discard)
 
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := sdk.AccAddress(pk.Address())

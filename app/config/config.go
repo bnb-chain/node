@@ -237,24 +237,24 @@ bscIbcChainId = {{ .CrossChainConfig.BscIbcChainId }}
 BUSDSymbol = "{{ .DexConfig.BUSDSymbol }}"
 `
 
-type BinanceChainContext struct {
+type BNBBeaconChainContext struct {
 	*server.Context
 	*viper.Viper
-	*BinanceChainConfig
+	*BNBBeaconChainConfig
 }
 
-func NewDefaultContext() *BinanceChainContext {
-	return &BinanceChainContext{
+func NewDefaultContext() *BNBBeaconChainContext {
+	return &BNBBeaconChainContext{
 		server.NewDefaultContext(),
 		viper.New(),
-		DefaultBinanceChainConfig()}
+		DefaultBNBBeaconChainConfig()}
 }
 
-func (context *BinanceChainContext) ToCosmosServerCtx() *server.Context {
+func (context *BNBBeaconChainContext) ToCosmosServerCtx() *server.Context {
 	return context.Context
 }
 
-type BinanceChainConfig struct {
+type BNBBeaconChainConfig struct {
 	*AddressConfig     `mapstructure:"addr"`
 	*PublicationConfig `mapstructure:"publication"`
 	*LogConfig         `mapstructure:"log"`
@@ -265,8 +265,8 @@ type BinanceChainConfig struct {
 	*DexConfig         `mapstructure:"dex"`
 }
 
-func DefaultBinanceChainConfig() *BinanceChainConfig {
-	return &BinanceChainConfig{
+func DefaultBNBBeaconChainConfig() *BNBBeaconChainConfig {
+	return &BNBBeaconChainConfig{
 		AddressConfig:     defaultAddressConfig(),
 		PublicationConfig: defaultPublicationConfig(),
 		LogConfig:         defaultLogConfig(),
@@ -610,7 +610,7 @@ func defaultGovConfig() *DexConfig {
 	}
 }
 
-func (context *BinanceChainContext) ParseAppConfigInPlace() error {
+func (context *BNBBeaconChainContext) ParseAppConfigInPlace() error {
 	// this piece of code should be consistent with bindFlagsLoadViper
 	// vendor/github.com/tendermint/tendermint/libs/cli/setup.go:125
 	homeDir := viper.GetString(cli.HomeFlag)
@@ -627,7 +627,7 @@ func (context *BinanceChainContext) ParseAppConfigInPlace() error {
 		return err
 	}
 
-	err := context.Viper.Unmarshal(context.BinanceChainConfig)
+	err := context.Viper.Unmarshal(context.BNBBeaconChainConfig)
 	if err != nil {
 		return err
 	}
@@ -635,7 +635,7 @@ func (context *BinanceChainContext) ParseAppConfigInPlace() error {
 }
 
 // WriteConfigFile renders config using the template and writes it to configFilePath.
-func WriteConfigFile(configFilePath string, config *BinanceChainConfig) {
+func WriteConfigFile(configFilePath string, config *BNBBeaconChainConfig) {
 	var buffer bytes.Buffer
 
 	if err := configTemplate.Execute(&buffer, config); err != nil {

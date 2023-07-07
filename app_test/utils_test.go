@@ -39,7 +39,7 @@ func setup(t *testing.T, symbol string, upgrade bool) (ass *assert.Assertions, r
 	logger := log.NewTMLogger(os.Stdout)
 
 	db := dbm.NewMemDB()
-	app = appPkg.NewBinanceChain(logger, db, os.Stdout)
+	app = appPkg.NewBNBBeaconChain(logger, db, os.Stdout)
 	//ctx = app.NewContext(false, abci.Header{ChainID: "mychainid"})
 	ctx = app.GetContextForCheckState()
 	cdc = app.GetCodec()
@@ -48,12 +48,12 @@ func setup(t *testing.T, symbol string, upgrade bool) (ass *assert.Assertions, r
 		setChainVersion()
 	}
 
-	keeper = app.(*appPkg.BinanceChain).DexKeeper
+	keeper = app.(*appPkg.BNBBeaconChain).DexKeeper
 	tradingPair := dextypes.NewTradingPair(baseAssetSymbol, types.NativeTokenSymbol, 1e8)
 	keeper.PairMapper.AddTradingPair(ctx, tradingPair)
 	keeper.AddEngine(tradingPair)
 
-	am = app.(*appPkg.BinanceChain).AccountKeeper
+	am = app.(*appPkg.BNBBeaconChain).AccountKeeper
 	_, buyerAcc := testutils.NewAccountForPub(ctx, am, 100000000000, 100000000000, 100000000000, symbol) // give user enough coins to pay the fee
 	buyer = buyerAcc.GetAddress()
 

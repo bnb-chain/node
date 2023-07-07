@@ -28,10 +28,10 @@ func defaultLogger() log.Logger {
 	return log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "sdk/app")
 }
 
-func newBinanceChainApp(options ...func(baseApp *baseapp.BaseApp)) *BinanceChain {
+func newBNBBeaconChainApp(options ...func(baseApp *baseapp.BaseApp)) *BNBBeaconChain {
 	logger := defaultLogger()
 	db := dbm.NewMemDB()
-	return NewBinanceChain(logger, db, os.Stdout, options...)
+	return NewBNBBeaconChain(logger, db, os.Stdout, options...)
 }
 
 // msg type for testing
@@ -45,7 +45,7 @@ func NewTestMsg(addrs ...sdk.AccAddress) *TestMsg {
 	}
 }
 
-//nolint
+// nolint
 func (msg *TestMsg) Route() string { return "TestMsg" }
 func (msg *TestMsg) Type() string  { return "Test message" }
 func (msg *TestMsg) GetSignBytes() []byte {
@@ -97,7 +97,7 @@ func TestPreCheckTxWithRightPubKey(t *testing.T) {
 	priv1, addr1 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -129,7 +129,7 @@ func TestPreCheckTxWithWrongPubKey(t *testing.T) {
 	priv2, _ := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -161,7 +161,7 @@ func TestPreCheckTxWithEmptyPubKey(t *testing.T) {
 	priv1, addr1 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -192,7 +192,7 @@ func TestPreCheckTxWithEmptySignatures(t *testing.T) {
 	priv1, addr1 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -224,7 +224,7 @@ func TestPreCheckTxWithWrongSignerNum(t *testing.T) {
 	_, addr2 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -254,7 +254,7 @@ func TestPreCheckTxWithData(t *testing.T) {
 	priv1, addr1 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -284,7 +284,7 @@ func TestPreCheckTxWithLargeMemo(t *testing.T) {
 	priv1, addr1 := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -315,7 +315,7 @@ func TestPreCheckTxWithWrongPubKeyAndEmptyAccountPubKey(t *testing.T) {
 	priv2, _ := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -346,7 +346,7 @@ func TestCheckTxWithUnrecognizedAccount(t *testing.T) {
 	priv2, _ := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -372,7 +372,7 @@ func TestCheckTxWithWrongSequence(t *testing.T) {
 	priv2, _ := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
@@ -401,7 +401,7 @@ func TestCheckTxWithWrongAccountNum(t *testing.T) {
 	priv2, _ := testutils.PrivAndAddr()
 
 	Codec = MakeCodec()
-	app := newBinanceChainApp(routerOpt)
+	app := newBNBBeaconChainApp(routerOpt)
 	app.Codec.RegisterConcrete(&TestMsg{}, "cosmos-sdk/baseapp/testMsg", nil)
 
 	app.BeginBlock(abci.RequestBeginBlock{})
