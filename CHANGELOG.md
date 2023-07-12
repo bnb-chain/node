@@ -2,7 +2,7 @@
 
 ## v0.10.16
 FEATURES
-* [\#977](https://github.com/bnb-chain/node/pull/977) [BEP] asset: update bep255 upgrade height for mainnet
+* [\#977](https://github.com/bnb-chain/node/pull/977) [BEP] asset: add bep255 upgrade height for mainnet
 
 ## v0.10.15
 FEATURES
