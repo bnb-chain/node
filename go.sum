@@ -178,8 +178,6 @@ github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJm
 github.com/bketelsen/crypt v0.0.4/go.mod h1:aI6NrJ0pMGgvZKL1iVgXLnfIFJtfV+bKCoqOes/6LfM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.6 h1:5NrdUXplI2cqWZlLOovSqm+xO5ja03ZPCPT4bQqCD1Y=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.6/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
 github.com/bnb-chain/bnc-tendermint v0.32.3-bc.10 h1:E4iSwEbJCLYchHiHE1gnOM3jjmJXLBxARhy/RCl8CpI=
@@ -789,6 +787,8 @@ github.com/iris-contrib/jade v1.1.4/go.mod h1:EDqR+ur9piDl6DUgs6qRrlfzmlx/D5Uybo
 github.com/iris-contrib/pongo2 v0.0.1/go.mod h1:Ssh+00+3GAZqSQb30AvBRNxBx7rf0GqwkjqxNd0u65g=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/iris-contrib/schema v0.0.6/go.mod h1:iYszG0IOsuIsfzjymw1kMzTL8YQcCWlm65f3wX8J5iA=
+github.com/j75689/bnc-cosmos-sdk v0.0.0-20230828031047-de8de0dae3cf h1:V7pDFgJSxT0EBqD0ZNB6tJjey1YatkVwkxhmYboCN3Q=
+github.com/j75689/bnc-cosmos-sdk v0.0.0-20230828031047-de8de0dae3cf/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=

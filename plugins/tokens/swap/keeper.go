@@ -171,6 +171,9 @@ func (kp *Keeper) getIndex(ctx sdk.Context) int64 {
 }
 
 func (kp *Keeper) Refound(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) error {
+	if swap.Status != Open {
+		return fmt.Errorf(fmt.Sprint("Invalid swap status", "status", swap.Status))
+	}
 	if !swap.OutAmount.IsZero() {
 		_, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.OutAmount)
 		if err != nil {
@@ -184,7 +187,7 @@ func (kp *Keeper) Refound(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) e
 		}
 	}
 
-	swap.Status = Expired
+	swap.Status = Completed
 	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
 	err := kp.CloseSwap(ctx, swapID, swap)
 	if err != nil {
