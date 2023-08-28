@@ -71,7 +71,11 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 			logger.Error("ParseKeyRecord error", "error", err)
 			continue
 		}
-		timelockKeeper.TimeUnlock(ctx, addr, id)
+		err = timelockKeeper.TimeUnlock(ctx, addr, id)
+		if err != nil {
+			logger.Error("TimeUnlock error", "error", err)
+			continue
+		}
 		i++
 	}
 

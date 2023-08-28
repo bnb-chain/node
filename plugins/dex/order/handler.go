@@ -32,9 +32,6 @@ func NewHandler(dexKeeper *DexKeeper) sdk.Handler {
 			}
 			return handleNewOrder(ctx, dexKeeper, msg)
 		case CancelOrderMsg:
-			if sdk.IsUpgrade(sdk.BEPXXX) {
-				return sdk.ErrMsgNotSupported("").Result()
-			}
 			return handleCancelOrder(ctx, dexKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
