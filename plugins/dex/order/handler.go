@@ -32,6 +32,9 @@ func NewHandler(dexKeeper *DexKeeper) sdk.Handler {
 			}
 			return handleNewOrder(ctx, dexKeeper, msg)
 		case CancelOrderMsg:
+			if sdk.IsUpgrade(sdk.BEPXXX) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleCancelOrder(ctx, dexKeeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized dex msg type: %v", reflect.TypeOf(msg).Name())
@@ -104,6 +107,7 @@ func validateQtyAndLockBalance(ctx sdk.Context, keeper *DexKeeper, acc common.Na
 func handleNewOrder(
 	ctx sdk.Context, dexKeeper *DexKeeper, msg NewOrderMsg,
 ) sdk.Result {
+
 	if _, ok := dexKeeper.OrderExists(msg.Symbol, msg.Id); ok {
 		errString := fmt.Sprintf("Duplicated order [%v] on symbol [%v]", msg.Id, msg.Symbol)
 		return sdk.NewError(types.DefaultCodespace, types.CodeDuplicatedOrder, errString).Result()

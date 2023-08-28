@@ -38,6 +38,9 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 }
 
 func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	errLogMsg := "issue token failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
@@ -62,8 +65,11 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 	return issue(ctx, logger, tokenMapper, bankKeeper, token)
 }
 
-//Mint MiniToken is also handled by this function
+// Mint MiniToken is also handled by this function
 func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)
 

@@ -30,6 +30,9 @@ func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper b
 }
 
 func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg FreezeMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	freezeAmount := msg.Amount
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", freezeAmount, "addr", msg.From)

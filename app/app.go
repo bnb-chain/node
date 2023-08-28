@@ -918,6 +918,7 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 	} else {
 		app.Logger.Debug("normal block", "height", height)
+		tokens.EndBlocker(ctx, app.timeLockKeeper, app.swapKeeper)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)

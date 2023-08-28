@@ -51,6 +51,49 @@ func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler 
 	return createAbciQueryHandler(mapper, queryPrefix)
 }
 
+const (
+	MaxUnlockItems = 100
+)
+
+func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
+	logger := bnclog.With("module", "tokens")
+	logger.Info("unlock the time locks", "blockHeight", ctx.BlockHeight())
+
+	iterator := timelockKeeper.GetTimeLockRecordIterator(ctx)
+	defer iterator.Close()
+	i := 0
+	for ; iterator.Valid(); iterator.Next() {
+		if i >= MaxUnlockItems {
+			break
+		}
+		addr, id, err := timelock.ParseKeyRecord(iterator.Key())
+		if err != nil {
+			logger.Error("ParseKeyRecord error", "error", err)
+			continue
+		}
+		timelockKeeper.TimeUnlock(ctx, addr, id)
+		i++
+	}
+
+	iterator = swapKeeper.GetSwapIterator(ctx)
+	defer iterator.Close()
+	i = 0
+	for ; iterator.Valid(); iterator.Next() {
+		if i >= MaxUnlockItems {
+			break
+		}
+		var automaticSwap swap.AtomicSwap
+		swapKeeper.CDC().MustUnmarshalBinaryBare(iterator.Value(), &automaticSwap)
+		swapID := iterator.Key()[len(swap.HashKey):]
+		err := swapKeeper.Refound(ctx, swapID, &automaticSwap)
+		if err != nil {
+			logger.Error("Refound error", "error", err)
+			continue
+		}
+		i++
+	}
+}
+
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 	logger := bnclog.With("module", "tokens")

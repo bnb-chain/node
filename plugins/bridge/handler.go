@@ -33,6 +33,9 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleUnbindMsg(ctx sdk.Context, keeper Keeper, msg UnbindMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	// check is native symbol
 	if msg.Symbol == cmmtypes.NativeTokenSymbol {
 		return types.ErrInvalidSymbol("can not unbind native symbol").Result()

@@ -41,6 +41,10 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 	}
 }
 
+func (keeper Keeper) CDC() *codec.Codec {
+	return keeper.cdc
+}
+
 func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
@@ -137,6 +141,11 @@ func (kp *Keeper) GetSwap(ctx sdk.Context, swapID SwapBytes) *AtomicSwap {
 	return &swap
 }
 
+func (kp *Keeper) GetSwapIterator(ctx sdk.Context) (iterator store.Iterator) {
+	kvStore := ctx.KVStore(kp.storeKey)
+	return sdk.KVStorePrefixIterator(kvStore, HashKey)
+}
+
 func (kp *Keeper) GetSwapCreatorIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
 	return sdk.KVStorePrefixIterator(kvStore, BuildSwapCreatorQueueKey(addr))
@@ -159,4 +168,27 @@ func (kp *Keeper) getIndex(ctx sdk.Context) int64 {
 		return 0
 	}
 	return int64(binary.BigEndian.Uint64(bz))
+}
+
+func (kp *Keeper) Refound(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) error {
+	if !swap.OutAmount.IsZero() {
+		_, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.OutAmount)
+		if err != nil {
+			return fmt.Errorf(fmt.Sprint("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.From.String(), "amount", swap.OutAmount.String(), "err", err.Error()))
+		}
+	}
+	if !swap.InAmount.IsZero() {
+		_, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.InAmount)
+		if err != nil {
+			return fmt.Errorf(fmt.Sprint("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.To.String(), "amount", swap.InAmount.String(), "err", err.Error()))
+		}
+	}
+
+	swap.Status = Expired
+	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
+	err := kp.CloseSwap(ctx, swapID, swap)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprint("Failed to close swap", "err", err.Error()))
+	}
+	return nil
 }

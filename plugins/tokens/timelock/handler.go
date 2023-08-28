@@ -24,6 +24,9 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	record, err := keeper.TimeLock(ctx, msg.From, msg.Description, msg.Amount, time.Unix(msg.LockTime, 0))
 	if err != nil {
 		return err.Result()
@@ -36,6 +39,9 @@ func handleTimeLock(ctx sdk.Context, keeper Keeper, msg TimeLockMsg) sdk.Result 
 }
 
 func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	newRecord := TimeLockRecord{
 		Description: msg.Description,
 		Amount:      msg.Amount,

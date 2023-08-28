@@ -27,6 +27,9 @@ func NewHandler(kp Keeper) sdk.Handler {
 }
 
 func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	header := ctx.BlockHeader()
 	blockTime := header.Time.Unix()
 	if msg.Timestamp < blockTime-ThirtyMinutes || msg.Timestamp > blockTime+FifteenMinutes {
@@ -66,6 +69,9 @@ func handleHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg HTLTMsg) sdk.
 }
 
 func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg DepositHTLTMsg) sdk.Result {
+	if sdk.IsUpgrade(sdk.BEPXXX) {
+		return sdk.ErrMsgNotSupported("").Result()
+	}
 	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
 		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
