@@ -112,12 +112,12 @@ github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQ
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJmJgSg28kpZDP6UIiPt0e0Oz0kqKNGyRaWEPv84=
 github.com/bketelsen/crypt v0.0.4/go.mod h1:aI6NrJ0pMGgvZKL1iVgXLnfIFJtfV+bKCoqOes/6LfM=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230828073032-b211ae9ce171 h1:C79bmiKHEA+0X2NROblgdDbMXGmp7CP2JZMObokElx4=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230828073032-b211ae9ce171/go.mod h1:2mp+iSJrQKype+lsD5co1Rqrleg5Bi/CqUKj0ml3tMw=
+github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230830073915-db9f65ebd7e1 h1:H37xBtSC3lhJMUgx7u1wbps1FJH/7O3VW6/exmZq3PQ=
+github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230830073915-db9f65ebd7e1/go.mod h1:XYllEtI4JiPpd5UhTJz4zpDopRnR74wusci3B8oWX8U=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
-github.com/bnb-chain/bnc-tendermint v0.32.3-bc.10 h1:E4iSwEbJCLYchHiHE1gnOM3jjmJXLBxARhy/RCl8CpI=
-github.com/bnb-chain/bnc-tendermint v0.32.3-bc.10/go.mod h1:wKxpgQYxtZxPasF59zca7NbmIazOjUdualm1gMEMGTU=
+github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7.0.20230830064832-049f57c7d047 h1:vPoA5XZ5mRnjG4DagQ7WXQsc08HimU7DA1vPvMXXHsE=
+github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7.0.20230830064832-049f57c7d047/go.mod h1:wKxpgQYxtZxPasF59zca7NbmIazOjUdualm1gMEMGTU=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.5 h1:8trIShwwXvCUQz34DwIsgPz2yJgVlZRMv+2IwEuKjTM=
 github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.5/go.mod h1:4Kf0qoRDM4vc1ZTBSHqwiQyVniCPS+HAAY434oYzr6w=
 github.com/bnb-chain/ics23 v0.0.0-20221021082321-d0a365dd9898/go.mod h1:cU6lTGolbbLFsGCgceNB2AzplH1xecLp6+KXvxM32nI=

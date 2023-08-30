@@ -242,7 +242,7 @@ require (
 replace (
 	github.com/Shopify/sarama v1.26.1 => github.com/Shopify/sarama v1.21.0
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.20.0-beta
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230828073032-b211ae9ce171
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20230830073915-db9f65ebd7e1
 	github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 	github.com/ipfs/go-datastore => github.com/ipfs/go-datastore v0.0.5
 	github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.3.0
@@ -258,7 +258,7 @@ replace (
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/go-amino => github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2
 	github.com/tendermint/iavl => github.com/bnb-chain/bnc-tendermint-iavl v0.12.0-binance.5
-	github.com/tendermint/tendermint => github.com/bnb-chain/bnc-tendermint v0.32.3-bc.10
+	github.com/tendermint/tendermint => github.com/bnb-chain/bnc-tendermint v0.32.3-binance.7.0.20230830064832-049f57c7d047
 	github.com/zondax/ledger-cosmos-go => github.com/bnb-chain/ledger-cosmos-go v0.9.10-0.20230201065744-d644bede1667
 	golang.org/x/crypto => github.com/bnb-chain/tendermint-crypto v0.0.0-20230703075311-6ffc0fd47894
 )
