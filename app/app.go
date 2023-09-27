@@ -49,6 +49,7 @@ import (
 	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/common/utils"
 	"github.com/bnb-chain/node/plugins/account"
+	"github.com/bnb-chain/node/plugins/airdrop"
 	"github.com/bnb-chain/node/plugins/bridge"
 	bTypes "github.com/bnb-chain/node/plugins/bridge/types"
 	"github.com/bnb-chain/node/plugins/dex"
@@ -1157,6 +1158,7 @@ func MakeCodec() *wire.Codec {
 	bridge.RegisterWire(cdc)
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
+	airdrop.RegisterWire(cdc)
 	return cdc
 }
 
