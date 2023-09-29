@@ -1,7 +1,9 @@
 package airdrop
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,6 +25,25 @@ func NewAirdropApprovalMsg(tokenIndex uint64, tokenSymbol string, amount uint64,
 	}
 }
 
+func newAirDropApprovalSignData(tokenIndex uint64, tokenSymbol string, amount uint64, recipient string) airDropApprovalSignData {
+	var tokenSymbolBytes [32]byte
+	copy(tokenSymbolBytes[:], []byte(tokenSymbol))
+
+	return airDropApprovalSignData{
+		TokenIndex:  hex.EncodeToString(big.NewInt(int64(tokenIndex)).FillBytes(make([]byte, 32))),
+		TokenSymbol: hex.EncodeToString(tokenSymbolBytes[:]),
+		Amount:      hex.EncodeToString(big.NewInt(int64(amount)).FillBytes(make([]byte, 32))),
+		Recipient:   recipient,
+	}
+}
+
+type airDropApprovalSignData struct {
+	TokenIndex  string `json:"token_index"`  // hex string(32 bytes)
+	TokenSymbol string `json:"token_symbol"` // hex string(32 bytes)
+	Amount      string `json:"amount"`       // hex string(32 bytes)
+	Recipient   string `json:"recipient"`    // eth address(20 bytes)
+}
+
 type AirdropApproval struct {
 	TokenIndex  uint64 `json:"token_index"`
 	TokenSymbol string `json:"token_symbol"`
@@ -37,7 +58,7 @@ func (msg AirdropApproval) GetInvolvedAddresses() []sdk.AccAddress {
 
 // GetSignBytes implements types.Msg.
 func (msg AirdropApproval) GetSignBytes() []byte {
-	b, err := json.Marshal(msg)
+	b, err := json.Marshal(newAirDropApprovalSignData(msg.TokenIndex, msg.TokenSymbol, msg.Amount, msg.Recipient))
 	if err != nil {
 		panic(err)
 	}
