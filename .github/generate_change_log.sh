@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-checksum() {
+checksum(check-success) {
     echo $(sha256sum $@ | awk '{print $1}')
 }
 change_log_file="./CHANGELOG.md"
