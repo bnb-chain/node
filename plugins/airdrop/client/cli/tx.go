@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -44,7 +45,7 @@ func GetApprovalCmd(cdc *codec.Codec) *cobra.Command {
 			tokenIndex := viper.GetInt64(flagTokenIndex)
 			tokenSymbol := viper.GetString(flagTokenSymbol)
 			recipient := viper.GetString(flagRecipient)
-			msg := airdrop.NewAirdropApprovalMsg(uint64(tokenIndex), tokenSymbol, uint64(amount), recipient)
+			msg := airdrop.NewAirdropApprovalMsg(uint64(tokenIndex), tokenSymbol, uint64(amount), common.HexToAddress(recipient).Hex())
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
