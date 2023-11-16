@@ -19,6 +19,9 @@ func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper b
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
+			if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleFreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
 		case UnfreezeMsg:
 			return handleUnfreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
@@ -30,7 +33,7 @@ func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper b
 }
 
 func handleFreezeToken(ctx sdk.Context, tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper bank.Keeper, msg FreezeMsg) sdk.Result {
-	if sdk.IsUpgrade(sdk.BEPXXX) {
+	if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
 		return sdk.ErrMsgNotSupported("").Result()
 	}
 	freezeAmount := msg.Amount

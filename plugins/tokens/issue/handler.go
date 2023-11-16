@@ -21,6 +21,9 @@ import (
 // NewHandler creates a new token issue message handler
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+		if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
+			return sdk.ErrMsgNotSupported("").Result()
+		}
 		switch msg := msg.(type) {
 		case IssueMsg:
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
@@ -38,9 +41,6 @@ func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 }
 
 func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMsg) sdk.Result {
-	if sdk.IsUpgrade(sdk.BEPXXX) {
-		return sdk.ErrMsgNotSupported("").Result()
-	}
 	errLogMsg := "issue token failed"
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
@@ -67,9 +67,6 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 
 // Mint MiniToken is also handled by this function
 func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
-	if sdk.IsUpgrade(sdk.BEPXXX) {
-		return sdk.ErrMsgNotSupported("").Result()
-	}
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)
 

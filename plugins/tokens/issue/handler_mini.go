@@ -13,9 +13,6 @@ import (
 )
 
 func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueMiniMsg) sdk.Result {
-	if sdk.IsUpgrade(sdk.BEPXXX) {
-		return sdk.ErrMsgNotSupported("").Result()
-	}
 	errLogMsg := "issue miniToken failed"
 	origSymbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", origSymbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)
@@ -37,9 +34,6 @@ func handleIssueMiniToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper 
 }
 
 func handleIssueTinyToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg IssueTinyMsg) sdk.Result {
-	if sdk.IsUpgrade(sdk.BEPXXX) {
-		return sdk.ErrMsgNotSupported("").Result()
-	}
 	errLogMsg := "issue tinyToken failed"
 	origSymbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "mini-token", "symbol", origSymbol, "name", msg.Name, "total_supply", msg.TotalSupply, "issuer", msg.From)

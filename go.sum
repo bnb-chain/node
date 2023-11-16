@@ -787,8 +787,8 @@ github.com/iris-contrib/jade v1.1.4/go.mod h1:EDqR+ur9piDl6DUgs6qRrlfzmlx/D5Uybo
 github.com/iris-contrib/pongo2 v0.0.1/go.mod h1:Ssh+00+3GAZqSQb30AvBRNxBx7rf0GqwkjqxNd0u65g=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/iris-contrib/schema v0.0.6/go.mod h1:iYszG0IOsuIsfzjymw1kMzTL8YQcCWlm65f3wX8J5iA=
-github.com/j75689/bnc-cosmos-sdk v0.0.0-20230828031047-de8de0dae3cf h1:V7pDFgJSxT0EBqD0ZNB6tJjey1YatkVwkxhmYboCN3Q=
-github.com/j75689/bnc-cosmos-sdk v0.0.0-20230828031047-de8de0dae3cf/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
+github.com/j75689/bnc-cosmos-sdk v0.0.0-20231116015058-f4c4b6cf4304 h1:pRwSJU1SnmKNmpK8yIdTEoeny2MbKoQPvmvoY/BUaA8=
+github.com/j75689/bnc-cosmos-sdk v0.0.0-20231116015058-f4c4b6cf4304/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=
