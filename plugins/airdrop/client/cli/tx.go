@@ -26,7 +26,6 @@ import (
 
 const (
 	flagAmount      = "amount"
-	flagTokenIndex  = "token-index"
 	flagTokenSymbol = "token-symbol"
 	flagRecipient   = "recipient"
 )
@@ -42,10 +41,9 @@ func GetApprovalCmd(cdc *codec.Codec) *cobra.Command {
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
 
 			amount := viper.GetInt64(flagAmount)
-			tokenIndex := viper.GetInt64(flagTokenIndex)
 			tokenSymbol := viper.GetString(flagTokenSymbol)
 			recipient := viper.GetString(flagRecipient)
-			msg := airdrop.NewAirdropApprovalMsg(uint64(tokenIndex), tokenSymbol, uint64(amount), common.HexToAddress(recipient).Hex())
+			msg := airdrop.NewAirdropApprovalMsg(tokenSymbol, uint64(amount), common.HexToAddress(recipient).Hex())
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {
@@ -55,7 +53,6 @@ func GetApprovalCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64(flagTokenIndex, 0, "owner token index")
 	cmd.Flags().String(flagTokenSymbol, "", "owner token symbol")
 	cmd.Flags().Int64(flagAmount, 0, "amount of token")
 	cmd.Flags().String(flagRecipient, "", "bsc recipient address")
