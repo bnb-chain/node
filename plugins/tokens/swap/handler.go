@@ -22,7 +22,7 @@ func NewHandler(kp Keeper) sdk.Handler {
 			}
 			return handleDepositHashTimerLockedTransfer(ctx, kp, msg)
 		case ClaimHTLTMsg:
-			return handleClaimHashTimerLockedTransfer(ctx, kp, msg)
+			return handleClaimHashTimerLockedTransfer(ctx, kp, msg, false)
 		case RefundHTLTMsg:
 			return handleRefundHashTimerLockedTransfer(ctx, kp, msg)
 		default:
@@ -107,7 +107,11 @@ func handleDepositHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg Deposi
 
 }
 
-func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg) sdk.Result {
+func HandleClaimHashTimerLockedTransferAfterBCFusion(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg) sdk.Result {
+	return handleClaimHashTimerLockedTransfer(ctx, kp, msg, true)
+}
+
+func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTLTMsg, isBCFusionRefund bool) sdk.Result {
 	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
 		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
@@ -115,11 +119,11 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
 	}
-	if swap.ExpireHeight <= ctx.BlockHeight() {
+	if !isBCFusionRefund && swap.ExpireHeight <= ctx.BlockHeight() {
 		return ErrClaimExpiredSwap(fmt.Sprintf("Current block height is %d, the swap expire height(%d) is passed", ctx.BlockHeight(), swap.ExpireHeight)).Result()
 	}
 
-	if !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), swap.RandomNumberHash) {
+	if !isBCFusionRefund && !bytes.Equal(CalculateRandomHash(msg.RandomNumber, swap.Timestamp), swap.RandomNumberHash) {
 		return ErrMismatchedRandomNumber("Mismatched random number").Result()
 	}
 

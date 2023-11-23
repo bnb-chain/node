@@ -169,29 +169,3 @@ func (kp *Keeper) getIndex(ctx sdk.Context) int64 {
 	}
 	return int64(binary.BigEndian.Uint64(bz))
 }
-
-func (kp *Keeper) Refound(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) error {
-	if swap.Status != Open {
-		return fmt.Errorf(fmt.Sprint("Invalid swap status", "status", swap.Status))
-	}
-	if !swap.OutAmount.IsZero() {
-		_, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.From, swap.OutAmount)
-		if err != nil {
-			return fmt.Errorf(fmt.Sprint("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.From.String(), "amount", swap.OutAmount.String(), "err", err.Error()))
-		}
-	}
-	if !swap.InAmount.IsZero() {
-		_, err := kp.ck.SendCoins(ctx, AtomicSwapCoinsAccAddr, swap.To, swap.InAmount)
-		if err != nil {
-			return fmt.Errorf(fmt.Sprint("Failed to send coins", "sender", AtomicSwapCoinsAccAddr.String(), "recipient", swap.To.String(), "amount", swap.InAmount.String(), "err", err.Error()))
-		}
-	}
-
-	swap.Status = Completed
-	swap.ClosedTime = ctx.BlockHeader().Time.Unix()
-	err := kp.CloseSwap(ctx, swapID, swap)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprint("Failed to close swap", "err", err.Error()))
-	}
-	return nil
-}
