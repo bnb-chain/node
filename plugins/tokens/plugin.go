@@ -52,7 +52,7 @@ func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler 
 }
 
 const (
-	MaxUnlockItems = 100
+	MaxUnlockItems = 10
 )
 
 func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
