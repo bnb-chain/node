@@ -8,13 +8,13 @@ import (
 
 func AddCommands(cmd *cobra.Command, cdc *codec.Codec) {
 	airdropCmd := &cobra.Command{
-		Use:   "airdrop",
-		Short: "airdrop commands",
+		Use:   "recover",
+		Short: "recover commands",
 	}
 
 	airdropCmd.AddCommand(
 		client.PostCommands(
-			GetApprovalCmd(cdc),
+			SignTokenRecoverRequestCmd(cdc),
 		)...,
 	)
 

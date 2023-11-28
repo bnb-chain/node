@@ -1,4 +1,4 @@
-package airdrop
+package recover
 
 import (
 	"encoding/hex"
@@ -10,51 +10,51 @@ import (
 )
 
 const (
-	Route   = "airdrop"
-	MsgType = "airdrop_approval"
+	Route   = "recover"
+	MsgType = "request_token"
 )
 
-var _ sdk.Msg = AirdropApproval{}
+var _ sdk.Msg = TokenRecoverRequest{}
 
-func NewAirdropApprovalMsg(tokenSymbol string, amount uint64, recipient string) AirdropApproval {
-	return AirdropApproval{
+func NewTokenRecoverRequestMsg(tokenSymbol string, amount uint64, recipient string) TokenRecoverRequest {
+	return TokenRecoverRequest{
 		TokenSymbol: tokenSymbol,
 		Amount:      amount,
 		Recipient:   recipient,
 	}
 }
 
-func newAirDropApprovalSignData(tokenSymbol string, amount uint64, recipient string) airDropApprovalSignData {
+func newTokenRecoverRequestSignData(tokenSymbol string, amount uint64, recipient string) tokenRecoverRequestSignData {
 	var tokenSymbolBytes [32]byte
 	copy(tokenSymbolBytes[:], []byte(tokenSymbol))
 
-	return airDropApprovalSignData{
+	return tokenRecoverRequestSignData{
 		TokenSymbol: hex.EncodeToString(tokenSymbolBytes[:]),
 		Amount:      hex.EncodeToString(big.NewInt(int64(amount)).FillBytes(make([]byte, 32))),
 		Recipient:   recipient,
 	}
 }
 
-type airDropApprovalSignData struct {
+type tokenRecoverRequestSignData struct {
 	TokenSymbol string `json:"token_symbol"` // hex string(32 bytes)
 	Amount      string `json:"amount"`       // hex string(32 bytes)
 	Recipient   string `json:"recipient"`    // eth address(20 bytes)
 }
 
-type AirdropApproval struct {
+type TokenRecoverRequest struct {
 	TokenSymbol string `json:"token_symbol"`
 	Amount      uint64 `json:"amount"`
 	Recipient   string `json:"recipient"` // eth address
 }
 
 // GetInvolvedAddresses implements types.Msg.
-func (msg AirdropApproval) GetInvolvedAddresses() []sdk.AccAddress {
+func (msg TokenRecoverRequest) GetInvolvedAddresses() []sdk.AccAddress {
 	return msg.GetSigners()
 }
 
 // GetSignBytes implements types.Msg.
-func (msg AirdropApproval) GetSignBytes() []byte {
-	b, err := json.Marshal(newAirDropApprovalSignData(msg.TokenSymbol, msg.Amount, msg.Recipient))
+func (msg TokenRecoverRequest) GetSignBytes() []byte {
+	b, err := json.Marshal(newTokenRecoverRequestSignData(msg.TokenSymbol, msg.Amount, msg.Recipient))
 	if err != nil {
 		panic(err)
 	}
@@ -62,24 +62,24 @@ func (msg AirdropApproval) GetSignBytes() []byte {
 }
 
 // GetSigners implements types.Msg.
-func (m AirdropApproval) GetSigners() []sdk.AccAddress {
+func (m TokenRecoverRequest) GetSigners() []sdk.AccAddress {
 	// This is not a real on-chain transaction
 	// We can get signer from the public key.
 	return []sdk.AccAddress{}
 }
 
 // Route implements types.Msg.
-func (AirdropApproval) Route() string {
+func (TokenRecoverRequest) Route() string {
 	return Route
 }
 
 // Type implements types.Msg.
-func (AirdropApproval) Type() string {
+func (TokenRecoverRequest) Type() string {
 	return MsgType
 }
 
 // ValidateBasic implements types.Msg.
-func (msg AirdropApproval) ValidateBasic() sdk.Error {
+func (msg TokenRecoverRequest) ValidateBasic() sdk.Error {
 	if msg.TokenSymbol == "" {
 		return sdk.ErrUnknownRequest("Invalid token symbol")
 	}

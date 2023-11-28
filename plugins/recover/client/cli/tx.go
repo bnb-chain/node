@@ -22,7 +22,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 
-	"github.com/bnb-chain/node/plugins/airdrop"
+	airdrop "github.com/bnb-chain/node/plugins/recover"
 )
 
 const (
@@ -31,10 +31,10 @@ const (
 	flagRecipient   = "recipient"
 )
 
-func GetApprovalCmd(cdc *codec.Codec) *cobra.Command {
+func SignTokenRecoverRequestCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "approval",
-		Short: "get airdrop approval sign data",
+		Use:   "sign-token-recover-request",
+		Short: "get token recover request sign data",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -44,8 +44,7 @@ func GetApprovalCmd(cdc *codec.Codec) *cobra.Command {
 			amount := viper.GetInt64(flagAmount)
 			tokenSymbol := viper.GetString(flagTokenSymbol)
 			recipient := viper.GetString(flagRecipient)
-
-			msg := airdrop.NewAirdropApprovalMsg(tokenSymbol, uint64(amount), strings.ToLower(common.HexToAddress(recipient).Hex()))
+			msg := airdrop.NewTokenRecoverRequestMsg(tokenSymbol, uint64(amount), strings.ToLower(common.HexToAddress(recipient).Hex()))
 
 			sdkErr := msg.ValidateBasic()
 			if sdkErr != nil {

@@ -23,10 +23,10 @@ import (
 	"github.com/bnb-chain/node/common"
 	"github.com/bnb-chain/node/common/types"
 	accountcmd "github.com/bnb-chain/node/plugins/account/client/cli"
-	airdropcmd "github.com/bnb-chain/node/plugins/airdrop/client/cli"
 	apiserv "github.com/bnb-chain/node/plugins/api"
 	bridgecmd "github.com/bnb-chain/node/plugins/bridge/client/cli"
 	dexcmd "github.com/bnb-chain/node/plugins/dex/client/cli"
+	recovercmd "github.com/bnb-chain/node/plugins/recover/client/cli"
 	tokencmd "github.com/bnb-chain/node/plugins/tokens/client/cli"
 	"github.com/bnb-chain/node/version"
 )
@@ -100,7 +100,7 @@ func main() {
 	admin.AddCommands(rootCmd, cdc)
 	bridgecmd.AddCommands(rootCmd, cdc)
 	sidecmd.AddCommands(rootCmd, cdc)
-	airdropcmd.AddCommands(rootCmd, cdc)
+	recovercmd.AddCommands(rootCmd, cdc)
 
 	// prepare and add flags
 	executor := cli.PrepareMainCmd(rootCmd, "BC", app.DefaultCLIHome)

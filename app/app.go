@@ -49,13 +49,13 @@ import (
 	"github.com/bnb-chain/node/common/upgrade"
 	"github.com/bnb-chain/node/common/utils"
 	"github.com/bnb-chain/node/plugins/account"
-	"github.com/bnb-chain/node/plugins/airdrop"
 	"github.com/bnb-chain/node/plugins/bridge"
 	bTypes "github.com/bnb-chain/node/plugins/bridge/types"
 	"github.com/bnb-chain/node/plugins/dex"
 	"github.com/bnb-chain/node/plugins/dex/list"
 	"github.com/bnb-chain/node/plugins/dex/order"
 	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	tokenRecover "github.com/bnb-chain/node/plugins/recover"
 	"github.com/bnb-chain/node/plugins/tokens"
 	"github.com/bnb-chain/node/plugins/tokens/issue"
 	"github.com/bnb-chain/node/plugins/tokens/ownership"
@@ -1158,7 +1158,7 @@ func MakeCodec() *wire.Codec {
 	bridge.RegisterWire(cdc)
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
-	airdrop.RegisterWire(cdc)
+	tokenRecover.RegisterWire(cdc)
 	return cdc
 }
 

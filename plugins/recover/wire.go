@@ -1,4 +1,4 @@
-package airdrop
+package recover
 
 import (
 	"github.com/bnb-chain/node/wire"
@@ -6,5 +6,5 @@ import (
 
 // Register concrete types on wire codec
 func RegisterWire(cdc *wire.Codec) {
-	cdc.RegisterConcrete(AirdropApproval{}, "airdrop/AirdropApproval", nil)
+	cdc.RegisterConcrete(TokenRecoverRequest{}, "recover/TokenRecoverRequest", nil)
 }
