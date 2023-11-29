@@ -82,20 +82,19 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 		i++
 	}
 
-	iterator = swapKeeper.GetSwapIterator(ctx)
-	defer iterator.Close()
+	swapIterator := swapKeeper.GetSwapIterator(ctx)
+	defer swapIterator.Close()
 	i = 0
-	for ; iterator.Valid(); iterator.Next() {
+	for ; swapIterator.Valid(); swapIterator.Next() {
 		if i >= MaxUnlockItems {
 			break
 		}
 		var automaticSwap swap.AtomicSwap
 		swapKeeper.CDC().MustUnmarshalBinaryBare(iterator.Value(), &automaticSwap)
 		swapID := iterator.Key()[len(swap.HashKey):]
-		result := swap.HandleClaimHashTimerLockedTransferAfterBCFusion(ctx, swapKeeper, swap.ClaimHTLTMsg{
-			From:         automaticSwap.From,
-			SwapID:       swapID,
-			RandomNumber: automaticSwap.RandomNumber,
+		result := swap.HandleRefundHashTimerLockedTransferAfterBCFusion(ctx, swapKeeper, swap.RefundHTLTMsg{
+			From:   automaticSwap.From,
+			SwapID: swapID,
 		})
 		if !result.IsOK() {
 			logger.Error("Refound error", "swapId", swapID)
