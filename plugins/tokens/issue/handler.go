@@ -21,7 +21,7 @@ import (
 // NewHandler creates a new token issue message handler
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
-		if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
+		if sdk.IsUpgrade(sdk.FirstSunsetFork) {
 			return sdk.ErrMsgNotSupported("").Result()
 		}
 		switch msg := msg.(type) {

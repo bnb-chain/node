@@ -12,12 +12,12 @@ func NewHandler(kp Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case HTLTMsg:
-			if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
 				return sdk.ErrMsgNotSupported("").Result()
 			}
 			return handleHashTimerLockedTransfer(ctx, kp, msg)
 		case DepositHTLTMsg:
-			if sdk.IsUpgrade(sdk.BCFusionFirstHardFork) {
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
 				return sdk.ErrMsgNotSupported("").Result()
 			}
 			return handleDepositHashTimerLockedTransfer(ctx, kp, msg)

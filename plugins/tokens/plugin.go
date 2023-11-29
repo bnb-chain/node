@@ -56,7 +56,7 @@ const (
 )
 
 func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
-	if !sdk.IsUpgrade(sdk.BCFusionSecondHardFork) {
+	if !sdk.IsUpgrade(sdk.SecondSunsetFork) {
 		return
 	}
 	logger := bnclog.With("module", "tokens")
