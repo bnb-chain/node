@@ -83,7 +83,7 @@ func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, msg sdk.Msg
 	var tx auth.StdTx
 	err = builder.Codec.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
 	if err != nil {
-
+		return err
 	}
 	json, err := builder.Codec.MarshalJSON(tx)
 	if err != nil {
