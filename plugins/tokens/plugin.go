@@ -90,8 +90,8 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 			break
 		}
 		var automaticSwap swap.AtomicSwap
-		swapKeeper.CDC().MustUnmarshalBinaryBare(iterator.Value(), &automaticSwap)
-		swapID := iterator.Key()[len(swap.HashKey):]
+		swapKeeper.CDC().MustUnmarshalBinaryBare(swapIterator.Value(), &automaticSwap)
+		swapID := swapIterator.Key()[len(swap.HashKey):]
 		result := swap.HandleRefundHashTimerLockedTransferAfterBCFusion(ctx, swapKeeper, swap.RefundHTLTMsg{
 			From:   automaticSwap.From,
 			SwapID: swapID,
