@@ -2,6 +2,7 @@ package timelock
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
@@ -18,9 +19,14 @@ func KeyRecordSubSpace(addr sdk.AccAddress) []byte {
 
 func ParseKeyRecord(key []byte) (sdk.AccAddress, int64, error) {
 	key = bytes.TrimPrefix(key, []byte("record:"))
-	addr := sdk.AccAddress(key[:sdk.AddrLen])
+	accKeyStr := key[:sdk.AddrLen*2]
+	accKeyBytes, err := hex.DecodeString(string(accKeyStr))
+	if err != nil {
+		return []byte{}, 0, err
+	}
+	addr := sdk.AccAddress(accKeyBytes)
 
-	id, err := strconv.ParseInt(string(key[sdk.AddrLen+1:]), 10, 64)
+	id, err := strconv.ParseInt(string(key[sdk.AddrLen*2+1:]), 10, 64)
 	if err != nil {
 		return []byte{}, 0, err
 	}

@@ -19,8 +19,6 @@ import (
 
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	cmn "github.com/tendermint/tendermint/libs/common"
 
 	airdrop "github.com/bnb-chain/node/plugins/recover"
 )
@@ -83,17 +81,16 @@ func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, msg sdk.Msg
 	}
 
 	var tx auth.StdTx
-	if err = builder.Codec.UnmarshalBinaryLengthPrefixed(txBytes, &tx); err == nil {
-		json, err := builder.Codec.MarshalJSON(tx)
-		if err == nil {
-			fmt.Printf("TX JSON: %s\n", json)
-		}
-	}
-	hexBytes := make([]byte, len(txBytes)*2)
-	hex.Encode(hexBytes, txBytes)
-	txHash := cmn.HexBytes(tmhash.Sum(txBytes)).String()
-	fmt.Printf("Transaction hash: %s, Transaction hex: %s\n", txHash, hexBytes)
+	err = builder.Codec.UnmarshalBinaryLengthPrefixed(txBytes, &tx)
+	if err != nil {
 
+	}
+	json, err := builder.Codec.MarshalJSON(tx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("TX JSON: %s\n", json)
 	fmt.Println("Sign Message: ", string(stdMsg.Bytes()))
 	fmt.Println("Sign Message Hash: ", hex.EncodeToString(crypto.Sha256(stdMsg.Bytes())))
 	sig := tx.GetSignatures()[0]

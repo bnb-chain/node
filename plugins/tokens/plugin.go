@@ -97,7 +97,7 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 			SwapID: swapID,
 		})
 		if !result.IsOK() {
-			logger.Error("Refound error", "swapId", swapID)
+			logger.Error("Refund error", "swapId", swapID)
 			continue
 		}
 		i++
