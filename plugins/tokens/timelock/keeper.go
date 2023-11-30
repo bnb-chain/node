@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -86,6 +87,11 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress) []
 	sort.Sort(TimeLockRecords(records))
 
 	return records
+}
+
+func (kp *Keeper) GetTimeLockRecordIterator(ctx sdk.Context) (iterator store.Iterator) {
+	kvStore := ctx.KVStore(kp.storeKey)
+	return sdk.KVStorePrefixIterator(kvStore, []byte{})
 }
 
 func (keeper Keeper) getTimeLockId(ctx sdk.Context, from sdk.AccAddress) int64 {

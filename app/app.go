@@ -55,6 +55,7 @@ import (
 	"github.com/bnb-chain/node/plugins/dex/list"
 	"github.com/bnb-chain/node/plugins/dex/order"
 	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	tokenRecover "github.com/bnb-chain/node/plugins/recover"
 	"github.com/bnb-chain/node/plugins/tokens"
 	"github.com/bnb-chain/node/plugins/tokens/issue"
 	"github.com/bnb-chain/node/plugins/tokens/ownership"
@@ -918,6 +919,7 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 	} else {
 		app.Logger.Debug("normal block", "height", height)
+		tokens.EndBlocker(ctx, app.timeLockKeeper, app.swapKeeper)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
@@ -1156,6 +1158,7 @@ func MakeCodec() *wire.Codec {
 	bridge.RegisterWire(cdc)
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
+	tokenRecover.RegisterWire(cdc)
 	return cdc
 }
 

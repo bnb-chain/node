@@ -7,6 +7,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.25.0
 	github.com/deathowl/go-metrics-prometheus v0.0.0-20200518174047-74482eab5bfb
 	github.com/eapache/go-resiliency v1.1.0
+	github.com/ethereum/go-ethereum v1.11.3
 	github.com/go-kit/kit v0.10.0
 	github.com/google/btree v1.0.0
 	github.com/gorilla/mux v1.8.0
@@ -48,7 +49,6 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/etcd-io/bbolt v1.3.3 // indirect
-	github.com/ethereum/go-ethereum v1.11.3 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210526181520-7df50c8568f8 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
@@ -165,7 +165,8 @@ require (
 
 replace (
 	github.com/Shopify/sarama v1.26.1 => github.com/Shopify/sarama v1.21.0
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/bnc-cosmos-sdk v0.26.6
+	// TODO: bump to official release
+	github.com/cosmos/cosmos-sdk => github.com/j75689/bnc-cosmos-sdk v0.0.0-20231129030639-0bac8422dcb4
 	github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/go-amino => github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2

@@ -19,6 +19,9 @@ func NewHandler(tokenMapper store.Mapper, accKeeper auth.AccountKeeper, keeper b
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case FreezeMsg:
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleFreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)
 		case UnfreezeMsg:
 			return handleUnfreezeToken(ctx, tokenMapper, accKeeper, keeper, msg)

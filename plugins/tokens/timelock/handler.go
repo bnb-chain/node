@@ -11,10 +11,16 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case TimeLockMsg:
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleTimeLock(ctx, keeper, msg)
 		case TimeUnlockMsg:
 			return handleTimeUnlock(ctx, keeper, msg)
 		case TimeRelockMsg:
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleTimeRelock(ctx, keeper, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized time lock message type: %T", msg)

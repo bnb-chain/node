@@ -51,6 +51,59 @@ func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler 
 	return createAbciQueryHandler(mapper, queryPrefix)
 }
 
+const (
+	MaxUnlockItems = 10
+)
+
+func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
+	if !sdk.IsUpgrade(sdk.SecondSunsetFork) {
+		return
+	}
+	logger := bnclog.With("module", "tokens")
+	logger.Info("unlock the time locks", "blockHeight", ctx.BlockHeight())
+
+	iterator := timelockKeeper.GetTimeLockRecordIterator(ctx)
+	defer iterator.Close()
+	i := 0
+	for ; iterator.Valid(); iterator.Next() {
+		if i >= MaxUnlockItems {
+			break
+		}
+		addr, id, err := timelock.ParseKeyRecord(iterator.Key())
+		if err != nil {
+			logger.Error("ParseKeyRecord error", "error", err)
+			continue
+		}
+		err = timelockKeeper.TimeUnlock(ctx, addr, id)
+		if err != nil {
+			logger.Error("TimeUnlock error", "error", err)
+			continue
+		}
+		i++
+	}
+
+	swapIterator := swapKeeper.GetSwapIterator(ctx)
+	defer swapIterator.Close()
+	i = 0
+	for ; swapIterator.Valid(); swapIterator.Next() {
+		if i >= MaxUnlockItems {
+			break
+		}
+		var automaticSwap swap.AtomicSwap
+		swapKeeper.CDC().MustUnmarshalBinaryBare(swapIterator.Value(), &automaticSwap)
+		swapID := swapIterator.Key()[len(swap.HashKey):]
+		result := swap.HandleRefundHashTimerLockedTransferAfterBCFusion(ctx, swapKeeper, swap.RefundHTLTMsg{
+			From:   automaticSwap.From,
+			SwapID: swapID,
+		})
+		if !result.IsOK() {
+			logger.Error("Refund error", "swapId", swapID)
+			continue
+		}
+		i++
+	}
+}
+
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 	logger := bnclog.With("module", "tokens")

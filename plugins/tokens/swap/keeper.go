@@ -41,6 +41,10 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, ck bank.Keeper, addrPool *sdk
 	}
 }
 
+func (keeper Keeper) CDC() *codec.Codec {
+	return keeper.cdc
+}
+
 func (kp *Keeper) CreateSwap(ctx sdk.Context, swapID SwapBytes, swap *AtomicSwap) sdk.Error {
 	if swap == nil {
 		return sdk.ErrInternal("empty atomic swap pointer")
@@ -135,6 +139,11 @@ func (kp *Keeper) GetSwap(ctx sdk.Context, swapID SwapBytes) *AtomicSwap {
 	var swap AtomicSwap
 	kp.cdc.MustUnmarshalBinaryBare(bz, &swap)
 	return &swap
+}
+
+func (kp *Keeper) GetSwapIterator(ctx sdk.Context) (iterator store.Iterator) {
+	kvStore := ctx.KVStore(kp.storeKey)
+	return sdk.KVStorePrefixIterator(kvStore, HashKey)
 }
 
 func (kp *Keeper) GetSwapCreatorIterator(ctx sdk.Context, addr sdk.AccAddress) (iterator store.Iterator) {
