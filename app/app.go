@@ -542,7 +542,24 @@ func (app *BNBBeaconChain) initBridge() {
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.BindChannelID, sdk.ChannelAllow)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferOutChannelID, sdk.ChannelAllow)
 		app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.TransferInChannelID, sdk.ChannelAllow)
+
+		// TODO: only for dev testing
+		if app.scKeeper.GetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorChannelID) != sdk.ChannelAllow {
+			_, err := app.scKeeper.SaveChannelSettingChangeToIbc(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorChannelID, sdk.ChannelAllow)
+			if err != nil {
+				app.Logger.Error("initBridge MirrorChannelID", "SaveChannelSettingChangeToIbc", err)
+			}
+			app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorChannelID, sdk.ChannelAllow)
+		}
+		if app.scKeeper.GetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorSyncChannelID) != sdk.ChannelAllow {
+			_, err := app.scKeeper.SaveChannelSettingChangeToIbc(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorSyncChannelID, sdk.ChannelAllow)
+			if err != nil {
+				app.Logger.Error("initBridge MirrorSyncChannelID", "SaveChannelSettingChangeToIbc", err)
+			}
+			app.scKeeper.SetChannelSendPermission(ctx, sdk.ChainID(ServerContext.BscIbcChainId), bTypes.MirrorSyncChannelID, sdk.ChannelAllow)
+		}
 	})
+
 }
 
 func (app *BNBBeaconChain) initParamHub() {
