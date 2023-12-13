@@ -950,6 +950,9 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
+
+	// That is no deep copy when New IBC Keeper. need to set it again.
+	app.ibcKeeper.SetSideChainKeeper(app.scKeeper)
 	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
