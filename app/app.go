@@ -360,6 +360,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP255, upgradeConfig.BEP255Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FirstSunset, upgradeConfig.FirstSunsetHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.SecondSunset, upgradeConfig.SecondSunsetHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FinalSunset, upgradeConfig.FinalSunsetHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -947,6 +950,9 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
+
+	// That is no deep copy when New IBC Keeper. need to set it again.
+	app.ibcKeeper.SetSideChainKeeper(app.scKeeper)
 	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
