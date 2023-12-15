@@ -127,13 +127,13 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 	return record, nil
 }
 
-func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64) sdk.Error {
+func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64, isBCFusionRefund bool) sdk.Error {
 	record, found := keeper.GetTimeLockRecord(ctx, from, recordId)
 	if !found {
 		return ErrTimeLockRecordDoesNotExist(DefaultCodespace, from, recordId)
 	}
 
-	if ctx.BlockHeader().Time.Before(record.LockTime) {
+	if !isBCFusionRefund && ctx.BlockHeader().Time.Before(record.LockTime) {
 		return ErrCanNotUnlock(DefaultCodespace, fmt.Sprintf("lock time(%s) is after now(%s)",
 			record.LockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
 	}
