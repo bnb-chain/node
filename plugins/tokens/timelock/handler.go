@@ -60,7 +60,7 @@ func handleTimeRelock(ctx sdk.Context, keeper Keeper, msg TimeRelockMsg) sdk.Res
 }
 
 func handleTimeUnlock(ctx sdk.Context, keeper Keeper, msg TimeUnlockMsg) sdk.Result {
-	err := keeper.TimeUnlock(ctx, msg.From, msg.Id)
+	err := keeper.TimeUnlock(ctx, msg.From, msg.Id, false)
 	if err != nil {
 		return err.Result()
 	}
