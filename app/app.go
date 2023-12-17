@@ -133,6 +133,14 @@ type BNBBeaconChain struct {
 	takeSnapshotHeight int64 // whether to take snapshot of current height, set at endblock(), reset at commit()
 }
 
+func (app *BNBBeaconChain) GetStakingKeeper() *stake.Keeper {
+	return &app.stakeKeeper
+}
+
+func (app *BNBBeaconChain) GetSwapKeeper() *swap.Keeper {
+	return &app.swapKeeper
+}
+
 // NewBNBBeaconChain creates a new instance of the BNBBeaconChain.
 func NewBNBBeaconChain(logger log.Logger, db dbm.DB, traceStore io.Writer, baseAppOptions ...func(*baseapp.BaseApp)) *BNBBeaconChain {
 	// create app-level codec for txs and accounts
