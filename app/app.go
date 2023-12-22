@@ -564,6 +564,10 @@ func (app *BNBBeaconChain) initParamHub() {
 	app.RegisterQueryHandler(paramHub.AbciQueryPrefix, func(app types.ChainApp, req abci.RequestQuery, path []string) (res *abci.ResponseQuery) {
 		return handler(app.GetContextForCheckState(), req, path)
 	})
+
+	upgrade.Mgr.RegisterBeginBlocker(sdk.FirstSunsetFork, func(ctx sdk.Context) {
+		app.ParamHub.SetSyncFeeAfterFirstSunsetFork(ctx)
+	})
 }
 
 func (app *BNBBeaconChain) initStaking() {
