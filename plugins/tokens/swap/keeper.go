@@ -141,6 +141,16 @@ func (kp *Keeper) GetSwap(ctx sdk.Context, swapID SwapBytes) *AtomicSwap {
 	return &swap
 }
 
+func (kp *Keeper) GetLatestProcessedRefundSwapKey(ctx sdk.Context) []byte {
+	kvStore := ctx.KVStore(kp.storeKey)
+	return kvStore.Get(LatestProcessedRefundSwapKey)
+}
+
+func (kp *Keeper) SetLatestProcessedRefundSwapKey(ctx sdk.Context, key []byte) {
+	kvStore := ctx.KVStore(kp.storeKey)
+	kvStore.Set(LatestProcessedRefundSwapKey, key)
+}
+
 func (kp *Keeper) GetSwapIterator(ctx sdk.Context) (iterator store.Iterator) {
 	kvStore := ctx.KVStore(kp.storeKey)
 	return sdk.KVStorePrefixIterator(kvStore, HashKey)

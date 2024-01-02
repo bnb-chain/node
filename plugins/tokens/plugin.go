@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -71,21 +72,29 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 		}
 		addr, id, err := timelock.ParseKeyRecord(iterator.Key())
 		if err != nil {
-			logger.Error("ParseKeyRecord error", "error", err)
+			logger.Error("failed to parse timelock record", "error", err)
 			continue
 		}
 		err = timelockKeeper.TimeUnlock(ctx, addr, id, true)
 		if err != nil {
-			logger.Error("TimeUnlock error", "error", err)
+			logger.Error("failed to unlock the time locks", "error", err)
 			continue
 		}
+		logger.Info("succeed to unlock the time locks", "addr", addr, "id", id)
 		i++
 	}
 
 	swapIterator := swapKeeper.GetSwapIterator(ctx)
 	defer swapIterator.Close()
 	i = 0
+	lastProcessedRefundSwapKey := swapKeeper.GetLatestProcessedRefundSwapKey(ctx)
 	for ; swapIterator.Valid(); swapIterator.Next() {
+		if len(lastProcessedRefundSwapKey) > 0 &&
+			bytes.Compare(swapIterator.Key(), lastProcessedRefundSwapKey) <= 0 {
+			// skip the processed swap
+			continue
+		}
+
 		if i >= MaxUnlockItems {
 			break
 		}
@@ -104,9 +113,12 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 			SwapID: swapID,
 		})
 		if !result.IsOK() {
-			logger.Error("Refund error", "swapId", swapID, "result", fmt.Sprintf("%+v", result))
+			logger.Error("failed to refund swap", "swapId", swapID, "result", fmt.Sprintf("%+v", result))
 			continue
 		}
+
+		logger.Info("succeed to refund swap", "swapId", swapID, "swap", fmt.Sprintf("%+v", swapItem))
+		swapKeeper.SetLatestProcessedRefundSwapKey(ctx, swapIterator.Key())
 		i++
 	}
 }
