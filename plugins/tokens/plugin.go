@@ -118,9 +118,11 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 		}
 
 		logger.Info("succeed to refund swap", "swapId", swapID, "swap", fmt.Sprintf("%+v", swapItem))
-		swapKeeper.SetLatestProcessedRefundSwapKey(ctx, swapIterator.Key())
+		lastProcessedRefundSwapKey = swapIterator.Key()
 		i++
 	}
+
+	swapKeeper.SetLatestProcessedRefundSwapKey(ctx, lastProcessedRefundSwapKey)
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
