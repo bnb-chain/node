@@ -11,12 +11,11 @@ const (
 )
 
 var (
-	HashKey                      = []byte{0x01}
-	SwapCreatorQueueKey          = []byte{0x02}
-	SwapRecipientQueueKey        = []byte{0x03}
-	SwapCloseTimeKey             = []byte{0x04}
-	SwapIndexKey                 = []byte{0x05}
-	LatestProcessedRefundSwapKey = []byte{0x06}
+	HashKey               = []byte{0x01}
+	SwapCreatorQueueKey   = []byte{0x02}
+	SwapRecipientQueueKey = []byte{0x03}
+	SwapCloseTimeKey      = []byte{0x04}
+	SwapIndexKey          = []byte{0x05}
 )
 
 func BuildHashKey(randomNumberHash []byte) []byte {

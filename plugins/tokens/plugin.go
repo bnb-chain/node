@@ -1,7 +1,6 @@
 package tokens
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -87,14 +86,7 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 	swapIterator := swapKeeper.GetSwapIterator(ctx)
 	defer swapIterator.Close()
 	i = 0
-	lastProcessedRefundSwapKey := swapKeeper.GetLatestProcessedRefundSwapKey(ctx)
 	for ; swapIterator.Valid(); swapIterator.Next() {
-		if len(lastProcessedRefundSwapKey) > 0 &&
-			bytes.Compare(swapIterator.Key(), lastProcessedRefundSwapKey) <= 0 {
-			// skip the processed swap
-			continue
-		}
-
 		if i >= MaxUnlockItems {
 			break
 		}
@@ -118,11 +110,8 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 		}
 
 		logger.Info("succeed to refund swap", "swapId", swapID, "swap", fmt.Sprintf("%+v", swapItem))
-		lastProcessedRefundSwapKey = swapIterator.Key()
 		i++
 	}
-
-	swapKeeper.SetLatestProcessedRefundSwapKey(ctx, lastProcessedRefundSwapKey)
 }
 
 // EndBreatheBlock processes the breathe block lifecycle event.
