@@ -71,14 +71,15 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 		}
 		addr, id, err := timelock.ParseKeyRecord(iterator.Key())
 		if err != nil {
-			logger.Error("ParseKeyRecord error", "error", err)
+			logger.Error("failed to parse timelock record", "error", err)
 			continue
 		}
 		err = timelockKeeper.TimeUnlock(ctx, addr, id, true)
 		if err != nil {
-			logger.Error("TimeUnlock error", "error", err)
+			logger.Error("failed to unlock the time locks", "error", err)
 			continue
 		}
+		logger.Info("succeed to unlock the time locks", "addr", addr, "id", id)
 		i++
 	}
 
@@ -104,9 +105,11 @@ func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap
 			SwapID: swapID,
 		})
 		if !result.IsOK() {
-			logger.Error("Refund error", "swapId", swapID, "result", fmt.Sprintf("%+v", result))
+			logger.Error("failed to refund swap", "swapId", swapID, "result", fmt.Sprintf("%+v", result))
 			continue
 		}
+
+		logger.Info("succeed to refund swap", "swapId", swapID, "swap", fmt.Sprintf("%+v", swapItem))
 		i++
 	}
 }
