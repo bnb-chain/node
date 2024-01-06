@@ -628,6 +628,8 @@ func (app *BNBBeaconChain) initStaking() {
 		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
 		// enable channel but not send cross chain msg
 		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.StakeMigrationChannelID, sdk.ChannelAllow)
+		// register msg fee calculator
+		fees.CalculatorsGen["side_stake_migration"] = fees.FixedFeeCalculatorGen
 	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
