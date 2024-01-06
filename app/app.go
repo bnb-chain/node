@@ -63,6 +63,7 @@ import (
 	"github.com/bnb-chain/node/plugins/tokens/swap"
 	"github.com/bnb-chain/node/plugins/tokens/timelock"
 	"github.com/bnb-chain/node/wire"
+	stakeMigration "github.com/cosmos/cosmos-sdk/x/stake/stake_migration"
 )
 
 const (
@@ -623,6 +624,11 @@ func (app *BNBBeaconChain) initStaking() {
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.ClearUpSideVoteAddrs(newCtx)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.FirstSunsetFork, func(ctx sdk.Context) {
+		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
+		// enable channel but not send cross chain msg
+		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.StakeMigrationChannelID, sdk.ChannelAllow)
+	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
@@ -630,6 +636,13 @@ func (app *BNBBeaconChain) initStaking() {
 	// register cross stake channel
 	crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
 	err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+	if err != nil {
+		panic(err)
+	}
+
+	// register stake migration channel
+	stakeMigrationApp := stakeMigration.NewStakeMigrationApp(app.stakeKeeper)
+	err = app.scKeeper.RegisterChannel(sTypes.StakeMigrationChannel, sTypes.StakeMigrationChannelID, stakeMigrationApp)
 	if err != nil {
 		panic(err)
 	}
