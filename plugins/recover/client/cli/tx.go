@@ -92,14 +92,14 @@ func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, msg sdk.Msg
 
 	fmt.Printf("TX JSON: %s\n", json)
 	fmt.Println("Sign Message: ", string(stdMsg.Bytes()))
-	fmt.Println("Sign Message Hash: ", hex.EncodeToString(crypto.Sha256(stdMsg.Bytes())))
+	fmt.Println("Sign Message Hash: ", "0x"+hex.EncodeToString(crypto.Sha256(stdMsg.Bytes())))
 	sig := tx.GetSignatures()[0]
-	fmt.Printf("Signature: %s\n", hex.EncodeToString(sig.Signature))
+	fmt.Printf("Signature: %s\n", "0x"+hex.EncodeToString(sig.Signature))
 	var originPubKey secp256k1.PubKeySecp256k1
 	err = builder.Codec.UnmarshalBinaryBare(sig.PubKey.Bytes(), &originPubKey)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("PubKey: %s\n", hex.EncodeToString(originPubKey))
+	fmt.Printf("PubKey: %s\n", "0x"+hex.EncodeToString(originPubKey))
 	return nil
 }
