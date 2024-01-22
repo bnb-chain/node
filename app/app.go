@@ -898,7 +898,7 @@ func (app *BNBBeaconChain) isBreatheBlock(height int64, lastBlockTime time.Time,
 	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
 	// state sync from breathe block, the height is breathe block + 1)
 	if app.baseConfig.BreatheBlockInterval > 0 {
-		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
+		return !lastBlockTime.IsZero() && !utils.SamePeriodInUTC(lastBlockTime, blockTime, int64(app.baseConfig.BreatheBlockInterval))
 	} else {
 		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
