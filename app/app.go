@@ -55,6 +55,7 @@ import (
 	"github.com/bnb-chain/node/plugins/dex/list"
 	"github.com/bnb-chain/node/plugins/dex/order"
 	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	migrate "github.com/bnb-chain/node/plugins/migrate"
 	tokenRecover "github.com/bnb-chain/node/plugins/recover"
 	"github.com/bnb-chain/node/plugins/tokens"
 	"github.com/bnb-chain/node/plugins/tokens/issue"
@@ -1178,6 +1179,7 @@ func MakeCodec() *wire.Codec {
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
 	tokenRecover.RegisterWire(cdc)
+	migrate.RegisterWire(cdc)
 	return cdc
 }
 

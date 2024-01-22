@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -20,46 +19,34 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 
-	airdrop "github.com/bnb-chain/node/plugins/recover"
+	"github.com/bnb-chain/node/plugins/migrate"
 )
 
 const (
-	flagAmount      = "amount"
-	flagTokenSymbol = "token-symbol"
-	flagRecipient   = "recipient"
+	flagBSCOperatorAddress = "bsc-operator-address"
 )
 
-func SignTokenRecoverRequestCmd(cdc *codec.Codec) *cobra.Command {
+func SignValidatorOwnerShipCmd(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sign-token-recover-request",
-		Short: "get token recover request sign data",
+		Use:   "sign-validator-ownership",
+		Short: "get validator ownership sign data",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
 				WithCodec(cdc).
 				WithAccountDecoder(authcmd.GetAccountDecoder(cdc))
+			bscOperator := viper.GetString(flagBSCOperatorAddress)
 
-			amount := viper.GetInt64(flagAmount)
-			tokenSymbol := viper.GetString(flagTokenSymbol)
-			recipient := viper.GetString(flagRecipient)
-			msg := airdrop.NewTokenRecoverRequestMsg(tokenSymbol, uint64(amount), strings.ToLower(common.HexToAddress(recipient).Hex()))
-
-			sdkErr := msg.ValidateBasic()
-			if sdkErr != nil {
-				return fmt.Errorf("%v", sdkErr.Data())
-			}
-			return SignAndPrint(cliCtx, txBldr, msg)
+			return SignAndPrint(cliCtx, txBldr, common.HexToAddress(bscOperator))
 		},
 	}
 
-	cmd.Flags().String(flagTokenSymbol, "", "owner token symbol")
-	cmd.Flags().Int64(flagAmount, 0, "amount of token")
-	cmd.Flags().String(flagRecipient, "", "bsc recipient address")
+	cmd.Flags().String(flagBSCOperatorAddress, "", "bsc operator address")
 
 	return cmd
 }
 
-func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, msg sdk.Msg) error {
+func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, bscOperator common.Address) error {
 	name, err := ctx.GetFromName()
 	if err != nil {
 		return err
@@ -69,6 +56,8 @@ func SignAndPrint(ctx context.CLIContext, builder authtxb.TxBuilder, msg sdk.Msg
 	if err != nil {
 		return err
 	}
+
+	msg := migrate.NewValidatorOwnerShipMsg(bscOperator)
 
 	// build and sign the transaction
 	stdMsg, err := builder.Build([]sdk.Msg{msg})
