@@ -49,7 +49,10 @@ const (
 	BEP171                      = sdk.BEP171 // https://github.com/bnb-chain/BEPs/pull/171 Security Enhancement for Cross-Chain Module
 	BEP173                      = sdk.BEP173 // https://github.com/bnb-chain/BEPs/pull/173 Text Proposal
 	FixDoubleSignChainId        = sdk.FixDoubleSignChainId
-	BEP255                      = sdk.BEP255 // https://github.com/bnb-chain/BEPs/pull/255 Asset Reconciliation for Security Enhancement
+	BEP255                      = sdk.BEP255           // https://github.com/bnb-chain/BEPs/pull/255 Asset Reconciliation for Security Enhancement
+	FirstSunset                 = sdk.FirstSunsetFork  // https://github.com/bnb-chain/BEPs/pull/333 BNB Chain Fusion
+	SecondSunset                = sdk.SecondSunsetFork // https://github.com/bnb-chain/BEPs/pull/333 BNB Chain Fusion
+	FinalSunset                 = sdk.FinalSunsetFork  // https://github.com/bnb-chain/BEPs/pull/333 BNB Chain Fusion
 )
 
 func UpgradeBEP10(before func(), after func()) {
