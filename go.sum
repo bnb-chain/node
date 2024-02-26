@@ -178,8 +178,8 @@ github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJm
 github.com/bketelsen/crypt v0.0.4/go.mod h1:aI6NrJ0pMGgvZKL1iVgXLnfIFJtfV+bKCoqOes/6LfM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20240131020427-f8fc0b8f70cb h1:qJqdTaveK4cJgl/lwHkIlsDNHOYRVu9sC/6O1qkMlcE=
-github.com/bnb-chain/bnc-cosmos-sdk v0.26.5-0.20240131020427-f8fc0b8f70cb/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
+github.com/bnb-chain/bnc-cosmos-sdk v0.26.7 h1:6dnRDvX5Q31+uJSvw3OhK8zb5kUeEX+dWvw9XbR4IEg=
+github.com/bnb-chain/bnc-cosmos-sdk v0.26.7/go.mod h1:OjdXpDHofs6gcPLM9oGD+mm8DPc6Lsevz0Kia53zt3Q=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2 h1:iAlp9gqG0f2LGAauf3ZiijWlT6NI+W2r9y70HH9LI3k=
 github.com/bnb-chain/bnc-go-amino v0.14.1-binance.2/go.mod h1:LiCO7jev+3HwLGAiN9gpD0z+jTz95RqgSavbse55XOY=
 github.com/bnb-chain/bnc-tendermint v0.32.3-bc.10 h1:E4iSwEbJCLYchHiHE1gnOM3jjmJXLBxARhy/RCl8CpI=
