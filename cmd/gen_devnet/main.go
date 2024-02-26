@@ -75,7 +75,7 @@ func main() {
 		bnbBeaconChainConfig.UpgradeConfig.BEP159Height = 3
 		bnbBeaconChainConfig.UpgradeConfig.BEP159Phase2Height = 6
 		bnbBeaconChainConfig.UpgradeConfig.LimitConsAddrUpdateIntervalHeight = 6
-		bnbBeaconChainConfig.BreatheBlockInterval = 5
+		bnbBeaconChainConfig.BreatheBlockInterval = 15
 		appConfigFilePath := filepath.Join(ctxConfig.RootDir, "config", "app.toml")
 		config.WriteConfigFile(appConfigFilePath, bnbBeaconChainConfig)
 		// pk
