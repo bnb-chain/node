@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.10.17
+This is the release for the sunset of BNB Beacon Chain.
+
+FEATURES
+* [\#977](https://github.com/bnb-chain/node/pull/1003) [BEP] feat: implement BEP-333(BNB Chain Fusion)
+
+
 ## v0.10.16
 FEATURES
 * [\#977](https://github.com/bnb-chain/node/pull/977) [BEP] asset: add bep255 upgrade height for mainnet
