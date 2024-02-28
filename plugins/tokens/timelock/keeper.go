@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -88,6 +89,11 @@ func (keeper Keeper) GetTimeLockRecords(ctx sdk.Context, addr sdk.AccAddress) []
 	return records
 }
 
+func (kp *Keeper) GetTimeLockRecordIterator(ctx sdk.Context) (iterator store.Iterator) {
+	kvStore := ctx.KVStore(kp.storeKey)
+	return sdk.KVStorePrefixIterator(kvStore, []byte{})
+}
+
 func (keeper Keeper) getTimeLockId(ctx sdk.Context, from sdk.AccAddress) int64 {
 	acc := keeper.ak.GetAccount(ctx, from)
 	return acc.GetSequence()
@@ -121,13 +127,13 @@ func (keeper Keeper) TimeLock(ctx sdk.Context, from sdk.AccAddress, description 
 	return record, nil
 }
 
-func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64) sdk.Error {
+func (keeper Keeper) TimeUnlock(ctx sdk.Context, from sdk.AccAddress, recordId int64, isBCFusionRefund bool) sdk.Error {
 	record, found := keeper.GetTimeLockRecord(ctx, from, recordId)
 	if !found {
 		return ErrTimeLockRecordDoesNotExist(DefaultCodespace, from, recordId)
 	}
 
-	if ctx.BlockHeader().Time.Before(record.LockTime) {
+	if !isBCFusionRefund && ctx.BlockHeader().Time.Before(record.LockTime) {
 		return ErrCanNotUnlock(DefaultCodespace, fmt.Sprintf("lock time(%s) is after now(%s)",
 			record.LockTime.UTC().String(), ctx.BlockHeader().Time.UTC().String()))
 	}

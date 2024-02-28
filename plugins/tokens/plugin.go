@@ -51,6 +51,76 @@ func createQueryHandler(mapper Mapper, queryPrefix string) app.AbciQueryHandler 
 	return createAbciQueryHandler(mapper, queryPrefix)
 }
 
+const (
+	MaxUnlockItems = 10
+)
+
+func EndBlocker(ctx sdk.Context, timelockKeeper timelock.Keeper, swapKeeper swap.Keeper) {
+	if !sdk.IsUpgrade(sdk.SecondSunsetFork) {
+		return
+	}
+	logger := bnclog.With("module", "tokens")
+	logger.Info("unlock the time locks", "blockHeight", ctx.BlockHeight())
+
+	iterator := timelockKeeper.GetTimeLockRecordIterator(ctx)
+	defer iterator.Close()
+	i := 0
+	failedCount := 0
+	for ; iterator.Valid(); iterator.Next() {
+		addr, id, err := timelock.ParseKeyRecord(iterator.Key())
+		if err != nil {
+			logger.Error("failed to parse timelock record", "error", err)
+			failedCount++
+			continue
+		}
+		err = timelockKeeper.TimeUnlock(ctx, addr, id, true)
+		if err != nil {
+			logger.Error("failed to unlock the time locks", "error", err)
+			failedCount++
+			continue
+		}
+		logger.Info("succeed to unlock the time locks", "addr", addr, "id", id)
+		i++
+		if i >= MaxUnlockItems {
+			break
+		}
+	}
+	logger.Info("unlock the time locks done", "blockHeight", ctx.BlockHeight(), "succeed", i, "failed", failedCount)
+
+	swapIterator := swapKeeper.GetSwapIterator(ctx)
+	defer swapIterator.Close()
+	i = 0
+	failedCount = 0
+	for ; swapIterator.Valid(); swapIterator.Next() {
+		var automaticSwap swap.AtomicSwap
+		swapKeeper.CDC().MustUnmarshalBinaryBare(swapIterator.Value(), &automaticSwap)
+		swapID := swapIterator.Key()[len(swap.HashKey):]
+		swapItem := swapKeeper.GetSwap(ctx, swapID)
+		if swapItem == nil {
+			continue
+		}
+		if swapItem.Status != swap.Open {
+			continue
+		}
+		result := swap.HandleRefundHashTimerLockedTransferAfterBCFusion(ctx, swapKeeper, swap.RefundHTLTMsg{
+			From:   automaticSwap.From,
+			SwapID: swapID,
+		})
+		if !result.IsOK() {
+			logger.Error("failed to refund swap", "swapId", swapID, "result", fmt.Sprintf("%+v", result))
+			failedCount++
+			continue
+		}
+
+		logger.Info("succeed to refund swap", "swapId", swapID, "swap", fmt.Sprintf("%+v", swapItem))
+		i++
+		if i >= MaxUnlockItems {
+			break
+		}
+	}
+	logger.Info("refund the swaps done", "blockHeight", ctx.BlockHeight(), "succeed", i, "failed", failedCount)
+}
+
 // EndBreatheBlock processes the breathe block lifecycle event.
 func EndBreatheBlock(ctx sdk.Context, swapKeeper swap.Keeper) {
 	logger := bnclog.With("module", "tokens")

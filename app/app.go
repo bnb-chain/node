@@ -55,6 +55,8 @@ import (
 	"github.com/bnb-chain/node/plugins/dex/list"
 	"github.com/bnb-chain/node/plugins/dex/order"
 	dextypes "github.com/bnb-chain/node/plugins/dex/types"
+	migrate "github.com/bnb-chain/node/plugins/migrate"
+	tokenRecover "github.com/bnb-chain/node/plugins/recover"
 	"github.com/bnb-chain/node/plugins/tokens"
 	"github.com/bnb-chain/node/plugins/tokens/issue"
 	"github.com/bnb-chain/node/plugins/tokens/ownership"
@@ -62,6 +64,7 @@ import (
 	"github.com/bnb-chain/node/plugins/tokens/swap"
 	"github.com/bnb-chain/node/plugins/tokens/timelock"
 	"github.com/bnb-chain/node/wire"
+	stakeMigration "github.com/cosmos/cosmos-sdk/x/stake/stake_migration"
 )
 
 const (
@@ -359,6 +362,9 @@ func SetUpgradeConfig(upgradeConfig *config.UpgradeConfig) {
 	upgrade.Mgr.AddUpgradeHeight(upgrade.FixDoubleSignChainId, upgradeConfig.FixDoubleSignChainIdHeight)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP126, upgradeConfig.BEP126Height)
 	upgrade.Mgr.AddUpgradeHeight(upgrade.BEP255, upgradeConfig.BEP255Height)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FirstSunset, upgradeConfig.FirstSunsetHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.SecondSunset, upgradeConfig.SecondSunsetHeight)
+	upgrade.Mgr.AddUpgradeHeight(upgrade.FinalSunset, upgradeConfig.FinalSunsetHeight)
 
 	// register store keys of upgrade
 	upgrade.Mgr.RegisterStoreKeys(upgrade.BEP9, common.TimeLockStoreKey.Name())
@@ -619,6 +625,11 @@ func (app *BNBBeaconChain) initStaking() {
 		newCtx := ctx.WithSideChainKeyPrefix(storePrefix)
 		app.stakeKeeper.ClearUpSideVoteAddrs(newCtx)
 	})
+	upgrade.Mgr.RegisterBeginBlocker(sdk.FirstSunsetFork, func(ctx sdk.Context) {
+		chainId := sdk.ChainID(ServerContext.BscIbcChainId)
+		// enable channel but not send cross chain msg
+		app.scKeeper.SetChannelSendPermission(ctx, chainId, sTypes.StakeMigrationChannelID, sdk.ChannelAllow)
+	})
 	app.stakeKeeper.SubscribeParamChange(app.ParamHub)
 	app.stakeKeeper.SubscribeBCParamChange(app.ParamHub)
 	app.stakeKeeper = app.stakeKeeper.WithHooks(app.slashKeeper.Hooks())
@@ -626,6 +637,13 @@ func (app *BNBBeaconChain) initStaking() {
 	// register cross stake channel
 	crossStakeApp := cStake.NewCrossStakeApp(app.stakeKeeper)
 	err := app.scKeeper.RegisterChannel(sTypes.CrossStakeChannel, sTypes.CrossStakeChannelID, crossStakeApp)
+	if err != nil {
+		panic(err)
+	}
+
+	// register stake migration channel
+	stakeMigrationApp := stakeMigration.NewStakeMigrationApp(app.stakeKeeper)
+	err = app.scKeeper.RegisterChannel(sTypes.StakeMigrationChannel, sTypes.StakeMigrationChannelID, stakeMigrationApp)
 	if err != nil {
 		panic(err)
 	}
@@ -880,7 +898,7 @@ func (app *BNBBeaconChain) isBreatheBlock(height int64, lastBlockTime time.Time,
 	// lastBlockTime is zero if this blockTime is for the first block (first block doesn't mean height = 1, because after
 	// state sync from breathe block, the height is breathe block + 1)
 	if app.baseConfig.BreatheBlockInterval > 0 {
-		return height%int64(app.baseConfig.BreatheBlockInterval) == 0
+		return !lastBlockTime.IsZero() && !utils.SamePeriodInUTC(lastBlockTime, blockTime, int64(app.baseConfig.BreatheBlockInterval))
 	} else {
 		return !lastBlockTime.IsZero() && !utils.SameDayInUTC(lastBlockTime, blockTime)
 	}
@@ -918,6 +936,7 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 		tokens.EndBreatheBlock(ctx, app.swapKeeper)
 	} else {
 		app.Logger.Debug("normal block", "height", height)
+		tokens.EndBlocker(ctx, app.timeLockKeeper, app.swapKeeper)
 	}
 
 	app.DexKeeper.StoreTradePrices(ctx)
@@ -945,6 +964,9 @@ func (app *BNBBeaconChain) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock)
 	} else if ctx.RouterCallRecord()["stake"] || sdk.IsUpgrade(upgrade.BEP128) {
 		validatorUpdates, completedUbd = stake.EndBlocker(ctx, app.stakeKeeper)
 	}
+
+	// That is no deep copy when New IBC Keeper. need to set it again.
+	app.ibcKeeper.SetSideChainKeeper(app.scKeeper)
 	ibc.EndBlocker(ctx, app.ibcKeeper)
 	if len(validatorUpdates) != 0 {
 		app.ValAddrCache.ClearCache()
@@ -1156,6 +1178,8 @@ func MakeCodec() *wire.Codec {
 	bridge.RegisterWire(cdc)
 	oracle.RegisterWire(cdc)
 	ibc.RegisterWire(cdc)
+	tokenRecover.RegisterWire(cdc)
+	migrate.RegisterWire(cdc)
 	return cdc
 }
 

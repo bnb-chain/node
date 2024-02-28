@@ -21,6 +21,9 @@ import (
 // NewHandler creates a new token issue message handler
 func NewHandler(tokenMapper store.Mapper, keeper bank.Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+		if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+			return sdk.ErrMsgNotSupported("").Result()
+		}
 		switch msg := msg.(type) {
 		case IssueMsg:
 			return handleIssueToken(ctx, tokenMapper, keeper, msg)
@@ -62,7 +65,7 @@ func handleIssueToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank
 	return issue(ctx, logger, tokenMapper, bankKeeper, token)
 }
 
-//Mint MiniToken is also handled by this function
+// Mint MiniToken is also handled by this function
 func handleMintToken(ctx sdk.Context, tokenMapper store.Mapper, bankKeeper bank.Keeper, msg MintMsg) sdk.Result {
 	symbol := strings.ToUpper(msg.Symbol)
 	logger := log.With("module", "token", "symbol", symbol, "amount", msg.Amount, "minter", msg.From)

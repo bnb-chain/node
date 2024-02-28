@@ -12,13 +12,19 @@ func NewHandler(kp Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case HTLTMsg:
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleHashTimerLockedTransfer(ctx, kp, msg)
 		case DepositHTLTMsg:
+			if sdk.IsUpgrade(sdk.FirstSunsetFork) {
+				return sdk.ErrMsgNotSupported("").Result()
+			}
 			return handleDepositHashTimerLockedTransfer(ctx, kp, msg)
 		case ClaimHTLTMsg:
 			return handleClaimHashTimerLockedTransfer(ctx, kp, msg)
 		case RefundHTLTMsg:
-			return handleRefundHashTimerLockedTransfer(ctx, kp, msg)
+			return handleRefundHashTimerLockedTransfer(ctx, kp, msg, false)
 		default:
 			errMsg := fmt.Sprintf("unrecognized message type: %T", msg)
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -158,7 +164,11 @@ func handleClaimHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg ClaimHTL
 	return sdk.Result{Tags: tags}
 }
 
-func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg) sdk.Result {
+func HandleRefundHashTimerLockedTransferAfterBCFusion(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg) sdk.Result {
+	return handleRefundHashTimerLockedTransfer(ctx, kp, msg, true)
+}
+
+func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundHTLTMsg, isBCFusionRefund bool) sdk.Result {
 	swap := kp.GetSwap(ctx, msg.SwapID)
 	if swap == nil {
 		return ErrNonExistSwapID(fmt.Sprintf("No matched swap with swapID %v", msg.SwapID)).Result()
@@ -166,8 +176,10 @@ func handleRefundHashTimerLockedTransfer(ctx sdk.Context, kp Keeper, msg RefundH
 	if swap.Status != Open {
 		return ErrUnexpectedSwapStatus(fmt.Sprintf("Expected swap status is Open, actually it is %s", swap.Status.String())).Result()
 	}
-	if ctx.BlockHeight() < swap.ExpireHeight {
-		return ErrRefundUnexpiredSwap(fmt.Sprintf("Current block height is %d, the expire height (%d) is still not reached", ctx.BlockHeight(), swap.ExpireHeight)).Result()
+	if !isBCFusionRefund {
+		if ctx.BlockHeight() < swap.ExpireHeight {
+			return ErrRefundUnexpiredSwap(fmt.Sprintf("Current block height is %d, the expire height (%d) is still not reached", ctx.BlockHeight(), swap.ExpireHeight)).Result()
+		}
 	}
 
 	tags := sdk.EmptyTags()

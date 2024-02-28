@@ -12,3 +12,7 @@ func Now() time.Time {
 func SameDayInUTC(first, second time.Time) bool {
 	return first.Unix()/SecondsPerDay == second.Unix()/SecondsPerDay
 }
+
+func SamePeriodInUTC(first, second time.Time, period int64) bool {
+	return first.Unix()/period == second.Unix()/period
+}

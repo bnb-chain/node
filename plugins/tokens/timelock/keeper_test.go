@@ -142,7 +142,7 @@ func TestKeeper_TimeUnlock_RecordNotExist(t *testing.T) {
 
 	_, acc := testutils.NewAccount(ctx, accKeeper, 0)
 
-	err := keeper.TimeUnlock(ctx, acc.GetAddress(), 1)
+	err := keeper.TimeUnlock(ctx, acc.GetAddress(), 1, false)
 	require.NotNil(t, err)
 	require.Equal(t, err.Code(), CodeTimeLockRecordDoesNotExist)
 }
@@ -169,7 +169,7 @@ func TestKeeper_TimeUnlock_ErrLockTime(t *testing.T) {
 	record, err := keeper.TimeLock(ctx, acc.GetAddress(), "Test", lockCoins, time.Now().Add(1000*time.Second))
 	require.Nil(t, err)
 
-	err = keeper.TimeUnlock(ctx, acc.GetAddress(), record.Id)
+	err = keeper.TimeUnlock(ctx, acc.GetAddress(), record.Id, false)
 	require.NotNil(t, err)
 	require.Equal(t, err.Code(), CodeCanNotUnlock)
 }
@@ -197,7 +197,7 @@ func TestKeeper_TimeUnlock_Success(t *testing.T) {
 	require.Nil(t, err)
 
 	ctx = ctx.WithBlockTime(time.Now().Add(2000 * time.Second))
-	err = keeper.TimeUnlock(ctx, acc.GetAddress(), record.Id)
+	err = keeper.TimeUnlock(ctx, acc.GetAddress(), record.Id, false)
 	require.Nil(t, err)
 }
 

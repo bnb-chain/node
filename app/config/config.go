@@ -103,6 +103,12 @@ FixDoubleSignChainIdHeight = {{ .UpgradeConfig.FixDoubleSignChainIdHeight }}
 BEP126Height = {{ .UpgradeConfig.BEP126Height }}
 # Block height of BEP255 upgrade
 BEP255Height = {{ .UpgradeConfig.BEP255Height }}
+# Block height of FirstSunset upgrade
+FirstSunsetHeight = {{ .UpgradeConfig.FirstSunsetHeight }}
+# Block height of SecondSunset upgrade
+SecondSunsetHeight = {{ .UpgradeConfig.SecondSunsetHeight }}
+# Block height of FinalSunset upgrade
+FinalSunsetHeight = {{ .UpgradeConfig.FinalSunsetHeight }}
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
@@ -552,6 +558,9 @@ type UpgradeConfig struct {
 	FixDoubleSignChainIdHeight                      int64 `mapstructure:"FixDoubleSignChainIdHeight"`
 	BEP126Height                                    int64 `mapstructure:"BEP126Height"`
 	BEP255Height                                    int64 `mapstructure:"BEP255Height"`
+	FirstSunsetHeight                               int64 `mapstructure:"FirstSunsetHeight"`
+	SecondSunsetHeight                              int64 `mapstructure:"SecondSunsetHeight"`
+	FinalSunsetHeight                               int64 `mapstructure:"FinalSunsetHeight"`
 }
 
 func defaultUpgradeConfig() *UpgradeConfig {
@@ -586,7 +595,10 @@ func defaultUpgradeConfig() *UpgradeConfig {
 		BEP171Height:                      math.MaxInt64,
 		FixFailAckPackageHeight:           math.MaxInt64,
 		EnableAccountScriptsForCrossChainTransferHeight: math.MaxInt64,
-		BEP255Height: math.MaxInt64,
+		BEP255Height:       math.MaxInt64,
+		FirstSunsetHeight:  math.MaxInt64,
+		SecondSunsetHeight: math.MaxInt64,
+		FinalSunsetHeight:  math.MaxInt64,
 	}
 }
 
