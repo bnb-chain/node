@@ -4,7 +4,7 @@
 This is the buf-fix release for the sunset of BNB Beacon Chain.
 
 FEATURES
-* [\#1004](https://github.com/bnb-chain/node/pull/1004) [fix] fix: publish completed UnbondingDelegation events to kafka in EndBlock
+* [\#1014](https://github.com/bnb-chain/node/pull/1014) [fix] fix: publish completed UnbondingDelegation events to kafka in EndBlock
 
 
 ## v0.10.17
