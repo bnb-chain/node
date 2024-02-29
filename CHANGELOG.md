@@ -1,10 +1,17 @@
 # Changelog
 
+## v0.10.18
+This is the buf-fix release for the sunset of BNB Beacon Chain.
+
+FEATURES
+* [\#1004](https://github.com/bnb-chain/node/pull/1004) [fix] fix: publish completed UnbondingDelegation events to kafka in EndBlock
+
+
 ## v0.10.17
 This is the release for the sunset of BNB Beacon Chain.
 
 FEATURES
-* [\#977](https://github.com/bnb-chain/node/pull/1003) [BEP] feat: implement BEP-333(BNB Chain Fusion)
+* [\#1003](https://github.com/bnb-chain/node/pull/1003) [BEP] feat: implement BEP-333(BNB Chain Fusion)
 
 
 ## v0.10.16
