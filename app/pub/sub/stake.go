@@ -96,7 +96,11 @@ func SubscribeStakeEvent(sub *pubsub.Subscriber) error {
 			stagingArea.StakeData.appendDelegateEvent(e.ChainId, e.DelegateEvent)
 		case stake.ChainUndelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("undelegate event: %v \n", e))
-			stagingArea.StakeData.appendUnDelegateEvent(e.ChainId, e.UndelegateEvent)
+			if e.IsFromTx {
+				stagingArea.StakeData.appendUnDelegateEvent(e.ChainId, e.UndelegateEvent)
+			} else {
+				toPublish.EventData.StakeData.appendUnDelegateEvent(e.ChainId, e.UndelegateEvent)
+			}
 		case stake.ChainRedelegateEvent:
 			sub.Logger.Debug(fmt.Sprintf("redelegate event: %v \n", e))
 			stagingArea.StakeData.appendReDelegateEvent(e.ChainId, e.RedelegateEvent)
