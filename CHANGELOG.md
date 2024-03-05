@@ -1,7 +1,13 @@
 # Changelog
 
+## v0.10.19
+This is the bug-fix release for the sunset of BNB Beacon Chain.
+
+FEATURES
+* [\#1015](https://github.com/bnb-chain/node/pull/1015) [fix] fix: publish ChainUndelegate event and ledger sig issue
+
 ## v0.10.18
-This is the buf-fix release for the sunset of BNB Beacon Chain.
+This is the bug-fix release for the sunset of BNB Beacon Chain.
 
 FEATURES
 * [\#1014](https://github.com/bnb-chain/node/pull/1014) [fix] fix: publish completed UnbondingDelegation events to kafka in EndBlock
