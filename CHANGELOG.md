@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.20
+This is the release for the First Sunset of BNB Beacon Chain Mainnet.
+
+FEATURES
+* [\#1016](https://github.com/bnb-chain/node/pull/1016) [BEP] feat: enable FirstSunset on mainnet
+
 ## v0.10.19
 This is the bug-fix release for the sunset of BNB Beacon Chain.
 
