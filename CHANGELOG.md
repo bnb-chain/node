@@ -1,4 +1,6 @@
 # Changelog
+## v0.10.21
+This is the release for the Second Sunset of BNB Beacon Chain testnet.
 
 ## v0.10.20
 This is the release for the First Sunset of BNB Beacon Chain Mainnet.
