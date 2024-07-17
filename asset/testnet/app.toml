@@ -76,8 +76,10 @@ BEP171Height = 37691120
 BEP126Height = 38931600
 # Block height of BEP255 upgrade
 BEP255Height = 41650000
+# Block height of BEP333 upgrade
 FirstSunsetHeight = 50121232
 SecondSunsetHeight = 54554742
+FinalSunsetHeight = 56218686
 
 [query]
 # ABCI query interface black list, suggested value: ["custom/gov/proposals", "custom/timelock/timelocks", "custom/atomicSwap/swapcreator", "custom/atomicSwap/swaprecipient"]
