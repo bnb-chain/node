@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.10.24
+This is the release for the Final Sunset of BNB Beacon Chain Mainnet.
+
 ## v0.10.23
 This is the release for the Final Sunset of BNB Beacon Chain testnet.
 
