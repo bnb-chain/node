@@ -73,6 +73,8 @@ BEP255Height = 328088888
 FirstSunsetHeight = 373526985
 # Block height of BEP333 upgrade
 SecondSunsetHeight = 378062790
+# Block height of BEP333 upgrade
+FinalSunsetHeight = 384544850
 
 [addr]
 # Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
